@@ -24,9 +24,11 @@ from swsscommon import swsscommon
 from mock import Mock, MagicMock, patch, call
 from sonic_py_common import device_info, multi_asic
 
-from .mock_connector import MockConnector
+from .mock_connector import MockConnector, MockRedisTransactioner, MockRedisCommand
 
 swsscommon.SonicV2Connector = MockConnector
+swsscommon.RedisTransactioner = MockRedisTransactioner
+swsscommon.RedisCommand = MockRedisCommand
 swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
@@ -1924,8 +1926,7 @@ def test_bmc_checker(mock_swss, mock_devinfo):
     checker = BmcChecker()
     mock_chassis = MagicMock()
     mock_chassis.get_bmc_if_link_status.return_value = (False, 'bmc0 link is down')
-    checker._chassis = mock_chassis
-    checker.check(Config())
+    checker.check(Config(), mock_chassis)
     assert checker._info['BMC-Connectivity']['status'] == 'Not OK'
     assert 'bmc0 link is down' in checker._info['BMC-Connectivity']['message']
 
@@ -1933,35 +1934,31 @@ def test_bmc_checker(mock_swss, mock_devinfo):
     mock_chassis.get_bmc_if_link_status.return_value = (
         False, 'bmc0 peer 169.254.100.1 unreachable')
     checker = BmcChecker()
-    checker._chassis = mock_chassis
-    checker.check(Config())
+    checker.check(Config(), mock_chassis)
     assert 'peer 169.254.100.1 unreachable' in checker._info['BMC-Connectivity']['message']
 
     # Link OK, connection failure
     mock_chassis.get_bmc_if_link_status.return_value = (True, '')
     mock_swss.DBConnector.side_effect = Exception('Connection refused')
     checker = BmcChecker()
-    checker._chassis = mock_chassis
-    checker.check(Config())
+    checker.check(Config(), mock_chassis)
     assert 'Cannot connect' in checker._info['BMC-Connectivity']['message']
 
-    # Link OK, successful pull with mixed status
+    # Link OK, successful pull with mixed status (flat hash)
     mock_swss.DBConnector.side_effect = None
-    mock_tbl = MagicMock()
-    mock_tbl.getKeys.return_value = ['_meta', 'Services|database', 'Services|pmon']
-    mock_tbl.get.side_effect = lambda k: {
-        '_meta': (True, [('last_updated', '2026-09-29T10:00:00Z'),
-                         ('summary', 'Not OK'), ('polling_interval', '300')]),
-        'Services|database': (True, [('status', 'OK'), ('message', '')]),
-        'Services|pmon': (True, [('status', 'Not OK'),
-                                  ('message', 'pmon is not running')]),
-    }[k]
-    mock_swss.Table.return_value = mock_tbl
+    mock_db = MagicMock()
+    mock_db.hgetall.return_value = {
+        'summary': 'Not OK',
+        'last_updated': '2026-09-29T10:00:00Z',
+        'polling_interval': '300',
+        'database': '',
+        'pmon': 'pmon is not running',
+    }
+    mock_swss.DBConnector.return_value = mock_db
     checker = BmcChecker()
-    checker._chassis = mock_chassis
-    checker.check(Config())
-    assert checker._info['Services|database']['status'] == 'OK'
-    assert checker._info['Services|pmon']['status'] == 'Not OK'
+    checker.check(Config(), mock_chassis)
+    assert checker._info['database']['status'] == 'OK'
+    assert checker._info['pmon']['status'] == 'Not OK'
     assert 'BMC-LastUpdate' in checker._info
     assert 'BMC-RefreshInterval' in checker._info
 
@@ -2034,7 +2031,9 @@ def test_healthd_full_stats():
         },
     }
     daemon._process_stat(MagicMock(), config, stat)
-    assert 'SYSTEM_HEALTH_INFO|Services|redis' in MockConnector.data
-    assert MockConnector.data['SYSTEM_HEALTH_INFO|Services|redis']['status'] == 'OK'
-    assert MockConnector.data['SYSTEM_HEALTH_INFO|Services|syncd']['status'] == 'Not OK'
-    assert 'last_updated' in MockConnector.data['SYSTEM_HEALTH_INFO|_meta']
+    table = MockConnector.data['SYSTEM_HEALTH_INFO']
+    assert table['redis'] == ''
+    assert table['syncd'] == 'syncd is not running'
+    assert table['summary'] in ('OK', 'Not OK')
+    assert 'last_updated' in table
+    assert table['polling_interval'] == '60'

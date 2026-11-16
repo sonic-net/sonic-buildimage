@@ -40,25 +40,26 @@ class HealthCheckerManager(object):
         self.config.load_config()
 
         for checker in self._checkers:
-            self._do_check(checker, stats)
+            self._do_check(checker, stats, chassis)
 
         if self.config.user_defined_checkers:
             for udc in self.config.user_defined_checkers:
                 checker = UserDefinedChecker(udc)
-                self._do_check(checker, stats)
+                self._do_check(checker, stats, chassis)
 
         self._set_system_led(chassis)
         return stats
 
-    def _do_check(self, checker, stats):
+    def _do_check(self, checker, stats, chassis=None):
         """
         Do check for a particular checker and collect the check statistic.
         :param checker: A checker object.
         :param stats: Check statistic.
+        :param chassis: Platform chassis object.
         :return:
         """
         try:
-            checker.check(self.config)
+            checker.check(self.config, chassis)
             category = checker.get_category()
             info = checker.get_info()
             if category not in stats:
