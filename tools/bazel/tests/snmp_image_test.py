@@ -1,6 +1,8 @@
 """Check inspected OCI layout materialization without running image producers."""
 
+import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 from types import SimpleNamespace
@@ -135,6 +137,98 @@ class SnmpImageBuildTest(unittest.TestCase):
         self.assertEqual(self.receipt["status"], "failed")
         self.assertNotIn("cached-archives", self.events)
         self.assertNotIn("layouts", self.events)
+
+
+class SnmpArtifactsWorkflowTest(unittest.TestCase):
+    def setUp(self):
+        workflow = yaml.safe_load((image.ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        self.steps = workflow["jobs"]["archive"]["steps"]
+        self.build = next(step for step in self.steps if step.get("id") == "snmp_build")
+        self.cleanup = next(step for step in self.steps
+                            if step.get("name") == "Remove uploaded SNMP temporary artifacts")
+
+    def allocate_directory(self, temporary):
+        output = temporary / "github-output"
+        output.write_text("")
+        commands = temporary / "commands"
+        commands.mkdir(exist_ok=True)
+        for name in ("python3", "git"):
+            command = commands / name
+            command.write_text("#!/bin/sh\nexit 0\n")
+            command.chmod(0o755)
+        result = subprocess.run(
+            ["bash", "-e", "-o", "pipefail", "-c", self.build["run"]],
+            env=dict(os.environ, RUNNER_TEMP=str(temporary), GITHUB_OUTPUT=str(output),
+                     BAZEL="fixture-bazel", PATH=str(commands) + os.pathsep + os.environ["PATH"]),
+            text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return Path(output.read_text().strip().split("=", 1)[1])
+
+    def test_cleanup_preserves_other_jobs_and_stale_staging(self):
+        with tempfile.TemporaryDirectory(prefix="snmp artifacts ") as temporary:
+            root = Path(temporary)
+            stale = root / "snmp/public/docker-snmp.gz"
+            stale.parent.mkdir(parents=True)
+            stale.write_bytes(b"previous run")
+            first = self.allocate_directory(root)
+            second = self.allocate_directory(root)
+            self.assertNotEqual(first, second)
+            payload = first / "docker-snmp.gz"
+            payload.write_bytes(b"current validated archive")
+            receipt = {"status": "built", "artifacts": {
+                payload.name: {"bytes": payload.stat().st_size,
+                               "sha256": hashlib.sha256(payload.read_bytes()).hexdigest()}}}
+            (first / "build-receipt.json").write_text(json.dumps(receipt))
+            image.source_image_worker.publish(SimpleNamespace(artifacts=first))
+            self.assertEqual((first / "public/docker-snmp.gz").read_bytes(), payload.read_bytes())
+            result = subprocess.run(
+                ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
+                env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(first)),
+                text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertFalse(first.exists())
+            self.assertEqual(stale.read_bytes(), b"previous run")
+            self.assertEqual(list(second.iterdir()), [])
+
+    def test_cleanup_follows_successful_upload_and_removes_only_the_allocated_directory(self):
+        upload = next(step for step in self.steps if step.get("id") == "snmp_upload")
+        self.assertLess(self.steps.index(upload), self.steps.index(self.cleanup))
+        self.assertEqual(self.cleanup["if"],
+                         "always() && steps.snmp_build.outputs.directory != '' "
+                         "&& steps.snmp_upload.outcome == 'success'")
+        with tempfile.TemporaryDirectory(prefix="snmp artifacts ") as temporary:
+            root = Path(temporary)
+            selected = self.allocate_directory(root)
+            other = self.allocate_directory(root)
+            (selected / "public").mkdir()
+            (selected / "public/docker-snmp.gz").write_bytes(b"uploaded bytes")
+            (other / "keep").write_bytes(b"another job")
+            result = subprocess.run(
+                ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
+                env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(selected)),
+                text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertFalse(selected.exists())
+            self.assertEqual((other / "keep").read_bytes(), b"another job")
+
+    def test_cleanup_rejects_temp_root_unrelated_paths_and_symlinks(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            unrelated = root / "other"
+            unrelated.mkdir()
+            outside = root / "outside/snmp.fixture"
+            outside.mkdir(parents=True)
+            link = root / "snmp.link"
+            link.symlink_to(outside, target_is_directory=True)
+            for directory in (root, unrelated, outside, link):
+                with self.subTest(directory=directory):
+                    result = subprocess.run(
+                        ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
+                        env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(directory)),
+                        text=True, capture_output=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Refusing to remove", result.stderr)
+                    self.assertTrue(directory.exists())
 
 
 if __name__ == "__main__":
