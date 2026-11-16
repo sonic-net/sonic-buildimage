@@ -104,6 +104,7 @@ ucode_port_29.BCM8887X=D3CE3:core_0.29
 ucode_port_30.BCM8887X=D3CE2:core_0.30
 ucode_port_31.BCM8887X=D3CE1:core_0.31
 ucode_port_32.BCM8887X=D3CE0:core_0.32
+ucode_port_33.BCM8887X=RCY0:core_0.33
 
 tm_port_header_type_in_0.BCM8887X=INJECTED
 tm_port_header_type_in_200.BCM8887X=INJECTED
@@ -1348,9 +1349,10 @@ lane_to_serdes_map_nif_lane261.BCM8887X=rx261:tx261
 lane_to_serdes_map_nif_lane262.BCM8887X=rx262:tx262
 lane_to_serdes_map_nif_lane263.BCM8887X=rx263:tx263
 
-rif_id_max=24576
+rif_id_max=8192
 sai_disable_srcmacqedstmac_ctrl=1
 trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
 sai_tc_based_queue_stats_enable=0
 sai_ecmp_group_members_increment=8
+sai_recycle_port_lane_base=300

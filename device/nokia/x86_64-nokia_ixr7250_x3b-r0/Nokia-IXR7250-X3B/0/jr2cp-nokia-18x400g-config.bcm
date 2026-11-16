@@ -2137,7 +2137,7 @@ serdes_lane_config_channel_mode_406=force_nr
 #serdes_lane_config_channel_mode_446=force_nr
 #serdes_lane_config_channel_mode_447=force_nr
 
-rif_id_max=24576
+rif_id_max=20480
 dpp_db_path=/usr/share/bcm/db
 sai_recycle_port_lane_base=200
 appl_param_nof_ports_per_modid=64
