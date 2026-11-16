@@ -383,17 +383,14 @@ PY
 reload_restored_legacy_config()
 {
     local asic_num=0
-    local IFS=,
-    local -a config_files=("${CONFIG_DB_JSON}")
+    local config_file_csv="${CONFIG_DB_JSON}"
 
     while [[ $asic_num -lt ${NUM_ASIC:-1} && ${NUM_ASIC:-1} -gt 1 ]]; do
-        config_files+=(
-            "${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}"
-        )
+        config_file_csv+=",${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}${asic_num}${CONFIG_DB_SUFFIX}"
         ((asic_num = asic_num + 1))
     done
 
-    "${CONFIG_CLI}" reload -y -n -f "${config_files[*]}"
+    "${CONFIG_CLI}" reload -y -n -f "${config_file_csv}"
 }
 
 verify_live_config_db_scope()
