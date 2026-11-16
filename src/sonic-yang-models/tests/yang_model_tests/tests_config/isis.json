@@ -1,0 +1,778 @@
+{
+    "ISIS_VALID": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_NET_SHORT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_NET_NSEL": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.01"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_UNKNOWN_VRF": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "VrfMissing",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MTU_LOW": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 127,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MTU_HIGH": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4353,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_REFRESH_HIGH": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 65236,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_LIFETIME_LOW": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 349
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_TIMER_RELATION": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 1000,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_TIMER_ORPHAN": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "VrfMissing",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_ORPHAN_INTERFACE": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_VALID_VRF": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "Vrf2",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "Vrf2",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf2"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_IPV6_ONLY": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": true,
+                        "ipv4_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_BOTH_AF_DISABLED": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "ipv4_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_IPV4_INVALID_BOOL": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false,
+                        "ipv4_enabled": "invalid"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MTU_EXPLICIT_1492": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 1492,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_MTU_IMPLICIT_DEFAULT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_IPV4_IMPLICIT_DEFAULT": {
+        "sonic-isis-global:sonic-isis-global": {
+            "ISIS_GLOBALS": {
+                "ISIS_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "enabled": true,
+                        "net_title": "49.0001.1921.6800.0001.00"
+                    }
+                ]
+            },
+            "ISIS_GLOBALS_TIMERS": {
+                "ISIS_GLOBALS_TIMERS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "lsp_mtu": 4000,
+                        "lsp_refresh_interval": 900,
+                        "lsp_lifetime": 1200
+                    }
+                ]
+            }
+        },
+        "sonic-isis-interface:sonic-isis-interface": {
+            "ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                    {
+                        "ifname": "Loopback0",
+                        "enabled": true,
+                        "ipv6_enabled": false
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        }
+    }
+}

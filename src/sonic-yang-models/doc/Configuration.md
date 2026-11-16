@@ -3574,23 +3574,53 @@ DNS configuration options can also be set when nameservers are defined:
 
 ### SRv6
 
-The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
-An example is as follows:
-```
+The **SRV6_MY_LOCATORS**, **SRV6_MY_SIDS**, and **SRV6_MY_SOURCE** tables configure local Segment Routing over IPv6 state. The optional **ISIS_GLOBALS** fields below bind a locator to the default IS-IS instance. The configuration fragment assumes that `Loopback0` and `Ethernet0` are already configured.
+
+| Table | Key | Fields and compatibility |
+|-------|-----|--------------------------|
+| SRV6_MY_LOCATORS | Locator name | `prefix` accepts an IPv6 address or an IPv6 prefix. For an address, the prefix length is `block_len + node_len`; an explicit prefix length must equal that sum. Geometry defaults remain `block_len=32`, `node_len=16`, `func_len=16`, and `arg_len=0`. |
+| SRV6_MY_LOCATORS | Locator name | Optional `behavior=usid` selects unformatted uSID behavior. With neither `behavior` nor `format`, the locator retains Classic behavior. Optional `format=usid-f3216` requires explicit `behavior=usid` and geometry `32/16/16/0`. |
+| SRV6_MY_SOURCE | Singleton name | `source-address` is a mandatory IPv6 address. `tunnel-source` is the canonical key; a single existing row with an arbitrary key remains accepted. More than one row is invalid. |
+| SRV6_MY_SIDS | Locator name and IPv6 prefix, separated by a vertical bar | Existing `action`, `decap_vrf`, and `decap_dscp_mode` fields are preserved. `uA` uses the existing mandatory `interface` reference and optional IPv6 `adj`; the native command calls `adj` a nexthop. A row without `action` carries policy settings and does not create a static SID. Two action-bearing rows cannot share a native SID prefix, including across locators. |
+| ISIS_GLOBALS | `default` | Optional `srv6_locator` and `srv6_interface` must appear together and reference an existing locator and interface. The binding is supported only in the default VRF. A disabled IS-IS process retains these fields as intent and does not render the binding until enabled. Named VRF rows without these fields retain their existing behavior. |
+
+The startup adapter validates native representability before applying configuration. The current adapter requires locator `arg_len=0` and locator `vrf=default`; it rejects unsupported values instead of omitting them. Target FRR version limits, such as the FRR 10.5 function-length limit, are applied by the adapter and are not imposed on the master YANG model.
+
+```json
 {
-    "SRV6_MY_LOCATORS" : {
-        "loc1" : {
-            "prefix" : "FCBB:BBBB:20::"
+    "SRV6_MY_LOCATORS": {
+        "LOC1": {
+            "prefix": "2001:db8:100::/48",
+            "behavior": "usid",
+            "format": "usid-f3216"
         }
-    }
-    "SRV6_MY_SIDS" : {
-        "loc1|FCBB:BBBB:20::" : {
-           "action": "uN"
+    },
+    "SRV6_MY_SOURCE": {
+        "tunnel-source": {
+            "source-address": "2001:db8::1"
+        }
+    },
+    "SRV6_MY_SIDS": {
+        "LOC1|2001:db8:100::/48": {
+            "action": "uN"
         },
-        "loc1|FCBB:BBBB:20:F1::" : {
-           "action": "uDT46",
-           "decap_vrf": "default",
-           "decap_dscp_mode": "pipe"
+        "LOC1|2001:db8:100:1::/64": {
+            "action": "uDT46",
+            "decap_vrf": "default",
+            "decap_dscp_mode": "pipe"
+        },
+        "LOC1|2001:db8:100:a::/128": {
+            "action": "uA",
+            "interface": "Ethernet0",
+            "adj": "fe80::2"
+        }
+    },
+    "ISIS_GLOBALS": {
+        "default": {
+            "enabled": "true",
+            "net_title": "49.0001.0000.0000.0001.00",
+            "srv6_locator": "LOC1",
+            "srv6_interface": "Loopback0"
         }
     }
 }
@@ -3998,3 +4028,39 @@ To be added.
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that
 implemented dynamic configuration for BGP.
+
+
+## IS-IS
+
+Keys are `ISIS_GLOBALS|<vrf_name>`, `ISIS_GLOBALS_TIMERS|<vrf_name>`, and
+`ISIS_INTERFACE|<ifname>`. The timer key references an existing global row. Interface
+keys reference PORT, PORTCHANNEL, VLAN_INTERFACE, LOOPBACK_INTERFACE or
+VLAN_SUB_INTERFACE entries. Global VRFs reference VRF, except `default`.
+ConfigDB stores scalar values as strings; YANG validates the following types.
+
+| Table | Field | YANG type / range | Default |
+| --- | --- | --- | --- |
+| ISIS_GLOBALS | enabled | boolean | false |
+| ISIS_GLOBALS | net_title | string matching `[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00` | absent |
+| ISIS_GLOBALS | level | level-1, level-2, level-1-2 | level-1-2 |
+| ISIS_GLOBALS | dynamic_hostname | boolean | true |
+| ISIS_GLOBALS | ipv6_multi_topology | boolean | true |
+| ISIS_GLOBALS_TIMERS | lsp_mtu | uint16, 128–4352 | 1497 |
+| ISIS_GLOBALS_TIMERS | lsp_refresh_interval | uint16, 1–65235 seconds | 900 |
+| ISIS_GLOBALS_TIMERS | lsp_lifetime | uint16, 350–65535 seconds | 1200 |
+| ISIS_INTERFACE | enabled | boolean | false |
+| ISIS_INTERFACE | ipv4_enabled | boolean | true |
+| ISIS_INTERFACE | ipv6_enabled | boolean | true |
+| ISIS_INTERFACE | metric | uint32, 1–16777215 | 10 |
+| ISIS_INTERFACE | circuit_type | p2p, lan | lan |
+| ISIS_INTERFACE | passive | boolean | absent (not passive) |
+
+Lifetime must be at least refresh interval + 300 seconds, including when either
+field is omitted and its default applies. CLI reset operations enforce this too.
+
+IPv4 and IPv6 bindings can be enabled independently. Both flags default to true
+to preserve existing dual-stack configurations. Set ipv4_enabled to false for an
+IPv6-only interface. With both flags false, the row is retained without an IS-IS
+circuit; interface attributes are applied when an address family is enabled again.
+Resetting lsp_mtu restores the native FRR default of 1497; explicitly configured
+valid values are preserved.

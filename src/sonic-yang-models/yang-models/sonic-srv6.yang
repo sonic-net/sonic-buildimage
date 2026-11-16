@@ -38,7 +38,10 @@ module sonic-srv6 {
 
                 leaf prefix {
                     description "IPv6 address prefix for this locator.";
-                    type inet:ipv6-address;
+                    type union {
+                        type inet:ipv6-address;
+                        type inet:ipv6-prefix;
+                    }
                     mandatory true;
                 }
 
@@ -80,6 +83,28 @@ module sonic-srv6 {
 
                 must 'block_len + node_len + func_len + arg_len <= 128';
 
+                must "not(contains(prefix, '/')) or number(substring-after(prefix, '/')) = block_len + node_len" {
+                    error-message "locator prefix length must equal block_len plus node_len";
+                }
+
+                leaf behavior {
+                    type enumeration {
+                        enum usid;
+                    }
+                    description "Optional unformatted uSID behavior; absence preserves Classic behavior.";
+                }
+
+                leaf format {
+                    type enumeration {
+                        enum usid-f3216;
+                    }
+                    description "Optional SID format; absence preserves the unformatted locator profile.";
+                }
+
+                must "not(format) or (behavior = 'usid' and block_len = 32 and node_len = 16 and func_len = 16 and arg_len = 0)" {
+                    error-message "usid-f3216 requires behavior usid and geometry 32/16/16/0";
+                }
+
                 leaf vrf {
                     type union {
                         type leafref {
@@ -96,11 +121,35 @@ module sonic-srv6 {
             }
         }
 
+        container SRV6_MY_SOURCE {
+            description "Global SRv6 encapsulation source address.";
+
+            list SRV6_MY_SOURCE_LIST {
+                key "name";
+                max-elements 1;
+
+                leaf name {
+                    type string;
+                    description "Singleton row key; tunnel-source is canonical and existing keys are preserved.";
+                }
+
+                leaf source-address {
+                    type inet:ipv6-address;
+                    mandatory true;
+                    description "IPv6 source address for SRv6 encapsulation.";
+                }
+            }
+        }
+
         container SRV6_MY_SIDS {
             description "Local SRv6 SID entries with endpoint behavior and decapsulation settings.";
 
             list SRV6_MY_SIDS_LIST {
                 key "locator ip_prefix";
+
+                must "not(action) or count(../SRV6_MY_SIDS_LIST[ip_prefix = current()/ip_prefix][action]) = 1" {
+                    error-message "action-bearing SID prefixes must be unique across locators";
+                }
 
                 leaf ip_prefix {
                     description "IPv6 prefix representing this SID.";

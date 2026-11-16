@@ -1,0 +1,81 @@
+! SRv6 configuration using ConfigDB tables.
+! The startup adapter validates the managed snapshot before applying this file.
+!
+{# Named/mixed IS-IS profiles retain their existing startup and replay path. #}
+{% set profile = namespace(canonical=true) %}
+{% for vrf in ISIS_GLOBALS|default({}) %}
+{% if vrf != 'default' %}
+{% set profile.canonical = false %}
+{% endif %}
+{% endfor %}
+{% if profile.canonical %}
+{% set locators = SRV6_MY_LOCATORS|default({}) %}
+{% set sources = SRV6_MY_SOURCE|default({}) %}
+{% set sids = SRV6_MY_SIDS|default({}) %}
+{% set state = namespace(has_static=false) %}
+{% for key, sid in sids.items() %}
+{% if sid.get('action') in ('uN', 'uA', 'uDT4', 'uDT6', 'uDT46') %}
+{% set state.has_static = true %}
+{% endif %}
+{% endfor %}
+{% if locators or sources or state.has_static %}
+segment-routing
+ srv6
+{% if locators %}
+  locators
+{% for name, locator in locators.items() %}
+{% set block = locator.block_len|default(32)|int %}
+{% set node = locator.node_len|default(16)|int %}
+{% set function = locator.func_len|default(16)|int %}
+{% set prefix = locator.prefix if '/' in locator.prefix else locator.prefix ~ '/' ~ (block + node)|string %}
+   locator {{ name }}
+    prefix {{ prefix }} block-len {{ block }} node-len {{ node }} func-bits {{ function }}
+{% if locator.behavior|default('') == 'usid' %}
+    behavior usid
+{% endif %}
+{% if locator.format is defined %}
+    format {{ locator.format }}
+{% endif %}
+   exit
+{% endfor %}
+  exit
+{% endif %}
+{% if sources %}
+  encapsulation
+{% for name, source in sources.items() %}
+   source-address {{ source['source-address'] }}
+{% endfor %}
+  exit
+{% endif %}
+{% if state.has_static %}
+  static-sids
+{% for key, sid in sids.items() %}
+{% set parts = key.split('|', 1) if key is string else key %}
+{% if sid.get('action') == 'uN' %}
+   sid {{ parts[1] }} locator {{ parts[0] }} behavior uN
+{% elif sid.get('action') in ('uDT4', 'uDT6', 'uDT46') %}
+   sid {{ parts[1] }} locator {{ parts[0] }} behavior {{ sid.action }} vrf {{ sid.decap_vrf|default('default') }}
+{% elif sid.get('action') == 'uA' %}
+{% set adjacency = ' nexthop ' ~ sid.adj if sid.adj is defined else '' %}
+   sid {{ parts[1] }} locator {{ parts[0] }} behavior uA interface {{ sid.interface }}{{ adjacency }}
+{% endif %}
+{% endfor %}
+  exit
+{% endif %}
+ exit
+exit
+!
+{% endif %}
+{% if ISIS_GLOBALS is defined and ISIS_GLOBALS['default'] is defined %}
+{% set isis = ISIS_GLOBALS['default'] %}
+{% if isis.enabled|default('false')|string|lower == 'true' and isis.srv6_locator is defined %}
+router isis default
+ segment-routing srv6
+  locator {{ isis.srv6_locator }}
+  interface {{ isis.srv6_interface }}
+ exit
+exit
+!
+{% endif %}
+{% endif %}
+{% endif %}

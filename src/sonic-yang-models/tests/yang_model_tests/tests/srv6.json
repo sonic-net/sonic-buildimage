@@ -4,41 +4,143 @@
     },
     "SRV6_MY_LOCATOR_INVALID_FUNC_LEN": {
         "desc": "A locator configured with invalid func_len",
-        "eStrKey" : "Must"
+        "eStrKey": "Must"
     },
     "SRV6_MY_LOCATOR_INVALID_VRF": {
         "desc": "A locator configured with an invalid VRF name",
-        "eStrKey" : "InvalidValue",
-        "eStr": ["vrf"]
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "vrf"
+        ]
     },
     "SRV6_MY_SID_INVALID_LOCATOR": {
         "desc": "A SID configured with invalid locator identifier",
-        "eStrKey" : "LeafRef"
+        "eStrKey": "LeafRef"
     },
     "SRV6_MY_SID_INVALID_IP_PREFIX": {
         "desc": "A SID configured with invalid IPv6 address",
-        "eStrKey" : "Pattern"
+        "eStrKey": "Pattern"
     },
     "SRV6_MY_SID_INVALID_ACTION": {
         "desc": "A SID with action uA but missing interface (must constraint)",
-        "eStr": ["interface is mandatory when action is 'uA'"]
+        "eStr": [
+            "interface is mandatory when action is 'uA'"
+        ]
     },
     "SRV6_MY_SID_UA_VALID": {
         "desc": "Valid config with action uA"
     },
     "SRV6_MY_SID_UA_MISSING_INTERFACE": {
         "desc": "A SID configured with action uA but missing interface",
-        "eStr": ["interface is mandatory when action is 'uA'"]
+        "eStr": [
+            "interface is mandatory when action is 'uA'"
+        ]
     },
     "SRV6_MY_SID_UA_MISSING_ADJ": {
         "desc": "Valid config with action uA (adj is optional)"
     },
     "SRV6_MY_SID_UA_MISSING_BOTH": {
         "desc": "A SID configured with action uA but missing both interface and adj",
-        "eStr": ["interface is mandatory when action is 'uA'"]
+        "eStr": [
+            "interface is mandatory when action is 'uA'"
+        ]
     },
     "SRV6_MY_SID_ADJ_INVALID_ACTION": {
         "desc": "A SID with adj set but action is not uA",
-        "eStr": ["adj is only applicable when action is 'uA'"]
+        "eStr": [
+            "adj is only applicable when action is 'uA'"
+        ]
+    },
+    "SRV6_SOURCE_CANONICAL": {
+        "desc": "Accept the canonical SRv6 source singleton."
+    },
+    "SRV6_SOURCE_LEGACY_KEY": {
+        "desc": "Preserve a single existing SRv6 source key."
+    },
+    "SRV6_SOURCE_MULTIPLE": {
+        "desc": "Reject competing global SRv6 source rows.",
+        "eStrKey": "MaxElements"
+    },
+    "SRV6_SOURCE_INVALID_ADDRESS": {
+        "desc": "Reject an IPv4 encapsulation source.",
+        "eStr": [
+            "source-address"
+        ]
+    },
+    "SRV6_SOURCE_MISSING_ADDRESS": {
+        "desc": "Require an address for an SRv6 source row.",
+        "eStrKey": "Mandatory"
+    },
+    "SRV6_LOCATOR_PREFIX_CIDR": {
+        "desc": "Accept a locator prefix with its explicit compatible length."
+    },
+    "SRV6_LOCATOR_PREFIX_GEOMETRY_MISMATCH": {
+        "desc": "Reject a prefix length inconsistent with block plus node.",
+        "eStr": [
+            "locator prefix length must equal block_len plus node_len"
+        ]
+    },
+    "SRV6_LOCATOR_UNFORMATTED_USID": {
+        "desc": "Accept an unformatted uSID locator."
+    },
+    "SRV6_LOCATOR_F3216": {
+        "desc": "Accept explicit F3216 with compatible implicit geometry."
+    },
+    "SRV6_LOCATOR_F3216_REQUIRES_USID": {
+        "desc": "Require explicit uSID behavior for F3216.",
+        "eStr": [
+            "usid-f3216 requires behavior usid and geometry 32/16/16/0"
+        ]
+    },
+    "SRV6_LOCATOR_F3216_BAD_GEOMETRY": {
+        "desc": "Reject geometry that F3216 would override.",
+        "eStr": [
+            "usid-f3216 requires behavior usid and geometry 32/16/16/0"
+        ]
+    },
+    "SRV6_LOCATOR_UNKNOWN_FORMAT": {
+        "desc": "Reject an unsupported SID format.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "format"
+        ]
+    },
+    "SRV6_ISIS_BINDING": {
+        "desc": "Accept the default-instance locator and existing interface binding."
+    },
+    "SRV6_ISIS_MISSING_LOCATOR": {
+        "desc": "Reject an absent IS-IS locator reference.",
+        "eStrKey": "LeafRef"
+    },
+    "SRV6_ISIS_MISSING_INTERFACE": {
+        "desc": "Reject an absent IS-IS SRv6 interface reference.",
+        "eStrKey": "InvalidValue"
+    },
+    "SRV6_ISIS_LOCATOR_INTERFACE_PAIR": {
+        "desc": "Require a locator for an explicit SRv6 interface.",
+        "eStr": [
+            "IS-IS SRv6 requires locator and interface in the default VRF"
+        ]
+    },
+    "SRV6_ISIS_INTERFACE_LOCATOR_PAIR": {
+        "desc": "Require an explicit existing interface for the locator.",
+        "eStr": [
+            "IS-IS SRv6 requires locator and interface in the default VRF"
+        ]
+    },
+    "SRV6_ISIS_NONDEFAULT_BINDING": {
+        "desc": "Reject a new SRv6 binding outside the supported default VRF.",
+        "eStr": [
+            "IS-IS SRv6 requires locator and interface in the default VRF"
+        ]
+    },
+    "SRV6_DUPLICATE_ACTION_PREFIX": {
+        "desc": "Reject multiple action-bearing rows with one native SID prefix.",
+        "eStr": [
+            "action-bearing SID prefixes must be unique across locators"
+        ]
+    },
+    "SRV6_SHARED_PREFIX_POLICY_ONLY": {
+        "desc": "Allow policy-only rows to share a prefix across locators."
     }
 }
