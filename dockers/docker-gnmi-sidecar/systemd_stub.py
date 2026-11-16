@@ -15,10 +15,11 @@ import argparse
 import traceback
 from typing import Dict, List, Optional, Union
 
+from sonic_py_common import sidecar_common
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
-    db_hget, db_hgetall, db_hdel, db_del, db_get_table_keys,
+    db_hget, db_hgetall,
     sync_items, cleanup_native_container, SYNC_INTERVAL_S
 )
 
@@ -264,17 +265,16 @@ def _apply_config_patch(patch: list) -> bool:
     return True
 
 
-def _ensure_user_auth_absent() -> None:
-    cur = db_hget("GNMI|gnmi", "user_auth")
-    if cur is None:
-        return
-    if db_hdel("GNMI|gnmi", "user_auth"):
-        logger.log_notice(f"Removed GNMI|gnmi.user_auth (was: {cur})")
-        rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "gnmi"])
-        if rc != 0:
-            logger.log_error(f"Failed to restart gnmi after user_auth removal: {err}")
-    else:
-        logger.log_error("Failed to remove GNMI|gnmi.user_auth")
+def _get_table_keys(table: str) -> List[str]:
+    """Return the keys of a CONFIG_DB table, raising if the read fails.
+
+    sidecar_common.db_get_table_keys returns [] on error, which would make the
+    patch add the whole table and replace what is there.
+    """
+    db = sidecar_common._get_config_db()
+    if db is None:
+        raise RuntimeError(f"CONFIG_DB unavailable; cannot read {table}")
+    return list((db.get_table(table) or {}).keys())
 
 
 def _normalize_role(value) -> List[str]:
@@ -311,7 +311,7 @@ def _build_enabled_patch() -> list:
 
     # JSON Patch "add" needs the parent to exist, so create GNMI or GNMI|gnmi
     # whole when missing rather than adding the leaf under an absent parent.
-    gnmi_keys = db_get_table_keys("GNMI")
+    gnmi_keys = _get_table_keys("GNMI")
     if not gnmi_keys:
         patch.append({"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}})
     elif "gnmi" not in gnmi_keys:
@@ -322,7 +322,7 @@ def _build_enabled_patch() -> list:
             op = "add" if cur is None else "replace"
             patch.append({"op": op, "path": "/GNMI/gnmi/user_auth", "value": "cert"})
 
-    existing_cnames = set(db_get_table_keys("GNMI_CLIENT_CERT"))
+    existing_cnames = set(_get_table_keys("GNMI_CLIENT_CERT"))
     entries_needed: list = []
     for entry in GNMI_CLIENT_CERTS:
         cname, role = entry["cname"], entry["role"]
@@ -352,36 +352,34 @@ def _build_enabled_patch() -> list:
     return patch
 
 
-def _ensure_cname_absent(cname: str) -> None:
-    key = f"GNMI_CLIENT_CERT|{cname}"
-    if db_hgetall(key):
-        if db_del(key):
-            logger.log_notice(f"Removed {key}")
-        else:
-            logger.log_error(f"Failed to remove {key}")
+_verify_disabled_warned = False
 
 
 def reconcile_config_db_once() -> None:
     """
     Idempotent drift-correction for CONFIG_DB:
-      - When GNMI_CLIENT_CERT_VERIFY_ENABLED is unset: do nothing
+      - When GNMI_CLIENT_CERT_VERIFY_ENABLED is unset or false: do nothing
       - When true:
           * Ensure GNMI|gnmi.user_auth=cert
           * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
-      - When false:
-          * Remove GNMI|gnmi.user_auth
-          * Remove all entries under GNMI_CLIENT_CERT table
+
+    A CONFIG_DB read error raises, so the caller skips the cycle instead of
+    patching from a partial view.
     """
+    global _verify_disabled_warned
     if GNMI_VERIFY_ENABLED is None:
         return
-    if GNMI_VERIFY_ENABLED:
-        patch = _build_enabled_patch()
-        if patch:
-            _apply_config_patch(patch)
-    else:
-        _ensure_user_auth_absent()
-        for cname in db_get_table_keys("GNMI_CLIENT_CERT"):
-            _ensure_cname_absent(cname)
+    if not GNMI_VERIFY_ENABLED:
+        # gnmi treats a missing user_auth as cert auth, so removing user_auth
+        # and the client certs would lock every client out.
+        if not _verify_disabled_warned:
+            logger.log_warning("Client-cert verify is false; not acting on it because gnmi "
+                               "defaults to cert auth. GNMI user_auth and GNMI_CLIENT_CERT are left as is.")
+            _verify_disabled_warned = True
+        return
+    patch = _build_enabled_patch()
+    if patch:
+        _apply_config_patch(patch)
 
 
 # Previous sidecar versions overwrote /lib/systemd/system/gnmi.service

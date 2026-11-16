@@ -141,16 +141,22 @@ def config_db(monkeypatch):
     def fake_db_del(key):
         return db.pop(key, None) is not None
 
-    def fake_db_get_table_keys(table):
-        prefix = f"{table}|"
-        return [k.split("|", 1)[1] for k in db if k.startswith(prefix)]
+    class FakeConnector:
+        def get_table(self, table):
+            prefix = f"{table}|"
+            return {k.split("|", 1)[1]: dict(v) for k, v in db.items() if k.startswith(prefix)}
 
     monkeypatch.setattr(real_sidecar_common, "db_hget", fake_db_hget)
     monkeypatch.setattr(real_sidecar_common, "db_hgetall", fake_db_hgetall)
     monkeypatch.setattr(real_sidecar_common, "db_hdel", fake_db_hdel)
     monkeypatch.setattr(real_sidecar_common, "db_del", fake_db_del)
-    monkeypatch.setattr(real_sidecar_common, "db_get_table_keys", fake_db_get_table_keys)
+    monkeypatch.setattr(real_sidecar_common, "_get_config_db", lambda: FakeConnector())
     return db
+
+
+class _FailingConnector:
+    def get_table(self, table):
+        raise RuntimeError(f"redis read of {table} failed")
 
 
 @pytest.fixture
@@ -741,75 +747,23 @@ def test_reconcile_unset_leaves_config_db_untouched(ss, config_db):
     assert not any(args[:1] == ("sudo",) for _, args in commands)
 
 
-def test_reconcile_disabled_removes_cname(ss, config_db):
+def test_reconcile_disabled_is_noop(ss, config_db):
+    """verify=false leaves user_auth and client certs alone and restarts nothing."""
     ss, container_fs, host_fs, commands = ss
     ss.GNMI_VERIFY_ENABLED = False
-    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
-
-    ss.reconcile_config_db_once()
-
-    assert "GNMI_CLIENT_CERT|fake-infra-ca.test.example.com" not in config_db
-
-
-def test_reconcile_disabled_removes_multiple_cnames(ss, config_db):
-    """When verify=false, all GNMI_CLIENT_CERT entries in the table are removed."""
-    ss, container_fs, host_fs, commands = ss
-    ss.GNMI_VERIFY_ENABLED = False
-    config_db["GNMI_CLIENT_CERT|a.test.example.com"] = {"role": "admin"}
-    config_db["GNMI_CLIENT_CERT|b.test.example.com"] = {"role": "gnmi_show_readonly"}
-
-    ss.reconcile_config_db_once()
-
-    assert "GNMI_CLIENT_CERT|a.test.example.com" not in config_db
-    assert "GNMI_CLIENT_CERT|b.test.example.com" not in config_db
-
-
-def test_reconcile_disabled_removes_entries_not_in_env(ss, config_db):
-    """When verify=false, entries NOT in GNMI_CLIENT_CERTS env are also removed."""
-    ss, container_fs, host_fs, commands = ss
-    ss.GNMI_VERIFY_ENABLED = False
-    ss.GNMI_CLIENT_CERTS = []
-    config_db["GNMI_CLIENT_CERT|unknown.example.com"] = {"role": "admin"}
-    config_db["GNMI_CLIENT_CERT|other.example.com"] = {"role": "gnmi_show_readonly"}
-
-    ss.reconcile_config_db_once()
-
-    assert "GNMI_CLIENT_CERT|unknown.example.com" not in config_db
-    assert "GNMI_CLIENT_CERT|other.example.com" not in config_db
-
-
-def test_reconcile_disabled_clears_user_auth_and_restarts_gnmi(ss, config_db):
-    """When verify=false and user_auth is set, the field is removed and gnmi restarted."""
-    ss, container_fs, host_fs, commands = ss
-    ss.GNMI_VERIFY_ENABLED = False
+    ss.GNMI_CLIENT_CERTS = [{"cname": "new.test.example.com", "role": ["admin"]}]
     config_db["GNMI|gnmi"] = {"user_auth": "cert", "port": "50052"}
+    config_db["GNMI_CLIENT_CERT|existing.test.example.com"] = {"role": ["admin"]}
+    before = json.loads(json.dumps(config_db))
+    ss.logger.messages.clear()
 
     ss.reconcile_config_db_once()
-
-    assert "user_auth" not in config_db.get("GNMI|gnmi", {})
-    assert config_db["GNMI|gnmi"]["port"] == "50052"
-    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
-    assert ("sudo", "systemctl", "restart", "gnmi") in post_cmds
-
-
-def test_reconcile_disabled_removes_user_auth_any_value(ss, config_db):
-    """When verify=false, user_auth should be removed regardless of its value."""
-    ss, container_fs, host_fs, commands = ss
-    ss.GNMI_VERIFY_ENABLED = False
-    config_db["GNMI|gnmi"] = {"user_auth": "password"}
-
     ss.reconcile_config_db_once()
 
-    assert "user_auth" not in config_db.get("GNMI|gnmi", {})
-
-
-def test_reconcile_disabled_no_restart_when_user_auth_absent(ss, config_db):
-    ss, container_fs, host_fs, commands = ss
-    ss.GNMI_VERIFY_ENABLED = False
-
-    ss.reconcile_config_db_once()
-
-    assert not any(args[:1] == ("sudo",) for _, args in commands)
+    assert config_db == before
+    assert commands == []
+    warnings = [m for lvl, m in ss.logger.messages if lvl == "WARNING" and "verify is false" in m]
+    assert len(warnings) == 1
 
 
 def test_reconcile_multiple_cnames(ss, config_db):
@@ -1052,6 +1006,64 @@ def test_build_enabled_patch_shapes_apply_with_jsonpatch(ss, config_db, gnmi_sha
     assert result["GNMI"]["gnmi"]["user_auth"] == "cert"
     for entry in _CERTS:
         assert result["GNMI_CLIENT_CERT"][entry["cname"]]["role"] == entry["role"]
+
+
+@pytest.mark.parametrize("connector", [None, _FailingConnector()], ids=["no_connector", "get_table_error"])
+def test_reconcile_read_error_applies_no_patch(ss, config_db, monkeypatch, connector):
+    """A failed table read raises instead of looking like an empty table."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = _CERTS
+    config_db["GNMI|gnmi"] = {"port": "50052"}
+    config_db["GNMI_CLIENT_CERT|other.test.example.com"] = {"role": ["admin"]}
+    before = json.loads(json.dumps(config_db))
+    monkeypatch.setattr(real_sidecar_common, "_get_config_db", lambda: connector)
+
+    with pytest.raises(RuntimeError):
+        ss_mod.reconcile_config_db_once()
+
+    assert config_db == before
+    assert not any(args[:4] == ("sudo", "-n", "config", "apply-patch") for _, args in commands)
+
+
+class _StopLoop(BaseException):
+    pass
+
+
+def test_main_loop_continues_after_read_error(ss, config_db, monkeypatch):
+    """Read errors skip the cycle; the loop keeps running and converges once reads work."""
+    ss_mod, container_fs, host_fs, commands = ss
+    ss_mod.GNMI_VERIFY_ENABLED = True
+    ss_mod.GNMI_CLIENT_CERTS = _CERTS
+    config_db["GNMI|gnmi"] = {"port": "50052"}
+    config_db["GNMI_CLIENT_CERT|other.test.example.com"] = {"role": ["admin"]}
+
+    healthy = real_sidecar_common._get_config_db
+    cycles = {"n": 0}
+    monkeypatch.setattr(real_sidecar_common, "_get_config_db",
+                        lambda: _FailingConnector() if cycles["n"] < 2 else healthy())
+
+    def fake_sleep(_):
+        cycles["n"] += 1
+        if cycles["n"] > 2:
+            raise _StopLoop()
+
+    monkeypatch.setattr(ss_mod.time, "sleep", fake_sleep)
+    monkeypatch.setattr(ss_mod, "ensure_sync", lambda: True, raising=True)
+    monkeypatch.setattr(sys, "argv", ["systemd_stub.py"])
+    ss_mod.logger.messages.clear()
+
+    with pytest.raises(_StopLoop):
+        ss_mod.main()
+
+    apply_cmds = [args for _, args in commands if args[:4] == ("sudo", "-n", "config", "apply-patch")]
+    assert len(apply_cmds) == 1
+    assert config_db["GNMI|gnmi"] == {"port": "50052", "user_auth": "cert"}
+    assert config_db["GNMI_CLIENT_CERT|other.test.example.com"] == {"role": ["admin"]}
+    for entry in _CERTS:
+        assert config_db[f"GNMI_CLIENT_CERT|{entry['cname']}"]["role"] == entry["role"]
+    errors = [m for lvl, m in ss_mod.logger.messages if lvl == "ERROR" and "redis read of GNMI failed" in m]
+    assert len(errors) >= 2
 
 
 def test_strict_apply_rejects_leaf_under_missing_parent():
