@@ -3,6 +3,7 @@ include $(PLATFORM_PATH)/sonic-version.mk
 include $(PLATFORM_PATH)/docker-sonic-vs.mk
 include $(PLATFORM_PATH)/docker-syncd-vs.mk
 include $(PLATFORM_PATH)/docker-gbsyncd-vs.mk
+include $(PLATFORM_PATH)/docker-poesyncd-vs.mk
 include $(PLATFORM_PATH)/docker-ptf.mk
 include $(PLATFORM_PATH)/docker-ptf-sai.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
