@@ -548,6 +548,42 @@ class CollectionTests(unittest.TestCase):
 
 
 class IOTests(unittest.TestCase):
+    def test_history_is_compact_deterministic_and_lossless(self):
+        history = collector.collect(FakeAPI(), REPO, empty())
+        history["pull_requests"][0]["title"] = "Build timings: \u6d4b\u8bd5"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            collector.write_atomic(path, history)
+            encoded = path.read_bytes()
+            self.assertEqual(json.loads(encoded), history)
+            self.assertEqual(collector.load_history(path, REPO), history)
+            self.assertEqual(encoded, (
+                json.dumps(history, separators=(",", ":"), sort_keys=True, allow_nan=False) + "\n"
+            ).encode())
+            self.assertLess(len(encoded), len(json.dumps(history, indent=2).encode()))
+            collector.write_atomic(path, history)
+            self.assertEqual(path.read_bytes(), encoded)
+
+    def test_history_size_budget_checks_exact_output_bytes_before_replacement(self):
+        history = empty()
+        encoded = (json.dumps(history, separators=(",", ":"), sort_keys=True) + "\n").encode()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded)):
+                collector.write_atomic(path, history)
+            self.assertEqual(path.read_bytes(), encoded)
+            for existing in (True, False):
+                with self.subTest(existing=existing):
+                    if not existing:
+                        path.unlink()
+                    with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded) - 1):
+                        with self.assertRaisesRegex(collector.CollectionError, "publication budget"):
+                            collector.write_atomic(path, history)
+                    self.assertEqual(path.exists(), existing)
+                    if existing:
+                        self.assertEqual(path.read_bytes(), encoded)
+                    self.assertEqual(list(Path(directory).glob(".history-*")), [])
+
     def test_cli_loads_reviewed_sibling_with_safe_path_outside_source_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             # A same-name module in the caller's directory must not be loaded.

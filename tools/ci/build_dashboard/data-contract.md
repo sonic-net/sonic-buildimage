@@ -6,6 +6,11 @@ public job logs. Raw logs, artifacts, machine names, workflow inputs, environmen
 variables and credentials are never retained in the public document. Collection
 does not execute a build or execute any content from a log.
 
+The document uses compact JSON with sorted object keys and a trailing newline.
+Whitespace is not part of the schema; readers also accept previously published
+indented history. Publication is capped at 95 MiB, measured on the serialized
+file, without dropping records or replacing the previous output on overflow.
+
 - `schema_version`: `1`.
 - `repository`: validated `owner/repository`.
 - `generated_at`: UTC collection timestamp.
