@@ -127,6 +127,10 @@ configure : $(PLATFORM_PATH)
 clean showtag docker-cleanup clean-docker sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
+# BLDENV-independent diagnostics: run once (do not fan out per build env)
+show-sonic-profile list-sonic-profiles :
+	$(Q)$(MAKE) --no-print-directory -f Makefile.work $@
+
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h
 freeze:
 	@scripts/versions_manager.py freeze $(FREEZE_VERSION_OPTIONS)

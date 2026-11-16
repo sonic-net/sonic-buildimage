@@ -1,0 +1,99 @@
+/dts-v1/;
+
+/*
+ * Generic FIT source template for SONiC Marvell Arm64 platforms.
+ *
+ * Unlike a build-time FIT, this template carries a single kernel, ramdisk
+ * and fdt image node instead of one copy per sub-platform (AC5x, CN9131,
+ * 7215-A1). FIT ties "load" to the *image* node rather than the
+ * *configuration* node, and each sub-platform boots at a different U-Boot
+ * load address -- so a static, build-time .its was forced to /incbin/ the
+ * same kernel+initrd data three times over (~141MB instead of ~47MB).
+ *
+ * This template is shipped as-is (with the kernel, initrd and DTBs it
+ * references) to /boot on the target rootfs, and is rendered into a
+ * concrete sonic_fit.its at *install* time by platform_arm64.conf, which
+ * already detects the sub-platform and therefore knows the one set of
+ * load addresses and DTB path to substitute. Placeholders substituted
+ * via sed:
+ *
+ *   __KERNEL_LOAD__  - kernel load/entry address (FIT cell list)
+ *   __INITRD_LOAD__  - ramdisk load/entry address (FIT cell list)
+ *   __FDT_LOAD__     - flat_dt load address (FIT cell list)
+ *   __KERNEL_PATH__  - absolute path to the vmlinuz to embed
+ *   __INITRD_PATH__  - absolute path to the initrd.img to embed
+ *   __FDT_PATH__     - absolute path to the platform DTB to embed
+ *   __CONF_NAME__    - configuration node name (e.g. conf_ac5x,
+ *                      conf_cn9131, conf_7215_a1)
+ *
+ * __CONF_NAME__ MUST stay sub-platform-specific (not a generic "conf"),
+ * even though this template only ever renders one configuration. The
+ * U-Boot env var fit_conf_name is global and shared by BOTH boot slots
+ * (sonic_image_1/sonic_image_2 both reference it live, at boot time --
+ * see platform_arm64.conf). Every previously-installed FIT on a given
+ * board -- old multi-config or this new single-config design -- always
+ * used the same sub-platform-specific config name, so fit_conf_name
+ * never had to change across installs/rollbacks on the same board. A
+ * generic "conf" name breaks that: installing a new-style image would
+ * repoint the shared fit_conf_name at "#conf", which the *other* boot
+ * slot's FIT (old-style, or a previous new-style image predating a
+ * name change) does not contain, making it fail to boot with
+ * "Could not find configuration node".
+ */
+
+/ {
+    description = "U-Boot fitImage for SONIC Marvell Arm64";
+    #address-cells = <1>;
+
+    images {
+        kernel {
+            description = "Linux Kernel";
+            data = /incbin/("__KERNEL_PATH__");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <__KERNEL_LOAD__>;
+            entry = <__KERNEL_LOAD__>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt {
+            description = "Flattened Device Tree blob";
+            data = /incbin/("__FDT_PATH__");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <__FDT_LOAD__>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk {
+            description = "ramdisk";
+            data = /incbin/("__INITRD_PATH__");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <__INITRD_LOAD__>;
+            entry = <__INITRD_LOAD__>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+    };
+    configurations {
+        default = "__CONF_NAME__";
+        __CONF_NAME__ {
+            description = "Boot Linux kernel with FDT blob + ramdisk";
+            kernel = "kernel";
+            fdt = "fdt";
+            ramdisk = "ramdisk";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+    };
+};
