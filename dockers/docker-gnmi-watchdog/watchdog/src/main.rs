@@ -2,7 +2,9 @@ use std::collections::{BTreeSet, HashMap};
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
+use std::os::unix::fs::FileTypeExt;
+use std::os::unix::net::UnixStream;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -20,6 +22,9 @@ struct HealthStatus {
     // Set when the watchdog cannot authenticate to the server, so gNMI probes were not run.
     #[serde(skip_serializing_if = "Option::is_none")]
     probes_skipped: Option<String>,
+    // Set when the SHOW probe ran but no xpath succeeded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    show_probe_error: Option<String>,
     xpath_commands: Vec<CommandResult>,
     xpath_load_errors: Vec<String>,
 }
@@ -32,6 +37,9 @@ struct CommandResult {
     // The server answered gRPC NotFound: this gnmi build doesn't implement the xpath.
     unsupported: bool,
     duration_ms: u128,
+    // The server answered gRPC Unauthenticated.
+    #[serde(skip)]
+    unauthenticated: bool,
 }
 
 const CMD_LIST_JSON: &str = "/cmd_list.json"; // absolute path inside container
@@ -39,6 +47,12 @@ const XPATH_ENV_VAR: &str = "GNMI_WATCHDOG_XPATHS"; // comma-separated list
 const XPATH_ENV_BLACKLIST: &str = "GNMI_WATCHDOG_XPATHS_BLACKLIST"; // comma-separated list to exclude
 const CMD_TIMEOUT_ENV_VAR: &str = "GNMI_WATCHDOG_CMD_TIMEOUT_SECS"; // per-command timeout seconds
 const GNMI_BASE_CMD: &str = "gnmi_get"; // assumed in PATH
+// gnmi serves this socket next to TCP; mounted from the host.
+const DEFAULT_UNIX_SOCKET: &str = "/var/run/gnmi/gnmi.sock";
+const UNIX_SOCKET_ENV_VAR: &str = "GNMI_WATCHDOG_UNIX_SOCKET";
+// With --pid=host, PID 1's view is the host network namespace whatever the container's own is.
+const PROC_NET_DIRS: [&str; 2] = ["/proc/1/net", "/proc/net"];
+const TCP_LISTEN_STATE: &str = "0A";
 // optional: set to "false" to skip show api (gnmi xpath) probing
 const SHOW_API_PROBE_ENV_VAR: &str = "GNMI_WATCHDOG_SHOW_API_PROBE_ENABLED";
 // optional: set to "true" to enable serial number probing
@@ -93,13 +107,18 @@ const HTTP_ERROR: &str = "HTTP/1.1 500 Internal Server Error";
 //    }
 // 2. Environment variable GNMI_WATCHDOG_XPATHS optional. Comma-separated list of xpaths.
 // Both sources are merged; duplicates removed.
-// During probe: for each xpath (after port OK) run command:
-//   gnmi_get -xpath_target SHOW -xpath <XPATH> -target_addr 127.0.0.1:<port> -logtostderr \
+// During probe: for each xpath (after the listener check) run command:
+//   gnmi_get -xpath_target SHOW -xpath <XPATH> -target_addr unix://<socket> -logtostderr -notls
+// gnmi skips authentication for unix-socket peers, so no TLS or client cert is needed. If the
+// socket is missing, or the server rejects it as Unauthenticated (gnmi builds that authenticate
+// unix peers), fall back to TCP:
+//   gnmi_get ... -target_addr 127.0.0.1:<port> -logtostderr \
 //     [ -ca <ca> -cert <cert> -key <key> -target_name <name> | -insecure true | -notls ]
-// The TLS mode mirrors gnmi-native.sh (see server_tls_mode). Port, cert paths and user_auth
+// The TCP TLS mode mirrors gnmi-native.sh (see server_tls_mode). Port, cert paths and user_auth
 // come from CONFIG_DB (GNMI|gnmi, GNMI|certs, DEVICE_METADATA|x509, DEVICE_METADATA|localhost).
 // Any failure (spawn error / non-zero exit / timeout) sets HTTP 500; body lists per-xpath results.
-// A SHOW xpath the server reports as gRPC NotFound is marked unsupported and does not fail the check.
+// A SHOW xpath the server reports as gRPC NotFound is marked unsupported and does not fail the
+// check, but at least one SHOW xpath must succeed.
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum TlsMode {
@@ -334,6 +353,7 @@ fn run_probe(
         error,
         unsupported: false,
         duration_ms: start.elapsed().as_millis(),
+        unauthenticated: false,
     };
 
     cmd.stdin(if stdin_data.is_some() { Stdio::piped() } else { Stdio::null() })
@@ -406,6 +426,7 @@ fn run_probe(
             msg.push_str(&format!("exit code: {exit_code}"));
             let mut res = result(false, Some(msg));
             res.unsupported = allow_unsupported && is_grpc_not_found(&raw_stderr);
+            res.unauthenticated = raw_stderr.contains("code = Unauthenticated");
             res
         }
         Err(e) => {
@@ -419,14 +440,25 @@ fn run_probe(
     }
 }
 
+fn gnmi_get_unix_command(program: &str, socket: &str, xpath: &str, xpath_target: &str) -> Command {
+    let mut cmd = Command::new(program);
+    cmd.arg("-xpath_target").arg(xpath_target)
+        .arg("-xpath").arg(xpath)
+        .arg("-target_addr").arg(format!("unix://{socket}"))
+        .arg("-logtostderr")
+        .arg("-notls");
+    cmd
+}
+
 fn gnmi_get_command(
+    program: &str,
     xpath: &str,
     port: u16,
     sec: &GnmiSecurityConfig,
     target_name: &str,
     xpath_target: &str,
 ) -> Command {
-    let mut cmd = Command::new(GNMI_BASE_CMD);
+    let mut cmd = Command::new(program);
     cmd.arg("-xpath_target").arg(xpath_target)
         .arg("-xpath").arg(xpath)
         .arg("-target_addr").arg(format!("127.0.0.1:{port}"))
@@ -457,8 +489,49 @@ fn run_gnmi_for_xpath(
     xpath_target: &str,
     allow_unsupported: bool,
 ) -> CommandResult {
-    let cmd = gnmi_get_command(xpath, port, sec, target_name, xpath_target);
+    let cmd = gnmi_get_command(GNMI_BASE_CMD, xpath, port, sec, target_name, xpath_target);
     run_probe(xpath, cmd, None, timeout, allow_unsupported)
+}
+
+fn usable_socket(path: &str) -> Option<String> {
+    let is_socket = fs::metadata(path).map(|m| m.file_type().is_socket()).unwrap_or(false);
+    is_socket.then(|| path.to_string())
+}
+
+// A unix-socket probe the server rejected as Unauthenticated: retry over TCP.
+fn unix_rejected(res: &CommandResult) -> bool {
+    !res.success && res.unauthenticated
+}
+
+// Runs gnmi_get over the unix socket while it is usable, else over TCP.
+struct Prober {
+    program: String,
+    socket: Option<String>,
+    // Err(reason) when the watchdog has no credentials the TCP listener accepts.
+    tcp: Result<(u16, GnmiSecurityConfig), String>,
+    target_name: String,
+    timeout: Duration,
+}
+
+impl Prober {
+    fn get(&mut self, xpath: &str, xpath_target: &str, allow_unsupported: bool) -> Result<CommandResult, String> {
+        if let Some(socket) = &self.socket {
+            let cmd = gnmi_get_unix_command(&self.program, socket, xpath, xpath_target);
+            let res = run_probe(xpath, cmd, None, self.timeout, allow_unsupported);
+            if !unix_rejected(&res) {
+                return Ok(res);
+            }
+            eprintln!("gNMI unix socket {socket} requires authentication; falling back to TCP");
+            self.socket = None;
+        }
+        match &self.tcp {
+            Ok((port, sec)) => {
+                let cmd = gnmi_get_command(&self.program, xpath, *port, sec, &self.target_name, xpath_target);
+                Ok(run_probe(xpath, cmd, None, self.timeout, allow_unsupported))
+            }
+            Err(reason) => Err(reason.clone()),
+        }
+    }
 }
 
 // Validates ConfigDB YANG integrity: `echo '[]' | sudo config apply-patch /dev/stdin`.
@@ -513,11 +586,61 @@ fn feature_enabled(state: Option<&str>) -> bool {
     }
 }
 
-fn check_gnmi_port(port: u16) -> String {
-    match TcpStream::connect(("127.0.0.1", port)) {
-        Ok(_) => "OK".to_string(),
-        Err(e) => format!("ERROR: {}", e),
+// True if a /proc/net/tcp or tcp6 table has a LISTEN socket on `port`, on any address. A
+// listener bound in a VRF (l3mdev, same namespace) is listed too, unlike a 127.0.0.1 connect.
+fn tcp_listening(table: &str, port: u16) -> bool {
+    table.lines().skip(1).any(|line| {
+        let cols: Vec<&str> = line.split_whitespace().collect();
+        let local_port = cols
+            .get(1)
+            .and_then(|local| local.rsplit(':').next())
+            .and_then(|hex| u16::from_str_radix(hex, 16).ok());
+        local_port == Some(port) && cols.get(3) == Some(&TCP_LISTEN_STATE)
+    })
+}
+
+fn read_tcp_tables() -> Result<String, String> {
+    let mut last_err = String::new();
+    for dir in PROC_NET_DIRS {
+        match fs::read_to_string(format!("{dir}/tcp")) {
+            // tcp6 is absent when IPv6 is disabled.
+            Ok(v4) => return Ok(v4 + &fs::read_to_string(format!("{dir}/tcp6")).unwrap_or_default()),
+            Err(e) => last_err = format!("cannot read {dir}/tcp: {e}"),
+        }
     }
+    Err(last_err)
+}
+
+// In uds-only mode (GNMI_LISTENER_MODE=uds-only) gnmi has no TCP listener; with no port
+// configured, a live unix socket counts as the listener being up.
+fn listener_status(
+    tables: Result<String, String>,
+    port: u16,
+    port_configured: bool,
+    socket_live: impl FnOnce() -> bool,
+) -> String {
+    let tables = match tables {
+        Ok(t) => t,
+        Err(e) => return format!("ERROR: {e}"),
+    };
+    if tcp_listening(&tables, port) {
+        "OK".to_string()
+    } else if !port_configured && socket_live() {
+        "OK (unix socket)".to_string()
+    } else {
+        format!("ERROR: no TCP listener on port {port}")
+    }
+}
+
+fn show_probe_error(results: &[CommandResult]) -> Option<String> {
+    if results.is_empty() || results.iter().any(|r| r.success) {
+        return None;
+    }
+    let unsupported = results.iter().filter(|r| r.unsupported).count();
+    Some(format!(
+        "no supported SHOW xpaths: {unsupported} unsupported, {} failed",
+        results.len() - unsupported
+    ))
 }
 
 fn run_health_checks() -> (bool, HealthStatus) {
@@ -533,6 +656,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
         let status = HealthStatus {
             gnmi_status: "SKIPPED: feature disabled".to_string(),
             probes_skipped: None,
+            show_probe_error: None,
             xpath_commands: cmd_results,
             xpath_load_errors: load_errors,
         };
@@ -541,12 +665,16 @@ fn run_health_checks() -> (bool, HealthStatus) {
 
     let gnmi = redis_hgetall("GNMI|gnmi");
     let port = parse_gnmi_port(field(&gnmi, "port"));
-    let gnmi_status = check_gnmi_port(port);
-    // Only run xpath probes if the port is reachable
+    let socket = usable_socket(&env_or_default(UNIX_SOCKET_ENV_VAR, DEFAULT_UNIX_SOCKET));
+    let gnmi_status = listener_status(read_tcp_tables(), port, field(&gnmi, "port").is_some(), || {
+        socket.as_deref().map(|s| UnixStream::connect(s).is_ok()).unwrap_or(false)
+    });
+    // Only run xpath probes if the listener is up
     if !gnmi_status.starts_with("OK") {
         let status = HealthStatus {
             gnmi_status,
             probes_skipped: None,
+            show_probe_error: None,
             xpath_commands: cmd_results,
             xpath_load_errors: load_errors,
         };
@@ -569,25 +697,9 @@ fn run_health_checks() -> (bool, HealthStatus) {
         cmd_results.push(res_patch);
     }
 
-    // Without usable credentials every gNMI probe would be rejected by a healthy server, and a
-    // false 500 would get it restarted; report the gap instead of failing.
-    let sec_cfg = match sec_cfg {
-        Ok(cfg) => cfg,
-        Err(reason) => {
-            eprintln!("Skipping gNMI probes: {reason}");
-            let status = HealthStatus {
-                gnmi_status,
-                probes_skipped: Some(reason),
-                xpath_commands: cmd_results,
-                xpath_load_errors: load_errors,
-            };
-            return (ok, status);
-        }
-    };
-
     // Certificate probes: a BAD client cert must be rejected and a GOOD one accepted.
-    // Only run when probing with a client cert; an insecure probe would not exercise cert auth.
-    if cert_probe_enabled && sec_cfg.tls == (TlsMode::Tls { client_cert: true }) {
+    // They exercise TCP cert auth, so only run when the TCP listener expects a client cert.
+    if cert_probe_enabled && matches!(&sec_cfg, Ok(cfg) if cfg.tls == TlsMode::Tls { client_cert: true }) {
         let bad_sec = GnmiSecurityConfig {
             tls: TlsMode::Tls { client_cert: true },
             ca_crt: env_or_default(BAD_CA_ENV_VAR, DEFAULT_BAD_CA),
@@ -619,28 +731,61 @@ fn run_health_checks() -> (bool, HealthStatus) {
         cmd_results.push(res_good);
     }
 
+    let mut prober = Prober {
+        program: GNMI_BASE_CMD.to_string(),
+        socket,
+        tcp: sec_cfg.map(|cfg| (port, cfg)),
+        target_name,
+        timeout,
+    };
+    // Without usable credentials every gNMI probe would be rejected by a healthy server, and a
+    // false 500 would get it restarted; report the gap instead of failing.
+    let mut probes_skipped = None;
+    let mut show_error = None;
+
     if env_flag_var(SERIALNUMBER_PROBE_ENV_VAR, false) {
-        let res_sn = run_gnmi_for_xpath(SERIAL_NUMBER_XPATH, port, &sec_cfg, &target_name, timeout, "STATE_DB", false);
-        ok &= res_sn.success;
-        cmd_results.push(res_sn);
+        match prober.get(SERIAL_NUMBER_XPATH, "STATE_DB", false) {
+            Ok(res_sn) => {
+                ok &= res_sn.success;
+                cmd_results.push(res_sn);
+            }
+            Err(reason) => probes_skipped = Some(reason),
+        }
     }
 
-    if env_flag_var(SHOW_API_PROBE_ENV_VAR, true) {
+    if probes_skipped.is_none() && env_flag_var(SHOW_API_PROBE_ENV_VAR, true) {
         let (xpaths, xpath_load_errors) = load_xpath_list();
         if !xpath_load_errors.is_empty() {
             load_errors.extend(xpath_load_errors);
             ok = false;
         }
+        let mut show_results = Vec::new();
         for xp in xpaths {
-            let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout, "SHOW", true);
-            ok &= res.success || res.unsupported;
-            cmd_results.push(res);
+            match prober.get(&xp, "SHOW", true) {
+                Ok(res) => {
+                    ok &= res.success || res.unsupported;
+                    show_results.push(res);
+                }
+                Err(reason) => {
+                    probes_skipped = Some(reason);
+                    break;
+                }
+            }
         }
+        if probes_skipped.is_none() {
+            show_error = show_probe_error(&show_results);
+            ok &= show_error.is_none();
+        }
+        cmd_results.extend(show_results);
+    }
+    if let Some(reason) = &probes_skipped {
+        eprintln!("Skipping gNMI probes: {reason}");
     }
 
     let status = HealthStatus {
         gnmi_status,
-        probes_skipped: None,
+        probes_skipped,
+        show_probe_error: show_error,
         xpath_commands: cmd_results,
         xpath_load_errors: load_errors,
     };
@@ -872,7 +1017,7 @@ mod tests {
             server_crt: "crt".into(),
             server_key: "key".into(),
         };
-        let cmd = gnmi_get_command("uptime", 50052, &sec, "tgt", "SHOW");
+        let cmd = gnmi_get_command(GNMI_BASE_CMD, "uptime", 50052, &sec, "tgt", "SHOW");
         assert_eq!(cmd.get_program(), GNMI_BASE_CMD);
         assert_eq!(
             args(&cmd),
@@ -889,7 +1034,7 @@ mod tests {
             server_crt: "crt".into(),
             server_key: "key".into(),
         };
-        let cmd = gnmi_get_command("uptime", 8080, &sec, "tgt", "SHOW");
+        let cmd = gnmi_get_command(GNMI_BASE_CMD, "uptime", 8080, &sec, "tgt", "SHOW");
         assert_eq!(
             args(&cmd),
             vec!["-xpath_target", "SHOW", "-xpath", "uptime", "-target_addr", "127.0.0.1:8080",
@@ -905,7 +1050,7 @@ mod tests {
             server_crt: "crt".into(),
             server_key: "key".into(),
         };
-        let cmd = gnmi_get_command(SERIAL_NUMBER_XPATH, 8080, &sec, "tgt", "STATE_DB");
+        let cmd = gnmi_get_command(GNMI_BASE_CMD, SERIAL_NUMBER_XPATH, 8080, &sec, "tgt", "STATE_DB");
         assert_eq!(
             args(&cmd),
             vec!["-xpath_target", "STATE_DB", "-xpath", SERIAL_NUMBER_XPATH, "-target_addr",
@@ -988,12 +1133,196 @@ mod tests {
     }
 
     #[test]
-    fn check_gnmi_port_reports_reachability() {
+    fn tcp_table_parsing() {
+        // 0xC3B4 = 50100, 0x1F90 = 8080, 0xC3B5 = 50101
+        let v4 = "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:C3B4 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 1 1 0000000000000000 100 0 0 10 0
+   1: 0100007F:1F90 0100007F:D2F0 01 00000000:00000000 00:00000000 00000000     0        0 2 1 0000000000000000 20 4 30 10 -1
+   2: 0100007F:C3B5 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 3 1 0000000000000000 100 0 0 10 0
+";
+        assert!(tcp_listening(v4, 50100));
+        assert!(tcp_listening(v4, 50101));
+        // ESTABLISHED (01), not LISTEN
+        assert!(!tcp_listening(v4, 8080));
+        assert!(!tcp_listening(v4, 0xD2F0));
+        assert!(!tcp_listening("", 50100));
+
+        let v6 = "  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000000000000000000000000000:1F90 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 4 1 0000000000000000 100 0 0 10 0
+   1: 00000000000000000000000001000000:C3B4 00000000000000000000000001000000:9C40 06 00000000:00000000 03:00000F4F 00000000     0        0 0 3 0000000000000000
+";
+        assert!(tcp_listening(v6, 8080));
+        // TIME_WAIT (06)
+        assert!(!tcp_listening(v6, 50100));
+    }
+
+    const LISTEN_8080: &str = "header
+   0: 00000000:1F90 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 4 1
+";
+
+    #[test]
+    fn listener_status_rules() {
+        let never = || -> bool { panic!("socket consulted") };
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 8080, true, never), "OK");
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, true, || true),
+                   "ERROR: no TCP listener on port 50052");
+        // uds-only: no port configured, no TCP listener, live socket.
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || true), "OK (unix socket)");
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || false),
+                   "ERROR: no TCP listener on port 8080");
+        assert_eq!(listener_status(Err("cannot read".into()), 8080, false, || true), "ERROR: cannot read");
+    }
+
+    #[test]
+    fn proc_tcp_tables_readable() {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
-        assert_eq!(check_gnmi_port(port), "OK");
+        assert!(tcp_listening(&read_tcp_tables().unwrap(), port));
         drop(listener);
-        assert!(check_gnmi_port(port).starts_with("ERROR: "));
+        assert!(!tcp_listening(&read_tcp_tables().unwrap(), port));
+    }
+
+    fn result(success: bool, unsupported: bool) -> CommandResult {
+        CommandResult {
+            xpath: "x".into(),
+            success,
+            error: None,
+            unsupported,
+            duration_ms: 0,
+            unauthenticated: false,
+        }
+    }
+
+    #[test]
+    fn show_probe_needs_one_success() {
+        assert_eq!(show_probe_error(&[]), None);
+        assert_eq!(show_probe_error(&[result(false, true), result(true, false)]), None);
+        assert_eq!(
+            show_probe_error(&[result(false, true), result(false, true)]),
+            Some("no supported SHOW xpaths: 2 unsupported, 0 failed".to_string())
+        );
+        assert_eq!(
+            show_probe_error(&[result(false, true), result(false, false)]),
+            Some("no supported SHOW xpaths: 1 unsupported, 1 failed".to_string())
+        );
+    }
+
+    struct Stub {
+        dir: std::path::PathBuf,
+    }
+
+    impl Stub {
+        // A fake gnmi_get that logs its args and runs `body`.
+        fn new(name: &str, body: &str) -> Stub {
+            use std::os::unix::fs::PermissionsExt;
+            let dir = env::temp_dir().join(format!("gnmi-watchdog-test-{}-{name}", std::process::id()));
+            let _ = fs::remove_dir_all(&dir);
+            fs::create_dir_all(&dir).unwrap();
+            let script = dir.join("gnmi_get");
+            let log = dir.join("calls");
+            fs::write(&script, format!("#!/bin/sh\necho \"$*\" >> '{}'\n{body}\n", log.display())).unwrap();
+            fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+            Stub { dir }
+        }
+
+        fn program(&self) -> String {
+            self.dir.join("gnmi_get").display().to_string()
+        }
+
+        fn calls(&self) -> Vec<String> {
+            fs::read_to_string(self.dir.join("calls")).unwrap_or_default().lines().map(String::from).collect()
+        }
+
+        fn prober(&self, socket: Option<&str>, tcp: Result<(u16, GnmiSecurityConfig), String>) -> Prober {
+            Prober {
+                program: self.program(),
+                socket: socket.map(String::from),
+                tcp,
+                target_name: "tgt".into(),
+                timeout: Duration::from_secs(5),
+            }
+        }
+    }
+
+    impl Drop for Stub {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    fn notls_tcp() -> Result<(u16, GnmiSecurityConfig), String> {
+        Ok((8080, GnmiSecurityConfig {
+            tls: NO_TLS,
+            ca_crt: "ca".into(),
+            server_crt: "crt".into(),
+            server_key: "key".into(),
+        }))
+    }
+
+    const UNAUTH: &str = r#"case "$*" in *unix://*) echo 'rpc error: code = Unauthenticated desc = no cert' >&2; exit 1;; esac"#;
+
+    #[test]
+    fn prober_uses_unix_socket_when_present() {
+        let stub = Stub::new("unix", "exit 0");
+        let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
+        assert!(prober.get("clock", "SHOW", true).unwrap().success);
+        assert_eq!(stub.calls(), vec!["-xpath_target SHOW -xpath clock -target_addr unix:///run/g.sock -logtostderr -notls"]);
+    }
+
+    #[test]
+    fn prober_uses_tcp_without_socket() {
+        let stub = Stub::new("tcp", "exit 0");
+        let mut prober = stub.prober(None, notls_tcp());
+        assert!(prober.get("clock", "SHOW", true).unwrap().success);
+        assert_eq!(stub.calls(), vec!["-xpath_target SHOW -xpath clock -target_addr 127.0.0.1:8080 -logtostderr -notls"]);
+    }
+
+    #[test]
+    fn prober_falls_back_to_tcp_on_unauthenticated() {
+        let stub = Stub::new("fallback", UNAUTH);
+        let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
+        assert!(prober.get("clock", "SHOW", true).unwrap().success);
+        assert!(prober.get("uptime", "SHOW", true).unwrap().success);
+        let calls = stub.calls();
+        assert_eq!(calls.len(), 3, "{calls:?}");
+        assert!(calls[0].contains("unix:///run/g.sock"));
+        assert!(calls[1].contains("-xpath clock -target_addr 127.0.0.1:8080"));
+        // The socket is not retried after it rejected us.
+        assert!(calls[2].contains("-xpath uptime -target_addr 127.0.0.1:8080"));
+    }
+
+    #[test]
+    fn prober_keeps_unix_result_on_other_errors() {
+        let stub = Stub::new("notfound", "echo 'rpc error: code = NotFound desc = not found in clientTrie' >&2; exit 1");
+        let mut prober = stub.prober(Some("/run/g.sock"), notls_tcp());
+        let res = prober.get("clock", "SHOW", true).unwrap();
+        assert!(res.unsupported);
+        assert_eq!(stub.calls().len(), 1);
+    }
+
+    #[test]
+    fn prober_reports_skip_when_tcp_unusable() {
+        let reason = "user_auth=password not supported by watchdog".to_string();
+        let stub = Stub::new("skip", UNAUTH);
+        let mut prober = stub.prober(Some("/run/g.sock"), Err(reason.clone()));
+        assert_eq!(prober.get("clock", "SHOW", true).unwrap_err(), reason);
+        let mut prober = stub.prober(None, Err(reason.clone()));
+        assert_eq!(prober.get("clock", "SHOW", true).unwrap_err(), reason);
+    }
+
+    #[test]
+    fn usable_socket_requires_a_socket() {
+        let dir = env::temp_dir().join(format!("gnmi-watchdog-test-{}-sock", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let sock = dir.join("gnmi.sock").display().to_string();
+        let file = dir.join("file").display().to_string();
+        fs::write(&file, "").unwrap();
+        let _listener = std::os::unix::net::UnixListener::bind(&sock).unwrap();
+        assert_eq!(usable_socket(&sock), Some(sock.clone()));
+        assert_eq!(usable_socket(&file), None);
+        assert_eq!(usable_socket(&dir.join("missing").display().to_string()), None);
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -1001,6 +1330,7 @@ mod tests {
         let mut status = HealthStatus {
             gnmi_status: "OK".to_string(),
             probes_skipped: None,
+            show_probe_error: None,
             xpath_commands: vec![],
             xpath_load_errors: vec![],
         };
