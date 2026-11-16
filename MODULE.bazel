@@ -23,8 +23,8 @@ bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
 
-# P4 producers retain their upstream Make/configure builds and export TARs.
-bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.4", repo_name = "p4lang_pi")
+# P4 producers export TARs; PI uses native Bazel rules.
+bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.6", repo_name = "p4lang_pi")
 bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.3", repo_name = "p4lang_bmv2")
 bazel_dep(name = "p4c", version = "1.2.4.2.sonic.3")
 bazel_dep(name = "sonic-dash", version = "0.0.3-2cbfdfa1205c0d03003444e5c80f89adb8c3df59", repo_name = "sonic_dash")
@@ -36,14 +36,7 @@ bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "net-snmp", version = "5.9.3.sonic.1", repo_name = "net_snmp")
 
 # Share APT lock metadata across dependency sets.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.18")
-# Shared-only pkg-config ordering anchors carry no static object code.
-single_version_override(
-    module_name = "rules_distroless",
-    version = "0.9.4.sonic.18",
-    patches = ["//src/sonic-frr:0003-distroless-shared-link-sequences.patch"],
-    patch_strip = 1,
-)
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.19")
 # Preserve system and quote headers in the P4/DASH Make builds.
 bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
