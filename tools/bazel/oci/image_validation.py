@@ -11,6 +11,7 @@ import tarfile
 
 ROOT = Path(__file__).absolute().parents[3]
 from tools.bazel.ci.artifact_validation import path_name as member_name, require, sha
+from tools.bazel.ci.validation_inputs import cached_inventory
 from tools.bazel.oci import oci_inventory
 from tools.bazel.oci.oci_inventory import assert_overlay_paths
 from tools.bazel.oci.oci_layout import validate_layout
@@ -40,12 +41,17 @@ def assert_ancestry(parent, child, description):
 def verify_unique_layer_paths(layout):
     """Docker rejects duplicate paths within a TAR, including directories."""
     for layer in layout.layers:
-        seen = set()
-        with tarfile.open(layer, "r:*") as archive:
-            for member in archive:
-                name = str(PurePosixPath(member.name))
-                require(name not in seen, "OCI layer repeats a path that Docker cannot load: " + name)
-                seen.add(name)
+        cached_inventory(layer, "oci_unique_layer_paths", lambda: _verify_unique_layer_paths(layer))
+
+
+def _verify_unique_layer_paths(layer):
+    seen = set()
+    with tarfile.open(layer, "r:*") as archive:
+        for member in archive:
+            name = str(PurePosixPath(member.name))
+            require(name not in seen, "OCI layer repeats a path that Docker cannot load: " + name)
+            seen.add(name)
+    return True
 
 
 def image_inventory(layout):

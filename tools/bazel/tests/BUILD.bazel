@@ -1191,6 +1191,22 @@ _SYNCD_P4_IMAGE_INPUTS = {
 }
 
 py_test(
+    name = "syncd_validation_timing_test",
+    size = "small",
+    srcs = [
+        "integration/syncd_p4_images_test.py",
+        "syncd_validation_timing_test.py",
+    ],
+    main = "syncd_validation_timing_test.py",
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
     name = "syncd_p4_images_test",
     size = "large",
     srcs = ["integration/syncd_p4_images_test.py"],

@@ -49,6 +49,7 @@ py_library(
         ":oci_layout",
         ":package_contract_lib",
         "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
     ],
 )
 

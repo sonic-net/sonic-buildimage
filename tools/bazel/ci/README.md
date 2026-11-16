@@ -292,6 +292,16 @@ Bazel configurations. The generated `*-installed-images-policy.json` files
 bind the Docker checks to those outputs; `installed-images.json` records the
 shared Docker-load result. The active workflow publishes these files in
 `sonic-vs-image-validation-amd64`.
+The Syncd `validation.json` includes additive `performance` evidence:
+`phase_seconds` separates input identity, image/archive validation, native
+packages/symbols, inherited base/symbols, and final input-integrity verification.
+`validation_seconds` excludes Bazel dependency preparation. Progress and timings
+are printed in the test log. Scoped cache statistics count hash reads/hits and
+bytes, inventory hits/misses, evictions and size/file-limit bypasses, plus
+separate final-integrity reads, bytes and duration.
+Successful duplicate-path checks for identical OCI layer bytes are reused only
+within the immutable-input cache scope. Invalid layers are never cached, and
+final byte-integrity verification remains mandatory.
 `runtime-debug-pairs-timing.json` (schema 2) records the revision and profile,
 P4 validation time, pair validation time and their total. It does not include
 the image build duration.

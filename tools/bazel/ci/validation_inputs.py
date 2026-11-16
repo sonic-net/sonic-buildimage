@@ -12,6 +12,7 @@ from copy import deepcopy
 import hashlib
 from pathlib import Path
 import sys
+import time
 
 _current = ContextVar("validation_inputs", default=None)
 
@@ -48,6 +49,13 @@ class _Inputs:
         self.max_bytes, self.max_files = max_bytes, max_files
         self.files, self.inventories = {}, OrderedDict()
         self.bytes = 0
+        self.counters = {
+            "hash_reads": 0, "hash_hits": 0, "hashed_bytes": 0,
+            "inventory_hits": 0, "inventory_misses": 0,
+            "inventory_evictions": 0, "inventory_oversized": 0,
+            "inventory_untracked": 0, "verification_reads": 0,
+            "verification_bytes": 0, "verification_seconds": 0.0,
+        }
 
     def contains(self, path):
         path = Path(path).absolute()
@@ -60,9 +68,12 @@ class _Inputs:
         if path in self.files:
             stamp, digest = self.files[path]
             _unchanged(path, stamp)
+            self.counters["hash_hits"] += 1
             return digest
         digest = _digest(path)
         _unchanged(path, before)
+        self.counters["hash_reads"] += 1
+        self.counters["hashed_bytes"] += before[2]
         if len(self.files) < self.max_files:
             self.files[path] = (before, digest)
         return digest
@@ -73,14 +84,17 @@ class _Inputs:
         digest = self.digest(path)
         if path not in self.files:
             # Do not retain a result whose path cannot be checked at scope exit.
+            self.counters["inventory_untracked"] += 1
             result = read()
             _unchanged(path, before)
             return result
         key = (kind, digest)
         if key in self.inventories:
+            self.counters["inventory_hits"] += 1
             self.inventories.move_to_end(key)
             result = deepcopy(self.inventories[key][0])
         else:
+            self.counters["inventory_misses"] += 1
             result = read()
             _unchanged(path, before)
             size = _size(result)
@@ -88,17 +102,30 @@ class _Inputs:
                 while self.inventories and self.bytes + size > self.max_bytes:
                     _, (_, removed) = self.inventories.popitem(last=False)
                     self.bytes -= removed
+                    self.counters["inventory_evictions"] += 1
                 self.inventories[key] = (deepcopy(result), size)
                 self.bytes += size
+            else:
+                self.counters["inventory_oversized"] += 1
         _unchanged(path, before)
         return result
 
     def verify(self):
+        started = time.perf_counter()
         for path, (stamp, digest) in self.files.items():
             _unchanged(path, stamp)
             if _digest(path) != digest:
                 raise ValueError("validation input changed: " + str(path))
             _unchanged(path, stamp)
+            self.counters["verification_reads"] += 1
+            self.counters["verification_bytes"] += stamp[2]
+        self.counters["verification_seconds"] = time.perf_counter() - started
+
+    def statistics(self):
+        return {**self.counters, "tracked_files": len(self.files),
+                "retained_inventories": len(self.inventories),
+                "retained_inventory_bytes": self.bytes,
+                "max_inventory_bytes": self.max_bytes, "max_files": self.max_files}
 
 
 @contextmanager
@@ -113,11 +140,13 @@ def validation_input_cache(paths, *, max_bytes=64 * 1024 * 1024, max_files=512):
     These must be read-only validation inputs, not concurrent build outputs.
     Oversized inventories and paths beyond the file budget are
     read normally instead of retained.
+    The yielded cache exposes statistics(); hash counters cover scoped reads,
+    while verification counters measure the separate successful-exit recheck.
     """
     inputs = _Inputs(paths, max_bytes, max_files)
     token = _current.set(inputs)
     try:
-        yield
+        yield inputs
         inputs.verify()
     finally:
         _current.reset(token)

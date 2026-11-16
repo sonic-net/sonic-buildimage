@@ -12,6 +12,8 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 ROOT = Path(__file__).absolute().parents[4]
 sys.path.insert(0, str(ROOT))
@@ -904,6 +906,48 @@ class CachedValidateImageTest(ValidateImageTest):
     def validate(self, **kwargs):
         with validation_input_cache([self.root]):
             return super().validate(**kwargs)
+
+
+class CachedUniqueLayerPathsTest(unittest.TestCase):
+    def test_shared_layer_is_scanned_once_per_validation_scope(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first, second = root / "first.tar", root / "second.tar"
+            first.write_bytes(layer([("usr/share/file", b"contents", 0o644)]))
+            second.write_bytes(first.read_bytes())
+            layout = SimpleNamespace(layers=[first, second, first])
+            with patch.object(subject, "_verify_unique_layer_paths",
+                              wraps=subject._verify_unique_layer_paths) as scan:
+                with validation_input_cache([root]):
+                    subject.verify_unique_layer_paths(layout)
+                    subject.verify_unique_layer_paths(layout)
+                    self.assertEqual(scan.call_count, 1)
+                subject.verify_unique_layer_paths(SimpleNamespace(layers=[first]))
+                self.assertEqual(scan.call_count, 2)
+
+    def test_duplicate_paths_are_rejected_on_every_attempt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "duplicate.tar"
+            path.write_bytes(layer([("./file", b"one", 0o644), ("file", b"two", 0o644)]))
+            with validation_input_cache([root]), \
+                    patch.object(subject, "_verify_unique_layer_paths",
+                                 wraps=subject._verify_unique_layer_paths) as scan:
+                for _ in range(2):
+                    with self.assertRaisesRegex(ValueError, "repeats a path"):
+                        subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
+                self.assertEqual(scan.call_count, 2)
+
+    def test_cached_success_still_rejects_changed_layer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "layer.tar"
+            path.write_bytes(layer([("file", b"one", 0o644)]))
+            with self.assertRaisesRegex(ValueError, "validation input changed"):
+                with validation_input_cache([root]):
+                    subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
+                    path.write_bytes(layer([("file", b"two", 0o644)]))
+                    subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
 
 
 if __name__ == "__main__":

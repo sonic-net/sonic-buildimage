@@ -45,6 +45,48 @@ class ValidationInputsTest(unittest.TestCase):
             oci_inventory.apply_layer(self.layer, files)
             self.assertEqual(files["usr/share/example"], expected)
 
+    def test_statistics_measure_content_reuse_and_separate_final_integrity_reads(self):
+        other = self.root / "same-content.tar"
+        other.write_bytes(self.layer.read_bytes())
+        with validation_inputs.validation_input_cache([self.root]) as cache:
+            for path in (self.layer, other, self.layer):
+                oci_inventory.apply_layer(path, {})
+            stats = cache.statistics()
+            self.assertEqual(stats["hash_reads"], 2)
+            self.assertEqual(stats["hash_hits"], 1)
+            self.assertEqual(stats["hashed_bytes"], self.layer.stat().st_size * 2)
+            self.assertEqual(stats["inventory_misses"], 1)
+            self.assertEqual(stats["inventory_hits"], 2)
+            self.assertEqual(stats["verification_reads"], 0)
+            stats["hash_reads"] = 999
+            self.assertEqual(cache.statistics()["hash_reads"], 2)
+        stats = cache.statistics()
+        self.assertEqual(stats["verification_reads"], 2)
+        self.assertEqual(stats["verification_bytes"], self.layer.stat().st_size * 2)
+        self.assertGreaterEqual(stats["verification_seconds"], 0)
+
+    def test_statistics_record_eviction_and_inventory_limits(self):
+        value = {"entry": "metadata"}
+        size = validation_inputs._size(value)
+        with validation_inputs.validation_input_cache([self.layer], max_bytes=size) as cache:
+            for kind in ("first", "second", "first"):
+                validation_inputs.cached_inventory(self.layer, kind, lambda: value)
+            stats = cache.statistics()
+            self.assertEqual(stats["inventory_misses"], 3)
+            self.assertEqual(stats["inventory_evictions"], 2)
+            self.assertEqual(stats["retained_inventories"], 1)
+            self.assertEqual(stats["retained_inventory_bytes"], size)
+        for limits, counter in (({"max_bytes": 1}, "inventory_oversized"),
+                                ({"max_files": 0}, "inventory_untracked")):
+            with self.subTest(limits=limits):
+                with validation_inputs.validation_input_cache([self.layer], **limits) as cache:
+                    for _ in range(2):
+                        validation_inputs.cached_inventory(self.layer, "large", lambda: value)
+                    stats = cache.statistics()
+                    self.assertEqual(stats[counter], 2)
+                    self.assertEqual(stats["inventory_hits"], 0)
+                    self.assertEqual(stats["retained_inventories"], 0)
+
     def test_rejects_mutation_even_when_size_and_mtime_are_restored(self):
         stamp = self.layer.stat()
         with self.assertRaisesRegex(ValueError, "validation input changed"):

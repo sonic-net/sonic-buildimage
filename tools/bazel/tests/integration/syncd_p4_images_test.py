@@ -1,9 +1,11 @@
 """Validate real Syncd images and their source-built P4 package identities."""
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import time
 
 from tools.bazel.ci.artifact_validation import require, sha, verify_make_archives
 from tools.bazel.ci.validation_inputs import validation_input_cache
@@ -25,6 +27,20 @@ NATIVE_INPUTS = (
 )
 SOURCE_BASE_INPUTS = ("base_symbols", "base_metadata", "config_metadata", "workspace_module")
 P4_RUNTIME_PACKAGES = {"p4lang-pi", "p4lang-bmv2", "p4lang-p4c", "libsai"}
+
+
+@contextmanager
+def phase(name, timings):
+    started = time.perf_counter()
+    status = "failed"
+    print(f"Syncd validation: {name} started", flush=True)
+    try:
+        yield
+        status = "completed"
+    finally:
+        elapsed = time.perf_counter() - started
+        timings[name] = elapsed
+        print(f"Syncd validation: {name} {status} in {elapsed:.3f}s", flush=True)
 
 
 def check_p4_inputs(contract_path, receipt_path):
@@ -49,26 +65,38 @@ def main():
     for name in (*IMAGE_INPUTS, *SOURCE_BASE_INPUTS, "policy", "make_runtime_archive", "make_debug_archive", "readelf", "objcopy"):
         parser.add_argument("--" + name.replace("_", "-"), required=True, type=Path)
     inputs = vars(parser.parse_args())
-    with validation_input_cache(inputs.values()):
-        policy = read_policy(inputs["policy"])
-        p4 = check_p4_inputs(inputs["source_contract_path"], inputs["source_receipt"])
-        verify_make_archives(inputs)
-        images = image_validation.validate_images(
-            source_root=Path.cwd(), policy=policy, runtime_handoff=None, debug_handoff=None,
-            **{name: inputs[name] for name in IMAGE_INPUTS})
-        native = native_packages.validate_native(
-            None, None, policy=policy,
-            readelf=str(inputs["readelf"].resolve()), objcopy=str(inputs["objcopy"].resolve()),
-            **{name: inputs[name] for name in NATIVE_INPUTS})
-        inherited = validate_source_base(
-            inputs["runtime_path"], inputs["debug_path"],
-            metadata_paths=[inputs["base_metadata"], inputs["config_metadata"]],
-            source_debug_tar=inputs["base_symbols"], architecture=policy["architecture"],
-            workspace_module=inputs["workspace_module"],
-            readelf=str(inputs["readelf"].resolve()), objcopy=str(inputs["objcopy"].resolve()))
+    timings = {}
+    started = time.perf_counter()
+    with validation_input_cache(inputs.values()) as cache:
+        with phase("input_identity", timings):
+            policy = read_policy(inputs["policy"])
+            p4 = check_p4_inputs(inputs["source_contract_path"], inputs["source_receipt"])
+            verify_make_archives(inputs)
+        with phase("images_and_archives", timings):
+            images = image_validation.validate_images(
+                source_root=Path.cwd(), policy=policy, runtime_handoff=None, debug_handoff=None,
+                **{name: inputs[name] for name in IMAGE_INPUTS})
+        with phase("native_packages_and_symbols", timings):
+            native = native_packages.validate_native(
+                None, None, policy=policy,
+                readelf=str(inputs["readelf"].resolve()), objcopy=str(inputs["objcopy"].resolve()),
+                **{name: inputs[name] for name in NATIVE_INPUTS})
+        with phase("inherited_base_and_symbols", timings):
+            inherited = validate_source_base(
+                inputs["runtime_path"], inputs["debug_path"],
+                metadata_paths=[inputs["base_metadata"], inputs["config_metadata"]],
+                source_debug_tar=inputs["base_symbols"], architecture=policy["architecture"],
+                workspace_module=inputs["workspace_module"],
+                readelf=str(inputs["readelf"].resolve()), objcopy=str(inputs["objcopy"].resolve()))
+        print("Syncd validation: input_integrity started", flush=True)
+    timings["input_integrity"] = cache.statistics()["verification_seconds"]
+    performance = {"phase_seconds": timings, "validation_seconds": time.perf_counter() - started,
+                   "cache": cache.statistics()}
+    print("Syncd validation performance: " + json.dumps(performance, sort_keys=True), flush=True)
     report = {"_generated": {"notice": "AUTO-GENERATED. DO NOT EDIT MANUALLY.",
                              "generator": "tools/bazel/tests/integration/syncd_p4_images_test.py"},
               "schema": 1, "p4": p4, "images": images, "native": native, "source_base": inherited,
+              "performance": performance,
               "scope": "Actual AMD64 Syncd runtime/debug images, package inputs and exported archives; boot and forwarding are separate."}
     output = Path(os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR", ".")) / "validation.json"
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
