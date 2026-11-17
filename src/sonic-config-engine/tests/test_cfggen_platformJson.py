@@ -326,6 +326,8 @@ class TestCfgGenPlatformJson(TestCase):
         children = get_child_ports("Ethernet192", "4x25G(4)[10G,1G]", "test_platform.json")
         self.assertEqual([port["subport"] for port in children.values()], ["1", "2", "3", "4"])
         self.assertEqual([port["lanes"] for port in children.values()], ["192", "193", "194", "195"])
+        self.assertEqual(
+            get_child_ports("Ethernet192", "4x25G (4)\t[10G] [1G]", "test_platform.json"), children)
 
         modes = test_platform_json["interfaces"]["Ethernet192"]["breakout_modes"]
         for entries in (list(modes.items()), list(reversed(list(modes.items())))):
@@ -344,6 +346,12 @@ class TestCfgGenPlatformJson(TestCase):
                              {"2x100G": ["etp25a", "etp25b"]}, clear=True):
             with self.assertRaisesRegex(RuntimeError, r"explicit selection.*Ethernet192.*2x100G"):
                 get_child_ports("Ethernet192", None, "test_platform.json", select_minimum=True)
+
+        other_interface = dict(test_platform_json["interfaces"]["Ethernet192"],
+                               breakout_modes={"1x100G": ["etp26"]})
+        with mock.patch.dict(test_platform_json["interfaces"], {"Ethernet200": other_interface}):
+            ports, _, _ = get_port_config(source=(None, "test_platform.json", None))
+            self.assertEqual(set(ports), {"Ethernet192", "Ethernet200"})
 
         for field, interface in (("lanes", "Ethernet192"), ("index", "Ethernet192"), (None, "Port192")):
             properties = {key: value for key, value in test_platform_json["interfaces"]["Ethernet192"].items()
@@ -365,6 +373,7 @@ class TestCfgGenPlatformJson(TestCase):
                     ({'Ethernet20': {'default_brkout_mode': 42}}, mode_error),
                     ({'Ethernet20': {'default_brkout_mode': 'invalid'}}, mode_error),
                     ({'Ethernet20': {'default_brkout_mode': '1xG[40G]'}}, mode_error),
+                    ({'Ethernet20': {'default_brkout_mode': '1x100G[40G] (4)\njunk'}}, mode_error),
                     ({'Ethernet20': {'default_brkout_mode': '3x25G'}}, mode_error),
                     ({'Ethernet20': {'default_brkout_mode': '1x100G[40G]'},
                       'Ethernet999': {'default_brkout_mode': '1x100G'}}, r"Unknown interfaces.*Ethernet999")):
@@ -381,3 +390,15 @@ class TestCfgGenPlatformJson(TestCase):
             with self.subTest(filename=filename), \
                     self.assertRaisesRegex(RuntimeError, r"expected '\*platform\.json' or '\*\.ini'"):
                 get_port_config(source=(None, filename, None))
+
+    @mock.patch('os.path.isfile')
+    def test_platform_hwsku_file_fallback(self, mock_isfile):
+        from portconfig import get_breakout_mode, get_hwsku_file_name
+
+        for directory in (os.path.join('/usr/share/sonic/device', 'test-platform'),
+                          '/usr/share/sonic/platform'):
+            path = os.path.join(directory, 'hwsku.json')
+            mock_isfile.side_effect = {path}.__contains__
+            self.assertEqual(get_hwsku_file_name(platform='test-platform'), path)
+            self.assertIsNone(get_breakout_mode(
+                platform='test-platform', port_config_file=self.platform_json))

@@ -92,10 +92,14 @@ class TestDeviceInfo(object):
         ([], None, None, False),
         (["hwsku.json"], None, None, False),
         (["platform.json"], "platform.json", None, False),
-        (["platform.json"], None, None, True),
+        (["platform.json"], "platform.json", "0", True),
         (["hwsku.json", "platform.json"], "platform.json", None, False),
         (["platform.json", "port_config.ini"], "port_config.ini", "0", False),
         (["hwsku.json", "platform.json", "port_config.ini"], "platform.json", "0", False),
+        (["platform.json", "platform_port_config.ini"], "platform_port_config.ini", None, False),
+        (["platform.json", "platform_hwsku.json", "platform_port_config.ini"], "platform.json", "0", True),
+        (["platform.json", "platform_hwsku.json", "port_config.ini", "platform_port_config.ini"],
+         "port_config.ini", "0", True),
     ])
     @mock.patch("sonic_py_common.device_info.get_platform", return_value="test-platform")
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir", return_value="platform")
@@ -112,6 +116,8 @@ class TestDeviceInfo(object):
             "hwsku.json": os.path.join(hwsku_dir, "hwsku.json"),
             "platform.json": os.path.join("platform", "platform.json"),
             "port_config.ini": os.path.join(ini_dir, "port_config.ini"),
+            "platform_hwsku.json": os.path.join("platform", "hwsku.json"),
+            "platform_port_config.ini": os.path.join("platform", "port_config.ini"),
         }
         mock_isfile.side_effect = {paths[filename] for filename in files}.__contains__
 

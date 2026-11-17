@@ -88,7 +88,7 @@ def db_connect_configdb(namespace=None):
         config_db = None
     return config_db
 
-def get_hwsku_file_name(hwsku=None, platform=None):
+def get_hwsku_file_name(hwsku=None, platform=None, include_platform_root=True):
     hwsku_candidates_Json = []
     hwsku_candidates_Json.append(os.path.join(HWSKU_ROOT_PATH, HWSKU_JSON))
     if hwsku:
@@ -96,6 +96,10 @@ def get_hwsku_file_name(hwsku=None, platform=None):
             hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH, platform, hwsku, HWSKU_JSON))
         hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH_DOCKER, hwsku, HWSKU_JSON))
         hwsku_candidates_Json.append(os.path.join(SONIC_ROOT_PATH, hwsku, HWSKU_JSON))
+    if include_platform_root:
+        if platform:
+            hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH, platform, HWSKU_JSON))
+        hwsku_candidates_Json.append(os.path.join(PLATFORM_ROOT_PATH_DOCKER, HWSKU_JSON))
     for candidate in hwsku_candidates_Json:
         if os.path.isfile(candidate):
             return candidate
@@ -487,9 +491,10 @@ class BreakoutCfg(object):
         """
 
         try:
-            # Normalize (lanes)[speeds] to [speeds](lanes).
+            # Normalize option spacing and (lanes)[speeds] to [speeds](lanes).
+            normalized = re.sub(r'\s*(\[[^\[\]]+\]|\(\d{1,6}\))\s*', r'\1', bmode)
             normalized = re.sub(
-                r'(\(\d{1,6}\))((?:\[[^\[\]]+\])+)', r'\2\1', bmode)
+                r'(\(\d{1,6}\))((?:\[[^\[\]]+\])+)', r'\2\1', normalized)
             normalized = normalized.replace('][', ',')
             groups_list = [re.fullmatch(BRKOUT_PATTERN, i).groups() for i in normalized.split("+")]
             return [self._re_group_to_entry(group) for group in groups_list]
@@ -566,7 +571,6 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
     ports = {}
     port_alias_map = {}
     port_alias_asic_map = {}
-    used_lanes = set()
 
     port_dict = readJson(platform_json_file)
     if port_dict is None:
@@ -593,11 +597,6 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file, validate_inter
 
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file,
                                      select_minimum=not hwsku_json_file)
-        if not hwsku_json_file:
-            lanes = set(child_ports[intf]["lanes"].split(",")) - {""}
-            if used_lanes & lanes:
-                continue
-            used_lanes.update(lanes)
 
         # take optional fields from hwsku.json
         hwsku_entry = hwsku_dict[INTF_KEY]
@@ -629,8 +628,8 @@ def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
         if not port_config_file:
             return None
     if Path(port_config_file).name.endswith(PLATFORM_JSON):
-        hwsku_json_file = get_hwsku_file_name(hwsku, platform)
-        # Minimum generation has no installed hwsku.json and writes PORT only.
+        hwsku_json_file = get_hwsku_file_name(hwsku, platform, include_platform_root=False)
+        # Minimum and platform-root generation write PORT only.
         if not hwsku_json_file:
             return None
 

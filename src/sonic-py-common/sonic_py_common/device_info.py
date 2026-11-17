@@ -595,6 +595,11 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
     else:
         port_config_file = os.path.join(hwsku_path, PORT_CONFIG_FILE)
 
+    if not os.path.isfile(port_config_file):
+        port_config_file = os.path.join(platform_path, PORT_CONFIG_FILE)
+        if not os.path.isfile(hwsku_json_file):
+            hwsku_json_file = os.path.join(platform_path, HWSKU_JSON_FILE)
+
     """
     This length check for interfaces in platform.json is performed to make sure
     the cfggen does not fail if port configuration information is not present
@@ -602,10 +607,8 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
           remove this check
     """
 
-    # Preserve legacy INI profiles unless an installed JSON selection takes priority.
-    # Multi-ASIC INI files are per ASIC, so only single-ASIC devices fall back when one is missing.
-    if (os.path.isfile(hwsku_json_file)
-            or (not is_multi_npu() and not os.path.isfile(port_config_file))):
+    # Prefer JSON selections to INI profiles; use the minimum fallback when neither exists.
+    if os.path.isfile(hwsku_json_file) or not os.path.isfile(port_config_file):
         if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
             json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
             platform_data = json.loads(open(json_file).read())
