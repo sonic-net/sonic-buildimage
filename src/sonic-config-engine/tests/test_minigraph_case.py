@@ -646,10 +646,18 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertTrue(('eth0', 'FC00:1::32/64') in mgmt_intf.keys())
         self.assertTrue(ipaddress.ip_address(u'fc00:1::1') == mgmt_intf[('eth0', 'FC00:1::32/64')]['gwaddr'])
 
-    def test_device_desc_compatibility_exports(self):
-        self.assertIs(minigraph.minigraph_encoder, config_encoder.minigraph_encoder)
-        self.assertIs(minigraph.parse_device, device_desc.parse_device)
-        self.assertIs(minigraph.parse_device_desc_xml, device_desc.parse_device_desc_xml)
+    def test_device_desc_neutral_module_parity(self):
+        root = ET.parse(self.sample_simple_device_desc).getroot()
+        self.assertEqual(minigraph.parse_device(root), device_desc.parse_device(root))
+
+        payload = {
+            'address': ipaddress.ip_address(u'10.0.0.1'),
+            'network': ipaddress.ip_network(u'FC00:1::/64'),
+        }
+        self.assertEqual(
+            json.dumps(payload, sort_keys=True, cls=minigraph.minigraph_encoder),
+            json.dumps(payload, sort_keys=True, cls=config_encoder.minigraph_encoder)
+        )
 
         for filename in (
                 self.sample_simple_device_desc,
