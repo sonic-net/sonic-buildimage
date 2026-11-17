@@ -18,6 +18,86 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class VerificationWorkflowTest(unittest.TestCase):
+    def test_image_jobs_restore_populated_submodules_on_reused_checkouts(self):
+        script = Path("tools/bazel/ci/prepare_image_submodules.sh")
+        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        for job in ("archive", "gearbox_archive", "dash_engine_archive"):
+            self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"][job]["steps"]])
+
+        env = dict(os.environ, GIT_ALLOW_PROTOCOL="file")
+
+        def git(repo, *args):
+            return subprocess.check_output(
+                ["git", "-c", "user.name=Fixture", "-c", "user.email=ci@example.org", *args],
+                cwd=repo, env=env, text=True, stderr=subprocess.PIPE,
+            ).strip()
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, parent, checkout = (root / name for name in ("source", "parent", "checkout"))
+            git(root, "init", "-q", str(source))
+            git(root, "init", "-q", str(parent))
+            (source / "input").write_text("old\n")
+            git(source, "add", "input")
+            git(source, "commit", "-qm", "old")
+            old = git(source, "rev-parse", "HEAD")
+            (source / "input").write_text("pinned\n")
+            git(source, "commit", "-qam", "pinned")
+            pinned = git(source, "rev-parse", "HEAD")
+
+            # Pin a nested copy of the original repository before the top-level
+            # source gains a submodule of its own.
+            nested = root / "nested source"
+            git(root, "clone", "-q", str(source), str(nested))
+            git(source, "submodule", "add", "-q", str(nested), "nested module")
+            git(source, "commit", "-qm", "pin nested module")
+            nested_pin = pinned
+            pinned = git(source, "rev-parse", "HEAD")
+
+            gnoi, pins, unused = "src/sonic-sysmgr/gnoi", "src/sonic-p4rt/sonic-pins", "unused module"
+            for path in (gnoi, pins, unused):
+                git(parent, "submodule", "add", "-q", str(source), path)
+            git(parent, "commit", "-qm", "pin submodules")
+            git(root, "clone", "-q", str(parent), str(checkout))
+            git(checkout, "submodule", "init", "--", unused)
+
+            def prepare(check=True):
+                return subprocess.run(["bash", ROOT / script], cwd=checkout, env=env,
+                                      capture_output=True, text=True, check=check)
+
+            prepare()
+            self.assertEqual(git(checkout / gnoi, "rev-parse", "HEAD"), pinned)
+            self.assertFalse((checkout / pins / ".git").exists())
+            self.assertFalse((checkout / unused / ".git").exists())
+
+            git(checkout, "submodule", "update", "--init", "--", pins)
+            git(checkout / pins, "checkout", "-q", old)
+            git(checkout, "reset", "--hard", "HEAD")
+            self.assertIn(pins, git(checkout, "diff", "--name-only", "--ignore-submodules=none", "HEAD"))
+            # A populated worktree can also lose its local registration.
+            git(checkout, "config", "--remove-section", f"submodule.{pins}")
+            prepare()
+            self.assertEqual(git(checkout / pins, "rev-parse", "HEAD"), pinned)
+            self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
+            self.assertFalse((checkout / unused / ".git").exists())
+
+            git(checkout / pins, "submodule", "update", "--init", "--", "nested module")
+            retained = checkout / pins / "nested module"
+            git(retained, "checkout", "-q", old)
+            git(checkout / pins, "config", "--remove-section", "submodule.nested module")
+            prepare()
+            self.assertEqual(git(retained, "rev-parse", "HEAD"), nested_pin)
+            self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
+
+            # Already-pinned local edits remain visible to the strict build check.
+            (checkout / gnoi / "input").write_text("local edit\n")
+            prepare()
+            self.assertIn(gnoi, git(checkout, "diff", "--name-only", "--ignore-submodules=none", "HEAD"))
+            git(checkout / pins, "checkout", "-q", old)
+            (checkout / pins / "input").write_text("conflicting edit\n")
+            self.assertNotEqual(prepare(check=False).returncode, 0)
+            self.assertEqual((checkout / pins / "input").read_text(), "conflicting edit\n")
+
     def run_sysmgr_public_evidence(self, directory):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
         step = next(step for step in workflow["jobs"]["archive"]["steps"]
@@ -77,7 +157,20 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(gate["needs"], [
             "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
             "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
+            "dash_engine_runtime",
         ])
+        dash = jobs["dash_engine_archive"]
+        self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
+        self.assertEqual(dash["timeout-minutes"], 360)
+        self.assertEqual(shlex.split(dash["env"]["SONIC_CONTAINER_BAZEL_OPTIONS"]), [
+            "--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache",
+            "--experimental_build_event_upload_strategy=local",
+        ])
+        self.assertNotIn("needs", dash)
+        self.assertEqual(jobs["dash_engine_runtime"]["needs"], "dash_engine_archive")
+        self.assertEqual(jobs["dash_engine_runtime"]["runs-on"], "ubuntu-24.04")
+        self.assertTrue(any("dash_engine_loaded.py" in step.get("run", "")
+                            for step in jobs["dash_engine_runtime"]["steps"]))
         self.assertEqual(jobs["macsec_runtime"]["needs"], "archive")
         self.assertTrue(any("macsec_loaded.py" in step.get("run", "")
                             for step in jobs["macsec_runtime"]["steps"]))

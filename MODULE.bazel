@@ -61,7 +61,7 @@ register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.36-3070359b148ad6ad4eab749f5143ff2a38c980df",
+    version = "0.0.37-316e298e77ab5cfa69af9b0c05ec24d5d94bbe1e",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(
@@ -637,3 +637,23 @@ bazel_dep(name = "sonic-dash-ha", version = "0.0.1-502377912f3530c9bb6c270078229
 
 # The shared infrastructure lock provides separate runtime, debug and test collections.
 use_repo(apt, "dash_ha_debian", "dash_ha_debug_debian", "dash_ha_test_debian")
+
+# Native nnpy is source-built for the BMv2 clients installed by its owner.
+bazel_dep(name = "nnpy", version = "1.4.2.sonic.1")
+
+use_repo(apt, "dash_engine_debian", "dash_engine_debug_debian")
+
+apt_inputs(
+    name = "dash_engine_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+source_modules(
+    name = "dash_engine_source_modules",
+    modules = {
+        "@p4lang_pi//:MODULE.bazel": "p4lang-pi",
+        "@p4lang_bmv2//:MODULE.bazel": "p4lang-bmv2",
+        "@nnpy//:MODULE.bazel": "nnpy",
+        "@sonic_fips//:MODULE.bazel": "sonic-fips",
+    },
+)

@@ -23,7 +23,7 @@ JOBS = [("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
         ("bazel-yang-models.yml", "package")]
 PRIVATE_CACHE_JOBS = {
     ("bazel-oci.yml", "radv_native"),
-    ("bazel-oci.yml", "gearbox_archive"),
+    ("bazel-oci.yml", "gearbox_archive"), ("bazel-oci.yml", "dash_engine_archive"),
     ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
     ("bazel-oci.yml", "archive"), ("bazel-supervisor-rust.yml", "native"),
     ("bazel-yang-models.yml", "package"),
@@ -61,9 +61,9 @@ class SetupBazelCacheTest(unittest.TestCase):
                 with self.subTest(workflow=path.name, job=name):
                     enabled.add((path.name, name))
                     self.assertEqual(calls, ["python3 " + HELPER + " --private-remote-cache"])
-                    if path.name == "bazel-oci.yml" and name in {"radv_native", "gearbox_archive"}:
+                    if path.name == "bazel-oci.yml" and name in {"radv_native", "gearbox_archive", "dash_engine_archive"}:
                         labels = ["self-hosted", "linux", "bazel-x64"]
-                        if name == "gearbox_archive":
+                        if name in {"gearbox_archive", "dash_engine_archive"}:
                             labels.append("vs")
                         self.assertEqual(job["runs-on"], labels)
                         continue

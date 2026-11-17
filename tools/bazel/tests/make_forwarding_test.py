@@ -14,6 +14,7 @@ ARTIFACTS = (
     "target/docker-orchagent-dbg.gz",
     "target/docker-database.gz",
     "target/docker-database-dbg.gz",
+    "target/docker-dash-engine.gz",
     "target/docker-fpm-frr.gz",
     "target/docker-fpm-frr-dbg.gz",
     "target/docker-teamd.gz",

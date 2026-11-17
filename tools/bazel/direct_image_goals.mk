@@ -3,6 +3,7 @@
 SONIC_DIRECT_BAZEL_IMAGES := docker-database docker-fpm-frr docker-gbsyncd-vs docker-lldp docker-mux docker-router-advertiser docker-teamd
 
 sonic_direct_image_goals := $(foreach image,$(SONIC_DIRECT_BAZEL_IMAGES),target/$(image).gz target/$(image)-dbg.gz)
+sonic_direct_image_goals += target/docker-dash-engine.gz
 ifneq ($(filter $(sonic_direct_image_goals),$(MAKECMDGOALS)),)
 .PHONY: sonic-direct-image-forward
 $(filter $(sonic_direct_image_goals),$(MAKECMDGOALS)): sonic-direct-image-forward

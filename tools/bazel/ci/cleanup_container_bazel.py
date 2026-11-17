@@ -21,7 +21,7 @@ LOCAL_CACHES = (*CACHE_NAMES, "bazelisk")
 UPLOAD_PREFIX = "bazel_upload_"
 AUTHORIZATION = "bazel-cleanup-authorization.json"
 IDENTITY = "job-identity.json"
-CONTAINER_JOBS = {"archive", "gearbox_archive", "radv_native", "native"}
+CONTAINER_JOBS = {"archive", "gearbox_archive", "dash_engine_archive", "radv_native", "native"}
 SUPPORTED_JOBS = CONTAINER_JOBS | {"package"}
 
 
@@ -126,6 +126,9 @@ def mark_artifacts(workspace, runner_temp, directory, steps):
 
 
 def artifact_directories():
+    if os.environ["GITHUB_JOB"] == "dash_engine_archive":
+        # DASH evidence lives entirely inside the registered job directory.
+        return ()
     if os.environ["GITHUB_JOB"] == "package":
         return ("src/sonic-yang-models/artifacts",)
     return ("artifacts",)

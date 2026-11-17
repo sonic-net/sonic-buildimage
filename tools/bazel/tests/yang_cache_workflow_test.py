@@ -132,10 +132,12 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
         for path in WORKFLOW.parent.glob("*.yml"):
             for name, job in yaml.safe_load(path.read_text())["jobs"].items():
                 for index, step in enumerate(job.get("steps", [])):
-                    if "submodule update --init --checkout -- src/sonic-sysmgr/gnoi" not in step.get("run", ""):
+                    command = step.get("run", "")
+                    if "submodule update --init --checkout -- src/sonic-sysmgr/gnoi" in command:
+                        self.assertEqual(command, prepare)
+                    elif command != "bash tools/bazel/ci/prepare_image_submodules.sh":
                         continue
                     with self.subTest(workflow=path.name, job=name):
-                        self.assertEqual(step["run"], prepare)
                         self.assertTrue(any(
                             earlier.get("uses", "").startswith("actions/checkout@")
                             for earlier in job["steps"][:index]
@@ -147,7 +149,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
                         selected.add((path.name, name))
         self.assertEqual(selected, {
             ("bazel-oci.yml", name) for name in
-            ("archive", "gearbox_archive", "checks", "mgmt_framework_native", "radv_native")
+            ("archive", "gearbox_archive", "dash_engine_archive", "checks", "mgmt_framework_native", "radv_native")
         } | {
             ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
             ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),

@@ -54,7 +54,7 @@ def json_records(path):
             buffer += chunk
 
 
-def collect(execution_log, build_events, artifact_target):
+def collect(execution_log, build_events, artifact_target, *, allow_empty=False, include_action_summary=False):
     """Bind the complete successful artifact build to safe per-spawn counts."""
     public_artifacts.label(artifact_target)
     require(execution_log.is_file() and not execution_log.is_symlink(), "missing execution log")
@@ -64,7 +64,7 @@ def collect(execution_log, build_events, artifact_target):
             for line in stream:
                 last[0] = line
                 yield line
-        summary = public_artifacts.bep_summary(lines())
+        summary = public_artifacts.bep_summary(lines(), include_action_summary=include_action_summary)
     require(summary["command"] == "build" and
             summary["finished"] == {"success": True, "exit_code": 0} and
             summary["targets"].get(artifact_target) is True and
@@ -91,13 +91,18 @@ def collect(execution_log, build_events, artifact_target):
         require(record.get("status", "") == "" and type(exit_code) is int and exit_code == 0,
                 "unsuccessful execution-log record")
         groups[(target, mnemonic, runner, cache_hit)] += 1
-    require(bool(groups), "empty execution log cannot establish production cache reuse")
+    # A completed cached image-build phase may have no spawns at all. Production
+    # cache-reuse callers keep requiring at least one recorded action.
+    require(bool(groups) or allow_empty, "empty execution log cannot establish production cache reuse")
     actions = [{"target": target, "mnemonic": mnemonic, "runner": runner,
                 "cache_hit": hit, "count": count}
                for (target, mnemonic, runner, hit), count in
                sorted(groups.items(), key=lambda item: (item[0][0] or "", *item[0][1:]))]
     action_count = sum(groups.values())
     hits = sum(item["count"] for item in actions if item["cache_hit"])
-    return {"phase": "before_tests", "artifact_target": artifact_target,
+    result = {"phase": "before_tests", "artifact_target": artifact_target,
             "action_count": action_count, "cache_hit_count": hits,
             "executed_count": action_count - hits, "actions": actions}
+    if include_action_summary:
+        result["build_action_summary"] = summary["action_summary"]
+    return result
