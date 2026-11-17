@@ -1,0 +1,9 @@
+depmod -a
+systemctl restart systemd-modules-load.service
+
+udevadm control --reload
+udevadm trigger --action=add --subsystem-match=pci
+udevadm trigger --action=add --subsystem-match=watchdog
+udevadm settle
+
+systemctl daemon-reexec
