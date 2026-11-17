@@ -17,6 +17,8 @@ ARTIFACTS = (
     "target/docker-dash-engine.gz",
     "target/docker-fpm-frr.gz",
     "target/docker-fpm-frr-dbg.gz",
+    "target/docker-sonic-otel.gz",
+    "target/docker-sonic-otel-dbg.gz",
     "target/docker-teamd.gz",
     "target/docker-teamd-dbg.gz",
     "target/docker-router-advertiser.gz",

@@ -149,7 +149,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
                         selected.add((path.name, name))
         self.assertEqual(selected, {
             ("bazel-oci.yml", name) for name in
-            ("archive", "gearbox_archive", "dash_engine_archive", "checks", "mgmt_framework_native", "radv_native")
+            ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "checks", "mgmt_framework_native", "radv_native")
         } | {
             ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
             ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),

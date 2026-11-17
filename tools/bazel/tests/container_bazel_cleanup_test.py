@@ -86,6 +86,19 @@ class ContainerBazelCleanupTest(unittest.TestCase):
                 self.assertTrue((self.directory / "pre-sysmgr-artifacts/image.gz").is_file())
                 self.assertTrue(all(not (self.cache / name).exists() for name in subject.LOCAL_CACHES))
 
+    def test_otel_cleanup_only_removes_its_published_artifacts(self):
+        with mock.patch.dict(os.environ, GITHUB_JOB="otel_archive"):
+            directory = subject.prepare(self.workspace, self.runner_temp)
+            output = self.artifacts / "otel"
+            output.mkdir()
+            (output / "runtime.tar").write_bytes(b"published")
+            subject.mark_artifacts(self.workspace, self.runner_temp, directory, self.steps)
+            with mock.patch.object(subject, "servers", return_value=[]):
+                subject.cleanup(self.home, self.workspace, self.runner_temp, directory)
+            self.assertFalse(directory.exists())
+            self.assertFalse(output.exists())
+            self.assertTrue((self.artifacts / "image.gz").is_file())
+
     def test_skipped_matrix_groups_are_allowed_alongside_successful_uploads(self):
         self.steps.update({"teamd_public": {"outcome": "skipped"},
                            "bazel_upload_teamd_public": {"outcome": "skipped"}})
@@ -430,7 +443,8 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
         action = "./.github/actions/bazel-post-job-cleanup"
         selected = {name for name, job in jobs.items()
                     if any(step.get("uses") == action for step in job["steps"])}
-        self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "radv_native"})
+        self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "radv_native"})
+        self.assertLessEqual(selected, subject.CONTAINER_JOBS)
         self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
                          {"amd64", "arm64"})
         for name in selected:
