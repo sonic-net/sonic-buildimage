@@ -54,6 +54,14 @@ module sonic-vrf {
                     description
                         "VNI mapped to VRF";
                 }
+
+                leaf description {
+                    type string {
+                        length "1..255";
+                    }
+                    description
+                        "Description for the VRF";
+                }
             } /* end of list VRF_LISt */
         } /* end of container VRf */
     } /* end of container sonic-vrf */
