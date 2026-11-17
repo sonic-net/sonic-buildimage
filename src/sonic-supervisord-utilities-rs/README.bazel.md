@@ -69,8 +69,8 @@ The shared graph's established release logging cap remains in effect.
 ## Shared dependency validation
 
 Local commands and native CI select `sonic-rust-deps` version
-`0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1` from SONiC registry `main`.
+`0.0.5-dd364f207d7b320a5af12c81da6d10893f292205` from SONiC registry `main`.
 This registration uses landed `sonic-build-infra` source
-`6d9c70f708d7420e9e2b2cdc906b80cee6b140f1` for the supervisor aliases
+`dd364f207d7b320a5af12c81da6d10893f292205` for the supervisor aliases
 and native linking support. Both paths use ordinary module resolution without
 a local source checkout or module override.

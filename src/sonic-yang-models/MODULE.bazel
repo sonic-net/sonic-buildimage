@@ -3,10 +3,10 @@ module(
     version = "1.0.1",
 )
 
-bazel_dep(name = "rules_python", version = "1.8.0")
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.37-d31541a95fdf477302f1b109f2105eee81c86617",
+    version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe",
     repo_name = "sonic_build_infra",
 )
 
@@ -25,5 +25,5 @@ use_repo(pip, "sonic_yang_models_pip")
 # Keep the published source-install API selected for standalone consumers.
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.37-d31541a95fdf477302f1b109f2105eee81c86617",
+    version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe",
 )

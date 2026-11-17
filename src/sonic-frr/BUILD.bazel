@@ -21,7 +21,6 @@ exports_files(glob(["patch/*.patch"]) + [
     "source.BUILD.bazel",
     "0001-bazel-xrelfo.patch",
     "0002-bazel-documentation.patch",
-    "0003-distroless-shared-link-sequences.patch",
 ])
 
 bool_flag(name = "tcmalloc", build_setting_default = True)
