@@ -83,11 +83,7 @@ class ArchiveCachePolicyTest(unittest.TestCase):
                          PATH=str(commands) + os.pathsep + os.environ["PATH"]),
                 text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(rc.read_text().splitlines(), [
-                "common --color=no",
-                "startup --host_jvm_args=-XX:ActiveProcessorCount=2",
-                "startup --local_startup_timeout_secs=300",
-            ])
+            self.assertEqual(rc.read_text(), "common --color=no")
             self.assertNotIn("--host_jvm_args", job["env"]["BAZEL_CONTAINER_ARGS"])
             self.assertNotIn("--local_startup_timeout_secs", job["env"]["BAZEL_CONTAINER_ARGS"])
             exported = dict(line.split("=", 1) for line in environment_file.read_text().splitlines())
@@ -125,11 +121,13 @@ class ArchiveCachePolicyTest(unittest.TestCase):
             job["env"]["SONIC_BAZEL_REMOTE_UPLOAD"],
             "${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}")
         for flag in (
-            "--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=3072",
+            "--jobs=4", "--local_resources=memory=12288",
             "--experimental_remote_downloader=grpc://172.16.0.4:9092",
             "--experimental_remote_downloader_local_fallback",
         ):
             self.assertIn(flag, job["env"]["BAZEL_CONTAINER_ARGS"])
+        self.assertNotIn("--local_resources=cpu=2", job["env"]["BAZEL_CONTAINER_ARGS"])
+        self.assertNotIn("--local_resources=memory=3072", job["env"]["BAZEL_CONTAINER_ARGS"])
         checkout = job["steps"][0]["with"]
         directory = "vs-${{ github.run_id }}-${{ github.run_attempt }}"
         self.assertEqual(checkout["path"], directory)

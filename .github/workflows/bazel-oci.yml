@@ -2993,9 +2993,9 @@ jobs:
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
       SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
-      # Four concurrent Make recipes share the runner's Bazel action budget.
+      # Image recipes serialize through one Bazel server on this runner.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=2 --local_resources=cpu=2 --local_resources=memory=3072
+        --jobs=4 --local_resources=memory=12288
         --experimental_remote_downloader=grpc://172.16.0.4:9092
         --experimental_remote_downloader_local_fallback
         --distdir=/bazel_cache/distdir/ape-1.0.1
@@ -3078,10 +3078,6 @@ jobs:
               fi
             fi
           done
-          # Four image builds can start JVMs on this eight-CPU runner at once.
-          # Match each JVM to its two-CPU action budget and allow a busy start.
-          printf '\n%s\n%s\n' 'startup --host_jvm_args=-XX:ActiveProcessorCount=2' \
-            'startup --local_startup_timeout_secs=300' >> .bazelrc.user
           python3 -B tools/bazel/gzip/source_archive.py \
             --archives-dir artifacts/vs/repository-inputs \
             --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json

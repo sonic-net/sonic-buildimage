@@ -60,7 +60,7 @@ def main(arguments):
     if arguments[0] == "image-recipe":
         images = arguments[1:]
         commands = ["build", *("cquery-" + image for image in images)]
-        directory = start_recipe(Path.cwd(), images[0], [*commands, "shutdown"], commands,
+        directory = start_recipe(Path.cwd(), images[0], commands, commands,
                                  ["export-" + image for image in images])
         print(directory)
         return 0
