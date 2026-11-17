@@ -7,7 +7,7 @@
 	dh $@
 
 override_dh_auto_build:
-	cargo build --release --all
+	cargo build --release --locked --all
 
 override_dh_auto_install:
 	# do nothing
