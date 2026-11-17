@@ -1,0 +1,110 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load(":defs.bzl", "component_versions", "container_metadata")
+
+package(default_visibility = ["//visibility:public"])
+exports_files(["containers.json"])
+bool_flag(name = "use_make_metadata", build_setting_default = False)
+config_setting(name = "make_metadata", flag_values = {":use_make_metadata": "true"})
+string_flag(name = "version", build_setting_default = "local")
+py_library(name = "render_lib", srcs = ["generate.py"], imports = ["."], deps = ["//tools/bazel/oci:manifest_labels_lib"])
+py_binary(name = "generate", srcs = ["generate.py"], deps = ["//tools/bazel/oci:manifest_labels_lib"])
+
+_CONTAINERS = ["docker-base-trixie", "docker-bmp-watchdog", "docker-config-engine-trixie", "docker-dash-engine", "docker-dash-ha", "docker-database", "docker-dhcp-relay", "docker-eventd", "docker-fpm-frr", "docker-gbsyncd-vs", "docker-gnmi-sidecar", "docker-gnmi-watchdog", "docker-lldp", "docker-macsec", "docker-mux", "docker-nat", "docker-orchagent", "docker-platform-monitor", "docker-restapi-sidecar", "docker-router-advertiser", "docker-sflow", "docker-snmp", "docker-sonic-bmp", "docker-sonic-gnmi", "docker-sonic-mgmt-framework", "docker-sonic-otel", "docker-sonic-p4rt", "docker-swss-layer-trixie", "docker-syncd-vs", "docker-sysmgr", "docker-teamd"]
+
+[
+    container_metadata(name = image + suffix + ".native", image = image, debug = suffix == "-dbg")
+    for image in _CONTAINERS
+    for suffix in ["", "-dbg"]
+]
+[
+    alias(
+        name = image + suffix + ".manifest",
+        actual = select({
+            ":make_metadata": "//:target/bazel-manifests/" + image + suffix + "/manifest.json",
+            "//conditions:default": ":" + image + suffix + ".native",
+        }),
+    )
+    for image in _CONTAINERS
+    for suffix in ["", "-dbg"]
+]
+[
+    filegroup(name = image + suffix + ".native_env", srcs = [":" + image + suffix + ".native"], output_group = "environment")
+    for image in _CONTAINERS
+    for suffix in ["", "-dbg"]
+]
+[
+    alias(
+        name = image + suffix + ".environment",
+        actual = select({
+            ":make_metadata": "//:target/bazel-manifests/" + image + suffix + "/image.env",
+            "//conditions:default": ":" + image + suffix + ".native_env",
+        }),
+    )
+    for image in _CONTAINERS
+    for suffix in ["", "-dbg"]
+]
+filegroup(name = "image_version", srcs = [":docker-database.native"], output_group = "version")
+
+component_versions(
+    name = "database_component_versions",
+    receipt = "//dockers/docker-database:runtime_package_metadata",
+    packages = ["libswsscommon"],
+)
+alias(
+    name = "docker-database/components.labels",
+    actual = select({
+        ":make_metadata": "//:target/bazel-manifests/docker-database/components.labels",
+        "//conditions:default": ":database_component_versions",
+    }),
+)
+
+# The receipt schema is the existing installed_packages metadata API. Exercise
+# its consumer without making a complete Database OCI image a test prerequisite.
+write_file(
+    name = "component_receipt_fixture",
+    out = "component-receipt.json",
+    content = ["{\"dependency_check\":{\"packages\":{\"libswsscommon\":{\"Package\":\"libswsscommon\",\"Version\":\"1.0.0+fixture\"}}}}"],
+    testonly = True,
+)
+component_versions(
+    name = "fixture_components",
+    receipt = ":component_receipt_fixture",
+    packages = ["libswsscommon"],
+    testonly = True,
+)
+string_flag(name = "empty_fixture_version", build_setting_default = "", testonly = True)
+string_flag(name = "explicit_fixture_version", build_setting_default = "fixture-explicit", testonly = True)
+manifest_labels(
+    name = "fallback_fixture_labels",
+    manifest = ":docker-database.manifest",
+    image_version = ":empty_fixture_version",
+    testonly = True,
+)
+manifest_labels(
+    name = "explicit_fixture_labels",
+    manifest = ":docker-database.manifest",
+    image_version = ":explicit_fixture_version",
+    testonly = True,
+)
+py_test(
+    name = "metadata_test",
+    srcs = ["metadata_test.py"],
+    deps = [":render_lib"],
+    args = [
+        "--runtime=$(rootpath :docker-database.manifest)",
+        "--debug=$(rootpath :docker-database-dbg.manifest)",
+        "--environment=$(rootpath :docker-database.environment)",
+        "--version=$(rootpath :image_version)",
+        "--components=$(rootpath :fixture_components)",
+        "--fallback-labels=$(rootpath :fallback_fixture_labels)",
+        "--explicit-labels=$(rootpath :explicit_fixture_labels)",
+    ],
+    data = [
+        ":docker-database.manifest", ":docker-database-dbg.manifest",
+        ":docker-database.environment", ":image_version", ":fixture_components",
+        ":fallback_fixture_labels", ":explicit_fixture_labels",
+    ],
+)

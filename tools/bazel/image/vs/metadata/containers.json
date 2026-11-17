@@ -1,0 +1,1483 @@
+{
+  "schema": 1,
+  "configuration": {
+    "platform": "vs",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "fips": true,
+    "dash": true
+  },
+  "containers": {
+    "docker-base-trixie": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "",
+          "depends": [],
+          "name": ""
+        },
+        "service": {
+          "name": "",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "",
+      "local_package": false,
+      "installed": false,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-bmp-watchdog": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "bmp_watchdog"
+        },
+        "service": {
+          "name": "bmp_watchdog",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --privileged --pid=host -v /lib/systemd/system:/lib/systemd/system:rw -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-config-engine-trixie": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "",
+          "depends": [],
+          "name": ""
+        },
+        "service": {
+          "name": "",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "",
+      "local_package": false,
+      "installed": false,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-dash-engine": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "dash-engine"
+        },
+        "service": {
+          "name": "dash_engine",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": true,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "--privileged -t",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-dash-ha": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "dash-ha"
+        },
+        "service": {
+          "name": "dash-ha",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [
+              "swss"
+            ],
+            "before": [
+              "syncd"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [
+              "swss"
+            ],
+            "before": [
+              "syncd"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-database": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "database"
+        },
+        "service": {
+          "name": "database",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --security-opt apparmor=unconfined --security-opt=\"systempaths=unconfined\" -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-dhcp-relay": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [
+            "database^1.0.0"
+          ],
+          "name": "dhcp-relay"
+        },
+        "service": {
+          "name": "dhcp_relay",
+          "requires": [
+            "config-setup"
+          ],
+          "after": [
+            "swss",
+            "syncd",
+            "teamd"
+          ],
+          "before": [],
+          "dependent-of": [
+            "swss"
+          ],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [
+            "/etc/sonic:/etc/sonic:ro",
+            "/etc/localtime:/etc/localtime:ro"
+          ],
+          "tmpfs": [
+            "/tmp/",
+            "/var/tmp/"
+          ]
+        },
+        "cli": {
+          "config": "/cli/config/plugins/dhcp_relay.py",
+          "show": "/cli/show/plugins/show_dhcp_relay.py",
+          "clear": "/cli/clear/plugins/clear_dhcp_relay.py"
+        }
+      },
+      "run_options": "",
+      "local_package": true,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": "y"
+    },
+    "docker-eventd": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "eventd"
+        },
+        "service": {
+          "name": "eventd",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-fpm-frr": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "fpm-frr"
+        },
+        "service": {
+          "name": "bgp",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [
+              "radv"
+            ],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [
+              "radv"
+            ],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-gbsyncd-vs": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "gbsyncd"
+        },
+        "service": {
+          "name": "gbsyncd",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "--privileged -t -v /host/machine.conf:/etc/machine.conf -v /etc/sonic:/etc/sonic:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-gnmi-sidecar": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "gnmi-sidecar"
+        },
+        "service": {
+          "name": "gnmi-sidecar",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --pid=host --cap-add=SYS_ADMIN --cap-add=SYS_PTRACE --cap-add=DAC_OVERRIDE --security-opt apparmor=unconfined --security-opt seccomp=unconfined -v /lib/systemd/system:/lib/systemd/system:rw -v /etc/audit:/etc/audit:rw -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-gnmi-watchdog": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "gnmi_watchdog"
+        },
+        "service": {
+          "name": "gnmi_watchdog",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --pid=host -v /lib/systemd/system:/lib/systemd/system:rw -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-lldp": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "lldp"
+        },
+        "service": {
+          "name": "lldp",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-macsec": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "macsec"
+        },
+        "service": {
+          "name": "macsec",
+          "requires": [
+            "config-setup"
+          ],
+          "after": [
+            "swss",
+            "syncd"
+          ],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [
+            "/etc/sonic:/etc/sonic:ro",
+            "/etc/localtime:/etc/localtime:ro"
+          ],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "/cli/config/plugins/macsec.py",
+          "show": "/cli/show/plugins/show_macsec.py",
+          "clear": "/cli/clear/plugins/clear_macsec_counter.py"
+        }
+      },
+      "run_options": "",
+      "local_package": true,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": "y"
+    },
+    "docker-mux": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "mux"
+        },
+        "service": {
+          "name": "mux",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-nat": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "nat"
+        },
+        "service": {
+          "name": "nat",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-orchagent": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "swss"
+        },
+        "service": {
+          "name": "swss",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "syncd"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "syncd"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN --security-opt apparmor=unconfined --security-opt=\"systempaths=unconfined\" -v /etc/network/interfaces:/etc/network/interfaces:ro -v /etc/localtime:/etc/localtime:ro  -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro -v /host/machine.conf:/host/machine.conf:ro -v /etc/sonic:/etc/sonic:ro -v /var/log/swss:/var/log/swss:rw -v /zmq_swss:/zmq_swss:rw",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-platform-monitor": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "pmon"
+        },
+        "service": {
+          "name": "pmon",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "--cap-add=SYS_RAWIO --cap-add=SYS_ADMIN -t --security-opt apparmor=unconfined --security-opt=\"systempaths=unconfined\" -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro  -v /host/reboot-cause:/host/reboot-cause:rw -v /host/pmon/stormond:/usr/share/stormond:rw -v /var/run/platform_cache:/var/run/platform_cache:ro -v /usr/share/sonic/device/pddf:/usr/share/sonic/device/pddf:ro -v /var/lock/pddf-locks:/var/lock/pddf-locks:rw -v /sys/:/sys/:rw",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-restapi-sidecar": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "restapi-sidecar"
+        },
+        "service": {
+          "name": "restapi-sidecar",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --privileged --pid=host -v /lib/systemd/system:/lib/systemd/system:rw -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-router-advertiser": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "radv"
+        },
+        "service": {
+          "name": "radv",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sflow": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "sflow"
+        },
+        "service": {
+          "name": "sflow",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-snmp": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "snmp"
+        },
+        "service": {
+          "name": "snmp",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sonic-bmp": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "bmp"
+        },
+        "service": {
+          "name": "bmp",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro -v /var/run/dbus:/var/run/dbus:rw",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sonic-gnmi": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "gnmi"
+        },
+        "service": {
+          "name": "gnmi",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro -v /var/run/dbus:/var/run/dbus:rw -v /:/mnt/host:ro -v /tmp:/mnt/host/tmp:rw -v /var/tmp:/mnt/host/var/tmp:rw --pid=host --cap-add=SYS_ADMIN --cap-add=SYS_BOOT --cap-add=SYS_PTRACE --cap-add=NET_ADMIN --cap-add=DAC_OVERRIDE --security-opt apparmor=unconfined --security-opt seccomp=unconfined --userns=host -v /var/run/gnmi:/var/run/gnmi:rw",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sonic-mgmt-framework": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "mgmt-framework"
+        },
+        "service": {
+          "name": "mgmt-framework",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro  -v /etc:/host_etc:ro -v /var/run/dbus:/var/run/dbus:rw --mount type=bind,source=\"/var/platform/\",target=\"/mnt/platform/\"",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sonic-otel": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "otel"
+        },
+        "service": {
+          "name": "otel",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro -v /:/mnt/host:ro -v /tmp:/mnt/host/tmp:rw -v /var/tmp:/mnt/host/var/tmp:rw --pid=host --userns=host",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sonic-p4rt": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "p4rt"
+        },
+        "service": {
+          "name": "p4rt",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": [
+              "swss"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t -v /etc/sonic:/etc/sonic:rw -v /etc/localtime:/etc/localtime:ro  -v /zmq_swss:/zmq_swss:rw",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-swss-layer-trixie": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "",
+          "depends": [],
+          "name": ""
+        },
+        "service": {
+          "name": "",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "",
+      "local_package": false,
+      "installed": false,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-syncd-vs": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "syncd"
+        },
+        "service": {
+          "name": "syncd",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "--cap-add=SYS_RAWIO --cap-add=SYS_ADMIN --cap-add=NET_ADMIN -t --security-opt apparmor=unconfined --security-opt=\"systempaths=unconfined\" -v /host/machine.conf:/etc/machine.conf -v /etc/sonic:/etc/sonic:ro --privileged",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-sysmgr": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "sysmgr"
+        },
+        "service": {
+          "name": "sysmgr",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": false,
+          "host-service": true,
+          "warm-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "fast-shutdown": {
+            "after": [],
+            "before": []
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-v /var/run/dbus:/var/run/dbus:rw   -v /etc/sonic:/etc/sonic:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    },
+    "docker-teamd": {
+      "manifest": {
+        "version": "1.0.0",
+        "package": {
+          "version": "1.0.0",
+          "depends": [],
+          "name": "teamd"
+        },
+        "service": {
+          "name": "teamd",
+          "requires": [],
+          "after": [],
+          "before": [],
+          "dependent-of": [],
+          "asic-service": true,
+          "host-service": false,
+          "warm-shutdown": {
+            "after": [
+              "swss"
+            ],
+            "before": [
+              "syncd"
+            ]
+          },
+          "fast-shutdown": {
+            "after": [
+              "swss"
+            ],
+            "before": [
+              "syncd"
+            ]
+          },
+          "syslog": {
+            "support-rate-limit": true
+          }
+        },
+        "container": {
+          "privileged": false,
+          "volumes": [],
+          "tmpfs": []
+        },
+        "cli": {
+          "config": "",
+          "show": "",
+          "clear": ""
+        }
+      },
+      "run_options": "-t --cap-add=NET_ADMIN -v /etc/sonic:/etc/sonic:ro -v /etc/localtime:/etc/localtime:ro",
+      "local_package": false,
+      "installed": true,
+      "default_feature_owner": "",
+      "default_feature_state_enabled": ""
+    }
+  }
+}

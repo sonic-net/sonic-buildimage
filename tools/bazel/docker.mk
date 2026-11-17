@@ -85,7 +85,8 @@ define build_bazel_docker_images
 			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}} $($(firstword $(1))_BAZEL_ARGS)")"
 		bazel_options=()
 		if [ -n "$$bazel_option_lines" ]; then mapfile -t bazel_options <<< "$$bazel_option_lines"; fi
-		bazel_options+=("--platforms=@sonic_build_infra//platforms:$$bazel_platform"
+		bazel_options+=("--//tools/bazel/image/vs/metadata:use_make_metadata=true"
+			"--platforms=@sonic_build_infra//platforms:$$bazel_platform"
 			"--host_platform=@sonic_build_infra//platforms:$$bazel_platform")
 		$(call vs_time_phase,build) "$${BAZEL:-bazel}" build "$${bazel_options[@]}" $(foreach image,$(1),"$($(image)_BAZEL_TARGET)")
 		$(foreach image,$(1),

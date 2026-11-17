@@ -15,7 +15,10 @@ def _manifest_labels_impl(ctx):
         args.add_all(ctx.attr.version_packages, before_each = "--version-package")
         inputs.append(ctx.file.package_receipt)
     if ctx.attr.image_version:
-        args.add("--image-version=" + ctx.attr.image_version[BuildSettingInfo].value)
+        image_version = ctx.attr.image_version[BuildSettingInfo].value
+        if not image_version and not ctx.attr._use_make_metadata[BuildSettingInfo].value:
+            image_version = ctx.attr._product_version[BuildSettingInfo].value
+        args.add("--image-version=" + image_version)
     ctx.actions.run(
         arguments = [args],
         executable = ctx.attr._tool[DefaultInfo].files_to_run,
@@ -30,6 +33,8 @@ _manifest_labels = rule(
         "component_labels": attr.label(allow_single_file = True),
         "manifest": attr.label(allow_single_file = True, mandatory = True),
         "image_version": attr.label(providers = [BuildSettingInfo]),
+        "_product_version": attr.label(default = Label("//tools/bazel/image/vs/metadata:version"), providers = [BuildSettingInfo]),
+        "_use_make_metadata": attr.label(default = Label("//tools/bazel/image/vs/metadata:use_make_metadata"), providers = [BuildSettingInfo]),
         "package_receipt": attr.label(allow_single_file = True),
         "version_packages": attr.string_list(),
         "out": attr.output(mandatory = True),
