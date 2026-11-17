@@ -27,15 +27,6 @@
       "extractVersionTemplate": "^(?<version>.+)~trixie$"
     },
     {
-      "description": "OpenTelemetry Collector in docker-sonic-otel",
-      "customType": "regex",
-      "managerFilePatterns": ["/^dockers/docker-sonic-otel/Dockerfile\\.j2$/"],
-      "matchStrings": ["ARG OTEL_VERSION=(?<currentValue>\\S+)"],
-      "depNameTemplate": "open-telemetry/opentelemetry-collector-releases",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
       "description": "Rust toolchain in the trixie build container",
       "customType": "regex",
       "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/"],
