@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <stdint.h>
 
+/* White-box coverage of static helpers: the check target compiles this test
+ * alone, without linking ft_ddr_test.o or exporting production internals.
+ */
 #include "../ft_ddr_test.c"
 
 #define GUARD_PATTERN 0xdeadbeefu
@@ -41,8 +44,8 @@ static void check_bounds(const uint32 *storage, size_t words)
 {
     assert(storage[0] == GUARD_PATTERN);
     assert(storage[words + 1] == GUARD_PATTERN);
-    assert((uintptr_t)pp >= (uintptr_t)(storage + 1));
-    assert((uintptr_t)pp <= (uintptr_t)(storage + words + 1));
+    assert(pp >= storage + 1);
+    assert(pp <= storage + words + 1);
 }
 
 static void check_uniform(const uint32 *storage, size_t words, uint32 pattern)
