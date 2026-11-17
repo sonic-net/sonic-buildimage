@@ -1,10 +1,10 @@
 /*
  * Header file for eventd daemon
  */
-#include "table.h"
-#include "events_service.h"
-#include "events.h"
-#include "events_wrap.h"
+#include <swss/table.h>
+#include <swss/events_service.h>
+#include <swss/events.h>
+#include <swss/events_wrap.h>
 
 #define ARRAY_SIZE(l) (sizeof(l)/sizeof((l)[0]))
 
