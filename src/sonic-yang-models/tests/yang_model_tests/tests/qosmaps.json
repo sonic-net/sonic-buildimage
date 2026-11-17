@@ -131,5 +131,19 @@
     "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
         "desc": "Configure a Traffic class to DSCP map with invalid value.",
         "eStr": "Invalid DSCP"
+    },
+
+    "TC_TO_DOT1P_MAP_CRETAE": {
+        "desc": "Configure a Traffic class to DOT1P map."
+    },
+
+    "TC_TO_DOT1P_MAP_CREATE_INVALID_TC": {
+        "desc": "Configure a Traffic class to DOT1P map with invalid key.",
+        "eStr": "Invalid Traffic Class"
+    },
+
+    "TC_TO_DOT1P_MAP_CREATE_INVALID_DOT1P": {
+        "desc": "Configure a Traffic class to DOT1P map with invalid value.",
+        "eStr": "Invalid DOT1P"
     }
 }
