@@ -84,6 +84,7 @@ COPY --from=linuxptp-builder /install/ /
 {%- endif %}
 
 COPY ["templates/", "/usr/share/sonic/templates/"]
+COPY ["cli", "/cli/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["*.sh", "/usr/bin/"]
 RUN chmod a+x /usr/bin/start.sh && \

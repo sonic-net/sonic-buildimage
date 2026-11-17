@@ -19,6 +19,10 @@ $(DOCKER_PTP)_SERVICE_AFTER = database syncd
 $(DOCKER_PTP)_CONTAINER_PRIVILEGED = true
 $(DOCKER_PTP)_CONTAINER_VOLUMES += /etc/sonic:/etc/sonic:ro
 
+$(DOCKER_PTP)_CLI_CONFIG_PLUGIN = /cli/config/plugins/ptp.py
+$(DOCKER_PTP)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_ptp.py
+$(DOCKER_PTP)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_ptp.py
+
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_PTP)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_PTP_DBG)
 
