@@ -29,6 +29,10 @@ def preserve(workspace, home, repository_only=False, private_remote_cache=False)
             "common --remote_cache=grpc://172.16.0.4:9092",
             "common --experimental_remote_downloader=grpc://172.16.0.4:9092",
             "common --experimental_remote_downloader_local_fallback",
+            # Local actions and their BEP files must survive a cache outage.
+            "build --remote_local_fallback",
+            "build --incompatible_remote_local_fallback_for_remote_cache",
+            "build --experimental_build_event_upload_strategy=local",
         ])
     user = workspace / ".bazelrc.user"
     current = user.read_text() if user.exists() else ""

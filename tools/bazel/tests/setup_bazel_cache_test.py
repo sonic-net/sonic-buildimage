@@ -37,6 +37,9 @@ PRIVATE_CACHE_SETTINGS = [
     "common --remote_cache=grpc://172.16.0.4:9092",
     "common --experimental_remote_downloader=grpc://172.16.0.4:9092",
     "common --experimental_remote_downloader_local_fallback",
+    "build --remote_local_fallback",
+    "build --incompatible_remote_local_fallback_for_remote_cache",
+    "build --experimental_build_event_upload_strategy=local",
 ]
 
 
