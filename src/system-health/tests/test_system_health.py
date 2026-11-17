@@ -220,7 +220,7 @@ def test_sanitize_optional_containers():
 def test_optional_containers(mock_check_docker_image):
     feature_table = {
         container_name: {'state': 'enabled'}
-        for container_name in ('otel', 'hft', 'missing', 'present', 'invalid', 'regular')
+        for container_name in ('otel', 'hft', 'telemetry', 'missing', 'present', 'invalid', 'regular')
     }
     config = Config()
     config.optional_containers = {
@@ -237,6 +237,7 @@ def test_optional_containers(mock_check_docker_image):
     assert mock_check_docker_image.call_args_list == [
         call('docker-sonic-otel'),
         call('docker-hft'),
+        call('docker-sonic-telemetry'),
         call('docker-missing'),
         call('docker-present'),
     ]
