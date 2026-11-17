@@ -1,8 +1,3 @@
-#
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
 # Integrate NVIDIA ispvme (Lattice CPLD firmware update over JTAG):
 # https://github.com/NVIDIA/ispvme
 #
