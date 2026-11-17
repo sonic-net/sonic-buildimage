@@ -15,6 +15,7 @@
 try:
     from sonic_platform_base.fan_base import FanBase
     from .pddf_fan_conversion import build_fan_conversion
+    from sonic_platform_pddf_base.pddf_logger import logger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -43,11 +44,11 @@ class PddfFan(FanBase):
         )
 
         if tray_idx < 0 or tray_idx >= self.platform['num_fantrays']:
-            print("Invalid fantray index %d\n" % tray_idx)
+            logger.log_error("Invalid fantray index %d\n" % tray_idx)
             return
 
         if fan_idx < 0 or fan_idx >= self.platform['num_fans_pertray']:
-            print("Invalid fan index (within a tray) %d\n" % fan_idx)
+            logger.log_error("Invalid fan index (within a tray) %d\n" % fan_idx)
             return
 
         self.fantray_index = tray_idx+1
@@ -326,15 +327,15 @@ class PddfFan(FanBase):
             A boolean, True if speed is set successfully, False if not
         """
         if self.is_psu_fan:
-            print("Setting PSU fan speed is not allowed")
+            logger.log_error("Setting PSU fan speed is not allowed")
             return False
         else:
             if speed < 0 or speed > 100:
-                print("Error: Invalid speed %d. Please provide a valid speed percentage" % speed)
+                logger.log_error("Error: Invalid speed %d. Please provide a valid speed percentage" % speed)
                 return False
 
             if 'duty_cycle_to_pwm' not in self.plugin_data['FAN']:
-                print("Setting fan speed is not allowed !")
+                logger.log_error("Setting fan speed is not allowed !")
                 return False
             else:
                 pwm = int(round(self._duty_cycle_to_pwm.convert(speed)))

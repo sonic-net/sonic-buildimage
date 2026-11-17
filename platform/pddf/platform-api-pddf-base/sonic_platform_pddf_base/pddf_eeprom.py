@@ -6,6 +6,7 @@
 
 try:
     from sonic_eeprom import eeprom_tlvinfo
+    from sonic_platform_pddf_base.pddf_logger import logger
     import os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -38,7 +39,7 @@ class PddfEeprom(eeprom_tlvinfo.TlvInfoDecoder):
             try:
                 os.makedirs(CACHE_ROOT)
             except Exception as e:
-                print("Error in creating Eeprom cache directory - {}".format(str(e)))
+                logger.log_error("Error in creating Eeprom cache directory - {}".format(str(e)))
 
         # Assign cache_name in eeprom_base.py
         try:
