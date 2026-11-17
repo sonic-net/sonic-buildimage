@@ -543,7 +543,9 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         meson \
         python3-pyelftools \
         hwdata \
-        libzip-dev
+        libzip-dev \
+# for static zstd compilation
+        musl-tools
 
 # Remove j2cli's deprecated pkg_resources version lookup.
 COPY ["j2cli-importlib-metadata.patch", "/tmp/"]

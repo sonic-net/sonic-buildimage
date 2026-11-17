@@ -379,7 +379,16 @@ extract_image() {
         fi
 
         ## extract docker archive
-        unzip -oqp "$swipath" "$dockerfs" | tar xzf - -C "$image_path/$docker_dir" $TAR_EXTRA_OPTION
+        file_type=$(unzip -p "$swipath" "$dockerfs" | hexdump -C | head -n 1 | grep -q "28 b5 2f fd" && echo zstd || echo gzip)
+        if [ "$file_type" = "zstd" ]; then
+            # prebuilt static zstd binary is provided within the INSTALLER_PAYLOAD
+            chmod +x $image_path/zstd-decompress
+            unzip -p "$swipath" "$dockerfs" | $image_path/zstd-decompress -d -c | tar x $TAR_EXTRA_OPTION -f - -C "$image_path/$docker_dir"
+            # cleanup static decompress binary
+            rm $image_path/zstd-decompress
+        else
+            unzip -oqp "$swipath" "$dockerfs" | tar xz $TAR_EXTRA_OPTION -f - -C "$image_path/$docker_dir"
+        fi
     else
         ## save dockerfs archive in the image directory
         unzip -oq "$swipath" "$dockerfs" -d "$image_path"
