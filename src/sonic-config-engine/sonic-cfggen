@@ -35,10 +35,10 @@ except ImportError:
     from pipes import quote as shell_quote
 
 from collections import OrderedDict
+from config_encoder import minigraph_encoder
 from config_samples import generate_sample_config, get_available_config
+from device_desc import parse_device_desc_xml
 from functools import partial
-from minigraph import minigraph_encoder, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
-from minigraph_ext import parse_xml
 from portconfig import get_port_config, get_breakout_mode, get_system_port_config
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common.bgp import validate_asn
@@ -581,6 +581,8 @@ def main():
             sys.exit(1)
 
     if args.minigraph is not None:
+        from minigraph_ext import parse_xml
+
         minigraph = args.minigraph
         load_namespace_config()
         if platform:
@@ -620,6 +622,9 @@ def main():
     # the minigraph file must be provided to get the mac address for backend asics
     # or switch_type chassis_packet
     if args.platform_info:
+        if args.minigraph is not None:
+            from minigraph import parse_asic_sub_role, parse_asic_switch_type, parse_hostname
+
         asic_role = None
         switch_type = None
         hostname = None

@@ -4,6 +4,8 @@ import subprocess
 import ipaddress
 import tempfile
 import tests.common_utils as utils
+import config_encoder
+import device_desc
 import minigraph
 
 from lxml import etree as ET
@@ -643,6 +645,21 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertEqual(len(mgmt_intf.keys()), 1)
         self.assertTrue(('eth0', 'FC00:1::32/64') in mgmt_intf.keys())
         self.assertTrue(ipaddress.ip_address(u'fc00:1::1') == mgmt_intf[('eth0', 'FC00:1::32/64')]['gwaddr'])
+
+    def test_device_desc_compatibility_exports(self):
+        self.assertIs(minigraph.minigraph_encoder, config_encoder.minigraph_encoder)
+        self.assertIs(minigraph.parse_device, device_desc.parse_device)
+        self.assertIs(minigraph.parse_device_desc_xml, device_desc.parse_device_desc_xml)
+
+        for filename in (
+                self.sample_simple_device_desc,
+                self.sample_simple_device_desc_ipv6_only,
+                self.sample_supervisor_device_desc,
+                self.sample_linecard_device_desc):
+            self.assertEqual(
+                minigraph.parse_device_desc_xml(filename),
+                device_desc.parse_device_desc_xml(filename)
+            )
 
     def test_parse_device_desc_xml_device_type(self):
         # Regular device type is passed through as-is
