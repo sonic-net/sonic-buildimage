@@ -2,9 +2,8 @@
 
 ## Deploy-time port configuration with sonic-cfggen
 
-`sonic-cfggen` generates `PORT` using the supported breakout modes in
-`platform.json` and an HWSKU selection file passed with `-S` / `--hwsku-config`.
-The selection file can be stored anywhere and uses the existing `hwsku.json` format:
+`sonic-cfggen` generates `CONFIG_DB.PORT` from `platform.json` and a deploy-time
+`hwsku.json` supplied with `-S` / `--hwsku-config`. The selection file may live anywhere:
 
 ```json
 {
@@ -14,12 +13,9 @@ The selection file can be stored anywhere and uses the existing `hwsku.json` for
 }
 ```
 
-For each selected physical port (cage), cfggen creates logical ports with aliases,
-lanes, speeds, indices, subports, and FEC where needed. Optional `fec`, `autoneg`,
-and `role` settings are also supported. Cages left out of the selection are not
-configured. Unreadable files and invalid selections cause an error, not fallback.
-Names in explicit `-S` selections must identify platform cages or generated child
-ports. Installed profiles retain legacy handling of unmatched names.
+Only selected platform cages or generated child ports are configured. Breakout
+modes supply port attributes; `fec`, `autoneg`, and `role` may be overridden.
+Invalid or unreadable selections fail rather than fall back.
 
 Generate ports directly or through a matching minigraph:
 
@@ -33,52 +29,30 @@ sonic-cfggen -m /etc/sonic/minigraph.xml \
     -S /tmp/deployment-hwsku.json --print-data
 ```
 
-Use the HWSKU and file paths for your device. These commands print data without
-applying configuration. Generating ports without a minigraph requires `-k`,
-not just `-p` and `-S`.
+These commands print configuration without applying it. Direct port generation requires `-k`.
 
 ### Selection and fallback
 
-When using JSON, `-S` takes priority over installed `hwsku.json`; without either,
-cfggen generates the minimum layout. Without `-p`, cfggen chooses `platform.json`
-with a nonempty `interfaces` section if installed HWSKU JSON exists, or if no matching
-`port_config.ini` exists on a single-ASIC device. Otherwise it uses the INI file. `-S` does not affect
-INI files; pass `-p` to choose JSON instead.
+JSON precedence is `-S`, installed `hwsku.json`, then minimum generation.
+Without `-p`, discovery prefers usable JSON when installed HWSKU JSON exists,
+or when no matching INI exists on single-ASIC devices. Eligible CONFIG_DB data
+can still be reused.
+`-S` bypasses saved `PORT` but does not override INI discovery; use `-p` to force JSON.
 
-With `-k`, cfggen looks for a port configuration file before checking CONFIG_DB.
-Passing `-S` uses that selection instead of saved `PORT` rows. Other callers of
-the shared reader can still reuse CONFIG_DB data when no file paths are supplied
-and the HWSKU matches, or no HWSKU was requested.
+**Minimum means one logical port per cage at the highest supported default speed.**
+Cages without a one-port mode require an explicit selection. This fallback also
+applies to other `get_port_config()` callers.
 
-Minimum generation is enabled for all `get_port_config()` callers,
-including cfggen, minigraph, and runtime/library consumers. Eligible CONFIG_DB
-data and explicit or installed selections retain precedence.
-Consumers that use an empty result to retry another port-config source now receive
-generated mappings instead; their source precedence may need a separate update.
+Only direct `-k` generation from installed `hwsku.json` emits `BREAKOUT_CFG`;
+other output does not support `config interface breakout`.
 
-**Minimum means one logical port per cage at the highest supported default
-speed**, not the lowest speed. Equal-speed ties use the mode name that comes
-last alphabetically. A cage without a supported one-port mode causes an error,
-even if multi-port modes exist. This requires a `platform.json` with breakout modes.
-Supply an explicit selection for cages without a supported one-port mode.
-Overlapping entries keep the first generated port in platform-file order.
+### Minigraph
 
-Minigraph, `-S` selections, and minimum generation write `PORT` only, never
-`BREAKOUT_CFG`. Only direct `-k` generation from an installed `hwsku.json`
-without `-S` keeps writing `BREAKOUT_CFG`. Consequently, `config interface breakout`
-is unavailable on devices configured from other output.
+Minimum and explicit JSON layouts preserve speeds, lanes, and supplied
+FEC/autonegotiation. On single-ASIC devices, missing channel/VLAN members,
+interface parents, route/FG-ECMP references, or unresolved dataplane ACL attachments
+cause errors, not topology repair. Legacy sources and multi-ASIC topology handling
+are unchanged.
 
-Minigraph preserves speeds, lanes, and supplied FEC/autonegotiation settings from
-minimum generation and explicit JSON selections. Installed profiles, INI files,
-and DB-backed ports retain their existing XML overrides.
-For minimum layouts and explicit JSON selections, local checks skip unavailable
-interface parents, channel/VLAN/ACL bindings, neighbors, and fine-grained ECMP
-members; VLAN definitions are retained. Installed profiles, INI files, and
-DB-backed ports retain their legacy topology handling.
-Filtering out one FG ECMP address family does not remove surviving members of
-the other.
-These checks do not infer replacement topology or replace full schema validation.
-Minigraph links a missing HWSKU directory to the
-shipped base SKU directory, named without the final hyphen-separated suffix,
-when that base directory exists. Existing paths are left untouched.
-If creating the link fails, minigraph warns and continues parsing.
+A missing HWSKU directory links to an existing base SKU directory (name without
+the final hyphen-separated suffix). Link failures warn and parsing continues.

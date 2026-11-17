@@ -1,14 +1,31 @@
+import io
 import json
 import os
+import runpy
 import subprocess
+import tempfile
 import ipaddress
 import tests.common_utils as utils
 import minigraph
 
 from lxml import etree as ET
 from lxml.etree import QName
-from unittest import TestCase, mock
-from tests.test_cfggen_platformJson import _run_cfggen_cli_json, port_config_env
+from unittest import TestCase
+
+if utils.PY3x:
+    from unittest import mock
+else:
+    import mock
+
+
+def _run_cfggen_cli_json(args):
+    script = os.path.join(os.path.dirname(__file__), '..', 'sonic-cfggen')
+    with mock.patch('sys.argv', [script] + args + ['--print-data']), \
+            mock.patch('swsscommon.swsscommon.SonicDBConfig.isInit', return_value=True), \
+            mock.patch('sys.stdout', new_callable=io.StringIO) as output:
+        runpy.run_path(script, run_name='__main__')
+    return json.loads(output.getvalue())
+
 
 TOR_ROUTER = 'ToRRouter'
 BACKEND_TOR_ROUTER = 'BackEndToRRouter'
@@ -29,6 +46,8 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.sample_supervisor_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-supervisor.xml')
         self.sample_linecard_device_desc = os.path.join(self.test_dir, 'simple-sample-device-desc-linecard.xml')
         self.port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
+        self.platform_sample_graph = os.path.join(self.test_dir, 'platform-sample-graph.xml')
+        self.platform_json = os.path.join(self.test_dir, 'sample_platform.json')
 
     def run_script(self, argument, check_stderr=False):
         print('\n    Running sonic-cfggen ' + ' '.join(argument))
@@ -676,6 +695,109 @@ class TestCfgGenCaseInsensitive(TestCase):
         first_peer = next(iter(peer_switch_table))
         self.assertIn(first_peer, ["switch2-t0", "switch3-t0"])
 
+    def test_minigraph_selected_layout(self):
+        with open(self.platform_json) as config:
+            minimum_ports = set(json.load(config)['interfaces'])
+        selection_data = {'Ethernet0': {'default_brkout_mode': '2x50G', 'fec': 'none', 'autoneg': 'off'},
+                          'Ethernet2': {'fec': 'rs'}}
+        graph = ET.parse(self.platform_sample_graph)
+        graph.find(f'.//{{{minigraph.ns}}}PortChannelInterfaces').clear()
+        ET.SubElement(graph.getroot(), QName(minigraph.ns, 'LinkMetadataDeclaration'))
+        for selection, expected_ports in (
+                (None, minimum_ports),
+                ({'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}}, {'Ethernet20'}),
+                (selection_data, {'Ethernet0', 'Ethernet2'}),
+                ({}, set())):
+            config_db = mock.Mock()
+            config_db.get_table.side_effect = {
+                'PORT': {'Ethernet20': {'alias': 'saved'}} if selection is not None else {},
+                'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
+            with self.subTest(selection=selection), \
+                    tempfile.TemporaryDirectory() as directory, \
+                    mock.patch('portconfig.db_connect_configdb', return_value=config_db), \
+                    mock.patch('portconfig.device_info.get_localhost_info', return_value='Force10-S6000'), \
+                    mock.patch('portconfig.device_info.get_path_to_port_config_file', return_value=self.platform_json), \
+                    mock.patch('portconfig.get_hwsku_file_name', return_value=None), \
+                    mock.patch('sonic_py_common.multi_asic.get_asic_conf_file_path', return_value=None), \
+                    mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}), \
+                    mock.patch.object(minigraph.ET, 'parse', return_value=graph), \
+                    mock.patch.object(minigraph, 'parse_linkmeta', return_value={
+                        'Eth1/1': {'FECDisabled': 'true', 'AutoNegotiation': 'true'}}):
+                args = ['-m', self.platform_sample_graph]
+                if selection is not None:
+                    selection_file = os.path.join(directory, 'selection.json')
+                    with open(selection_file, 'w') as config:
+                        json.dump({'interfaces': selection}, config)
+                    args += ['-S', selection_file]
+                result = _run_cfggen_cli_json(args)
+                self.assertEqual(set(result['PORT']), expected_ports)
+                self.assertNotIn('BREAKOUT_CFG', result)
+                if selection == selection_data:
+                    # Child FEC retains legacy cage-wide propagation.
+                    self.assertEqual(result['PORT']['Ethernet2']['fec'], 'rs')
+                    self.assertEqual(result['PORT']['Ethernet0']['fec'], 'rs')
+                    self.assertEqual(result['PORT']['Ethernet0']['autoneg'], 'off')
+                    self.assertEqual(
+                        {name: (port['speed'], port['lanes']) for name, port in result['PORT'].items()},
+                        {'Ethernet0': ('50000', '0,1'), 'Ethernet2': ('50000', '2,3')})
+                self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
+                direct = _run_cfggen_cli_json(['-k', 'Force10-S6000', '-p', self.platform_json] + args[2:])
+                self.assertEqual(set(direct['PORT']), expected_ports)
+                self.assertNotIn('BREAKOUT_CFG', direct)
+                for name, port in direct['PORT'].items():
+                    self.assertLessEqual(port.items(), result['PORT'][name].items())
+
+    def test_minigraph_rejects_incompatible_layout(self):
+        cases = [
+            ('PortChannelInterfaces', '<PortChannel><Name>PortChannel1</Name>'
+             '<AttachTo>Ethernet0;Ethernet999</AttachTo></PortChannel>', "port channel 'PortChannel1'"),
+            ('VlanInterfaces', '<VlanInterface><Name>Vlan1000</Name><VlanID>1000</VlanID>'
+             '<AttachTo>Ethernet999</AttachTo></VlanInterface>', "VLAN 'Vlan1000'"),
+            ('VlanInterfaces', '<VlanInterface><Name>Vlan1000</Name><VlanID>1000</VlanID>'
+             '<AttachTo>PortChannel999</AttachTo></VlanInterface>', "VLAN 'Vlan1000'"),
+            ('IPInterfaces', '<IPInterface><Name>invalid</Name><AttachTo>Ethernet999.10</AttachTo>'
+             '<Prefix>192.0.2.1/24</Prefix></IPInterface>', 'IP interface'),
+        ]
+        for attachments in ('Ethernet999', 'Ethernet0;Ethernet999', 'PortChannel999;Ethernet0', 'Ethernet0;Eth1/2'):
+            cases.append(('AclInterfaces', f'<AclInterface><AttachTo>{attachments}</AttachTo>'
+                          '<InAcl>DATA</InAcl><Type>DataPlane</Type></AclInterface>', "ACL 'DATA'"))
+        cases.append(('AclInterfaces', '<AclInterface><AttachTo>Ethernet999</AttachTo>'
+                      '<InAcl>BMC</InAcl><Type>BMCDATA</Type></AclInterface>', "ACL 'BMC'"))
+        for interface in ('Ethernet999', 'PortChannel999', 'PortChannel999.10'):
+            cases.append(('IPNextHops', '<IPNextHop><Type>StaticRoute</Type><Address>198.51.100.1/32</Address>'
+                          f'<AttachTo>{interface},192.0.2.2</AttachTo></IPNextHop>', "static route '198.51.100.1/32'"))
+        for address in ('192.0.2.2', '2001:db8::2'):
+            cases.append(('IPNextHops', '<IPNextHop><Type>FineGrainedECMPGroupMember</Type>'
+                          f'<AttachTo>Ethernet999</AttachTo><Address>{address}</Address></IPNextHop>', 'FG ECMP member'))
+
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch('portconfig.db_connect_configdb', return_value=None), \
+                mock.patch('portconfig.device_info.get_localhost_info', return_value=None), \
+                mock.patch('portconfig.device_info.get_path_to_port_config_file', return_value=self.platform_json), \
+                mock.patch('portconfig.get_hwsku_file_name', return_value=None), \
+                mock.patch('sonic_py_common.multi_asic.get_asic_conf_file_path', return_value=None):
+            selection_file = os.path.join(directory, 'selection.json')
+            empty_selection = os.path.join(directory, 'empty.json')
+            with open(selection_file, 'w') as config:
+                json.dump({'interfaces': {'Ethernet0': {'default_brkout_mode': '2x50G'}}}, config)
+            with open(empty_selection, 'w') as config:
+                json.dump({'interfaces': {}}, config)
+            for section, content, context in cases:
+                graph = ET.parse(self.platform_sample_graph)
+                device = graph.find(f'.//{{{minigraph.ns}}}DeviceDataPlaneInfo')
+                device.find(str(QName(minigraph.ns, 'PortChannelInterfaces'))).clear()
+                existing = device.find(str(QName(minigraph.ns, section)))
+                if existing is not None:
+                    device.remove(existing)
+                device.append(ET.fromstring(f'<{section} xmlns="{minigraph.ns}">{content}</{section}>'))
+                for source in ([], ['-S', selection_file], ['-S', empty_selection],
+                               ['-p', self.platform_json, '-S', selection_file]):
+                    with self.subTest(section=section, content=content, source=source), \
+                            mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}), \
+                            mock.patch.object(minigraph.ET, 'parse', return_value=graph), \
+                            self.assertRaisesRegex(SystemExit, f"Error: Minigraph {context}.*generated port layout"):
+                        _run_cfggen_cli_json(['-m', 'minigraph.xml'] + source)
+
 
 class TestParseChassisHwsku(TestCase):
     def build_root(self, devices):
@@ -702,115 +824,3 @@ class TestParseChassisHwsku(TestCase):
         # parse_chassis_hwsku must return None instead of raising AttributeError.
         root = self.build_root([('str-sonic', 'Sonic-chassis-sku')])
         self.assertIsNone(minigraph.parse_chassis_hwsku(root, None))
-
-
-class TestMinigraphPortSources(TestCase):
-    def test_minigraph_skips_invalid_channel_and_vlan_members(self):
-        test_dir = os.path.dirname(os.path.realpath(__file__))
-        with port_config_env():
-            all_ports, aliases, _ = minigraph.get_port_config(
-                port_config_file=os.path.join(test_dir, 'mellanox-sample-port-config.ini'))
-        single_port = {'Ethernet36': all_ports['Ethernet36']}
-        for ports, channels, fg_members, versions in (
-                (all_ports, 4, 10, {'ipv4', 'ipv6'}),
-                (single_port, 0, 1, {'ipv4', 'ipv6'}),
-                (single_port, 0, 1, {'ipv4'}),
-                (single_port, 0, 1, {'ipv6'}),
-                ({}, 0, 0, set())):
-            graph = ET.parse(os.path.join(test_dir, 'fg-ecmp-sample-minigraph.xml'))
-            dpg = graph.find(str(QName(minigraph.ns, 'DpgDec')))
-            for ipnh in dpg.findall(f".//{{{minigraph.ns}}}IPNextHop[{{{minigraph.ns}}}AttachTo='etp10']"):
-                version = 'ipv6' if ':' in ipnh.find(str(QName(minigraph.ns, 'Address'))).text else 'ipv4'
-                if version not in versions:
-                    ipnh.getparent().remove(ipnh)
-            vlan_members = dpg.find(f'.//{{{minigraph.ns}}}VlanInterface/{{{minigraph.ns}}}AttachTo')
-            vlan_members.text += ';PortChannel0001'
-            selected_aliases = {alias: name for alias, name in aliases.items() if name in ports}
-            with self.subTest(ports=list(ports), versions=versions), mock.patch.multiple(
-                    minigraph, port_names_map=ports, port_alias_map=selected_aliases):
-                (_, _, _, _, _, vlans, members, _, pcs, pc_members, acls,
-                 _, _, _, ecmp, _, _) = minigraph.parse_dpg(dpg, 'str2-sn3800-azd', ports=ports)
-                self.assertEqual(set(vlans), {'Vlan1000', 'Vlan31'})
-                self.assertEqual(len(pcs), channels)
-                self.assertLessEqual({member for _, member in pc_members}, ports.keys())
-                self.assertLessEqual({member for _, member in members}, ports.keys() | pcs.keys())
-                self.assertEqual('DATAACL' in acls, bool(pcs))
-                self.assertEqual(acls.get('DATAACL', {}).get('ports', []), list(pcs))
-                self.assertEqual(acls['SNMP_ACL']['type'], 'CTRLPLANE')
-                self.assertEqual(set(ecmp), versions)
-                fg = minigraph.parse_png(
-                    graph.find(str(QName(minigraph.ns, 'PngDec'))), 'str2-sn3800-azd', ecmp)[-1]
-                self.assertEqual(set(fg.get('FG_NHG', {})), {f'fgnhg_v{version[-1]}' for version in versions})
-                self.assertEqual(len(fg.get('FG_NHG_MEMBER', {})), fg_members * len(versions))
-                self.assertLessEqual(
-                    {entry['link'] for entry in fg.get('FG_NHG_MEMBER', {}).values()}, ports.keys())
-                self.assertEqual(set(fg.get('NEIGH', {})), {
-                    f'Vlan31|{ip}' for content in ecmp.values() for ip in content['port_nhip_map'].values()})
-
-    def test_minigraph_selected_layout(self):
-        test_dir = os.path.dirname(os.path.realpath(__file__))
-        platform_json = os.path.join(test_dir, 'sample_platform.json')
-        with open(platform_json) as config:
-            minimum_ports = set(json.load(config)['interfaces'])
-        selection_data = {'Ethernet0': {'default_brkout_mode': '2x50G', 'fec': 'none', 'autoneg': 'off'},
-                          'Ethernet2': {'fec': 'rs'}}
-        graph = ET.parse(os.path.join(test_dir, 'platform-sample-graph.xml'))
-        ET.SubElement(graph.getroot(), QName(minigraph.ns, 'LinkMetadataDeclaration'))
-        for selection, expected_ports in (
-                (None, minimum_ports),
-                ({'Ethernet20': {'default_brkout_mode': '1x100G[40G]'}}, {'Ethernet20'}),
-                (selection_data, {'Ethernet0', 'Ethernet2'}),
-                ({}, set())):
-            config_db = mock.Mock()
-            config_db.get_table.side_effect = {
-                'PORT': {'Ethernet20': {'alias': 'saved'}} if selection is not None else {},
-                'FABRIC_MONITOR': {}, 'FABRIC_PORT': {}}.__getitem__
-            with self.subTest(selection=selection), \
-                    port_config_env(platform_json, config_db=config_db, db_hwsku='Force10-S6000') as directory, \
-                    mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}), \
-                    mock.patch.object(minigraph.ET, 'parse', return_value=graph), \
-                    mock.patch.object(minigraph, 'parse_linkmeta', return_value={
-                        'Eth1/1': {'FECDisabled': 'true', 'AutoNegotiation': 'true'}}):
-                args = ['-m', os.path.join(test_dir, 'platform-sample-graph.xml')]
-                if selection is not None:
-                    selection_file = os.path.join(directory, 'selection.json')
-                    with open(selection_file, 'w') as config:
-                        json.dump({'interfaces': selection}, config)
-                    args += ['-S', selection_file]
-                result = _run_cfggen_cli_json(args)
-                self.assertEqual(set(result['PORT']), expected_ports)
-                self.assertNotIn('BREAKOUT_CFG', result)
-                if selection == selection_data:
-                    # Child FEC retains legacy cage-wide propagation.
-                    self.assertEqual(result['PORT']['Ethernet2']['fec'], 'rs')
-                    self.assertEqual(result['PORT']['Ethernet0']['fec'], 'rs')
-                    self.assertEqual(result['PORT']['Ethernet0']['autoneg'], 'off')
-                    self.assertEqual(
-                        {name: (port['speed'], port['lanes']) for name, port in result['PORT'].items()},
-                        {'Ethernet0': ('50000', '0,1'), 'Ethernet2': ('50000', '2,3')})
-                self.assertEqual(set(result['DEVICE_NEIGHBOR']), {'Ethernet0'} & expected_ports)
-                direct = _run_cfggen_cli_json(['-k', 'Force10-S6000', '-p', platform_json] + args[2:])
-                self.assertEqual(set(direct['PORT']), expected_ports)
-                self.assertNotIn('BREAKOUT_CFG', direct)
-                for name, port in direct['PORT'].items():
-                    self.assertLessEqual(port.items(), result['PORT'][name].items())
-
-    def test_minigraph_filters_interface_parents(self):
-        test_dir = os.path.dirname(os.path.realpath(__file__))
-        with port_config_env():
-            ports, aliases, _ = minigraph.get_port_config(
-                port_config_file=os.path.join(test_dir, 't0-sample-port-config.ini'))
-        for selected in ({'Ethernet0': ports['Ethernet0']}, {'Ethernet4': ports['Ethernet4']}, {}):
-            selected_aliases = {alias: name for alias, name in aliases.items() if name in selected}
-            with self.subTest(ports=list(selected)), port_config_env(), \
-                    mock.patch.multiple(minigraph, port_names_map={}, port_alias_map={}, port_alias_asic_map={}), \
-                    mock.patch.object(minigraph, 'get_port_config_source', return_value=(None, 'platform.json', None)), \
-                    mock.patch.object(minigraph, 'get_port_config', return_value=(selected, selected_aliases, {})):
-                result = minigraph.parse_xml(os.path.join(test_dir, 'sample-graph-subintf.xml'))
-                self.assertEqual('Ethernet0.10' in result.get('VLAN_SUB_INTERFACE', {}), 'Ethernet0' in selected)
-                self.assertEqual('PortChannel1' in result['PORTCHANNEL_INTERFACE'], 'Ethernet4' in selected)
-                available = selected.keys() | result['PORTCHANNEL'].keys() | result['VLAN'].keys()
-                for table in ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE', 'VLAN_SUB_INTERFACE'):
-                    for key in result.get(table, {}):
-                        name = key[0] if isinstance(key, tuple) else key
-                        self.assertIn(name.split('.')[0], available)

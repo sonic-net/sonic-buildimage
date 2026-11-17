@@ -4,6 +4,7 @@ try:
     import os
     import re
     import sys
+    from pathlib import Path
 
     from swsscommon import swsscommon
     from sonic_py_common import device_info
@@ -194,7 +195,7 @@ def get_port_config_source(hwsku=None, platform=None, port_config_file=None, hws
             return None, None, None
 
     hwsku_json_file = None
-    if port_config_file.endswith('.json'):
+    if Path(port_config_file).name.endswith(PLATFORM_JSON):
         hwsku_json_file = hwsku_config_file or get_hwsku_file_name(hwsku, platform)
     return None, port_config_file, hwsku_json_file
 
@@ -214,13 +215,15 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
         return ({}, {}, {})
 
     # Read from 'platform.json' file
-    if port_config_file.endswith('.json'):
+    if Path(port_config_file).name.endswith(PLATFORM_JSON):
         return parse_platform_json_file(hwsku_json_file, port_config_file,
                                         validate_interface_names=hwsku_config_file is not None)
 
-    # If 'platform.json' file is not available, read from 'port_config.ini'
-    else:
+    elif Path(port_config_file).name == PORT_CONFIG_INI:
         return parse_port_config_file(port_config_file)
+    else:
+        raise RuntimeError(f"Unsupported port configuration file '{port_config_file}'; "
+                           f"expected '*{PLATFORM_JSON}' or '{PORT_CONFIG_INI}'")
 
 def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_config_file=None):
     config_db = db_connect_configdb(asic_name)
@@ -625,7 +628,7 @@ def get_breakout_mode(hwsku=None, platform=None, port_config_file=None):
         port_config_file = device_info.get_path_to_port_config_file(hwsku)
         if not port_config_file:
             return None
-    if port_config_file.endswith('.json'):
+    if Path(port_config_file).name.endswith(PLATFORM_JSON):
         hwsku_json_file = get_hwsku_file_name(hwsku, platform)
         # Minimum generation has no installed hwsku.json and writes PORT only.
         if not hwsku_json_file:
