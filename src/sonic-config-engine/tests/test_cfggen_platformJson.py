@@ -377,7 +377,7 @@ class TestCfgGenPlatformJson(TestCase):
                         self.assertEqual(set(get_port_config(source=source)[0]), {'Ethernet20'})
 
     def test_unsupported_port_config_filename(self):
-        for filename in ('hwsku.json', 'ports.ini'):
+        for filename in ('hwsku.json', 'ports.txt'):
             with self.subTest(filename=filename), \
-                    self.assertRaisesRegex(RuntimeError, r"expected '\*platform\.json' or 'port_config\.ini'"):
+                    self.assertRaisesRegex(RuntimeError, r"expected '\*platform\.json' or '\*\.ini'"):
                 get_port_config(source=(None, filename, None))

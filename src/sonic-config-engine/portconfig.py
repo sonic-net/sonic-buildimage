@@ -219,11 +219,11 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
         return parse_platform_json_file(hwsku_json_file, port_config_file,
                                         validate_interface_names=hwsku_config_file is not None)
 
-    elif Path(port_config_file).name == PORT_CONFIG_INI:
+    elif Path(port_config_file).suffix == '.ini':
         return parse_port_config_file(port_config_file)
     else:
         raise RuntimeError(f"Unsupported port configuration file '{port_config_file}'; "
-                           f"expected '*{PLATFORM_JSON}' or '{PORT_CONFIG_INI}'")
+                           f"expected '*{PLATFORM_JSON}' or '*.ini'")
 
 def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_config_file=None):
     config_db = db_connect_configdb(asic_name)
