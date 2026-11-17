@@ -4,6 +4,7 @@ load("@rules_python//python:packaging.bzl", "py_wheel")
 load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//python:py_library.bzl", "py_library")
 load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -110,29 +111,37 @@ filegroup(
     ],
 )
 
+_SOURCE_DISTRIBUTION = "sonic-config-engine"
+
+_SOURCE_REQUIRES = [
+    "bitarray==2.8.1",
+    "lxml>=4.9.1",
+    "netaddr==0.8.0",
+    "Jinja2>=2.10",
+    "pyyaml>=6.0.1",
+    "sonic-py-common",
+    "sonic-yang-mgmt>=1.0",
+    "sonic-yang-models>=1.0",
+]
+
+_SOURCE_SUMMARY = "Utilities for generating SONiC configuration files"
+
+_SOURCE_VERSION = "1.0"
+
 py_wheel(
     name = "sonic_config_engine_wheel",
     data_files = {
         ":wheel_cfggen_script": "scripts/sonic-cfggen",
     },
-    distribution = "sonic-config-engine",
+    distribution = _SOURCE_DISTRIBUTION,
     python_tag = "py3",
-    requires = [
-        "bitarray==2.8.1",
-        "lxml>=4.9.1",
-        "netaddr==0.8.0",
-        "Jinja2>=2.10",
-        "pyyaml>=6.0.1",
-        "sonic-py-common",
-        "sonic-yang-mgmt>=1.0",
-        "sonic-yang-models>=1.0",
-    ],
+    requires = _SOURCE_REQUIRES,
     strip_path_prefixes = [
         "src/sonic-config-engine/wheel_data/",
         "src/sonic-config-engine/",
     ],
-    summary = "Utilities for generating SONiC configuration files",
-    version = "1.0",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
     deps = [":wheel_payload"],
 )
 
@@ -166,5 +175,63 @@ filegroup(
 # source-tree path. Expose only the files that suite needs.
 filegroup(
     name = "supervisor_test_fixtures",
-    srcs = glob(["tests/mock_tables/**"], exclude = ["**/__pycache__/**", "**/*.pyc"]),
+    srcs = glob(
+        ["tests/mock_tables/**"],
+        exclude = [
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ),
+)
+
+# Direct source installation preserves setup.py metadata and original wheel API.
+site_packages(
+    name = "sonic-config-engine.runtime",
+    author = "Taoyu Li",
+    author_email = "taoyl@microsoft.com",
+    classifiers = [
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
+    data_prefix = "/usr/local",
+    distribution = _SOURCE_DISTRIBUTION,
+    executable_files = ["sonic_config_engine-1.0.data/scripts/sonic-cfggen"],
+    files = {p: p for p in _MODULES} | {p: "usr/share/sonic/templates/" + p[len("data/"):] for p in _WHEEL_TEMPLATES} | {"sonic-cfggen": "sonic_config_engine-1.0.data/scripts/sonic-cfggen"},
+    headers = "/usr/local/include",
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    interpreter = "/usr/bin/python3",
+    keywords = "SONiC sonic-cfggen config-engine PYTHON python",
+    normalize_scripts = True,
+    regular_file_mode = "0644",
+    requires = _SOURCE_REQUIRES,
+    scripts = "/usr/local/bin",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
+    runtime_deps = [
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+        "//src/sonic-yang-models:sonic-yang-models.runtime",
+    ],
+)
+
+filegroup(
+    name = "sonic-config-engine.runtime_metadata",
+    srcs = [":sonic-config-engine.runtime"],
+    output_group = "metadata",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_install_test_sources",
+    testonly = True,
+    srcs = [":wheel_sources"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
 )

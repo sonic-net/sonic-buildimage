@@ -7,6 +7,7 @@ load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@sonic_build_infra//python:source_package.bzl", "python_runtime_packages")
 load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
 load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
@@ -1378,4 +1379,81 @@ py_test(
         "//platform/vs/docker-syncd-vs:Dockerfile.j2",
     ],
     python_version = "3.11",
+)
+
+# Validate the source installation contract independently of wheel assembly.
+py_test(
+    name = "source_installation_test",
+    srcs = ["integration/source_installation_test.py"],
+    args = [
+        "--yang-mgmt-dependencies",
+        "$(rootpaths //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata)",
+        "--metadata",
+        "$(rootpaths :source_installation_metadata)",
+        "--package=sonic-config-engine=$(rootpath //src/sonic-config-engine:sonic-config-engine.runtime)",
+        "--setup=sonic-config-engine=$(rootpath //src/sonic-config-engine:setup.py)",
+        "--package=sonic-py-common=$(rootpath //src/sonic-py-common:sonic-py-common.runtime)",
+        "--setup=sonic-py-common=$(rootpath //src/sonic-py-common:setup.py)",
+        "--package=sonic-yang-mgmt=$(rootpath //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime)",
+        "--setup=sonic-yang-mgmt=$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "--package=sonic-yang-models=$(rootpath //src/sonic-yang-models:sonic-yang-models.runtime)",
+        "--setup=sonic-yang-models=$(rootpath //src/sonic-yang-models:setup.py)",
+        "--package=sonic-containercfgd=$(rootpath //src/sonic-containercfgd:sonic-containercfgd.runtime)",
+        "--setup=sonic-containercfgd=$(rootpath //src/sonic-containercfgd:setup.py)",
+        "--package=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime)",
+        "--setup=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+    ],
+    data = [
+        ":source_installation_metadata",
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:sonic-config-engine.runtime",
+        "//src/sonic-config-engine:source_install_test_sources",
+        "//src/sonic-containercfgd:setup.py",
+        "//src/sonic-containercfgd:sonic-containercfgd.runtime",
+        "//src/sonic-containercfgd:source_install_test_sources",
+        "//src/sonic-py-common:setup.py",
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "//src/sonic-py-common:source_install_test_sources",
+        "//src/sonic-supervisord-utilities:setup.py",
+        "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
+        "//src/sonic-supervisord-utilities:source_install_test_sources",
+        "//src/sonic-yang-mgmt:setup.py",
+        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata",
+        "//src/sonic-yang-mgmt:source_install_test_sources",
+        "//src/sonic-yang-models:setup.py",
+        "//src/sonic-yang-models:sonic-yang-models.runtime",
+        "//src/sonic-yang-models:source_install_test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/source_installation_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-config-engine:sonic_config_engine",
+        "//src/sonic-containercfgd:containercfgd",
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("grpcio-tools"),
+        requirement("jinja2"),
+    ],
+)
+
+python_runtime_packages(
+    name = "source_installation_packages",
+    testonly = True,
+    deps = [
+        "//src/sonic-config-engine:sonic-config-engine.runtime",
+        "//src/sonic-containercfgd:sonic-containercfgd.runtime",
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
+        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+        "//src/sonic-yang-models:sonic-yang-models.runtime",
+    ],
+)
+
+filegroup(
+    name = "source_installation_metadata",
+    testonly = True,
+    srcs = [":source_installation_packages"],
+    output_group = "metadata",
 )
