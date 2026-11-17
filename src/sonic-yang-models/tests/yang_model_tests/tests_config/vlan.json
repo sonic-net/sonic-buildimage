@@ -1241,6 +1241,198 @@
             }
         }
     },
+    "VLAN_ADD_PORT_THAT_IS_PRIORITY_TAGGED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    },
+                    {
+                        "name": "Vlan11"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "priority_tagged",
+                        "name": "Vlan10"
+                    },
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "priority_tagged",
+                        "name": "Vlan11"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_ADD_PRIORITY_TAGGED_PORT_THAT_IS_UNTAGGED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    },
+                    {
+                        "name": "Vlan11"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "priority_tagged",
+                        "name": "Vlan10"
+                    },
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan11"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_PORT_PRIORITY_TAGGED_AND_TAGGED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    },
+                    {
+                        "name": "Vlan11"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "priority_tagged",
+                        "name": "Vlan10"
+                    },
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan11"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_PORT_UNTAGGED_AND_TAGGED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "name": "Ethernet1",
+                        "speed": 25000,
+                        "lanes": "1"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    },
+                    {
+                        "name": "Vlan11"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan10"
+                    },
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan11"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_ADD_PRIORITY_TAGGED_PORTCHANNEL_THAT_IS_UNTAGGED": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "name": "PortChannel5"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan200"
+                    },
+                    {
+                        "name": "Vlan201"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "PortChannel5",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan200"
+                    },
+                    {
+                        "port": "PortChannel5",
+                        "tagging_mode": "priority_tagged",
+                        "name": "Vlan201"
+                    }
+                ]
+            }
+        }
+    },
     "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
         "sonic-interface:sonic-interface": {
             "sonic-interface:INTERFACE": {

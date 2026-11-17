@@ -46,12 +46,32 @@ function check_redundant_type()
     debug "DEVICE_SUBTYPE: ${DEVICE_SUBTYPE}, CONFIG_KNOB: ${CONFIG_KNOB}"
 }
 
+function handle_interrupted_start() {
+    # If this wrapper is killed (e.g. `systemctl stop sonic.target` during a
+    # `config reload`) while still inside start(), the unit never reaches "active"
+    # and systemd will not run ExecStop - so stop() below is skipped even though
+    # `/usr/bin/${SERVICE}.sh start` may have already left the container running.
+    # Stop it here instead of leaving an orphaned, unmanaged container (and its
+    # main process) running.
+    debug "Start of ${SERVICE}$DEV interrupted by signal, checking for an orphaned container..."
+    if [ -n "$(docker ps -q --filter "name=^/${SERVICE}${DEV}$" --filter "status=running")" ]; then
+        debug "${SERVICE}$DEV container is running after interrupted start, stopping it..."
+        stop
+    fi
+    # Conventional shell exit code for death-by-signal: 128 + signal number.
+    exit $((128 + $(kill -l TERM)))
+}
+
 start() {
     debug "Starting ${SERVICE}$DEV service..."
+
+    trap handle_interrupted_start TERM
 
     # start service docker
     /usr/bin/${SERVICE}.sh start $DEV
     debug "Started ${SERVICE}$DEV service..."
+
+    trap - TERM
 }
 
 wait() {

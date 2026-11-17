@@ -687,12 +687,15 @@ def mock_subproc_side_effect(cmd, shell=False, stdout=None, stderr=None):
 class mock_reqget:
     def __init__(self):
         self.ok = True
+        self.is_redirect = False
+        self.status_code = 200
 
     def json(self):
         return current_test_data.get(REQ, "")
 
 
-def mock_reqget_side_effect(url, cert, verify=True, timeout=None):
+def mock_reqget_side_effect(url, cert, verify=True, headers=None, proxies=None,
+                            allow_redirects=True, timeout=None):
     return mock_reqget()
 
 
@@ -703,7 +706,7 @@ def set_kube_mock(mock_subproc, mock_table=None, mock_conn=None, mock_reqget=Non
     if mock_conn != None:
         mock_conn.side_effect = conn_side_effect
     if mock_reqget != None:
-        mock_reqget.side_effect = mock_reqget_side_effect
+        mock_reqget.return_value.get.side_effect = mock_reqget_side_effect
 
 
 def create_remote_ctr_config_json():

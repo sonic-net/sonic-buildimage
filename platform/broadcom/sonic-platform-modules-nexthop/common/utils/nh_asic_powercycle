@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+from nexthop.asic_powercycle import main
+
+if __name__ == "__main__":
+    main()

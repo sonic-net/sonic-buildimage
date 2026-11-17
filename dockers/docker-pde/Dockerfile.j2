@@ -24,6 +24,10 @@ RUN apt-get install -y --no-install-recommends python3-jsonschema i2c-tools
 # Use --break-system-packages for Trixie environment
 RUN pip3 install --break-system-packages pytest pexpect
 
+# Python modules some platform APIs import; same versions as the
+# platform-monitor container
+RUN pip3 install --break-system-packages python-dateutil==2.9.0.post0 smbus2
+
 {% if docker_pde_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 COPY \
