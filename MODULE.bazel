@@ -326,7 +326,7 @@ bazel_dep(name = "libyang", version = "3.12.2.sonic.6")
 
 single_version_override(
     module_name = "sonic-rust-deps",
-    version = "0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1",
+    version = "0.0.5-dd364f207d7b320a5af12c81da6d10893f292205",
 )
 
 bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
@@ -366,6 +366,7 @@ source_modules(
         "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
         "@libteam//:MODULE.bazel": "libteam",
         "@sonic_dash_api//:MODULE.bazel": "sonic-dash-api",
+        "@sonic_dash_ha//:MODULE.bazel": "sonic-dash-ha",
         "@socat//:MODULE.bazel": "socat",
         "@iproute2//:MODULE.bazel": "iproute2",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
@@ -631,3 +632,8 @@ apt_inputs(
         "libboost-thread1.83.0",
     ],
 )
+
+bazel_dep(name = "sonic-dash-ha", version = "0.0.1-502377912f3530c9bb6c27007822919f6f32aeb7", repo_name = "sonic_dash_ha")
+
+# The shared infrastructure lock provides separate runtime, debug and test collections.
+use_repo(apt, "dash_ha_debian", "dash_ha_debug_debian", "dash_ha_test_debian")

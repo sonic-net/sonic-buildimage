@@ -1,0 +1,4 @@
+exports_files([
+    "source_paths.json",
+    "debug_source_paths.json",
+])

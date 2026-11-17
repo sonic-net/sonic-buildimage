@@ -149,3 +149,5 @@ apt-retries-count
 /artifacts/archive/
 /artifacts/swss-layer/
 /artifacts/config-engine/
+
+/artifacts/dash-ha/

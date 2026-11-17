@@ -1581,6 +1581,112 @@ jobs:
           shutil.rmtree(directory)
           PY
 
+      - name: Preserve completed archive evidence before DASH HA acceptance
+        if: matrix.architecture == 'amd64'
+        run: |
+          if [[ -d artifacts ]]; then
+            preserved=$(mktemp -d "$RUNNER_TEMP/pre-dash-ha-artifacts.XXXXXXXX")
+            mv artifacts "$preserved/artifacts"
+          fi
+
+      - name: Build DASH HA runtime and debug images
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          python3 -B tools/bazel/ci/dash_ha_image.py build --bazel "$BAZEL" --artifacts artifacts/dash-ha
+      - name: Validate DASH HA image contents and cache reuse
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          python3 -B tools/bazel/ci/dash_ha_image.py validate --artifacts artifacts/dash-ha
+          python3 -B tools/bazel/ci/dash_ha_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dash-ha
+      - name: Review DASH HA build evidence
+        id: dash_ha_public
+        if: always() && matrix.architecture == 'amd64'
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summary
+          root = Path('artifacts/dash-ha')
+          root.mkdir(parents=True, exist_ok=True)
+          if (root / 'build-receipt.json').exists():
+              receipt = json.loads((root / 'build-receipt.json').read_text())
+              public = {key: receipt[key] for key in ('status', 'architecture', 'revision', 'artifacts') if key in receipt}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          names = ['validation.json', 'action-audit.json', 'incremental.json', 'runtime-apt.json', 'debug-apt.json']
+          names += [path.name for path in root.glob('*.validation.json')]
+          names += [path.name for path in root.glob('*.packages.json')]
+          for name in names:
+              path = root / name
+              if path.exists():
+                  safe_json(json.loads(path.read_text()))
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          summary = {str(path.relative_to(root)): bep_summary(path.read_text().splitlines(), partial=True)
+                     for path in root.rglob('*events.json*')}
+          safe_json(summary)
+          (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          PYCODE
+      - name: Retain DASH HA image artifacts and evidence
+        if: always() && matrix.architecture == 'amd64' && steps.dash_ha_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-ha-images-amd64-${{ github.sha }}
+          path: |
+            artifacts/dash-ha/*.gz
+            artifacts/dash-ha/*.tar
+            artifacts/dash-ha/*.packages.json
+            artifacts/dash-ha/*.validation.json
+            artifacts/dash-ha/validation.json
+            artifacts/dash-ha/public-receipt.json
+            artifacts/dash-ha/runtime-apt.json
+            artifacts/dash-ha/debug-apt.json
+            artifacts/dash-ha/action-audit.json
+            artifacts/dash-ha/incremental.json
+            artifacts/dash-ha/build-summary.json
+            artifacts/dash-ha/module-graph.json
+            artifacts/dash-ha/*.status
+            artifacts/dash-ha/MODULE.bazel.lock
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  dash_ha_runtime:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    name: Load and run DASH HA images (AMD64)
+    needs: archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dash-ha-images-amd64-${{ github.sha }}
+          path: artifacts/dash-ha
+      - name: Check installed HA startup, peer routing and PMON reset state
+        env:
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 -B tools/bazel/ci/dash_ha_loaded.py --artifacts artifacts/dash-ha
+      - name: Retain installed HA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-ha-installed-amd64-${{ github.sha }}
+          path: artifacts/dash-ha/*.runtime.json
+          if-no-files-found: error
+          retention-days: 14
+
   macsec_runtime:
     name: Run installed MACsec images (AMD64)
     needs: archive
