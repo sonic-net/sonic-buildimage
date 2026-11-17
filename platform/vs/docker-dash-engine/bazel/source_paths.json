@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "packages": {
+    "p4lang-pi": {"required_paths": ["usr/bin/pi_CLI_dummy", "usr/lib/x86_64-linux-gnu/libpi.so.0"]},
+    "p4lang-bmv2": {"required_paths": ["usr/bin/simple_switch_grpc", "usr/bin/bm_p4dbg", "usr/bin/bm_nanomsg_events"]}
+  }
+}

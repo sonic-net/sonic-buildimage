@@ -292,12 +292,8 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Prepare pinned source submodules
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
       - name: Register post-job Bazel cleanup
         id: bazel_cleanup_register
         uses: ./.github/actions/bazel-post-job-cleanup
@@ -1935,12 +1931,8 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Prepare pinned source submodules
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
       - name: Register post-job Bazel cleanup
         id: bazel_cleanup_register
         uses: ./.github/actions/bazel-post-job-cleanup
@@ -2085,11 +2077,211 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  dash_engine_archive:
+    name: DASH engine archive (AMD64)
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    # Both image variants and their source payloads need a fresh large workspace.
+    runs-on: [self-hosted, linux, bazel-x64, vs]
+    timeout-minutes: 360
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    env:
+      # Shared CI entry point with the canonical registry; the full Make VS job is separate.
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+      # Keep action execution and the build-event file available during cache outages.
+      SONIC_CONTAINER_BAZEL_OPTIONS: >-
+        --remote_local_fallback
+        --incompatible_remote_local_fallback_for_remote_cache
+        --experimental_build_event_upload_strategy=local
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libarchive-tools libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+          for tool in bsdtar gdb readelf objcopy; do
+            command -v "$tool"
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
+
+      - name: Reserve scratch for DASH engine validation
+        id: dash_scratch
+        run: |
+          for path in "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME"; do
+            available=$(df --output=avail --block-size=1 "$path" | tail -n 1)
+            printf '%s bytes free on %s\n' "$available" "$path"
+            if (( available < 45 * 1024 * 1024 * 1024 )); then
+              echo 'Source image validation requires 45 GiB of free build space.' >&2
+              exit 1
+            fi
+          done
+          directory=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/dash-engine.XXXXXXXX")
+          printf 'directory=%s\n' "$directory" >> "$GITHUB_OUTPUT"
+          printf 'DASH_ARTIFACTS=%s\n' "$directory" >> "$GITHUB_ENV"
+
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: dash-engine-amd64
+          cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Build DASH engine runtime and debug images from source owners
+        id: dash_engine_build
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/dash_engine_image.py build --bazel "$BAZEL" --artifacts "$DASH_ARTIFACTS"
+      - name: Validate DASH engine payloads and matching symbols
+        run: python3 -B tools/bazel/ci/dash_engine_image.py validate --artifacts "$DASH_ARTIFACTS"
+      - name: Validate nnpy in the selected image dependency graph
+        run: |
+          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+            --platforms=@sonic_build_infra//platforms:x86_64_trixie
+            --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+          audit=()
+          for option in "${options[@]}"; do audit+=("--bazel-arg=$option"); done
+          python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit[@]}" \
+            --output "$DASH_ARTIFACTS/owner-action-audit.json" @nnpy//:package_test
+          "$BAZEL" test "${options[@]}" --test_output=errors @nnpy//:package_test
+          mkdir -p "$DASH_ARTIFACTS/tests"
+          test -s bazel-testlogs/external/nnpy+/package_test/test.xml
+          cp bazel-testlogs/external/nnpy+/package_test/test.xml "$DASH_ARTIFACTS/tests/test.xml"
+      - name: Verify DASH engine no-op, startup edit and restored archives
+        run: python3 -B tools/bazel/ci/dash_engine_image.py incremental --bazel "$BAZEL" --artifacts "$DASH_ARTIFACTS"
+      - name: Review public DASH engine evidence
+        id: dash_engine_public
+        if: always() && steps.dash_engine_build.outcome != 'skipped'
+        run: python3 -B tools/bazel/ci/dash_engine_public.py --artifacts "$DASH_ARTIFACTS"
+      - name: Retain DASH engine archives and source evidence
+        id: bazel_upload_dash_engine_public
+        if: always() && steps.dash_engine_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-engine-source-amd64-${{ github.sha }}
+          path: |
+            ${{ steps.dash_scratch.outputs.directory }}/*.gz
+            ${{ steps.dash_scratch.outputs.directory }}/*.tar
+            ${{ steps.dash_scratch.outputs.directory }}/*.status
+            ${{ steps.dash_scratch.outputs.directory }}/*-apt.json
+            ${{ steps.dash_scratch.outputs.directory }}/*.packages.json
+            ${{ steps.dash_scratch.outputs.directory }}/*.validation.json
+            ${{ steps.dash_scratch.outputs.directory }}/validation.json
+            ${{ steps.dash_scratch.outputs.directory }}/public-receipt.json
+            ${{ steps.dash_scratch.outputs.directory }}/action-audit.json
+            ${{ steps.dash_scratch.outputs.directory }}/owner-action-audit.json
+            ${{ steps.dash_scratch.outputs.directory }}/incremental.json
+            ${{ steps.dash_scratch.outputs.directory }}/MODULE.bazel.lock
+            ${{ steps.dash_scratch.outputs.directory }}/module-graph.json
+            ${{ steps.dash_scratch.outputs.directory }}/tests/test.xml
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  dash_engine_runtime:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    name: Load and run DASH engine images (AMD64)
+    needs: dash_engine_archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dash-engine-source-amd64-${{ github.sha }}
+          path: artifacts/dash-engine
+      - name: Exercise original startup and installed controller interfaces
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/dash_engine_loaded.py --artifacts artifacts/dash-engine
+      - name: Retain installed DASH engine evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-engine-runtime-amd64-${{ github.sha }}
+          path: |
+            artifacts/dash-engine/*.runtime.json
+            artifacts/dash-engine/loaded-validation.json
+          if-no-files-found: warn
+          retention-days: 14
+
   eventd_runtime:
     # Keep the required status on the job that actually loads and tests both archives.
     name: Container archive (AMD64)
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')
-    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime, macsec_runtime]
+    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime, macsec_runtime, dash_engine_runtime]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2469,7 +2661,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl \
-            gdb git j2cli jq libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-yaml redis-server squashfs-tools tar unzip zstd
+            gdb git j2cli jq libarchive-tools libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-yaml redis-server squashfs-tools tar unzip zstd
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

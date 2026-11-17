@@ -1,0 +1,260 @@
+"""DASH engine consumes the existing PI, BMv2 and nnpy source packages."""
+
+load("@dash_engine_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_BASE = "//dockers/docker-base-trixie:docker-base-trixie"
+
+_LOCK = "@sonic_build_infra//apt:apt.lock.json"
+
+_COMPATIBLE = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-dash-engine",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_PACKAGES = {
+    "p4lang-pi": "@p4lang_pi//:runtime",
+    "p4lang-bmv2": "@p4lang_bmv2//:runtime",
+}
+
+exports_files([
+    "Dockerfile.j2",
+    "start.sh",
+])
+
+# Preserve the direct startup script. The original Dockerfile's Supervisor
+# copies and entrypoint are commented out; its packages remain available.
+tar(
+    name = "files",
+    srcs = ["start.sh"],
+    mtree = ["usr/bin/start.sh type=file mode=0755 uid=0 gid=0 time=0 content=$(location start.sh)"],
+)
+
+manifest_labels(
+    name = "labels",
+    manifest = "//:target/bazel-manifests/docker-dash-engine/manifest.json",
+)
+
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "dash_engine_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["dash_engine_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_payload",
+    tars = [":debian_runtime"],
+)
+
+# nnpy retains upstream Python distribution metadata. It is deliberately not
+# assigned a fabricated Debian package record alongside the two Debian owners.
+sonic_layer(
+    name = "source_runtime",
+    tars = _PACKAGES.values() + ["@nnpy//:runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["dash_engine_debian"]["amd64"].values()],
+    owner_metadata = [
+        "@p4lang_pi//:runtime_packages.json",
+        "@p4lang_bmv2//:runtime_packages.json",
+    ],
+    source_modules = {
+        "p4lang-pi": "@dash_engine_source_modules//:p4lang-pi.MODULE.bazel",
+        "p4lang-bmv2": "@dash_engine_source_modules//:p4lang-bmv2.MODULE.bazel",
+    },
+    source_spec = "//platform/vs/docker-dash-engine/bazel:source_paths.json",
+    sources = _PACKAGES,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status type=file mode=0644 uid=0 gid=0 time=0 content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/dash-engine-packages.json type=file mode=0644 uid=0 gid=0 time=0 content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-dash-engine",
+    base = _BASE,
+    entrypoint = ["/usr/bin/start.sh"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_payload",
+        ":source_runtime",
+        ":files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-dash-engine.debug_symbols",
+    image = ":docker-dash-engine",
+)
+
+# This companion is a native validation/debug export, not a new legacy Make
+# installer family. Normal Make continues to request docker-dash-engine.gz.
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-dash-engine",
+    dependency_set = "dash_engine_debug_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["dash_engine_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim type=link mode=0777 uid=0 gid=0 time=0 link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-dash-engine",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-dash-engine",
+    controls = [label + ":control" for label in APT_INPUTS["dash_engine_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@dash_engine_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//platform/vs/docker-dash-engine/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status type=file mode=0644 uid=0 gid=0 time=0 content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/dash-engine-debug-packages.json type=file mode=0644 uid=0 gid=0 time=0 content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-dash-engine-dbg",
+    base = ":docker-dash-engine",
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-dash-engine.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-dash-engine" + suffix + ".gz",
+        image = ":docker-dash-engine" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-dash-engine.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)

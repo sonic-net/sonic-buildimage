@@ -39,14 +39,15 @@ def resolve_output(execution_root, output):
 
 
 def collect_archives(workspace, directory, receipt, targets, *, bazel="bazel", options=(),
-                     use_execution_root=False):
+                     use_execution_root=False, additional_targets=()):
     """Build filename-to-label declarations, exporting one nonempty file each.
 
     The caller owns target selection and payload validation. These are archive
     artifacts: publication uses the shared helper's mode 0644 and keeps a prior
     output intact if a query or copy fails. Commands and completed exports remain
     in the caller's receipt on failure. Callers can opt into output lookup bound
-    to this build's BEP; existing callers retain their current lookup contract.
+    to this build's BEP. Additional targets are built in the same invocation
+    for consumers which inspect their layouts or lock in the execution root.
     """
     if not targets or any(not name or Path(name).name != name or name in (".", "..") for name in targets):
         raise ValueError("archive declarations need nonempty, plain output filenames")
@@ -54,7 +55,7 @@ def collect_archives(workspace, directory, receipt, targets, *, bazel="bazel", o
     receipt.setdefault("artifacts", {})
     execute([bazel, "build", *options,
              "--build_event_json_file=" + str(directory / "build-events.jsonl"),
-             *targets.values()], directory, receipt, "build")
+             *targets.values(), *additional_targets], directory, receipt, "build")
     execution_root = None
     if use_execution_root:
         execution_root = execution_root_from_bep(directory / "build-events.jsonl")

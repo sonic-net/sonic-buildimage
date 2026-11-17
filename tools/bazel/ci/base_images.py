@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import artifact_validation as validation
 from tools.bazel.ci import bazel_commands, build, command_log, resolution
-from tools.bazel.oci import image_validation, oci_layout, package_contract
+from tools.bazel.oci import image_validation, native_packages, oci_layout, package_contract
 from tools.bazel.oci.image_validation import verify_directory_aliases, verify_unique_layer_paths
 
 IMAGES = ("docker-base-trixie", "docker-config-engine-trixie")
@@ -94,8 +94,46 @@ def verify_editor_commands(files):
                                "base image changed the vim-tiny command alternative: " + path)
 
 
-def verify_symbols(native, runtimes, debug_tar, directory):
+def verify_forwarded_symbols(root, native, runtime, symbols, forwarding):
+    """Use the declared native-package contract for source-free ELF launchers."""
+    validation.require(isinstance(forwarding, dict) and set(forwarding).issubset(native),
+                       "debug forwarding names an uncovered launcher")
+    runtime = {name: {**item, "path": name, **({"file": root / name} if "elf_machine" in item else {})}
+               for name, item in runtime.items()}
+    symbols = {name: {**item, **({"file": root / name} if "elf_machine" in item else {})}
+               for name, item in symbols.items()}
+    pairs = []
+    for name, spec in forwarding.items():
+        launcher = runtime.get(name, {})
+        validation.require(launcher.get("file") is not None and
+                           launcher.get("sha256") == native[name]["sha256"],
+                           "debug forwarding launcher is not a covered source ELF")
+        validation.require(isinstance(spec, dict) and isinstance(spec.get("provider"), str),
+                           "invalid debug forwarding provider")
+        provider = native_packages.resolve(runtime, spec["provider"])
+        validation.require(provider.get("path") in native and
+                           provider.get("sha256") == native[provider["path"]]["sha256"],
+                           "debug forwarding provider is not a covered source ELF")
+        info = validation.elf_info(root / name, dynamic=True)
+        identifier = info["build_id"]
+        validation.require(identifier and info["has_debuglink"] and not info["has_dwarf"],
+                           "debug forwarding requires a stripped source-free launcher: " + name)
+        debug_name = "usr/lib/debug/.build-id/" + identifier[:2] + "/" + identifier[2:] + ".debug"
+        validation.require(debug_name in symbols, "forwarding launcher symbols are absent: " + name)
+        symbol_info = validation.elf_info(root / debug_name)
+        validation.require(symbol_info["build_id"] == identifier and not symbol_info["has_dwarf"],
+                           "forwarding launcher symbols differ or contain source DWARF: " + name)
+        validation.verify_debuglink(root / name, root / debug_name, name)
+        contract = native_packages.debug_forwarding(
+            name, spec, runtime, symbols, info, readelf="readelf", objcopy="objcopy")
+        pairs.append({"path": name, "build_id": identifier, "debug_path": debug_name,
+                      "debug_forwarding": contract})
+    return pairs
+
+
+def verify_symbols(native, runtimes, debug_tar, directory, *, forwarding=None):
     """Use the shared verifier, with the source owner's sealed-core exception."""
+    forwarding = {} if forwarding is None else forwarding
     symbols = validation.payload(debug_tar)
     machines = {item["elf_machine"] for item in native.values()}
     validation.require(len(machines) == 1 and all(
@@ -110,9 +148,15 @@ def verify_symbols(native, runtimes, debug_tar, directory):
                   if item["source_package"] == "symcrypt-openssl" and
                   re.fullmatch(r"usr/lib/(?:x86_64|aarch64)-linux-gnu/libsymcrypt\.so\.103\.13\.0", name)]
         validation.require(len(sealed) == 1, "expected the reviewed sealed SymCrypt core")
-        ordinary = {name: item for name, item in native.items() if name not in sealed}
+        runtime = {}
+        if forwarding:
+            for archive in runtimes:
+                runtime.update(validation.payload(archive, require_root=False))
+        forwarded = verify_forwarded_symbols(root, native, runtime, symbols, forwarding)
+        ordinary = {name: item for name, item in native.items() if name not in sealed and name not in forwarding}
         pairs, gaps = validation.elf_debug(root, {**ordinary, **symbols}, set())
         validation.require(not gaps, "source-built package lacks debug symbols")
+        pairs.extend(forwarded)
         core = root / sealed[0]
         sections = validation.command(["readelf", "-SW", str(core)])
         validation.require(".debug_info" not in sections and ".gnu_debuglink" not in sections,

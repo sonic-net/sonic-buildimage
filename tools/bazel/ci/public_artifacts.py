@@ -220,7 +220,31 @@ def dependency_json(value, kind):
     safe_json(value)
 
 
-def bep_summary(lines, partial=False):
+def bep_action_summary(value):
+    """Keep only typed action/cache counts from Bazel's structured metrics."""
+    require(isinstance(value, dict), "missing-bep-action-summary")
+    executed = value.get("actionsExecuted", 0)
+    if isinstance(executed, str) and re.fullmatch(r"0|[1-9][0-9]*", executed):
+        executed = int(executed)
+    executed = integer(executed)
+    statistics = value.get("actionCacheStatistics")
+    require(isinstance(statistics, dict), "missing-bep-action-cache-statistics")
+    hits = integer(statistics.get("hits", 0))
+    records = value.get("runnerCount")
+    require(isinstance(records, list) and records, "missing-bep-runner-counts")
+    runners = {}
+    for record in records:
+        require(isinstance(record, dict) and set(record) <= {"name", "count", "execKind"},
+                "invalid-bep-runner-record")
+        name = record.get("name")
+        require(isinstance(name, str) and re.fullmatch(r"[A-Za-z0-9_. -]{1,80}", name)
+                and name not in runners, "invalid-or-duplicate-bep-runner")
+        runners[name] = integer(record.get("count", 0))
+    require("total" in runners, "missing-bep-runner-total")
+    return {"actions_executed": executed, "action_cache_hits": hits, "runners": runners}
+
+
+def bep_summary(lines, partial=False, *, include_action_summary=False):
     result = {"event_count": 0, "command": None, "bazel_version": None, "targets": {}, "tests": {}, "finished": None, "truncated": False}
     for raw in lines:
         try:
@@ -260,6 +284,11 @@ def bep_summary(lines, partial=False):
             code = finished.get("exitCode", {}).get("code", 0 if success else None)
             require(code is None or isinstance(code, int), "invalid-exit-code")
             result["finished"] = {"success": success, "exit_code": code}
+        elif "buildMetrics" in identifier and include_action_summary:
+            require("action_summary" not in result, "duplicate-bep-action-summary")
+            result["action_summary"] = bep_action_summary(event.get("buildMetrics", {}).get("actionSummary"))
+    if include_action_summary:
+        require("action_summary" in result, "missing-bep-action-summary")
     return result
 
 

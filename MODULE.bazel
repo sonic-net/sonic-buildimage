@@ -650,3 +650,23 @@ http_archive(
     strip_prefix = "tar-split-0.11.6",
     build_file = "//tools/bazel/image/tar_split_json:upstream.BUILD.bazel",
 )
+
+# Native nnpy is source-built for the BMv2 clients installed by its owner.
+bazel_dep(name = "nnpy", version = "1.4.2.sonic.1")
+
+use_repo(apt, "dash_engine_debian", "dash_engine_debug_debian")
+
+apt_inputs(
+    name = "dash_engine_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+source_modules(
+    name = "dash_engine_source_modules",
+    modules = {
+        "@p4lang_pi//:MODULE.bazel": "p4lang-pi",
+        "@p4lang_bmv2//:MODULE.bazel": "p4lang-bmv2",
+        "@nnpy//:MODULE.bazel": "nnpy",
+        "@sonic_fips//:MODULE.bazel": "sonic-fips",
+    },
+)

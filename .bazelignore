@@ -25,7 +25,6 @@ platform/pensando
 platform/s3ip-sysfs
 platform/template
 platform/vpp
-platform/vs/docker-dash-engine
 platform/vs/docker-sonic-vs
 platform/vs/sonic-platform-modules-vs
 platform/vs/sonic-version

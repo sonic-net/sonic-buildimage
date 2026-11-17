@@ -295,5 +295,65 @@ class SourceImageValidationTest(unittest.TestCase):
             verify_editor_commands(files)
 
 
+class ForwardedSourceSymbolsTest(unittest.TestCase):
+    """Exercise the shared image adapter using the existing real linker fixture."""
+
+    def check_fixture(self, mutation=None, **options):
+        from tools.bazel.tests.integration.oci_native_packages_test import ValidateNativePackagesTest
+        fixture = ValidateNativePackagesTest("test_source_free_launcher_has_explicit_matching_provider_symbols")
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.forwarding_fixture(**options)
+        root = fixture.root / "extracted"
+        root.mkdir()
+        archives = [fixture.runtime_manifest.parent / "payload.tar", fixture.debug_manifest.parent / "payload.tar"]
+        for archive in archives:
+            with tarfile.open(archive) as payload:
+                payload.extractall(root, filter="data")
+        runtime, symbols = [base_images.validation.payload(path) for path in archives]
+        native = {name: item for name, item in runtime.items() if "elf_machine" in item}
+        forwarding = fixture.policy["native"]["debug_forwarding"]
+        if mutation:
+            mutation(root, native, runtime, symbols, forwarding)
+        return base_images.verify_forwarded_symbols(root, native, runtime, symbols, forwarding)
+
+    def test_declared_launcher_and_provider_are_both_covered(self):
+        pairs = self.check_fixture()
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual(pairs[0]["debug_forwarding"]["symbol"], "main")
+        self.assertEqual(pairs[0]["debug_forwarding"]["source"], "forward_main.c")
+
+    def test_existing_native_contract_rejects_invalid_provider_and_symbols(self):
+        for option in ("wrong_provider", "no_provider_dwarf", "missing_needed", "corrupt_stub"):
+            with self.subTest(option=option), self.assertRaises(ValueError):
+                self.check_fixture(**{option: True})
+
+    def test_forwarding_cannot_bypass_covered_native_inventory(self):
+        for remove in ("usr/bin/launcher", "usr/lib/x86_64-linux-gnu/libsample.so.0.0.0"):
+            with self.subTest(remove=remove), self.assertRaisesRegex(ValueError, "uncovered launcher|covered source ELF"):
+                self.check_fixture(lambda root, native, runtime, symbols, forwarding: native.pop(remove))
+
+    def test_forwarding_launcher_record_must_match_the_covered_elf(self):
+        def mismatch(root, native, runtime, symbols, forwarding):
+            runtime["usr/bin/launcher"] = {**runtime["usr/bin/launcher"], "sha256": "0" * 64}
+        with self.assertRaisesRegex(ValueError, "launcher is not a covered source ELF"):
+            self.check_fixture(mismatch)
+
+    def test_launcher_symbol_build_id_and_provider_crc_are_still_required(self):
+        def wrong_launcher_id(root, native, runtime, symbols, forwarding):
+            launcher = base_images.validation.elf_info(root / "usr/bin/launcher")["build_id"]
+            path = root / ("usr/lib/debug/.build-id/" + launcher[:2] + "/" + launcher[2:] + ".debug")
+            subprocess.run(["objcopy", "--remove-section=.note.gnu.build-id", str(path)], check=True)
+        def wrong_provider_crc(root, native, runtime, symbols, forwarding):
+            # The existing fixture has one non-launcher debug ELF.
+            launcher = base_images.validation.elf_info(root / "usr/bin/launcher")["build_id"]
+            path = next(root / name for name in symbols if "elf_machine" in symbols[name] and
+                        name != "usr/lib/debug/.build-id/" + launcher[:2] + "/" + launcher[2:] + ".debug")
+            path.write_bytes(path.read_bytes() + b"crc-tamper")
+        for mutation in (wrong_launcher_id, wrong_provider_crc):
+            with self.subTest(mutation=mutation.__name__), self.assertRaises(ValueError):
+                self.check_fixture(mutation)
+
+
 if __name__ == "__main__":
     unittest.main()
