@@ -18,9 +18,9 @@ int is_debug_on = DEBUG_IGNORE;
 /*
  * firmware_upgrade_debug
  * function: Debug switch
- * Parses the file "/var/tmp/.firmware_upgrade_debug" and returns the corresponding debug level
- * return:off--DEBUG_OFF,  app debug on---DEBUG_APP_ON, kernel debug on--DEBUG_KERN_ON,
- *        all debug on--DEBUG_ALL_ON, other--DEBUG_IGNORE
+ * Reads the first byte of DEBUG_FILE ("/tmp/.firmware_upgrade_debug").
+ * Returns DEBUG_OFF for '0', DEBUG_APP_ON for '1', DEBUG_ALL_ON for '3',
+ * and DEBUG_IGNORE if the file cannot be opened, is empty, or starts with another byte.
  */
 int firmware_upgrade_debug(void)
 {
