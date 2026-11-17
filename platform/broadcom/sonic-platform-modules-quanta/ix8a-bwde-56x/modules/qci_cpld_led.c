@@ -192,14 +192,18 @@ static int cpld_led_probe(struct i2c_client *client,
 		cpld_class = class_create(THIS_MODULE, "cpld-led");
 		if (IS_ERR(cpld_class)) {
 			pr_err("couldn't create sysfs class\n");
-			return PTR_ERR(cpld_class);
+			err = PTR_ERR(cpld_class);
+			cpld_class = NULL;
+			return err;
 		}
 	}
 
 	data = devm_kzalloc(&client->dev, sizeof(struct cpld_led_data),
 			    GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
+	if (!data) {
+		err = -ENOMEM;
+		goto err_destroy_class;
+	}
 
 	/* Test */
 	nr = ida_simple_get(&cpld_led_ida, 1, 99, GFP_KERNEL);
@@ -208,7 +212,7 @@ static int cpld_led_probe(struct i2c_client *client,
 		goto err_destroy_class;
 	}
 
-	led_data = kzalloc(sizeof(struct cpld_led_data), GFP_KERNEL);
+	led_data = kzalloc(sizeof(*led_data), GFP_KERNEL);
 	if (!led_data) {
 		err = -ENOMEM;
 		goto err_remove_id;
@@ -223,7 +227,8 @@ static int cpld_led_probe(struct i2c_client *client,
 	port_dev = device_create(cpld_class, &client->dev, MKDEV(0,0), led_data, CPLD_LED_ID_FORMAT, nr);
 	if (IS_ERR(port_dev)) {
 		err = PTR_ERR(port_dev);
-		// printk("err_status\n");
+		dev_err(&client->dev, "Failed to create LED%d device: %d\n", nr, err);
+		goto err_free_data;
 	}
 
 	data->port_dev = port_dev;
@@ -237,7 +242,10 @@ static int cpld_led_probe(struct i2c_client *client,
 	led_data->cpld_client = client;
 
 	err = sysfs_create_group(&port_dev->kobj, &led_attr_group);
-	// if (status)	printk("err status\n");
+	if (err) {
+		dev_err(&client->dev, "Failed to create LED%d attributes: %d\n", nr, err);
+		goto err_unregister_device;
+	}
 	/* end */
 
 	i2c_set_clientdata(client, data);
@@ -248,6 +256,8 @@ static int cpld_led_probe(struct i2c_client *client,
 
 	return 0;
 
+err_unregister_device:
+	device_unregister(port_dev);
 err_free_data:
 	kfree(led_data);
 err_remove_id:

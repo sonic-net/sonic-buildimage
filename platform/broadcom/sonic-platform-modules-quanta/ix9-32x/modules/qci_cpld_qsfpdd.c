@@ -321,14 +321,18 @@ static int cpld_probe(struct i2c_client *client,
 		cpld_class = class_create(THIS_MODULE, "cpld-qsfpdd");
 		if (IS_ERR(cpld_class)) {
 			pr_err("couldn't create sysfs class\n");
-			return PTR_ERR(cpld_class);
+			err = PTR_ERR(cpld_class);
+			cpld_class = NULL;
+			return err;
 		}
 	}
 
 	data = devm_kzalloc(&client->dev, sizeof(struct cpld_data),
 			    GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
+	if (!data) {
+		err = -ENOMEM;
+		goto err_destroy_class;
+	}
 
 	/* register sfp port data to sysfs */
 	for (i = 0; i < 16; i++)
@@ -341,23 +345,21 @@ static int cpld_probe(struct i2c_client *client,
 
 		port_data = kzalloc(sizeof(struct sfp_data), GFP_KERNEL);
 		if (!port_data) {
-			ida_simple_remove(&cpld_ida, port_nr);
 			err = -ENOMEM;
-			goto err_unregister_ports;
+			goto err_remove_id;
 		}
 		err = snprintf(port_data->name, sizeof(port_data->name),
 			       "port-%d", port_nr);
 		if (err < 0 || (size_t)err >= sizeof(port_data->name)) {
-			kfree(port_data);
-			ida_simple_remove(&cpld_ida, port_nr);
 			err = -ENAMETOOLONG;
-			goto err_unregister_ports;
+			goto err_free_data;
 		}
 
 		port_dev = device_create(cpld_class, &client->dev, MKDEV(0,0), port_data, CPLD_ID_FORMAT, port_nr);
 		if (IS_ERR(port_dev)) {
 			err = PTR_ERR(port_dev);
-			// printk("err_status\n");
+			dev_err(&client->dev, "Failed to create port-%d device: %d\n", port_nr, err);
+			goto err_free_data;
 		}
 
 		data->port_dev[i] = port_dev;
@@ -374,7 +376,10 @@ static int cpld_probe(struct i2c_client *client,
 		port_data->cpld_client = client;
 
 		err = sysfs_create_group(&port_dev->kobj, &sfp_attr_group);
-		// if (status)	printk("err status\n");
+		if (err) {
+			dev_err(&client->dev, "Failed to create port-%d attributes: %d\n", port_nr, err);
+			goto err_unregister_device;
+		}
 	}
 
 	i2c_set_clientdata(client, data);
@@ -385,12 +390,19 @@ static int cpld_probe(struct i2c_client *client,
 
 	return 0;
 
+err_unregister_device:
+	device_unregister(port_dev);
+err_free_data:
+	kfree(port_data);
+err_remove_id:
+	ida_simple_remove(&cpld_ida, port_nr);
 err_unregister_ports:
 	while (--i >= 0) {
 		device_unregister(data->port_dev[i]);
 		ida_simple_remove(&cpld_ida, data->port_data[i]->port_id);
 		kfree(data->port_data[i]);
 	}
+err_destroy_class:
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4,10,0)
 	if (ida_is_empty(&cpld_ida)) {
 #else
