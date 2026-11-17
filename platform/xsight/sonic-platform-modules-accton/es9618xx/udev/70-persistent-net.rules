@@ -1,0 +1,3 @@
+## CDC Ethernet device
+SUBSYSTEM=="net", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:02", ATTR{type}=="1", NAME="usb0", ACTION=="add"
+
