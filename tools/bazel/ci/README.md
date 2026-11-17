@@ -50,11 +50,14 @@ deleting active builds.
 AMD64 archive jobs upload generic evidence before Sysmgr acceptance, Sysmgr
 evidence before SWSS layer acceptance, and SWSS layer evidence before Orchagent
 acceptance. Each step preserves its completed artifacts outside the checkout in
-a unique private directory under `RUNNER_TEMP`, prefixed with
-`pre-sysmgr-artifacts.`, `pre-swss-layer-artifacts.`, or
-`pre-orchagent-artifacts.`. This keeps the source-only fence
+a unique private directory under `SONIC_BAZEL_JOB_TEMP`, prefixed with
+`pre-sysmgr-artifacts.`, `pre-swss-layer-artifacts.`,
+`pre-orchagent-artifacts.`, `pre-macsec-artifacts.`, or `pre-dash-ha-artifacts.`.
+This keeps the source-only fence
 intact without colliding with or deleting prior jobs' evidence. The preserved
-path is logged; retained temporary evidence is subject to agent maintenance.
+path is logged. The registered post-job hook removes these job-owned copies only
+after their publication steps and artifact uploads succeed. Incomplete uploads
+leave the evidence available for agent maintenance.
 Sysmgr public evidence is collected only after its build was attempted,
 including failed builds, not when an earlier step prevented it from running.
 
@@ -72,6 +75,61 @@ expected physical workspace, stays on its filesystem and skips symlinks and
 hardlinked files.
 It does not delete files or change shared-cache targets. Any repair failure
 stops the job before checkout.
+
+### Post-job Bazel disk cleanup
+
+Before source checks, the native Bazel workflows restore already-populated
+submodules to their superproject's recorded commits, recursively, then initialize
+the required Sysmgr gNOI source. A checkout without `submodules` does not update
+retained submodule revisions on a reused runner. The preparation uses
+`submodule foreach` to avoid cloning unrelated uninitialized modules, including
+registered modules whose working directories are absent. Git fetches missing
+pinned commits as needed; conflicting local edits fail explicitly rather than
+being forcibly reset. Repository-wide tracked-source checks remain enabled,
+including YANG's check. Preparation stays inline so base-image reviews selecting
+older source revisions do not depend on a newly added helper in that checkout.
+
+SNMP retains its upload-gated immediate artifact cleanup within the registered
+job temporary directory; failed uploads preserve those artifacts. The post-job
+hook reclaims the remaining authorized job artifacts and Bazel state.
+
+The [cleanup action](../../../.github/actions/bazel-post-job-cleanup/action.yml)
+is registered **before** `setup-bazel` on the AMD64/ARM64 Bazel pools. GitHub
+runs post actions in reverse order, so local caches are saved before
+[`cleanup_container_bazel.py`](cleanup_container_bazel.py) reclaims disk space.
+The final regular step records publication outcomes; it does not delete files.
+It runs only after the `bazel_cleanup_register` step succeeds, ensuring Python,
+the cleanup controller and the registered job temporary directory are available.
+Once registered, publication outcomes are recorded even if a later build fails;
+early prerequisite failures or failed/skipped registration skip authorization.
+
+OCI archive, Gearbox, Router Advertiser, base-image, event-services and Rust
+supervisor container jobs stop their checkout-owned Bazel servers and remove
+only the dedicated `/github/home/.cache/{bazel,bazel-disk,bazel-repo,bazelisk}`
+directories. Successful publication authorizes removing checkout artifacts
+and the registered per-job temporary directory, including preserved source-only
+snapshots. Failed, cancelled or missing publication retains those files with an
+explicit warning; local caches can still be reclaimed after cache-save hooks.
+
+The YANG host job removes only its exact checkout/component output bases and
+successfully uploaded component artifacts. Shared host repository, disk and
+Bazelisk caches, other checkouts' output bases, and Docker-referenced paths are
+preserved. Removal rejects symlink roots, changed directory identities and
+mounted subtrees rather than following them.
+The host runner's work-root alias (for example `_work` pointing to build storage)
+is resolved before registration and cleanup. Checkout, temporary and artifact
+directories below that physical root still require no-follow traversal; changing
+the work-root target invalidates the registered job directory.
+
+Base-image reviews may check out an older source revision. Their small cleanup
+controller is staged under ignored `target/ci-bazel-cleanup-controller` before
+cache setup, keeping the post hook independent of that checkout.
+
+This cleanup does not run on the VS installer agent, delete runner metadata,
+touch shared NFS/remote caches or prune Docker images. Agents already unable to
+start a job need a separate one-time cleanup while idle; a post hook cannot
+recover an agent that fails before checkout. Continue managing host Docker
+retention outside active jobs.
 
 Kernel host jobs retain the master's fixed directory names under the short
 `KERNEL_RUN_TEMP=/mnt/build/k` root; GitHub's `RUNNER_TEMP` is unchanged. Before

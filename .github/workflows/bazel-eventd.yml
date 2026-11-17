@@ -3,6 +3,9 @@ name: Bazel event services
 on:
   pull_request:
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
       - src/sonic-eventd/**
       - .bazelrc
       - MODULE.bazel
@@ -17,6 +20,9 @@ on:
   push:
     branches: [master]
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
       - src/sonic-eventd/**
       - .bazelrc
       - MODULE.bazel
@@ -46,7 +52,9 @@ jobs:
             runner: [self-hosted, linux, bazel-arm64]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
-    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -58,8 +66,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - uses: ./.github/actions/bazel-post-job-cleanup
+        id: bazel_cleanup_register
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -107,6 +121,7 @@ jobs:
           echo 'Bazel cache-parent write probe passed.'
           tools/bazel/ci/libteam_draft_bazel.sh info output_base
       - name: Audit, build and run all original suites with private Redis
+        id: eventd_build
         env:
           # Bazel records its client environment in retained build events.
           BAZELISK_GITHUB_TOKEN: ""
@@ -116,6 +131,7 @@ jobs:
           python3 -B src/sonic-eventd/bazel/ci.py --bazel "$GITHUB_WORKSPACE/tools/bazel/ci/libteam_draft_bazel.sh" --architecture '${{ matrix.architecture }}' --artifacts artifacts/eventd
           git -c safe.directory="$GITHUB_WORKSPACE" diff --exit-code
       - name: Upload native packages and test evidence
+        id: bazel_upload_eventd_build
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -124,3 +140,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts

@@ -146,7 +146,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -161,7 +161,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(set(scratch.glob("pre-sysmgr-artifacts.*")), set(destinations))
@@ -171,7 +171,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
@@ -193,7 +194,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             for value in ("first", "second"):
@@ -238,7 +239,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             destinations = []
@@ -305,7 +306,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -323,7 +324,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
