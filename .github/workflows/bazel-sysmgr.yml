@@ -77,12 +77,32 @@ jobs:
             'build --remote_upload_local_results=false' \
             'build --experimental_build_event_upload_strategy=local' \
             >> "$GITHUB_WORKSPACE/.bazelrc.user"
+      - name: Check out the registry's verified Cosmos downloader
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: securely1g/sonic-bazel-registry
+          ref: 0f459395f8852b5c89e9895afeeea01b95b281ea
+          path: .ci/sysmgr-registry
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /ci/github_sources.py
+            /ci/github_sources/cosmos-4.0.2.json
+      - name: Prepare the APE tools from the official Cosmos release
+        run: |
+          mkdir -p artifacts/sysmgr
+          registry=.ci/sysmgr-registry/ci
+          python3 -B "$registry/github_sources.py" \
+            --manifest "$registry/github_sources/cosmos-4.0.2.json" \
+            --distdir "$RUNNER_TEMP/sysmgr-distdir" \
+            --cache-dir "$RUNNER_TEMP/sysmgr-github-cache" \
+            --receipt artifacts/sysmgr/github-sources.json
+          printf 'common --distdir="%s"\n' "$RUNNER_TEMP/sysmgr-distdir" >> "$GITHUB_WORKSPACE/.bazelrc.user"
       - name: Audit, build and validate installed packages and original tests
         env:
           BAZELISK_GITHUB_TOKEN: ""
           CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          mkdir -p artifacts/sysmgr
           python3 -B src/sonic-sysmgr/bazel/ci.py \
             --startup-arg="--bazelrc=$GITHUB_WORKSPACE/.bazelrc.user" \
             --registry https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \

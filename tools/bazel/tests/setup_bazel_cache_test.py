@@ -118,11 +118,13 @@ class SetupBazelCacheTest(unittest.TestCase):
         handoff = next(step for step in steps if HELPER in step.get("run", ""))
         policy = next(step for step in steps
                       if step.get("name") == "Configure read-only cache and local test evidence")
+        prefetch = next(step for step in steps if "github_sources.py" in step.get("run", ""))
         build = next(step for step in steps if "src/sonic-sysmgr/bazel/ci.py" in step.get("run", ""))
         self.assertEqual(setup["with"]["module-root"], "src/sonic-sysmgr")
         self.assertEqual(steps.index(handoff), steps.index(setup) + 1)
         self.assertLess(steps.index(handoff), steps.index(policy))
-        self.assertLess(steps.index(policy), steps.index(build))
+        self.assertLess(steps.index(policy), steps.index(prefetch))
+        self.assertLess(steps.index(prefetch), steps.index(build))
         for event in ("pull_request", "push"):
             self.assertIn(HELPER, document.get("on", document.get(True))[event]["paths"])
         with tempfile.TemporaryDirectory(prefix="sysmgr cache ") as temporary:
@@ -131,11 +133,6 @@ class SetupBazelCacheTest(unittest.TestCase):
             env["GITHUB_WORKSPACE"] = str(root)
             for step in (handoff, policy):
                 subprocess.run(["bash", "-euc", step["run"]], cwd=root, env=env, check=True)
-            self.assertEqual((root / ".bazelrc.user").read_text().splitlines(), [
-                "build --disk_cache=/disk", "common --repository_cache=/repo",
-                *PRIVATE_CACHE_SETTINGS, "build --remote_upload_local_results=false",
-                "build --experimental_build_event_upload_strategy=local",
-            ])
             recorder = root / "bin/python3"
             recorder.write_text("""#!/usr/bin/python3
 import json, os, sys
@@ -143,6 +140,16 @@ from pathlib import Path
 Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
 """)
             recorder.chmod(0o755)
+            subprocess.run(["bash", "-euc", prefetch["run"]], cwd=root, env=env, check=True)
+            prefetch_args = json.loads((root / "record.json").read_text())
+            self.assertEqual(prefetch_args[prefetch_args.index("--distdir") + 1],
+                             str(root / "sysmgr-distdir"))
+            self.assertEqual((root / ".bazelrc.user").read_text().splitlines(), [
+                "build --disk_cache=/disk", "common --repository_cache=/repo",
+                *PRIVATE_CACHE_SETTINGS, "build --remote_upload_local_results=false",
+                "build --experimental_build_event_upload_strategy=local",
+                f'common --distdir="{root / "sysmgr-distdir"}"',
+            ])
             subprocess.run(["bash", "-e", "-o", "pipefail", "-c", build["run"]],
                            cwd=root, env=env, check=True)
             args = json.loads((root / "record.json").read_text())
