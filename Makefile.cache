@@ -82,7 +82,7 @@
 SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 6d6fe618e63c3e0d6c106a4a09223e7f854318f1
+SONIC_CACHE_RECIPE_VER_BASELINE := 68ba0f84106c29fa3d6077924c3eb78e60763f65
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -107,7 +107,10 @@ endif
 # SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
 # It includes common files like .platform, rules/functions, Makefile.cache etc.
 # NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
-SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
+# NOTE: scripts/prepare_docker_buildinfo.sh and the helpers it invokes
+# (build_mirror_config.sh, versions_manager.py) generate the build context of
+# every docker image, so changes to them must invalidate cached outputs.
+SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions scripts/prepare_docker_buildinfo.sh scripts/build_mirror_config.sh scripts/versions_manager.py Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 # NOTE: DOCKER_DEFAULT_PLATFORM changes the architecture recorded in every docker
 # image produced, so images cached under a different value must not be reused.
@@ -147,10 +150,7 @@ endif
 endif
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
-SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 \
-                                 sonic-slave-stretch/Dockerfile.j2 \
-                                 sonic-slave-buster/Dockerfile.j2 \
-                                 sonic-slave-bullseye/Dockerfile.j2 \
+SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-bullseye/Dockerfile.j2 \
                                  sonic-slave-bookworm/Dockerfile.j2 \
 								 sonic-slave-trixie/Dockerfile.j2
 
@@ -575,10 +575,10 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 #             sub module dependency file (.smdep)
 #             sub module hash file (.smsha)
 #         For example: following are the cache framework files for bash module
-#             target/debs/stretch/bash_4.3-14_amd64.deb             => Final debian package
-#             target/debs/stretch/bash_4.3-14_amd64.deb.flags       => Environment Flag file
-#             target/debs/stretch/bash_4.3-14_amd64.deb.dep         => Dependency files list
-#             target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha     => SHA Hash file
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb          => Final debian package
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.flags    => Environment Flag file
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep      => Dependency files list
+#             target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep.sha  => SHA Hash file
 #
 #
 # [1] .flags => contains value of all the environment variables of a target.
@@ -622,7 +622,7 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 # This file contains the values of target environment flags and gets updated only when there is a change in the flag's value.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.flags
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.flags
 #
 #  RULE args:
 #  $(1)  => target name
@@ -670,8 +670,8 @@ $(eval $(call FLAGS_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),flags))
 # The submodule dependency file is created with the name as '<target name>.smdep' and the SHA hash file created as '<target name>.smdep.smsha'.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep
-#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep.smsha
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.smdep
+#       target/debs/bookworm/linux-headers-6.1.0-22-2-common_6.1.94-1_all.deb.smdep.smsha
 #
 #  RULE args:
 #  $(1)  => target name
@@ -721,8 +721,8 @@ $(eval $(call SMSHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES)
 # The module dependency file is created with the name as '<target name>.dep' and the SHA hash file created as '<target name>.dep.sha'.
 # This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
 # For Eg:
-#       target/debs/stretch/bash_4.3-14_amd64.deb.dep
-#       target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha
+#       target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep
+#       target/debs/bookworm/bash_5.2.15-2_amd64.deb.dep.sha
 #
 #  RULE args:
 #          $(1)  => target name
