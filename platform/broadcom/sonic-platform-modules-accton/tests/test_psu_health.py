@@ -2,7 +2,8 @@
 
 import json
 import unittest
-from platform_test_utils import SOURCE, DEVICE
+from platform_test_utils import SOURCE, DEVICE, definitions
+from unittest.mock import Mock
 
 
 class PsuHealth(unittest.TestCase):
@@ -124,5 +125,35 @@ class As7726PsuHealth(unittest.TestCase):
         plugin = json.loads((root / "pddf/pd-plugin.json").read_text())
         self.assertEqual(
             plugin["PSU"]["psu_fan_dir"]["i2c"]["valmap"],
-            {"F2B": "EXHAUST", "B2F": "INTAKE"},
+            {"F2B": "EXHAUST", "F2B*": "EXHAUST", "B2F": "INTAKE"},
         )
+
+    def test_psu_airflow_api_maps_observed_labels_without_hiding_unknown_values(self):
+        root = SOURCE / (DEVICE + "as7726_32x-r0")
+        plugin = json.loads((root / "pddf/pd-plugin.json").read_text())
+        fan_class = definitions(
+            "platform/pddf/platform-api-pddf-base/sonic_platform_pddf_base/pddf_fan.py",
+            FanBase=object,
+        )["PddfFan"]
+        for index in (1, 2):
+            fan = object.__new__(fan_class)
+            fan.is_psu_fan = True
+            fan.fans_psu_index = index
+            fan.plugin_data = plugin
+            fan.pddf_obj = Mock()
+            for value, expected in (
+                ("F2B*", "EXHAUST"),
+                ("F2B", "EXHAUST"),
+                ("B2F", "INTAKE"),
+                ("B2F*", "B2F*"),
+                ("UNKNOWN", "UNKNOWN"),
+            ):
+                with self.subTest(psu=index, value=value):
+                    fan.pddf_obj.get_attr_name_output.return_value = {
+                        "mode": "i2c",
+                        "status": value + "\n",
+                    }
+                    self.assertEqual(fan.get_direction(), expected)
+                    fan.pddf_obj.get_attr_name_output.assert_called_with(
+                        "PSU{}".format(index), "psu_fan_dir"
+                    )
