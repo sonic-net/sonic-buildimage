@@ -139,9 +139,10 @@ replace Bazel's remote cache or resolve its connection failures.
 
 The VS job sets `SONIC_BUILD_JOBS=4` for concurrent Make recipes. Per-package
 compilation parallelism remains at its existing default, and Bazel retains its
-separate `--jobs=4` limit. Commands sharing one Bazel output base still serialize;
-increasing Make concurrency does not bypass that lock and may increase memory
-or I/O pressure.
+separate `--jobs=4` and 12-GiB local-memory budget. Image recipes use the normal
+shared workspace server, so their commands serialize; increasing Make concurrency
+does not bypass that lock. No per-image server lifecycle or custom shared-server
+wrapper is added. P4RT and kernel workspaces retain their independent launchers.
 
 Before local cache cleanup, the job uses noninteractive `sudo` to check that the
 cache directory exists and is NFS-backed. The `stat --file-system` probe triggers

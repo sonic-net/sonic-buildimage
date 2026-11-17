@@ -44,16 +44,19 @@ class MacsecWorkflowTest(unittest.TestCase):
             root = Path(temporary)
             scratch = root / "scratch"
             scratch.mkdir()
+            job_temp = scratch / "registered-job"
+            job_temp.mkdir()
             mirror = scratch / "sonic-source-mirrors.cfg"
             mirror.write_text("shared mirror configuration\n")
             rc = root / ".bazelrc.user"
             rc.write_text("common --downloader_config=" + str(mirror) + "\nbuild --disk_cache=/shared/cache\n")
             original_rc = rc.read_bytes()
 
-            def run(directory=scratch):
+            def run(directory=job_temp):
                 return subprocess.run(["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                                       cwd=root, capture_output=True, text=True,
-                                      env=dict(os.environ, RUNNER_TEMP=str(directory)))
+                                      env=dict(os.environ, RUNNER_TEMP=str(scratch),
+                                               SONIC_BAZEL_JOB_TEMP=str(directory)))
 
             for value in ("first", "second"):
                 previous = root / "artifacts/orchagent"
@@ -64,8 +67,9 @@ class MacsecWorkflowTest(unittest.TestCase):
                 self.assertFalse((root / "artifacts").exists())
                 self.assertEqual(rc.read_bytes(), original_rc)
                 self.assertEqual(mirror.read_text(), "shared mirror configuration\n")
-            receipts = list(scratch.glob("pre-macsec-artifacts.*/artifacts/orchagent/receipt.json"))
+            receipts = list(job_temp.glob("pre-macsec-artifacts.*/artifacts/orchagent/receipt.json"))
             self.assertCountEqual([path.read_text() for path in receipts], ["first", "second"])
+            self.assertEqual(list(scratch.glob("pre-macsec-artifacts.*")), [])
             for path in receipts:
                 self.assertEqual(path.parents[2].stat().st_mode & 0o777, 0o700)
             self.assertEqual(run().returncode, 0)

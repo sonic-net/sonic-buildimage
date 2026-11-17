@@ -24,7 +24,7 @@ class VsOciSessionTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
         for source in ("tools/bazel/ci/verify_vs_oci.sh", "tools/bazel/build_helpers.py",
-                       "tools/bazel/cache/credentials.py", "tools/bazel/private_server.sh"):
+                       "tools/bazel/cache/credentials.py"):
             destination = self.directory / source
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / source, destination)
@@ -39,23 +39,10 @@ import json, os, pathlib, sys
 args = sys.argv[1:]
 with pathlib.Path('bazel-arguments.jsonl').open('a') as output:
     output.write(json.dumps(args) + '\\n')
-base = pathlib.Path(next(arg.split('=', 1)[1] for arg in args if arg.startswith('--output_base=')))
-command = next(arg for arg in args if arg in ('test', 'build', 'info', 'cquery', 'shutdown'))
-if command in ('test', 'build') and os.environ.get('VERIFY_ORIGINAL_ARCHIVE'):
-    label = next(arg for arg in args if arg.startswith('//'))
-    owner = 'docker-syncd-vs.gz' if 'syncd' in label else 'docker-orchagent.gz'
-    produced = base / 'original-archive'
-    if not produced.exists() or produced.read_bytes() != (pathlib.Path('target') / owner).read_bytes():
-        sys.exit('runtime Make archive differs from the Bazel output')
-execroot = base / 'execroot/main repo'
-testlogs = execroot / 'bazel-out/chosen-config/testlogs'
-if command == 'info':
-    sys.exit('info cannot resolve apparent Bzlmod platform labels')
+command = args[0]
 if command == 'test':
-    if os.environ.get('NO_TEST_REPORT'):
-        sys.exit(int(os.environ.get('IMAGE_STATUS', '0')))
     target = next(arg.split(':')[1] for arg in args if arg.startswith('//'))
-    output = testlogs / 'tools/bazel/tests' / target
+    output = pathlib.Path('bazel-testlogs/tools/bazel/tests') / target
     for name in ('test.log', 'test.xml', 'test.outputs/validation.json'):
         path = output / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,8 +51,7 @@ if command == 'test':
     sys.exit(int(os.environ.get('IMAGE_STATUS', '0')))
 if command == 'build':
     label = next(arg for arg in args if arg.startswith('//'))
-    (execroot / 'bazel-out').mkdir(parents=True, exist_ok=True)
-    (execroot / 'policy.json').write_text(label)
+    pathlib.Path('policy.json').write_text(label)
 if command == 'cquery':
     print('policy.json')
 """)
@@ -132,41 +118,29 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         path = self.directory / "make-calls.jsonl"
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
-    def test_separate_validation_uses_the_published_images_and_their_own_bazel_outputs(self):
+    def test_separate_validation_reuses_the_published_config_engine(self):
         switch = {"SONIC_VS_REUSE_BAZEL_PRODUCERS": "1"}
-        for owner in ARCHIVES[::2]:
-            result = subprocess.run(["bash", "-ec", """
-                source tools/bazel/private_server.sh
-                start_image_bazel "$1"
-                mkdir -p "$bazel_output_base/execroot/main repo/bazel-out"
-                printf '%s' "$bazel_output_base" > "$bazel_output_base/original-archive"
-                cp "$bazel_output_base/original-archive" "target/$1"
-            """, "--", owner], cwd=self.directory, env=dict(self.environment, **switch),
-                                    capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
         base = self.directory / BASE_ARCHIVE
+        base.parent.mkdir()
         base.write_bytes(b"base used by the installer")
-        result = self.run_verifier(VERIFY_ORIGINAL_ARCHIVE="1", **switch)
+        result = self.run_verifier(**switch)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.producers(), DEB_PATHS)
         self.assertEqual(base.read_bytes(), b"base used by the installer")
         self.assertTrue((self.directory / "artifacts/vs/syncd-installed-images-policy.json").is_file())
         self.assertTrue((self.directory / "artifacts/vs/swss-installed-images-policy.json").is_file())
+        arguments = [json.loads(line) for line in
+                     (self.directory / "bazel-arguments.jsonl").read_text().splitlines()]
+        self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
+                             for args in arguments for arg in args))
+        self.assertFalse(any("shutdown" in args for args in arguments))
 
         # A Bazel test or policy output copied during the first attempt is read-only.
         for name in ("swss-images/test.log", "syncd-installed-images-policy.json"):
             (self.directory / "artifacts/vs" / name).chmod(0o444)
-        result = self.run_verifier(VERIFY_ORIGINAL_ARCHIVE="1", **switch)
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-        (self.directory / "target/docker-orchagent.gz").write_bytes(b"replacement")
-        result = self.run_verifier(VERIFY_ORIGINAL_ARCHIVE="1", **switch)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("runtime Make archive differs", result.stdout)
-        shutil.rmtree(self.directory / "target/.vs-bazel/docker-orchagent.gz")
         result = self.run_verifier(**switch)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Missing VS producer output base", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.directory / "target/.vs-bazel").exists())
 
     def test_verification_keeps_archive_options_logs_and_deb_inputs(self):
         cache = self.directory / "cache with spaces"
@@ -176,13 +150,13 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         arguments = [json.loads(line) for line in (self.directory / "bazel-arguments.jsonl").read_text().splitlines()]
         target_calls = [args for args in arguments if any(arg.startswith("//") for arg in args)]
         self.assertEqual(len(target_calls), 6)
-        self.assertEqual(len({next(arg for arg in args if arg.startswith("--output_base="))
-                              for args in target_calls}), 4)
+        self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
+                             for args in target_calls for arg in args))
         test_calls = [args[args.index("test"):] for args in target_calls if "test" in args]
         common = [f"--repository_cache={cache}/repository_cache", f"--disk_cache={cache}/disk_cache",
                   "--distdir=/input with spaces", "--jobs=3",
                   "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
-                  "--host_platform=@sonic_build_infra//platforms:x86_64_trixie", "--symlink_prefix=/"]
+                  "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
         for index, (target, flags) in enumerate((("swss_images_test", []),
                                                ("syncd_p4_images_test", ["--config=syncd-dash"]))):
             self.assertEqual(test_calls[index], ["test", *common, *flags, "//tools/bazel/tests:" + target,
@@ -203,13 +177,6 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         self.assertEqual(result.returncode, 7, result.stdout + result.stderr)
         self.assertTrue((self.directory / "artifacts/vs/syncd-p4-images/test.xml").is_file())
         self.assertFalse((self.directory / "debug-arguments.json").exists())
-
-    def test_missing_report_preserves_test_error_and_rejects_incomplete_success(self):
-        for status in ("7", "0"):
-            with self.subTest(status=status):
-                result = self.run_verifier(NO_TEST_REPORT="1", IMAGE_STATUS=status)
-                self.assertEqual(result.returncode, int(status) or 1, result.stderr)
-                self.assertIn("found 0", result.stderr)
 
     def test_debug_verification_failure_is_not_hidden_by_tee(self):
         result = self.run_verifier(DEBUG_STATUS="9")

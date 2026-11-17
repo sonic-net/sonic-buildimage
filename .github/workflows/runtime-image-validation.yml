@@ -3,6 +3,9 @@ name: Installed-image validator
 on:
   pull_request:
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
       - tools/bazel/ci/validate_runtime.py
       - tools/bazel/tests/runtime_validation_test.py
       - tools/bazel/tests/installed_images_test.py
@@ -22,6 +25,9 @@ on:
   push:
     branches: [master]
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
       - tools/bazel/ci/validate_runtime.py
       - tools/bazel/tests/runtime_validation_test.py
       - tools/bazel/tests/installed_images_test.py
@@ -77,5 +83,6 @@ jobs:
             tools.bazel.tests.vs_oci_session_test \
             tools.bazel.tests.integration.oci_inventory_test \
             tools.bazel.tests.integration.oci_image_test \
+            tools.bazel.tests.container_bazel_cleanup_test \
             tools.bazel.tests.image_workflow_test -v
           /usr/bin/python3 -B tools/bazel/ci/validate_runtime.py --help

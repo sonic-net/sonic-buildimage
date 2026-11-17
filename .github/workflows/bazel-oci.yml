@@ -292,8 +292,15 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -528,6 +535,7 @@ jobs:
             --github-output "$GITHUB_OUTPUT"
 
       - name: Upload public archive evidence
+        id: bazel_upload_public_artifacts
         if: always() && steps.public_artifacts.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -561,6 +569,7 @@ jobs:
         run: python3 -B tools/bazel/ci/eventd_image.py publish --artifacts artifacts/eventd
 
       - name: Upload Eventd archives and public evidence
+        id: bazel_upload_eventd_public
         if: always() && steps.eventd_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -587,7 +596,7 @@ jobs:
           # outside the checkout while the source-only image fence runs.
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-sysmgr-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-sysmgr-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed archive evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -640,6 +649,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain Sysmgr image artifacts and evidence
+        id: bazel_upload_sysmgr_public
         if: always() && matrix.architecture == 'amd64' && steps.sysmgr_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -669,7 +679,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-swss-layer-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-swss-layer-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed Sysmgr evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -678,7 +688,7 @@ jobs:
         id: snmp_build
         if: matrix.architecture == 'amd64'
         run: |
-          snmp_artifacts=$(mktemp -d "$RUNNER_TEMP/snmp.XXXXXXXX")
+          snmp_artifacts=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/snmp.XXXXXXXX")
           printf 'directory=%s\n' "$snmp_artifacts" >> "$GITHUB_OUTPUT"
           python3 -B tools/bazel/ci/snmp_image.py build --bazel "$BAZEL" --artifacts "$snmp_artifacts"
           python3 -B tools/bazel/ci/snmp_image.py validate --artifacts "$snmp_artifacts"
@@ -691,7 +701,7 @@ jobs:
           snmp_artifacts: ${{ steps.snmp_build.outputs.directory }}
         run: python3 -B tools/bazel/ci/snmp_image.py publish --artifacts "$snmp_artifacts"
       - name: Retain SNMP archives and build evidence
-        id: snmp_upload
+        id: bazel_upload_snmp_public
         if: always() && steps.snmp_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -753,6 +763,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain FRR images and reviewed build evidence
+        id: bazel_upload_frr_public
         if: always() && steps.frr_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -826,6 +837,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain Teamd images and reviewed build evidence
+        id: bazel_upload_teamd_public
         if: always() && matrix.architecture == 'amd64' && steps.teamd_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -917,6 +929,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PY
       - name: Retain reviewed artifacts and receipts
+        id: bazel_upload_swss_layer_public
         if: always() && matrix.architecture == 'amd64' && steps.swss_layer_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -946,7 +959,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-sflow-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-sflow-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed SWSS layer evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -1032,6 +1045,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain sFlow archives and source evidence
+        id: bazel_upload_sflow_public
         if: always() && matrix.architecture == 'amd64' && steps.sflow_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1067,7 +1081,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-orchagent-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-orchagent-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed sFlow evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -1091,8 +1105,8 @@ jobs:
           set -euo pipefail
           rc_flags=(--nosystem_rc --nohome_rc --noworkspace_rc "--bazelrc=$PWD/tools/bazel/common.bazelrc")
           bazel "${rc_flags[@]}" shutdown >/dev/null 2>&1 || true
-          owner_output="$(mktemp -d "$RUNNER_TEMP/orchagent-owner-output.XXXXXXXX")"
-          owner_bazel="$(mktemp "$RUNNER_TEMP/orchagent-owner-bazel.XXXXXXXX")"
+          owner_output="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-output.XXXXXXXX")"
+          owner_bazel="$(mktemp "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-bazel.XXXXXXXX")"
           export OWNER_OUTPUT="$owner_output"
           owner_jvm="--host_jvm_args=-Xmx6g"
           cleanup_owner_output() {
@@ -1200,6 +1214,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYORCH
       - name: Retain Orchagent archives and source evidence
+        id: bazel_upload_orchagent_public
         if: always() && matrix.architecture == 'amd64' && steps.orchagent_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1285,6 +1300,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - name: Upload Database archives and public evidence
+        id: bazel_upload_database_public_evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && matrix.architecture == 'amd64' && steps.database_public_evidence.outcome == 'success'
         with:
@@ -1309,7 +1325,7 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           if [[ -d artifacts ]]; then
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-lldp-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-lldp-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
           fi
 
@@ -1376,6 +1392,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain images and reviewed build evidence
+        id: bazel_upload_lldp_public
         if: always() && steps.lldp_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1402,7 +1419,7 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           if [[ -d artifacts ]]; then
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-mux-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-mux-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
           fi
 
@@ -1455,6 +1472,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - name: Retain MUX images and evidence
+        id: bazel_upload_mux_public
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && matrix.architecture == 'amd64' && steps.mux_public.outcome == 'success'
         with:
@@ -1479,7 +1497,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-macsec-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-macsec-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed Orchagent evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -1539,6 +1557,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYMACSEC
       - name: Retain MACsec archives and reviewed evidence
+        id: bazel_upload_macsec_public
         if: always() && matrix.architecture == 'amd64' && steps.macsec_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1563,7 +1582,7 @@ jobs:
           compression-level: 1
 
       - name: Remove uploaded SNMP temporary artifacts
-        if: always() && steps.snmp_build.outputs.directory != '' && steps.snmp_upload.outcome == 'success'
+        if: always() && steps.snmp_build.outputs.directory != '' && steps.bazel_upload_snmp_public.outcome == 'success'
         env:
           SNMP_ARTIFACTS: ${{ steps.snmp_build.outputs.directory }}
         run: |
@@ -1573,7 +1592,7 @@ jobs:
           import shutil
 
           directory = Path(os.environ["SNMP_ARTIFACTS"])
-          temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+          temporary = Path(os.environ["SONIC_BAZEL_JOB_TEMP"]).resolve()
           if (not directory.is_absolute() or directory.is_symlink()
                   or directory.parent.resolve() != temporary
                   or not directory.name.startswith("snmp.")):
@@ -1585,7 +1604,7 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           if [[ -d artifacts ]]; then
-            preserved=$(mktemp -d "$RUNNER_TEMP/pre-dash-ha-artifacts.XXXXXXXX")
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-dash-ha-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
           fi
 
@@ -1636,6 +1655,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain DASH HA image artifacts and evidence
+        id: bazel_upload_dash_ha_public
         if: always() && matrix.architecture == 'amd64' && steps.dash_ha_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1658,6 +1678,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   dash_ha_runtime:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
@@ -1862,6 +1888,7 @@ jobs:
     timeout-minutes: 360
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     env:
       # Shared CI entry point with the canonical registry; the full Make VS job is separate.
       BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
@@ -1908,8 +1935,15 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -1981,6 +2015,7 @@ jobs:
               (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
           PYCODE
       - name: Retain gearbox archives and source evidence
+        id: bazel_upload_gearbox_public
         if: always() && steps.gearbox_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -2007,6 +2042,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   gearbox_runtime:
     name: Load and run gearbox images (AMD64)
@@ -2445,8 +2486,12 @@ jobs:
       - name: Check hosted storage
         run: df -h "$GITHUB_WORKSPACE" "$HOME"
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -2993,9 +3038,9 @@ jobs:
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
       SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
-      # Four concurrent Make recipes share the runner's Bazel action budget.
+      # Image recipes serialize through one Bazel server on this runner.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=2 --local_resources=cpu=2 --local_resources=memory=3072
+        --jobs=4 --local_resources=memory=12288
         --experimental_remote_downloader=grpc://172.16.0.4:9092
         --experimental_remote_downloader_local_fallback
         --distdir=/bazel_cache/distdir/ape-1.0.1
@@ -3078,10 +3123,6 @@ jobs:
               fi
             fi
           done
-          # Four image builds can start JVMs on this eight-CPU runner at once.
-          # Match each JVM to its two-CPU action budget and allow a busy start.
-          printf '\n%s\n%s\n' 'startup --host_jvm_args=-XX:ActiveProcessorCount=2' \
-            'startup --local_startup_timeout_secs=300' >> .bazelrc.user
           python3 -B tools/bazel/gzip/source_archive.py \
             --archives-dir artifacts/vs/repository-inputs \
             --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json
@@ -3460,7 +3501,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Initialize the pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -3587,6 +3632,7 @@ jobs:
     timeout-minutes: 180
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -3621,8 +3667,15 @@ jobs:
             --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
             --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
             --github-output "$GITHUB_OUTPUT"
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -3686,6 +3739,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: bazel_upload_public_evidence
         if: always() && steps.public_evidence.outcome == 'success'
         with:
           name: radv-image-amd64-${{ github.sha }}
@@ -3703,6 +3757,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   radv_runtime:
     name: Run installed Router Advertiser images (AMD64)

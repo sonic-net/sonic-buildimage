@@ -31,19 +31,12 @@ class ArchiveRecipeFixture:
         self.fake_bazel.write_text("#!/usr/bin/env python3\n" + r"""
 import hashlib, json, os, pathlib, sys
 arguments = sys.argv[1:]
-startup = []
-while arguments and arguments[0].startswith('-'):
-    startup.append(arguments.pop(0))
-bases = [arg.split('=', 1)[1] for arg in startup if arg.startswith('--output_base=')]
-if len(bases) != 1 or not pathlib.Path(bases[0]).is_absolute():
-    raise SystemExit('expected one absolute --output_base before the Bazel command')
-execution_root = pathlib.Path(bases[0]) / 'execroot/fixture workspace'
 operation = arguments[0]
 labels = json.loads(os.environ['FAKE_BAZEL_LABELS'])
 archives = [labels[arg] for arg in arguments if arg in labels]
 prerequisites = [path for name in archives
                  for path in json.loads(os.environ['FAKE_BAZEL_PREREQUISITES'])[name]]
-record = {'arguments': arguments, 'output_base': bases[0],
+record = {'arguments': arguments,
           'prerequisites_ready': all(pathlib.Path(path).is_file() for path in prerequisites),
           'prerequisite_sha256': {path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
                                   for path in prerequisites if pathlib.Path(path).is_file()}}
@@ -52,22 +45,11 @@ with pathlib.Path(os.environ['FAKE_BAZEL_CALLS']).open('a') as output:
 if not record['prerequisites_ready']:
     raise SystemExit('Make prerequisites were not prepared before Bazel')
 mode = os.environ.get('FAKE_BAZEL_MODE', '')
-relative_dir = pathlib.Path('bazel-out/archive outputs')
 if operation == 'build':
-    if mode == 'server_startup_failure':
-        log = pathlib.Path(bases[0]) / 'server/jvm.out'
-        log.parent.mkdir()
-        log.write_text('SIGABRT\n' + 'x' * 20000 + '\nPicked up JAVA_TOOL_OPTIONS: synthetic-private-value\n'
-                       + 'java.lang.OutOfMemoryError: unable to create native thread; synthetic-private-value\n')
-        raise SystemExit(37)
     if mode == 'build_failure':
         raise SystemExit('fixture build failure')
-    if mode == 'missing_execroot':
-        raise SystemExit(0)
-    if mode == 'ambiguous_execroot':
-        (execution_root.parent / 'another workspace/bazel-out').mkdir(parents=True)
     for archive in archives:
-        source = execution_root / relative_dir / archive
+        source = pathlib.Path('bazel-bin/archive outputs') / archive
         source.parent.mkdir(parents=True, exist_ok=True)
         if mode == 'directory_output':
             source.mkdir(exist_ok=True)
@@ -75,7 +57,7 @@ if operation == 'build':
             source.write_bytes(b'' if mode == 'empty_output' else
                                os.environ.get('FAKE_BAZEL_PAYLOAD', 'new ' + archive).encode())
 elif operation == 'cquery':
-    source = relative_dir / labels[arguments[-1]]
+    source = pathlib.Path('bazel-bin/archive outputs') / labels[arguments[-1]]
     print('INFO: fixture query diagnostic', file=sys.stderr)
     if mode == 'query_failure':
         print(source)
@@ -84,17 +66,12 @@ elif operation == 'cquery':
         pass
     elif mode == 'multiple_outputs':
         print(source)
-        print(relative_dir / 'unexpected-second-output')
+        print('bazel-bin/unexpected-second-output')
     elif mode == 'missing_output':
-        print(relative_dir / 'missing-output')
-    elif mode == 'absolute_output':
-        print((execution_root / source).resolve())
-    elif mode == 'outside_output':
-        (execution_root.parent / 'other-server-output').write_text('wrong archive')
-        print('../other-server-output')
+        print('bazel-bin/missing-output')
     else:
         print(source)
-elif operation != 'shutdown':
+else:
     raise SystemExit('unexpected Bazel operation: ' + operation)
 """)
         self.fake_bazel.chmod(0o755)
@@ -281,10 +258,8 @@ registered: $(SONIC_TARGET_LIST)
         self.assertFalse((self.root / 'logging-errors').exists())
         calls = self.recorded_calls()
         self.assertEqual(len(calls), 2 * len(self.archives))
-        self.assertEqual(len({call['output_base'] for call in calls}), len(self.archives))
-        for label in self.labels.values():
-            self.assertEqual(len({call['output_base'] for call in calls
-                                  if call['arguments'][-1] == label}), 1)
+        self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
+                             for call in calls for arg in call["arguments"]))
 
     def test_containers_have_independent_prerequisites(self):
         """A missing input must preserve its container archive without blocking an unrelated
@@ -361,7 +336,7 @@ selection:
 
     def test_build_and_query_share_cache_and_quoted_options_without_shell_expansion(self):
         """Keep build and query configurations identical while preserving literal arguments and
-        avoiding shared output bases.
+        retaining the shared output base.
         """
         cache = self.root / "builder's persistent cache"
         options = ["--jobs=2", "--define=message=two words", "--define=owner=builder's cache",
@@ -412,27 +387,22 @@ selection:
         SBOM and success hooks.
         """
         archive = self.archives[0]
-        for mode in ('build_failure', 'missing_execroot', 'ambiguous_execroot', 'query_failure',
-                     'no_outputs', 'multiple_outputs', 'missing_output', 'empty_output',
-                     'directory_output', 'absolute_output', 'outside_output'):
+        for mode in ('build_failure', 'query_failure', 'no_outputs', 'multiple_outputs',
+                     'missing_output', 'empty_output', 'directory_output'):
             with self.subTest(mode=mode):
                 self.calls.unlink(missing_ok=True)
+                source = self.root / 'bazel-bin/archive outputs' / archive
+                if source.is_file():
+                    source.unlink()
                 destination = self.target / archive
                 previous = destination.read_bytes(), destination.stat().st_mtime_ns
                 result = self.run_make(environment={'FAKE_BAZEL_MODE': mode})
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual((destination.read_bytes(), destination.stat().st_mtime_ns), previous)
                 expected = ['build', 'cquery']
-                if mode in ('build_failure', 'missing_execroot', 'ambiguous_execroot'):
+                if mode == 'build_failure':
                     expected = ['build']
                 self.assertEqual([call['arguments'][0] for call in self.recorded_calls()], expected)
-                if mode in ('missing_execroot', 'ambiguous_execroot'):
-                    log = (self.target / (archive + '.log')).read_text()
-                    self.assertIn('Expected one Bazel execution root', log)
-                build, = self.recorded_calls(('build',))
-                shutdown, = self.recorded_calls(('shutdown',))
-                self.assertEqual(shutdown['output_base'], build['output_base'])
-                self.assertFalse(pathlib.Path(build['output_base']).exists())
                 self.assertFalse([path for path in self.target.glob(archive + '.*') if path.suffix != '.log'])
                 self.assertFalse(self.markers.exists(), 'failure continued to SBOM or footer')
                 self.assertTrue((self.root / 'logging-errors').is_file(),

@@ -1,0 +1,7 @@
+name: Bazel container post-job cleanup
+description: Remove job-local Bazel files after cache saves and artifact uploads.
+runs:
+  using: node24
+  main: main.js
+  post: post.js
+  post-if: always()

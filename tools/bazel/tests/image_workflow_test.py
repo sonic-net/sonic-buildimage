@@ -146,7 +146,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -161,7 +161,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(set(scratch.glob("pre-sysmgr-artifacts.*")), set(destinations))
@@ -171,7 +171,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
@@ -193,7 +194,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             for value in ("first", "second"):
@@ -238,7 +239,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             destinations = []
@@ -305,7 +306,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -323,7 +324,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
@@ -535,8 +537,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="image configs ") as temporary:
             directory = Path(temporary)
             (directory / "artifacts/vs").mkdir(parents=True)
-            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py",
-                           "tools/bazel/private_server.sh"):
+            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py"):
                 destination = directory / source
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / source, destination)
@@ -550,16 +551,15 @@ class VerificationWorkflowTest(unittest.TestCase):
                 args = sys.argv[1:]
                 with Path(os.environ['CALLS']).open('a') as output:
                     output.write(json.dumps(args) + '\\n')
-                base = Path(next(arg.split('=', 1)[1] for arg in args if arg.startswith('--output_base=')))
-                command = next(arg for arg in args if arg in ('test', 'build', 'info', 'cquery', 'shutdown'))
+                command = args[0]
                 config = 'dash' if '--config=syncd-dash' in args else 'default'
-                execution_root = base / 'execroot/main'
-                logs = execution_root / 'bazel-out' / config / 'testlogs'
-                if command == 'info':
-                    sys.exit('info cannot resolve apparent Bzlmod platform labels')
+                logs = Path('testlogs') / config
+                logs.mkdir(parents=True, exist_ok=True)
+                link = Path('bazel-testlogs')
+                link.unlink(missing_ok=True)
+                link.symlink_to(logs, target_is_directory=True)
                 if command == 'build':
-                    (execution_root / 'bazel-out').mkdir(parents=True, exist_ok=True)
-                    (execution_root / 'policy.json').write_text(config)
+                    Path('policy.json').write_text(config)
                 if command == 'cquery':
                     print('policy.json')
                 if command == 'test':
@@ -582,7 +582,7 @@ class VerificationWorkflowTest(unittest.TestCase):
 
     def check_static_workflow(self, directory, script, bazel, calls, swss_exit, syncd_exit):
         calls.unlink(missing_ok=True)
-        for name in ("artifacts/vs/swss-images", "artifacts/vs/syncd-p4-images"):
+        for name in ("testlogs", "artifacts/vs/swss-images", "artifacts/vs/syncd-p4-images"):
             shutil.rmtree(directory / name, ignore_errors=True)
         outputs = [directory / "artifacts/vs" / (family + "-installed-images-policy.json")
                    for family in ("swss", "syncd")]

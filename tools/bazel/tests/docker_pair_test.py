@@ -11,7 +11,6 @@ sys.path.insert(0, str(ROOT))
 
 from tools.bazel.tests.docker_test import ArchiveRecipeFixture
 from tools.bazel.ci.private_server_diagnostics import snapshot
-from tools.bazel.ci.summarize_vs_image_timings import read_owner
 
 
 class VSDockerPairTest(ArchiveRecipeFixture, unittest.TestCase):
@@ -109,7 +108,7 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         for owner, debug in (self.archives[:2], self.archives[2:]):
             directory, = (timings / owner).iterdir()
             profiles = ["build", "cquery-" + owner, "cquery-" + debug]
-            commands = [*profiles, "shutdown"]
+            commands = profiles
             exports = ["export-" + owner, "export-" + debug]
             self.assertEqual(json.loads((directory / "recipe.json").read_text()),
                              {"bazel": commands, "profiles": profiles, "exports": exports})
@@ -135,35 +134,9 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         self.assertEqual(len(instances), 2)
         for directory in instances:
             recipe = json.loads((directory / "recipe.json").read_text())
-            self.assertEqual(recipe["bazel"], ["build", "cquery-" + owner, "shutdown"])
+            self.assertEqual(recipe["bazel"], ["build", "cquery-" + owner])
             self.assertEqual(recipe["exports"], ["export-" + owner])
             self.assertTrue((directory / "build.timing.json").is_file())
-
-    def test_failed_server_retains_sanitized_snapshot_before_cleanup(self):
-        owner = self.archives[0]
-        result = self.run_make(owner, environment={"SONIC_VS_IMAGE_TIMINGS": "1",
-                                                   "FAKE_BAZEL_MODE": "server_startup_failure"})
-        self.assertNotEqual(result.returncode, 0)
-        build, shutdown = self.recorded_calls(("build", "shutdown"))
-        self.assertEqual(build["output_base"], shutdown["output_base"])
-        self.assertFalse(pathlib.Path(build["output_base"]).exists())
-
-        owner_dir = self.root / "artifacts/vs/image-timings" / owner
-        recipe, = owner_dir.iterdir()
-        self.assertEqual(json.loads((recipe / "build.timing.json").read_text())["exit_code"], 37)
-        receipt = recipe / "startup-diagnostics.json"
-        data = json.loads(receipt.read_text())
-        self.assertEqual(data["jvm"], {"available": True, "bytes_scanned": 16384,
-                                       "error_phrases": ["OutOfMemoryError", "unable to create native thread"]})
-        self.assertNotIn("synthetic-private-value", receipt.read_text())
-        self.assertEqual(len(data["load_average_1_5_15_min"]), 3)
-        self.assertGreaterEqual(data["output_base_disk"]["available_bytes"], 0)
-        self.assertLess(receipt.stat().st_size, 8192)
-        # Older receipts have no snapshot. Both formats must give the same dashboard row.
-        summary = read_owner(owner_dir)
-        self.assertTrue(summary[0]["failed"])
-        receipt.unlink()
-        self.assertEqual(read_owner(owner_dir), summary)
 
     def test_failure_snapshot_reads_the_process_and_enclosing_container_limits(self):
         proc = self.root / "proc"
@@ -217,13 +190,6 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
                     self.assert_pairs()
 
     def test_parallel_installer_and_explicit_variants_execute_once_per_pair(self):
-        # Another Bazel caller can own the workspace convenience symlink.
-        other_outputs = self.root / "other-server/bazel-out"
-        (other_outputs / "archive outputs").mkdir(parents=True)
-        (self.root / "bazel-out").symlink_to(other_outputs, target_is_directory=True)
-        for name in self.archives:
-            (other_outputs / "archive outputs" / name).write_bytes(b"other server's archive")
-
         cache = "--remote_cache=grpc://fixture:9092"
         result = self.run_make(goals=["target/sonic-vs.img.gz"] +
                                ["target/" + name for name in reversed(self.archives)],
@@ -231,19 +197,15 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         self.assert_success(result)
         self.assert_pairs()
         builds = self.recorded_calls(("build",))
-        self.assertEqual(len({call["output_base"] for call in builds}), 2)
         for build in builds:
             labels = build["arguments"][-2:]
             queries = [call for call in self.recorded_calls(("cquery",))
                        if call["arguments"][-1] in labels]
             self.assertEqual(len(queries), 2)
             for call in [build, *queries]:
-                self.assertEqual(call["output_base"], build["output_base"])
                 self.assertIn(cache, call["arguments"])
-                self.assertIn("--symlink_prefix=/", call["arguments"])
-        self.assertCountEqual([call["output_base"] for call in self.recorded_calls(("shutdown",))],
-                              [call["output_base"] for call in builds])
-        self.assertTrue(all(not pathlib.Path(call["output_base"]).exists() for call in builds))
+                self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
+                                     for arg in call["arguments"]))
 
     def test_missing_debug_outputs_are_recreated_without_changing_runtime(self):
         self.installer()
