@@ -45,6 +45,50 @@ class AssemblyTest(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
 
+    def test_stream_layer_whiteout_targets(self):
+        # OCI layer.md defines .wh.<basename> and the sole opaque marker.
+        # A deletion must name a child, never the current/parent directory.
+        class SplitterSink:
+            def __init__(self):
+                self.stdin = io.BytesIO()
+
+            def wait(self):
+                return 0
+
+            def terminate(self):
+                pass
+
+        def stream(name):
+            data = io.BytesIO()
+            with tarfile.open(fileobj=data, mode="w") as layer:
+                layer.addfile(tarfile.TarInfo(name))
+            raw = data.getvalue()
+            blob = self.write("whiteout-layer.tar", raw)
+            output = io.BytesIO()
+            with patch.object(overlay2_store.subprocess, "Popen", return_value=SplitterSink()):
+                with tarfile.open(fileobj=output, mode="w") as archive:
+                    overlay2_store.stream_layer(
+                        archive, blob, "sha256:" + hashlib.sha256(raw).hexdigest(),
+                        "diff", None, "splitter", self.root / "metadata.json")
+            output.seek(0)
+            return tarfile.open(fileobj=output, mode="r:")
+
+        for directory in ("", "dir/"):
+            for marker in (".wh.", ".wh..", ".wh..."):
+                with self.subTest(name=directory + marker):
+                    with self.assertRaises(ValueError):
+                        stream(directory + marker)
+        with stream("dir/.wh.deleted") as archive:
+            removed = archive.getmember("diff/dir/deleted")
+            self.assertTrue(removed.ischr())
+            self.assertEqual((removed.devmajor, removed.devminor), (0, 0))
+        with stream("dir/.wh..wh..opq") as archive:
+            opaque = archive.getmember("diff/dir")
+            self.assertTrue(opaque.isdir())
+            self.assertEqual(opaque.pax_headers["SCHILY.xattr.trusted.overlay.opaque"], "y")
+        with self.assertRaises(ValueError):
+            stream("dir/.wh..wh.reserved")
+
     def write(self, name, data):
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)

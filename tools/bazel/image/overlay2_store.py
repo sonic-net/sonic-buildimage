@@ -106,7 +106,10 @@ def stream_layer(archive, blob, diff_id, prefix, zstd, tar_split_json, metadata_
                     if path.name.startswith(".wh."):
                         if path.name.startswith(".wh..wh."):
                             raise ValueError("unsupported OCI whiteout " + name)
-                        info.name = prefix + "/" + str(path.with_name(path.name[4:]))
+                        target = path.name[4:]
+                        if target in ("", ".", ".."):
+                            raise ValueError("invalid OCI whiteout target " + name)
+                        info.name = prefix + "/" + str(path.with_name(target))
                         info.type, info.size = tarfile.CHRTYPE, 0
                         info.devmajor = info.devminor = 0
                         archive.addfile(info)

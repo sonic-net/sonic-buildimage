@@ -63,7 +63,7 @@ jobs:
             --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --spawn_strategy=processwrapper-sandbox --nocache_test_results \
-            --zip_undeclared_test_outputs
+            --nozip_undeclared_test_outputs
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -81,7 +81,7 @@ jobs:
             cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
             cp "bazel-testlogs/tools/bazel/image/$target/test.xml" "$directory/"
           done
-          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.outputs/outputs.zip artifacts/image-rule-actions/
+          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.outputs/action-receipt.json artifacts/image-rule-actions/
           if [ '${{ matrix.architecture }}' = amd64 ]; then
             mkdir -p artifacts/image-rule-actions/disk_action_test
             cp bazel-testlogs/tools/bazel/image/action_test/disk_action_test/test.{log,xml} artifacts/image-rule-actions/disk_action_test/
@@ -94,7 +94,7 @@ jobs:
             test -s "artifacts/image-rule-actions/$target/test.log"
             test -s "artifacts/image-rule-actions/$target/test.xml"
           done
-          test -s artifacts/image-rule-actions/outputs.zip
+          test -s artifacts/image-rule-actions/action-receipt.json
           git diff --exit-code
       - name: Retain public rule action evidence
         if: always()
