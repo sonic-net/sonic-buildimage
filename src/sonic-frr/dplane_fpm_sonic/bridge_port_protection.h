@@ -27,7 +27,10 @@ static inline ssize_t sonic_bpp_binding(uint32_t ifindex, uint32_t group_id,
 	if (!ifindex || ifindex > INT_MAX || capacity < length)
 		return -1;
 	binding.ebnm_ifindex = ifindex;
-	binding.ebnm_backup_nhg_id = deleting ? 0 : group_id;
+	/* An ordinary L2 ES group is an unbind for the protection consumer.
+	 * Do not leave its previous L3 protection binding installed. */
+	binding.ebnm_backup_nhg_id = (!deleting && (group_id >> 28) == 8)
+					? group_id : 0;
 	header.nlmsg_len = length;
 	header.nlmsg_type = binding.ebnm_backup_nhg_id
 				? RTM_FPM_ADD_EVPN_ES_BACKUP_NHG
@@ -40,7 +43,9 @@ static inline ssize_t sonic_bpp_binding(uint32_t ifindex, uint32_t group_id,
 }
 
 /* FRR #24071 provides these operations/getters. Older FRR keeps its existing
- * plugin behavior until the companion control-plane support is integrated. */
+ * plugin behavior until the companion control-plane support is integrated.
+ * Remove this compatibility guard after sonic-buildimage#30585 is merged;
+ * the encoder unit tests run unconditionally while that dependency is open. */
 #ifdef EVPN_MH_NHG_MAX_MEMBERS
 static inline bool sonic_bpp_id(uint32_t id, unsigned type)
 {

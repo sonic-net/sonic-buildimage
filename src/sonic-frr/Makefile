@@ -13,6 +13,10 @@ export DEBEMAIL := sonicproject@googlegroups.com
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
+	# Exercise the provider's enabled encoder contract even when the pinned
+	# FRR does not yet include the companion protection dataplane API.
+	CC=$${CC_FOR_BUILD:-cc} python3 -m unittest discover -s dplane_fpm_sonic/tests -v
+
 	# Prepare source tree.
 
 	pushd ./frr
@@ -74,3 +78,8 @@ endif
 	mv $(DERIVED_TARGET) $* $(DEST)/
 
 $(addprefix $(DEST)/, $(DERIVED_TARGET)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
+
+# Host-native tests do not require an FRR source checkout or patched branch.
+.PHONY: check-bpp-fpm
+check-bpp-fpm:
+	CC=$${CC_FOR_BUILD:-cc} python3 -m unittest discover -s dplane_fpm_sonic/tests -v

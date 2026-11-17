@@ -21,16 +21,21 @@ def prepare_netlink_contract(build):
     This isolates the inserted protocol section from unrelated FRR APIs. Full
     patched-FRR header/module builds are separate integration checks.
     """
-    patch = (Path(__file__).resolve().parents[2] / 'patch' /
-             '0077-zebra-Add-FPM-EVPN-MH-message-types-and-structures.patch')
-    declarations = '\n'.join(line[1:] for line in patch.read_text().splitlines()
+    patch_dir = Path(__file__).resolve().parents[2] / 'patch'
+    original = patch_dir / '0077-zebra-Add-FPM-EVPN-MH-message-types-and-structures.patch'
+    declarations = '\n'.join(line[1:] for line in original.read_text().splitlines()
                              if line.startswith('+') and not line.startswith('+++'))
     header = build / 'zebra' / 'kernel_netlink.h'
     header.parent.mkdir(parents=True, exist_ok=True)
     header.write_text('#ifndef BPP_TEST_KERNEL_NETLINK_H\n'
                       '#define BPP_TEST_KERNEL_NETLINK_H\n'
-                      '#include <stddef.h>\n#include <stdint.h>\n'
-                      '#include <linux/netlink.h>\n' + declarations + '\n#endif\n')
+                      '#define HAVE_NETLINK 1\n\n#ifdef HAVE_NETLINK\n\n'
+                      '#include <stddef.h>\n#include <stdbool.h>\n#include <stdint.h>\n'
+                      '#include <linux/netlink.h>\n' + declarations + '\n#endif\n#endif\n')
+    extension = patch_dir / '0123-zebra-Add-bridge-port-protection-FPM-contract.patch'
+    subprocess.run(['patch', '--batch', '--fuzz=0', '-p1', '-d', str(build),
+                    '-i', str(extension)], check=True, text=True)
+
 
 
 class AddressUnion(C.Union):
@@ -272,10 +277,18 @@ class ProtectionEncoderTest(unittest.TestCase):
         self.assertEqual(bytes(buf)[capacity:], b'\xa5' * (32-capacity))
         return size, bytes(buf)[:max(0, size)]
 
-    def test_binding_preserves_unsigned_and_legacy_ids(self):
-        for identifier in [0x20000001, 0x80000000, 0x80000001, 0x8fffffff]:
+    def test_binding_preserves_unsigned_protection_ids(self):
+        for identifier in [0x80000000, 0x80000001, 0x8fffffff]:
             self.assertEqual(self.binding(group=identifier),
                              (24, netlink(147, struct.pack('=iI', 7, identifier))))
+
+    def test_non_protection_group_withdraws_prior_binding(self):
+        for identifier in [0x10000001, 0x20000001, 0x40000001, 0xffffffff]:
+            with self.subTest(identifier=identifier):
+                self.assertEqual(self.binding(group=0x80000001)[1],
+                                 netlink(147, struct.pack('=iI', 7, 0x80000001)))
+                self.assertEqual(self.binding(group=identifier),
+                                 (24, netlink(148, struct.pack('=iI', 7, 0))))
 
     def test_binding_delete_clears_even_stale_nonzero_group(self):
         self.assertEqual(self.binding(deleting=True)[1], netlink(148, struct.pack('=iI', 7, 0)))
