@@ -21,7 +21,7 @@ class VerificationWorkflowTest(unittest.TestCase):
     def test_image_jobs_restore_populated_submodules_on_reused_checkouts(self):
         script = Path("tools/bazel/ci/prepare_image_submodules.sh")
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        for job in ("archive", "gearbox_archive", "dash_engine_archive"):
+        for job in ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive"):
             self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"][job]["steps"]])
 
         env = dict(os.environ, GIT_ALLOW_PROTOCOL="file")
@@ -157,8 +157,9 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(gate["needs"], [
             "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
             "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
-            "dash_engine_runtime",
+            "otel_runtime", "dash_engine_runtime",
         ])
+        self.assertEqual(jobs["otel_runtime"]["needs"], "otel_archive")
         dash = jobs["dash_engine_archive"]
         self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
         self.assertEqual(dash["timeout-minutes"], 360)

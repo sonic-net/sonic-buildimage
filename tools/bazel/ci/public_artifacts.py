@@ -141,7 +141,28 @@ def safe_text(value):
         require(not names & {"sig", "token", "access_token", "api_key", "key", "auth", "password", "secret"}, "sensitive-url-query")
 
 
-def safe_json(value):
+# Gazelle records public dependency names as object keys in these two lock maps.
+OTEL_GO_REPO_SPECS = ("moduleExtensions", "@@otelcol-contrib+//bazel:collector_deps.bzl%go_deps",
+                      "general", "generatedRepoSpecs")
+OTEL_GO_IMPORT_PATHS = OTEL_GO_REPO_SPECS + ("bazel_gazelle_go_repository_config", "attributes", "importpaths")
+GO_MODULE_NAMES = {
+    "com_github_aws_aws_sdk_go_v2_credentials": "github.com/aws/aws-sdk-go-v2/credentials",
+    "com_github_gsterjov_go_libsecret": "github.com/gsterjov/go-libsecret",
+}
+
+
+def public_go_module_name(lock_path, key, value):
+    importpath = GO_MODULE_NAMES.get(key)
+    if importpath is None:
+        return False
+    if lock_path == OTEL_GO_IMPORT_PATHS:
+        return value == importpath
+    return (lock_path == OTEL_GO_REPO_SPECS and isinstance(value, dict)
+            and value.get("repoRuleId") == "@@gazelle+//internal:go_repository.bzl%go_repository"
+            and isinstance(value.get("attributes"), dict) and value["attributes"].get("importpath") == importpath)
+
+
+def safe_json(value, *, lock_path=None):
     if isinstance(value, dict):
         for key, child in value.items():
             require(isinstance(key, str), "invalid-json-key")
@@ -151,9 +172,10 @@ def safe_json(value):
             require(normalized not in DIAGNOSTIC_KEYS, "diagnostic-json-field")
             require(not normalized.endswith(("token", "tokens", "password", "passwords", "secret", "secrets",
                                              "credential", "credentials", "authorization", "apikey", "privatekey",
-                                             "accesskey", "secretkey", "cookie", "cookies")), "credential-json-field")
+                                             "accesskey", "secretkey", "cookie", "cookies"))
+                    or public_go_module_name(lock_path, key, child), "credential-json-field")
             safe_text(key)
-            safe_json(child)
+            safe_json(child, lock_path=None if lock_path is None else (*lock_path, key))
     elif isinstance(value, list):
         for child in value:
             safe_json(child)
@@ -217,7 +239,7 @@ def dependency_json(value, kind):
                 require(set(action) == {"runner", "cache_hit"}, "invalid-cache-action")
                 require(isinstance(action["cache_hit"], bool), "invalid-cache-hit")
                 require(action["runner"] is None or isinstance(action["runner"], str) and re.fullmatch(r"[A-Za-z0-9_. -]{1,80}", action["runner"]), "invalid-cache-runner")
-    safe_json(value)
+    safe_json(value, lock_path=() if kind == "lock" else None)
 
 
 def bep_action_summary(value):

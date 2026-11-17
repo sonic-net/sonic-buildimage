@@ -151,3 +151,4 @@ apt-retries-count
 /artifacts/config-engine/
 
 /artifacts/dash-ha/
+/artifacts/otel/
