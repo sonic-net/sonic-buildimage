@@ -205,6 +205,17 @@
                     "hw_cause": "CMD_PWR_CYC",
                     "hw_desc": "Software commanded power cycle",
                     "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0000",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0000",
+                    "gpio_value": "0x0000",
+                    "vh_uv_mask": "0x1",
+                    "vh_uv_value": "0x1",
+                    "hw_cause": "MAIN_12V_LOSS",
+                    "hw_desc": "Loss of 12V power from PSU",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
                 }
             ],
             "pin_to_name": {
@@ -338,8 +349,8 @@
             }
         },
         "default_max_speed": 100,
-        "duty_cycle_to_pwm": "lambda dc: ((dc/100) * 255)",
-        "pwm_to_duty_cycle": "lambda pwm: ((pwm/255) * 100)"
+        "duty_cycle_to_pwm": {"input_offset": 0, "multiplier": 255, "pre_divide_offset": 0, "divisor": 100, "output_offset": 0, "divide_before_multiply": true, "force_float": false},
+        "pwm_to_duty_cycle": {"input_offset": 0, "multiplier": 100, "pre_divide_offset": 0, "divisor": 255, "output_offset": 0, "divide_before_multiply": true, "force_float": false}
     },
     "REBOOT_CAUSE": {
         "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
