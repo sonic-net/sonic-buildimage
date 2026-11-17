@@ -116,6 +116,10 @@ override_dh_auto_install:
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
 		--prefix=/usr --install-lib=/usr/lib/python3/dist-packages
+	cd $(MOD_SRC_DIR)/../../nexthop-common/sonic-platform-nexthop-utils && \
+		python3 setup.py install \
+			--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
+			--prefix=/usr --install-lib=/usr/lib/python3/dist-packages
 
 override_dh_install:
 	set -e
@@ -131,7 +135,9 @@ override_dh_install:
 					fixed_platform_string_model=$$(echo "$$platform_string_model" | sed 's/-/_/g' | sed -E 's/([a-z])([a-z])/\1\U\2/g'); \
 					device_name="x86_64-nexthop_$${fixed_platform_string_model}$${revision}"; \
 					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
-						usr/share/sonic/device/$${device_name}/pddf/; \
+						usr/share/sonic/device/$${device_name}/; \
+					dh_installdirs -p$${pkg_name} usr/share/sonic/device/$${device_name}/pddf; \
+					touch debian/$${pkg_name}/usr/share/sonic/device/$${device_name}/pddf/skip_whl_install; \
 					dh_install -p$${pkg_name} \
 						../../../target/python-wheels/$$BLDENV/nexthop_utils-1.0-py3-none-any.whl \
 						usr/share/sonic/device/$${device_name}/; \
