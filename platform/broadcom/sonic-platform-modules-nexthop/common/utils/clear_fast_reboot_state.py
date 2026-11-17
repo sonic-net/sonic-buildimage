@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Clear restored restart state before SWSS on the first fast boot."""
+"""On the first fast boot, write the restore files and clear restored restart state before SWSS."""
 
 import shlex
 import subprocess
 import syslog
 import time
 from pathlib import Path
+
+from nexthop import fast_boot_restore
 
 
 def db(*args: str) -> str:
@@ -38,6 +40,16 @@ def wait_for_database() -> None:
         time.sleep(1)
 
 
+def write_restore_files() -> None:
+    try:
+        counts = fast_boot_restore.write_restore_files()
+    except Exception as error:  # noqa: BLE001
+        syslog.syslog(syslog.LOG_ERR, f"fast-reboot post-kexec: writing restore files failed: {error}")
+        return
+    syslog.syslog("fast-reboot post-kexec: wrote restore files: " +
+                  ", ".join(f"{name} ({count})" for name, count in counts.items()))
+
+
 def main() -> None:
     if not is_fast_boot():
         return
@@ -47,6 +59,8 @@ def main() -> None:
     # The cmdline persists for this boot; FAST is consumed only once.
     if not get_fast_pending():
         return
+
+    write_restore_files()
 
     # Clear FAST last so an earlier failure leaves cleanup pending for retry.
     db("STATE_DB", "hset", "WARM_RESTART_ENABLE_TABLE|system", "enable", "false")

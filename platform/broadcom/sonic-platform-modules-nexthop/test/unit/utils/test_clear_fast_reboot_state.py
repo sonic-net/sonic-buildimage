@@ -76,15 +76,20 @@ class FakeStateDb:
         raise AssertionError(f"unexpected sonic-db-cli call: {command}")
 
 
-@pytest.fixture
-def script():
+def load_script():
     loader = importlib.machinery.SourceFileLoader("clear_fast_reboot_state", SCRIPT)
     spec = importlib.util.spec_from_loader(loader.name, loader)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def script():
+    module = load_script()
     with patch.object(module, "syslog"), patch.object(module, "Path"), \
-            patch.object(module.time, "sleep"):
+            patch.object(module.time, "sleep"), patch.object(module, "write_restore_files"):
         yield module
 
 
@@ -146,3 +151,26 @@ def test_cold_and_warm_boots_leave_restart_state_alone(script, cmdline):
 
     check_output.assert_not_called()
     assert tables == restored_state()
+
+
+def test_fast_boot_writes_restore_files(script):
+    run(script, FAST_CMDLINE, restored_state())
+
+    script.write_restore_files.assert_called_once_with()
+
+
+@pytest.mark.parametrize("cmdline, fast", [(COLD_CMDLINE, "true"), (WARM_CMDLINE, "true"),
+                                           (FAST_CMDLINE, "false")])
+def test_no_restore_files_outside_the_first_fast_boot_start(script, cmdline, fast):
+    tables = restored_state()
+    tables["FAST_RESTART_ENABLE_TABLE|system"] = {"enable": fast}
+    run(script, cmdline, tables)
+
+    script.write_restore_files.assert_not_called()
+
+
+def test_restore_file_errors_do_not_stop_the_cleanup():
+    module = load_script()
+    with patch.object(module, "syslog"), \
+            patch("nexthop.fast_boot_restore.write_restore_files", side_effect=RuntimeError("no redis")):
+        module.write_restore_files()
