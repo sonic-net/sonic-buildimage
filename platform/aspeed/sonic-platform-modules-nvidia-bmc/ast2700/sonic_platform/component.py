@@ -30,10 +30,12 @@ ComponentCPLD programs Lattice CPLDs via the ``ispvme`` CLI (from the aspeed
 JTAG controller (``/dev/jtag0``). The firmware image is a Lattice VME file.
 """
 
+import fcntl
 import os
 import re
 import subprocess
 import sys
+from contextlib import contextmanager
 
 from sonic_py_common.logger import Logger
 
@@ -405,6 +407,10 @@ class ComponentBMC(ComponentBase):
         return None
 
 
+class CpldUpdateInProgressError(OSError):
+    """Another process holds the CPLD JTAG chain lock."""
+
+
 class ComponentCPLD(ComponentBase):
     """
     Firmware component for one Lattice CPLD (``CPLD<idx>``) on the NVIDIA
@@ -452,6 +458,13 @@ class ComponentCPLD(ComponentBase):
 
     # Active-low gate signal: write 0 to enable JTAG burn mode, restore 1 after.
     _JTAG_BURN_EN_L_SYSFS = "system/GP_JTAG_BMC_CPLD_BURN_EN_L"
+
+    # Serializes programming across processes. All CPLDs share one JTAG chain
+    # and one burn-enable gate, so the lock is chain-wide rather than per
+    # CPLD<idx>. It is an flock(2) lock, which the kernel releases when the
+    # holder exits for any reason, so a crashed or killed update cannot leave
+    # it held.
+    _JTAG_LOCK_FILE = "/run/lock/cpld-jtag.lock"
 
     # CPLD VME programming typically completes in under a minute; allow 5 min.
     _UPDATE_TIMEOUT = 300
@@ -541,8 +554,49 @@ class ComponentCPLD(ComponentBase):
         """
         return VERSION_NA
 
+    @contextmanager
+    def _jtag_chain_lock(self):
+        """Hold the chain-wide CPLD JTAG lock for the duration of the block.
+
+        Fails immediately rather than waiting: a second update arriving while
+        one is in progress is an operator error, not something to queue.
+
+        Raises:
+            CpldUpdateInProgressError: another process holds the lock.
+            OSError: the lock file cannot be opened.
+        """
+        fd = os.open(self._JTAG_LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise CpldUpdateInProgressError(
+                    "Another CPLD firmware update is in progress "
+                    f"({self._JTAG_LOCK_FILE} is held)"
+                ) from exc
+            yield
+        finally:
+            # Closing the descriptor releases the lock.
+            os.close(fd)
+
     def _run_ispvme(self, vme_path):
+        """Run ispvme on `vme_path` while holding the chain-wide JTAG lock.
+
+        The lock is taken before the burn-enable gate is asserted and released
+        only after it has been restored, so a concurrent invocation fails
+        without touching the gate and cannot release it while this one is
+        programming. See :meth:`_burn_vme` for the gate and ispvme handling.
+
+        Raises:
+            CpldUpdateInProgressError: another update holds the lock.
+        """
+        with self._jtag_chain_lock():
+            return self._burn_vme(vme_path)
+
+    def _burn_vme(self, vme_path):
         """Run ``ispvme -d <jtag_device> <vme_path>``; returns CompletedProcess.
+
+        Callers must hold the chain-wide JTAG lock (see :meth:`_run_ispvme`).
 
         Asserts the active-low JTAG burn-enable gate (GP_JTAG_BMC_CPLD_BURN_EN_L)
         before programming and restores it unconditionally afterward. Without

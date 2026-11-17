@@ -16,7 +16,10 @@
 # limitations under the License.
 #
 
+import fcntl
+import os
 import subprocess
+import sys
 from contextlib import contextmanager
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -24,7 +27,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sonic_platform import component
-from sonic_platform.component import ComponentBMC, ComponentCPLD, ISPVME, VERSION_NA
+from sonic_platform.component import (
+    ComponentBMC,
+    ComponentCPLD,
+    CpldUpdateInProgressError,
+    ISPVME,
+    VERSION_NA,
+)
 from sonic_platform.mctp import MctpError
 
 
@@ -807,7 +816,8 @@ class TestCPLDRunIspvme:
         (hw_root / "system").mkdir(parents=True)
         burn_en = hw_root / "system" / "GP_JTAG_BMC_CPLD_BURN_EN_L"
         burn_en.write_text("1\n")
-        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)):
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)), \
+                patch.object(ComponentCPLD, "_JTAG_LOCK_FILE", str(tmp_path / "cpld-jtag.lock")):
             yield burn_en
 
     def test_run_ispvme_uses_jtag_device_and_vme_path(self, cpld, tmp_path):
@@ -928,6 +938,130 @@ class TestCPLDRunIspvme:
              patch("builtins.open", side_effect=self._flaky_open_failing_nth_call(2)):
             with pytest.raises(subprocess.CalledProcessError):
                 cpld._run_ispvme(str(vme))
+
+
+class TestCPLDJtagChainLock:
+    """Programming is serialized across processes by a chain-wide flock held
+    from before the burn-enable gate is asserted until after it is restored."""
+
+    @pytest.fixture(autouse=True)
+    def env(self, tmp_path):
+        hw_root = tmp_path / "hw-management"
+        (hw_root / "system").mkdir(parents=True)
+        burn_en = hw_root / "system" / "GP_JTAG_BMC_CPLD_BURN_EN_L"
+        burn_en.write_text("1\n")
+        lock_file = tmp_path / "cpld-jtag.lock"
+        vme = tmp_path / "cpld.vme"
+        vme.write_bytes(b"\x00")
+        with patch("sonic_platform.utils.HW_MANAGEMENT_ROOT", str(hw_root)), \
+                patch.object(ComponentCPLD, "_JTAG_LOCK_FILE", str(lock_file)):
+            yield {"burn_en": burn_en, "lock_file": lock_file, "vme": str(vme)}
+
+    @staticmethod
+    def _lock_is_free(lock_file):
+        fd = os.open(str(lock_file), os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except BlockingIOError:
+            return False
+        finally:
+            os.close(fd)
+
+    @contextmanager
+    def _held_by_other_holder(self, lock_file):
+        """Hold the lock through a separate open file description, as another
+        process would."""
+        fd = os.open(str(lock_file), os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            yield
+        finally:
+            os.close(fd)
+
+    def test_second_update_during_programming_leaves_gate_asserted(self, cpld, tmp_path, env):
+        """A second update started while the first is programming must fail
+        without running ispvme and without restoring the gate under it."""
+        other = ComponentCPLD(3, jtag_device=cpld._jtag_device, eeprom=MagicMock())
+        seen = {}
+
+        def first_ispvme(*args, **kwargs):
+            with pytest.raises(CpldUpdateInProgressError):
+                other._run_ispvme(env["vme"])
+            seen["gate_after_second"] = env["burn_en"].read_text().strip()
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=first_ispvme) as mock_run:
+            cpld._run_ispvme(env["vme"])
+
+        assert seen["gate_after_second"] == "0"
+        assert mock_run.call_count == 1
+        assert env["burn_en"].read_text().strip() == "1"
+
+    def test_update_while_lock_held_fails_without_touching_gate(self, cpld, env):
+        env["burn_en"].write_text("0\n")  # the holder has asserted the gate
+        with self._held_by_other_holder(env["lock_file"]), \
+                patch("subprocess.run") as mock_run:
+            with pytest.raises(CpldUpdateInProgressError, match="in progress"):
+                cpld._run_ispvme(env["vme"])
+        mock_run.assert_not_called()
+        assert env["burn_en"].read_text().strip() == "0"
+
+    def test_install_firmware_returns_false_while_lock_held(self, cpld, env):
+        with self._held_by_other_holder(env["lock_file"]), \
+                patch("subprocess.run") as mock_run, \
+                patch("sonic_platform.component.logger") as mock_logger:
+            assert cpld.install_firmware(env["vme"]) is False
+        mock_run.assert_not_called()
+        assert "in progress" in mock_logger.log_error.call_args[0][0]
+
+    def test_update_firmware_raises_runtime_error_while_lock_held(self, cpld, env):
+        with self._held_by_other_holder(env["lock_file"]), \
+                patch("subprocess.run") as mock_run:
+            with pytest.raises(RuntimeError, match="in progress"):
+                cpld.update_firmware(env["vme"])
+        mock_run.assert_not_called()
+
+    def test_lock_released_after_success(self, cpld, env):
+        with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+            cpld._run_ispvme(env["vme"])
+        assert self._lock_is_free(env["lock_file"])
+
+    def test_lock_released_after_ispvme_failure(self, cpld, env):
+        err = subprocess.CalledProcessError(1, ISPVME, stderr="| FAIL! |\n")
+        with patch("subprocess.run", side_effect=err):
+            with pytest.raises(subprocess.CalledProcessError):
+                cpld._run_ispvme(env["vme"])
+        assert self._lock_is_free(env["lock_file"])
+        assert env["burn_en"].read_text().strip() == "1"
+
+    def test_lock_released_when_holder_is_killed(self, cpld, env):
+        """A killed holder must not leave the lock held: the next update
+        acquires it and converges the gate back to deasserted."""
+        holder_code = (
+            "import fcntl, os, sys, time\n"
+            "fd = os.open(sys.argv[1], os.O_RDWR | os.O_CREAT, 0o600)\n"
+            "fcntl.flock(fd, fcntl.LOCK_EX)\n"
+            "print('locked', flush=True)\n"
+            "time.sleep(60)\n"
+        )
+        holder = subprocess.Popen(
+            [sys.executable, "-c", holder_code, str(env["lock_file"])],
+            stdout=subprocess.PIPE,
+        )
+        try:
+            assert holder.stdout.readline().strip() == b"locked"
+            env["burn_en"].write_text("0\n")  # holder dies with the gate asserted
+            assert not self._lock_is_free(env["lock_file"])
+        finally:
+            holder.kill()
+            holder.wait()
+            holder.stdout.close()
+
+        with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
+            cpld._run_ispvme(env["vme"])
+        mock_run.assert_called_once()
+        assert env["burn_en"].read_text().strip() == "1"
 
 
 class TestCPLDFormatError:
