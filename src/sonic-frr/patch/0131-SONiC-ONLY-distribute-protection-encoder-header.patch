@@ -1,0 +1,19 @@
+From: Nitin Kalavala <202352552+nitin-kalavala@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 02:10:00 -0500
+Subject: [PATCH] SONiC-ONLY: Distribute the protection encoder header
+
+Keep the shared encoder with the provider sources in distribution tarballs.
+Apply after the MAC provider source split without modifying its patch.
+
+Signed-off-by: Nitin Kalavala <202352552+nitin-kalavala@users.noreply.github.com>
+---
+--- a/zebra/subdir.am
++++ b/zebra/subdir.am
+@@ -251,6 +251,7 @@ module_LTLIBRARIES += zebra/dplane_fpm_sonic.la
+ zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c zebra/fpm_mac.c
+ zebra_dplane_fpm_sonic_la_LDFLAGS = $(MODULE_LDFLAGS)
+ zebra_dplane_fpm_sonic_la_LIBADD  = -lnexthopgroup
++zebra_dplane_fpm_sonic_la_SOURCES += zebra/bridge_port_protection.h
+ 
+ if NETLINK_DEBUG
+ zebra_zebra_SOURCES += \

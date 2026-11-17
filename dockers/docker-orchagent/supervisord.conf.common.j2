@@ -3,7 +3,7 @@
 
    Parameters:
      swss_priority_base    - base priority offset (standalone: 0, VS: varies)
-     include_swssconfig    - include swssconfig/countersyncd/enable_counters programs (default: true)
+     include_swssconfig    - include swssconfig/enable_counters programs (default: true)
    Note: rsyslogd is NOT included here — each consumer provides its own rsyslogd program.
          Programs in this template use dependent_startup_wait_for=rsyslogd:running,
          so the consumer must define a [program:rsyslogd] before including this template.
@@ -386,17 +386,3 @@ dependent_startup_wait_for=orchagent:running
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 {%- endif %}
-
-{% if include_swssconfig %}
-[program:countersyncd]
-command=/usr/bin/countersyncd --enable-otel
-priority={{ swss_priority_base + 18 }}
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-dependent_startup=true
-dependent_startup_wait_for=swssconfig:exited
-{% endif %}

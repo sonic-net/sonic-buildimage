@@ -94,6 +94,7 @@ stderr_syslog=true
 {% set frr_priority_base = 24 %}
 {% set use_dependent_startup = true %}
 {% set frr_wait_for = "start.sh:exited" %}
+{% set _snmp = ENABLE_FRR_SNMP_AGENT != "n" %}
 {% include "supervisord.conf.frr.j2" %}
 
 [program:arp_update]
@@ -118,3 +119,15 @@ stderr_syslog=true
 
 {% set lldp_priority_base = 34 %}
 {% include "supervisord.conf.lldp.j2" %}
+
+# SNMP programs (from docker-snmp via _INCLUDE_DOCKER)
+# snmp_include_start=true emits [program:wait-for-snmp-config] and
+# [program:start-snmp], both running after the image-wide [program:start.sh].
+# IMAGE_VERSION is unset here, so start-snmp.sh deliberately skips
+# snmp_yml_to_configdb.py (no baked-in public fallback community) and only
+# renders /etc/snmp/snmpd.conf; wait_for_snmp_config.sh first waits for the
+# community cSONiC loads into CONFIG_DB.
+{% set snmp_priority_base = 36 %}
+{% set snmp_include_start = true %}
+{% set snmp_start_wait_for = "start.sh:exited" %}
+{% include "supervisord.conf.snmp.j2" %}

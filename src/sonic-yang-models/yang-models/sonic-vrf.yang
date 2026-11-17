@@ -30,9 +30,9 @@ module sonic-vrf {
                 key "name";
 
                 leaf name {
-                    description "VRF instance name (e.g. Vrf_blue)";
+                    description "VRF instance name (e.g. Vrf_blue) or the reserved default VRF name";
                     type stypes:interface_name {
-                        pattern "Vrf[a-zA-Z0-9_-]+" {
+                        pattern "Vrf[a-zA-Z0-9_-]+|default" {
                             error-message "Invalid VRF name";
                             error-app-tag vrf-name-invalid;
                         }

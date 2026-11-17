@@ -228,6 +228,12 @@ When building, you can use the `BAZEL_MIN_READINESS` configuration knob (defined
 | `experimental` | those declaring `experimental` or `stable` |
 | `stable` | those declaring `stable` |
 
+## Build caching and the PR cache-key gate
+
+See [DPKG build caching and cache-key validation](README.dpkg-cache.md) for
+cache dependency declarations, troubleshooting the PR completeness gate, and
+using an AI assistant to help fix findings.
+
 ## Tips & Tricks
 Although every target is built inside a sonic-slave container, which exits at the end of build, you can enter bash of sonic-slave using this command:
 ```
