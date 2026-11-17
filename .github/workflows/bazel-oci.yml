@@ -3740,6 +3740,8 @@ jobs:
       # Image recipes serialize through one Bazel server on this runner.
       BAZEL_CONTAINER_ARGS: >-
         --jobs=4 --local_resources=memory=12288
+        --remote_local_fallback
+        --incompatible_remote_local_fallback_for_remote_cache
         --experimental_remote_downloader=grpc://172.16.0.4:9092
         --experimental_remote_downloader_local_fallback
         --distdir=/bazel_cache/distdir/ape-1.0.1
