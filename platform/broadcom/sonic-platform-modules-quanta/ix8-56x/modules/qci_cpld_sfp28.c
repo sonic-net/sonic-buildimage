@@ -48,6 +48,7 @@ enum platform_type {
 };
 
 static struct class *cpld_class = NULL;
+static DEFINE_MUTEX(cpld_class_lock);
 
 struct sfp_data {
 	struct i2c_client *cpld_client;
@@ -296,6 +297,8 @@ static int cpld_probe(struct i2c_client *client,
 	strncpy(type,name+5,strlen(name)-5);
 	type[strlen(name)-5]='\0';
 
+	mutex_lock(&cpld_class_lock);
+
 	if (!cpld_class)
 	{
 		cpld_class = class_create(THIS_MODULE, "cpld-sfp28");
@@ -303,6 +306,7 @@ static int cpld_probe(struct i2c_client *client,
 			pr_err("couldn't create sysfs class\n");
 			err = PTR_ERR(cpld_class);
 			cpld_class = NULL;
+			mutex_unlock(&cpld_class_lock);
 			return err;
 		}
 	}
@@ -369,7 +373,7 @@ static int cpld_probe(struct i2c_client *client,
 
 	dev_info(&client->dev, "%s device found\n", client->name);
 
-
+	mutex_unlock(&cpld_class_lock);
 	return 0;
 
 err_unregister_device:
@@ -389,6 +393,7 @@ err_destroy_class:
 		class_destroy(cpld_class);
 		cpld_class = NULL;
 	}
+	mutex_unlock(&cpld_class_lock);
 	return err;
 
 err_out:
@@ -414,6 +419,8 @@ static int cpld_remove(struct i2c_client *client)
 	int i;
 //	int id;
 
+	mutex_lock(&cpld_class_lock);
+
 	for (i = 15; i >= 0; i--)
 	{
 		dev_info(data->port_dev[i], "Remove %s port-%d\n", data->port_data[i]->type , data->port_data[i]->port_id);
@@ -428,6 +435,7 @@ static int cpld_remove(struct i2c_client *client)
 		cpld_class = NULL;
 	}
 
+	mutex_unlock(&cpld_class_lock);
 	return 0;
 }
 

@@ -46,6 +46,7 @@ enum platform_type {
 };
 
 static struct class *cpld_class = NULL;
+static DEFINE_MUTEX(cpld_class_lock);
 
 struct cpld_data {
 	struct i2c_client *cpld_client;
@@ -187,6 +188,8 @@ static int cpld_led_probe(struct i2c_client *client,
 	struct device *port_dev;
 	int nr, err;
 
+	mutex_lock(&cpld_class_lock);
+
 	if (!cpld_class)
 	{
 		cpld_class = class_create(THIS_MODULE, "cpld-led");
@@ -194,6 +197,7 @@ static int cpld_led_probe(struct i2c_client *client,
 			pr_err("couldn't create sysfs class\n");
 			err = PTR_ERR(cpld_class);
 			cpld_class = NULL;
+			mutex_unlock(&cpld_class_lock);
 			return err;
 		}
 	}
@@ -253,7 +257,7 @@ static int cpld_led_probe(struct i2c_client *client,
 
 	dev_info(&client->dev, "%s device found\n", client->name);
 
-
+	mutex_unlock(&cpld_class_lock);
 	return 0;
 
 err_unregister_device:
@@ -267,6 +271,7 @@ err_destroy_class:
 		class_destroy(cpld_class);
 		cpld_class = NULL;
 	}
+	mutex_unlock(&cpld_class_lock);
 	return err;
 }
 
@@ -287,6 +292,8 @@ static int cpld_led_remove(struct i2c_client *client)
 {
 	struct cpld_led_data *data = i2c_get_clientdata(client);
 
+	mutex_lock(&cpld_class_lock);
+
 	dev_info(data->port_dev, "Remove CPLDLED-%d\n", data->cpld_data->cpld_id);
 	device_unregister(data->port_dev);
 	ida_simple_remove(&cpld_led_ida, data->cpld_data->cpld_id);
@@ -297,6 +304,7 @@ static int cpld_led_remove(struct i2c_client *client)
 		cpld_class = NULL;
 	}
 
+	mutex_unlock(&cpld_class_lock);
 	return 0;
 }
 
