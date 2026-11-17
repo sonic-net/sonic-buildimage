@@ -1,0 +1,232 @@
+"""AMD64 MUX images using the source-built config-engine parent."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@mux_runtime_apt_inputs//:apt_inputs.bzl", RUNTIME_APT_INPUTS = "APT_INPUTS")
+load("@sysmgr_apt_inputs//:apt_inputs.bzl", DEBUG_APT_INPUTS = "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+)
+
+exports_files([
+    "Dockerfile.j2",
+    "critical_processes",
+    "docker-init.sh",
+    "supervisord.conf",
+])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# Common, Python bindings and all five libnl libraries come from config-engine.
+# Linkmgrd is built by its own repository and installed directly from its TAR.
+sonic_layer(
+    name = "source_runtime",
+    tars = ["@sonic_linkmgrd//:sonic_linkmgrd_runtime"],
+)
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "mux_runtime_debian",
+    lock = "//dockers/docker-mux/bazel:apt.lock.json",
+    packages = RUNTIME_APT_INPUTS["trixie"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-mux",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "runtime",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+# Extend inherited state with the owner package and locked Boost runtime facts.
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in RUNTIME_APT_INPUTS["trixie"]["amd64"].values()],
+    owner_metadata = ["@sonic_linkmgrd//:runtime_packages.json"],
+    source_modules = {"sonic-linkmgrd": "@image_source_modules//:sonic-linkmgrd.MODULE.bazel"},
+    source_spec = "//dockers/docker-mux/bazel:source_paths.json",
+    sources = {"sonic-linkmgrd": "@sonic_linkmgrd//:sonic_linkmgrd_runtime"},
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/mux-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-mux",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/bin/docker-init.sh"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = "//dockers/docker-mux/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        "//dockers/docker-mux/config:files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-mux.debug_symbols",
+    image = ":docker-mux",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-mux",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-mux",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "debug",
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-mux",
+    controls = [label + ":control" for label in DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-mux/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/mux-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-mux-dbg",
+    base = ":docker-mux",
+    labels = "//dockers/docker-mux/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-mux.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-mux/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-mux" + suffix + ".gz",
+        image = ":docker-mux" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-mux.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# The private Redis fixture is only used by installed-service acceptance.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@sysmgr_test_debian//redis-server"],
+)

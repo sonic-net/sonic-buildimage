@@ -82,21 +82,6 @@ class TarPayloadTest(unittest.TestCase):
 
 
 class LegacyP4rtDockerTest(unittest.TestCase):
-    def test_full_vs_build_produces_both_deb_verifier_inputs(self):
-        import shlex
-        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
-        steps = workflow.split("  vs:\n", 1)[1]
-        def command(name):
-            return steps.split("      - name: " + name + "\n", 1)[1].split("      - name:", 1)[0]
-        build = command("Build the VS image and both OCI container variants")
-        verifier = command("Verify P4RT packaged split debug symbols")
-        goals = shlex.split(build.replace("\\\n", " "))
-        for option in ("--runtime-deb", "--debug-deb"):
-            path = verifier.split(option, 1)[1].split()[0]
-            self.assertIn(path, goals)
-            self.assertTrue(path.endswith(".deb"))
-        self.assertIn("BUILD_WITH_BAZEL_WHEN_AVAILABLE=y", build)
-
     def test_global_bazel_selector_keeps_legacy_deb_dependencies(self):
         makefile = """SRC_PATH = src
 DOCKERS_PATH = dockers

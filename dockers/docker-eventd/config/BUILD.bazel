@@ -1,0 +1,90 @@
+"""Event service configuration, including the files copied onto the SONiC host."""
+
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_python//python/entry_points:py_console_script_binary.bzl", "py_console_script_binary")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-eventd:__pkg__"])
+
+# Make's base installs jinjanator, whose upstream j2 entry point renders these
+# same JSON inputs. Keep its whitespace and undefined-variable behavior.
+py_console_script_binary(
+    name = "j2",
+    pkg = requirement("jinjanator"),
+    script = "j2",
+)
+
+_EVENTS = [
+    "host",
+    "bgp",
+    "dhcp_relay",
+    "swss",
+    "syncd",
+]
+
+[
+    run_binary(
+        name = event + "_events",
+        srcs = [
+            "//dockers/docker-eventd:" + event + "_events_info.json",
+            "//files/build_templates:rsyslog_plugin.conf.j2",
+        ],
+        outs = [event + "_events.conf"],
+        args = [
+            "--quiet",
+            "-f",
+            "json",
+            "-o",
+            "$(location :" + event + "_events.conf)",
+            "$(location //files/build_templates:rsyslog_plugin.conf.j2)",
+            "$(location //dockers/docker-eventd:" + event + "_events_info.json)",
+        ],
+        tool = ":j2",
+    )
+    for event in _EVENTS
+]
+
+_CONFIGS = {
+    "start.sh": "usr/bin/start.sh",
+    "eventdb_wrapper.sh": "usr/bin/eventdb_wrapper.sh",
+    "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
+    "critical_processes": "etc/supervisor/critical_processes",
+}
+
+tar(
+    name = "files",
+    srcs = ["//dockers/docker-eventd:" + name for name in _CONFIGS] + [":" + event + "_events" for event in _EVENTS],
+    mtree = [
+        destination + " uid=0 gid=0 mode=" + ("0755" if name.endswith(".sh") else "0644") + " time=0 type=file content=$(location //dockers/docker-eventd:" + name + ")"
+        for name, destination in _CONFIGS.items()
+    ] + [
+        "etc/rsyslog.d/rsyslog_plugin_conf/" + event + "_events.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location :" + event + "_events)"
+        for event in _EVENTS
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-eventd" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-eventd:docker-eventd",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

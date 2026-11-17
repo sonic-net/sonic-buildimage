@@ -15,6 +15,8 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 import tarfile
+
+from tools.bazel.ci.validation_inputs import cached_inventory
 import tempfile
 
 from tools.bazel.ci.artifact_validation import file_metadata, metadata, path_name, require, sha
@@ -229,6 +231,10 @@ def validate_member_metadata(member):
 
 def inventory(path):
     """Inventory normalized tar bytes without following host filesystem links."""
+    return cached_inventory(path, "source_package", lambda: _inventory(path))
+
+
+def _inventory(path):
     files = {}
     with tarfile.open(path, "r:*") as archive:
         for member in archive:

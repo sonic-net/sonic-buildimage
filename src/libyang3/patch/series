@@ -1,1 +1,3 @@
 0001-pr2362-lyd_validate_noextdeps.patch
+0002-fix-headless-interactive-tests.patch
+0003-fail-on-test-harness-errors.patch

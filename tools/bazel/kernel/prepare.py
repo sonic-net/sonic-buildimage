@@ -11,6 +11,7 @@ import fcntl
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -21,21 +22,23 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from tools.bazel.ci import resolution
+from tools.bazel.ci import resolution, time_vs_image
 
 MANIFEST = "kernel-packages.json"
 PROVENANCE = "kernel-provenance.json"
 TARGET = "@sonic_linux_kernel//:kernel_packages"
 DEBS_DIRECTORY = Path("target/debs/trixie")
 KERNEL_PATH = Path("src/sonic-linux-kernel")
+DOWNLOADER_CONFIG = Path("tools/bazel/debian_mirrors.cfg")
 REGISTRY_PREFIX = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"
 DEFAULT_REGISTRY = REGISTRY_PREFIX + "main"
 WATCHED = [
     ".gitmodules", "Makefile", "Makefile.work", "rules/linux-kernel.mk", "rules/linux-kernel.dep",
-    "tools/bazel/ci/resolution.py", "tools/bazel/ci/kernel_make_smoke.py", "rules/config",
+    "tools/bazel/ci/resolution.py", "tools/bazel/ci/time_vs_image.py",
+    "tools/bazel/ci/kernel_make_smoke.py", "rules/config",
     "tools/bazel/kernel", "build_debian.sh", "slave.mk", "Makefile.cache",
     "tools/bazel/ci/kernel_install_smoke.sh", "scripts/build_sbom.py",
-    "scripts/sbom_kernel_deb.py", str(KERNEL_PATH),
+    "scripts/sbom_kernel_deb.py", str(KERNEL_PATH), str(DOWNLOADER_CONFIG),
 ]
 
 
@@ -442,7 +445,7 @@ def inspect_resolution(workdir, consumer, source, registry, *, fetch=None):
     stderr = (workdir / "module-graph.stderr").read_text()
     status = int(regular(workdir / "module-graph.exit-code").read_text())
     graph_text = graph_path.read_text()
-    inspection = resolution.inspect_graph(graph_text, stderr, status)
+    inspection = resolution.inspect_graph_with_diagnostics(graph_text, stderr, status)
     keys = set()
 
     def visit(node):
@@ -604,6 +607,13 @@ def plan(workspace, state, remote_cache, upload, *, architecture=None, kernel_co
             files.append({"name": name, "sha256": expected_sha256, "size": path.stat().st_size})
         source_directory = {"path": str(directory), "files": files}
     registry = selected_registry()
+    managed_rc = os.environ.get("SONIC_BAZEL_REMOTE_ONLY_RC")
+    if managed_rc:
+        require(not (cache_directory or remote_cache or upload),
+                "runner-managed caching cannot be combined with explicit kernel cache options")
+        require(Path(managed_rc).is_absolute() and not any(c in managed_rc for c in "\r\n"),
+                "runner cache configuration must be an absolute path on one line")
+        regular(Path(managed_rc))
     if remote_cache:
         remote_cache = endpoint(remote_cache)
     require(not upload or remote_cache, "remote upload requires an explicit cache endpoint")
@@ -643,7 +653,7 @@ def plan(workspace, state, remote_cache, upload, *, architecture=None, kernel_co
             "source_kind": "registry", "state": str(state), "debs_directory": str(make_inputs),
             "remote_cache": remote_cache, "upload_local_results": upload,
             "disk_cache": str(disk_cache) if disk_cache else None,
-            "execution_trust": trust, "distdir": source_directory,
+            "runner_cache_rc": managed_rc or None, "execution_trust": trust, "distdir": source_directory,
             "argv": command}
 
 
@@ -662,12 +672,45 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
     state.mkdir(parents=True, mode=0o700, exist_ok=False)
     consumer = state / "consumer"
     shutil.copytree(workspace / "tools/bazel/kernel", consumer)
+    shutil.copyfile(regular(workspace / DOWNLOADER_CONFIG), consumer / DOWNLOADER_CONFIG.name)
     require(configure_registry(consumer) == prepared["registry"], "kernel registry selection changed")
+    if prepared["runner_cache_rc"]:
+        # The pinned build.py skips the home RC and passes --repository_cache
+        # on the command line. Import the worker's remote cache settings and
+        # keep that launcher option from re-enabling a local repository cache.
+        policy = ('flag_policies { flag_name: "repository_cache" set_value { '
+                  'flag_value: "" behavior: FINAL_VALUE_IGNORE_OVERRIDES } }')
+        with (consumer / ".bazelrc").open("a") as rc:
+            rc.write("\nimport " + shlex.quote(prepared["runner_cache_rc"]) + "\n")
+            # build.py also skips the system RC that configures Squid on native workers.
+            rc.write("try-import /run/sonic-native-apt/bazel-source.bazelrc\n")
+            rc.write("startup --invocation_policy=" + shlex.quote(policy) + "\n")
     (state / "plan.json").write_text(json.dumps(prepared, indent=2, sort_keys=True) + "\n")
-    if execute is None:
-        subprocess.run(prepared["argv"], cwd=workspace, check=True)
-    else:
-        execute(prepared["argv"], workspace)
+    timings = None
+    if os.environ.get("SONIC_VS_IMAGE_TIMINGS") == "1":
+        timings = time_vs_image.start_recipe(workspace, "linux-kernel", ["launcher"],
+                                             ["build", "cquery", "mod"], ["stage-debs"])
+        # The verified launcher sets the build profile path on its command line.
+        # The queries use the private consumer workspace's RC.
+        with (consumer / ".bazelrc").open("a") as rc:
+            rc.write("\ncommon --noslim_profile\n")
+            for command in ("cquery", "mod"):
+                profile = shlex.quote(str(timings / f"{command}.profile.json.gz"))
+                rc.write(f"{command} --profile={profile}\n")
+    try:
+        with time_vs_image.time_phase(timings, "launcher"):
+            if execute is None:
+                subprocess.run(prepared["argv"], cwd=workspace, check=True)
+            else:
+                execute(prepared["argv"], workspace)
+    finally:
+        if timings is not None:
+            for name, destination in (("profile.json.gz", "build.profile.json.gz"),
+                                      ("build.log", "build.log"),
+                                      ("module-graph.stderr", "module-graph.stderr")):
+                source = state / "build" / name
+                if source.is_file() and not source.is_symlink():
+                    shutil.copyfile(source, timings / destination)
     invocation = json.loads(regular(state / "build/invocation.json").read_text())
     require(invocation.get("schema") == 2 and invocation.get("target") == TARGET
             and invocation.get("execution_strategy") == "linux-sandbox"
@@ -682,7 +725,8 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
             and invocation.get("disk_cache") == prepared["disk_cache"],
             "kernel launcher invocation differs from the prepared source build")
     selected = inspect_resolution(state / "build", consumer, prepared["source"], prepared["registry"], fetch=fetch)
-    result = stage_outputs(state / "build", Path(prepared["debs_directory"]), workspace, prepared["source"], selected)
+    with time_vs_image.time_phase(timings, "stage-debs"):
+        result = stage_outputs(state / "build", Path(prepared["debs_directory"]), workspace, prepared["source"], selected)
     receipt = {"schema": 1, "plan": prepared, "result": result}
     (state / "kernel-receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
@@ -788,11 +832,18 @@ def main():
     parser.add_argument("--remote-cache")
     parser.add_argument("--upload-local-results", action="store_true")
     parser.add_argument("--ca-bundle", type=Path)
-    parser.add_argument("--java-trust-store", type=Path)
+    parser.add_argument("--java-trust-store", type=Path,
+                        help="Java trust store; overrides SONIC_BAZEL_JAVA_TRUST_STORE for build commands")
     parser.add_argument("--distdir", type=Path)
     parser.add_argument("--cache-directory", type=Path,
                         help="persistent Bazel download/action cache visible to this process")
     args = parser.parse_args()
+    # Managed builders own certificate policy. Keep this optional default out
+    # of verification-only calls, which do not download or invoke Bazel.
+    if args.command in {"ensure", "plan", "build"} and args.java_trust_store is None:
+        configured_trust = os.environ.get("SONIC_BAZEL_JAVA_TRUST_STORE")
+        if configured_trust:
+            args.java_trust_store = Path(configured_trust)
     workspace = args.workspace.resolve(strict=True)
     configuration = parse_kernel_config(args.kernel_config)
     if args.command == "ensure":

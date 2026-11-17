@@ -2,5 +2,6 @@
 common --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
 common --registry=https://bcr.bazel.build
 common --lockfile_mode=update
+common --downloader_config=debian_mirrors.cfg
 # Bazel-built bootstrap tools must run independently of the host libc version.
 build --host_features=fully_static_link

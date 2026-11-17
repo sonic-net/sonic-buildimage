@@ -1,0 +1,135 @@
+name: SONiC slave images
+
+on:
+  push:
+    branches: [master, vs-runner]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish VS slave images (AMD64)
+    if: >-
+      github.ref == 'refs/heads/master' ||
+      (github.event_name == 'push' &&
+       github.ref == 'refs/heads/vs-runner')
+    runs-on: [self-hosted, linux, bazel-x64, vs]
+    timeout-minutes: 720
+    defaults:
+      run:
+        shell: bash
+        working-directory: vs-${{ github.run_id }}-${{ github.run_attempt }}
+    env:
+      SONIC_CI_CONTAINER_LABEL: io.sonic-buildimage.ci-job=${{ github.repository }}:${{ github.run_id }}:${{ github.run_attempt }}:slave-images
+      SONIC_CONFIG_USE_DOCKER_CACHE: "y"
+      ENABLE_DOCKER_BASE_PULL: "y"
+      REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
+      ACR_REGISTRY_NAME: sonicdev
+      AZURE_SUBSCRIPTION_ID: ${{ vars.ACR_SUBSCRIPTION_ID }}
+      REGISTRY_PORT: "443"
+      INCLUDE_FIPS: "y"
+      SONIC_VERSION_CONTROL_COMPONENTS: py2,py3,web,git,docker
+      MIRROR_SNAPSHOT: "y"
+      SONIC_BUILD_SLAVE_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    steps:
+      - name: Checkout repository and pinned submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Initialize private Docker configuration
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-config-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$DOCKER_CONFIG"
+          printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Reclaim unused images and build cache
+        run: |
+          set -euo pipefail
+          docker system df
+          docker image prune --all --force
+          docker builder prune --all --force
+          docker system df
+
+      - name: Reclaim local Bazel caches
+        run: python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache --runner-workspace "${{ runner.workspace }}"
+
+      - name: Check host-agent build prerequisites
+        run: python3 -B tools/ci/runner/preflight.py --host-agent --workspace "$PWD" --build-target sonic-vs.bin
+
+      - name: Authenticate to the slave image registry
+        env:
+          AZURE_CONFIG_DIR: ${{ runner.temp }}/slave-images-azure-cli
+        run: bash tools/ci/runner/azure_acr_login.sh "${ACR_REGISTRY_NAME:?}"
+
+      - name: Build and publish computed slave tags
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/slave-images
+          make init 2>&1 | tee artifacts/slave-images/init.log
+          options=(
+            PLATFORM=generic PLATFORM_ARCH=amd64
+            "SONIC_BUILDER_EXTRA_CMDLINE=--label $SONIC_CI_CONTAINER_LABEL"
+          )
+          for build_env in bookworm trixie; do
+            image=$(make -s -f Makefile.work BLDENV="$build_env" showtag "${options[@]}" \
+              | tee "artifacts/slave-images/showtag-$build_env.log" | tail -n 1)
+            if [[ ! "$image" =~ ^sonic-slave-${build_env}:[0-9a-f]{11}$ ]]; then
+              printf 'Invalid computed slave image reference: %s\n' "$image" >&2
+              exit 1
+            fi
+            make -f Makefile.work BLDENV="$build_env" sonic-slave-build "${options[@]}" \
+              2>&1 | tee "artifacts/slave-images/build-$build_env.log"
+            docker image inspect "$image" > "artifacts/slave-images/image-$build_env.json"
+            remote="$REGISTRY_SERVER:$REGISTRY_PORT/$image"
+            docker tag "$image" "$remote"
+            docker push "$remote" 2>&1 | tee "artifacts/slave-images/push-$build_env.log"
+            printf 'Removing published local image tags: %s %s\n' "$remote" "$image"
+            docker image rm "$remote" "$image"
+          done
+
+      - name: Retain slave publication evidence
+        id: evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-slave-images-amd64
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/slave-images/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Log out of the slave image registry
+        if: always()
+        working-directory: ${{ runner.temp }}
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-config-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          status=0
+          docker logout "$REGISTRY_SERVER:$REGISTRY_PORT" || status=$?
+          rm -f -- "${DOCKER_CONFIG:?}/config.json"
+          exit "$status"
+
+      - name: Remove only this run's checkout
+        if: always() && steps.evidence.outcome == 'success'
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          checkout="$GITHUB_WORKSPACE/vs-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if test -L "$checkout"; then
+            printf 'Refusing redirected slave checkout: %s\n' "$checkout" >&2
+            exit 1
+          fi
+          if test ! -e "$checkout"; then
+            printf 'No slave checkout to remove: %s\n' "$checkout"
+            exit 0
+          fi
+          python3 -B "$checkout/tools/bazel/ci/cleanup_vs_workspace.py" \
+            --workspace "$GITHUB_WORKSPACE" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"

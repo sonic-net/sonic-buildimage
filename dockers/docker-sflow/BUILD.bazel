@@ -1,0 +1,303 @@
+"""sFlow composition; hsflowd, sflowtool, psample and SWSS own their source outputs."""
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sflow_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
+
+_LOCK = "@sonic_build_infra//apt:apt.lock.json"
+
+_COMPATIBLE = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-sflow",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_FILES = {
+    "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
+    "critical_processes": "etc/supervisor/critical_processes",
+    "port_index_mapper.py": "usr/bin/port_index_mapper.py",
+    "enable_mod_vpp.sh": "usr/bin/enable_mod_vpp.sh",
+}
+
+exports_files(_FILES.keys() + ["Dockerfile.j2"])
+
+# Preserve the Dockerfile's only modification to the owner's init script.
+# The source owner retains the complete script and service implementation.
+expand_template(
+    name = "hsflowd_init",
+    out = "hsflowd.init",
+    substitutions = {"DAEMON_ARGS=\"\"": "DAEMON_ARGS=\"-c /var/log/hsflowd.crash\""},
+    template = "@hsflowd//src/Linux:scripts/hsflowd.deb",
+)
+
+tar(
+    name = "files",
+    srcs = _FILES.keys() + [":hsflowd_init"],
+    mtree = [
+        path + " uid=0 gid=0 mode=" + ("0755" if source.endswith(".py") or source.endswith(".sh") else "0644") +
+        " time=0 type=file content=$(location " + source + ")"
+        for source, path in _FILES.items()
+    ] + ["etc/init.d/hsflowd uid=0 gid=0 mode=0755 time=0 type=file content=$(location :hsflowd_init)"],
+)
+
+[
+    manifest_labels(
+        name = "labels" + suffix,
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-sflow" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# sflowmgrd and all shared native/Python libraries already belong to the parent.
+# Each additional producer supplies its own runtime TAR and matching symbols.
+sonic_layer(
+    name = "source_runtime",
+    tars = [
+        "@hsflowd//:runtime",
+        "@sflowtool//:runtime",
+        "@libpsample//:runtime",
+    ],
+)
+
+debug_symbols_layer(
+    name = "source_debug_symbols",
+    image = ":source_runtime",
+)
+
+# The external roots follow the Dockerfile and source ELF runtime dependencies.
+# Existing parent packages are retained when their versions satisfy the request.
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "sflow_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["sflow_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_payload",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["sflow_debian"]["amd64"].values()],
+    owner_metadata = [
+        "@hsflowd//:runtime_packages.json",
+        "@sflowtool//:runtime_packages.json",
+        "@libpsample//:runtime_packages.json",
+    ],
+    source_modules = {
+        "hsflowd": "@image_source_modules//:hsflowd.MODULE.bazel",
+        "sflowtool": "@image_source_modules//:sflowtool.MODULE.bazel",
+        "libpsample": "@image_source_modules//:libpsample.MODULE.bazel",
+    },
+    source_spec = "//dockers/docker-sflow/bazel:source_paths.json",
+    sources = {
+        "hsflowd": "@hsflowd//:runtime",
+        "sflowtool": "@sflowtool//:runtime",
+        "psample": "@libpsample//:runtime",
+    },
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/sflow-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sflow",
+    base = _BASE,
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_payload",
+        ":source_runtime",
+        ":files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-sflow.debug_symbols",
+    image = ":docker-sflow",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-sflow",
+    dependency_set = "sysmgr_debug_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+# Activate full Vim over the source base's vim.tiny hardlink.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+# Match the selected FIPS OpenSSH owner's ssh-agent group contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-sflow",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-sflow",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-sflow/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/sflow-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sflow-dbg",
+    base = ":docker-sflow",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-sflow.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-sflow" + suffix + ".gz",
+        image = ":docker-sflow" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-sflow.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# Private validation service only; this payload never enters the production image.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@sysmgr_test_debian//redis-server"],
+)

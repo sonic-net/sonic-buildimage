@@ -1,4 +1,9 @@
 common --lockfile_mode=update
+build --remote_upload_local_results=false
+
+# Common CI and sonic-slave must use the same action environment. Inherited
+# PATH/LD_LIBRARY_PATH values otherwise change cross-repository cache keys.
+common --incompatible_strict_action_env
 
 # Default direct invocations to AMD64; the Make container bridge selects the
 # configured native architecture, and ARM64 callers can pass both platform flags.
@@ -17,6 +22,9 @@ build:syncd-dash --@sonic_sairedis//:enable_dashsai=true
 build:syncd-dash --@sonic_sairedis//:dash_sai=@sonic_dash//:sdk
 build:syncd-dash --@sonic_sairedis//:dash_runtime_metadata=@sonic_dash//:runtime_packages.json
 
+# Workspace-relative, including when Bazel is invoked from a subdirectory.
+# Local user configuration below can replace this downloader configuration.
+common --downloader_config=tools/bazel/debian_mirrors.cfg
 try-import %workspace%/.bazelrc.user
 
 # Restore complete declared kernel/metadata tool trees from the action cache.

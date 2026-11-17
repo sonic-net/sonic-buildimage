@@ -1,7 +1,7 @@
 """Declared fixture inputs for the public image rule action test."""
 
 def _fixture_impl(ctx):
-    trees = {name: ctx.actions.declare_directory(ctx.label.name + "." + name) for name in ["boot_files", "grub_assets", "oci"]}
+    trees = {name: ctx.actions.declare_directory(ctx.label.name + "." + name) for name in ["boot_files", "oci"]}
     files = {name: ctx.actions.declare_file(ctx.label.name + "." + name) for name in [
         "arch_image_conf", "default_platform_conf", "efi_sbatlevel", "grub_config",
         "initrd", "install_sh", "kernel_metadata", "machine_conf", "onie_image_conf",
@@ -10,7 +10,7 @@ def _fixture_impl(ctx):
     files.update({
         "layer": ctx.actions.declare_file(ctx.label.name + ".layer.tar"),
         "onie_boot": ctx.actions.declare_file(ctx.label.name + ".onie-boot.tar"),
-        "platform_archive": ctx.actions.declare_file(ctx.label.name + ".platform.tar.gz"),
+        "platform_archive": ctx.actions.declare_file(ctx.label.name + ".platform.tar"),
     })
     outputs = files | trees
     request = ctx.actions.declare_file(ctx.label.name + ".fixture.json")

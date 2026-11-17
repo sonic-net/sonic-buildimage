@@ -1,0 +1,59 @@
+"""Original router-advertiser startup and templates, plus explicit debug account."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-router-advertiser:__pkg__"])
+
+# radvd's reviewed postinst adds a system account without a private group or
+# home directory. UID101 is the first free system UID in the selected parent.
+account_layer(
+    name = "accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    users = [{
+        "username": "radvd",
+        "password": "x",
+        "uid": 101,
+        "gid": 65534,
+        "home": "/run/radvd",
+        "shell": "/usr/sbin/nologin",
+    }],
+)
+
+_FILES = {
+    "start.sh": "usr/bin/start.sh",
+    "docker-init.sh": "usr/bin/docker-init.sh",
+    "radvd.conf.j2": "usr/share/sonic/templates/radvd.conf.j2",
+    "wait_for_link.sh.j2": "usr/share/sonic/templates/wait_for_link.sh.j2",
+    "docker-router-advertiser.supervisord.conf.j2": "usr/share/sonic/templates/docker-router-advertiser.supervisord.conf.j2",
+    "critical_processes": "etc/supervisor/critical_processes",
+}
+
+tar(
+    name = "files",
+    srcs = ["//dockers/docker-router-advertiser:" + name for name in _FILES],
+    mtree = [destination + " uid=0 gid=0 mode=" + ("0755" if name.endswith(".sh") else "0644") + " time=0 type=file content=$(location //dockers/docker-router-advertiser:" + name + ")" for name, destination in _FILES.items()],
+)
+
+[manifest_labels(
+    name = "labels" if suffix == "" else "debug_labels",
+    out = "manifest" + suffix + ".labels",
+    image_version = "//dockers/docker-router-advertiser:image_version",
+    manifest = "//:target/bazel-manifests/docker-router-advertiser" + suffix + "/manifest.json",
+) for suffix in [
+    "",
+    "-dbg",
+]]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-router-advertiser:docker-router-advertiser",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

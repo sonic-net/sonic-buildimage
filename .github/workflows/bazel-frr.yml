@@ -1,0 +1,163 @@
+name: Bazel FRR and sonic-fib
+
+on:
+  pull_request:
+    paths:
+      - src/sonic-frr/**
+      - src/libraries/sonic-fib/**
+      - MODULE.bazel
+      - .bazelrc
+      - tools/bazel/common.bazelrc
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/artifact_validation.py
+      - tools/bazel/oci/runtime_smoke.py
+      - .github/workflows/bazel-frr.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native FRR and sonic-fib (${{ matrix.architecture }}, ${{ matrix.distribution }})
+    strategy:
+      fail-fast: false
+      matrix:
+        distribution: [trixie]
+        architecture: [amd64]
+        include:
+          - architecture: amd64
+            cpu: x86_64
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl file gdb git libtool patch pkg-config python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: frr-${{ matrix.architecture }}-${{ matrix.distribution }}
+          cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+      - name: Build source outputs and execute native tests
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_ARCHITECTURE: ${{ matrix.architecture }}
+          CI_CPU: ${{ matrix.cpu }}
+          CI_DISTRIBUTION: ${{ matrix.distribution }}
+          # Use the published dependencies from the maintained registry.
+          SONIC_BAZEL_REGISTRY: https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          test "$(dpkg --print-architecture)" = "$CI_ARCHITECTURE"
+          test "$(uname -m)" = "$CI_CPU"
+          git -c safe.directory="$GITHUB_WORKSPACE" cat-file -p HEAD > artifacts/checkout.txt
+          git -c safe.directory="$GITHUB_WORKSPACE" rev-parse HEAD > artifacts/checkout-sha.txt
+          printf '%s\n' "$CI_HEAD_SHA" "$CI_BASE_SHA" "$CI_ARCHITECTURE" "$CI_DISTRIBUTION" "$SONIC_BAZEL_REGISTRY" > artifacts/inputs.txt
+          options=(
+            "--registry=$SONIC_BAZEL_REGISTRY"
+            --registry=https://bcr.bazel.build
+            "--host_platform=@sonic_build_infra//platforms:${CI_CPU}_trixie"
+            "--platforms=@sonic_build_infra//platforms:${CI_CPU}_${CI_DISTRIBUTION}"
+            --jobs=2
+          )
+          run_bazel() {
+            local command="$1"
+            shift
+            bazel --nosystem_rc --nohome_rc --noworkspace_rc \
+              --bazelrc="$PWD/tools/bazel/common.bazelrc" \
+              "$command" "${options[@]}" "$@"
+          }
+          targets=(
+            //src/sonic-frr:frr_layout
+            //src/sonic-frr:frr_elf.debug_symbols
+            //src/sonic-frr:frr_snmp_layout
+            //src/sonic-frr:frr_snmp_elf.debug_symbols
+            //src/sonic-frr:pythontools_layout
+            //src/sonic-frr:check_programs
+            //src/libraries/sonic-fib:runtime
+            //src/libraries/sonic-fib:runtime.debug_symbols
+            //src/libraries/sonic-fib:development
+            //src/libraries/sonic-fib:runtime_packages.json
+          )
+          # FRR metadata declares Trixie-only compatibility; sonic-fib metadata
+          # and all installation TARs retain both target distributions.
+          if [[ "$CI_DISTRIBUTION" == trixie ]]; then
+            targets+=(//src/sonic-frr:runtime_packages.json)
+          fi
+          run_bazel build --build_event_json_file="$PWD/artifacts/build-events.json" "${targets[@]}" 2>&1 | tee artifacts/build.log
+          run_bazel cquery "set(${targets[*]})" --output=files > artifacts/outputs.txt
+          test -s artifacts/outputs.txt
+          while IFS= read -r output; do
+            test -f "$output"
+            cp --parents "$output" artifacts/
+            sha256sum "$output" >> artifacts/SHA256SUMS
+          done < artifacts/outputs.txt
+          cp MODULE.bazel.lock artifacts/
+          python3 src/libraries/sonic-fib/verify_runtime.py \
+            --runtime "$(run_bazel cquery //src/libraries/sonic-fib:runtime --output=files)" \
+            --development "$(run_bazel cquery //src/libraries/sonic-fib:development --output=files)" \
+            --symbols "$(run_bazel cquery //src/libraries/sonic-fib:runtime.debug_symbols --output=files)" \
+            --output artifacts/libfib-installed.json
+          python3 src/sonic-frr/verify_runtime.py \
+            --runtime "$(run_bazel cquery //src/sonic-frr:frr_layout --output=files)" \
+            --symbols "$(run_bazel cquery //src/sonic-frr:frr_elf.debug_symbols --output=files)" \
+            --snmp-runtime "$(run_bazel cquery //src/sonic-frr:frr_snmp_layout --output=files)" \
+            --snmp-symbols "$(run_bazel cquery //src/sonic-frr:frr_snmp_elf.debug_symbols --output=files)" \
+            --output artifacts/frr-installed.json
+          run_bazel test --build_event_json_file="$PWD/artifacts/test-events.json" \
+            //src/sonic-frr:upstream_native_check \
+            //src/libraries/sonic-fib:tests \
+            //src/libraries/sonic-fib:public_c_api_test \
+            2>&1 | tee artifacts/test.log
+          # Keep production outputs and ordinary checks on the default allocator.
+          # Valgrind must own allocation instrumentation in its separate profile.
+          run_bazel test --//src/sonic-frr:tcmalloc=false \
+            --build_event_json_file="$PWD/artifacts/memcheck-events.json" \
+            //src/sonic-frr:upstream_check \
+            2>&1 | tee artifacts/memcheck.log
+          python3 src/libraries/sonic-fib/verify_rebuild.py \
+            --bazel "$PWD/tools/bazel/ci/libteam_draft_bazel.sh" \
+            --output "$PWD/artifacts/libfib-rebuild"
+          git -c safe.directory="$GITHUB_WORKSPACE" diff --exit-code
+      - name: Preserve native test diagnostics
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -d bazel-testlogs ]]; then
+            mkdir -p artifacts
+            cp -aL bazel-testlogs artifacts/testlogs
+          fi
+      - name: Upload source outputs and validation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frr-${{ matrix.architecture }}-${{ matrix.distribution }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1

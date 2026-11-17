@@ -36,3 +36,30 @@ $(DOCKER_MUX)_CONTAINER_NAME = mux
 $(DOCKER_MUX)_RUN_OPT += -t
 $(DOCKER_MUX)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_MUX)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+
+# The source parent owns Common; Linkmgrd supplies its runtime/debug TARs.
+# Preserve the existing Make producer for configurations outside this profile.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_MUX) $(DOCKER_MUX_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK):$(INCLUDE_MUX),y:vs:amd64:y:dbg:y)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_MUX)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_MUX_DBG)
+$(DOCKER_MUX)_BAZEL_TARGET = //dockers/docker-mux:$(DOCKER_MUX)
+$(DOCKER_MUX_DBG)_PATH = $($(DOCKER_MUX)_PATH)
+$(DOCKER_MUX_DBG)_BAZEL_TARGET = //dockers/docker-mux:$(DOCKER_MUX_DBG)
+SONIC_BAZEL_MANIFESTS += docker-mux docker-mux-dbg
+docker-mux_MANIFEST_IMAGE = $(DOCKER_MUX)
+docker-mux-dbg_MANIFEST_IMAGE = $(DOCKER_MUX)
+docker-mux-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_MUX)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-mux/manifest.json
+$(DOCKER_MUX_DBG)_BAZEL_DEPENDS = $($(DOCKER_MUX)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-mux-dbg/manifest.json
+endif
+endif
+endif
+
+$(DOCKER_MUX)_BAZEL_ARGS = --//dockers/docker-mux:image_version=$(SONIC_IMAGE_VERSION)
+$(DOCKER_MUX_DBG)_BAZEL_ARGS = $($(DOCKER_MUX)_BAZEL_ARGS)

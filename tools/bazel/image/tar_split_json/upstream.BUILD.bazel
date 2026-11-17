@@ -1,0 +1,43 @@
+"""Build the upstream API directly; the CLI's external dependencies are unused."""
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+package(default_visibility = ["//visibility:public"])
+
+go_library(
+    name = "archive_tar",
+    srcs = [
+        "archive/tar/common.go",
+        "archive/tar/format.go",
+        "archive/tar/reader.go",
+        "archive/tar/stat_actime1.go",
+        "archive/tar/stat_actime2.go",
+        "archive/tar/stat_unix.go",
+        "archive/tar/strconv.go",
+        "archive/tar/writer.go",
+    ],
+    importpath = "github.com/vbatts/tar-split/archive/tar",
+)
+
+go_library(
+    name = "storage",
+    srcs = [
+        "tar/storage/doc.go",
+        "tar/storage/entry.go",
+        "tar/storage/getter.go",
+        "tar/storage/packer.go",
+    ],
+    importpath = "github.com/vbatts/tar-split/tar/storage",
+)
+
+go_library(
+    name = "asm",
+    srcs = [
+        "tar/asm/assemble.go",
+        "tar/asm/disassemble.go",
+        "tar/asm/doc.go",
+        "tar/asm/iterate.go",
+    ],
+    importpath = "github.com/vbatts/tar-split/tar/asm",
+    deps = [":archive_tar", ":storage"],
+)

@@ -9,7 +9,6 @@ import argparse
 import binascii
 import hashlib
 import json
-import gzip
 from contextlib import ExitStack
 from functools import partial
 import re
@@ -23,7 +22,7 @@ import tempfile
 import zlib
 
 from kernel_inputs import boot_inputs, boot_mode
-from image_config import image_options, installer_config, boot_config
+from image_config import image_options, installer_config, boot_config, compressed_output
 
 
 class Member:
@@ -165,7 +164,7 @@ def _write(spec, cleanup):
             members.append(member(name + "/", mode=boot_mode(spec, relative, True)))
         else:
             members.append(member(name, path, boot_mode(spec, relative), not path.name.endswith(".gz")))
-    members += [member("boot/initrd.img-" + release, spec["initrd"], deflate=True),
+    members += [member("boot/initrd.img-" + release, spec["initrd"]),
                 member("platform.tar.gz", spec["platform_archive"]),
                 member(names["squashfs_name"], spec["squashfs"])]
     external = None
@@ -192,7 +191,9 @@ def _write(spec, cleanup):
             archive.addfile(root)
             add_file(archive, "installer/install.sh", spec["install_sh"], 0o755)
             add_file(archive, "installer/machine.conf", spec["machine_conf"])
-            resources = {"default_platform.conf": spec["default_platform_conf"], "onie-image.conf": spec["onie_image_conf"], "onie-image-" + metadata["architecture"] + ".conf": spec["arch_image_conf"], "platforms_asic": spec["platforms_asic"], "efi_sbatlevel.py": spec["efi_sbatlevel"]}
+            resources = {"default_platform.conf": spec["default_platform_conf"], "onie-image.conf": spec["onie_image_conf"], "platforms_asic": spec["platforms_asic"], "efi_sbatlevel.py": spec["efi_sbatlevel"]}
+            if spec.get("arch_image_conf"):
+                resources["onie-image-" + metadata["architecture"] + ".conf"] = spec["arch_image_conf"]
             if spec.get("platform_conf"):
                 resources["platform.conf"] = spec["platform_conf"]
             for destination, path in resources.items():
@@ -232,6 +233,8 @@ def build(spec):
         names = image_options(spec)
         kernel, _ = boot_inputs(spec["kernel_metadata"], spec["boot_files"])
         for field in ("onie_image_conf", "arch_image_conf", "default_platform_conf"):
+            if not spec.get(field):
+                continue
             text = Path(spec[field]).read_text()
             text = boot_config(text, kernel, names) if field == "default_platform_conf" else installer_config(text, names)
             destination = work / field
@@ -240,7 +243,13 @@ def build(spec):
         if spec.get("installer_variables", {}).get("ARCH", kernel["architecture"]) != kernel["architecture"]:
             raise ValueError("installer ARCH differs from kernel metadata")
         script = Path(spec["install_sh"]).read_text()
-        for key, value in spec.get("installer_variables", {}).items():
+        variables = dict(spec.get("installer_variables", {}))
+        if spec.get("version_file"):
+            version = Path(spec["version_file"]).read_text().strip()
+            if not version or any(character in version for character in "\r\n\0"):
+                raise ValueError("installer image version must be one nonempty line")
+            variables["IMAGE_VERSION"] = version
+        for key, value in variables.items():
             script = script.replace("%%" + key + "%%", value)
         unresolved = sorted(set(re.findall(r"%%[A-Z_]+%%", script)))
         if unresolved:
@@ -264,9 +273,8 @@ def build(spec):
                     raise ValueError("zstd dockerfs requires a zstd stream and docker_mode=ram")
             elif compression == "none":
                 compressed = work / name
-                with source.open("rb") as inp, compressed.open("wb") as raw:
-                    with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as out:
-                        shutil.copyfileobj(inp, out, 1024 * 1024)
+                with source.open("rb") as inp, compressed_output(compressed, "gzip", pigz=spec.get("pigz")) as out:
+                    shutil.copyfileobj(inp, out, 1024 * 1024)
                 prepared[field] = str(compressed)
             else:
                 raise ValueError("unsupported " + setting + " " + compression)

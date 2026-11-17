@@ -1,0 +1,77 @@
+"""The same service files and dialout selection as the Make Dockerfile."""
+
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-sonic-gnmi:__pkg__"])
+
+py_binary(
+    name = "render_supervisor",
+    srcs = ["render_supervisor.py"],
+)
+
+genrule(
+    name = "supervisor_without_dialout",
+    srcs = ["//dockers/docker-sonic-gnmi:supervisord.conf"],
+    outs = ["supervisord-no-dialout.conf"],
+    cmd = "$(execpath :render_supervisor) $(location //dockers/docker-sonic-gnmi:supervisord.conf) $@",
+    tools = [":render_supervisor"],
+)
+
+alias(
+    name = "supervisor",
+    actual = select({
+        "@sonic_gnmi//tools/bazel:dialout_enabled": "//dockers/docker-sonic-gnmi:supervisord.conf",
+        "//conditions:default": ":supervisor_without_dialout",
+    }),
+)
+
+_CONFIGS = {
+    "//dockers/docker-sonic-gnmi:start.sh": "usr/bin/start.sh",
+    "//dockers/docker-sonic-gnmi:gnmi-native.sh": "usr/bin/gnmi-native.sh",
+    "//dockers/docker-sonic-gnmi:telemetry_vars.j2": "usr/share/sonic/templates/telemetry_vars.j2",
+    "//dockers/docker-sonic-gnmi:critical_processes": "etc/supervisor/critical_processes",
+    "//files/image_config:rsyslog/rsyslog-container-gnmi.conf": "etc/rsyslog.conf",
+    ":supervisor": "etc/supervisor/conf.d/supervisord.conf",
+}
+
+tar(
+    name = "files",
+    srcs = _CONFIGS.keys(),
+    mtree = [
+        dest + " uid=0 gid=0 mode=" + ("0755" if dest.startswith("usr/bin/") else "0644") + " time=0 type=file content=$(location " + source + ")"
+        for source, dest in _CONFIGS.items()
+    ],
+)
+
+tar(
+    name = "dialout_launcher",
+    srcs = ["//dockers/docker-sonic-gnmi:dialout.sh"],
+    mtree = ["usr/bin/dialout.sh uid=0 gid=0 mode=0755 time=0 type=file content=$(location //dockers/docker-sonic-gnmi:dialout.sh)"],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-sonic-gnmi" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# Preserve the source OpenSSH client's declared setgid group.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-sonic-gnmi:docker-sonic-gnmi",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

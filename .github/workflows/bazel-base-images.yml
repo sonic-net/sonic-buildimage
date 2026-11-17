@@ -5,12 +5,24 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      architecture:
+        description: Native architectures to validate
+        type: choice
+        options: [all, amd64]
+        default: all
+      source_revision:
+        description: Optional full buildimage commit for an AMD64 review
+        type: string
+      registry_revision:
+        description: Full SONiC registry commit paired with the reviewed source
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: bazel-base-images-${{ github.event.pull_request.number || github.ref }}
+  group: bazel-base-images-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -18,24 +30,34 @@ jobs:
     name: Build and inspect source base (${{ matrix.architecture }})
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - architecture: amd64
-            runner: ubuntu-24.04
+      matrix: &base_matrix
+        architecture: [amd64, arm64]
+        selection: ["${{ inputs.architecture || 'all' }}"]
+        exclude:
           - architecture: arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+            selection: amd64
+    runs-on: &base_runner [self-hosted, linux, "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 120
-    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
     defaults:
       run:
         shell: bash
     steps:
+      - name: Check space for source image validation
+        run: |
+          set -euo pipefail
+          df -h /github/home
+          available_bytes=$(df --output=avail --block-size=1 /github/home | tail -n 1)
+          (( available_bytes >= 45 * 1024 * 1024 * 1024 )) || {
+            echo 'Source image validation requires 45 GiB of free build space.' >&2
+            exit 1
+          }
       - name: Install execution and verification tools
         run: |
           apt-get update
           # SymCrypt's scoped LLVM linker needs libxml2 on the execution host.
-          apt-get install -y --no-install-recommends binutils build-essential ca-certificates gdb git j2cli jq libarchive-tools libxml2 python3
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates file gdb git j2cli jq libarchive-tools libxml2 pkg-config python3
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -46,6 +68,30 @@ jobs:
           repository-cache: true
           disk-cache: base-images-${{ matrix.architecture }}
           cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Select the reviewed source and registry
+        if: github.event_name == 'workflow_dispatch' && (inputs.source_revision != '' || inputs.registry_revision != '')
+        env:
+          SOURCE_REVISION: ${{ inputs.source_revision }}
+          REGISTRY_REVISION: ${{ inputs.registry_revision }}
+          SELECTED_ARCHITECTURE: ${{ inputs.architecture }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/base_review.py
+
+      - name: Initialize Sysmgr's pinned gNOI source
+        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+
       - name: Check clean dependency inputs
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -55,8 +101,27 @@ jobs:
           # Bazel records its client environment in retained build events.
           BAZELISK_GITHUB_TOKEN: ""
         run: |
+          set -euo pipefail
+          mkdir -p artifacts/base-images
+          bazel="${BASE_REVIEW_BAZEL:-$GITHUB_WORKSPACE/tools/bazel/ci/libteam_draft_bazel.sh}"
+          cp "$bazel" artifacts/base-images/registry-input.txt
+          acceptance=()
+          if [[ '${{ matrix.architecture }}' == amd64 ]]; then
+            acceptance+=(--config-engine-acceptance)
+          fi
           python3 -B tools/bazel/ci/base_images.py \
-            --architecture '${{ matrix.architecture }}' --artifacts artifacts/base-images
+            --bazel "$bazel" \
+            --architecture '${{ matrix.architecture }}' --artifacts artifacts/base-images "${acceptance[@]}"
+          git diff --exit-code
+      - name: Verify config-engine no-op and template rebuilds
+        if: matrix.architecture == 'amd64'
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          bazel="${BASE_REVIEW_BAZEL:-$GITHUB_WORKSPACE/tools/bazel/ci/libteam_draft_bazel.sh}"
+          python3 -B tools/bazel/ci/config_engine_rebuild.py \
+            --bazel "$bazel" \
+            --output artifacts/base-images/config-engine-rebuild.json
           git diff --exit-code
       - name: Retain images, symbols and build evidence
         if: always()
@@ -69,6 +134,7 @@ jobs:
             artifacts/base-images/*.json
             artifacts/base-images/*.jsonl
             artifacts/base-images/*.log
+            artifacts/base-images/registry-input.txt
             artifacts/base-images/MODULE.bazel.lock
           if-no-files-found: error
           retention-days: 14
@@ -79,17 +145,46 @@ jobs:
     needs: native
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - architecture: amd64
-            runner: ubuntu-24.04
-          - architecture: arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+      matrix: *base_matrix
+    runs-on: *base_runner
     timeout-minutes: 20
     steps:
+      - name: Restore workspace access before checkout
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY##*/}"
+          pipeline_workspace="${RUNNER_PIPELINE_WORKSPACE%/}"
+          expected="$pipeline_workspace/$repository"
+          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
+            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
+              "$expected" "$GITHUB_WORKSPACE" >&2
+            exit 1
+          fi
+          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
+            echo 'No existing workspace to repair.'
+            exit 0
+          fi
+          work_root="$(realpath -e -- "$pipeline_workspace/..")"
+          physical_workspace="$work_root/$repository/$repository"
+          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
+            echo 'Refusing permission repair on a redirected workspace.' >&2
+            exit 1
+          fi
+          expected="$physical_workspace"
+          owner="$(id -u):$(id -g)"
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chown --no-dereference -- "$owner" {} +
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chmod u+rwx -- {} +
+          sudo -n find -P "$expected" -xdev -type f -links 1 \
+            -exec chown --no-dereference -- "$owner" {} +
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_revision || github.sha }}
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -98,6 +193,8 @@ jobs:
       - name: Load only this run's verified image
         env:
           EXPECTED_ARCH: ${{ matrix.architecture }}
+          REVIEW_SOURCE: ${{ inputs.source_revision }}
+          REVIEW_REGISTRY: ${{ inputs.registry_revision }}
         run: |
           python3 - <<'PY'
           import hashlib, json, os, subprocess
@@ -106,16 +203,23 @@ jobs:
           receipt = json.loads((directory / 'receipt.json').read_text())
           assert receipt['status'] == 'passed' and receipt['architecture'] == os.environ['EXPECTED_ARCH']
           assert receipt['revision'] == subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          name = 'docker-config-engine-trixie.gz'
-          assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == receipt['artifacts'][name]['sha256']
-          subprocess.run(['docker', 'load', '--input', str(directory / name)], check=True)
-          actual = json.loads(subprocess.check_output(['docker', 'image', 'inspect', 'docker-config-engine-trixie:latest']))[0]
-          report = json.loads((directory / 'docker-config-engine-trixie.validation.json').read_text())
-          assert actual['Architecture'] == os.environ['EXPECTED_ARCH'] and actual['Os'] == 'linux'
-          assert actual['RootFS']['Layers'] == report['rootfs']['diff_ids']
-          meaningful = lambda values: {key: value for key, value in values.items() if value not in (None, '', [], {}, False)}
-          assert meaningful(actual['Config']) == meaningful(report['config'])
+          if os.environ['REVIEW_SOURCE']:
+              selection = json.loads((directory / 'review-selection.json').read_text())
+              assert selection == {'source': os.environ['REVIEW_SOURCE'], 'registry': os.environ['REVIEW_REGISTRY'],
+                                   'controller': os.environ['GITHUB_SHA']}
+              assert selection['source'] == receipt['revision']
+              prefix = 'https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/'
+              assert {url for url in receipt['resolution']['observed_registry_urls'] if url.startswith(prefix)} == {prefix + selection['registry']}
+          assert hashlib.sha256((directory / 'installed-images-policy.json').read_bytes()).hexdigest() == receipt['installed_images_policy_sha256']
+          for name in ('docker-base-trixie.gz', 'docker-config-engine-trixie.gz'):
+              with (directory / name).open('rb') as archive:
+                  actual = hashlib.file_digest(archive, 'sha256').hexdigest()
+              assert actual == receipt['artifacts'][name]['sha256'], name
           PY
+          python3 -B tools/bazel/ci/validate_runtime.py \
+            --images-policy artifacts/base-images/installed-images-policy.json \
+            --target artifacts/base-images \
+            --output artifacts/base-images/installed-images.json
       - name: Exercise installed source programs and Python packages
         run: |
           set -o pipefail
@@ -126,11 +230,18 @@ jobs:
             --mount "type=bind,src=$PWD/artifacts/base-images/docker-config-engine-trixie.validation.json,dst=/probe/validation.json,readonly" \
             --entrypoint /usr/bin/python3 docker-config-engine-trixie:latest \
             -B /probe/smoke.py /probe/validation.json | tee artifacts/base-images/runtime-smoke.json
+      - name: Require the installed-image smoke receipt
+        if: always()
+        run: |
+          set -euo pipefail
+          test -e artifacts/base-images/runtime-smoke.json
       - name: Retain installed-image validation
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: source-base-runtime-${{ matrix.architecture }}
-          path: artifacts/base-images/runtime-smoke.json
-          if-no-files-found: warn
+          path: |
+            artifacts/base-images/installed-images.json
+            artifacts/base-images/runtime-smoke.json
+          if-no-files-found: error
           retention-days: 14

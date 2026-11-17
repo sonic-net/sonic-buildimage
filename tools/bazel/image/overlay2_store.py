@@ -66,7 +66,7 @@ class HashReader:
         return data
 
 
-def stream_layer(archive, blob, diff_id, prefix, zstd, tar_split, metadata_path):
+def stream_layer(archive, blob, diff_id, prefix, zstd, tar_split_json, metadata_path):
     """Stream exact layer bytes to tar-split and return Moby header-data size."""
     process = None
     with Path(blob).open("rb") as raw:
@@ -81,7 +81,7 @@ def stream_layer(archive, blob, diff_id, prefix, zstd, tar_split, metadata_path)
             source = process.stdout
         else:
             source = raw
-        splitter = subprocess.Popen([tar_split, "disasm", "--output", str(metadata_path), "--no-stdout", "-"], stdin=subprocess.PIPE)
+        splitter = subprocess.Popen([tar_split_json, str(metadata_path)], stdin=subprocess.PIPE)
         reader = HashReader(source, splitter.stdin)
         directories, opaque = {}, set()
         size = 0
@@ -147,14 +147,16 @@ def stream_layer(archive, blob, diff_id, prefix, zstd, tar_split, metadata_path)
         return size
 
 
-def build(images, version, platform, output, zstd=None, tar_split=None, compression="gzip"):
-    if not tar_split:
-        raise ValueError("a declared tar-split executable is required")
+def build(images, version, platform, output, zstd=None, tar_split_json=None, compression="gzip", pigz=None):
+    if not tar_split_json:
+        raise ValueError("a declared tar_split_json executable is required")
+    if not pigz:
+        raise ValueError("a declared pigz executable is required for Docker metadata")
     if compression not in ("none", "gzip", "zstd"):
         raise ValueError("unsupported Docker store compression: " + compression)
     repositories, seen = {}, set()
     with ExitStack() as stack:
-        compressed = stack.enter_context(compressed_output(output, compression, zstd))
+        compressed = stack.enter_context(compressed_output(output, compression, zstd, pigz))
         tar = stack.enter_context(tarfile.open(fileobj=compressed, mode="w|", format=tarfile.PAX_FORMAT))
         scratch = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="tar-split-")))
         archive = StoreWriter(tar)
@@ -177,8 +179,8 @@ def build(images, version, platform, output, zstd=None, tar_split=None, compress
                 seen.add(chain)
                 root = "overlay2/" + chain
                 entry(archive, root + "/diff", mode=0o755, kind=tarfile.DIRTYPE)
-                metadata_path = scratch / (chain + ".json.gz")
-                size = stream_layer(archive, blob, diff_id, root + "/diff", zstd, tar_split, metadata_path)
+                metadata_path = scratch / (chain + ".json")
+                size = stream_layer(archive, blob, diff_id, root + "/diff", zstd, tar_split_json, metadata_path)
                 entry(archive, root + "/link", short.encode())
                 entry(archive, root + "/committed")
                 if len(chains) > 1:
@@ -187,11 +189,15 @@ def build(images, version, platform, output, zstd=None, tar_split=None, compress
                 db = "image/overlay2/layerdb/sha256/" + chain
                 for key, value in [("diff", diff_id), ("cache-id", chain), ("size", str(size))]:
                     entry(archive, db + "/" + key, value.encode())
-                info = tarfile.TarInfo(db + "/tar-split.json.gz")
-                info.mode, info.size = 0o644, metadata_path.stat().st_size
-                with metadata_path.open("rb") as stream:
-                    archive.addfile(info, stream)
+                compressed_metadata = metadata_path.with_suffix(".json.gz")
+                with metadata_path.open("rb") as source, compressed_metadata.open("wb") as destination:
+                    subprocess.run([pigz, "-n", "-c"], stdin=source, stdout=destination, check=True)
                 metadata_path.unlink()
+                info = tarfile.TarInfo(db + "/tar-split.json.gz")
+                info.mode, info.size = 0o644, compressed_metadata.stat().st_size
+                with compressed_metadata.open("rb") as stream:
+                    archive.addfile(info, stream)
+                compressed_metadata.unlink()
                 if len(chains) > 1:
                     entry(archive, db + "/parent", ("sha256:" + chains[-2]).encode())
             for tag in tags.split(","):
@@ -212,7 +218,7 @@ def main():
     args = parser.parse_args()
     spec = json.loads(Path(args.spec).read_text())
     version = Path(spec["version_file"]).read_text().strip() if spec.get("version_file") else ""
-    build(spec["images"], version, spec["platform"], spec["out"], spec.get("zstd"), spec.get("tar_split"), spec.get("compression", "gzip"))
+    build(spec["images"], version, spec["platform"], spec["out"], spec.get("zstd"), spec.get("tar_split_json"), spec.get("compression", "gzip"), spec.get("pigz"))
 
 
 if __name__ == "__main__":

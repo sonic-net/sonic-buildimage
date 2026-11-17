@@ -509,6 +509,17 @@ ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
+# Forward cache authentication by name so the value never appears in Make's
+# printed Docker command or its command-line variables. Keep this independent
+# of the optional local cache mount below. Only the Bazel client uses it.
+DOCKER_RUN += -e BAZEL_REMOTE_AUTH
+
+# Pass cache settings into the slave independently of its shared disk-cache mount.
+DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_CACHE))' \
+	-e 'SONIC_BAZEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_UPLOAD))'
+DOCKER_RUN += -e 'SONIC_BAZEL_KERNEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))' \
+	-e 'SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))'
+
 # Reuse downloads and action outputs across disposable builder containers.
 # Create the bind source as the host build user, before Docker can create a
 # root-owned directory. Keep the output base private to each builder/check-out.
@@ -786,6 +797,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   SBOM_STRICT=$(SBOM_STRICT) \
 						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
 						   BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(BUILD_WITH_BAZEL_WHEN_AVAILABLE) \
+                           PREFER_DEBIAN_REPO=$(PREFER_DEBIAN_REPO) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset
@@ -812,6 +824,8 @@ export BUILD_SNAPSHOT_URL
 export SONIC_VERSION_CONTROL_COMPONENTS
 export PIP_HTTP_TIMEOUT
 export SECURE_UPGRADE_PROD_TOOL_ARGS
+
+include tools/bazel/direct_image_goals.mk
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)

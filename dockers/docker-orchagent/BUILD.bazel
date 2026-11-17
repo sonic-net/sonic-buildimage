@@ -1,13 +1,18 @@
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@orchagent_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@orchagent_debug_apt_inputs//:apt_inputs.bzl", DEBUG_APT_INPUTS = "APT_INPUTS")
 load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//dockers/docker-config-engine-trixie:validation.bzl", "service_images_policy")
 load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
-load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+load("//tools/bazel/oci:source_contract.bzl", "source_contract")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -33,7 +38,7 @@ _APT_POLICY = {
     "image": "docker-orchagent",
     "architecture": "amd64",
     "distribution": "trixie",
-    "retained_source": "none",
+    "retained_source": "source",
     "features": {},
 }
 
@@ -58,10 +63,29 @@ _PACKAGE_POLICY = dict(
         "environment": {"DEBIAN_FRONTEND": "noninteractive"},
         "startup_files": {},
         "required_elf_paths": ["usr/bin/orchagent"],
-        "debug_alternatives": [],
+        "debug_alternatives": [
+            {
+                "paths": ["etc/alternatives/" + name for name in [
+                    "editor",
+                    "ex",
+                    "rview",
+                    "vi",
+                    "view",
+                ]],
+                "before": "/usr/bin/vim.tiny",
+                "after": "/usr/bin/vim.basic",
+            },
+            {
+                "paths": ["usr/bin/vim"],
+                "before_kind": "hardlink",
+                "before_mode": 0o755,
+                "before": "usr/bin/vim.tiny",
+                "after": "/etc/alternatives/vim",
+            },
+        ],
         "runtime_tag": "docker-orchagent:latest",
         "debug_tag": "docker-orchagent-dbg:latest",
-        "package_state": False,
+        "package_state": True,
     },
     install_inventory = {
         "architecture": _APT_POLICY["architecture"],
@@ -87,6 +111,18 @@ _PACKAGE_POLICY = dict(
         "expected_program_count": 30,
     },
     libraries = {
+        "libteam.tar": {
+            "architecture": _APT_POLICY["architecture"],
+            "runtime_path": "usr/lib/x86_64-linux-gnu/libteam.so.5.6.1",
+            "soname_links": {"usr/lib/x86_64-linux-gnu/libteam.so.5": "libteam.so.5.6.1"},
+            "exclusive_pattern": "*/libteam.so*",
+        },
+        "libteamdctl.tar": {
+            "architecture": _APT_POLICY["architecture"],
+            "runtime_path": "usr/lib/x86_64-linux-gnu/libteamdctl.so.0.1.5",
+            "soname_links": {"usr/lib/x86_64-linux-gnu/libteamdctl.so.0": "libteamdctl.so.0.1.5"},
+            "exclusive_pattern": "*/libteamdctl.so*",
+        },
         "protobuf.tar": {
             "architecture": _APT_POLICY["architecture"],
             "runtime_path": "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12",
@@ -108,6 +144,8 @@ _PACKAGE_POLICY = dict(
         "usr/lib/libdashapi.so",
         "usr/lib/python3/dist-packages/dash_api/_utils.so",
         "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12",
+        "usr/lib/x86_64-linux-gnu/libteam.so.5.6.1",
+        "usr/lib/x86_64-linux-gnu/libteamdctl.so.0.1.5",
     ],
     retained_requirements = [],
 )
@@ -118,36 +156,71 @@ write_file(
     content = [json.encode(_PACKAGE_POLICY)],
 )
 
-# FIPS builds already select the source-built config-engine image. Consume its
-# native OCI graph directly; its Docker export is only an installer artifact.
-bool_flag(
-    name = "source_config_engine",
-    build_setting_default = False,
-)
-
-config_setting(
-    name = "source_config_engine_enabled",
-    flag_values = {":source_config_engine": "true"},
-)
-
+# Compose the source-built OCI image directly. The Docker archive is an
+# installer output, not an OCI input to another Bazel image.
 alias(
     name = "config_engine_base_layout",
-    actual = select({
-        ":source_config_engine_enabled": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
-        "//conditions:default": ":make_config_engine_base_layout",
-    }),
+    actual = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
 )
 
-# Other builds retain the native OCI layout prepared from the Make archive.
-oci_base_layout(
-    name = "make_config_engine_base_layout",
-    srcs = [
-        "//:config_engine_oci_files",
-        "//:target/docker-config-engine-trixie.oci/oci-layout",
+# Match SWSS's link providers with the installed library TARs and generated
+# Debian controls. Keep the libteam_source_* target names while covering all
+# five runtime source library packages (libteam, sairedis, and protobuf).
+_SOURCE_PACKAGES = {
+    "libteam5": "@libteam//:libteam_runtime",
+    "libteamdctl0": "@libteam//:libteamdctl_runtime",
+    "libsairedis": "@sonic_sairedis//lib:libsairedis_pkg",
+    "libsaimetadata": "@sonic_sairedis//meta:libsaimetadata_pkg",
+    "libprotobuf32t64": "@sonic_protobuf//:libprotobuf_pkg",
+}
+
+source_contract(
+    name = "libteam_source_contract",
+    architecture = "amd64",
+    distribution = "trixie",
+    image = "docker-orchagent",
+    out = "libteam_source_contract.json",
+    owner_metadata = [
+        "@libteam//:library_runtime_packages.json",
+        "@sonic_sairedis//:library_runtime_packages.json",
+        "@sonic_protobuf//:runtime_packages.json",
     ],
-    expected_platform = "linux/amd64",
-    marker = "$(execpath //:target/docker-config-engine-trixie.oci/oci-layout)",
-    root = "target/docker-config-engine-trixie.oci",
+    source_modules = {
+        "libteam": "@image_source_modules//:libteam.MODULE.bazel",
+        "sonic-sairedis": "@image_source_modules//:sonic-sairedis.MODULE.bazel",
+        "protobuf-legacy": "@image_source_modules//:protobuf-legacy.MODULE.bazel",
+    },
+    sources = _SOURCE_PACKAGES,
+)
+
+run_binary(
+    name = "checked_libteam_runtime",
+    srcs = [
+        ":config_engine_base_layout",
+        ":libteam_source_contract",
+        "@image_source_modules//:libteam.MODULE.bazel",
+        "@image_source_modules//:protobuf-legacy.MODULE.bazel",
+        "@image_source_modules//:sonic-sairedis.MODULE.bazel",
+    ] + _SOURCE_PACKAGES.values(),
+    outs = ["libteam_source_runtime.tar", "libteam_source_packages.receipt.json"],
+    args = [
+        "--contract=$(execpath :libteam_source_contract)",
+        "--base=$(execpath :config_engine_base_layout)",
+        "--module=libteam=$(execpath @image_source_modules//:libteam.MODULE.bazel)",
+        "--module=sonic-sairedis=$(execpath @image_source_modules//:sonic-sairedis.MODULE.bazel)",
+        "--module=protobuf-legacy=$(execpath @image_source_modules//:protobuf-legacy.MODULE.bazel)",
+        "--out-tar=$(execpath libteam_source_runtime.tar)",
+        "--receipt=$(execpath libteam_source_packages.receipt.json)",
+    ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in _SOURCE_PACKAGES.items()] +
+           ["--package-target=" + name + "=" + target for name, target in _SOURCE_PACKAGES.items()],
+    mnemonic = "ValidateOrchagentLibteamRuntime",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tool = "//tools/bazel/oci:package_contract",
+)
+
+filegroup(
+    name = "libteam_source_receipt",
+    srcs = ["libteam_source_packages.receipt.json"],
 )
 
 # Select checked Debian contents before filtering the final layer. Packages
@@ -156,9 +229,10 @@ apt_layer(
     name = "runtime_layer",
     base = ":config_engine_base_layout",
     dependency_set = "orchagent_debian",
-    lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
     packages = APT_INPUTS["orchagent_debian"]["amd64"],
     policy = _APT_POLICY,
+    source_receipt = ":libteam_source_receipt",
     variant = "runtime",
 )
 
@@ -173,24 +247,81 @@ sonic_layer(
     tars = [":runtime_layer"],
 )
 
-sonic_layer(
+# Share the same complete source payload with the SWSS parent and its consumers.
+# This alias remains source-only: package tests do not need an OCI base.
+alias(
     name = "rdeps",
-    root_owned = True,
-    tars = [
-        "@sonic_swss//dist:swss_pkg",
-        "@sonic_swss_common//:libswsscommon_pkg",
-        "@sonic_sairedis//lib:libsairedis_pkg",
-        "@sonic_sairedis//meta:libsaimetadata_pkg",
-        "@sonic_dash_api//:libdashapi_pkg",
-        "@sonic_dash_api//:protobuf_runtime_pkg",
-    ],
+    actual = "//dockers/docker-swss-layer-trixie:source_runtime",
+)
+
+alias(
+    name = "python_runtime",
+    actual = "//dockers/docker-orchagent/config:python_runtime",
 )
 
 # Check the runtime dependencies' transitive symbols without requiring the
-# config-engine base container that Make builds for complete image assembly.
+# config-engine base container used for complete image assembly.
 debug_symbols_layer(
     name = "rdeps_debug_symbols",
     image = ":rdeps",
+)
+
+# Synthesize ndisc6 postinst update-alternatives links and dpkg state for traceroute6.
+write_file(
+    name = "traceroute6_alternative_state",
+    out = "traceroute6.alternative",
+    content = [
+        "auto",
+        "/usr/bin/traceroute6",
+        "traceroute6.8.gz",
+        "/usr/share/man/man8/traceroute6.8.gz",
+        "",
+        "/usr/bin/rltraceroute6",
+        "110",
+        "/usr/share/man/man8/rltraceroute6.8.gz",
+        "",
+        "",
+    ],
+    newline = "unix",
+)
+
+tar(
+    name = "runtime_alternatives",
+    srcs = [":traceroute6_alternative_state"],
+    mtree = [
+        "etc/alternatives/traceroute6 uid=0 gid=0 mode=0777 time=0 type=link link=/usr/bin/rltraceroute6",
+        "usr/bin/traceroute6 uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/traceroute6",
+        "var/lib/dpkg/alternatives/traceroute6 uid=0 gid=0 mode=0644 time=0 type=file content=$(location :traceroute6_alternative_state)",
+    ],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = ":config_engine_base_layout",
+    controls = [label + ":control" for label in APT_INPUTS["orchagent_debian"]["amd64"].values()],
+    source_receipt = ":libteam_source_receipt",
+    source_spec = ":libteam_source_contract",
+    sources = _SOURCE_PACKAGES,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/orchagent-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
 )
 
 oci_image(
@@ -203,8 +334,10 @@ oci_image(
     tars = [
         ":apt_deps",
         ":rdeps",
+        ":runtime_alternatives",
         "//dockers/docker-orchagent/config:python_runtime",
         "//dockers/docker-orchagent/config:files",
+        ":installed_package_state",
     ],
 )
 
@@ -224,11 +357,12 @@ debug_symbols_layer(
 apt_layer(
     name = "debug_layer",
     base = ":docker-orchagent",
-    base_package_metadata = ":runtime_apt_selection",
-    dependency_set = "orchagent_debug_debian",
-    lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
-    packages = APT_INPUTS["orchagent_debug_debian"]["amd64"],
+    base_package_metadata = ":runtime_package_metadata",
+    dependency_set = "orchagent_debug_subset_debian",
+    lock = "//dockers/docker-orchagent/bazel:debug_apt.lock.json",
+    packages = DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"],
     policy = _APT_POLICY,
+    source_receipt = ":libteam_source_receipt",
     variant = "debug",
 )
 
@@ -238,9 +372,72 @@ filegroup(
     output_group = "selection",
 )
 
+# The source base owns a hardlink to vim.tiny at this path. Replacing it with
+# the normal alternatives link activates the full Vim installed for debug.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
 sonic_layer(
     name = "debug_tools",
-    tars = [":debug_layer"],
+    tars = [
+        ":debug_layer",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+# Match the selected FIPS OpenSSH owner's ssh-agent group contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-orchagent",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-orchagent",
+    controls = [label + ":control" for label in DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-orchagent/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/orchagent-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
 )
 
 oci_image(
@@ -251,6 +448,19 @@ oci_image(
     tars = [
         ":debug_tools",
         ":docker-orchagent.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+# The native FIPS debug profile adds its owner's client symbols to runtime symbols.
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-orchagent.debug_symbols",
+        ":debug_client_symbols",
     ],
 )
 
@@ -267,7 +477,6 @@ test_suite(
     tests = [
         "//src/sonic-config-engine:sonic_cfggen_cli_test",
         "//tools/bazel/tests:apt_selection_test",
-        "//tools/bazel/tests:common_rust_runtime_test",
         "//tools/bazel/tests:containercfgd_full_test",
         "//tools/bazel/tests:containercfgd_wheel_test",
         "//tools/bazel/tests:manifest_labels_action_test",
@@ -289,11 +498,13 @@ test_suite(
         "//tools/bazel/tests:sonic_yang_mgmt_wheel_test",
         "//tools/bazel/tests:supervisor_python_full_test",
         "//tools/bazel/tests:supervisor_python_wheel_test",
-        "//tools/bazel/tests:swss_common_rust_test",
         "//tools/bazel/tests:swss_manifest_labels_test",
         "//tools/bazel/tests:swss_package_contract_test",
         "//tools/bazel/tests:swss_render_test",
         "//tools/bazel/tests:test_dpkg_patterns_up_to_date",
+        "@scapy//:upstream_test",
+        "@scapy//:wheel_test",
+        "@sonic_swss//crates/countersyncd:common_rust_test",
     ],
 )
 
@@ -308,6 +519,8 @@ test_suite(
     for name, source in {
         "swss": "@sonic_swss//dist:swss_pkg",
         "protobuf": "@sonic_dash_api//:protobuf_runtime_pkg",
+        "libteam": "@libteam//:libteam_runtime",
+        "libteamdctl": "@libteam//:libteamdctl_runtime",
         "rdeps": ":rdeps",
         "config": "//dockers/docker-orchagent/config:files",
         "debug-symbols": ":rdeps_debug_symbols",
@@ -319,8 +532,16 @@ filegroup(
     srcs = [
         ":ci_config",
         ":ci_debug_symbols",
+        ":ci_libteam",
+        ":ci_libteamdctl",
         ":ci_protobuf",
         ":ci_rdeps",
         ":ci_swss",
     ],
+)
+
+write_file(
+    name = "installed_checks",
+    out = "installed_checks.json",
+    content = [json.encode(service_images_policy("docker-orchagent", "amd64"))],
 )

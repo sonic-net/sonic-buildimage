@@ -272,9 +272,13 @@ def _directories(fs, arch):
 
 def collect_entries(root, arch):
     """Scan target libraries; return entry dictionaries in glibc cache order."""
+    return collect_entries_from_fs(RootFS(root), arch)
+
+
+def collect_entries_from_fs(fs, arch):
+    """Scan a chroot-style filesystem reader, including TAR-backed readers."""
     if arch not in MULTIARCH:
         raise ValueError("unsupported architecture: " + arch)
-    fs = RootFS(root)
     entries = []
     for directory, hwcaps in _directories(fs, arch):
         selected = {}
@@ -336,10 +340,15 @@ def _stringtable(strings):
 
 def generate_cache(root, arch):
     """Return Debian's glibc-ld.so.cache1.1 bytes, without modifying root."""
-    entries = collect_entries(root, arch)
+    return generate_cache_from_fs(RootFS(root), arch)
+
+
+def generate_cache_from_fs(fs, arch):
+    """Generate cache bytes directly from a declared filesystem reader."""
+    entries = collect_entries_from_fs(fs, arch)
     hwcaps = sorted({e["hwcaps"] for e in entries if e["hwcaps"] is not None})
     # ldconfig interns even unused (empty) glibc-hwcaps directory names.
-    names = {h for _, h in _directories(RootFS(root), arch) if h is not None}
+    names = {h for _, h in _directories(fs, arch) if h is not None}
     encode = lambda s: s.encode("utf-8", "surrogateescape")
     strings = [encode(e[k]) for e in entries for k in ("soname", "path")]
     table, offsets = _stringtable(strings + [encode(h) for h in names])

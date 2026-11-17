@@ -50,6 +50,17 @@ def main():
         assert hashlib.sha256(binary.read_bytes()).hexdigest() == item["sha256"], name
         output = command(loader, "--list", str(binary))
         assert "not found" not in output, (name, output)
+    for layer in report.get("installed_owner_layers", {}).values():
+        for name, expected in layer["files"].items():
+            installed = Path("/") / name
+            metadata = installed.lstat()
+            assert (metadata.st_uid, metadata.st_gid) == (expected["uid"], expected["gid"]), name
+            if expected["kind"] == "symlink":
+                assert installed.is_symlink() and os.readlink(installed) == expected["linkname"], name
+            else:
+                assert installed.is_file() and not installed.is_symlink(), name
+                assert metadata.st_mode & 0o7777 == expected["mode"], name
+                assert hashlib.sha256(installed.read_bytes()).hexdigest() == expected["sha256"], name
     for name in ("swsscommon.swsscommon", "libyang", "sonic_yang", "sonic_yang_ext", "sonic_yang_path",
                  "sonic_py_common", "openconfig_acl", "minigraph",
                  "sonic_yang_cfg_generator", "supervisor", "supervisord_dependent_startup"):
@@ -64,6 +75,20 @@ def main():
     # Make-built child containers resolve the config-engine wheel's dependency
     # on this distribution. Model files alone do not satisfy pip's resolver.
     assert importlib.metadata.version("sonic-yang-models") == "1.0"
+    if machine == "x86_64":
+        # Exercise the generated gNOI messages and installed patched Redis
+        # adapter in the final image, beyond their source-wheel tests.
+        from sonic_grpc.gnoi import GnoiClient, file_pb2, file_pb2_grpc, system_pb2
+        assert callable(GnoiClient) and callable(file_pb2_grpc.FileStub)
+        request = system_pb2.RebootRequest(method=system_pb2.HALT)
+        assert system_pb2.RebootRequest.FromString(request.SerializeToString()).method == system_pb2.HALT
+        request = file_pb2.StatRequest(path="/etc/hostname")
+        assert file_pb2.StatRequest.FromString(request.SerializeToString()).path == "/etc/hostname"
+        import redisdl
+        assert list(redisdl._read_keys(None, [], pretty=False, encoding="utf-8")) == []
+        for name, expected in (("sonic-db-load", "Load data from FILE"),
+                               ("sonic-db-dump", "Dump data from specified")):
+            assert expected in command(name, "--help"), name
     for directory in ("yang-models", "cvlyang-models"):
         assert list((Path("/usr/local") / directory).glob("*.yang")), directory
     os.environ["PLATFORM"] = "sonic-bazel-build"
@@ -118,6 +143,7 @@ def main():
     assert "--nodaemon" in command("supervisord", "--help")
     assert "--container-name" in command("/usr/bin/supervisor-proc-exit-listener-rs", "--help")
     print(json.dumps({"status": "passed", "machine": machine, "source_elf_count": len(report["native"]),
+                      "installed_owner_file_count": sum(len(item["files"]) for item in report.get("installed_owner_layers", {}).values()),
                       "checks": ["installed source hashes and library loading", "cfggen render", "YANG valid/invalid data",
                                  "Python dependencies and command scripts", "native ip/socat", "legacy provider",
                                  "sealed SymCrypt constructor", "provider and engine SHA256", "Vim hard link", "inherited and service accounts"]}, indent=2))

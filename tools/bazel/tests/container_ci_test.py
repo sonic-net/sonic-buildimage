@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
@@ -508,6 +509,105 @@ class SourceArchiveBindingTest(unittest.TestCase):
                 path.write_bytes(b"archive bytes")
             with self.assertRaisesRegex(ValueError, "basenames must be unique"):
                 oci_source_layers_test.archive_hashes(paths)
+
+
+class SourceLayerAliasTest(unittest.TestCase):
+    """Reject legacy Common alias paths and accept canonical run paths."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        (self.root / "dist").mkdir()
+        (self.root / "cfgmgr").mkdir()
+        (self.root / "debian").mkdir()
+        (self.root / "dist/BUILD.bazel").write_text("LUA_FILES = ['//cfgmgr:vs.lua']\n")
+        (self.root / "cfgmgr/vs.lua").write_bytes(b"return {}\n")
+        (self.root / "debian/swss.install").write_text("")
+        self.runtime = {"usr/share/swss/vs.lua": b"return {}\n"}
+        self.libraries = {}
+        self.excludes = self.root / "excludes"
+        self.includes = self.root / "includes"
+        self.excludes.write_text("usr/share/doc/*\n")
+        self.includes.write_text("usr/share/doc/*/copyright\n")
+        self.policy = {
+            "architecture": "amd64", "libraries": {}, "required_debug_paths": [], "config_paths": {},
+            "install_inventory": {
+                "architecture": "amd64", "declaration_file": "dist/BUILD.bazel",
+                "groups": [{"variable": "LUA_FILES", "destination": "usr/share/swss",
+                            "kind": "file", "mode": 0o644}],
+                "install_file": "debian/swss.install", "generated_programs": [],
+                "executable_directories": ["usr/bin"], "expected_program_count": 0,
+            },
+        }
+
+    def archive(self, name, files):
+        path = self.root / name
+        with tarfile.open(path, "w") as archive:
+            for name, contents in files.items():
+                member = tarfile.TarInfo(name)
+                member.mode = 0o644 if contents is not None else 0o755
+                if contents is None:
+                    member.type = tarfile.DIRTYPE
+                    archive.addfile(member)
+                else:
+                    member.size = len(contents)
+                    archive.addfile(member, io.BytesIO(contents))
+        return path
+
+    def verify(self, overlay):
+        # Native ELF/debug validation has separate real-binutils tests. Keep
+        # archive reading and source inventory real so this exercises the
+        # production dependency-layer guard, not only a disconnected helper.
+        with mock.patch.object(oci_source_layers_test.artifact_validation, "debug_archives",
+                               return_value={"debug_pairs": []}):
+            return oci_source_layers_test.verify_layers(
+                self.archive("runtime.tar", self.runtime),
+                self.archive("dependencies.tar", dict(self.runtime, **overlay)),
+                self.archive("config.tar", {}), self.archive("symbols.tar", {}),
+                self.libraries, self.root, self.policy,
+                source_layer_excludes=self.excludes, source_layer_includes=self.includes,
+                readelf="readelf", objcopy="objcopy",
+            )
+
+    def test_installed_library_obeys_oci_document_filters(self):
+        library = "usr/lib/libexample.so.1"
+        copyright_file = "usr/share/doc/libexample/copyright"
+        changelog = "usr/share/doc/libexample/changelog.Debian.gz"
+        elf = b"\x7fELF\x02\x01" + bytes(10) + b"\x03\x00\x3e\x00"
+        retained = {library: elf, copyright_file: b"license"}
+        raw = {**retained, changelog: b"changelog"}
+        self.libraries["libexample.tar"] = self.archive("libexample.tar", raw)
+        self.policy["libraries"]["libexample.tar"] = {
+            "architecture": "amd64", "runtime_path": library, "soname_links": {}, "exclusive_pattern": "*/libexample.so*",
+        }
+        self.verify(retained)
+        for installed, message in (
+            (raw, "filtered library path is present"),
+            ({library: elf}, "changes source library bytes or modes"),
+            ({**retained, copyright_file: b"changed"}, "changes source library bytes or modes"),
+            ({**retained, library: elf + b"changed"}, "changes source library bytes or modes"),
+        ):
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                self.verify(installed)
+        self.excludes.write_text("usr/share/doc/*\n" + library + "\n")
+        with self.assertRaisesRegex(ValueError, "OCI filter removes a source ELF"):
+            self.verify({copyright_file: b"license"})
+
+    def test_normalized_runtime_paths_preserve_the_base(self):
+        self.verify({"run/redis/sonic-db/database_config.json": b"{}\n"})
+
+    def test_common_cannot_reintroduce_var_run_after_base_normalization(self):
+        for overlay in ({"var/run": None}, {"var/run": b"unexpected file"},
+                        {"var/run/redis/sonic-db/database_config.json": b"{}\n"}):
+            with self.subTest(overlay=overlay), self.assertRaisesRegex(ValueError, "inherited directory alias"):
+                self.verify(overlay)
+
+    def test_other_debian_directory_aliases_cannot_be_overlaid(self):
+        for alias in ("bin", "sbin", "lib", "lib64"):
+            for overlay in ({alias: None}, {alias + "/payload": b"payload"}):
+                with self.subTest(overlay=overlay), self.assertRaisesRegex(ValueError, "inherited directory alias"):
+                    self.verify(overlay)
 
 
 class TestEvidenceTest(unittest.TestCase):

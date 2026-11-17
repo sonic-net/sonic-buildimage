@@ -1,5 +1,7 @@
 """Hook expansion and rooted staging regressions; no image tools executed."""
 import io
+import argparse
+import sys
 import hashlib
 import json
 import lzma
@@ -17,6 +19,14 @@ from mkinitramfs import ARCH, compress_initrd, Mkinitramfs, Rootfs, gnu_tsort, s
 from newc import write_newc
 
 
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument('--pigz')
+TOOLS, _arguments = _parser.parse_known_args()
+if TOOLS.pigz:
+    TOOLS.pigz = str(Path(TOOLS.pigz).absolute())
+sys.argv = [sys.argv[0]] + _arguments
+
+
 class InitrdTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -24,6 +34,22 @@ class InitrdTest(unittest.TestCase):
         self.root = Path(self.temp.name) / 'root'
         self.root.mkdir()
         self.fs = Rootfs(str(self.root))
+
+    def test_debian_merged_usr_keeps_directory_alias(self):
+        (self.root / 'usr/lib/modules/abi').mkdir(parents=True)
+        (self.root / 'lib').symlink_to('usr/lib')
+        layer = Path(self.temp.name) / 'legacy-lib.tar'
+        with tarfile.open(layer, 'w') as archive:
+            directory = tarfile.TarInfo('lib/')
+            directory.type, directory.mode = tarfile.DIRTYPE, 0o755
+            archive.addfile(directory)
+            member = tarfile.TarInfo('lib/initramfs-tools/hook-functions')
+            member.size = 4
+            archive.addfile(member, io.BytesIO(b'hook'))
+        self.fs.apply_layer(layer)
+        self.assertTrue((self.root / 'lib').is_symlink())
+        self.assertTrue(self.fs.isdir('/lib/modules/abi'))
+        self.assertEqual((self.root / 'usr/lib/initramfs-tools/hook-functions').read_bytes(), b'hook')
 
     def kernel_layer(self, name, directories=(), symlinks=()):
         layer = Path(self.temp.name) / (name + '.tar')
@@ -349,7 +375,7 @@ class InitrdTest(unittest.TestCase):
                         raise RuntimeError('probe stopped before assembly')
 
                 spec = {'layers': [str(layer)], 'kernel_metadata': str(metadata)}
-                with patch('mkinitramfs.Mkinitramfs', ProbeAssembler):
+                with patch('mkinitramfs.Mkinitramfs', ProbeAssembler), patch('mkinitramfs.prepare_module_indexes'):
                     if accepted:
                         with self.assertRaisesRegex(RuntimeError, 'probe stopped before assembly'):
                             build_initrd(spec, str(self.root / 'initrd'), str(self.root / 'audit.json'))
@@ -384,7 +410,7 @@ class InitrdTest(unittest.TestCase):
                 raise RuntimeError('probe stopped before assembly')
 
         spec = {'layers': [str(layer)], 'kernel_metadata': str(metadata), 'extra_config': [str(extra)]}
-        with patch('mkinitramfs.Mkinitramfs', ProbeAssembler):
+        with patch('mkinitramfs.Mkinitramfs', ProbeAssembler), patch('mkinitramfs.prepare_module_indexes'):
             with self.assertRaisesRegex(RuntimeError, 'probe stopped before assembly'):
                 build_initrd(spec, str(self.root / 'initrd'), str(self.root / 'audit.json'))
         self.assertEqual(sentinel.read_bytes(), b'preserve this sentinel')
@@ -452,7 +478,11 @@ class CompressionContractTest(unittest.TestCase):
             for kind, decode in [("gzip", gzip.decompress), ("xz", lzma.decompress)]:
                 for level in [1, 9]:
                     destination = Path(directory) / (kind + str(level))
-                    compress_initrd(source, destination, {"compression": kind, "compression_level": level})
+                    if kind == "gzip" and not TOOLS.pigz:
+                        with self.assertRaisesRegex(ValueError, "declared pigz executable"):
+                            compress_initrd(source, destination, {"compression": kind, "compression_level": level})
+                        continue
+                    compress_initrd(source, destination, {"compression": kind, "compression_level": level, "pigz": TOOLS.pigz})
                     self.assertEqual(decode(destination.read_bytes()), source.read_bytes())
 
 

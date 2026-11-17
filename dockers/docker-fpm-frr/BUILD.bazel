@@ -1,0 +1,401 @@
+"""FRR container-owned configuration; native payloads stay with their owners."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@frr_image_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+)
+
+_SCRIPTS = [
+    "TS",
+    "TSA",
+    "TSB",
+    "TSC",
+    "docker_init.sh",
+    "zsocket.sh",
+]
+
+_TEMPLATES = glob(["frr/**/*.j2"])
+
+_TEMPLATE_DIRS = sorted({
+    "/".join(path.split("/")[1:index]): True
+    for path in _TEMPLATES
+    for index in range(
+        2,
+        len(path.split("/")),
+    )
+})
+
+exports_files(_SCRIPTS + _TEMPLATES + [
+    "Dockerfile.common.j2",
+    "Dockerfile.j2",
+    "snmp.conf",
+    "vtysh.conf",
+])
+
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = _TEMPLATES,
+    visibility = ["//dockers:__pkg__"],
+)
+
+# Keep source-owner bytes while expressing the Dockerfile/postinst's installed
+# permissions explicitly. The Dockerfile copies vtysh.conf after its chown, so
+# that particular file is root-owned. No maintainer script runs during assembly.
+_OWNER_CONFIGS = [
+    "daemons",
+    "frr.conf",
+    "support_bundle_commands.conf",
+]
+
+tar(
+    name = "files",
+    srcs = _SCRIPTS + _TEMPLATES + [
+        "snmp.conf",
+        "vtysh.conf",
+    ] + ["@frr_source//:tools/etc/frr/" + name for name in _OWNER_CONFIGS],
+    mtree = [
+        "./" + path + " uid=0 gid=0 mode=0755 time=0 type=dir"
+        for path in [
+            "etc",
+            "etc/snmp",
+            "run",
+            "usr",
+            "usr/bin",
+            "usr/share",
+            "usr/share/sonic",
+            "usr/share/sonic/templates",
+            "var",
+            "var/lib",
+            "var/log",
+        ]
+    ] + [
+        "./usr/share/sonic/templates/" + directory + " uid=0 gid=0 mode=0755 time=0 type=dir"
+        for directory in _TEMPLATE_DIRS
+    ] + [
+        "./etc/frr uid=300 gid=300 mode=0750 time=0 type=dir",
+        "./var/log/frr uid=300 gid=300 mode=0750 time=0 type=dir",
+        "./var/lib/frr uid=300 gid=300 mode=0700 time=0 type=dir",
+        # The source package's tmpfiles declaration supplies this socket dir.
+        "./run/frr uid=300 gid=300 mode=0755 time=0 type=dir",
+        "./etc/snmp/frr.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location snmp.conf)",
+        "./etc/frr/vtysh.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location vtysh.conf)",
+    ] + [
+        "./etc/frr/" + name + " uid=300 gid=300 mode=0640 time=0 type=file content=$(location @frr_source//:tools/etc/frr/" + name + ")"
+        for name in _OWNER_CONFIGS
+    ] + [
+        "./usr/bin/" + name + " uid=0 gid=0 mode=0755 time=0 type=file content=$(location " + name + ")"
+        for name in _SCRIPTS
+    ] + [
+        "./usr/share/sonic/templates/" + path.removeprefix("frr/") +
+        " uid=0 gid=0 mode=" + ("0755" if path in [
+            "frr/isolate.j2",
+            "frr/unisolate.j2",
+        ] else "0644") +
+        " time=0 type=file content=$(location " + path + ")"
+        for path in _TEMPLATES
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" + suffix,
+        image_version = ":image_version",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-fpm-frr" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+config_setting(
+    name = "supported_features",
+    flag_values = {
+        "//src/sonic-frr:snmp": "true",
+        "//src/sonic-frr:tcmalloc": "true",
+        "@sonic_swss//tools/bazel:asan": "false",
+    },
+)
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    ":supported_features": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+_BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-fpm-frr",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_SOURCE_TARS = {
+    "frr": "//src/sonic-frr:frr_layout",
+    "frr-snmp": "//src/sonic-frr:frr_snmp_layout",
+    "libnexthopgroup": "//src/libraries/sonic-fib:runtime",
+}
+
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "frr_image_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["frr_image_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_payload",
+    tars = [":debian_runtime"],
+)
+
+sonic_layer(
+    name = "source_runtime",
+    # FRR's pkg_tar layouts carry files, while the original native targets own
+    # DebugSymbolsInfo. Retain those exact public edges through filtering.
+    debug_symbol_deps = [
+        "//src/sonic-frr:frr_elf",
+        "//src/sonic-frr:frr_snmp_elf",
+    ],
+    tars = _SOURCE_TARS.values(),
+)
+
+sonic_layer(
+    name = "python_runtime",
+    tars = [
+        "//src/sonic-bgpcfgd:runtime",
+        "//src/sonic-frr-mgmt-framework:runtime",
+    ],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["frr_image_debian"]["amd64"].values()],
+    owner_metadata = [
+        "//src/sonic-frr:runtime_packages.json",
+        "//src/libraries/sonic-fib:runtime_packages.json",
+    ],
+    source_modules = {"sonic-buildimage": "@image_source_modules//:sonic-buildimage.MODULE.bazel"},
+    source_spec = "//dockers/docker-fpm-frr/bazel:source_paths.json",
+    sources = _SOURCE_TARS,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/frr-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+# IDs300 match rules/config. frrvty follows the source package's postinst and
+# the inherited base's next available system group; account collisions fail.
+account_layer(
+    name = "accounts",
+    architecture = "amd64",
+    base = _BASE,
+    groups = [
+        {
+            "name": "frr",
+            "password": "x",
+            "gid": 300,
+        },
+        {
+            "name": "frrvty",
+            "password": "x",
+            "gid": 102,
+            "users": ["frr"],
+        },
+    ],
+    users = [{
+        "username": "frr",
+        "password": "x",
+        "uid": 300,
+        "gid": 300,
+        "home": "/home/frr",
+        "shell": "/bin/false",
+    }],
+)
+
+oci_image(
+    name = "docker-fpm-frr",
+    base = _BASE,
+    entrypoint = ["/usr/bin/docker_init.sh"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_payload",
+        ":source_runtime",
+        ":python_runtime",
+        ":accounts",
+        ":files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-fpm-frr.debug_symbols",
+    image = ":docker-fpm-frr",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-fpm-frr",
+    dependency_set = "frr_image_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["frr_image_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-fpm-frr",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-fpm-frr",
+    controls = [label + ":control" for label in APT_INPUTS["frr_image_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-fpm-frr/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/frr-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-fpm-frr-dbg",
+    base = ":docker-fpm-frr",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-fpm-frr.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-fpm-frr" + suffix + ".gz",
+        image = ":docker-fpm-frr" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-fpm-frr.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# Installed-image checks mount a private database; it is never an image layer.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@frr_image_test_debian//redis-server"],
+)

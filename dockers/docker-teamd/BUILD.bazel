@@ -1,0 +1,213 @@
+"""Teamd image composition; libteam and SWSS keep their source ownership."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("@teamd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@teamd_runtime_apt_inputs//:apt_inputs.bzl", RUNTIME_APT_INPUTS = "APT_INPUTS")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+)
+
+_BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
+_LOCK = "@sonic_build_infra//apt:apt.lock.json"
+_COMPATIBLE = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+_POLICY = {
+    "schema": 1,
+    "image": "docker-teamd",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_FILES = {
+    "docker-teamd-init.sh": ("usr/bin/docker-teamd-init.sh", "0755"),
+    "start.sh": ("usr/bin/start.sh", "0755"),
+    "supervisord.conf.j2": ("usr/share/sonic/templates/supervisord.conf.j2", "0644"),
+    "supervisord.conf.common.j2": ("usr/share/sonic/templates/supervisord.conf.common.j2", "0644"),
+    "critical_processes": ("etc/supervisor/critical_processes", "0644"),
+}
+exports_files(_FILES.keys() + ["Dockerfile.j2", "base_image_files/teamdctl"])
+
+tar(
+    name = "files",
+    srcs = _FILES.keys(),
+    mtree = [
+        path + " uid=0 gid=0 mode=" + mode + " time=0 type=file content=$(location " + source + ")"
+        for source, (path, mode) in _FILES.items()
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" + suffix,
+        image_version = ":image_version",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-teamd" + suffix + "/manifest.json",
+    )
+    for suffix in ["", "-dbg"]
+]
+
+# teammgrd, teamsyncd, tlm_teamd and both patched libraries already come from
+# the shared source-built parent. Add only the existing owner's utility TAR.
+sonic_layer(
+    name = "source_runtime",
+    tars = ["@libteam//:libteam_utils_runtime"],
+)
+
+debug_symbols_layer(
+    name = "source_debug_symbols",
+    image = ":source_runtime",
+)
+
+# These four external library roots follow the actual libteam-utils DT_NEEDED
+# closure. They are retained from the base when its checked versions satisfy it.
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "teamd_debian",
+    lock = "//dockers/docker-teamd/bazel:apt.lock.json",
+    packages = RUNTIME_APT_INPUTS["libteam_deps"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(name = "runtime_apt_selection", srcs = [":debian_runtime"], output_group = "selection")
+sonic_layer(name = "debian_runtime_payload", tars = [":debian_runtime"])
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in RUNTIME_APT_INPUTS["libteam_deps"]["amd64"].values()],
+    owner_metadata = ["@libteam//:runtime_packages.json"],
+    source_modules = {"libteam": "@image_source_modules//:libteam.MODULE.bazel"},
+    source_spec = "//dockers/docker-teamd/bazel:source_paths.json",
+    # libteam5 and libteamdctl0 are installed and recorded by the SWSS parent.
+    sources = {"libteam-utils": "@libteam//:libteam_utils_runtime"},
+)
+
+filegroup(name = "runtime_package_metadata", srcs = [":installed_packages"], output_group = "metadata")
+
+tar(
+    name = "installed_package_state",
+    srcs = [":installed_packages", ":runtime_package_metadata"],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/teamd-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-teamd",
+    base = _BASE,
+    entrypoint = ["/usr/bin/docker-teamd-init.sh"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [":debian_runtime_payload", ":source_runtime", ":files", ":installed_package_state"],
+)
+
+debug_symbols_layer(name = "docker-teamd.debug_symbols", image = ":docker-teamd")
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-teamd",
+    dependency_set = "sysmgr_debug_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+# The maintained base now supplies vim as a hardlink to vim.tiny. Match the
+# shared debug-image convention when selecting the full Vim package.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [":debian_debug", "@sonic_build_infra//deps/vim:vim_alternatives_pkg", ":debug_vim_link"],
+)
+sonic_layer(name = "debug_client", tars = ["@sonic_fips//openssh:openssh_client_pkg"])
+debug_symbols_layer(name = "debug_client_symbols", image = ":debug_client")
+
+# Match the selected FIPS OpenSSH owner's ssh-agent group contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-teamd",
+    groups = [{"name": "_ssh", "password": "x", "gid": 104}],
+)
+
+filegroup(name = "debug_apt_selection", srcs = [":debian_debug"], output_group = "selection")
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-teamd",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-teamd/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+filegroup(name = "debug_package_metadata", srcs = [":debug_installed_packages"], output_group = "metadata")
+
+tar(
+    name = "debug_package_state",
+    srcs = [":debug_installed_packages", ":debug_package_metadata"],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/teamd-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-teamd-dbg",
+    base = ":docker-teamd",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-teamd.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(name = "docker-teamd" + suffix + ".gz", image = ":docker-teamd" + suffix)
+    for suffix in ["", "-dbg"]
+]
+
+sonic_layer(name = "all_debug_symbols", tars = [":docker-teamd.debug_symbols", ":debug_client_symbols"])
+
+# Private validation service only; this payload never enters the production image.
+flatten(name = "test_redis", testonly = True, tars = ["@sysmgr_test_debian//redis-server"])

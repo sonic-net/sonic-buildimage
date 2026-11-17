@@ -2,13 +2,64 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const {duration, measured, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep} = require("./app.js");
+const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, coverageRows, baseSummary, prStateLabel} = require("./app.js");
+const pr72Fixture = require("../testdata/pr72-carried-image-execution.json");
+
+test("closed draft PRs remain closed while open drafts and merged PRs keep their states", () => {
+  assert.equal(prStateLabel({state: "closed", draft: true}), "Closed");
+  assert.equal(prStateLabel({state: "closed", draft: false}), "Closed");
+  assert.equal(prStateLabel({state: "closed", draft: true, merged_at: "2026-10-21T00:00:00Z"}), "Merged");
+  assert.equal(prStateLabel({state: "open", draft: true}), "Draft");
+  assert.equal(prStateLabel({state: "open", draft: false}), "open");
+  assert.equal(prStateLabel({draft: true}), "unknown");
+});
+
+test("current selected base and recorded event base never imply tested-base validation", () => {
+  const pr = {number: 13, base_branch: "stack/base", base_target_sha: "a".repeat(40), base_sha: "b".repeat(40)};
+  const summary = baseSummary(pr, {event_bases: [{number: 13, ref: "old/base", sha: "c".repeat(40)}]});
+  assert.equal(summary.selected, "Selected base: stack/base@aaaaaaaaaaaa");
+  assert.match(summary.attempt, /old\/base@cccccccccccc/);
+  assert.match(summary.attempt, /checkout base is unverified/);
+  assert.match(baseSummary({...pr, base_target_sha: null}, {}).selected, /unavailable/);
+  assert.match(baseSummary(pr, {}).attempt, /no recorded event base/);
+  assert.equal(baseSummary({number: 13, base_sha: "b".repeat(40)}, {}).selected, "Selected base: unavailable");
+});
+
+test("PR coverage follows the latest image attempt, with unmeasured PRs last", () => {
+  const image = {kind: "make-vs", conclusion: "failure", image_build_seconds: null};
+  const run = (number, started_at, jobs = [image], completed_at = null) => ({pr_numbers: [number], started_at, completed_at, jobs});
+  const data = {
+    pull_requests: [1, 2, 3, 4, 5, 6, 7].map(number => ({number})),
+    runs: [
+      run(1, "2026-10-21T02:00:00Z"),
+      run(2, "2026-10-21T01:00:00Z"),
+      run(2, "2026-10-21T03:00:00Z", [{kind: "source"}]),
+      run(3, "2026-10-21T02:00:00Z"),
+      run(4, null, [image], "2026-10-21T04:00:00Z"),
+      run(5, "2026-10-21T05:00:00Z", [{kind: "checks"}]),
+      run(6, null),
+    ],
+  };
+  const rows = coverageRows(data);
+  assert.deepEqual(rows.map(row => row.pr.number), [4, 3, 1, 2, 6, 7, 5]);
+  assert.equal(rows.find(row => row.pr.number === 2).latestImageRun.started_at, "2026-10-21T01:00:00Z");
+  assert.equal(rows.find(row => row.pr.number === 5).latestImageRun, null);
+  assert.deepEqual(data.pull_requests.map(pr => pr.number), [1, 2, 3, 4, 5, 6, 7]);
+});
 
 test("unmeasured and invalid durations never look like fast builds", () => {
   for (const value of [null, undefined, "12", -1, NaN, Infinity]) assert.equal(duration(value), "—");
   assert.equal(duration(0), "0s");
   assert.equal(duration(125), "2m 5s");
   assert.equal(duration(3660), "1h 1m");
+});
+
+test("a later validation failure preserves the completed build time in the PR details", () => {
+  const job = {kind: "make-vs", conclusion: "failure", image_build_seconds: 10259};
+  assert.equal(completedImageSeconds(job), 10259);
+  assert.equal(measured(job), false);
+  assert.equal(completedImageSeconds({...job, image_build_seconds: null}), null);
+  assert.equal(completedImageSeconds({...job, kind: "source"}), null);
 });
 
 test("only successful recognized image jobs enter the performance chart", () => {
@@ -18,6 +69,254 @@ test("only successful recognized image jobs enter the performance chart", () => 
   for (const conclusion of ["failure", "skipped", "cancelled", null]) assert.equal(measured({...job, conclusion}), false);
   for (const kind of ["container", "source", "checks", "other"]) assert.equal(measured({...job, kind}), false);
   assert.equal(measured({...job, image_build_seconds: null}), false);
+});
+
+function timingPoint(name, extra = {}) {
+  return {job: {kind: "make-vs", architecture: "amd64", conclusion: "success",
+    image_build_seconds: 120, steps: [{name}], ...extra}};
+}
+
+test("moving validation out of the build step starts a separate trend series", () => {
+  const old = timingPoint("Build the VS image and both OCI container variants");
+  const current = timingPoint("Build the VS image");
+  const next = timingPoint("Build the VS image", {image_build_seconds: 110});
+  const points = [old, current, next], before = structuredClone(points);
+  assert.deepEqual(imageTrendGroups(points), [[old], [current, next]]);
+  assert.notEqual(imageMeasurement(old.job).signature, imageMeasurement(current.job).signature);
+  assert.match(imageMeasurement(old.job).label, /follow-up and archive validation/);
+  assert.match(imageMeasurement(current.job).label, /embedded boot checks; post-build validation excluded/);
+  assert.deepEqual(points, before, "grouping must preserve historical durations and metadata");
+});
+
+test("ONIE installer timings never join VM-image or combined validation timings", () => {
+  const combined = timingPoint("Build the VS image and both OCI container variants");
+  const vm = timingPoint("Build the VS image");
+  const installer = timingPoint("Build the VS installer (.bin)");
+  const next = timingPoint("Build the VS installer (.bin)", {image_build_seconds: 100});
+  const points = [combined, vm, installer, next], before = structuredClone(points);
+  assert.deepEqual(imageTrendGroups(points), [[combined], [vm], [installer, next]]);
+  assert.match(imageMeasurement(installer.job).label, /installer \(\.bin\); VM generation and boot checks excluded/);
+  assert.match(imageMeasurement(vm.job).label, /embedded boot checks/);
+  assert.deepEqual(points, before, "target changes must preserve historical measurements");
+});
+
+test("trend grouping retains architecture and build-path boundaries", () => {
+  const amd64 = timingPoint("Build the VS image");
+  const arm64 = timingPoint("Build the VS image", {architecture: "arm64"});
+  const otherPath = timingPoint("Build the VS image", {kind: "bazel-vs"});
+  const repeated = timingPoint("Build the VS image");
+  assert.deepEqual(imageTrendGroups([amd64, arm64, otherPath, repeated]),
+    [[amd64, repeated], [arm64], [otherPath]]);
+});
+
+test("missing and unknown measurement identities remain isolated", () => {
+  const points = [timingPoint("Renamed image build"), timingPoint("Renamed image build"),
+    timingPoint("<script>"), timingPoint("__proto__"), timingPoint(null, {steps: []}),
+    timingPoint(null, {steps: undefined})];
+  assert.deepEqual(imageTrendGroups(points), points.map(point => [point]));
+  for (const {job} of points) {
+    assert.deepEqual(imageMeasurement(job), {signature: null, label: "Image step boundary not recorded"});
+  }
+});
+
+test("measurement signatures include every counted image step but exclude separate checks", () => {
+  const point = timingPoint("Build the VS image");
+  const validated = timingPoint("Build the VS image", {steps: [
+    {name: "Build the VS image"}, {name: "Validate VS container pairs and P4 debug symbols"},
+  ]});
+  assert.deepEqual(imageMeasurement(point.job), imageMeasurement(validated.job));
+  const combined = timingPoint(null, {steps: [
+    {name: "Build the VS image"}, {name: "Build the VS image and both OCI container variants"},
+  ]});
+  assert.notEqual(imageMeasurement(point.job).signature, imageMeasurement(combined.job).signature);
+  assert.equal(imageMeasurement(combined.job).signature,
+    imageMeasurement({...combined.job, steps: [...combined.job.steps].reverse()}).signature);
+  assert.deepEqual(imageTrendGroups([point, combined, validated]), [[point, validated], [combined]]);
+});
+
+function pr72CarriedSnapshot() {
+  const fixture = structuredClone(pr72Fixture);
+  const makeRun = value => {
+    const {job_id, observed_run_started_at, created_at, ...attempt} = value;
+    assert.equal(observed_run_started_at, attempt.started_at);
+    const job = {...structuredClone(fixture.job), job_id, image_build_step_numbers: fixture.image_build_step_numbers,
+      url: `https://github.com/${fixture.repository}/actions/runs/${fixture.run_id}/job/${job_id}`};
+    return {...attempt, started_at_source: "run_started_at", run_id: fixture.run_id, workflow_path: fixture.workflow_path, source_sha: fixture.source_sha,
+      pr_numbers: [72], jobs: [job], url: `https://github.com/${fixture.repository}/actions/runs/${fixture.run_id}/attempts/${attempt.attempt}`};
+  };
+  return {schema_version: 1, repository: fixture.repository, pull_requests: [fixture.pr],
+    runs: [makeRun(fixture.attempt1), makeRun(fixture.attempt2)]};
+}
+
+test("PR72 retry keeps the original image execution and counts it once", () => {
+  const snapshot = pr72CarriedSnapshot(), before = structuredClone(snapshot);
+  const retry = snapshot.runs[1], job = retry.jobs[0], execution = imageExecution(snapshot, retry, job);
+  assert.equal(execution.originStatus, "carried");
+  assert.equal(execution.originAttempt, 1);
+  assert.equal(execution.originJobId, 123981002106);
+  assert.equal(execution.originUrl, "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/job/123981002106");
+  assert.equal(execution.timeKind, "image_step");
+  assert.equal(execution.startedAt, "2026-10-30T11:55:36.000Z");
+  assert.equal(execution.completedAt, "2026-10-30T12:34:25.000Z");
+  assert.equal(execution.attemptStartedAt, "2026-10-30T13:36:46Z");
+  assert.equal(execution.attemptStartVerified, true);
+  assert.match(attemptTimeLabel(retry), /^Attempt 2 started /);
+  assert.match(executionTimeLabel(execution), /^Image step executed /);
+  assert.equal(executionOriginLabel(execution), "Carried from attempt 1");
+  assert.match(jobExecutionLabel(job), /^Job executed /);
+  const measurements = imageMeasurements(snapshot);
+  assert.equal(measurements.records.length, 1);
+  assert.equal(measurements.unverified.length, 0);
+  assert.equal(measurements.records[0].execution.startedAt, "2026-10-30T11:55:36.000Z");
+  assert.equal(measurements.records[0].run.attempt, 2);
+  assert.equal(prCoverage(snapshot)[0].classification, "success", "the retained image job succeeded");
+  assert.equal(prCoverage(snapshot)[0].latestImageRun.status, "in_progress", "the retry itself remains pending");
+  assert.deepEqual(snapshot, before, "display analysis must preserve raw attempts and jobs");
+});
+
+test("legacy PR72 records without image step identities stay readable", () => {
+  const snapshot = pr72CarriedSnapshot();
+  for (const run of snapshot.runs) delete run.jobs[0].image_build_step_numbers;
+  assert.equal(validateSnapshot(snapshot), snapshot);
+  const execution = imageExecution(snapshot, snapshot.runs[1], snapshot.runs[1].jobs[0]);
+  assert.equal(execution.originStatus, "carried");
+  assert.equal(execution.timeKind, "image_job");
+  assert.equal(execution.startedAt, "2026-10-30T11:50:35.000Z");
+  assert.equal(execution.completedAt, "2026-10-30T13:27:57.000Z");
+  assert.match(executionTimeLabel(execution), /^Image job executed /);
+  assert.equal(imageMeasurements(snapshot).records.length, 1);
+});
+
+test("PR72 created-at fallback and legacy retry times never prove a new execution", () => {
+  for (const source of [undefined, "created_at"]) {
+    const snapshot = pr72CarriedSnapshot(), retry = snapshot.runs[1];
+    if (source === undefined) { delete retry.started_at_source; delete snapshot.runs[0].started_at_source; }
+    else { retry.started_at_source = source; retry.started_at = pr72Fixture.attempt2.created_at; }
+    assert.equal(validateSnapshot(snapshot), snapshot);
+    const execution = imageExecution(snapshot, retry, retry.jobs[0]);
+    assert.equal(execution.originStatus, "unverified");
+    assert.equal(execution.attemptStartedAt, null);
+    assert.equal(execution.attemptStartVerified, false);
+    assert.equal(imageMeasurements(snapshot).records.length, 1);
+    assert.equal(imageMeasurements(snapshot).unverified.length, 1);
+    assert.match(attemptTimeLabel(retry), source === undefined ? /attempt 2 start unverified$/ : /attempt 2 start not recorded$/);
+    assert.equal(snapshot.runs.length, 2);
+  }
+});
+
+test("missing or ambiguous carried origins never become new image executions", () => {
+  const missing = pr72CarriedSnapshot();
+  missing.runs.shift();
+  let execution = imageExecution(missing, missing.runs[0], missing.runs[0].jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(execution.originAttempt, null);
+  assert.equal(executionOriginLabel(execution), "Execution origin unverified");
+  assert.equal(imageMeasurements(missing).records.length, 0);
+  assert.equal(imageMeasurements(missing).unverified.length, 1);
+
+  const changed = pr72CarriedSnapshot();
+  changed.runs[1].jobs[0].steps[0].completed_at = "2026-10-30T11:51:01Z";
+  execution = imageExecution(changed, changed.runs[1], changed.runs[1].jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(imageMeasurements(changed).records.length, 1);
+  assert.equal(imageMeasurements(changed).unverified.length, 1);
+
+  const ambiguous = pr72CarriedSnapshot();
+  const candidate = structuredClone(ambiguous.runs[0]);
+  candidate.attempt = 2; candidate.started_at = "2026-10-30T09:05:43Z"; candidate.jobs[0].job_id = 999999;
+  candidate.url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/attempts/2";
+  candidate.jobs[0].url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/job/999999";
+  ambiguous.runs[1].attempt = 3;
+  ambiguous.runs[1].url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/attempts/3";
+  ambiguous.runs.splice(1, 0, candidate);
+  execution = imageExecution(ambiguous, ambiguous.runs[2], ambiguous.runs[2].jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(execution.originJobId, null);
+
+  const incomplete = pr72CarriedSnapshot();
+  incomplete.runs[1].jobs[0].started_at = null;
+  execution = imageExecution(incomplete, incomplete.runs[1], incomplete.runs[1].jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(imageMeasurements(incomplete).unverified.length, 1);
+
+  const missingStep = pr72CarriedSnapshot();
+  missingStep.runs[1].jobs[0].steps[0].started_at = null;
+  execution = imageExecution(missingStep, missingStep.runs[1], missingStep.runs[1].jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(imageMeasurements(missingStep).unverified.length, 1);
+});
+
+test("a genuinely new image execution remains a separate measurement", () => {
+  const snapshot = pr72CarriedSnapshot(), retry = snapshot.runs[1], job = retry.jobs[0];
+  const shift = value => value === null ? null : new Date(Date.parse(value) + 7765000).toISOString();
+  job.started_at = shift(job.started_at); job.completed_at = shift(job.completed_at);
+  for (const step of job.steps) { step.started_at = shift(step.started_at); step.completed_at = shift(step.completed_at); }
+  retry.status = "completed"; retry.conclusion = "success"; retry.completed_at = job.completed_at;
+  const execution = imageExecution(snapshot, retry, job);
+  assert.equal(execution.originStatus, "current_attempt");
+  assert.equal(execution.originAttempt, 2);
+  assert.equal(imageMeasurements(snapshot).records.length, 2);
+  const carried = structuredClone(retry);
+  carried.attempt = 3; carried.started_at = "2026-10-31T00:05:00Z"; carried.status = "in_progress"; carried.conclusion = null; carried.completed_at = null;
+  carried.url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/attempts/3";
+  carried.jobs[0].job_id = 999998; carried.jobs[0].url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/job/999998";
+  snapshot.runs.push(carried);
+  const carriedExecution = imageExecution(snapshot, carried, carried.jobs[0]);
+  assert.equal(carriedExecution.originStatus, "carried");
+  assert.equal(carriedExecution.originAttempt, 2);
+  assert.equal(imageMeasurements(snapshot).records.length, 2);
+});
+
+test("three-attempt PR72 carry chain stays on the original execution day", () => {
+  const snapshot = pr72CarriedSnapshot();
+  snapshot.runs[1].status = "completed"; snapshot.runs[1].conclusion = "success"; snapshot.runs[1].completed_at = "2026-10-30T13:55:10Z";
+  const third = structuredClone(snapshot.runs[1]);
+  third.attempt = 3; third.started_at = "2026-10-31T00:05:00Z"; third.jobs[0].job_id = 999997;
+  third.status = "in_progress"; third.conclusion = null; third.completed_at = null;
+  third.url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/attempts/3";
+  third.jobs[0].url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/job/999997";
+  snapshot.runs.push(third);
+  const execution = imageExecution(snapshot, third, third.jobs[0]);
+  assert.equal(execution.originStatus, "carried");
+  assert.equal(execution.originAttempt, 1);
+  assert.equal(execution.originJobId, 123981002106);
+  const measurements = imageMeasurements(snapshot);
+  assert.equal(measurements.records.length, 1);
+  assert.equal(measurements.records[0].run.attempt, 3);
+  assert.equal(measurements.records[0].execution.startedAt, "2026-10-30T11:55:36.000Z");
+  assert.equal(new Date(measurements.records[0].execution.startedAt).getUTCDate(), 30);
+  assert.equal(new Date(third.started_at).getUTCDate(), 31);
+  assert.equal(snapshot.runs.length, 3);
+});
+
+test("a legacy prior retry cannot become a false original when attempt 1 is missing", () => {
+  const snapshot = pr72CarriedSnapshot(); snapshot.runs.shift();
+  const prior = snapshot.runs[0]; prior.started_at = pr72Fixture.attempt2.created_at; prior.started_at_source = "created_at";
+  prior.status = "completed"; prior.conclusion = "success"; prior.completed_at = prior.jobs[0].completed_at;
+  const third = structuredClone(prior); third.attempt = 3; third.started_at = "2026-10-31T00:05:00Z"; third.started_at_source = "run_started_at";
+  third.status = "in_progress"; third.conclusion = null; third.completed_at = null; third.jobs[0].job_id = 999996;
+  third.url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/attempts/3";
+  third.jobs[0].url = "https://github.com/securely1g/sonic-buildimage/actions/runs/41030906724/job/999996"; snapshot.runs.push(third);
+  const execution = imageExecution(snapshot, third, third.jobs[0]);
+  assert.equal(execution.originStatus, "unverified");
+  assert.equal(execution.originAttempt, null);
+  assert.equal(imageMeasurements(snapshot).records.length, 0);
+  assert.equal(imageMeasurements(snapshot).unverified.length, 2);
+});
+
+test("duplicate legacy job identities keep different executions unverified", () => {
+  const snapshot = pr72CarriedSnapshot(); snapshot.runs.pop();
+  const run = snapshot.runs[0], duplicate = structuredClone(run.jobs[0]);
+  const shift = value => value === null ? null : new Date(Date.parse(value) + 60000).toISOString();
+  duplicate.started_at = shift(duplicate.started_at); duplicate.completed_at = shift(duplicate.completed_at);
+  for (const step of duplicate.steps) { step.started_at = shift(step.started_at); step.completed_at = shift(step.completed_at); }
+  run.completed_at = duplicate.completed_at; run.jobs.push(duplicate);
+  assert.equal(validateSnapshot(snapshot), snapshot);
+  assert.equal(imageExecution(snapshot, run, run.jobs[0]).originStatus, "unverified");
+  assert.equal(imageExecution(snapshot, run, run.jobs[1]).originStatus, "unverified");
+  assert.equal(imageMeasurements(snapshot).records.length, 0);
+  assert.equal(imageMeasurements(snapshot).unverified.length, 2);
+  assert.equal(run.jobs.length, 2);
 });
 
 function imageOutcome(conclusion, extra = {}) {
@@ -225,6 +524,105 @@ function descendants(node, predicate) {
   return [node, ...(node.children || []).flatMap(child => descendants(child, predicate))].filter(predicate);
 }
 function stepWith(breakdown) { return {name: "Make VS image", status: "completed", conclusion: "success", duration_seconds: 101, ...(breakdown === undefined ? {} : {breakdown})}; }
+
+const hostStepName = "Build sonic-vs.bin through the host Make wrapper";
+
+function recipeJob() {
+  const images = ["docker-fpm-frr.gz", "docker-mux.gz", "docker-teamd.gz", "docker-syncd-vs.gz"]
+    .map(owner => ({owner, bazel_seconds: 12.5, lock_seconds: 2.25, compile_seconds: 4, foreign_seconds: 0,
+      fetch_seconds: 0.125, export_seconds: 1.5, bazel_phases: 3, profiles: 3, exports: 2, failed: false}));
+  return {kind: "make-vs", steps: [{name: hostStepName}], image_recipe_timings: {version: 1, status: "available", images}};
+}
+
+test("the host Make installer has a consistent and separate chart boundary", () => {
+  const old = timingPoint("Build the VS installer (.bin)"), first = timingPoint(hostStepName), next = timingPoint(hostStepName);
+  assert.deepEqual(imageTrendGroups([old, first, next]), [[old], [first, next]]);
+  assert.match(imageMeasurement(first.job).label, /through host Make/);
+});
+
+test("previous four-image receipts retain measured and partial coverage", () => withDocument(() => {
+  const job = recipeJob(), [frr, mux, teamd] = job.image_recipe_timings.images;
+  Object.assign(frr, {failed: true, bazel_phases: 1, profiles: 1, exports: 0, export_seconds: null});
+  Object.assign(mux, {profiles: 0, lock_seconds: null, compile_seconds: null, foreign_seconds: null, fetch_seconds: null});
+  Object.assign(teamd, {lock_seconds: 0.0001});
+  const view = renderRecipeTimings(job);
+  const rows = descendants(view, item => item.tagName === "details");
+  assert.equal(rows.length, 4);
+  assert.match(view.textContent, /four image recipes/);
+  assert.match(rows.at(-1).textContent, /docker-fpm-frr.gzCommand failed12.5sPartial/);
+  assert.match(rows.at(-1).textContent, /Bazel lock wait2.25s \(1\/3\)/);
+  assert.match(rows.at(-1).textContent, /Export— \(0\/2\)/);
+  assert.match(view.textContent, /Bazel lock wait<0.001s/);
+  assert.match(view.textContent, /can overlap/);
+  assert.match(view.textContent, /disk and remote reads/);
+}));
+
+test("all build recipes are ordered by recorded commands and exports with separate profile coverage", () => withDocument(() => {
+  const job = recipeJob();
+  const image = {...job.image_recipe_timings.images[0], owner: "docker-orchagent.gz",
+    bazel_expected: 3, profiles_expected: 3, exports_expected: 2};
+  const kernel = {...image, owner: "linux-headers-amd64", bazel_seconds: 120, bazel_expected: 1, bazel_phases: 1,
+    profiles_expected: 3, profiles: 2, exports_expected: 0, exports: 0, export_seconds: null};
+  const unknown = {...kernel, owner: "sonic-swss", bazel_seconds: null, bazel_phases: 0,
+    profiles: 0, fetch_seconds: null, compile_seconds: null, lock_seconds: null, foreign_seconds: null};
+  const packages = Array.from({length: 36}, (_, n) => ({...image, owner: `package-${n}.deb`, bazel_seconds: n}));
+  job.image_recipe_timings = {version: 2, status: "available", recipes: [unknown, image, ...packages, kernel]};
+  const view = renderRecipeTimings(job), rows = descendants(view, el => el.tagName === "details");
+  assert.equal(rows.length, 39);
+  assert.match(rows[0].textContent, /linux-headers-amd64120sBazel \/ launcher120sBazel lock wait2.25s \(2\/3\)/);
+  assert.match(rows[0].textContent, /ExportN\/A/);
+  assert.equal(rows[0].open, true);
+  assert.equal(rows[1].open, false);
+  assert.match(rows[1].textContent, /package-35.deb/);
+  assert.match(rows.at(-1).textContent, /sonic-swss—Bazel \/ launcher— \(0\/1\)/);
+  assert.equal(job.image_recipe_timings.recipes[0], unknown);
+  job.image_recipe_timings.recipes = [];
+  assert.match(renderRecipeTimings(job).textContent, /No Bazel activity was recorded/);
+  for (const change of [{owner: "bad/../path"}, {owner: "<script>"}, {owner: "a".repeat(193)},
+                        {bazel_expected: 65536}, {profiles_expected: 1}, {exports_expected: 1}, {compile_seconds: NaN}]) {
+    job.image_recipe_timings.recipes = [{...image, ...change}];
+    const invalid = renderRecipeTimings(job);
+    assert.match(invalid.textContent, /could not be verified/);
+    assert.doesNotMatch(invalid.textContent, /\.\.\/path|<script>/);
+  }
+}));
+
+test("unavailable or unverifiable profiles do not appear as measured recipes", () => withDocument(() => {
+  const job = recipeJob();
+  assert.equal(renderRecipeTimings({...job, kind: "container"}), null);
+  assert.equal(renderRecipeTimings({...job, steps: [{name: "Build the VS image"}]}), null);
+  assert.match(renderRecipeTimings({...job, image_recipe_timings: undefined}).textContent, /No Bazel timing breakdown/);
+  const unavailable = {version: 1, status: "unavailable", images: [], reason: "pending-collection"};
+  assert.match(renderRecipeTimings({...job, image_recipe_timings: unavailable}).textContent, /pending collection/);
+  for (const change of [{profiles: 0}, {bazel_seconds: "0"}, {compile_seconds: -1}, {exports: 3}, {failed: 0},
+                        {owner: "docker-mux.gz"}, {owner: "<img>"}]) {
+    const candidate = structuredClone(job);
+    Object.assign(candidate.image_recipe_timings.images[0], change);
+    const view = renderRecipeTimings(candidate);
+    assert.match(view.textContent, /could not be verified/);
+    assert.equal(descendants(view, el => el.tagName === "details").length, 0);
+    assert.doesNotMatch(view.textContent, /<img>/);
+  }
+}));
+
+test("the recipe evidence link opens this job's successful timing artifact upload", () => withDocument(() => {
+  const repository = "securely1g/sonic-buildimage", job = recipeJob();
+  job.url = `https://github.com/${repository}/actions/runs/123/job/456`;
+  const upload = {name: "Preserve VS image build profiles, timings and Make logs", conclusion: "success", number: 16};
+  job.steps.push(upload);
+  const links = () => descendants(renderRecipeTimings(job, repository), node => node.tagName === "a");
+  assert.equal(links()[0].href, job.url + "#step:16:1");
+  assert.match(links()[0].textContent, /Profiles and Make logs/);
+  job.steps[1] = {...upload, name: "Preserve VS Bazel profiles, timings and Make logs"};
+  assert.equal(links()[0].href, job.url + "#step:16:1");
+  for (const change of [{number: 0}, {number: "16"}, {name: "A different artifact"}, {conclusion: "failure"}]) {
+    job.steps[1] = {...upload, ...change};
+    assert.equal(links().length, 0);
+  }
+  job.steps[1] = upload;
+  job.url = "https://github.com/unrelated/repo/actions/runs/123/job/456";
+  assert.equal(links().length, 0);
+}));
 
 test("legacy snapshots keep their step duration without requiring a breakdown", () => withDocument(() => {
   const step = stepWith(undefined);

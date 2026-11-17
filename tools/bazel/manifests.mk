@@ -24,3 +24,28 @@ $(addprefix $(TARGET_PATH)/bazel-manifests/,$(addsuffix /manifest.json,$(sort $(
 	if ! cmp -s "$$manifest_stage/manifest.json" "$@"; then
 		mv -f "$$manifest_stage/manifest.json" "$@"
 	fi
+
+# Owners opt in with SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-example and add
+# target/bazel-manifests/docker-example/image.env to their _BAZEL_DEPENDS.
+# This is Make's SONIC_IMAGE_VERSION, not the package version in manifest.json.
+# Pass it through the environment so shell quoting cannot alter its contents.
+SONIC_BAZEL_IMAGE_ENVIRONMENT_FILES := $(addprefix $(TARGET_PATH)/bazel-manifests/,$(addsuffix /image.env,$(sort $(SONIC_BAZEL_IMAGE_ENVIRONMENTS))))
+ifneq ($(strip $(SONIC_BAZEL_IMAGE_ENVIRONMENT_FILES)),)
+$(SONIC_BAZEL_IMAGE_ENVIRONMENT_FILES): private export SONIC_IMAGE_VERSION := $(SONIC_IMAGE_VERSION)
+$(SONIC_BAZEL_IMAGE_ENVIRONMENT_FILES): $(TARGET_PATH)/bazel-manifests/%/image.env : tools/bazel/prepare_image_environment.py bazel-manifests-force
+	python3 -B tools/bazel/prepare_image_environment.py --output "$@"
+endif
+
+# Component labels are a declared input for images that other SONiC packages
+# depend on. Use the same label selection as the native Docker invocation.
+SONIC_BAZEL_COMPONENT_LABEL_FILES := $(addprefix $(TARGET_PATH)/bazel-manifests/,$(addsuffix /components.labels,$(sort $(SONIC_BAZEL_COMPONENT_LABELS))))
+ifneq ($(strip $(SONIC_BAZEL_COMPONENT_LABEL_FILES)),)
+$(SONIC_BAZEL_COMPONENT_LABEL_FILES): private export COMPONENT_LABELS = $(call docker_component_version_labels,$($*_MANIFEST_IMAGE))
+$(SONIC_BAZEL_COMPONENT_LABEL_FILES): $(TARGET_PATH)/bazel-manifests/%/components.labels : bazel-manifests-force
+	@mkdir -p "$(@D)"
+	stage=$$(mktemp "$(@D)/.labels.XXXXXX")
+	trap 'rm -f "$$stage"' EXIT
+	set -f
+	for label in $$COMPONENT_LABELS; do printf '%s\n' "$$label"; done > "$$stage"
+	if ! cmp -s "$$stage" "$@"; then mv -f "$$stage" "$@"; fi
+endif

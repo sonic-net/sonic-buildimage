@@ -182,12 +182,14 @@ The owner's original suites remain in their separate producer workflows.
 
 ## Refreshing APT and Python inputs
 
-Keep one reviewed `apt.lock.json` for the base, config-engine and base-debug
-package sets. `apt-resolve.MODULE.bazel` contains the small handwritten package
-requests used only to refresh that lock. Resolve those requests with Distroless,
-then review versions, architecture, dependencies and archive hashes.
+The base, config-engine and base-debug sets use the shared reviewed
+`@sonic_build_infra//apt:apt.lock.json`. Refresh their roots through
+`sonic-build-infra/apt/requests.json` and the infrastructure owner's APT workflow.
+Review versions, architectures, dependency edges and archive hashes before
+selecting the published infrastructure update in `MODULE.bazel`.
 
-Normal builds call `apt.import_lock(lock = "//dockers/docker-base-trixie/bazel:apt.lock.json")`.
+Normal builds import that shared lock and select `base_debian`,
+`config_engine_debian` and `base_debug_debian`.
 Distroless imports the exact locked archives and exposes every package's public
 payload and control targets without resolving current repository indexes. The
 shared `apt_inputs` repository derives BUILD labels from the same lock. Neither
@@ -204,9 +206,12 @@ an obsolete compiler or execution-tool runtime. FIPS owns the GNU tool runtime
 files required by SymCrypt and the OpenSSL, OpenSSH, Kerberos and SymCrypt
 runtime/debug TAR contracts.
 
-The source-base roots select published
-`sonic-build-infra@0.0.22-a12bc826d6f811a157db5c7c02a2fe033896cc14`
-and `sonic-fips@0.0.3-0565bc0426dde6a1e7c495de17707c9557f843a9` from
-registry `main`. The root retains the targeted
+The root resolves the production lock and FIPS targets from registry `main`.
+The published [build-infra registration](https://github.com/securely1g/sonic-bazel-registry/pull/287)
+uses the reconciled APT lock. The published
+[FIPS registration](https://github.com/securely1g/sonic-bazel-registry/pull/284)
+includes OpenSSH's declared libedit metadata and the source-built OpenSSL.
+
+The root retains the targeted
 `kernel_runtime_(amd64|arm64)` remote-download policy in
 `tools/bazel/common.bazelrc` because dependency `.bazelrc` files are not inherited.

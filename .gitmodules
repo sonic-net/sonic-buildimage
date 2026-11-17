@@ -146,7 +146,7 @@
 	url = https://github.com/Supervisor/supervisor
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
-	url = https://github.com/sonic-net/sonic-alpine/
+	url = https://github.com/securely1g/sonic-alpine.git
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish

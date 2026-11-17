@@ -6,6 +6,10 @@ builds install those DEBs. `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y` selects Bazel
 only for registered OCI images; it does not change P4RT's package format or
 inject source TARs into its Dockerfile.
 
+The nested Bazel build and tests fetch Boost's pinned XZ 5.4.6 source archive
+from the XZ release, with Fedora's lookaside cache as a fallback. Both URLs
+use the SHA-256 from the pinned `rules_boost` repository rule.
+
 For example, the full VS workflow requests both
 `target/debs/trixie/sonic-p4rt_0.0.1_amd64.deb` and
 `target/debs/trixie/sonic-p4rt-dbgsym_0.0.1_amd64.deb`, then verifies their

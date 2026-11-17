@@ -211,7 +211,7 @@ def build(spec):
                 raise ValueError("docker_store_compression does not match input stream")
         if docker_archive and names["docker_mode"] == "ram" and spec.get("docker_store_compression", "gzip") == "none":
             compressed = work / names["dockerfs_name"]
-            with open(docker_archive, "rb") as source, compressed_output(compressed, "gzip") as destination:
+            with open(docker_archive, "rb") as source, compressed_output(compressed, "gzip", pigz=spec.get("pigz")) as destination:
                 shutil.copyfileobj(source, destination, 1024 * 1024)
             docker_archive = str(compressed)
         def emit_grub(archive, partition):

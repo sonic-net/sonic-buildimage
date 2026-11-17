@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "apt_lock_sha256": "6830770712f098ad5ee0fb67f6933822bda37c799848ce11499a033aff13e266",
+  "entries": [
+    {
+      "path": "etc/alternatives/traceroute6",
+      "kind": "symlink",
+      "mode": 511,
+      "uid": 0,
+      "gid": 0,
+      "linkname": "/usr/bin/rltraceroute6"
+    },
+    {
+      "path": "usr/bin/traceroute6",
+      "kind": "symlink",
+      "mode": 511,
+      "uid": 0,
+      "gid": 0,
+      "linkname": "/etc/alternatives/traceroute6"
+    },
+    {
+      "path": "var/lib/dpkg/alternatives/traceroute6",
+      "kind": "file",
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "text": "auto\n/usr/bin/traceroute6\ntraceroute6.8.gz\n/usr/share/man/man8/traceroute6.8.gz\n\n/usr/bin/rltraceroute6\n110\n/usr/share/man/man8/rltraceroute6.8.gz\n\n",
+      "sha256": "3d9e0f58161329a1f8a511fe4b89e107d55785eb2db138f1d21d62d1fdec109a",
+      "size": 148
+    }
+  ],
+  "aliases": []
+}

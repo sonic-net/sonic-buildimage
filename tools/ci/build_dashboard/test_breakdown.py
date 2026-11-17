@@ -216,6 +216,26 @@ class ImagePhaseTests(unittest.TestCase):
         for log in (before, after, different_section):
             self.assertEqual(self.parse(log)["reason"], "not-recorded")
 
+    def test_vm_phase_receipts_never_populate_installer_recipe_timings(self):
+        installer_log = synthetic_log().replace(b"sonic-vs.img.gz", b"sonic-vs.bin")
+        finish = FINAL_FINISH.replace(b"sonic-vs.img.gz", b"sonic-vs.bin")
+        for marker in (phase_marker(), phase_marker("invalid VM timing")):
+            with self.subTest(marker=marker):
+                value = self.parse(installer_log.replace(finish, marker + finish))
+                self.assertEqual(value, breakdown.phase_unavailable("not-recorded"))
+        # The reverse mismatch must not damage valid historical VM details.
+        value = self.parse(log_with_phases(phase_marker(target="target/sonic-vs.bin") + phase_marker()))
+        self.assertEqual(value["status"], "available")
+
+    def test_different_final_image_recipes_have_independent_phase_state(self):
+        second = (b"2026-10-10T00:08:01Z [ building ] [ target/sonic-vs.bin ]\n"
+                  b"2026-10-10T00:08:02Z [ finished ] [ target/sonic-vs.bin ]\n")
+        value = breakdown.parse_log(log_with_phases().replace(FINAL_FINISH, FINAL_FINISH + second), job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        tasks = final_tasks(value)
+        self.assertEqual(tasks[0]["phase_breakdown"]["status"], "available")
+        self.assertEqual(tasks[1]["phase_breakdown"], breakdown.phase_unavailable("not-recorded"))
+
     def test_cached_final_image_never_uses_saved_phase_output(self):
         log = log_with_phases().replace(FINAL_FINISH, FINAL_FINISH.replace(b"finished", b"cached"))
         self.assertEqual(self.parse(log), breakdown.phase_unavailable("not-recorded"))
@@ -255,6 +275,68 @@ class ImagePhaseTests(unittest.TestCase):
 
 
 class ParserTests(unittest.TestCase):
+    def test_installer_and_vm_targets_keep_distinct_recipe_and_rootfs_timings(self):
+        for target, name in (("sonic-vs.bin", "Build the VS installer (.bin)"),
+                             ("sonic-vs.img.gz", "Build the VS image")):
+            with self.subTest(target=target):
+                log = synthetic_log().replace(b"sonic-vs.img.gz", target.encode())
+                rootfs = (f"2026-10-10T00:01:20Z [ building ] [ target/{target}__vs__rfs.squashfs ]\n"
+                          f"2026-10-10T00:01:50Z [ finished ] [ target/{target}__vs__rfs.squashfs ]\n").encode()
+                start = FINAL_START.replace(b"sonic-vs.img.gz", target.encode())
+                value = breakdown.parse_log(log.replace(start, rootfs + start), dict(job()["steps"][0], name=name))
+                self.assertTrue(breakdown.valid(value))
+                self.assertEqual(value["status"], "available")
+                self.assertEqual(value["duration_seconds"], 600.2)
+                self.assertEqual(final_tasks(value)[0]["duration_seconds"], 360)
+                self.assertEqual(final_tasks(value)[0]["phase_breakdown"], breakdown.phase_unavailable("not-recorded"))
+                tasks = value["sections"][0]["tasks"]
+                self.assertEqual([task["duration_seconds"] for task in tasks if task["id"] == "rootfs-1"], [30])
+
+    def test_pair_marker_labels_only_the_matching_active_recipe(self):
+        building = b"2026-10-10T00:08:20Z [ building ] [ target/docker-orchagent.gz ]\n"
+        marker = b"2026-10-10T00:08:21Z [ bazel image pair ] [ target/docker-orchagent.gz ] [ target/docker-orchagent.gz ]\n"
+        value = breakdown.parse_log(synthetic_log().replace(building, building + marker), job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        task = value["sections"][1]["tasks"][0]
+        self.assertEqual(task["id"], "orchagent-pair-1")
+        self.assertEqual(task["label"], "Orchagent runtime and debug containers")
+        self.assertEqual(task["duration_seconds"], 10)
+        unknown = marker.replace(b"docker-orchagent.gz ] [", b"private-secret.gz ] [")
+        stale = marker.replace(b"00:08:21", b"00:08:19")
+        for log in (synthetic_log().replace(building, building + unknown),
+                    synthetic_log().replace(building, stale + building)):
+            value = breakdown.parse_log(log, job()["steps"][0])
+            self.assertTrue(breakdown.valid(value))
+            self.assertEqual(value["sections"][1]["tasks"][0]["id"], "orchagent-release-1")
+            self.assertNotIn("private-secret", json.dumps(value))
+
+    def test_verification_only_session_has_accurate_label_and_package_timing(self):
+        log = synthetic_log().replace(b"Making target/docker-orchagent.gz", b"Making bazel-vs-oci-verify")
+        log = log.replace(b"[ target/docker-orchagent.gz ]",
+                          b"[ target/debs/trixie/sonic-p4rt_0.0.1_amd64.deb ]")
+        value = breakdown.parse_log(log, job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        self.assertEqual(value["duration_seconds"], 600.2)
+        self.assertEqual([section["id"] for section in value["sections"]], ["vs-image-1", "oci-verification-1"])
+        session = value["sections"][1]
+        self.assertEqual(session["label"], "P4 packages and OCI verification")
+        self.assertEqual(session["duration_seconds"], 110.4)
+        self.assertEqual(session["tasks"][0]["id"], "p4rt-runtime-1")
+        self.assertEqual(session["tasks"][0]["duration_seconds"], 10)
+
+    def test_shared_oci_session_preserves_child_archive_timings(self):
+        log = synthetic_log().replace(b"Making target/docker-orchagent.gz", b"Making bazel-vs-oci")
+        log = log.replace(b"[ target/docker-orchagent.gz ]", b"[ target/docker-orchagent-dbg.gz ]")
+        value = breakdown.parse_log(log, job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        self.assertEqual(value["duration_seconds"], 600.2)
+        self.assertEqual([section["id"] for section in value["sections"]], ["vs-image-1", "oci-session-1"])
+        session = value["sections"][1]
+        self.assertEqual(session["label"], "OCI archives and verification")
+        self.assertEqual(session["duration_seconds"], 110.4)
+        self.assertEqual(session["tasks"][0]["id"], "orchagent-debug-1")
+        self.assertEqual(session["tasks"][0]["duration_seconds"], 10)
+
     def test_sequential_sections_include_setup_cleanup_and_exclude_later_step(self):
         value = parsed()
         self.assertTrue(breakdown.valid(value))
@@ -267,6 +349,30 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(final["id"], "final-image-1")
         self.assertEqual(final["duration_seconds"], 360)
         self.assertEqual(sections[1]["tasks"][0]["outcome"], "cached")
+
+    def test_adjacent_setup_in_same_second_uses_both_step_boundaries(self):
+        setup = b"2026-10-10T00:00:00.1000000Z ##[group]Run prepare workspace\n"
+        self.assertEqual(breakdown.parse_log(setup + synthetic_log(), job()["steps"][0]), parsed())
+
+    def test_multiple_matching_intervals_are_rejected_instead_of_guessed(self):
+        log = b"""2026-10-10T00:00:00.1000000Z ##[group]Run first short step
+2026-10-10T00:00:00.4000000Z ##[group]Run second short step
+2026-10-10T00:00:00.6000000Z ##[group]Run following step
+"""
+        step = dict(job()["steps"][0], completed_at=START)
+        self.assertEqual(breakdown.parse_log(log, step), breakdown.unavailable("unsupported-log-format"))
+
+    def test_direct_slave_markers_measure_one_installer_section(self):
+        log = synthetic_log().split(b"2026-10-10T00:08:10Z", 1)[0]
+        log = log.replace(b"sonic-vs.img.gz", b"sonic-vs.bin")
+        log += b"2026-10-10T00:10:00.4000000Z ##[group]Run validate installer\n"
+        step = dict(job()["steps"][0], name="Build sonic-vs.bin directly with slave.mk")
+        value = breakdown.parse_log(log, step)
+        self.assertTrue(breakdown.valid(value))
+        self.assertEqual(value["duration_seconds"], 600.2)
+        self.assertEqual([section["id"] for section in value["sections"]], ["vs-image-1"])
+        self.assertEqual(final_tasks(value)[0]["duration_seconds"], 360)
+        self.assertEqual(final_tasks(value)[0]["phase_breakdown"], breakdown.phase_unavailable("not-recorded"))
 
     def test_overlapping_tasks_sorted_by_start_preserve_wallclock(self):
         tasks = parsed()["sections"][0]["tasks"]
@@ -317,6 +423,8 @@ class ParserTests(unittest.TestCase):
         mutations = [
             lambda v: v.update(private_field="private-host"),
             lambda v: v.update(version=True),
+            lambda v: v.update(parser_revision=True),
+            lambda v: v.update(parser_revision=breakdown.PARSER_REVISION + 1),
             lambda v: v.update(duration_seconds=float("nan")),
             lambda v: v.update(duration_seconds=10 ** 400),
             lambda v: v["sections"][0].update(label="private-host"),
@@ -336,6 +444,50 @@ class ParserTests(unittest.TestCase):
 
 
 class EnrichmentTests(unittest.TestCase):
+    def test_old_parser_failures_retry_once_and_preserve_step_measurements(self):
+        for reason in ("unsupported-log-format", "incomplete-log"):
+            for log in (synthetic_log(), b""):
+                with self.subTest(reason=reason, supported=bool(log)):
+                    old = collector.collect(FakeAPI(), REPO, empty(), log_jobs=0)
+                    step = old["runs"][0]["jobs"][0]["steps"][0]
+                    step["breakdown"] = breakdown.unavailable(reason)
+                    del step["breakdown"]["parser_revision"]
+                    api = FakeAPI()
+                    api.logs[99] = log
+                    result = collector.collect(api, REPO, old)
+                    self.assertEqual(api.log_calls, [(REPO, 99)])
+                    detail = result["runs"][0]["jobs"][0]["steps"][0]["breakdown"]
+                    self.assertEqual(detail["status"], "available" if log else "unavailable")
+                    self.assertEqual(detail["parser_revision"], breakdown.PARSER_REVISION)
+                    self.assertEqual(result["runs"][0]["jobs"][0]["image_build_seconds"], 600)
+                    repeat = FakeAPI()
+                    self.assertEqual(collector.collect(repeat, REPO, result)["runs"], result["runs"])
+                    self.assertEqual(repeat.log_calls, [])
+
+    def test_legacy_available_measurements_are_preserved_without_log_reads(self):
+        api = FakeAPI()
+        api.logs[99] = synthetic_log()
+        old = collector.collect(api, REPO, empty())
+        del old["runs"][0]["jobs"][0]["steps"][0]["breakdown"]["parser_revision"]
+        refresh = FakeAPI()
+        result = collector.collect(refresh, REPO, old)
+        self.assertEqual(result["runs"], old["runs"])
+        self.assertEqual(refresh.log_calls, [])
+
+    def test_old_parser_retry_obeys_log_read_budget(self):
+        old = collector.collect(FakeAPI(latest=[run(run_id=i) for i in range(1, 26)]),
+                                REPO, empty(), log_jobs=0)
+        for item in old["runs"]:
+            value = breakdown.unavailable("unsupported-log-format")
+            del value["parser_revision"]
+            item["jobs"][0]["steps"][0]["breakdown"] = value
+        api = FakeAPI(latest=[])
+        result = collector.collect(api, REPO, old, log_jobs=2)
+        self.assertEqual(api.log_calls, [(REPO, 99), (REPO, 99)])
+        self.assertEqual(len(result["runs"]), 25)
+        self.assertEqual([item["jobs"][0]["steps"][0]["breakdown"]["reason"] for item in result["runs"]],
+                         ["logs-expired"] * 2 + ["pending-collection"] * 23)
+
     def test_optional_phase_field_preserves_cached_v1_without_log_sweep(self):
         api = FakeAPI()
         api.logs[99] = log_with_phases()

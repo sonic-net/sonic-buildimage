@@ -34,7 +34,7 @@ def _squashfs_impl(ctx):
     args.add_all(["-comp", ctx.attr.compression, "-b", str(ctx.attr.block_size)], format_each = "--mksquashfs-arg=%s")
     args.add_all(ctx.files.layers)
     ctx.actions.run(
-        executable = ctx.executable._merge,
+        executable = ctx.attr._merge[DefaultInfo].files_to_run,
         arguments = [args],
         inputs = ctx.files.layers,
         tools = [ctx.attr.mksquashfs[DefaultInfo].files_to_run],
@@ -62,7 +62,7 @@ def _spec_action(ctx, spec, inputs, tools, mnemonic):
     request = ctx.actions.declare_file(ctx.label.name + ".inputs.json")
     ctx.actions.write(request, json.encode(spec))
     ctx.actions.run(
-        executable = ctx.executable._tool,
+        executable = ctx.attr._tool[DefaultInfo].files_to_run,
         arguments = [request.path],
         inputs = depset([request] + inputs),
         tools = tools,
@@ -83,8 +83,8 @@ def _docker_store_impl(ctx):
         # Producers may expose referenced blobs via runfiles. A complete layout
         # tree or these declared files must cover every symlink in that layout.
         inputs.extend(target[DefaultInfo].default_runfiles.files.to_list())
-    spec = {"images": images, "platform": ctx.attr.platform, "tar_split": ctx.executable.tar_split.path, "compression": ctx.attr.compression}
-    tools = [ctx.attr.tar_split[DefaultInfo].files_to_run]
+    spec = {"images": images, "platform": ctx.attr.platform, "tar_split_json": ctx.executable.tar_split_json.path, "compression": ctx.attr.compression, "pigz": ctx.executable.pigz.path}
+    tools = [ctx.attr.tar_split_json[DefaultInfo].files_to_run, ctx.attr.pigz[DefaultInfo].files_to_run]
     if ctx.attr.zstd:
         spec["zstd"] = ctx.executable.zstd.path
         tools.append(ctx.attr.zstd[DefaultInfo].files_to_run)
@@ -97,11 +97,12 @@ docker_overlay2_store = rule(
     implementation = _docker_store_impl,
     attrs = {
         "images": attr.label_keyed_string_dict(mandatory = True),
-        "tar_split": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "tar_split_json": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "compression": attr.string(default = "gzip", values = ["none", "gzip", "zstd"]),
         "version_file": attr.label(allow_single_file = True),
         "platform": attr.string(mandatory = True),
         "out": attr.string(mandatory = True),
+        "pigz": attr.label(default = "@sonic_build_infra//tools/build_tools:pigz", executable = True, cfg = "exec"),
         "zstd": attr.label(executable = True, cfg = "exec"),
         "_tool": attr.label(default = Label(":overlay2_store"), executable = True, cfg = "exec"),
     },
@@ -110,7 +111,7 @@ docker_overlay2_store = rule(
 def _onie_impl(ctx):
     spec = _image_spec(ctx)
     inputs = []
-    for name in ["squashfs", "boot_files", "kernel_metadata", "initrd", "platform_archive", "dockerfs", "install_sh", "sharch_body", "machine_conf", "default_platform_conf", "onie_image_conf", "arch_image_conf", "platforms_asic", "efi_sbatlevel", "platform_conf", "signing_cert", "signing_key"]:
+    for name in ["squashfs", "boot_files", "kernel_metadata", "initrd", "platform_archive", "dockerfs", "version_file", "install_sh", "sharch_body", "machine_conf", "default_platform_conf", "onie_image_conf", "arch_image_conf", "platforms_asic", "efi_sbatlevel", "platform_conf", "signing_cert", "signing_key"]:
         target = getattr(ctx.attr, name)
         if target:
             file = _single(target)
@@ -120,7 +121,7 @@ def _onie_impl(ctx):
             inputs.append(file)
     spec.update({"installer_variables": ctx.attr.installer_variables, "dockerfs_compression": ctx.attr.dockerfs_compression, "platform_compression": ctx.attr.platform_compression, "boot_file_modes": ctx.attr.boot_file_modes, "signing_mode": ctx.attr.signing_mode})
     tools = []
-    for name in ["openssl", "signing_tool"]:
+    for name in ["openssl", "signing_tool", "pigz"]:
         target = getattr(ctx.attr, name)
         if target:
             spec[name] = getattr(ctx.executable, name).path
@@ -142,8 +143,8 @@ def _onie_impl(ctx):
 onie_installer = rule(
     implementation = _onie_impl,
     attrs = _IMAGE_ATTRS | {
-        name: attr.label(mandatory = name not in ["dockerfs", "platform_conf", "signing_cert", "signing_key"], allow_single_file = True)
-        for name in ["squashfs", "boot_files", "kernel_metadata", "initrd", "platform_archive", "dockerfs", "install_sh", "sharch_body", "machine_conf", "default_platform_conf", "onie_image_conf", "arch_image_conf", "platforms_asic", "efi_sbatlevel", "platform_conf", "signing_cert", "signing_key"]
+        name: attr.label(mandatory = name not in ["dockerfs", "version_file", "platform_conf", "arch_image_conf", "signing_cert", "signing_key"], allow_single_file = True)
+        for name in ["squashfs", "boot_files", "kernel_metadata", "initrd", "platform_archive", "dockerfs", "version_file", "install_sh", "sharch_body", "machine_conf", "default_platform_conf", "onie_image_conf", "arch_image_conf", "platforms_asic", "efi_sbatlevel", "platform_conf", "signing_cert", "signing_key"]
     } | {
         "extra_files": attr.label_keyed_string_dict(allow_files = True),
         "extra_file_modes": attr.string_dict(),
@@ -157,6 +158,7 @@ onie_installer = rule(
         "signing_inputs": attr.label_list(allow_files = True),
         "signing_tool_args": attr.string_list(default = ["{input}", "{output}", "{mode}"]),
         "out": attr.string(mandatory = True),
+        "pigz": attr.label(default = "@sonic_build_infra//tools/build_tools:pigz", executable = True, cfg = "exec"),
         "_tool": attr.label(default = Label(":onie"), executable = True, cfg = "exec"),
     },
 )
@@ -185,7 +187,7 @@ def _disk_impl(ctx):
         inputs.append(file)
     spec["platform_layers"] = [f.path for f in ctx.files.platform_layers]
     inputs.extend(ctx.files.platform_layers)
-    for name in ["mke2fs", "debugfs", "sgdisk", "qemu_img", "grub_mkimage", "grub_bios_setup", "grub_editenv", "mkfs_fat", "mcopy", "mmd", "zstd"]:
+    for name in ["mke2fs", "debugfs", "sgdisk", "qemu_img", "grub_mkimage", "grub_bios_setup", "grub_editenv", "mkfs_fat", "mcopy", "mmd", "zstd", "pigz"]:
         target = getattr(ctx.attr, name)
         if target:
             spec[name] = getattr(ctx.executable, name).path
@@ -216,6 +218,7 @@ sonic_disk_image = rule(
         "docker_store_compression": attr.string(default = "gzip", values = ["none", "gzip", "zstd"]),
         "zstd": attr.label(executable = True, cfg = "exec"),
         "out": attr.string(mandatory = True),
+        "pigz": attr.label(default = "@sonic_build_infra//tools/build_tools:pigz", executable = True, cfg = "exec"),
         "_tool": attr.label(default = Label(":disk_image"), executable = True, cfg = "exec"),
     },
 )

@@ -6,7 +6,12 @@ on:
       - 'MODULE.bazel'
       - '.bazelrc'
       - 'tools/bazel/common.bazelrc'
+      - 'tools/bazel/go/**'
       - 'tools/bazel/ci/bazel_commands.py'
+      - 'tools/bazel/ci/libteam_draft_bazel.sh'
+      - 'tools/bazel/ci/preserve_setup_bazel_cache.py'
+      - 'tools/bazel/ci/source_mirrors.py'
+      - 'tools/bazel/debian_mirrors.cfg'
       - 'src/sonic-yang-models/**'
       - '.github/workflows/bazel-yang-models.yml'
   push:
@@ -15,7 +20,12 @@ on:
       - 'MODULE.bazel'
       - '.bazelrc'
       - 'tools/bazel/common.bazelrc'
+      - 'tools/bazel/go/**'
       - 'tools/bazel/ci/bazel_commands.py'
+      - 'tools/bazel/ci/libteam_draft_bazel.sh'
+      - 'tools/bazel/ci/preserve_setup_bazel_cache.py'
+      - 'tools/bazel/ci/source_mirrors.py'
+      - 'tools/bazel/debian_mirrors.cfg'
       - 'src/sonic-yang-models/**'
       - '.github/workflows/bazel-yang-models.yml'
   workflow_dispatch:
@@ -33,22 +43,67 @@ jobs:
       matrix:
         include:
           - architecture: amd64
-            runner: ubuntu-24.04
+            runner: [self-hosted, linux, bazel-x64]
             machine: x86_64
           - architecture: arm64
-            runner: ubuntu-24.04-arm
+            runner: [self-hosted, linux, bazel-arm64]
             machine: aarch64
     steps:
+      - name: Restore workspace access before checkout
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY##*/}"
+          pipeline_workspace="${RUNNER_PIPELINE_WORKSPACE%/}"
+          expected="$pipeline_workspace/$repository"
+          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
+            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
+              "$expected" "$GITHUB_WORKSPACE" >&2
+            exit 1
+          fi
+          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
+            echo 'No existing workspace to repair.'
+            exit 0
+          fi
+          work_root="$(realpath -e -- "$pipeline_workspace/..")"
+          physical_workspace="$work_root/$repository/$repository"
+          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
+            echo 'Refusing permission repair on a redirected workspace.' >&2
+            exit 1
+          fi
+          expected="$physical_workspace"
+          owner="$(id -u):$(id -g)"
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chown --no-dereference -- "$owner" {} +
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chmod u+rwx -- {} +
+          sudo -n find -P "$expected" -xdev -type f -links 1 \
+            -exec chown --no-dereference -- "$owner" {} +
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Initialize Sysmgr's pinned gNOI source
+        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
           bazelisk-cache: true
           repository-cache: true
           disk-cache: yang-models-${{ matrix.architecture }}
+      - name: Preserve setup-bazel caches for the image-root query
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure shared source download mirrors
+        shell: bash
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
       - name: Build and verify the installed source distribution
         working-directory: src/sonic-yang-models
         shell: bash
@@ -61,7 +116,7 @@ jobs:
           options=(--registry="$registry" --registry=https://bcr.bazel.build --lockfile_mode=update)
           mkdir -p artifacts
           # The standalone module and image root use the same maintained registry.
-          (cd ../.. && bazel cquery --lockfile_mode=update \
+          (cd ../.. && tools/bazel/ci/libteam_draft_bazel.sh cquery --lockfile_mode=update \
             //src/sonic-yang-models:yang_models_package_test) > artifacts/image-root-targets.txt
           git rev-parse HEAD > artifacts/revision.txt
           uname -m > artifacts/execution-machine.txt

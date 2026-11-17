@@ -2,10 +2,13 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["apt_subset.jq"])
+
 py_library(
     name = "source_base_validation",
     srcs = ["source_base_validation.py"],
     deps = [
+        ":container_validation",
         ":oci_inventory",
         ":oci_layout",
         "//tools/bazel/ci:artifact_validation",
@@ -22,6 +25,7 @@ py_library(
         ":oci_inventory",
         ":oci_layout",
         "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
     ],
 )
 
@@ -45,6 +49,7 @@ py_library(
         ":oci_layout",
         ":package_contract_lib",
         "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
     ],
 )
 
@@ -142,7 +147,10 @@ py_binary(
 py_library(
     name = "oci_inventory",
     srcs = ["oci_inventory.py"],
-    deps = ["//tools/bazel/ci:artifact_validation"],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+    ],
 )
 
 exports_files(["prepare_oci_base.py"])
@@ -190,4 +198,26 @@ py_binary(
     name = "source_contract",
     srcs = ["source_contract.py"],
     deps = [":source_contract_lib"],
+)
+
+py_binary(
+    name = "installed_images_policy",
+    srcs = ["installed_images_policy.py"],
+    deps = [":container_validation"],
+)
+
+py_library(
+    name = "statoverride_lib",
+    srcs = ["statoverride.py"],
+    deps = [":oci_layout"],
+)
+
+py_binary(
+    name = "statoverride",
+    srcs = ["statoverride.py"],
+    main = "statoverride.py",
+    deps = [
+        ":statoverride_lib",
+        "@sonic_build_infra//oci:package_metadata",
+    ],
 )

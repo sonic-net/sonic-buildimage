@@ -22,6 +22,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.validation_inputs import validation_input_cache
 from tools.bazel.oci import native_packages as subject
 from tools.bazel.oci import package_payloads as validate_payloads
 from tools.bazel.oci import package_contract as source_packages
@@ -456,6 +457,14 @@ class ValidateNativePackagesTest(unittest.TestCase):
         result = self.validate(required=set(), sonames={}, gaps={"p4lang-pi"})
         self.assertEqual({item["package"] for item in result["preserved_make_debug_gaps"]}, {"p4lang-pi", "openssh-client"})
         self.assertEqual(result["embedded_symbols"], [])
+
+
+class CachedValidateNativePackagesTest(ValidateNativePackagesTest):
+    """Run the same success and rejection cases with scoped inventory reuse."""
+
+    def validate(self, **kwargs):
+        with validation_input_cache([self.root]):
+            return super().validate(**kwargs)
 
 
 if __name__ == "__main__":

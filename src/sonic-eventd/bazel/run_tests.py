@@ -12,10 +12,11 @@ import tarfile
 import tempfile
 import time
 import xml.etree.ElementTree as ET
-from python.runfiles import runfiles
 
 
 def locate(value):
+    from python.runfiles import runfiles
+
     path = Path(value)
     if path.exists():
         return path.absolute()
@@ -32,6 +33,68 @@ def member_filter(member, destination):
             target = posixpath.relpath(target, str(PurePosixPath(member.name).parent))
         member = member.replace(linkname=target)
     return tarfile.data_filter(member, destination)
+
+
+def unused_port():
+    with socket.socket() as listener:
+        listener.bind(('127.0.0.1', 0))
+        return listener.getsockname()[1]
+
+
+def stop_redis(process):
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+
+def start_redis(redis, root, unix_socket, environment, attempts=5):
+    """Start our server, retrying only a lost TCP port allocation race."""
+    for attempt in range(attempts):
+        port = unused_port()
+        log = (root / ('redis-' + str(port) + '-' + str(attempt) + '.log')).open('w+')
+        process = None
+        ready = False
+        try:
+            process = subprocess.Popen([str(redis), '--bind', '127.0.0.1', '--port', str(port),
+                '--unixsocket', unix_socket, '--save', '', '--appendonly', 'no',
+                '--databases', '32', '--dir', str(root)], env=environment,
+                stdout=log, stderr=subprocess.STDOUT)
+            deadline = time.monotonic() + 10
+            while process.poll() is None and time.monotonic() < deadline:
+                try:
+                    with socket.create_connection(('127.0.0.1', port), timeout=0.2) as client:
+                        client.sendall(b'*2\r\n$4\r\nINFO\r\n$6\r\nserver\r\n')
+                        with client.makefile('rb') as stream:
+                            header = stream.readline(64)
+                            if not header.startswith(b'$'):
+                                raise ValueError('Redis did not return its server identity')
+                            length = int(header[1:].strip())
+                            if not 0 < length < 65536:
+                                raise ValueError('Unexpected Redis server response size')
+                            identity = stream.read(length).decode()
+                        ready = ('process_id:' + str(process.pid) + '\r\n') in identity and process.poll() is None
+                    if ready:
+                        return process, log, port
+                except (OSError, ValueError):
+                    pass
+                time.sleep(0.05)
+            log.flush()
+            log.seek(0)
+            diagnostic = log.read()
+            tcp_collision = '127.0.0.1:' + str(port) + ': bind: Address already in use'
+            collision = process.poll() is not None and tcp_collision in diagnostic
+            if not collision or attempt + 1 == attempts:
+                raise ValueError('Private Redis startup failed: ' + diagnostic)
+        finally:
+            if not ready:
+                if process is not None:
+                    stop_redis(process)
+                log.close()
+    raise ValueError('Private Redis startup requires at least one attempt')
 
 
 def main():
@@ -57,47 +120,22 @@ def main():
         if not redis.is_file():
             raise ValueError('Declared test runtime lacks redis-server')
         endpoints = {}
-        for config in (work/'tests').rglob('*.json'):
-            data = json.loads(config.read_text())
-            if not isinstance(data, dict) or 'INSTANCES' not in data:
-                continue
-            for instance in data['INSTANCES'].values():
-                key = instance['unix_socket_path']
-                if key not in endpoints:
-                    with socket.socket() as listener:
-                        listener.bind(('127.0.0.1', 0)); port = listener.getsockname()[1]
-                    endpoints[key] = (port, str(root/('redis-' + str(len(endpoints)) + '.sock')))
-                instance['hostname'] = '127.0.0.1'
-                instance['port'], instance['unix_socket_path'] = endpoints[key]
-            config.write_text(json.dumps(data) + '\n')
         children = []
         try:
-            for port, unix_socket in endpoints.values():
-                log = (root/('redis-' + str(port) + '.log')).open('w+')
-                process = subprocess.Popen([str(redis), '--bind', '127.0.0.1', '--port', str(port),
-                    '--unixsocket', unix_socket, '--save', '', '--appendonly', 'no',
-                    '--databases', '32', '--dir', str(root)], env=environment, stdout=log, stderr=subprocess.STDOUT)
-                children.append((process, log))
-                ready = False; deadline = time.monotonic() + 10
-                while process.poll() is None and time.monotonic() < deadline:
-                    try:
-                        with socket.create_connection(('127.0.0.1', port), timeout=0.2) as client:
-                            client.sendall(b'*2\r\n$4\r\nINFO\r\n$6\r\nserver\r\n')
-                            with client.makefile('rb') as stream:
-                                header = stream.readline(64)
-                                if not header.startswith(b'$'):
-                                    raise ValueError('Redis did not return its server identity')
-                                length = int(header[1:].strip())
-                                if not 0 < length < 65536:
-                                    raise ValueError('Unexpected Redis server response size')
-                                identity = stream.read(length).decode()
-                            ready = ('process_id:' + str(process.pid) + '\r\n') in identity and process.poll() is None
-                        if ready: break
-                    except OSError:
-                        time.sleep(0.05)
-                if not ready:
-                    log.flush(); log.seek(0)
-                    raise ValueError('Private Redis startup failed: ' + log.read())
+            for config in (work/'tests').rglob('*.json'):
+                data = json.loads(config.read_text())
+                if not isinstance(data, dict) or 'INSTANCES' not in data:
+                    continue
+                for instance in data['INSTANCES'].values():
+                    key = instance['unix_socket_path']
+                    if key not in endpoints:
+                        unix_socket = str(root/('redis-' + str(len(endpoints)) + '.sock'))
+                        process, log, port = start_redis(redis, root, unix_socket, environment)
+                        children.append((process, log))
+                        endpoints[key] = (port, unix_socket)
+                    instance['hostname'] = '127.0.0.1'
+                    instance['port'], instance['unix_socket_path'] = endpoints[key]
+                config.write_text(json.dumps(data) + '\n')
             report = root/'gtest.xml'
             result = subprocess.run([str(binary), '--gtest_output=xml:' + str(report)], cwd=work,
                                     env=environment, text=True, capture_output=True, timeout=600)
@@ -128,10 +166,7 @@ def main():
             return 0
         finally:
             for process, log in children:
-                if process.poll() is None:
-                    process.terminate()
-                    try: process.wait(timeout=5)
-                    except subprocess.TimeoutExpired: process.kill(); process.wait()
+                stop_redis(process)
                 log.close()
 
 

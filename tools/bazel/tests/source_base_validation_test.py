@@ -15,6 +15,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from tools.bazel.ci.validation_inputs import validation_input_cache
 from tools.bazel.oci import source_base_validation as check
 from tools.bazel.tests import oci_base_fixture as fixture
 
@@ -299,6 +300,14 @@ class SourceBaseTest(unittest.TestCase):
         self.replacing = {self.sealed: self.pairs["sealed"][0]}
         with self.assertRaisesRegex(ValueError, "outside the three reviewed"):
             self.run_validation()
+
+
+class CachedSourceBaseTest(SourceBaseTest):
+    """Run the same success and rejection cases with scoped inventory reuse."""
+
+    def run_validation(self, **kwargs):
+        with validation_input_cache([self.root]):
+            return super().run_validation(**kwargs)
 
 
 if __name__ == "__main__":

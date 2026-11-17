@@ -4,26 +4,32 @@
 import base64
 import copy
 import concurrent.futures
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.kernel import prepare as kernel
+from tools.bazel.ci import kernel_scratch as kernel_cleanup
 
 
 class KernelBundleTest(unittest.TestCase):
     def setUp(self):
-        registry = patch.dict(os.environ, {"SONIC_REVIEW_REGISTRY": kernel.DEFAULT_REGISTRY})
+        registry = patch.dict(os.environ, {"SONIC_REVIEW_REGISTRY": kernel.DEFAULT_REGISTRY,
+                                           "SONIC_BAZEL_REMOTE_ONLY_RC": ""})
         registry.start()
         self.addCleanup(registry.stop)
         temporary = tempfile.TemporaryDirectory()
@@ -71,12 +77,13 @@ class KernelBundleTest(unittest.TestCase):
         shutil.copyfile(ROOT / "Makefile.work", self.root / "Makefile.work")
         shutil.copyfile(ROOT / ".gitmodules", self.root / ".gitmodules")
         shutil.copytree(ROOT / "tools/bazel/kernel", self.root / "tools/bazel/kernel")
+        shutil.copyfile(ROOT / kernel.DOWNLOADER_CONFIG, self.root / kernel.DOWNLOADER_CONFIG)
         consumer_module = self.root / "tools/bazel/kernel/MODULE.bazel"
         consumer_module.write_text(module.replace(next(line for line in module.splitlines() if 'name = "sonic-linux-kernel"' in line),
             'bazel_dep(name = "sonic-linux-kernel", version = "0.0.1-' + self.gitlink + '", repo_name = "sonic_linux_kernel")'))
         ci = self.root / "tools/bazel/ci"
         ci.mkdir(parents=True)
-        for name in ("resolution.py",):
+        for name in ("resolution.py", "time_vs_image.py"):
             shutil.copyfile(ROOT / "tools/bazel/ci" / name, ci / name)
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "add", ".gitmodules", "Makefile.work", "rules", "tools"], check=True)
@@ -318,6 +325,95 @@ class KernelBundleTest(unittest.TestCase):
             kernel.inspect_resolution(workdir, consumer, self.state, kernel.DEFAULT_REGISTRY,
                                       fetch=lambda url: metadata[url])
 
+    def test_stored_graph_failure_reports_primary_command_without_fetching(self):
+        """Keep a post-build graph failure visible through the kernel's direct inspection path."""
+        workdir, consumer = self.root / "resolution", self.root / "consumer"
+        consumer.mkdir()
+        self.resolution_files(workdir, consumer)
+        primary = "ERROR: downloading https://private.invalid/package?token=fixture: HTTP 503\n"
+        (workdir / "module-graph.stderr").write_text(primary)
+        (workdir / "module-graph.exit-code").write_text("2\n")
+        before = {path: path.read_bytes() for path in [
+            workdir / "module-graph.json", workdir / "module-graph.stderr",
+            workdir / "module-graph.exit-code", consumer / "MODULE.bazel.lock",
+        ]}
+        console = io.StringIO()
+
+        def unexpected_fetch(url):
+            self.fail("A rejected module graph must not fetch package metadata")
+
+        with redirect_stderr(console), \
+                self.assertRaisesRegex(ValueError, "Unexpected module graph inspection failure"):
+            kernel.inspect_resolution(workdir, consumer, self.state, kernel.DEFAULT_REGISTRY,
+                                      fetch=unexpected_fetch)
+        diagnostic = json.loads(console.getvalue())
+        self.assertEqual(diagnostic["returncode"], 2)
+        self.assertEqual(diagnostic["http_statuses"], [503])
+        self.assertNotIn("private.invalid", console.getvalue())
+        self.assertEqual(before, {path: path.read_bytes() for path in before})
+
+    def test_remote_cache_policy_is_forwarded_to_isolated_launcher(self):
+        for index, (remote, upload) in enumerate((
+                (None, False), ("grpc://cache.example:9092", False),
+                ("grpc://cache.example:9092", True))):
+            with self.subTest(remote=remote, upload=upload):
+                planned = kernel.plan(self.root, self.root / f"remote-plan-{index}", remote, upload)
+                self.assertEqual(planned["remote_cache"], remote)
+                self.assertEqual(planned["upload_local_results"], upload)
+                argv = planned["argv"]
+                if remote:
+                    self.assertEqual(argv[argv.index("--remote-cache") + 1], remote)
+                else:
+                    self.assertNotIn("--remote-cache", argv)
+                self.assertEqual("--remote-cache-read-only" in argv, not upload)
+
+    def test_cli_managed_trust_reaches_plan_with_explicit_override(self):
+        managed = self.root / "managed-cacerts"
+        managed.write_bytes(b"managed trust fixture")
+        override = self.root / "override-cacerts"
+        override.write_bytes(b"explicit trust fixture")
+        key = "SONIC_BAZEL_JAVA_TRUST_STORE"
+        cases = [(None, None), ("", None), (str(managed), None),
+                 (str(self.root / "missing-cacerts"), override)]
+        for index, (setting, explicit) in enumerate(cases):
+            argv = ["prepare.py", "plan", "--workspace", str(self.root),
+                    "--state-dir", str(self.root / ("trust-plan-" + str(index)))]
+            if explicit:
+                argv += ["--java-trust-store", str(explicit)]
+            with self.subTest(setting=setting, explicit=explicit), \
+                    patch.dict(os.environ), patch.object(sys, "argv", argv), \
+                    redirect_stdout(io.StringIO()) as output:
+                if setting is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = setting
+                kernel.main()
+                planned = json.loads(output.getvalue())
+            selected = explicit or (managed if setting else None)
+            if selected:
+                self.assertEqual(planned["execution_trust"], {
+                    "java_trust_store_sha256": kernel.sha256(selected)})
+                option = planned["argv"].index("--java-trust-store")
+                self.assertEqual(planned["argv"][option + 1], str(selected))
+            else:
+                self.assertEqual(planned["execution_trust"], {})
+                self.assertNotIn("--java-trust-store", planned["argv"])
+
+    def test_cli_rejects_missing_managed_trust_file(self):
+        with patch.dict(os.environ, {"SONIC_BAZEL_JAVA_TRUST_STORE": str(self.root / "missing-cacerts")}), \
+                patch.object(sys, "argv", ["prepare.py", "plan", "--workspace", str(self.root),
+                                          "--state-dir", str(self.root / "trust-plan")]), \
+                self.assertRaises(FileNotFoundError):
+            kernel.main()
+
+    def test_cli_verify_ignores_managed_trust(self):
+        with patch.dict(os.environ, {"SONIC_BAZEL_JAVA_TRUST_STORE": str(self.root / "missing-cacerts")}), \
+                patch.object(sys, "argv", ["prepare.py", "verify", "--workspace", str(self.root)]), \
+                redirect_stdout(io.StringIO()) as output:
+            kernel.main()
+        self.assertEqual(json.loads(output.getvalue())["manifest"], self.manifest)
+
+    @patch.dict(os.environ, {"SONIC_VS_IMAGE_TIMINGS": "1"})
     def test_producer_uses_registered_source_and_retains_evidence(self):
         prebuilt = self.bundle
         with self.assertRaisesRegex(ValueError, "must not overlap"):
@@ -332,9 +428,15 @@ class KernelBundleTest(unittest.TestCase):
             consumer = Path(command[command.index("--workspace") + 1])
             workdir = Path(command[command.index("--work-dir") + 1])
             self.assertIn(kernel.DEFAULT_REGISTRY, (consumer / ".bazelrc").read_text())
+            self.assertIn("common --downloader_config=debian_mirrors.cfg",
+                          (consumer / ".bazelrc").read_text().splitlines())
+            self.assertEqual((consumer / kernel.DOWNLOADER_CONFIG.name).read_bytes(),
+                             (self.root / kernel.DOWNLOADER_CONFIG).read_bytes())
             self.assertIn(kernel.DEFAULT_REGISTRY, (self.root / "tools/bazel/kernel/.bazelrc").read_text())
             outputs = workdir / "outputs"
             outputs.mkdir(parents=True)
+            (workdir / "build.log").write_text("kernel source build\n")
+            (workdir / "profile.json.gz").write_bytes(b"build profile")
             for name in [kernel.MANIFEST, *self.packages]:
                 shutil.copyfile(prebuilt / name, outputs / name)
             (workdir / "output-paths.txt").write_text("".join(
@@ -363,6 +465,56 @@ class KernelBundleTest(unittest.TestCase):
         self.assertTrue((self.root / "state/kernel-receipt.json").is_file())
         self.assertEqual((self.root / "state").stat().st_mode & 0o077, 0)
         self.assertFalse((self.root / "tools/bazel/kernel/MODULE.bazel.lock").exists())
+        directory, = (self.root / "artifacts/vs/image-timings/linux-kernel").iterdir()
+        recipe = json.loads((directory / "recipe.json").read_text())
+        self.assertEqual(recipe, {"bazel": ["launcher"], "profiles": ["build", "cquery", "mod"],
+                                  "exports": ["stage-debs"]})
+        for phase in ("launcher", "stage-debs"):
+            self.assertEqual(json.loads((directory / f"{phase}.timing.json").read_text())["exit_code"], 0)
+        self.assertEqual((directory / "build.profile.json.gz").read_bytes(), b"build profile")
+        self.assertEqual((directory / "build.log").read_text(), "kernel source build\n")
+        rc = (self.root / "state/consumer/.bazelrc").read_text().splitlines()
+        self.assertIn("common --noslim_profile", rc)
+        for phase in ("cquery", "mod"):
+            self.assertIn(f"{phase} --profile={directory}/{phase}.profile.json.gz", rc)
+        self.assertTrue(kernel.ensure(self.root)["reused"])
+        self.assertEqual(list(directory.parent.iterdir()), [directory])
+
+    @patch.dict(os.environ, {"SONIC_VS_IMAGE_TIMINGS": "1"})
+    def test_failed_kernel_launcher_retains_its_profile_and_status(self):
+        def execute(command, workspace):
+            workdir = Path(command[command.index("--work-dir") + 1])
+            workdir.mkdir(parents=True)
+            (workdir / "profile.json.gz").write_bytes(b"partial profile")
+            raise subprocess.CalledProcessError(37, command)
+
+        with self.assertRaises(subprocess.CalledProcessError) as failure:
+            kernel.build(self.root, self.root / "state", None, False, execute=execute)
+        self.assertEqual(failure.exception.returncode, 37)
+        directory, = (self.root / "artifacts/vs/image-timings/linux-kernel").iterdir()
+        self.assertEqual(json.loads((directory / "launcher.timing.json").read_text())["exit_code"], 37)
+        self.assertEqual((directory / "build.profile.json.gz").read_bytes(), b"partial profile")
+        self.assertFalse((directory / "stage-debs.timing.json").exists())
+
+    def test_managed_kernel_cache_reaches_only_the_isolated_consumer(self):
+        cache_rc = self.root / "worker-cache.bazelrc"
+        cache_rc.write_text("common --remote_cache=https://cache.example.test\n")
+        state = self.root / "managed-state"
+        template = self.root / "tools/bazel/kernel/.bazelrc"
+        original = template.read_bytes()
+        with patch.dict(os.environ, {"SONIC_BAZEL_REMOTE_ONLY_RC": str(cache_rc)}):
+            with self.assertRaisesRegex(ValueError, "explicit kernel cache"):
+                kernel.plan(self.root, state, None, False, cache_directory=self.root / "disk-cache")
+            with self.assertRaisesRegex(RuntimeError, "stop before compilation"):
+                kernel.build(self.root, state, None, False,
+                             execute=Mock(side_effect=RuntimeError("stop before compilation")))
+        rc = (state / "consumer/.bazelrc").read_text()
+        self.assertIn("import " + str(cache_rc), rc.splitlines())
+        self.assertIn("try-import /run/sonic-native-apt/bazel-source.bazelrc", rc.splitlines())
+        self.assertIn('flag_name: "repository_cache" set_value { flag_value: ""', rc)
+        self.assertEqual((state / "consumer" / kernel.DOWNLOADER_CONFIG.name).read_bytes(),
+                         (self.root / kernel.DOWNLOADER_CONFIG).read_bytes())
+        self.assertEqual(template.read_bytes(), original)
 
     def test_build_rejects_privileged_or_weakened_launcher_invocations(self):
         for index, override in enumerate((
@@ -746,6 +898,25 @@ class KernelBundleTest(unittest.TestCase):
         self.assertTrue(kernel.ensure(self.root, builder=builder)["reused"])
         self.assertEqual(len(calls), 1)
 
+    def test_downloader_policy_changes_invalidate_kernel_reuse(self):
+        policy = self.root / kernel.DOWNLOADER_CONFIG
+        policy.write_text(policy.read_text() + "\n# changed download policy\n")
+        with self.assertRaisesRegex(ValueError, "handoff inputs must match"):
+            kernel.source_state(self.root)
+        subprocess.run(["git", "-C", str(self.root), "add", str(policy)], check=True)
+        self.commit(self.root, "Change Debian download policy")
+        current = kernel.source_state(self.root)
+        self.assertNotEqual(current["consumer_inputs_sha256"], self.state["consumer_inputs_sha256"])
+        calls = []
+
+        def builder(*args, **options):
+            calls.append(options)
+            raise RuntimeError("rebuild required for changed download policy")
+
+        with self.assertRaisesRegex(RuntimeError, "rebuild required"):
+            kernel.ensure(self.root, builder=builder)
+        self.assertEqual(len(calls), 1)
+
     def test_runtime_installation_excludes_matching_debug_package(self):
         makefile = self.make_fixture()
         result = subprocess.run(["make", "--no-print-directory", "--no-builtin-rules", "-f", str(makefile)],
@@ -763,7 +934,8 @@ class KernelBundleTest(unittest.TestCase):
 
 class KernelConfigurationTest(unittest.TestCase):
     def setUp(self):
-        registry = patch.dict(os.environ, {"SONIC_REVIEW_REGISTRY": kernel.DEFAULT_REGISTRY})
+        registry = patch.dict(os.environ, {"SONIC_REVIEW_REGISTRY": kernel.DEFAULT_REGISTRY,
+                                           "SONIC_BAZEL_REMOTE_ONLY_RC": ""})
         registry.start()
         self.addCleanup(registry.stop)
 
@@ -887,6 +1059,510 @@ class KernelConfigurationTest(unittest.TestCase):
                       "https://cache.example.test/#secret", "file:///cache", "https://cache.example.test\n"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 kernel.endpoint(value)
+
+
+class KernelWorkflowTest(unittest.TestCase):
+    def setUp(self):
+        self.workflow = (ROOT / ".github/workflows/bazel-kernel-bundle.yml").read_text()
+        self.steps = dict(re.findall(
+            r"^      - name: ([^\n]+)\n(.*?)(?=^      - |\Z)",
+            self.workflow, re.MULTILINE | re.DOTALL))
+
+    def test_self_hosted_kernel_ci_accepts_all_same_repository_prs(self):
+        self.assertEqual(re.findall(r"^    if: (.+)$", self.workflow, re.MULTILINE), [
+            "github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
+        ])
+
+    def test_shared_cache_defaults_and_optional_cold_proof(self):
+        self.assertIn("runner: [self-hosted, linux, bazel-x64]", self.workflow)
+        self.assertIn("runner: [self-hosted, linux, bazel-arm64]", self.workflow)
+        cold = "github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache"
+        self.assertIn("KERNEL_REMOTE_CACHE: ${{ " + cold
+                      + " && 'http://127.0.0.1:8080' || 'grpc://172.16.0.4:9092' }}",
+                      self.workflow)
+        self.assertIn("UPLOAD_KERNEL_CACHE: ${{ (" + cold
+                      + ") || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}",
+                      self.workflow)
+        for name in ("Start a disposable cache for optional cold-build verification",
+                     "Verify a fresh output directory reuses the kernel action"):
+            self.assertIn("if: " + cold, self.steps[name])
+        self.assertIn("if: always() && steps.kernel_state.outcome == 'success' && " + cold,
+                      self.steps["Stop the disposable verification cache"])
+        self.assertIn("'kernel-cache-hit' || 'kernel-bundle-state'",
+                      self.steps["Select verified DEBs and a public validation summary"])
+        self.assertNotIn("sudo rm", self.workflow)
+
+    def test_fixed_state_is_cleaned_before_build_and_after_artifact_upload(self):
+        before = self.steps["Remove stale fixed kernel state"]
+        after = self.steps["Clean fixed kernel scratch state"]
+        command = "run: python3 -B tools/bazel/ci/kernel_scratch.py cleanup"
+        self.assertIn(command, before)
+        self.assertIn(command, after)
+        self.assertIn("id: kernel_state", before)
+        self.assertIn(
+            "if: always() && steps.kernel_state.outcome == 'success' "
+            "&& (steps.kernel_cache_stop.outcome == 'success' "
+            "|| steps.kernel_cache_stop.outcome == 'skipped')", after
+        )
+        self.assertLess(self.workflow.index("- name: Remove stale fixed kernel state"),
+                        self.workflow.index("- name: Check available scratch space"))
+        self.assertLess(self.workflow.index("- name: Retain verified DEBs"),
+                        self.workflow.index("- name: Clean fixed kernel scratch state"))
+        self.assertLess(self.workflow.index("- name: Stop the disposable verification cache"),
+                        self.workflow.index("- name: Clean fixed kernel scratch state"))
+        self.assertIn("KERNEL_RUN_TEMP: /mnt/build/k", self.workflow)
+        self.assertNotIn("kernel-job.", self.workflow)
+        self.assertIn("path: ${{ env.KERNEL_RUN_TEMP }}/kernel-bundle-artifacts", self.workflow)
+        self.assertLess(self.workflow.index("- name: Prepare short kernel scratch root"),
+                        self.workflow.index("- name: Remove stale fixed kernel state"))
+        self.assertLess(self.workflow.index("- name: Provision short kernel scratch root"),
+                        self.workflow.index("- name: Prepare short kernel scratch root"))
+        for name, step in self.steps.items():
+            if name not in ("Restore workspace access before checkout", "Provision short kernel scratch root"):
+                self.assertNotIn("$RUNNER_TEMP", step, name)
+        self.assertIn("os.environ['KERNEL_RUN_TEMP']", self.steps["Check available scratch space"])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            for _ in range(2):
+                (root / "kernel-bundle-state").mkdir()
+                result = subprocess.run(
+                    [sys.executable, "-B", str(ROOT / "tools/bazel/ci/kernel_scratch.py"), "cleanup"],
+                    cwd=ROOT, capture_output=True, text=True,
+                    env=dict(os.environ, KERNEL_RUN_TEMP=temporary, GITHUB_WORKSPACE=str(workspace)),
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse((root / "kernel-bundle-state").exists())
+                self.assertTrue(workspace.is_dir())
+
+    def test_scratch_provisioning_creates_only_an_absent_root_without_elevating_builds(self):
+        step = self.steps["Provision short kernel scratch root"]
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        for scenario in ("absent", "existing", "wrong-owner", "symlink", "dangling-symlink", "file",
+                         "parent-symlink", "parent-writable", "parent-owner", "other-disk",
+                         "wrong-path", "root-user", "sudo-failure", "chown-failure", "mkdir-race"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                build = root / "build"
+                build.mkdir()
+                build.chmod(0o755)
+                scratch = build / "k"
+                runner_temp = root / "temp"
+                runner_temp.mkdir()
+                commands = root / "commands"
+                commands.mkdir()
+                uid, gid = "1001", "1002"
+                identity = commands / "id"
+                identity.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import os, sys\n"
+                    "assert sys.argv[1:] in (['-u'], ['-g'])\n"
+                    "if sys.argv[1] == '-u':\n"
+                    "    print('0' if os.environ['SCENARIO'] == 'root-user' else os.environ['TEST_UID'])\n"
+                    "else: print(os.environ['TEST_GID'])\n")
+                identity.chmod(0o755)
+                calls = root / "sudo-calls.jsonl"
+                retained = root / "retained"
+                retained.mkdir()
+                (retained / "receipt").write_text("keep")
+                if scenario in ("existing", "wrong-owner"):
+                    scratch.mkdir(mode=0o700 if scenario == "existing" else 0o755)
+                    (scratch / "receipt").write_text("keep")
+                elif scenario in ("symlink", "dangling-symlink"):
+                    scratch.symlink_to(retained if scenario == "symlink" else root / "missing")
+                elif scenario == "file":
+                    scratch.write_text("not a directory")
+                elif scenario == "parent-symlink":
+                    build.rmdir()
+                    build.symlink_to(retained, target_is_directory=True)
+                sudo = commands / "sudo"
+                sudo.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import json, os, subprocess, sys\n"
+                    "from pathlib import Path\n"
+                    "with open(os.environ['CALLS'], 'a') as stream:\n"
+                    "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                    "assert sys.argv[1] == '-n'\n"
+                    "scenario = os.environ['SCENARIO']\n"
+                    "if scenario == 'sudo-failure': sys.exit(23)\n"
+                    "if sys.argv[2] == 'mkdir':\n"
+                    "    if scenario == 'mkdir-race': Path(sys.argv[-1]).mkdir(mode=0o755)\n"
+                    "    sys.exit(subprocess.run(sys.argv[2:]).returncode)\n"
+                    "assert sys.argv[2] == 'chown'\n"
+                    "assert sys.argv[3:5] == ['--no-dereference', '--']\n"
+                    "assert sys.argv[5] == os.environ['TEST_UID'] + ':' + os.environ['TEST_GID']\n"
+                    "sys.exit(24 if scenario == 'chown-failure' else 0)\n")
+                sudo.chmod(0o755)
+                stat_command = commands / "stat"
+                stat_command.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import os, subprocess, sys\n"
+                    "scenario = os.environ['SCENARIO']\n"
+                    "field = sys.argv[2]\n"
+                    "if field == '%u':\n"
+                    "    print('1000' if scenario == 'parent-owner' else '0')\n"
+                    "elif field == '%a' and scenario == 'parent-writable': print('777')\n"
+                    "elif field == '%d' and scenario == 'other-disk' "
+                    "and sys.argv[-1] == os.environ['RUNNER_TEMP']: print('-1')\n"
+                    "else: sys.exit(subprocess.run(['/usr/bin/stat'] + sys.argv[1:]).returncode)\n")
+                stat_command.chmod(0o755)
+                selected_script = script.replace("/mnt", str(root))
+                result = subprocess.run(
+                    ["bash", "-e", "-o", "pipefail", "-c", selected_script],
+                    cwd=root, capture_output=True, text=True,
+                    env=dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"],
+                             RUNNER_TEMP=str(runner_temp), KERNEL_RUN_TEMP=str(
+                                 retained if scenario == "wrong-path" else scratch),
+                             CALLS=str(calls), SCENARIO=scenario, TEST_UID=uid, TEST_GID=gid))
+                success = scenario in ("absent", "existing", "wrong-owner")
+                expected_exit = 0 if success else {"sudo-failure": 23, "chown-failure": 24}.get(scenario, 1)
+                self.assertEqual(result.returncode, expected_exit, result.stdout + result.stderr)
+                if scenario == "root-user":
+                    self.assertIn("unexpected user", result.stderr)
+                if scenario in ("absent", "chown-failure"):
+                    self.assertEqual(scratch.stat().st_mode & 0o777, 0o700)
+                    self.assertEqual(
+                        [json.loads(line) for line in calls.read_text().splitlines()],
+                        [["-n", "mkdir", "--mode=0700", "--", str(scratch)],
+                         ["-n", "chown", "--no-dereference", "--",
+                          f"{uid}:{gid}", str(scratch)]])
+                elif scenario in ("sudo-failure", "mkdir-race"):
+                    self.assertEqual(len(calls.read_text().splitlines()), 1)
+                else:
+                    self.assertFalse(calls.exists())
+                if scenario in ("existing", "wrong-owner"):
+                    self.assertEqual((scratch / "receipt").read_text(), "keep")
+                    self.assertEqual(scratch.stat().st_mode & 0o777,
+                                     0o700 if scenario == "existing" else 0o755)
+                self.assertEqual((retained / "receipt").read_text(), "keep")
+                self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+                if scenario != "parent-symlink":
+                    self.assertEqual(build.stat().st_mode & 0o777, 0o755)
+        for name, content in self.steps.items():
+            if name not in ("Restore workspace access before checkout", "Provision short kernel scratch root"):
+                self.assertNotIn("sudo", content, name)
+
+    def test_short_scratch_root_is_private_and_bound_to_one_runner(self):
+        for scenario in ("reuse", "other-runner", "other-temp", "symlink", "dangling-symlink",
+                         "alias-parent", "public", "file", "workspace", "temp", "relative",
+                         "owner-symlink", "owner-file", "owner-directory", "wrong-uid", "other-disk"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                workspace = root / "workspace"
+                workspace.mkdir()
+                runner_temp = root / "temp"
+                runner_temp.mkdir()
+                scratch = root / "k"
+                kernel_cleanup.prepare_root(scratch, runner_temp, workspace, "agent-one")
+                owner = scratch / ".runner-owner"
+                identity = owner.read_text()
+                (scratch / "kernel-bundle-state").mkdir()
+                retained = scratch / "kernel-bundle-state/receipt"
+                retained.write_text("retained")
+                runner_name = "agent-one"
+                selected = scratch
+                if scenario == "other-runner":
+                    runner_name = "agent-two"
+                elif scenario == "other-temp":
+                    runner_temp = root / "other-temp"
+                    runner_temp.mkdir()
+                elif scenario in ("symlink", "dangling-symlink"):
+                    selected = root / "link"
+                    selected.symlink_to(scratch if scenario == "symlink" else root / "missing")
+                elif scenario == "alias-parent":
+                    alias = root / "alias"
+                    alias.symlink_to(root, target_is_directory=True)
+                    selected = alias / "k"
+                elif scenario == "public":
+                    scratch.chmod(0o755)
+                elif scenario == "file":
+                    selected = root / "file"
+                    selected.write_text("not a directory")
+                elif scenario == "workspace":
+                    workspace = scratch / "kernel-bundle-state"
+                elif scenario == "temp":
+                    runner_temp = scratch
+                elif scenario == "relative":
+                    selected = Path("relative")
+                elif scenario.startswith("owner-"):
+                    owner.unlink()
+                    if scenario == "owner-symlink":
+                        owner.symlink_to(retained)
+                    elif scenario == "owner-directory":
+                        owner.mkdir()
+                    else:
+                        owner.write_text("another identity")
+                original_stat = Path.stat
+
+                def filesystem(path, *args, **kwargs):
+                    metadata = original_stat(path, *args, **kwargs)
+                    if scenario == "other-disk" and path == runner_temp:
+                        values = list(metadata)
+                        values[2] = metadata.st_dev + 1
+                        return os.stat_result(values)
+                    return metadata
+
+                with patch.object(Path, "stat", autospec=True, side_effect=filesystem), \
+                        patch.object(kernel_cleanup.os, "geteuid",
+                                     return_value=-1 if scenario == "wrong-uid" else os.geteuid()):
+                    if scenario == "reuse":
+                        kernel_cleanup.prepare_root(selected, runner_temp, workspace, runner_name)
+                        self.assertEqual(scratch.stat().st_mode & 0o777, 0o700)
+                        kernel_cleanup.cleanup(scratch, workspace)
+                        self.assertFalse(retained.exists())
+                        self.assertEqual(owner.read_text(), identity)
+                    else:
+                        with self.assertRaises((ValueError, FileExistsError)):
+                            kernel_cleanup.prepare_root(selected, runner_temp, workspace, runner_name)
+                        self.assertEqual(retained.read_text(), "retained")
+
+    def test_kernel_scratch_path_budget_includes_worst_case_sandbox_and_longest_header(self):
+        kernel_cleanup.check_path_budget(Path("/mnt/build/k"), "6.12.41")
+        kernel_cleanup.check_path_budget(Path("/mnt/build/" + "k" * 11), "6.12.41")
+        for root, version in (
+                (Path("/mnt/build/" + "k" * 12), "6.12.41"),
+                (Path("/mnt/build/actions-runner-work/_temp"), "6.12.41"),
+                (Path("/mnt/build/" + "\u00e9" * 6), "6.12.41"),
+                (Path("/mnt/build/k"), "6.12.41" + "0" * 11)):
+            with self.subTest(root=root, version=version):
+                with self.assertRaisesRegex(ValueError, "255-byte limit"):
+                    kernel_cleanup.check_path_budget(root, version)
+
+    def test_scratch_cleanup_is_scoped_and_rejects_redirected_paths(self):
+        for scenario in ("cleanup", "symlink", "dangling-symlink", "workspace", "workspace-parent",
+                         "file", "mount", "nested-mount", "file-symlink", "file-directory",
+                         "workspace-child", "relative", "root"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                workspace = root / "workspace"
+                workspace.mkdir()
+                shared = root / "shared-cache"
+                shared.mkdir()
+                retained = shared / "object"
+                retained.write_text("retained")
+                retained.chmod(0o444)
+                metadata = retained.stat()
+                unrelated = root / "unrelated"
+                unrelated.mkdir()
+                (unrelated / "receipt").write_text("keep")
+                for name in kernel_cleanup.DIRECTORIES:
+                    state = root / name
+                    state.mkdir()
+                    os.link(retained, state / "hardlink")
+                    (state / "cache-link").symlink_to(shared, target_is_directory=True)
+                    if scenario == "cleanup":
+                        state.chmod(0o555)
+                for name in kernel_cleanup.FILES:
+                    (root / name).write_text("disposable")
+                scratch = root / "kernel-unsupported"
+                if scenario in ("symlink", "dangling-symlink", "file"):
+                    shutil.rmtree(scratch)
+                    if scenario in ("symlink", "dangling-symlink"):
+                        scratch.symlink_to(shared if scenario == "symlink" else root / "missing",
+                                           target_is_directory=True)
+                    else:
+                        scratch.write_text("unexpected file")
+                if scenario == "workspace":
+                    workspace = scratch
+                elif scenario == "workspace-parent":
+                    workspace = scratch / "nested-workspace"
+                    workspace.mkdir()
+                elif scenario == "workspace-child":
+                    workspace = root
+                if scenario in ("file-symlink", "file-directory"):
+                    path = root / kernel_cleanup.FILES[-1]
+                    path.unlink()
+                    if scenario == "file-symlink":
+                        path.symlink_to(retained)
+                    else:
+                        path.mkdir()
+                mountinfo = ""
+                if scenario in ("mount", "nested-mount"):
+                    mount = scratch if scenario == "mount" else scratch / "nested"
+                    mountinfo = f"1 0 0:0 / {mount} rw - ext4 /dev/fixture rw\n"
+                selected = Path(".") if scenario == "relative" else Path("/") if scenario == "root" else root
+                with patch.object(Path, "read_text", return_value=mountinfo):
+                    if scenario == "cleanup":
+                        kernel_cleanup.cleanup(selected, workspace)
+                        kernel_cleanup.cleanup(selected, workspace)
+                    else:
+                        with self.assertRaises(ValueError):
+                            kernel_cleanup.cleanup(selected, workspace)
+                self.assertEqual(retained.read_text(), "retained")
+                self.assertEqual(retained.stat().st_mode, metadata.st_mode)
+                self.assertEqual(retained.stat().st_mtime_ns, metadata.st_mtime_ns)
+                self.assertEqual((unrelated / "receipt").read_text(), "keep")
+                if scenario == "cleanup":
+                    self.assertTrue(all(not (root / name).exists()
+                                        for name in kernel_cleanup.DIRECTORIES + kernel_cleanup.FILES))
+                else:
+                    self.assertTrue((root / "kernel-bundle-state/hardlink").exists())
+
+    def test_scratch_cleanup_requires_a_stopped_cache(self):
+        for scenario in ("live", "stopped", "invalid", "symlink", "denied"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                workspace = root / "workspace"
+                workspace.mkdir()
+                cache = root / "kernel-cache"
+                cache.mkdir()
+                pid = cache / "server.pid"
+                pid.write_text("12345\n" if scenario != "invalid" else "-1\n")
+                if scenario == "symlink":
+                    pid.unlink()
+                    pid.symlink_to(workspace / "missing")
+                error = ProcessLookupError() if scenario == "stopped" else PermissionError() if scenario == "denied" else None
+                with patch.object(kernel_cleanup.os, "kill", side_effect=error) as probe:
+                    if scenario == "stopped":
+                        kernel_cleanup.cleanup(root, workspace)
+                        self.assertFalse(cache.exists())
+                    else:
+                        with self.assertRaises(PermissionError if scenario == "denied" else ValueError):
+                            kernel_cleanup.cleanup(root, workspace)
+                        self.assertTrue(cache.exists())
+                    if scenario in ("invalid", "symlink"):
+                        probe.assert_not_called()
+                    else:
+                        probe.assert_called_once_with(12345, 0)
+
+    def test_workspace_repair_is_scoped_and_preserves_cache_links(self):
+        name = "Restore workspace access before checkout"
+        step = self.steps[name]
+        self.assertLess(self.workflow.index("- name: " + name),
+                        self.workflow.index("- uses: actions/checkout@"))
+        self.assertIn("working-directory: ${{ runner.temp }}", step)
+        self.assertIn("RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}", step)
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        for scenario in ("repair", "separate-temp", "aliased-work-root",
+                         "absent", "outside", "symlink", "sudo-failure"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                work_root = root / "work"
+                scratch = (root / "separate-disk/_temp" if scenario == "separate-temp"
+                           else work_root / "_temp")
+                scratch.mkdir(parents=True)
+                workspace = work_root / "sonic-buildimage/sonic-buildimage"
+                workspace.mkdir(parents=True)
+                outside = root / "cache"
+                outside.mkdir()
+                payload = outside / "object"
+                payload.write_text("shared cache object")
+                payload.chmod(0o444)
+                linked = workspace / "hardlink"
+                os.link(payload, linked)
+                (workspace / "symlink").symlink_to(outside, target_is_directory=True)
+                regular = workspace / "tracked-file"
+                regular.write_text("tracked")
+                regular.chmod(0o444)
+                nested = workspace / ".git"
+                nested.mkdir()
+                nested.chmod(0o555)
+                outside.chmod(0o555)
+                commands = root / "commands"
+                commands.mkdir()
+                calls = root / "sudo-calls.jsonl"
+                changed = root / "chown-calls.jsonl"
+                sudo = commands / "sudo"
+                sudo.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import json, os, sys\n"
+                    "with open(os.environ['SUDO_CALLS'], 'a') as f:\n"
+                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                    "if int(os.environ['SUDO_EXIT']):\n"
+                    "    sys.exit(int(os.environ['SUDO_EXIT']))\n"
+                    "assert sys.argv[1] == '-n'\n"
+                    "os.execvp(sys.argv[2], sys.argv[2:])\n")
+                sudo.chmod(0o755)
+                chown = commands / "chown"
+                chown.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import json, os, sys\n"
+                    "with open(os.environ['CHOWN_CALLS'], 'a') as f:\n"
+                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n")
+                chown.chmod(0o755)
+                selected = workspace
+                pipeline = workspace.parent
+                if scenario == "absent":
+                    selected = work_root / "missing/missing"
+                    pipeline = selected.parent
+                elif scenario == "outside":
+                    selected = outside
+                elif scenario == "symlink":
+                    shutil.rmtree(workspace)
+                    workspace.symlink_to(outside, target_is_directory=True)
+                elif scenario == "aliased-work-root":
+                    alias = root / "work-link"
+                    alias.symlink_to(work_root, target_is_directory=True)
+                    selected = alias / "sonic-buildimage/sonic-buildimage"
+                    pipeline = selected.parent
+                repository = "missing" if scenario == "absent" else "sonic-buildimage"
+                result = subprocess.run(
+                    ["bash", "-e", "-o", "pipefail", "-c", script],
+                    cwd=scratch, capture_output=True, text=True,
+                    env=dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"],
+                             RUNNER_TEMP=str(scratch), GITHUB_WORKSPACE=str(selected),
+                             RUNNER_PIPELINE_WORKSPACE=str(pipeline),
+                             GITHUB_REPOSITORY="owner/" + repository,
+                             SUDO_CALLS=str(calls), CHOWN_CALLS=str(changed),
+                             SUDO_EXIT="23" if scenario == "sudo-failure" else "0"))
+                expected_exit = {"outside": 1, "symlink": 1, "sudo-failure": 23}.get(scenario, 0)
+                self.assertEqual(result.returncode, expected_exit, result.stdout + result.stderr)
+                if scenario in ("repair", "separate-temp", "aliased-work-root"):
+                    self.assertEqual(nested.stat().st_mode & 0o777, 0o755)
+                    self.assertEqual(regular.stat().st_mode & 0o777, 0o444)
+                    ownership_calls = [json.loads(line) for line in changed.read_text().splitlines()]
+                    paths = [path for call in ownership_calls for path in call[3:]]
+                    self.assertIn(str(regular), paths)
+                    self.assertNotIn(str(linked), paths)
+                    self.assertNotIn(str(workspace / "symlink"), paths)
+                    self.assertTrue(all(path.startswith(str(workspace)) for path in paths))
+                    self.assertEqual(len(calls.read_text().splitlines()), 3)
+                elif scenario != "sudo-failure":
+                    self.assertFalse(calls.exists())
+                self.assertEqual(payload.read_text(), "shared cache object")
+                self.assertEqual(payload.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(outside.stat().st_mode & 0o777, 0o555)
+                outside.chmod(0o755)
+                if nested.exists():
+                    nested.chmod(0o755)
+
+    def test_build_cache_flags_and_failure_propagation(self):
+        step = self.steps["Build and verify kernel DEBs in the normal package directory"]
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        script = script.replace("${{ matrix.arch }}", "arm64")
+        for endpoint, upload in (("grpc://172.16.0.4:9092", "true"),
+                                 ("grpc://172.16.0.4:9092", "false"),
+                                 ("http://127.0.0.1:8080", "true")):
+            for exit_code in (0, 9):
+                with self.subTest(endpoint=endpoint, upload=upload, exit_code=exit_code):
+                    with tempfile.TemporaryDirectory() as temporary:
+                        root = Path(temporary)
+                        executable = root / "python3"
+                        executable.write_text(
+                            "#!" + sys.executable + "\n"
+                            "import json, os, sys\n"
+                            "from pathlib import Path\n"
+                            "Path(os.environ['CALLS']).write_text(json.dumps(sys.argv[1:]))\n"
+                            "sys.exit(int(os.environ['BUILD_EXIT']))\n")
+                        executable.chmod(0o755)
+                        calls = root / "calls.json"
+                        result = subprocess.run(
+                            ["bash", "-e", "-o", "pipefail", "-c", script],
+                            cwd=root, capture_output=True, text=True,
+                            env=dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                                     KERNEL_RUN_TEMP=temporary, KERNEL_REMOTE_CACHE=endpoint,
+                                     UPLOAD_KERNEL_CACHE=upload, CALLS=str(calls),
+                                     BUILD_EXIT=str(exit_code)))
+                        self.assertEqual(result.returncode, exit_code, result.stdout + result.stderr)
+                        argv = json.loads(calls.read_text())
+                        self.assertEqual(argv[argv.index("--remote-cache") + 1], endpoint)
+                        self.assertEqual("--upload-local-results" in argv, upload == "true")
+                        self.assertEqual(argv[argv.index("--architecture") + 1], "arm64")
+                        self.assertEqual(
+                            argv[argv.index("--state-dir") + 1],
+                            str(root / "kernel-bundle-state"),
+                        )
 
 
 if __name__ == "__main__":

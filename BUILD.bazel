@@ -1,8 +1,8 @@
 # Expose Make-generated inputs to Bazel.
 #
-# Make prepares the config-engine OCI base, Scapy wheel, Debian package inputs and
-# service manifests under target/ before Bazel assembles the images. This file
-# declares existing files as Bazel inputs; it does not generate them or invoke Make.
+# Make prepares the Scapy wheel, Debian package inputs and service manifests
+# under target/ before Bazel assembles the images and source-built bases. This
+# file declares existing inputs; it does not generate them or invoke Make.
 #
 # target/ has no BUILD.bazel of its own, so its files belong to this root Bazel
 # package. Keep this input boundary here for now. Source exports, configuration
@@ -14,29 +14,26 @@
 exports_files(
     glob(
         [
-            "target/docker-config-engine-trixie.oci/oci-layout",
             "target/bazel-manifests/*/manifest.json",
+            "target/bazel-manifests/*/components.labels",
+            "target/bazel-manifests/*/image.env",
             "target/python-wheels/trixie/scapy-2.6.1.dev0-py3-none-any.whl",
         ],
         allow_empty = True,
     ),
 )
 
-# Track every OCI metadata file and blob, not just the oci-layout marker exported
-# above, so changed contents and newly published layers invalidate Bazel actions.
-filegroup(
-    name = "config_engine_oci_files",
-    srcs = glob(
-        ["target/docker-config-engine-trixie.oci/**"],
-        allow_empty = True,
-        exclude = ["target/docker-config-engine-trixie.oci/oci-layout"],
-    ),
-    visibility = ["//visibility:public"],
-)
-
-# Compare the Make-published archives with the exact OCI outputs in the manual
+# Compare the Make-published archives with the exact OCI outputs in the
 # full-image check, after Make has completed both image targets.
 exports_files([
+    "target/docker-orchagent.gz",
+    "target/docker-orchagent-dbg.gz",
     "target/docker-syncd-vs.gz",
     "target/docker-syncd-vs-dbg.gz",
+])
+
+# Host-independent regression inputs for the gearbox Make selector.
+exports_files([
+    "platform/vs/docker-gbsyncd-vs.mk",
+    "platform/template/docker-gbsyncd-trixie.mk",
 ])

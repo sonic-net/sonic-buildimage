@@ -145,12 +145,14 @@ and source package metadata remain part of the image. The original
 `Dockerfile.j2`, `start.sh`, `supervisord.conf`, `critical_processes` and Make
 image manifest remain the behavioral reference.
 
-The checked-in `apt.lock.json` is the only APT package list consumed by a build.
+The canonical package list is `@sonic_build_infra//apt:apt.lock.json`.
 `apt.import_lock` reads its package URLs, checksums, architectures and dependency
 edges during repository setup and exposes the standard Distroless package targets.
-To refresh it, use `apt-resolve.MODULE.bazel` in a private preparation checkout
-and review the resulting lock against the base. No expanded import file needs
-to be checked in or regenerated.
+Syncd selects `syncd_vs_debian` for runtime and `syncd_vs_vim_debug_debian` for
+its existing Vim debug tools. Refresh these sets through
+`sonic-build-infra/apt/requests.json` and review the shared lock against the base.
+The `ci_artifacts` filegroup exports the resolved lock so CI fingerprints the
+actual package metadata used by the image.
 
 ## Validation
 
@@ -162,13 +164,20 @@ their supported native AMD64 and ARM64 configurations separately.
 Full DASH Syncd image validation currently runs on native AMD64; native ARM64
 source-producer checks do not establish an ARM64 DASH image.
 
+The full VS workflow runs `//tools/bazel/tests:syncd_p4_images_test` against the
+actual runtime/debug OCI layouts, source TARs and exported Make archives. It
+retains the test log, XML and `validation.json`. The shared installed-image
+validator also Docker-loads both Syncd archives and checks inherited Common
+files, directory aliases, parent layers and matching copied debug symbols.
+These checks share their implementation with base and SWSS validation; they do
+not start Syncd or boot the installer.
+
 Installed-container validation is maintained separately in
 [PR #20](https://github.com/securely1g/sonic-buildimage/pull/20). It uses the
 exported runtime/debug images to resolve libraries, exercise CLI and startup
 behavior, check GDB symbol lookup, and compile a small P4 program with the
 installed driver before starting its local BMv2 listener. These probes are not
 part of the image build or the native archive tests.
-The full VS workflow retains the existing installer boot and login checks.
 Strict guest service validation is maintained separately in
 [PR #28](https://github.com/securely1g/sonic-buildimage/pull/28).
 

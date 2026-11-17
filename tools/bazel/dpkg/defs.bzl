@@ -40,6 +40,9 @@ _OCI_NOTICE_INCLUDES = [
     ]
 ]
 
+# The layer producer and receipt validator consume this same include policy.
+OCI_INCLUDES = PATH_INCLUDES + _OCI_NOTICE_INCLUDES
+
 _TAR_ARGS = ["--format", "gnutar"]
 
 def _copy(ctx, mnemonic, bsdtar, output, srcs, add_extra_args = lambda args: args):
@@ -143,7 +146,7 @@ So we need to build the excluded first, then the included, and then merge them.
         ),
         "includes": attr.string_list(
             doc = "bsdtar include patterns, carving back out of the excludes.",
-            default = PATH_INCLUDES + _OCI_NOTICE_INCLUDES,
+            default = OCI_INCLUDES,
         ),
     },
     toolchains = [tar_lib.toolchain_type],

@@ -1,0 +1,167 @@
+"""AMD64 event-service images using the source-built config-engine parent."""
+
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "start.sh",
+    "eventdb_wrapper.sh",
+    "supervisord.conf",
+    "critical_processes",
+    "host_events_info.json",
+    "bgp_events_info.json",
+    "dhcp_relay_events_info.json",
+    "swss_events_info.json",
+    "syncd_events_info.json",
+])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# The parent already builds eventd, eventdb, events_tool, Common, Python bindings,
+# and their native dependencies from source. Do not install those files twice.
+oci_image(
+    name = "docker-eventd",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = "//:target/bazel-manifests/docker-eventd/image.env",
+    labels = "//dockers/docker-eventd/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = ["//dockers/docker-eventd/config:files"],
+)
+
+debug_symbols_layer(
+    name = "docker-eventd.debug_symbols",
+    image = ":docker-eventd",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-eventd",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-eventd",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "debug",
+)
+
+# Replace the parent's vim.tiny hardlink with the full debug Vim selection.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-eventd",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-eventd/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/eventd-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-eventd-dbg",
+    base = ":docker-eventd",
+    labels = "//dockers/docker-eventd/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-eventd.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-eventd/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-eventd" + suffix + ".gz",
+        image = ":docker-eventd" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-eventd.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@eventd_deps//redis-server"],
+)

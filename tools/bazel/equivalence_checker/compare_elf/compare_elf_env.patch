@@ -1,0 +1,25 @@
+Subject: [PATCH] Use caller-selected ELF comparison tools
+
+The SONiC Bazel equivalence checker owns the readelf and abidiff tool selection.
+Pass those declared paths to compareELF instead of letting the CLI select host
+tools. This preserves comparison policy while supporting sealed tool closures.
+
+This downstream integration patch was carried by sonic-buildimage's checker at
+54eb0632ba9dc93e784665280ce4ec19c122cef1 for compareELF 5f79c620. It is retained
+for that pinned source; no upstream acceptance is claimed. Remove it when the
+selected compareELF CLI supports equivalent explicit tool selection.
+
+--- a/elfcompare.py
++++ b/elfcompare.py
+@@ -434,6 +434,9 @@
+     parser = build_parser()
+     args = parser.parse_args(argv)
+-    policy = ComparisonPolicy()
++    policy = ComparisonPolicy(
++        readelf=os.environ.get("ELFCOMPARE_READELF") or None,
++        abidiff=os.environ.get("ELFCOMPARE_ABIDIFF") or None,
++    )
+-
++
+     try:
+         from elfcompare_tools import dump_json

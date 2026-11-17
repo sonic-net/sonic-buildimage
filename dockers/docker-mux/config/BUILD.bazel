@@ -1,0 +1,51 @@
+"""Preserve the configuration copied by docker-mux's Dockerfile."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-mux:__pkg__"])
+
+# The Dockerfile's *.j2 COPY includes Dockerfile.j2 itself. Preserve its Git
+# mode as well as the daemon entrypoint, supervisor and critical-process files.
+_FILES = {
+    "docker-init.sh": ("usr/bin/docker-init.sh", "0755"),
+    "supervisord.conf": ("etc/supervisor/conf.d/supervisord.conf", "0644"),
+    "critical_processes": ("etc/supervisor/critical_processes", "0644"),
+    "Dockerfile.j2": ("usr/share/sonic/templates/Dockerfile.j2", "0755"),
+}
+
+tar(
+    name = "files",
+    srcs = ["//dockers/docker-mux:" + name for name in _FILES],
+    mtree = [
+        destination + " uid=0 gid=0 mode=" + mode + " time=0 type=file content=$(location //dockers/docker-mux:" + name + ")"
+        for name, (destination, mode) in _FILES.items()
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-mux" + suffix + "/manifest.json",
+        image_version = "//dockers/docker-mux:image_version",
+        package_receipt = "//dockers/docker-mux:runtime_package_metadata",
+        version_packages = ["libswsscommon", "sonic-supervisord-utilities-rs"],
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-mux:docker-mux",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

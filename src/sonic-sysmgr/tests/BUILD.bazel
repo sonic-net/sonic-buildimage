@@ -1,0 +1,115 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_python//python:defs.bzl", "py_test")
+load("//:flags.bzl", "CFLAGS_GTEST", "DBGFLAGS")
+
+genrule(
+    name = "mock_header",
+    testonly = True,
+    srcs = ["//rebootbackend:reboot.xml"],
+    outs = ["reboot_dbus_mock.h"],
+    cmd = "$(execpath //tools/dbus:generate) --runtime $(location //tools/dbus:runtime) --xml $(location //rebootbackend:reboot.xml) --mode adaptor --output $@",
+    tools = [
+        "//tools/dbus:generate",
+        "//tools/dbus:runtime",
+    ],
+)
+
+cc_binary(
+    name = "reboot_dbus_mock",
+    testonly = True,
+    srcs = [
+        "reboot_dbus_mock.cpp",
+        ":mock_header",
+    ],
+    includes = ["."],
+    deps = ["@trixie//libdbus-c++-dev:libdbus-c++"],
+)
+
+flatten(
+    name = "test_runtime",
+    testonly = True,
+    deduplicate = True,
+    tars = [
+        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
+        "@sonic_swss_common//dist:libswsscommon_pkg",
+        "@sonic_protobuf//:libprotobuf_pkg",
+        "@trixie//libdbus-c++-1-0v5",
+        "@trixie//gdb",
+        "@build_tools//binutils",
+        "@build_tools//bubblewrap",
+        "@build_tools//dbus-daemon",
+        "@build_tools//redis-server",
+    ],
+)
+
+py_test(
+    name = "installed_sysmgr_test",
+    # This test needs a nested private PID/mount/network namespace. CI grants
+    # that container capability; no host Redis, D-Bus or reboot path is used.
+    timeout = "moderate",
+    srcs = ["package_test.py"],
+    args = [
+        "--runtime-tar=$(rootpath //:sysmgr_pkg)",
+        "--debug-tar=$(rootpath //:sysmgr_debug_pkg)",
+        "--dependencies=$(rootpath :test_runtime)",
+        "--mock=$(rootpath :reboot_dbus_mock)",
+        "--probe=$(rootpath //rebootbackend:gnoi_runtime_test)",
+        "--fixture=$(rootpath :installed_reboot_test.py)",
+        "--metadata=$(rootpath //:runtime_packages.json)",
+        "--control=$(rootpath //:debian/control)",
+        "--changelog=$(rootpath //:debian/changelog)",
+    ],
+    data = [
+        ":installed_reboot_test.py",
+        ":reboot_dbus_mock",
+        ":test_runtime",
+        "//:debian/changelog",
+        "//:debian/control",
+        "//:runtime_packages.json",
+        "//:sysmgr_debug_pkg",
+        "//:sysmgr_pkg",
+        "//rebootbackend:gnoi_runtime_test",
+    ],
+    main = "package_test.py",
+)
+
+cc_binary(
+    name = "original_unit_tests_binary",
+    testonly = True,
+    srcs = [
+        "mock_reboot_interfaces.h",
+        "reboot_thread_test.cpp",
+        "rebootbe_test.cpp",
+        "test_main.cpp",
+    ],
+    cxxopts = DBGFLAGS + CFLAGS_GTEST,
+    deps = [
+        "//rebootbackend:reboot_core",
+        # The pinned upstream gtest target includes Google Mock.
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+py_test(
+    name = "original_unit_tests",
+    timeout = "long",
+    srcs = [
+        "installed_reboot_test.py",
+        "package_test.py",
+        "unit_test.py",
+    ],
+    args = [
+        "--binary=$(rootpath :original_unit_tests_binary)",
+        "--dependencies=$(rootpath :test_runtime)",
+        "--runtime-tar=$(rootpath //:sysmgr_pkg)",
+    ],
+    data = [
+        ":original_unit_tests_binary",
+        ":test_runtime",
+        "//:sysmgr_pkg",
+    ],
+    # The rules_python launcher does not add the main file's directory.
+    imports = ["."],
+    main = "unit_test.py",
+)

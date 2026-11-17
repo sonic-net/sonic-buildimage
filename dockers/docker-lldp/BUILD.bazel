@@ -1,0 +1,250 @@
+"""Native AMD64 LLDP images from LLDP, DBSyncd and config-engine source owners."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@lldp_runtime_apt_inputs//:apt_inputs.bzl", RUNTIME_INPUTS = "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+)
+
+exports_files(glob(["*.j2", "*.sh", "lldpd", "lldpmgrd", "critical_processes"]))
+
+# Parent config-engine tests retain every template across this package boundary.
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = glob(["*.j2"]),
+    visibility = ["//dockers:__pkg__"],
+)
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# LLDP links its own three source ELFs against the locked distro libraries.
+# Common, py-common and the rest of the project closure come from config-engine.
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "lldp_runtime_debian",
+    lock = "//dockers/docker-lldp/bazel:runtime_lock_view",
+    packages = RUNTIME_INPUTS["lldpd_deps"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-lldp",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "runtime",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+# Preserve actual imported package records; source TARs and wheels do not
+# invent Debian package state.
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in RUNTIME_INPUTS["lldpd_deps"]["amd64"].values()],
+    source_spec = "//dockers/docker-lldp/bazel:source_paths.json",
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/lldp-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+# The owner retains Debian's /lib/systemd install path. The merged-/usr base
+# requires its archive entry at /usr/lib/systemd; use the public BSD tar tool
+# without modifying file bytes, ownership, permissions or symbolic links.
+genrule(
+    name = "lldpd_usr_payload",
+    srcs = ["@lldpd//:runtime"],
+    outs = ["lldpd_usr.tar"],
+    cmd = '"$(BSDTAR_BIN)" -cf "$@" --format=pax -s ",^lib$$,usr/lib," -s ",^lib/,usr/lib/," "@$(execpath @lldpd//:runtime)"',
+    toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+)
+
+sonic_layer(
+    name = "source_runtime",
+    tars = [
+        ":lldpd_usr_payload",
+        "@sonic_dbsyncd//:sonic_dbsyncd_runtime",
+    ],
+    debug_symbol_deps = ["@lldpd//:runtime"],
+)
+
+oci_image(
+    name = "docker-lldp",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/bin/docker-lldp-init.sh"],
+    env = "//:target/bazel-manifests/docker-lldp/image.env",
+    labels = "//dockers/docker-lldp/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        "//dockers/docker-lldp/config:accounts",
+        "//dockers/docker-lldp/config:files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-lldp.debug_symbols",
+    image = ":docker-lldp",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-lldp",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-lldp",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "debug",
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-lldp",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-lldp/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/lldp-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-lldp-dbg",
+    base = ":docker-lldp",
+    labels = "//dockers/docker-lldp/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-lldp.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-lldp/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-lldp" + suffix + ".gz",
+        image = ":docker-lldp" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-lldp.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# Existing eventd test dependency; the private Redis fixture is not installed.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@eventd_deps//redis-server"],
+)

@@ -216,7 +216,7 @@ def validate_inherited_base(runtime_path, symbols_tar, receipt_path, temporary, 
     """Independently check dynamic matches with binutils against deployed ELFs."""
     from tools.bazel.oci.oci_inventory import apply_layer
     from tools.bazel.oci.oci_layout import validate_layout
-    runtime = validate_layout(runtime_path, "linux/" + policy["architecture"])
+    runtime = validate_layout(runtime_path, "linux/" + policy["architecture"], digest_file=sha)
     receipt, _ = imported_symbol_receipt(symbols_tar, receipt_path, runtime.descriptor["digest"], package_manifest, policy=policy)
     pairs = receipt["pairs"]
     require(set(required_paths).issubset({pair["runtime_path"] for pair in pairs}),
@@ -328,7 +328,7 @@ def validate_native(runtime_manifest, debug_manifest, *, policy, source_contract
             from tools.bazel.oci.oci_layout import validate_layout
             from tools.bazel.oci.oci_inventory import apply_layer
             require(base_path is not None, "inherited source files require the managed OCI base")
-            base = validate_layout(base_path, "linux/" + architecture)
+            base = validate_layout(base_path, "linux/" + architecture, digest_file=sha)
             require(base.descriptor["digest"] == receipt["base_manifest_digest"],
                     "inherited source files use a different OCI base")
             base_files = {}

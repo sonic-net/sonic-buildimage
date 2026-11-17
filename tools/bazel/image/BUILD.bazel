@@ -1,4 +1,5 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load(":tests.bzl", "image_assembly_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -80,12 +81,16 @@ py_binary(
 
 py_test(
     name = "assembly_test",
+    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
+    data = ["@sonic_build_infra//tools/build_tools:pigz"],
     srcs = ["assembly_test.py"],
     deps = [":assembly_lib"],
 )
 
 py_test(
     name = "mkinitramfs_test",
+    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
+    data = ["@sonic_build_infra//tools/build_tools:pigz"],
     srcs = [
         "mkinitramfs.py",
         "mkinitramfs_test.py",
@@ -95,4 +100,27 @@ py_test(
         ":ldcache",
         ":newc",
     ],
+)
+
+# Read output formats using the same pinned tool closures as production actions.
+image_assembly_test(
+    name = "assembly_formats_test",
+    tar_split_json = "//tools/bazel/image/tar_split_json:tar_split_json",
+    tar_split = "@sonic_build_infra//tools/build_tools:tar-split",
+    openssl = "@sonic_build_infra//tools/build_tools:openssl",
+    grub_editenv = "@sonic_build_infra//tools/build_tools:grub-editenv",
+    zstd = "@sonic_build_infra//tools/build_tools:zstd",
+    pigz = "@sonic_build_infra//tools/build_tools:pigz",
+)
+
+py_binary(
+    name = "kernel_deb",
+    srcs = ["kernel_deb.py"],
+)
+
+py_test(
+    name = "kernel_deb_test",
+    imports = ["."],
+    srcs = ["kernel_deb_test.py", "kernel_deb.py"],
+    main = "kernel_deb_test.py",
 )

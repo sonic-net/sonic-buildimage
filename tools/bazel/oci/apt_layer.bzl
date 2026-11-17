@@ -6,7 +6,28 @@ package controls and binds debug selection to the exact runtime receipt and
 Make manifest. Conflicting inherited package records are rejected.
 """
 
+load("@aspect_bazel_lib//lib:jq.bzl", "jq")
 load("@sonic_build_infra//apt:apt_layer.bzl", _apt_layer = "apt_layer")
+
+def apt_subset_lock(name, selection, dependency_set, out):
+    """Expose one selected closure to the OCI selector with its original lock metadata."""
+    jq(
+        name = name,
+        srcs = ["@sonic_build_infra//apt:apt.lock.json"],
+        args = [
+            "--sort-keys",
+            "--slurpfile",
+            "selection",
+            "$(execpath %s)" % selection,
+            "--arg",
+            "subset",
+            dependency_set,
+        ],
+        data = [selection],
+        expand_args = True,
+        filter_file = "//tools/bazel/oci:apt_subset.jq",
+        out = out,
+    )
 
 def _policy_impl(ctx):
     output = ctx.actions.declare_file(ctx.label.name + ".json")

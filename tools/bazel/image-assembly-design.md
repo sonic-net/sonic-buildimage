@@ -2,13 +2,14 @@
 
 ## 交付范围
 
-本轮只实现组装规则及其自身验证。代码位于 `tools/bazel/image/`，入口为
-`//tools/bazel/image:defs.bzl`。组件源码、现有构建方式、依赖锁和产品目标保持原状。
-实际组件移植、生产者产物导出、整机目标接入及启动验收由调用方后续工作承担。
+本文件描述组装规则及其格式验证。代码位于 `tools/bazel/image/`，入口为
+`//tools/bazel/image:defs.bzl`。组件源码、生产者安装接口和完整产品目标由各自配方维护。
+产品目标负责声明组件闭包、安装阶段和功能配置，并承担实际安装及启动验收。
 
 规则直接消费 Bazel 声明的安装 TAR、OCI layout、内核 boot tree 和元数据。
-所有执行工具由调用方传入 executable label，采用 `cfg = "exec"`；运行依赖通过
-目标的 runfiles 进入 action。根 MODULE 不添加镜像产品依赖。
+执行工具采用 `cfg = "exec"` 的 executable label；gzip 的 `pigz` 默认引用共享工具，
+调用方可显式覆盖。运行依赖通过
+目标的 runfiles 进入 action。产品依赖在根 MODULE 和产品 BUILD 中声明。
 
 ## 五种 rule
 
@@ -24,7 +25,7 @@ load("//tools/bazel/image:defs.bzl",
 | --- | --- | --- |
 | `sonic_squashfs` | 有序安装 TAR、排除路径、压缩算法/块大小、`mksquashfs` | SquashFS |
 | `sonic_initramfs` | 对应生成阶段的安装 TAR、kernel metadata、配置目录、BusyBox applet 清单、`modprobe`/`depmod`/`zstd` | 一个 initrd；`audit` 输出组 |
-| `docker_overlay2_store` | OCI layout 目标到 tag 的映射、平台、可选版本文件、`tar_split`、按需 `zstd`、压缩方式 | Docker overlay2 store TAR，默认 gzip，即 dockerfs |
+| `docker_overlay2_store` | OCI layout 目标到 tag 的映射、平台、可选版本文件、`tar_split_json`、`pigz`、按需 `zstd`、压缩方式 | Docker overlay2 store TAR，默认 gzip，即 dockerfs |
 | `onie_installer` | SquashFS、boot tree、kernel metadata、initrd、平台归档、安装脚本/头部、必需安装资源、模板变量、签名配置、可选 dockerfs/附加资源 | ONIE `.bin` |
 | `sonic_disk_image` | 相同系统输入、ONIE boot TAR、平台 TAR、分区布局、匹配 GRUB 资源和执行工具 | qcow2 |
 
@@ -76,8 +77,8 @@ System.map 0600、其他文件 0644，避免依赖 Bazel 输入在宿主上的�
 | 消费方 | 必须显式传入的 executable 属性 |
 | --- | --- |
 | SquashFS | `mksquashfs` |
-| initramfs | `modprobe`、`depmod`；zstd 输出或 .zst 模块另需 `zstd` |
-| Docker store | `tar_split`；含 zstd layer 或输出 zstd 时另需 `zstd` |
+| initramfs | `modprobe`、`depmod`；gzip 输出使用 `pigz`；zstd 输出或 .zst 模块另需 `zstd` |
+| Docker store | `tar_split_json`；元数据及 gzip 外层使用 `pigz`；含 zstd layer 或输出 zstd 时另需 `zstd` |
 | ONIE 开发签名 | `openssl`；证书与密钥为显式文件输入 |
 | ONIE 生产签名 | `signing_tool`；其余数据由 `signing_inputs` 声明 |
 | qcow2 公共工具 | `mke2fs`、`debugfs`、`sgdisk`、`qemu_img`、`grub_editenv` |
@@ -99,8 +100,10 @@ GRUB core、modules 与 BIOS setup 必须版本匹配。UEFI 需要所选平台�
 
 - 安装 TAR 流合并后直接送入 `mksquashfs`，不物化整棵 rootfs。
 - OCI layer 直接转换为 overlay2 store TAR，保留 diff ID、chain ID、image metadata、
-  whiteout 和 xattr。原始 layer TAR 同时流入 `tar-split disasm`，写入 layerdb 的
-  `tar-split.json.gz`，支持按原字节重建；layerdb `size` 取 TAR header 声明的数据长度总和。
+  whiteout 和 xattr。原始 layer TAR 同时流入 `tar_split_json`，使用固定官方 API 生成
+  raw JSON，再由声明的 `pigz` 一次压缩为 layerdb 的 `tar-split.json.gz`，支持按原字节重建。
+  元数据生产过程没有先压缩再解压的中间步骤；layerdb `size` 取 TAR header 声明的数据长度总和。
+  产品中间 Docker store 使用 `compression = "none"`，避免非格式边界所需的压缩。
   `compression = "gzip"` 为默认，另支持 `"none"` 和 `"zstd"`；均可供磁盘消费。
   zstd 输出使用声明的 `zstd` 工具直接写最终压缩流。
 - ONIE 在最终 `.bin` 中直接写内部 ZIP；为兼容 ONIE BusyBox，local header 写入已知
@@ -129,7 +132,11 @@ modules、prefix、`grub_partition_role` 和 `grub_directory`；UEFI 另给
 前者直接消费已有 gzip 字节，后者流式压缩普通 TAR。`dockerfs_compression` 另支持
 `zstd` 原字节消费，此时须选 `docker_mode = "ram"`，对应原 initramfs 的 zstd 解码路径。
 普通磁盘安装的原 `tar xz` 消费路径要求 gzip。
-默认 Docker store 直接提供 gzip，避免额外压缩。内部 ZIP 和大 dockerfs 外置 TAR 的选择
+Docker store 保留 gzip 默认值兼容既有调用。完整镜像调用方显式选择 `compression = "none"`，
+ONIE 选择 `dockerfs_compression = "none"`，KVM 选择 `docker_store_compression = "none"`。
+这样中间存储只生成一次未压缩 TAR，ONIE 在最终格式边界用 `pigz` 压缩；KVM 直接消费 TAR。
+平台归档同样可保持未压缩至 ONIE 边界。已经压缩的输入原字节复用，initrd 在 payload ZIP 中采用 stored 模式。
+内部 ZIP 和大 dockerfs 外置 TAR 的选择
 遵循原安装器的非 ZIP64 限制。
 
 `signing_mode` 接受 `no_sign`、`dev`、`prod`。开发模式使用显式 `openssl`、
@@ -227,22 +234,34 @@ config_setting(name = "prod", flag_values = {":signing": "prod"})
 | Docker 压缩 | 安装器可 gzip 解码，数据字节保留 | none/gzip 两种输入读取 |
 | 完整 boot | EFI、DTB 等嵌套路径保留，内核 SHA 配对 | ZIP 与 TAR 成员读取 |
 | 安装资源与变量 | 必需资源齐全、变量按输入替换、冲突失败 | 安装器 TAR/ZIP 读取和无效输入测试 |
-| Docker 元数据 | tar-split 可重建原 TAR，size 符合 Moby 数据长度语义 | 真实 tar-split disasm/asm 逐字节比较 |
-| CMS 签名 | no_sign 无尾签名，dev/prod 签名覆盖完整 unsigned 内容 | 三种 select 配置实际 Bazel action + OpenSSL verify |
+| Docker 元数据 | tar-split 可重建原 TAR，size 符合 Moby 数据长度语义 | raw API → pigz 元数据经独立 APT tar-split asm 逐字节重建 |
+| CMS 签名 | no_sign 无尾签名，dev/prod 签名覆盖完整 unsigned 内容 | Bazel 格式测试中实际调用 OpenSSL sign/verify |
 | 磁盘启动资源 | grubenv 可读写，EFI 厂商与回退路径字节一致 | 真实 GRUB 工具、ext4/FAT 读回和 qcow2 检查 |
 | initramfs 配置 | 压缩数据可独立解码、模块策略按所选值执行 | initramfs 规则测试 |
 
-规则回归测试为 `assembly_test` 15 项、`mkinitramfs_test` 11 项。使用
-`tests.bzl` 的 `image_assembly_test` 宏传入真实 `tar_split`、`openssl`、`grub_editenv`、`zstd`
-可执行目标后，完整执行工具互操作用例；省略这些工具时对应互操作用例显式跳过。
-本次隔离验证传入全部工具，两个 Bazel 测试目标通过，26 项通过，跳过 0 项。
+规则回归目标包括 `assembly_formats_test`、`mkinitramfs_test` 和
+`kernel_deb_test`。前者使用 `tests.bzl` 的 `image_assembly_test` 宏传入真实
+`tar_split_json`、作为独立 asm oracle 的 `tar_split`、`openssl`、`grub_editenv`、`zstd`
+与 `pigz`，执行格式互操作用例。
+`mkinitramfs_test` 检查 0.142 配置、模块处理及压缩契约；`kernel_deb_test`
+按 Debian ar/TAR 协议检查解压边界、原文件元数据和生产者 receipt 配对。
+组件移植、完整产品闭包与系统启动分别由产品目标验收。
 
-一次性检查另覆盖同一 ONIE 目标的 no_sign/dev/prod 三种配置，以及 256 MiB UEFI
-磁盘夹具的 qcow2、grubenv、EFI 字节与稀疏占用。证据位于
-`/tmp/sonic-image-rule-fixes/`。组件移植、完整产品闭包与系统启动属于产品接入范围。
+## 受管工具与真实格式验收
 
-第二轮等价性修复的验证证据位于 `/tmp/sonic-image-rule-parity/`：
-Bazel 测试覆盖两组非默认 release/名称、配置冲突、zstd 与缺失解码工具；
-一次性检查读回四种 Docker 放置/压缩组合的 ext4/FAT、GRUB 配置、文件元数据和
-qcow2 稀疏占用，并通过真实 Bazel action 的 `select()` 切换验证压缩、名称、模式与签名。
-既有 amd64/arm64、固定身份 hook 和部分 initramfs 配置仍是明确的支持边界。
+`assembly_formats_test` 通过共享 `build_tools` 的 executable/runfiles 消费
+`tar-split`、OpenSSL、`grub-editenv`、zstd 和 pigz。CI 直接执行 Bazel 测试，
+工具版本、执行架构、动态加载器和运行依赖由共享 APT 锁及工具生产目标固定。
+测试保持工具调用路径的符号链接语义，使用 `absolute()` 而不是 `resolve()`。
+
+`action_test` 使用真实 `mksquashfs`、`tar_split_json` 和 `pigz` 生产 SquashFS、Docker store 和 ONIE。
+`tar_split_json` 复用固定官方 API 源码；APT `tar-split` 仅作为独立 asm oracle，逐字节重建输入 layer TAR。
+独立 `unsquashfs` 读取 payload、数值 uid/gid 和 setuid 权限；ZIP/TAR 读取器检查安装器。
+AMD64 的独立 `disk_action_test` 通过受管分区、ext4、GRUB 和 qemu-img 工具生成 BIOS qcow2，执行格式、虚拟大小
+、`qemu-img check`、MBR/GPT 签名和 BIOS core 嵌入位置检查。GRUB 资源直接引用匹配 `image_runtime` 的 `usr/lib/grub`，
+避免复制资源树。BIOS setup 使用匹配 Debian 补丁集的原生 GRUB 2.12 生产者，
+规避 APT BIOS setup 对沙箱宿主挂载设备的探测。CI 在 ARM64 上选取 SquashFS、Docker store 和 ONIE 检查。
+这些测试中的内核和 initrd 是格式测试输入；真实产品 initramfs 和启动由产品目标验收。
+
+本目录组装规则及本轮新增 Debian 包装的 gzip 输出通过显式 pigz 工具执行。ZIP deflate 保持 ZIP 格式压缩，
+输入 gzip 解码保持已有读取协议；两者独立于 gzip 输出工具选择。

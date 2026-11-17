@@ -34,3 +34,31 @@ $(DOCKER_ROUTER_ADVERTISER)_CONTAINER_NAME = radv
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -t
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+
+# The source parent supplies project runtime dependencies.
+# The existing Make producer remains available for other profiles.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_ROUTER_ADVERTISER) $(DOCKER_ROUTER_ADVERTISER_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_ROUTER_ADVERTISER)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_ROUTER_ADVERTISER_DBG)
+$(DOCKER_ROUTER_ADVERTISER)_BAZEL_TARGET = //dockers/docker-router-advertiser:$(DOCKER_ROUTER_ADVERTISER)
+$(DOCKER_ROUTER_ADVERTISER_DBG)_PATH = $($(DOCKER_ROUTER_ADVERTISER)_PATH)
+$(DOCKER_ROUTER_ADVERTISER_DBG)_BAZEL_TARGET = //dockers/docker-router-advertiser:$(DOCKER_ROUTER_ADVERTISER_DBG)
+$(DOCKER_ROUTER_ADVERTISER)_BAZEL_ARGS = --//dockers/docker-router-advertiser:image_version=$(SONIC_IMAGE_VERSION)
+$(DOCKER_ROUTER_ADVERTISER_DBG)_BAZEL_ARGS = $($(DOCKER_ROUTER_ADVERTISER)_BAZEL_ARGS)
+SONIC_BAZEL_MANIFESTS += docker-router-advertiser docker-router-advertiser-dbg
+docker-router-advertiser_MANIFEST_IMAGE = $(DOCKER_ROUTER_ADVERTISER)
+docker-router-advertiser-dbg_MANIFEST_IMAGE = $(DOCKER_ROUTER_ADVERTISER)
+docker-router-advertiser-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_ROUTER_ADVERTISER)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-router-advertiser/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-router-advertiser/image.env
+$(DOCKER_ROUTER_ADVERTISER_DBG)_BAZEL_DEPENDS = $($(DOCKER_ROUTER_ADVERTISER)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-router-advertiser-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-router-advertiser
+endif
+endif
+endif

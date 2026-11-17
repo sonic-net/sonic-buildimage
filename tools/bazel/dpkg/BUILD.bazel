@@ -1,3 +1,13 @@
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load(":defs.bzl", "OCI_INCLUDES")
+
+write_file(
+    name = "oci_includes",
+    out = "oci_includes.txt",
+    content = OCI_INCLUDES + [""],
+    visibility = ["//visibility:public"],
+)
+
 # Translate the paths dpkg filters under Make (/etc/dpkg/dpkg.cfg.d)
 # into the format bsdtar wants them.
 genrule(

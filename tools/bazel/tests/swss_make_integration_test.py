@@ -94,14 +94,15 @@ selected:
         self.assertEqual(values["runtime_label"], "//dockers/docker-orchagent:docker-orchagent.gz")
         self.assertEqual(values["debug_label"], "//dockers/docker-orchagent:docker-orchagent-dbg.gz")
         self.assertEqual(values["runtime_inputs"].split(),
-                         ["target/docker-config-engine-trixie.oci", "target/python-wheels/trixie/scapy.whl",
+                         ["target/bazel-manifests/docker-base-trixie/manifest.json",
+                          "target/bazel-manifests/docker-config-engine-trixie/manifest.json",
                           "target/bazel-manifests/docker-orchagent/manifest.json"])
         self.assertEqual(values["debug_inputs"].split(), values["runtime_inputs"].split() +
                          ["target/bazel-manifests/docker-orchagent-dbg/manifest.json"])
         self.assertEqual(values["debug_path"], "dockers/docker-orchagent")
-        self.assertEqual(values["oci_bases"], "docker-config-engine-trixie.oci")
-        self.assertEqual(values["oci_archive"], "target/docker-config-engine-trixie.gz")
-        self.assertEqual(values["oci_platform"], "linux/amd64")
+        self.assertEqual(values["oci_bases"], "")
+        self.assertEqual(values["oci_archive"], "")
+        self.assertEqual(values["oci_platform"], "")
         self.assertEqual(
             values["legacy"].split(),
             ["docker-sysmgr.gz", "docker-swss-layer-trixie.gz"],
@@ -123,24 +124,19 @@ selected:
                 self.assertEqual(values["oci_bases"], "")
                 self.assertEqual(values["switchable"], "")
 
-    def test_fips_consumes_source_base_without_extracting_its_docker_archive(self):
-        values = self.values(self.select(BUILD_WITH_BAZEL_WHEN_AVAILABLE="y", INCLUDE_FIPS="y"))
-        self.assertEqual(values["oci_bases"], "")
-        self.assertEqual(values["oci_archive"], "")
-        self.assertEqual(values["runtime_args"], "--//dockers/docker-orchagent:source_config_engine=true")
-        self.assertEqual(values["debug_args"], values["runtime_args"])
-        self.assertEqual(values["runtime_inputs"].split(), [
-            "target/bazel-manifests/docker-base-trixie/manifest.json",
-            "target/bazel-manifests/docker-config-engine-trixie/manifest.json",
-            "target/python-wheels/trixie/scapy.whl",
-            "target/bazel-manifests/docker-orchagent/manifest.json",
-        ])
-        self.assertEqual(values["debug_inputs"].split(), values["runtime_inputs"].split() +
-                         ["target/bazel-manifests/docker-orchagent-dbg/manifest.json"])
-        legacy = self.values(self.select(BUILD_WITH_BAZEL_WHEN_AVAILABLE="y", INCLUDE_FIPS="n"))
-        self.assertEqual(legacy["runtime_args"], "")
-        self.assertEqual(legacy["debug_args"], "")
-        self.assertEqual(legacy["oci_bases"], "docker-config-engine-trixie.oci")
+    def test_fips_and_non_fips_consume_source_base_without_archive_import(self):
+        for fips in ("y", "n"):
+            with self.subTest(fips=fips):
+                values = self.values(self.select(BUILD_WITH_BAZEL_WHEN_AVAILABLE="y", INCLUDE_FIPS=fips))
+                for name in ("oci_bases", "oci_archive", "runtime_args", "debug_args"):
+                    self.assertEqual(values[name], "", name)
+                self.assertEqual(values["runtime_inputs"].split(), [
+                    "target/bazel-manifests/docker-base-trixie/manifest.json",
+                    "target/bazel-manifests/docker-config-engine-trixie/manifest.json",
+                    "target/bazel-manifests/docker-orchagent/manifest.json",
+                ])
+                self.assertEqual(values["debug_inputs"].split(), values["runtime_inputs"].split() +
+                                 ["target/bazel-manifests/docker-orchagent-dbg/manifest.json"])
 
     def test_unavailable_bazel_configurations_preserve_make_inputs(self):
         """The global opt-in keeps the original Make build when SWSS has no supported target."""
@@ -197,8 +193,6 @@ class MakeArchiveRecipeTest(ArchiveRecipeFixture, unittest.TestCase):
     labels = {archive: "//dockers/docker-orchagent:" + archive for archive in archives}
 
     def setUp(self):
-        from tools.bazel.tests.oci_base_fixture import docker_save, image_fixture
-
         super().setUp()
         for directory in ("dockers", "rules", "files"):
             (self.root / directory).symlink_to(ROOT / directory, target_is_directory=True)
@@ -206,13 +200,8 @@ class MakeArchiveRecipeTest(ArchiveRecipeFixture, unittest.TestCase):
         # The production slave loads this generator before the shared bridge.
         generator = (ROOT / "rules/functions").read_text().split("define generate_manifest\n", 1)[1].split("endef", 1)[0]
         self.makefile += "\ndefine generate_manifest\n" + generator + "endef\n"
-        self.base = self.target / "docker-config-engine-trixie.gz"
-        docker_save(self.base, *image_fixture())
-        self.wheel = self.target / "python-wheels/trixie/scapy.whl"
-        self.wheel.parent.mkdir(parents=True)
-        self.wheel.write_bytes(b"cached Make wheel")
-        self.prerequisites = {archive: ["target/docker-config-engine-trixie.oci/index.json",
-                                        "target/python-wheels/trixie/scapy.whl",
+        self.prerequisites = {archive: ["target/bazel-manifests/docker-base-trixie/manifest.json",
+                                        "target/bazel-manifests/docker-config-engine-trixie/manifest.json",
                                         "target/bazel-manifests/docker-orchagent/manifest.json"]
                               for archive in self.archives}
         self.prerequisites[self.archives[1]].append("target/bazel-manifests/docker-orchagent-dbg/manifest.json")
@@ -224,9 +213,10 @@ CONFIGURED_ARCH = amd64
 ENABLE_ASAN = n
 DBG_IMAGE_MARK = dbg
 DOCKERS_PATH = dockers
-DOCKER_CONFIG_ENGINE_TRIXIE = docker-config-engine-trixie.gz
 PYTHON_WHEELS_PATH = target/python-wheels/trixie
 SCAPY = scapy.whl
+include rules/docker-base-trixie.mk
+include rules/docker-config-engine-trixie.mk
 include rules/docker-orchagent.mk
 include tools/bazel/docker.mk
 """
@@ -234,39 +224,21 @@ include tools/bazel/docker.mk
     def test_source_base_prepares_both_variants_without_a_make_base_archive(self):
         self.makefile = self.makefile.replace("include rules/docker-orchagent.mk",
                                               "INCLUDE_FIPS = y\ninclude rules/docker-orchagent.mk")
-        self.base.unlink()
-        source_manifests = ["target/bazel-manifests/" + name + "/manifest.json"
-                            for name in ("docker-base-trixie", "docker-config-engine-trixie")]
-        for name in source_manifests:
-            path = self.root / name
-            path.parent.mkdir(parents=True)
-            path.write_text("{}\n")
-        for name in self.archives:
-            self.prerequisites[name] = source_manifests + self.prerequisites[name][1:]
+        self.assertFalse((self.target / "docker-config-engine-trixie.gz").exists())
+        self.assertFalse((self.target / "python-wheels/trixie/scapy.whl").exists())
         result = self.run_make(*self.archives, parallel=True)
         self.assert_success(result)
         calls = self.recorded_calls()
         self.assertEqual(len(calls), 4)
         self.assertTrue(all(call['prerequisites_ready'] for call in calls))
-        self.assertTrue(all("--//dockers/docker-orchagent:source_config_engine=true" in call['arguments']
+        self.assertTrue(all(not any("source_config_engine" in arg for arg in call["arguments"])
                             for call in calls))
         self.assertNotIn("prepare_oci_base.py --archive", result.stdout)
         self.assertFalse((self.target / "docker-config-engine-trixie.oci").exists())
 
     def test_make_prerequisite_failures_stop_before_bazel(self):
-        """Keep the previous SWSS archive when its Make-provided base or wheel is missing, or the
-        base is invalid.
-        """
-        for missing in (self.base, self.wheel):
-            with self.subTest(missing=missing.name):
-                original = missing.read_bytes()
-                missing.unlink()
-                result = self.run_make()
-                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(self.recorded_calls(), [])
-                self.assertEqual((self.target / self.archives[0]).read_bytes(), b'previous image')
-                missing.write_bytes(original)
-        self.base.write_bytes(b'invalid Make base archive')
+        """Keep the previous SWSS archive when a required Make prerequisite is missing."""
+        self.makefile = self.makefile.replace(".PHONY: .platform\n", "")
         result = self.run_make()
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.recorded_calls(), [])
@@ -292,14 +264,14 @@ include tools/bazel/docker.mk
         self.assertEqual(self.recorded_calls(), [])
         self.assertEqual((self.target / self.archives[0]).read_bytes(), b"previous image")
 
-    def test_swss_declarations_prepare_shared_base_before_both_consumers(self):
-        """Verify the actual SWSS declarations prepare one shared base before either runtime or
-        debug invokes Bazel.
-        """
+    def test_source_producers_prepare_manifests_without_archive_round_trip(self):
+        """Use all three real owners: Bazel needs base manifests, never an installer archive."""
         result = self.run_make(*self.archives, parallel=True)
         self.assert_success(result)
-        self.assertEqual(result.stdout.count('python3 tools/bazel/oci/prepare_oci_base.py'), 1)
-        self.assertTrue((self.target / 'docker-config-engine-trixie.oci/index.json').is_file())
+        self.assertNotIn('python3 tools/bazel/oci/prepare_oci_base.py', result.stdout)
+        self.assertFalse((self.target / 'docker-config-engine-trixie.oci').exists())
+        self.assertFalse((self.target / 'docker-config-engine-trixie.gz').exists())
+        self.assertFalse((self.target / 'docker-base-trixie.gz').exists())
         calls = self.recorded_calls()
         self.assertEqual(len(calls), 4)
         self.assertTrue(all(call['prerequisites_ready'] for call in calls))
@@ -307,6 +279,15 @@ include tools/bazel/docker.mk
             self.assertEqual((self.target / archive).read_bytes(), ('new ' + archive).encode())
             self.assertEqual([call['arguments'][0] for call in calls
                               if call['arguments'][-1] == self.labels[archive]], ['build', 'cquery'])
+
+    def test_stale_installer_archive_is_not_an_oci_input(self):
+        """An unrelated Docker-only installer archive cannot replace the native OCI producer."""
+        archive = self.target / 'docker-config-engine-trixie.gz'
+        archive.write_bytes(b'previous installer archive, not an OCI layout')
+        self.assert_success(self.run_make())
+        self.assertEqual(archive.read_bytes(), b'previous installer archive, not an OCI layout')
+        self.assertFalse((self.target / 'docker-config-engine-trixie.oci').exists())
+        self.assertEqual(len(self.recorded_calls()), 2)
 
 
 if __name__ == "__main__":

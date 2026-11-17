@@ -1,0 +1,47 @@
+"""Unchanged management-service configuration and Make image labels."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-sonic-mgmt-framework:__pkg__"])
+
+_CONFIGS = {
+    "start.sh": "usr/bin/start.sh",
+    "rest-server.sh": "usr/bin/rest-server.sh",
+    "mgmt_vars.j2": "usr/share/sonic/templates/mgmt_vars.j2",
+    "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
+}
+
+tar(
+    name = "files",
+    srcs = ["//dockers/docker-sonic-mgmt-framework:" + name for name in _CONFIGS],
+    mtree = [
+        dest + " uid=0 gid=0 mode=" + ("0755" if dest.startswith("usr/bin/") else "0644") + " time=0 type=file content=$(location //dockers/docker-sonic-mgmt-framework:" + name + ")"
+        for name, dest in _CONFIGS.items()
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-sonic-mgmt-framework" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# The source-owned debug client's ssh-agent retains its declared setgid group.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-sonic-mgmt-framework:docker-sonic-mgmt-framework",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

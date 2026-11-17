@@ -1,0 +1,69 @@
+name: Bazel Sysmgr source packages
+
+on:
+  pull_request:
+    paths:
+      - src/sonic-sysmgr/**
+      - tools/bazel/ci/bazel_commands.py
+      - .github/workflows/bazel-sysmgr.yml
+  push:
+    branches: [master]
+    paths:
+      - src/sonic-sysmgr/**
+      - tools/bazel/ci/bazel_commands.py
+      - .github/workflows/bazel-sysmgr.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native Sysmgr packages (amd64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Nested Linux sandboxes must remount /proc; Docker's masked system paths
+      # otherwise prevent Bazel from registering the required sandbox strategy.
+      options: --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils binutils-gold build-essential ca-certificates curl file git python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Check out the owner's pinned gNOI messages
+        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          module-root: src/sonic-sysmgr
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: sysmgr-amd64
+          cache-version: "8.5.1"
+      - name: Audit, build and validate installed packages and original tests
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p artifacts/sysmgr
+          python3 -B src/sonic-sysmgr/bazel/ci.py \
+            --registry https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
+            --artifacts artifacts/sysmgr 2>&1 | tee artifacts/sysmgr/ci.log
+      - name: Upload packages, original XML and installed-package evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sysmgr-amd64
+          path: artifacts/sysmgr
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1

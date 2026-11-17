@@ -1449,12 +1449,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_APT_PACKAGES)))\n" | awk '!a[$$0]++'))
 		if [ -d $($*.gz_PATH)/cli-plugin-tests/ ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pushd $($*.gz_PATH)/cli-plugin-tests; PATH=$(VIRTENV_BIN_CROSS_PYTHON$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION)):${PATH} PYTHONPATH=$(shell realpath $($*.gz_PATH)):${PYTHONPATH} pytest-$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION) -v $(LOG); popd; fi
 		# Label docker image with components versions
-		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_labels=$(foreach component,\
-			$(call expand,$($*.gz_DEPENDS),RDEPENDS) \
-			$(call expand,$($*.gz_PYTHON_DEBS)) \
-			$(call expand,$($*.gz_PYTHON_WHEELS)),\
-			$(shell [[ ! -z "$($(component)_VERSION)" && ! -z "$($(component)_NAME)" ]] && \
-				echo "--label com.azure.sonic.versions.$($(component)_NAME)=$($(component)_VERSION)")))
+		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_labels=$(foreach label,$(call docker_component_version_labels,$*.gz),--label $(label)))
 		python3 scripts/j2_include.py -I $($*.gz_PATH) $($*.gz_J2_INCLUDE_PATHS) $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
 		$(call generate_manifest,$*)
 		# Prepare docker build info
@@ -1676,6 +1671,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         .platform \
         onie-image.conf \
         build_debian.sh \
+        scripts/validate_sonic_version.py \
+        files/build_templates/sonic_version.yml.j2 \
         files/build_templates/sonic_debian_extension.j2 \
         files/build_templates/docker_image_ctl.j2 \
         $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
@@ -1779,6 +1776,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_kernel_cafile="$(SECURE_UPGRADE_KERNEL_CAFILE)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
+	export SECURE_UPGRADE_MODE="$${sonic_su_mode}"
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_otel="$(INCLUDE_SYSTEM_OTEL)"
@@ -1852,6 +1850,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
+	export ENABLE_MULTIDB="$(ENABLE_MULTIDB)"
+	export ENABLE_VRF_STRICT="$(ENABLE_VRF_STRICT)"
 	export ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)"
 	$(foreach docker, $($*_DOCKERS),\
 		export docker_image="$(docker)"

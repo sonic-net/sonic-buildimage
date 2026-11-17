@@ -1,15 +1,57 @@
 # Check installed runtime and debug images
 
-The OCI layout checks prove which files and symbols an image contains. They do
-not execute those files. `tools/bazel/ci/validate_runtime.py` adds an optional
-check of the exact exported runtime/debug archives from
-[the Syncd image work](https://github.com/securely1g/sonic-buildimage/pull/13).
-It does not build an image or package.
+`tools/bazel/ci/validate_runtime.py` is the shared Docker validation entry point
+for base, SWSS and Syncd images. It does not build an image or package. Static
+OCI validation and Docker loading remain distinct: the former checks the
+layers and export, while the latter checks the filesystem Docker actually
+installs from that export.
 
-The Syncd-specific policy and source-image entry point are maintained in
-[PR #20](https://github.com/securely1g/sonic-buildimage/pull/20). Supply that
-policy explicitly when validating prepared Syncd archives; it is not an image
-build input.
+## Check files and symbols in CI's exported images
+
+The base workflow runs this mode on native AMD64 and ARM64. The full VS workflow
+runs it on native AMD64 for config-engine, SWSS and Syncd runtime/debug images:
+
+```sh
+python3 -B tools/bazel/ci/validate_runtime.py \
+  --images-policy artifacts/vs/swss-installed-images-policy.json \
+  --images-policy artifacts/vs/syncd-installed-images-policy.json \
+  --target target \
+  --output artifacts/vs/installed-images.json
+```
+
+Bazel generates the policy from the image owners' declarations and actual OCI
+outputs (`//tools/bazel/tests:swss_installed_images_policy` with the normal
+SWSS flags and `//tools/bazel/tests:syncd_installed_images_policy` with
+`--config=syncd-dash`). These match Make's two build configurations. The runner
+combines identical shared-base declarations and rejects conflicting identities.
+The base-image driver uses the same policy generation for its two images.
+The policy identifies the archives, expected image configuration, file metadata, parent relationships,
+directory aliases and runtime/debug pairs. The validator uses ordinary
+`docker load`, then probes immutable image IDs in isolated containers.
+
+For example, config-engine supplies
+`usr/lib/x86_64-linux-gnu/libswsscommon.so.0.0.0` and
+`run/redis/sonic-db/database_config.json`. SWSS and Syncd must retain those
+files' hashes, ownership and modes, and `/var/run` must remain a symlink to
+`/run`. The database configuration must be root-owned `0644`. A child layer
+that overwrites the library or replaces the symlink causes validation to fail.
+Common's deployed ELF and its debug file are copied from the containers;
+matching build IDs, DWARF and debuglink CRC are checked by the shared ELF helper.
+These file probes do not start the SONiC services.
+
+This mode expects a private Docker daemon or an ephemeral runner dedicated to
+this job: loading the archives retains their published tags. Full VS CI
+uses the direct SONiC slave worker's private Docker daemon for loading and
+probing. The retained legacy job prepares a separate nested daemon and cgroups.
+The native base workflow retains
+its additional installed-program, Python/YANG and FIPS smoke checks.
+
+## Optional program and startup probes
+
+The same entry point also supports the existing runtime/debug program-probe
+mode below. Its Syncd policy and source-image entry point are maintained in
+[PR #20](https://github.com/securely1g/sonic-buildimage/pull/20). Those probes are
+separate from the shared file checks enabled in full VS CI.
 
 ## Run against prepared archives
 
@@ -84,8 +126,8 @@ and DASH SAI as well as its other native source packages. Runtime probes alone
 do not prove source provenance; the source receipts and action audit establish
 that separate property.
 
-The `Installed-image validator` workflow tests the validator on native AMD64 and
-ARM64, including compiling a tiny C library and checking its split symbols with
-GDB. It does not build or run a SONiC image, compile P4/DASH producers, or create
+The `Installed-image validator` workflow tests both modes on native AMD64 and
+ARM64, including compiling a tiny C library, checking split symbols with GDB,
+rejecting a corrupted debug file, and checking the workflow isolation guards. It does not build or run a SONiC image, compile P4/DASH producers, or create
 DEB packages. The current Syncd image policy is AMD64-only;
 ARM64 validator CI must not be reported as ARM64 image support.

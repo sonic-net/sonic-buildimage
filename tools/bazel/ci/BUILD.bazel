@@ -4,4 +4,11 @@ py_library(
     name = "artifact_validation",
     srcs = ["artifact_validation.py"],
     visibility = ["//visibility:public"],
+    deps = [":validation_inputs"],
+)
+
+py_library(
+    name = "validation_inputs",
+    srcs = ["validation_inputs.py"],
+    visibility = ["//visibility:public"],
 )

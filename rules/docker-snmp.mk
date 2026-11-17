@@ -39,3 +39,28 @@ $(DOCKER_SNMP)_BASE_IMAGE_FILES += monit_snmp:/etc/monit/conf.d
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SNMP)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_SNMP_DBG)
+
+# The first supported source-built profile shares PR #64's Trixie/FIPS base.
+# Every other profile retains the original Make recipe and package lists above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_SNMP) $(DOCKER_SNMP_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_SNMP)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_SNMP_DBG)
+$(DOCKER_SNMP_DBG)_PATH = $($(DOCKER_SNMP)_PATH)
+$(DOCKER_SNMP)_BAZEL_TARGET = //dockers/docker-snmp:$(DOCKER_SNMP)
+$(DOCKER_SNMP_DBG)_BAZEL_TARGET = //dockers/docker-snmp:$(DOCKER_SNMP_DBG)
+$(DOCKER_SNMP)_BAZEL_ARGS = --//dockers/docker-snmp:image_version=$(SONIC_IMAGE_VERSION)
+$(DOCKER_SNMP_DBG)_BAZEL_ARGS = $($(DOCKER_SNMP)_BAZEL_ARGS)
+SONIC_BAZEL_MANIFESTS += docker-snmp docker-snmp-$(DBG_IMAGE_MARK)
+docker-snmp_MANIFEST_IMAGE = $(DOCKER_SNMP)
+docker-snmp-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_SNMP)
+docker-snmp-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_SNMP)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-snmp/manifest.json
+$(DOCKER_SNMP_DBG)_BAZEL_DEPENDS = $($(DOCKER_SNMP)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-snmp-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

@@ -39,3 +39,29 @@ $(DOCKER_EVENTD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_EVENTD)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_EVENTD_DBG)
+
+# The parent already supplies source-built eventd and Common runtime files.
+# Other profiles retain the Make package prerequisites declared above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_EVENTD) $(DOCKER_EVENTD_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_EVENTD)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_EVENTD_DBG)
+$(DOCKER_EVENTD_DBG)_PATH = $($(DOCKER_EVENTD)_PATH)
+$(DOCKER_EVENTD)_BAZEL_TARGET = //dockers/docker-eventd:$(DOCKER_EVENTD)
+$(DOCKER_EVENTD_DBG)_BAZEL_TARGET = //dockers/docker-eventd:$(DOCKER_EVENTD_DBG)
+SONIC_BAZEL_MANIFESTS += docker-eventd docker-eventd-dbg
+docker-eventd_MANIFEST_IMAGE = $(DOCKER_EVENTD)
+docker-eventd-dbg_MANIFEST_IMAGE = $(DOCKER_EVENTD)
+docker-eventd-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_EVENTD)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-eventd/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-eventd/image.env
+$(DOCKER_EVENTD_DBG)_BAZEL_DEPENDS = $($(DOCKER_EVENTD)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-eventd-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-eventd
+endif
+endif
+endif

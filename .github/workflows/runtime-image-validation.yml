@@ -4,6 +4,17 @@ on:
   pull_request:
     paths:
       - tools/bazel/ci/validate_runtime.py
+      - tools/bazel/tests/runtime_validation_test.py
+      - tools/bazel/tests/installed_images_test.py
+      - tools/bazel/tests/image_workflow_test.py
+      - tools/bazel/ci/verify_vs_oci.sh
+      - tools/bazel/private_server.sh
+      - tools/bazel/tests/vs_oci_session_test.py
+      - tools/bazel/oci/oci_inventory.py
+      - tools/bazel/tests/integration/oci_inventory_test.py
+      - tools/bazel/tests/integration/oci_image_test.py
+      - .github/workflows/bazel-oci.yml
+      - .github/workflows/bazel-base-images.yml
       - tools/bazel/oci/runtime_smoke.py
       - tools/bazel/oci/tests/runtime_smoke_test.py
       - tools/bazel/oci/RUNTIME_VALIDATION.md
@@ -12,6 +23,17 @@ on:
     branches: [master]
     paths:
       - tools/bazel/ci/validate_runtime.py
+      - tools/bazel/tests/runtime_validation_test.py
+      - tools/bazel/tests/installed_images_test.py
+      - tools/bazel/tests/image_workflow_test.py
+      - tools/bazel/ci/verify_vs_oci.sh
+      - tools/bazel/private_server.sh
+      - tools/bazel/tests/vs_oci_session_test.py
+      - tools/bazel/oci/oci_inventory.py
+      - tools/bazel/tests/integration/oci_inventory_test.py
+      - tools/bazel/tests/integration/oci_image_test.py
+      - .github/workflows/bazel-oci.yml
+      - .github/workflows/bazel-base-images.yml
       - tools/bazel/oci/runtime_smoke.py
       - tools/bazel/oci/tests/runtime_smoke_test.py
       - tools/bazel/oci/RUNTIME_VALIDATION.md
@@ -48,5 +70,12 @@ jobs:
       - name: Check loading, matching debug symbols and container guards
         run: |
           for tool in cc objcopy readelf gdb; do command -v "$tool"; done
-          env -u PYTHONSAFEPATH /usr/bin/python3 -B -m unittest tools.bazel.oci.tests.runtime_smoke_test -v
+          env -u PYTHONSAFEPATH /usr/bin/python3 -B -m unittest \
+            tools.bazel.oci.tests.runtime_smoke_test \
+            tools.bazel.tests.runtime_validation_test \
+            tools.bazel.tests.installed_images_test \
+            tools.bazel.tests.vs_oci_session_test \
+            tools.bazel.tests.integration.oci_inventory_test \
+            tools.bazel.tests.integration.oci_image_test \
+            tools.bazel.tests.image_workflow_test -v
           /usr/bin/python3 -B tools/bazel/ci/validate_runtime.py --help

@@ -4,15 +4,35 @@ on:
   pull_request:
     paths:
       - .github/workflows/bazel-supervisor-rust.yml
+      - .bazelrc
+      - .bazelversion
       - MODULE.bazel
       - tools/bazel/common.bazelrc
+      - tools/bazel/go-lock
+      - tools/bazel/go/**
+      - tools/bazel/tests/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
       - src/sonic-supervisord-utilities-rs/**
   push:
     branches: [master]
     paths:
       - .github/workflows/bazel-supervisor-rust.yml
+      - .bazelrc
+      - .bazelversion
       - MODULE.bazel
       - tools/bazel/common.bazelrc
+      - tools/bazel/go-lock
+      - tools/bazel/go/**
+      - tools/bazel/tests/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
       - src/sonic-supervisord-utilities-rs/**
   workflow_dispatch:
 
@@ -20,7 +40,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bazel-supervisor-rust-${{ github.event.pull_request.number || github.ref }}
+  group: bazel-supervisor-rust-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -31,16 +51,18 @@ jobs:
       matrix:
         include:
           - arch: AMD64
-            runner: ubuntu-24.04
+            runner: [self-hosted, linux, bazel-x64]
             machine: x86_64
             debian_arch: amd64
           - arch: ARM64
-            runner: ubuntu-24.04-arm
+            runner: [self-hosted, linux, bazel-arm64]
             machine: aarch64
             debian_arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    env:
+      BAZEL: tools/bazel/ci/libteam_draft_bazel.sh
     defaults:
       run:
         shell: bash
@@ -48,12 +70,14 @@ jobs:
       - name: Install native verification tools
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends binutils build-essential ca-certificates gdb git python3
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates file gdb git pkg-config python3
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Initialize Sysmgr's pinned gNOI source
+        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -62,6 +86,10 @@ jobs:
           disk-cache: ${{ github.workflow }}-${{ matrix.arch }}
           cache-version: "8.5.1"
 
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
       - name: Verify native architecture and clean dependency inputs
         env:
           EXPECTED_MACHINE: ${{ matrix.machine }}
@@ -76,9 +104,23 @@ jobs:
           test ! -e MODULE.bazel.lock
           test -z "$(git ls-files -- MODULE.bazel.lock)"
 
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Check the root Go ZIP lock
+        if: matrix.arch == 'AMD64'
+        run: |
+          tools/bazel/go-lock --check
+          git diff --exit-code
+
       - name: Audit and test source runtime and debug packages
         env:
           MACHINE: ${{ matrix.machine }}
+          BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
         run: |
           set -euo pipefail
           flags=(--jobs=4
@@ -87,17 +129,20 @@ jobs:
           targets=(//src/sonic-supervisord-utilities-rs:unit_tests
             //src/sonic-supervisord-utilities-rs:integration_tests
             //src/sonic-supervisord-utilities-rs:listener_tests
-            //src/sonic-supervisord-utilities-rs:package_test)
+            //src/sonic-supervisord-utilities-rs:package_test
+            @sonic_swss//crates/countersyncd:common_rust_test)
           audit_flags=()
           for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
-          python3 tools/bazel/ci/bazel_commands.py "${audit_flags[@]}" \
+          python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
             --output artifacts/supervisor-rust/action-audit.json "${targets[@]}"
-          bazel test "${flags[@]}" --test_output=errors "${targets[@]}"
-          bazel cquery "${flags[@]}" --noimplicit_deps \
+          "$BAZEL" test "${flags[@]}" --test_output=errors "${targets[@]}"
+          "$BAZEL" cquery "${flags[@]}" --noimplicit_deps \
             'kind("rust_library rule", deps(//src/sonic-supervisord-utilities-rs:supervisor_library))' \
             > artifacts/supervisor-rust/rust-libraries.txt
           cp MODULE.bazel.lock artifacts/supervisor-rust/MODULE.bazel.lock
           cp -aL bazel-testlogs/src/sonic-supervisord-utilities-rs artifacts/supervisor-rust/tests
+          common_repo="$("$BAZEL" mod dump_repo_mapping '' | python3 -c 'import json, sys; print(json.load(sys.stdin)["sonic_swss"])')"
+          cp -aL "bazel-testlogs/external/$common_repo/crates/countersyncd/common_rust_test" artifacts/supervisor-rust/tests/
           git diff --exit-code
 
       - name: Retain source and installed-package evidence

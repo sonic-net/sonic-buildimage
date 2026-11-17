@@ -1,0 +1,312 @@
+"""Sysmgr images consume source-owned runtime TARs and matching symbols."""
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sysmgr_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_BASE = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
+
+_LOCK = "@sonic_build_infra//apt:apt.lock.json"
+
+_COMPATIBLE = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-sysmgr",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_FILES = {
+    "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
+    "critical_processes": "etc/supervisor/critical_processes",
+}
+
+exports_files(_FILES.keys() + ["Dockerfile.j2"])
+
+# Preserve the Dockerfile's syslog tag and config-engine status marker.
+expand_template(
+    name = "syslog_config",
+    out = "rsyslog.conf",
+    substitutions = {"%syslogtag%": "sysmgr#%syslogtag%"},
+    template = "//dockers/docker-base-trixie:etc/rsyslog.conf",
+)
+
+write_file(
+    name = "status_marker",
+    out = "config_status",
+    content = ["# Config files managed by sonic-config-engine", ""],
+)
+
+tar(
+    name = "files",
+    srcs = _FILES.keys() + [
+        ":status_marker",
+        ":syslog_config",
+    ],
+    mtree = [
+        path + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location " + source + ")"
+        for source, path in _FILES.items()
+    ] + [
+        "etc/rsyslog.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location :syslog_config)",
+        "var/sonic/config_status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :status_marker)",
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" + suffix,
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-sysmgr" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# Common belongs to the source-built parent. Add the Sysmgr and Protobuf
+# owners' exact runtime payloads; their debug providers follow the same edges.
+sonic_layer(
+    name = "source_runtime",
+    tars = [
+        "@sonic_sysmgr//:sysmgr_pkg",
+        "@sonic_protobuf//:libprotobuf_pkg",
+    ],
+)
+
+debug_symbols_layer(
+    name = "source_debug_symbols",
+    image = ":source_runtime",
+)
+
+# The external roots follow Sysmgr's actual DT_NEEDED and declared Debian
+# dependencies. Existing parent packages are retained when versions satisfy it.
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "sysmgr_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["sysmgr_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_payload",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debian"]["amd64"].values()],
+    owner_metadata = [
+        "@sonic_sysmgr//:runtime_packages.json",
+        "@sonic_protobuf//:runtime_packages.json",
+    ],
+    source_modules = {
+        "sonic-sysmgr": "@image_source_modules//:sonic-sysmgr.MODULE.bazel",
+        "protobuf-legacy": "@image_source_modules//:protobuf-legacy.MODULE.bazel",
+    },
+    source_spec = "//dockers/docker-sysmgr/bazel:source_paths.json",
+    sources = {
+        "sysmgr": "@sonic_sysmgr//:sysmgr_pkg",
+        "libprotobuf32t64": "@sonic_protobuf//:libprotobuf_pkg",
+    },
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/sysmgr-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sysmgr",
+    base = _BASE,
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_payload",
+        ":source_runtime",
+        ":files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-sysmgr.debug_symbols",
+    image = ":docker-sysmgr",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-sysmgr",
+    dependency_set = "sysmgr_debug_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+# Replace the parent's vim.tiny hardlink with the full debug Vim selection.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+# Match the selected FIPS OpenSSH owner's ssh-agent group contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-sysmgr",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-sysmgr",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-sysmgr/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/sysmgr-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sysmgr-dbg",
+    base = ":docker-sysmgr",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-sysmgr.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-sysmgr" + suffix + ".gz",
+        image = ":docker-sysmgr" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-sysmgr.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# Private validation service only; this payload never enters the production image.
+flatten(
+    name = "test_services",
+    testonly = True,
+    deduplicate = True,
+    tars = [
+        "@sysmgr_test_debian//redis-server",
+        "@sysmgr_test_debian//dbus-daemon",
+    ],
+)

@@ -1,0 +1,16 @@
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_python//python:defs.bzl", "py_binary")
+
+# The standard APT rule supplies the generator and its native runtime.
+flatten(
+    name = "runtime",
+    tars = ["@build_tools//libdbus-c++-bin"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "generate",
+    srcs = ["generate.py"],
+    main = "generate.py",
+    visibility = ["//visibility:public"],
+)

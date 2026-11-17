@@ -1,0 +1,252 @@
+"""AMD64 management-service images from the Framework and Common source owners."""
+
+load("@framework_runtime_apt_inputs//:apt_inputs.bzl", RUNTIME_APT_INPUTS = "APT_INPUTS")
+load("@sysmgr_apt_inputs//:apt_inputs.bzl", DEBUG_APT_INPUTS = "APT_INPUTS")
+load("@image_framework_pip//:requirements.bzl", "whl_requirement")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "start.sh",
+    "rest-server.sh",
+    "mgmt_vars.j2",
+    "supervisord.conf",
+])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-sonic-mgmt-framework",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "framework_debian",
+    lock = "//dockers/docker-sonic-mgmt-framework/bazel:apt.lock.json",
+    packages = RUNTIME_APT_INPUTS["framework_cli_target_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+# Preserve real imported Debian control records. Project runtime TARs have no
+# dpkg installation; their source and installed payloads are verified separately.
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in RUNTIME_APT_INPUTS["framework_cli_target_debian"]["amd64"].values()],
+    source_spec = "//dockers/docker-sonic-mgmt-framework/bazel:source_paths.json",
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/mgmt-framework-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+flatten(
+    name = "source_runtime",
+    deduplicate = True,
+    tars = [
+        "@sonic_mgmt_common//dist:runtime",
+        "@sonic_mgmt_framework//dist:runtime",
+    ],
+)
+
+# The parent already supplies six. Generator-only wheels from the owner's lock
+# are excluded; the CLI receives only requests and its runtime dependency closure.
+wheel_layer(
+    name = "python_runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [whl_requirement(name) for name in [
+        "certifi",
+        "charset-normalizer",
+        "idna",
+        "requests",
+        "urllib3",
+    ]],
+)
+
+oci_image(
+    name = "docker-sonic-mgmt-framework",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = "//dockers/docker-sonic-mgmt-framework/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        ":python_runtime",
+        "//dockers/docker-sonic-mgmt-framework/config:files",
+        ":installed_package_state",
+    ],
+)
+
+# Consume the owner's complete public symbol TAR explicitly: its CLI archive
+# uses pkg_tar dependencies that the generic OCI debug aspect does not traverse.
+flatten(
+    name = "docker-sonic-mgmt-framework.debug_symbols",
+    deduplicate = True,
+    tars = [
+        "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+        "@sonic_mgmt_framework//dist:runtime.debug_symbols",
+    ],
+)
+
+# Select debug imports against the final runtime package state, not the earlier
+# APT receipt whose base inventory predates the installed status file.
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-sonic-mgmt-framework",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-sonic-mgmt-framework",
+    controls = [label + ":control" for label in DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-sonic-mgmt-framework/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/mgmt-framework-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sonic-mgmt-framework-dbg",
+    base = ":docker-sonic-mgmt-framework",
+    labels = "//dockers/docker-sonic-mgmt-framework/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-sonic-mgmt-framework.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-sonic-mgmt-framework/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-sonic-mgmt-framework" + suffix + ".gz",
+        image = ":docker-sonic-mgmt-framework" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-sonic-mgmt-framework.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@sysmgr_test_debian//redis-server"],
+)

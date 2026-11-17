@@ -1,0 +1,71 @@
+"""Original LLDP startup files, service accounts and Make metadata."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-lldp:__pkg__"])
+
+# Exact Debian adduser result against the selected source config-engine parent.
+# The owner's lldpcli remains setuid _lldpd and group adm, mode 04750.
+account_layer(
+    name = "accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    groups = [{"name": "_lldpd", "password": "x", "gid": 102}],
+    users = [{
+        "username": "_lldpd",
+        "password": "x",
+        "uid": 101,
+        "gid": 102,
+        "home": "/run/lldpd",
+        "shell": "/usr/sbin/nologin",
+    }],
+)
+
+_FILES = {
+    "docker-lldp-init.sh": "usr/bin/docker-lldp-init.sh",
+    "start.sh": "usr/bin/start.sh",
+    "waitfor_lldp_ready.sh": "usr/bin/waitfor_lldp_ready.sh",
+    "lldpmgrd": "usr/bin/lldpmgrd",
+    "lldpd": "etc/default/lldpd",
+    "lldpd.conf.j2": "usr/share/sonic/templates/lldpd.conf.j2",
+    "lldpdSysDescr.conf.j2": "usr/share/sonic/templates/lldpdSysDescr.conf.j2",
+    "supervisord.conf.j2": "usr/share/sonic/templates/supervisord.conf.j2",
+    "supervisord.conf.common.j2": "usr/share/sonic/templates/supervisord.conf.common.j2",
+    "critical_processes": "etc/supervisor/critical_processes",
+}
+
+genrule(
+    name = "statoverride",
+    srcs = ["//dockers/docker-config-engine-trixie:docker-config-engine-trixie"],
+    outs = ["statoverride.txt"],
+    cmd = "$(execpath //tools/bazel/oci:statoverride) --base $(location //dockers/docker-config-engine-trixie:docker-config-engine-trixie) --entry '_lldpd adm 4750 /usr/sbin/lldpcli' --output $@",
+    tools = ["//tools/bazel/oci:statoverride"],
+)
+
+tar(
+    name = "files",
+    srcs = [":statoverride"] + ["//dockers/docker-lldp:" + name for name in _FILES],
+    mtree = [destination + " uid=0 gid=0 mode=" + ("0755" if destination.startswith("usr/bin/") else "0644") + " time=0 type=file content=$(location //dockers/docker-lldp:" + name + ")" for name, destination in _FILES.items()] + [
+        "var/lib/dpkg/statoverride uid=0 gid=0 mode=0644 time=0 type=file content=$(location :statoverride)",
+    ],
+)
+
+[manifest_labels(
+    name = "labels" if suffix == "" else "debug_labels",
+    out = "manifest" + suffix + ".labels",
+    manifest = "//:target/bazel-manifests/docker-lldp" + suffix + "/manifest.json",
+    image_version = "//dockers/docker-lldp:image_version",
+    package_receipt = "//dockers/docker-lldp:runtime_package_metadata",
+    version_packages = ["libswsscommon", "sonic-supervisord-utilities-rs"],
+) for suffix in ["", "-dbg"]]
+
+# The FIPS owner TAR reserves GID104 for its setgid ssh-agent. Preserve that
+# declared owner contract; this is not a fresh dpkg group-allocation request.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-lldp:docker-lldp",
+    groups = [{"name": "_ssh", "password": "x", "gid": 104}],
+)

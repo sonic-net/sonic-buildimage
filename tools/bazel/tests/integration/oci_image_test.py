@@ -12,9 +12,12 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 ROOT = Path(__file__).absolute().parents[4]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.validation_inputs import validation_input_cache
 from tools.bazel.tests.oci_base_fixture import digest, oci_files, tar_entries as layer, write_layout
 from tools.bazel.oci import image_validation as subject
 from tools.bazel.oci import package_payloads as validate_payloads
@@ -196,7 +199,7 @@ class ValidateImageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "debug imported base symbols"):
             self.validate(base_debug_symbols=payload, base_debug_receipt=receipt)
 
-    def source_archives(self):
+    def source_archives(self, extra_runtime=()):
         """Model owner tar payloads independently of Make's remaining package handoff."""
         records = copy.deepcopy(self.source_contract["packages"])
         directory = self.root / "source"
@@ -212,6 +215,8 @@ class ValidateImageTest(unittest.TestCase):
                     continue
                 data = self.ssh_elf + package.encode() if kind == "elf" else b"source data"
                 runtime.append((name, data, 0o755 if kind == "elf" else 0o644))
+            if index == 0:
+                runtime.extend(extra_runtime)
             debug = [("usr/lib/debug/.build-id/ab/" + str(index) * 38 + ".debug",
                       self.ssh_elf + b"symbols" + package.encode(), 0o644)]
             runtime_path, debug_path = directory / (package + ".tar"), directory / (package + "-debug.tar")
@@ -313,11 +318,13 @@ class ValidateImageTest(unittest.TestCase):
                                     self.debug_handoff, self.runtime_manifest, self.debug_manifest, self.root, policy=self.policy,
                                     source_contract_path=self.source_contract_path, dpkg_filter_path=self.filter_path, **complete)
 
-    def complete_make_only_inputs(self):
+    def complete_make_only_inputs(self, *, direct_layers=False):
         """Supply real OCI descriptors, overlay receipts and save archives for the production path."""
         self.policy["native"].update(require_source=False, require_imported_symbols=False)
         self.policy["image_validation"].update(startup_files={}, debug_alternatives=[],
                                                required_elf_paths=["usr/bin/ssh"], package_state=False)
+        if direct_layers:
+            self.policy.update(retained_source="none", retained_requirements=[])
         base_stream = io.BytesIO()
         with tarfile.open(fileobj=base_stream, mode="w") as archive:
             directories = {".", "usr", "var", *[item["target"] for item in validate_payloads.DIRECTORY_ALIASES.values()]}
@@ -336,6 +343,8 @@ class ValidateImageTest(unittest.TestCase):
         tools = self.root / "tools.tar"
         tools.write_bytes(layer([("usr/share/example/debug-tool", b"debug addition", 0o644)]))
         self.runtime_layers = [base_stream.getvalue(), self.runtime_payload.read_bytes(), apt.read_bytes()]
+        if direct_layers:
+            self.runtime_layers = [base_stream.getvalue(), apt.read_bytes(), self.runtime_payload.read_bytes()]
         self.debug_layers = self.runtime_layers + [tools.read_bytes(), self.debug_payload.read_bytes()]
         self.write_images()
         lock = self.root / "apt-lock.json"
@@ -349,6 +358,13 @@ class ValidateImageTest(unittest.TestCase):
                 "base_manifest_digest": subject.image(selected_base)[0]["digest"],
                 "apt_lock_sha256": subject.sha(lock), "make_manifest_sha256": subject.sha(manifest),
                 "selected": [], "skipped_base": [], "skipped_make": [], "changed_non_elf_base_paths": []}))
+            if direct_layers:
+                selected = json.loads(selection.read_bytes())
+                selected.update(image=self.policy["image"], group=selected.pop("variant"),
+                                dependency_check={"status": "satisfied"},
+                                skipped_retained=selected.pop("skipped_make"))
+                selected.pop("make_manifest_sha256")
+                selection.write_text(json.dumps(selected))
             selections[variant + "_apt_selection"] = selection
         archives = {}
         for variant, layers in (("runtime", self.runtime_layers), ("debug", self.debug_layers)):
@@ -363,8 +379,233 @@ class ValidateImageTest(unittest.TestCase):
             archive = self.root / (variant + "-save.tar.gz")
             archive.write_bytes(gzip.compress(layer(entries), mtime=0))
             archives[variant + "_archive"] = archive
+        declared = {"runtime_payload_layers": [self.runtime_payload], "debug_payload_layers": [self.debug_payload]} if direct_layers else {}
         return {"base_path": base, "apt_layer": apt, "debug_tools_layer": tools,
-                "apt_lock_path": lock, **selections, **archives}
+                "apt_lock_path": lock, **selections, **archives, **declared}
+
+    def validate_direct_images(self, inputs):
+        return subject.validate_images(self.root / "runtime.oci", self.root / "debug.oci", None, None,
+            self.runtime_manifest, self.debug_manifest, self.root, policy=self.policy, **inputs)
+
+    def complete_receipted_layers(self, *, extra_runtime=(), omitted_runtime=()):
+        """Compose an owned library with other payloads, retaining its independent receipt."""
+        # This fixture installs one real file; link semantics have independent
+        # package-contract tests and are not needed for the composition case.
+        for record in self.source_contract["packages"]:
+            record["required_paths"] = {name: kind for name, kind in record["required_paths"].items()
+                                        if kind != "symlink"}
+        self.source_contract_path.write_text(json.dumps(self.source_contract))
+        source = self.source_archives(extra_runtime)
+        combined = io.BytesIO()
+        with tarfile.open(fileobj=combined, mode="w") as output:
+            for path in (self.runtime_payload, source["source_runtime_tar"]):
+                with tarfile.open(path) as archive:
+                    for member in archive:
+                        if member.name in omitted_runtime:
+                            continue
+                        output.addfile(member, archive.extractfile(member) if member.isfile() else None)
+        self.runtime_payload.write_bytes(combined.getvalue())
+        self.debug_payload = source["source_debug_tar"]
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        self.policy["retained_source"] = "source"
+        receipt = json.loads(source["source_receipt"].read_bytes())
+        receipt["base_manifest_digest"] = subject.image(inputs["base_path"])[0]["digest"]
+        source["source_receipt"].write_text(json.dumps(receipt))
+        for variant in ("runtime", "debug"):
+            path = inputs[variant + "_apt_selection"]
+            selection = json.loads(path.read_bytes())
+            selection.update(variant=selection.pop("group"), skipped_source=selection.pop("skipped_retained"),
+                             skipped_make=[], make_manifest_sha256=None,
+                             source_receipt_sha256=subject.sha(source["source_receipt"]))
+            path.write_text(json.dumps(selection))
+        excludes, includes = self.root / "source-excludes.txt", self.root / "source-includes.txt"
+        excludes.write_text("usr/share/doc/*\n")
+        includes.write_text("\n".join("usr/share/doc/*/" + name
+                                     for name in ("copyright", "LICENSE*", "COPYING*", "NOTICE*")) + "\n")
+        return {**inputs, **source, "source_contract_path": self.source_contract_path,
+                "source_layer_excludes": excludes, "source_layer_includes": includes}
+
+    def test_direct_layers_keep_their_source_package_ownership_receipt(self):
+        """An aggregate layer can add files while preserving independently checked owner bytes."""
+        inputs = self.complete_receipted_layers()
+        result = self.validate_direct_images(inputs)
+        self.assertEqual(result["validation_mode"], "complete")
+        self.assertEqual(result["source_receipt_sha256"], subject.sha(inputs["source_receipt"]))
+        self.assertEqual(result["source_runtime_payload_entries"], 3)
+        self.assertEqual(result["archives"]["runtime"]["sha256"], subject.sha(inputs["runtime_archive"]))
+
+    def test_source_retaining_direct_layers_cannot_omit_their_receipt(self):
+        """Actual source policy must not fall back to the unreceipted direct-layer adapter."""
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        self.policy["retained_source"] = "source"
+        with self.assertRaisesRegex(ValueError, "cannot replace a required package receipt"):
+            self.validate_direct_images(inputs)
+
+    def test_direct_layers_cannot_replace_a_receipted_package(self):
+        """A valid receipt cannot be hidden by composing different bytes at its installed path."""
+        inputs = self.complete_receipted_layers()
+        replacement = self.root / "replacement.tar"
+        replacement.write_bytes(layer([("usr/lib/libexample.so.2.4.0", self.ssh_elf + b"changed", 0o755)]))
+        inputs["runtime_payload_layers"].append(replacement)
+        with self.assertRaisesRegex(ValueError, "declared layers change the receipted runtime payload"):
+            self.validate_direct_images(inputs)
+
+    def test_receipted_layers_apply_declared_documentation_filter(self):
+        """Keep the full source receipt while the declared OCI policy excludes a changelog."""
+        changelog = "usr/share/doc/example/changelog.Debian.gz"
+        notices = [("usr/share/doc/example/" + name, name.encode(), 0o644)
+                   for name in ("copyright", "LICENSE", "COPYING", "NOTICE")]
+        inputs = self.complete_receipted_layers(
+            extra_runtime=[(changelog, gzip.compress(b"source history", mtime=0), 0o644), *notices],
+            omitted_runtime=[changelog])
+        result = self.validate_direct_images(inputs)
+        self.assertEqual(result["validation_mode"], "complete")
+        self.assertIn(changelog, result["source_packages"]["packages"][0]["files"])
+
+    def test_receipted_layers_reject_missing_legal_notice_or_library(self):
+        """Filtering must not turn absent retained files into an accepted source subset."""
+        notice = "usr/share/doc/example/NOTICE"
+        library = "usr/lib/libexample.so.2.4.0"
+        inputs = self.complete_receipted_layers(extra_runtime=[(notice, b"legal notice", 0o644)])
+        original = inputs["runtime_payload_layers"][0].read_bytes()
+        for missing in (notice, library):
+            output = io.BytesIO()
+            with tarfile.open(fileobj=io.BytesIO(original)) as source, tarfile.open(fileobj=output, mode="w") as archive:
+                for member in source:
+                    if member.name != missing:
+                        archive.addfile(member, source.extractfile(member) if member.isfile() else None)
+            inputs["runtime_payload_layers"][0].write_bytes(output.getvalue())
+            with self.subTest(path=missing), self.assertRaisesRegex(ValueError, "receipted runtime payload.*" + missing):
+                self.validate_direct_images(inputs)
+
+    def test_receipted_layers_reject_changed_notice_bytes_or_metadata(self):
+        """An OCI include exception preserves complete file metadata and content."""
+        notice = "usr/share/doc/example/COPYING"
+        inputs = self.complete_receipted_layers(extra_runtime=[(notice, b"legal notice", 0o644)])
+        replacement = self.root / "changed-notice.tar"
+        inputs["runtime_payload_layers"].append(replacement)
+        for data, mode in ((b"changed notice", 0o644), (b"legal notice", 0o600)):
+            replacement.write_bytes(layer([(notice, data, mode)]))
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "receipted runtime payload.*COPYING"):
+                self.validate_direct_images(inputs)
+
+    def test_oci_filter_cannot_remove_an_elf_outside_required_paths(self):
+        """Even an undeclared extra ELF cannot disappear under documentation exclusions."""
+        inputs = self.complete_receipted_layers(
+            extra_runtime=[("usr/share/doc/example/extra-program", self.ssh_elf, 0o755)])
+        with self.assertRaisesRegex(ValueError, "filter removes a required source path or ELF"):
+            self.validate_direct_images(inputs)
+
+    def test_oci_filter_cannot_remove_a_required_non_elf_path(self):
+        """The owner contract's required data paths survive independently of ELF checks."""
+        self.source_contract["packages"][0]["required_paths"]["usr/share/doc/example/required-data"] = "file"
+        inputs = self.complete_receipted_layers()
+        with self.assertRaisesRegex(ValueError, "filter removes a required source path or ELF"):
+            self.validate_direct_images(inputs)
+
+    def test_receipted_direct_layers_require_both_filter_inputs(self):
+        """A caller must bind the producer's policy instead of guessing from installed files."""
+        inputs = self.complete_receipted_layers()
+        for missing in ("source_layer_excludes", "source_layer_includes"):
+            partial = {key: value for key, value in inputs.items() if key != missing}
+            with self.subTest(missing=missing), self.assertRaisesRegex(ValueError, "filter inputs must be supplied together"):
+                self.validate_direct_images(partial)
+        absent = {key: value for key, value in inputs.items() if key not in
+                  ("source_layer_excludes", "source_layer_includes")}
+        with self.assertRaisesRegex(ValueError, "requires its declared OCI filter policy"):
+            self.validate_direct_images(absent)
+
+    def test_receipted_layers_bind_both_apt_selections_and_the_base(self):
+        """Runtime/debug APT must retain the same receipt prepared for this exact base."""
+        inputs = self.complete_receipted_layers()
+        for variant in ("runtime", "debug"):
+            path = inputs[variant + "_apt_selection"]
+            original = path.read_bytes()
+            selection = json.loads(original)
+            selection["source_receipt_sha256"] = "f" * 64
+            path.write_text(json.dumps(selection))
+            with self.subTest(variant=variant), self.assertRaisesRegex(ValueError, variant + " APT selection uses a different source receipt"):
+                self.validate_direct_images(inputs)
+            path.write_bytes(original)
+        receipt = json.loads(inputs["source_receipt"].read_bytes())
+        receipt["base_manifest_digest"] = "sha256:" + "f" * 64
+        inputs["source_receipt"].write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "prepared for a different OCI base"):
+            self.validate_direct_images(inputs)
+
+    def test_receipted_direct_layers_bind_contract_and_archive(self):
+        """Owner metadata and the checked TAR remain mandatory even with exact image layers."""
+        inputs = self.complete_receipted_layers()
+        contract = inputs["source_contract_path"]
+        original = contract.read_bytes()
+        contract.write_bytes(original + b"\n")
+        with self.assertRaisesRegex(ValueError, "different reviewed contract"):
+            self.validate_direct_images(inputs)
+        contract.write_bytes(original)
+        inputs["source_runtime_tar"].write_bytes(inputs["source_runtime_tar"].read_bytes() + b"changed")
+        with self.assertRaisesRegex(ValueError, "archive hash differs"):
+            self.validate_direct_images(inputs)
+
+    def test_complete_declared_source_layers_use_shared_image_and_archive_checks(self):
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        result = self.validate_direct_images(inputs)
+        self.assertEqual(result["validation_mode"], "complete")
+        self.assertIsNone(result["source_receipt_sha256"])
+        self.assertEqual(result["archives"]["runtime"]["sha256"], subject.sha(inputs["runtime_archive"]))
+        self.assertEqual(result["source_runtime_payload_entries"], 2)
+
+    def test_declared_layers_cannot_replace_required_source_receipts(self):
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        self.policy["native"]["require_source"] = True
+        with self.assertRaisesRegex(ValueError, "requires its source contract"):
+            self.validate_direct_images(inputs)
+
+    def test_direct_layers_bind_order_even_when_installed_contents_are_identical(self):
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        inputs["runtime_payload_layers"] = [inputs["apt_layer"], self.runtime_payload]
+        with self.assertRaisesRegex(ValueError, "layers differ from their declared"):
+            self.validate_direct_images(inputs)
+
+    def test_direct_layers_reject_changed_symbol_file_and_foreign_apt_selection(self):
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        self.debug_payload.write_bytes(layer([("usr/share/example-runtime-dbgsym/data", b"wrong symbols", 0o644)]))
+        with self.assertRaisesRegex(ValueError, "debug source package payload"):
+            self.validate_direct_images(inputs)
+        inputs = self.complete_make_only_inputs(direct_layers=True)
+        selection = inputs["runtime_apt_selection"]
+        document = json.loads(selection.read_bytes())
+        document["image"] = "another-owner"
+        selection.write_text(json.dumps(document))
+        with self.assertRaisesRegex(ValueError, "wrong image"):
+            self.validate_direct_images(inputs)
+
+    def test_installed_policy_binds_archive_and_effective_files(self):
+        inputs = self.complete_make_only_inputs()
+        runtime, debug = self.root / "runtime.oci", self.root / "debug.oci"
+        path = "usr/bin/ssh"
+        declarations = [{"architecture": "amd64", "images": [
+            {"name": "runtime", "archive": "runtime.tar.gz", "tag": "docker-example:latest",
+             "files": {path: {"mode": 0o755, "uid": 0, "gid": 0}}, "directory_aliases": {"var/run": "/run"}},
+            {"name": "debug", "archive": "debug.tar.gz", "tag": "docker-example-dbg:latest",
+             "parent": "runtime", "inherit_files": [path]},
+        ]}]
+        layouts = {"runtime": runtime, "debug": debug}
+        archives = {"runtime": inputs["runtime_archive"], "debug": inputs["debug_archive"]}
+        policy = subject.installed_images_policy(declarations, layouts, archives, "amd64")
+        self.assertEqual(policy["images"][0]["files"][path], policy["images"][1]["files"][path])
+        self.assertEqual(policy["images"][0]["archive_sha256"], subject.sha(archives["runtime"]))
+        self.assertEqual(policy["images"][0]["expected_rootfs"], subject.image(runtime).config["rootfs"])
+        declarations[0]["images"][0]["files"][path]["mode"] = 0o644
+        with self.assertRaisesRegex(ValueError, "changed declared source file"):
+            subject.installed_images_policy(declarations, layouts, archives, "amd64")
+
+    def test_ancestry_checks_uncompressed_rootfs_as_well_as_layer_descriptors(self):
+        self.complete_make_only_inputs()
+        runtime, debug = subject.image(self.root / "runtime.oci"), subject.image(self.root / "debug.oci")
+        config = copy.deepcopy(debug.config)
+        config["rootfs"]["diff_ids"][0] = "sha256:" + "f" * 64
+        with self.assertRaisesRegex(ValueError, "wrong parent"):
+            subject.assert_ancestry(runtime, debug._replace(config=config), "wrong parent")
 
     def test_complete_make_only_image_needs_no_source_contract(self):
         """The production image validator accepts complete Make-only evidence without source receipts."""
@@ -437,6 +678,13 @@ class ValidateImageTest(unittest.TestCase):
     def test_debug_cannot_mutate_the_runtime_openssh_elf(self):
         """Reject an unlisted overlay that changes the runtime FIPS client's deployed bytes."""
         self.debug_layers.append(layer([("usr/bin/ssh", self.ssh_elf + b"changed", 0o755)]))
+        self.write_images()
+        with self.assertRaisesRegex(ValueError, "debug image changes the runtime package payload"):
+            self.validate()
+
+    def test_debug_cannot_change_runtime_regular_file_permissions(self):
+        """Linux symlink-mode normalization must not hide a permission change on an executable."""
+        self.debug_layers.append(layer([("usr/bin/ssh", self.ssh_elf, 0o644)]))
         self.write_images()
         with self.assertRaisesRegex(ValueError, "debug image changes the runtime package payload"):
             self.validate()
@@ -601,6 +849,105 @@ class ValidateImageTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     subject.apply_debug_tools_layer(path, files, alternatives=DEBUG_ALTERNATIVES)
                 self.assertEqual(files, before)
+
+
+    def vim_command_tools(self, *, new_target="/etc/alternatives/vim", replace_tiny=False):
+        path, files = self.vim_tools()
+        files["usr/bin/vim.tiny"] = files.pop("usr/bin/vim")
+        files["usr/bin/vim"] = {"kind": "hardlink", "mode": 0o755, "uid": 0, "gid": 0,
+                                "linkname": "usr/bin/vim.tiny"}
+        with tarfile.open(path, "a") as archive:
+            for name, target in (("etc/alternatives/vim", "/usr/bin/vim.basic"), ("usr/bin/vim", new_target)):
+                member = tarfile.TarInfo(name)
+                member.type, member.mode, member.linkname = tarfile.SYMTYPE, 0o777, target
+                archive.addfile(member)
+            if replace_tiny:
+                member = tarfile.TarInfo("usr/bin/vim.tiny")
+                member.mode, member.size = 0o755, 7
+                archive.addfile(member, io.BytesIO(b"changed"))
+        policy = [*DEBUG_ALTERNATIVES, {"paths": ["usr/bin/vim"], "before": "usr/bin/vim.tiny",
+                  "before_kind": "hardlink", "before_mode": 0o755, "after": "/etc/alternatives/vim"}]
+        return path, files, policy
+
+    def test_declared_vim_command_replaces_hardlink_without_changing_tiny(self):
+        path, files, policy = self.vim_command_tools()
+        original = dict(files["usr/bin/vim.tiny"])
+        with self.assertRaisesRegex(ValueError, "changes a base ELF link"):
+            subject.apply_debug_tools_layer(path, dict(files), alternatives=DEBUG_ALTERNATIVES)
+        subject.apply_debug_tools_layer(path, files, alternatives=policy)
+        self.assertEqual(files["usr/bin/vim.tiny"], original)
+        self.assertEqual(subject.oci_inventory.resolve_path("usr/bin/vim", files), "usr/bin/vim.basic")
+
+    def test_vim_command_rejects_wrong_original_metadata_and_new_target(self):
+        for key, value in (("mode", 0o777), ("uid", 1), ("kind", "symlink"), ("linkname", "usr/bin/other")):
+            path, files, policy = self.vim_command_tools()
+            files["usr/bin/vim"][key] = value
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "unexpected debug alternative"):
+                subject.apply_debug_tools_layer(path, files, alternatives=policy)
+        path, files, policy = self.vim_command_tools(new_target="/usr/bin/other")
+        with self.assertRaisesRegex(ValueError, "unexpected debug alternative"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+    def test_declared_hardlink_requires_same_architecture_binaries(self):
+        path, files, policy = self.vim_command_tools()
+        files["usr/bin/vim.tiny"]["elf_machine"] = 183
+        with self.assertRaisesRegex(ValueError, "binaries for the expected architecture"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+    def test_declared_vim_command_cannot_replace_inherited_binary(self):
+        path, files, policy = self.vim_command_tools(replace_tiny=True)
+        with self.assertRaisesRegex(ValueError, "change an inherited ELF"):
+            subject.apply_debug_tools_layer(path, files, alternatives=policy)
+
+
+class CachedValidateImageTest(ValidateImageTest):
+    """Run the same success and rejection cases with scoped inventory reuse."""
+
+    def validate(self, **kwargs):
+        with validation_input_cache([self.root]):
+            return super().validate(**kwargs)
+
+
+class CachedUniqueLayerPathsTest(unittest.TestCase):
+    def test_shared_layer_is_scanned_once_per_validation_scope(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first, second = root / "first.tar", root / "second.tar"
+            first.write_bytes(layer([("usr/share/file", b"contents", 0o644)]))
+            second.write_bytes(first.read_bytes())
+            layout = SimpleNamespace(layers=[first, second, first])
+            with patch.object(subject, "_verify_unique_layer_paths",
+                              wraps=subject._verify_unique_layer_paths) as scan:
+                with validation_input_cache([root]):
+                    subject.verify_unique_layer_paths(layout)
+                    subject.verify_unique_layer_paths(layout)
+                    self.assertEqual(scan.call_count, 1)
+                subject.verify_unique_layer_paths(SimpleNamespace(layers=[first]))
+                self.assertEqual(scan.call_count, 2)
+
+    def test_duplicate_paths_are_rejected_on_every_attempt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "duplicate.tar"
+            path.write_bytes(layer([("./file", b"one", 0o644), ("file", b"two", 0o644)]))
+            with validation_input_cache([root]), \
+                    patch.object(subject, "_verify_unique_layer_paths",
+                                 wraps=subject._verify_unique_layer_paths) as scan:
+                for _ in range(2):
+                    with self.assertRaisesRegex(ValueError, "repeats a path"):
+                        subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
+                self.assertEqual(scan.call_count, 2)
+
+    def test_cached_success_still_rejects_changed_layer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "layer.tar"
+            path.write_bytes(layer([("file", b"one", 0o644)]))
+            with self.assertRaisesRegex(ValueError, "validation input changed"):
+                with validation_input_cache([root]):
+                    subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
+                    path.write_bytes(layer([("file", b"two", 0o644)]))
+                    subject.verify_unique_layer_paths(SimpleNamespace(layers=[path]))
 
 
 if __name__ == "__main__":

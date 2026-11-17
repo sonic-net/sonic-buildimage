@@ -1,0 +1,248 @@
+"""Native AMD64 SNMP OCI images from the public source owners."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@snmp_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@image_snmp_pip//:requirements.bzl", "whl_requirement")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["requirements_lock.txt"])
+
+exports_files(glob([
+    "*.j2",
+    "*.sh",
+    "*.py",
+    "critical_processes",
+]))
+
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = glob(["*.j2"]),
+    visibility = ["//dockers:__pkg__"],
+)
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+]
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-snmp",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+)
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "snmp_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["snmp_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+# Retain the real imported package control records for later child images and
+# runtime package queries. Python wheels remain wheel metadata, never fake DEBs.
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in APT_INPUTS["snmp_debian"]["amd64"].values()],
+    source_spec = "//dockers/docker-snmp/bazel:source_paths.json",
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/snmp-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+# py-common, YAML and natsort are inherited from the source-built config-engine
+# image. Install the image-specific wheels with the same pins as Make.
+wheel_layer(
+    name = "python_runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [
+        "@sonic_platform_common//:sonic_platform_common_wheel",
+        "@sonic_snmpagent//:sonic_snmpagent_wheel",
+    ] + [whl_requirement(name) for name in [
+        "hiredis",
+        "psutil",
+        "python-arptable",
+        "smbus",
+    ]],
+)
+
+oci_image(
+    name = "docker-snmp",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/bin/docker-snmp-init.sh"],
+    env = "//dockers/docker-snmp/config:environment",
+    labels = "//dockers/docker-snmp/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":python_runtime",
+        "@sonic_snmpagent//:snmp_install",
+        "//dockers/docker-snmp/config:accounts",
+        "//dockers/docker-snmp/config:files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-snmp.debug_symbols",
+    image = ":docker-snmp",
+)
+
+# The runtime image already contains its complete package database. Its APT
+# selection receipt describes the earlier parent inventory, not this base.
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-snmp",
+    dependency_set = "snmp_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["snmp_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-snmp",
+    controls = [label + ":control" for label in APT_INPUTS["snmp_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-snmp/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/snmp-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-snmp-dbg",
+    base = ":docker-snmp",
+    labels = "//dockers/docker-snmp/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-snmp.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-snmp/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-snmp" + suffix + ".gz",
+        image = ":docker-snmp" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# One inspection artifact covering inherited source ELF and the added client.
+sonic_layer(
+    name = "all_debug_symbols",
+    tars = [
+        ":docker-snmp.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# The database is mounted only by CI, never added to the SNMP image.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@snmp_test_debian//redis-server"],
+)

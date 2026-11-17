@@ -1,0 +1,5 @@
+exports_files([
+    "debug_source_paths.json",
+    "source_paths.json",
+    "requirements_lock.txt",
+])

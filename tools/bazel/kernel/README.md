@@ -95,6 +95,23 @@ enables read-only reuse; `--upload-local-results` explicitly permits writes.
 launcher verifies the pinned native Bazel executable and requires the kernel
 action to use `linux-sandbox`; it does not start a worker container.
 
+Managed builders can set `SONIC_BAZEL_JAVA_TRUST_STORE` in their container
+image to provide the default Java trust store for `ensure`, `plan`, and
+`build`. An explicit `--java-trust-store` takes precedence; an empty or unset
+environment variable leaves Bazel's default unchanged. The selected file is
+validated and its SHA256 recorded in the build plan. `verify` ignores this
+environment setting because it only checks existing outputs. The runner
+image owns the certificate path and policy; Make needs no runner-specific
+trust options.
+
+The private consumer uses the shared
+[`debian_mirrors.cfg`](../debian_mirrors.cfg) download policy. Preparation copies
+the configuration into the consumer workspace, where its own `.bazelrc` enables
+it for dependency downloads. Package versions and checksum verification remain
+unchanged. The shared policy is a tracked handoff input: uncommitted changes
+are rejected, and committed changes invalidate reuse of previously verified
+kernel packages. The root workspace's `.bazelrc` is not inherited.
+
 Automatic Make preparation serializes concurrent requests and uses the existing
 `SONIC_BAZEL_CACHE_SOURCE` setting. The existing slave mount exposes this cache
 at `/bazel_cache`; the kernel uses its `kernel-linux-sandbox/repository_cache` and
@@ -116,6 +133,30 @@ are pruned, while failed workspaces remain for diagnosis.
 A changed source/tool/configuration input can rebuild the entire kernel. A
 cache hit reuses the source-built package outputs and skips kernel compilation.
 This does not claim per-object caching or independent cold byte reproducibility.
+
+### Remote cache through Make
+
+The kernel's isolated Bazel invocation does not inherit `BAZEL_CONTAINER_ARGS`
+or the root workspace's remote-cache settings. Select its endpoint explicitly:
+
+```sh
+make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y \
+  SONIC_BAZEL_KERNEL_REMOTE_CACHE=grpc://172.16.0.4:9092
+```
+
+The endpoint defaults to empty, leaving ordinary builds local-only. With an
+endpoint selected, remote access is read-only unless
+`SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=y` is also set. Uploads without an endpoint
+and upload values other than `y` or `n` fail. Do not put credentials in the URL.
+The host Make wrapper forwards both settings into the slave for normal builds
+and direct `Makefile.work` entry points. The existing local cache mount remains
+independent and can be used alongside the remote cache.
+
+The VS installer CI job selects the private gRPC endpoint explicitly. PR/manual
+runs use read-only access; only pushes to master enable uploads. A configured
+endpoint does not guarantee a cache hit: the kernel action inputs must match.
+The retained kernel plan records `remote_cache` and `upload_local_results`;
+the launcher invocation records the effective remote policy.
 
 ## Package contract
 
@@ -170,11 +211,46 @@ kernel ABI dependencies. Other package recipe records remain available.
 
 ## Validation and public artifacts
 
-The `Bazel kernel DEBs` matrix runs on native AMD64 and ARM64 runners. Each
-builds the exact registered kernel source as an unprivileged user under
-`linux-sandbox`, then builds into a fresh Bazel output directory using a local
-HTTP remote cache. Verification requires the cold action's sandbox runner and
-the second action's remote cache hit, with identical DEB hashes. It also repeats
+The `Bazel kernel DEBs` matrix runs on self-hosted native AMD64
+(`[self-hosted, linux, bazel-x64]`) and ARM64
+(`[self-hosted, linux, bazel-arm64]`) runners. Normal runs use the shared
+`grpc://172.16.0.4:9092` cache and allow either a cache hit or an unprivileged
+`linux-sandbox` build of the exact registered kernel source. Only pushes to
+`master` upload results to the shared cache; pull requests and normal manual
+runs are read-only. Agents require network access to the cache, server-enforced
+write permissions, Docker for installation checks, unprivileged user namespaces,
+and at least 45 GiB of free scratch space. CI uses the short physical
+`/mnt/build/k` scratch root, preserving master directory names while keeping
+Speakup's absolute input paths within its 255-byte limit. The root must be private
+to the unprivileged runner and on the same filesystem as its normal temp storage.
+CI can provision an absent root using guarded noninteractive sudo, without
+changing existing directory permissions or elevating the build; see the
+[CI scratch requirements](../ci/README.md).
+
+Agents must have GNU Make preinstalled for the contract tests and Make handoff
+checks. The workflow does not install host packages. Kernel compilation still
+uses its declared Bazel toolchain, not a host compiler.
+
+Before checkout, the workflow restores access to the default repository workspace
+using the runner user's UID/GID and noninteractive `sudo`. This requires
+passwordless permission to run the repair commands. It rejects redirected paths,
+does not recursively cross filesystem boundaries or follow symlinks, preserves
+regular-file modes, and skips hard-linked files to avoid changing shared cache
+ownership. Directory owner permissions are restored so checkout can clean old
+outputs. The repair does not operate on the whole runner work directory.
+This privileged step is operational cleanup, not isolation from untrusted jobs;
+agents still require the appropriate workflow trust and isolation policy.
+The scope comes from the runner's pipeline workspace context, not the location
+of its temporary directory. Temporary storage can be on a separate disk, and
+the runner work-directory root may be a symlink; repository-level redirects
+are still rejected.
+
+To force a cold-build/cache-hit proof, manually dispatch the workflow with
+`verify_cold_cache` enabled. This mode uses a disposable local HTTP cache instead
+of the shared server, uploads the cold build locally, and builds again into a
+fresh output directory. Verification requires the cold action's sandbox runner
+and the second action's remote cache hit, with identical DEB hashes. The local
+server is stopped at the end of the job. Both modes also repeat
 `ensure` and requests the DEBs twice through the production Make rules, checking
 that unchanged package timestamps and unrelated files are preserved.
 
@@ -212,5 +288,5 @@ sandbox build selects the landed
 [kernel registration #124](https://github.com/securely1g/sonic-bazel-registry/pull/124).
 Both source and tools revisions are fixed in `MODULE.bazel`, and the kernel
 source revision must match the buildimage gitlink. Native AMD64 and ARM64
-source/cache validation runs on Ubuntu 22.04 with unprivileged user namespaces;
+source/cache validation runs on self-hosted Linux with unprivileged user namespaces;
 installed-package validation runs separately in Debian Trixie.

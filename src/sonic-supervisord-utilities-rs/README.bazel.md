@@ -8,9 +8,8 @@ AMD64 and ARM64 Debian Trixie are supported; Bazel never produces a DEB here.
 `:supervisor_library` owns this component's Rust code. It depends directly on
 `@sonic_swss_common//crates/swss-common:swss_common`; Common retains its source,
 C bindings and native library. All application Rust dependencies use the single
-`sonic-rust-deps` graph. The buildimage root also selects landed SWSS commit
-`252a506ae5a94e36a4e330b736a3781a9f7bcf9b` and registered Common 0.0.2, which
-already use that graph. No local Common source checkout is needed by Bazel.
+`sonic-rust-deps` graph. The buildimage root selects the published SWSS and Common
+modules that use that graph.
 
 ```sh
 bazel build //src/sonic-supervisord-utilities-rs:runtime \

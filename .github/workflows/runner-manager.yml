@@ -11,12 +11,18 @@ on:
       - tools/ci/runner/**
       - .github/workflows/runner-manager.yml
   workflow_dispatch:
+    inputs:
+      inspect_capacity:
+        description: Report self-hosted storage capacity without building
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   tests:
+    if: github.event_name != 'workflow_dispatch' || !inputs.inspect_capacity
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -29,3 +35,60 @@ jobs:
         run: |
           bash -n tools/ci/runner/bootstrap.sh
           python3 -B tools/ci/runner/install_manager.py --operator example --master --dry-run
+
+  capacity:
+    if: github.event_name == 'workflow_dispatch' && inputs.inspect_capacity
+    runs-on: [self-hosted, linux, x64, sonic-vs-source-master]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect storage without changing retained builds
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import os
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          def capture(*args, timeout=30):
+              try:
+                  result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+              except subprocess.TimeoutExpired:
+                  print(f"{args[0]}: timed out", flush=True)
+                  return ""
+              except OSError as error:
+                  print(f"{args[0]}: unavailable (errno {error.errno})", flush=True)
+                  return ""
+              if result.returncode:
+                  print(f"{args[0]}: incomplete (exit {result.returncode})", flush=True)
+              # Do not expose command stderr, environment, or Docker image names.
+              return result.stdout.strip()
+
+          print(capture("lsblk", "-b", "-o", "NAME,SIZE,FSTYPE,MOUNTPOINTS"), flush=True)
+          docker_root = capture("docker", "info", "--format", "{{.DockerRootDir}}")
+          paths = ["/", "/data/sonic-runner", "/var/lib/containerd"]
+          if docker_root.startswith("/") and "\n" not in docker_root:
+              paths.append(docker_root)
+          for name in dict.fromkeys(paths):
+              try:
+                  path = Path(name)
+                  usage = shutil.disk_usage(path)
+                  device = path.stat().st_dev
+              except OSError as error:
+                  print(f"{name}: unavailable (errno {error.errno})", flush=True)
+                  continue
+              print(f"{name}: device={device} free_gib={usage.free / 1024**3:.1f} "
+                    f"total_gib={usage.total / 1024**3:.1f} "
+                    f"writable={os.access(path, os.W_OK)}", flush=True)
+              print(capture("findmnt", "-rn", "-o", "SOURCE,FSTYPE,TARGET",
+                            "--target", name), flush=True)
+              options = capture("findmnt", "-rn", "-o", "OPTIONS", "--target", name)
+              if options:
+                  blockers = set(options.split(",")) & {"ro", "nodev", "nosuid", "noexec"}
+                  print("construction_blockers=" + ",".join(sorted(blockers)), flush=True)
+          print(capture("docker", "system", "df", timeout=120), flush=True)
+          for name in ("/data/sonic-runner/attempts",
+                       "/data/sonic-runner/cache/sonic-buildimage"):
+              print(f"Directory sizes: {name}", flush=True)
+              print(capture("du", "-x", "-B1", "--max-depth=1", name, timeout=120), flush=True)
+          PY

@@ -14,6 +14,7 @@ import collections
 import fnmatch
 import gzip
 import hashlib
+import io
 import lzma
 import json
 import os
@@ -256,6 +257,11 @@ class Rootfs:
             # Preserve stream order for ordinary entries and hardlinks.
             for m, name in entries:
                 if name.rsplit('/', 1)[-1].startswith('.wh.'):
+                    continue
+                # Debian merged-/usr package extraction keeps a directory
+                # alias supplied by base-files when an older package names
+                # that directory explicitly (tar --keep-directory-symlink).
+                if m.isdir() and self.islink('/' + name) and self.isdir('/' + name):
                     continue
                 d, base = self._parent(name)
                 rel = (d + '/' + base) if d else base
@@ -1288,8 +1294,10 @@ def compress_initrd(source_path, output, spec):
     level = compression_level(spec)
     with open(source_path, 'rb') as source, open(output, 'wb') as destination:
         if compression == 'gzip':
-            with gzip.GzipFile(filename='', fileobj=destination, mode='wb', compresslevel=level, mtime=0) as compressed:
-                shutil.copyfileobj(source, compressed, 1024 * 1024)
+            if not spec.get('pigz'):
+                raise ValueError('gzip compression requires a declared pigz executable')
+            subprocess.run([spec['pigz'], '-n', '-' + str(level), '-c'], stdin=source, stdout=destination,
+                           check=True, env=ENV)
         elif compression == 'xz':
             with lzma.LZMAFile(destination, mode='wb', preset=level, check=lzma.CHECK_CRC32) as compressed:
                 shutil.copyfileobj(source, compressed, 1024 * 1024)
@@ -1311,7 +1319,27 @@ def read_kernel_metadata(path):
     return metadata
 
 
-def build_initrd(spec, output, report):
+def prepare_module_indexes(root, mk, work, release, module_path, module_indexes):
+    # Debian image.postinst runs depmod before linux-run-hooks invokes
+    # mkinitramfs. Reproduce that installation effect in this same stage.
+    dconf = [directory for directory in ('/etc/depmod.d', '/lib/depmod.d', '/usr/lib/depmod.d', '/usr/local/lib/depmod.d', '/run/depmod.d')
+             if root.isdir(directory) and root.glob(directory, '*.conf')]
+    if dconf:
+        raise NotImplementedError('image depmod.d configuration: %r' % dconf)
+    empty = os.path.join(work, 'empty-host-depmod.d')
+    os.mkdir(empty)
+    mk.run([mk.depmod, '-b', root.h, '-C', empty, release])
+    if module_indexes is not None:
+        with tarfile.open(module_indexes, 'w', format=tarfile.PAX_FORMAT) as archive:
+            for source in root.glob(module_path, 'modules.*'):
+                if root.isfile(source):
+                    content = root.read(source)
+                    member = tarfile.TarInfo(source.lstrip('/'))
+                    member.mode, member.size = 0o644, len(content)
+                    archive.addfile(member, io.BytesIO(content))
+
+
+def build_initrd(spec, output, report, module_indexes=None, kernel_links=None):
     metadata = read_kernel_metadata(spec['kernel_metadata'])
     spec = dict(spec, arch=metadata['architecture'], kernel_release=metadata['kernel_release'])
     if spec.get('compression', 'zstd') not in ('zstd', 'gzip', 'xz'):
@@ -1356,13 +1384,32 @@ def build_initrd(spec, output, report):
                 os.fchmod(target.fileno(), 0o644)
             root.meta[relative] = (stat.S_IFREG | 0o644, 0, 0, 0)
         mk = Mkinitramfs(root, spec, work)
+        prepare_module_indexes(root, mk, work, release, module_path, module_indexes)
         mk.build(confdir)
+        if kernel_links is not None:
+            # linux-base 4.12.1 linux-update-symlinks defaults for this fresh
+            # one-kernel VS installation (image_dest=/, do_symlinks=yes).
+            with tarfile.open(kernel_links, 'w', format=tarfile.PAX_FORMAT) as archive:
+                for name, target in [('vmlinuz', metadata['boot']['vmlinuz']['path']),
+                                     ('initrd.img', 'boot/initrd.img-' + release)]:
+                    member = tarfile.TarInfo(name)
+                    member.type, member.mode, member.linkname = tarfile.SYMTYPE, 0o777, target
+                    archive.addfile(member)
         spec['compression_level'] = mk.compression_level
         cpio_path = os.path.join(work, 'initrd.cpio')
         listing = mk.cpio(cpio_path)
         compress_initrd(cpio_path, output, spec)
+        seen_inodes = set()
+        allocated = 0
+        staged = root.host(root.canon(mk.D))
+        for directory, directories, files in os.walk(staged):
+            for path in [directory] + [os.path.join(directory, name) for name in directories + files]:
+                value = os.lstat(path); key = (value.st_dev, value.st_ino)
+                if key not in seen_inodes:
+                    seen_inodes.add(key); allocated += value.st_blocks * 512
         with open(report, 'w') as stream:
             json.dump({'config_dir': confdir, 'arch': spec['arch'], 'kernel_release': release,
+                       'uncompressed_size_mib': (allocated + (1 << 20) - 1) // (1 << 20),
                        'cpio_bytes': os.path.getsize(cpio_path), 'initrd_bytes': os.path.getsize(output),
                        'hooks_run': mk.hooks_run, 'orders': mk.orders, 'log': mk.log,
                        'busybox_applets': len(getattr(mk, 'busybox_applets', [])), 'entries': listing}, stream, indent=1)
@@ -1371,4 +1418,4 @@ def build_initrd(spec, output, report):
 if __name__ == '__main__':
     with open(sys.argv[1]) as stream:
         spec = json.load(stream)
-    build_initrd(spec, sys.argv[2], sys.argv[3])
+    build_initrd(spec, sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None, sys.argv[5] if len(sys.argv) > 5 else None)

@@ -1,0 +1,15 @@
+load("//tools/bazel/oci:apt_layer.bzl", "apt_subset_lock")
+
+package(default_visibility = ["//dockers/docker-swss-layer-trixie:__pkg__"])
+
+exports_files(["source_paths.json"])
+
+# The OCI selector validates every member of the supplied dependency set.
+# Give it this layer's exact roots and closure, including the production
+# lock's archive and extracted-content hashes.
+apt_subset_lock(
+    name = "runtime_lock_view",
+    selection = "@swss_layer_apt_inputs//:apt_manifest.json",
+    dependency_set = "swss_layer_debian",
+    out = "apt.lock.json",
+)

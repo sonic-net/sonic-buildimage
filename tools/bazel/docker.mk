@@ -8,9 +8,8 @@ $(foreach IMAGE,$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES),\
     $(if $(strip $($(IMAGE)_BAZEL_TARGET)),,$(error $(IMAGE)_BAZEL_TARGET is required for a Bazel container))\
     $(if $(strip $($(IMAGE)_PATH)),,$(error $(IMAGE)_PATH is required for a Bazel container SBOM)))
 
-ifneq ($(filter $(SONIC_PACKAGES_LOCAL),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)),)
-$(error Bazel container archives use the latest tag and cannot be in SONIC_PACKAGES_LOCAL: $(filter $(SONIC_PACKAGES_LOCAL),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)))
-endif
+# Local packages also accept these latest-tagged archives: the installer's
+# sonic-package-manager path adds SONIC_IMAGE_VERSION after loading them.
 
 # Let Bazel check declared inputs on every request. Export preserves timestamps
 # when bytes are unchanged and publishes changed archives atomically.
@@ -45,10 +44,35 @@ $(addprefix $(TARGET_PATH)/, $(sort $(SONIC_BAZEL_OCI_BASES))) : $(TARGET_PATH)/
 	python3 tools/bazel/oci/prepare_oci_base.py --archive "$($*.oci_OCI_ARCHIVE)" \
 		--output "$@" --expected-platform "$($*.oci_OCI_PLATFORM)" $(LOG)
 
-$(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform bazel-docker-force \
-		$$($$*.gz_BAZEL_DEPENDS)
+# Build each selected VS runtime/debug pair together while the installer builder
+# still owns its warm Bazel state. This is a production dependency only: the
+# installer continues to select its payload through <installer>_DOCKERS.
+# Standalone archive requests and unsupported owner profiles keep their rules.
+SONIC_BAZEL_VS_PAIRED_IMAGES :=
+ifeq ($(CONFIGURED_PLATFORM):$(BLDENV),vs:trixie)
+ifneq ($(filter $(TARGET_PATH)/sonic-vs.bin $(TARGET_PATH)/sonic-vs.img.gz,$(SONIC_BUILD_TARGET) $(MAKECMDGOALS)),)
+SONIC_BAZEL_VS_PAIRED_IMAGES := $(foreach image,$(sort $(SONIC_BAZEL_DOCKER_IMAGES)),\
+    $(if $(filter $(image:.gz=-$(DBG_IMAGE_MARK).gz),$(SONIC_BAZEL_DBG_DOCKER_IMAGES)),$(image)))
+endif
+endif
+SONIC_BAZEL_VS_PAIR_OUTPUTS := $(foreach image,$(SONIC_BAZEL_VS_PAIRED_IMAGES),$(image) $(image:.gz=-$(DBG_IMAGE_MARK).gz))
+
+# One directory per recipe execution keeps parallel and repeated invocations separate.
+ifeq ($(SONIC_VS_IMAGE_TIMINGS),1)
+define vs_start_image_timing
+	timing_directory="$$(python3 -B tools/bazel/ci/time_vs_image.py image-recipe $(1))"
+	trap 'if [[ -f "$@.log" && ! -L "$@.log" ]]; then cp -- "$@.log" "$$timing_directory/make.log"; fi' EXIT
+endef
+vs_time_phase = python3 -B tools/bazel/ci/time_vs_image.py "$$timing_directory" $(1)
+endif
+
+# One invocation per owner keeps its runtime/debug configuration identical.
+# Query and export both standalone archives; unchanged exports retain timestamps.
+define build_bazel_docker_images
 	$(HEADER)
-	{
+	$(call vs_start_image_timing,$(1))
+	$(if $(word 2,$(1)),printf '%s\n' '[ bazel image pair ] [ $@ ] [ $(TARGET_PATH)/$(firstword $(1)) ]')
+	(
 		# These image builds are native. Keep both target and execution tools on
 		# Make's configured architecture instead of the root RC's AMD64 default.
 		case "$(CONFIGURED_ARCH)" in
@@ -58,17 +82,48 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCK
 		esac
 		bazel_option_lines="$$(python3 tools/bazel/build_helpers.py options \
 			--cache-directory="$${BAZEL_CONTAINER_CACHE_DIR-$${BAZEL_SWSS_CACHE_DIR:-}}" \
-			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}} $($(@F)_BAZEL_ARGS)")"
+			--arguments="$${BAZEL_CONTAINER_ARGS-$${BAZEL_SWSS_ARGS:-}} $($(firstword $(1))_BAZEL_ARGS)")"
 		bazel_options=()
 		if [ -n "$$bazel_option_lines" ]; then mapfile -t bazel_options <<< "$$bazel_option_lines"; fi
 		bazel_options+=("--platforms=@sonic_build_infra//platforms:$$bazel_platform"
 			"--host_platform=@sonic_build_infra//platforms:$$bazel_platform")
-		"$${BAZEL:-bazel}" build "$${bazel_options[@]}" "$($(@F)_BAZEL_TARGET)"
-		bazel_output="$$("$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(@F)_BAZEL_TARGET)")"
-		python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$@"
-	} $(LOG)
-	$(call sbom_emit_fragment,$@,DOCKER_IMAGE,$($(@F)_PATH),,,,)
+		source tools/bazel/private_server.sh
+		start_image_bazel "$(firstword $(1))"
+		private_bazel_shutdown_prefix=($(call vs_time_phase,shutdown))
+		bazel_options+=("--symlink_prefix=/")
+		$(call vs_time_phase,build) "$${private_bazel[@]}" build "$${bazel_options[@]}" $(foreach image,$(1),"$($(image)_BAZEL_TARGET)") || {
+			build_status=$$?
+			$(if $(filter 1,$(SONIC_VS_IMAGE_TIMINGS)),python3 -B tools/bazel/ci/private_server_diagnostics.py "$$bazel_output_base" "$$timing_directory" || true)
+			exit "$$build_status"
+		}
+		execution_root="$$(private_bazel_execution_root)"
+		$(foreach image,$(1),
+		bazel_output="$$($(call vs_time_phase,cquery-$(image)) "$${private_bazel[@]}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET)")"
+		$(call vs_time_phase,export-$(image)) python3 tools/bazel/build_helpers.py export --execution-root="$$execution_root" --query-output="$$bazel_output" --output="$(TARGET_PATH)/$(image)"
+		)
+	) $(LOG)
+	$(foreach image,$(1),$(call sbom_emit_fragment,$(TARGET_PATH)/$(image),DOCKER_IMAGE,$($(image)_PATH),,,,)
+	)
 	$(FOOTER)
+endef
+
+$(addprefix $(TARGET_PATH)/, $(filter-out $(SONIC_BAZEL_VS_PAIR_OUTPUTS),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES))) : $(TARGET_PATH)/%.gz : .platform bazel-docker-force \
+        $$($$*.gz_BAZEL_DEPENDS)
+	$(call build_bazel_docker_images,$(@F))
+
+# Grouped targets run once even when both variants are requested in parallel,
+# and rebuild the pair if either archive is missing. Each variant's manifest,
+# declared inputs and producer-transition stamp must exist before Bazel starts.
+define bazel_vs_pair_rule
+ifneq ($$(strip $$($(1)_BAZEL_ARGS)),$$(strip $$($(2)_BAZEL_ARGS)))
+$$(error VS runtime/debug pair $(1) $(2) requires identical Bazel arguments)
+endif
+$(addprefix $(TARGET_PATH)/,$(1) $(2)) &: .platform bazel-docker-force \
+        $$$$($(1)_BAZEL_DEPENDS) $$$$($(2)_BAZEL_DEPENDS) \
+        $(addprefix $(TARGET_PATH)/.container-build-method/,$(filter $(SONIC_BAZEL_SWITCHABLE_IMAGES),$(1) $(2)))
+	$$(call build_bazel_docker_images,$(1) $(2))
+endef
+$(foreach image,$(SONIC_BAZEL_VS_PAIRED_IMAGES),$(eval $(call bazel_vs_pair_rule,$(image),$(image:.gz=-$(DBG_IMAGE_MARK).gz))))
 
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES))
 SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(sort $(SONIC_BAZEL_OCI_BASES)))

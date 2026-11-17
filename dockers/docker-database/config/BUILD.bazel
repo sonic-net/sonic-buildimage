@@ -1,0 +1,112 @@
+"""Database startup files and the existing SONiC Redis configuration edits."""
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-database:__pkg__"])
+
+# Extract the pinned upstream configuration with the public BSD tar toolchain.
+genrule(
+    name = "redis_original",
+    srcs = ["@mgmt_test_deps//redis-server:data"],
+    outs = ["redis.original.conf"],
+    cmd = '"$(BSDTAR_BIN)" -xOf "$(execpath @mgmt_test_deps//redis-server:data)" ./etc/redis/redis.conf > "$@"',
+    toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+)
+
+# These exact replacements are verified against Dockerfile.common.j2's native
+# sed recipe and this lock's original Redis configuration in image CI.
+expand_template(
+    name = "redis_config",
+    out = "redis.conf",
+    substitutions = {
+        '\n# save ""\n': '\nsave ""\n',
+        "\ndaemonize yes\n": "\ndaemonize no\n",
+        "\nlogfile /var/log/redis/redis-server.log\n": '\nlogfile ""\n',
+        "\n# syslog-enabled no\n": "\nsyslog-enabled no\n",
+        "\n# unixsocket": "\nunixsocket",
+        "redis-server.sock": "redis.sock",
+        "\nclient-output-buffer-limit pubsub 32mb 8mb 60\n": "\nclient-output-buffer-limit pubsub 0 0 0\n",
+        '\nnotify-keyspace-events ""\n': "\nnotify-keyspace-events AKE\n",
+        "\ndatabases 16\n": "\ndatabases 100\n",
+    },
+    template = ":redis_original",
+)
+
+_CONFIGS = {
+    "//dockers/docker-database:flush_unused_database": [
+        "usr/local/bin/flush_unused_database",
+        "0755",
+    ],
+    "//dockers/docker-database:docker-database-init.sh": [
+        "usr/local/bin/docker-database-init.sh",
+        "0755",
+    ],
+    "//files/scripts:update_chassisdb_config": [
+        "usr/local/bin/update_chassisdb_config",
+        "0755",
+    ],
+    "//files/image_config:sysctl/90-sonic.conf": [
+        "usr/lib/sysctl.d/90-sonic.conf",
+        "0644",
+    ],
+}
+
+_TEMPLATES = [
+    "database_config.json.j2",
+    "database_global.json.j2",
+    "multi_database_config.json.j2",
+    "supervisord.conf.j2",
+    "critical_processes.j2",
+]
+
+tar(
+    name = "files",
+    srcs = list(_CONFIGS) + ["//dockers/docker-database:" + name for name in _TEMPLATES] + [
+        "statoverride",
+        ":redis_config",
+    ],
+    mtree = [
+        destination + " uid=0 gid=0 mode=" + mode + " time=0 type=file content=$(location " + label + ")"
+        for label, (destination, mode) in _CONFIGS.items()
+    ] + [
+        "usr/share/sonic/templates/" + name + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location //dockers/docker-database:" + name + ")"
+        for name in _TEMPLATES
+    ] + [
+        # Match redis-tools/postinst and redis-server/postinst using the
+        # redis100:101 and adm4 identities inherited from the checked base.
+        "etc/redis uid=100 gid=101 mode=2770 time=0 type=dir",
+        "etc/redis/redis.conf uid=100 gid=101 mode=0640 time=0 type=file content=$(location :redis_config)",
+        "var/lib/redis uid=100 gid=101 mode=0750 time=0 type=dir",
+        "var/log/redis uid=100 gid=4 mode=2750 time=0 type=dir",
+        "var/lib/dpkg/statoverride uid=0 gid=0 mode=0644 time=0 type=file content=$(location statoverride)",
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        image_version = "//dockers/docker-database:image_version",
+        component_labels = "//:target/bazel-manifests/docker-database/components.labels" if not suffix else None,
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-database" + suffix + "/manifest.json",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-database:docker-database",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

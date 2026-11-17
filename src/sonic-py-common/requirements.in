@@ -1,6 +1,6 @@
 # Runtime dependencies for the complete Python 3 package.
 natsort==8.4.0
-PyYAML==6.0.2
+PyYAML==6.0.3
 # The Make-pinned swsssdk source requires Redis Python >=4.5.4.
 redis==4.5.4
 # Match Make's source before applying its existing pipeline patch in MODULE.bazel.

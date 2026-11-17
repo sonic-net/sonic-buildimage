@@ -3,6 +3,7 @@ import contextlib
 import gzip
 import io
 import json
+import stat
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +19,19 @@ import apparmor_gs
 
 class RunnerTests(unittest.TestCase):
     registration = {"id": 42, "name": "sonic-vs-9-unique", "attempt": "/data/sonic-runner/attempts/unique"}
+
+    def test_host_agent_checks_process_umask_without_legacy_service(self):
+        for mask, accepted in (("0022", True), ("0077", False)):
+            with self.subTest(mask=mask), \
+                    patch.object(preflight.Path, "read_text", return_value=f"Umask:\t{mask}\n"), \
+                    patch.object(preflight, "output") as output, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                if accepted:
+                    preflight.check_worker_umasks(host_agent=True)
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "hides files"):
+                        preflight.check_worker_umasks(host_agent=True)
+                output.assert_not_called()
 
     def test_legacy_nat_checks_loaded_and_builtin_support_not_only_nft_nat(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -426,6 +440,227 @@ print(json.dumps({'accepted': accepted, 'file': config.stat().st_mode & 0o777,
                 contextlib.redirect_stdout(io.StringIO()):
             with self.assertRaisesRegex(RuntimeError, "100 GiB Docker"):
                 preflight.check_disk("/workspace", "/docker", 100, 100)
+
+
+class PreflightStorageTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def storage(self, filesystem=None, *, block=True):
+        with tempfile.TemporaryDirectory() as temporary, contextlib.ExitStack() as stack:
+            path = Path(temporary) / "data"
+            path.mkdir()
+            original_stat = preflight.os.stat
+
+            def device_stat(candidate, *args, **kwargs):
+                if candidate == "/dev/test-disk":
+                    return SimpleNamespace(st_mode=stat.S_IFBLK if block else stat.S_IFREG)
+                return original_stat(candidate, *args, **kwargs)
+
+            stack.enter_context(patch.object(preflight.os.path, "ismount", return_value=False))
+            stack.enter_context(patch.object(preflight.os, "stat", side_effect=device_stat))
+            probe = stack.enter_context(patch.object(preflight, "output", return_value=json.dumps(
+                {"filesystems": [filesystem or {"source": "/dev/test-disk", "fstype": "ext4"}]})))
+            stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+            yield path, probe
+
+    def test_mounted_storage_preserves_both_legacy_and_onie_behavior(self):
+        for arguments in ({}, {"build_target": "sonic-vs.img.gz"}, {"build_target": "sonic-vs.bin"}):
+            with self.subTest(arguments=arguments), self.storage() as (path, probe), \
+                    patch.object(preflight.os.path, "ismount", return_value=True):
+                preflight.check_data_storage(path, **arguments)
+                probe.assert_not_called()
+
+    def test_unmounted_storage_is_rejected_by_default_and_explicit_kvm(self):
+        for arguments in ({}, {"build_target": "sonic-vs.img.gz"}):
+            with self.subTest(arguments=arguments), self.storage() as (path, probe):
+                with self.assertRaisesRegex(RuntimeError, "must be mounted"):
+                    preflight.check_data_storage(path, **arguments)
+                probe.assert_not_called()
+
+    def test_onie_accepts_real_directory_on_local_ext4_block_storage(self):
+        for source in ("/dev/test-disk", "/dev/test-disk[/runner-data]"):
+            with self.subTest(source=source), self.storage({"source": source, "fstype": "ext4"}) as (path, probe):
+                preflight.check_data_storage(path, build_target="sonic-vs.bin")
+                probe.assert_called_once_with("findmnt", "--json", "--target", str(path), "--output", "SOURCE,FSTYPE")
+
+    def test_onie_rejects_symlinks_and_nondirectories(self):
+        for kind in ("symlink", "file"):
+            with self.subTest(kind=kind), self.storage() as (path, probe):
+                path.rmdir()
+                if kind == "symlink":
+                    path.symlink_to(path.parent, target_is_directory=True)
+                else:
+                    path.write_text("not a directory")
+                with self.assertRaisesRegex(RuntimeError, "must be a real directory"):
+                    preflight.check_data_storage(path, build_target="sonic-vs.bin")
+                probe.assert_not_called()
+
+    def test_onie_rejects_remote_or_nonext4_storage(self):
+        for filesystem in ({"source": "server:/data", "fstype": "nfs"},
+                           {"source": "server:/data", "fstype": "ext4"},
+                           {"source": "/dev/test-disk", "fstype": "xfs"},
+                           {"source": "overlay", "fstype": "overlay"}):
+            with self.subTest(filesystem=filesystem), self.storage(filesystem) as (path, _):
+                with self.assertRaisesRegex(RuntimeError, "local ext4 block filesystem"):
+                    preflight.check_data_storage(path, build_target="sonic-vs.bin")
+
+    def test_onie_rejects_malformed_findmnt_results(self):
+        for text in ("invalid json", "null", "[]", "{}", '{"filesystems": []}',
+                     '{"filesystems": [{}, {}]}', '{"filesystems": [null]}',
+                     '{"filesystems": [{"source": null}]}'):
+            with self.subTest(text=text), self.storage() as (path, probe):
+                probe.return_value = text
+                with self.assertRaisesRegex(RuntimeError, "Could not identify the filesystem"):
+                    preflight.check_data_storage(path, build_target="sonic-vs.bin")
+
+    def test_onie_rejects_sources_that_are_not_block_devices(self):
+        with self.storage(block=False) as (path, _):
+            with self.assertRaisesRegex(RuntimeError, "not a block device"):
+                preflight.check_data_storage(path, build_target="sonic-vs.bin")
+
+
+class PreflightBuildTargetTests(unittest.TestCase):
+    def test_host_agent_retains_capability_checks_without_legacy_installation(self):
+        with self.host(("--host-agent", "--build-target", "sonic-vs.bin")) as host, \
+                patch.object(preflight, "check_data_storage") as storage:
+            preflight.main()
+            storage.assert_not_called()
+            host.checks["check_worker_umasks"].assert_called_once_with(True)
+            for name in ("check_ghostscript", "check_legacy_nat", "check_disk"):
+                host.checks[name].assert_called_once()
+            host.device.assert_not_called()
+
+    @contextlib.contextmanager
+    def host(self, arguments=(), *, memory_gib=16):
+        """Exercise the real entrypoint against controlled, non-root host probes."""
+        with tempfile.TemporaryDirectory() as temporary, contextlib.ExitStack() as stack:
+            workspace = Path(temporary)
+            stdout, stderr = io.StringIO(), io.StringIO()
+            original_read = Path.read_text
+
+            def read_text(path, *args, **kwargs):
+                if path == Path("/proc/meminfo"):
+                    return f"MemAvailable: {memory_gib * 1024**2} kB\n"
+                if path == Path("/proc/filesystems"):
+                    return "nodev overlay\n"
+                return original_read(path, *args, **kwargs)
+
+            def output(*command):
+                if command[0] == "findmnt":
+                    return "rw,relatime"
+                if command[:2] == ("docker", "info"):
+                    return "/var/lib/docker"
+                if command[0] == "j2":
+                    self.assertEqual(Path(command[1]).read_text(), "{{ 6 * 7 }}")
+                    return "42"
+                return "docker version"
+
+            stack.enter_context(patch.object(sys, "argv", ["preflight.py", "--workspace", str(workspace), *arguments]))
+            stack.enter_context(patch.object(preflight.os, "geteuid", return_value=1000))
+            stack.enter_context(patch.object(preflight.os.path, "ismount", return_value=True))
+            stack.enter_context(patch.object(preflight.platform, "machine", return_value="x86_64"))
+            stack.enter_context(patch.object(preflight.platform, "freedesktop_os_release",
+                                             return_value={"ID": "ubuntu", "VERSION_ID": "24.04"}))
+            stack.enter_context(patch.object(preflight.shutil, "which", return_value="/usr/bin/tool"))
+            stack.enter_context(patch.object(Path, "read_text", read_text))
+            stack.enter_context(patch.object(preflight, "output", side_effect=output))
+            checks = {name: stack.enter_context(patch.object(preflight, name)) for name in
+                      ("check_worker_umasks", "check_ghostscript", "check_legacy_nat", "check_disk")}
+            device = stack.enter_context(patch.object(preflight, "open", create=True))
+            device.return_value.__enter__.return_value.fileno.return_value = 42
+            ioctl = stack.enter_context(patch.object(preflight.fcntl, "ioctl", return_value=12))
+            stack.enter_context(contextlib.redirect_stdout(stdout))
+            stack.enter_context(contextlib.redirect_stderr(stderr))
+            yield SimpleNamespace(workspace=workspace, stdout=stdout, stderr=stderr,
+                                  checks=checks, device=device, ioctl=ioctl)
+
+    def test_default_and_explicit_kvm_check_device_api(self):
+        for arguments in ((), ("--build-target", "sonic-vs.img.gz")):
+            with self.subTest(arguments=arguments), self.host(arguments) as host:
+                preflight.main()
+                host.device.assert_called_once_with("/dev/kvm", "r+b", buffering=0)
+                host.ioctl.assert_called_once_with(42, 0xAE00, 0)
+                self.assertIn("PASS:", host.stdout.getvalue())
+                self.assertIn("KVM API 12", host.stdout.getvalue())
+
+    def test_default_and_explicit_kvm_reject_missing_device(self):
+        for arguments in ((), ("--build-target", "sonic-vs.img.gz")):
+            with self.subTest(arguments=arguments), self.host(arguments) as host:
+                host.device.side_effect = FileNotFoundError("/dev/kvm")
+                with self.assertRaisesRegex(FileNotFoundError, "/dev/kvm"):
+                    preflight.main()
+                self.assertNotIn("PASS", host.stdout.getvalue())
+
+    def test_kvm_rejects_unexpected_api(self):
+        with self.host() as host:
+            host.ioctl.return_value = 11
+            with self.assertRaisesRegex(RuntimeError, "Unexpected KVM API: 11"):
+                preflight.main()
+
+    def test_kvm_keeps_vm_memory_floor(self):
+        for arguments in ((), ("--build-target", "sonic-vs.img.gz")):
+            with self.subTest(arguments=arguments), self.host(arguments, memory_gib=8) as host:
+                with self.assertRaises(SystemExit) as result:
+                    preflight.main()
+                self.assertEqual(result.exception.code, 2)
+                self.assertIn("VM alone requests 10 GiB", host.stderr.getvalue())
+
+    def test_both_targets_warn_about_memory_headroom(self):
+        for target in ("sonic-vs.img.gz", "sonic-vs.bin"):
+            with self.subTest(target=target), self.host(("--build-target", target), memory_gib=11) as host:
+                preflight.main()
+                self.assertIn("headroom beyond the 10 GiB minimum", host.stdout.getvalue())
+
+    def test_onie_keeps_native_build_memory_floor(self):
+        with self.host(("--build-target", "sonic-vs.bin"), memory_gib=8) as host:
+            with self.assertRaises(SystemExit) as result:
+                preflight.main()
+            self.assertEqual(result.exception.code, 2)
+            self.assertIn("native VS build requires at least 10 GiB", host.stderr.getvalue())
+            self.assertNotIn("installer VM", host.stderr.getvalue())
+
+    def test_onie_passes_without_kvm(self):
+        with self.host(("--build-target", "sonic-vs.bin")) as host:
+            host.device.side_effect = FileNotFoundError("/dev/kvm")
+            preflight.main()
+            host.device.assert_not_called()
+            host.ioctl.assert_not_called()
+            self.assertIn("PASS:", host.stdout.getvalue())
+            self.assertIn("sonic-vs.bin does not require KVM", host.stdout.getvalue())
+            self.assertNotIn("KVM API", host.stdout.getvalue())
+            self.assertNotIn("installer VM", host.stdout.getvalue())
+            for name, check in host.checks.items():
+                with self.subTest(check=name):
+                    check.assert_called_once()
+            host.checks["check_disk"].assert_called_once_with(host.workspace, Path("/var/lib/docker"), 100, 100)
+
+    def test_both_targets_preserve_common_host_check_failures(self):
+        for target in ("sonic-vs.img.gz", "sonic-vs.bin"):
+            for name in ("check_worker_umasks", "check_ghostscript", "check_legacy_nat", "check_disk"):
+                with self.subTest(target=target, check=name), self.host(("--build-target", target)) as host:
+                    host.checks[name].side_effect = RuntimeError("host prerequisite failed")
+                    with self.assertRaisesRegex(RuntimeError, "host prerequisite failed"):
+                        preflight.main()
+                    self.assertNotIn("PASS", host.stdout.getvalue())
+
+    def test_data_only_mode_does_not_probe_other_host_prerequisites(self):
+        for arguments, target in (((), None), (("--build-target", "sonic-vs.bin"), "sonic-vs.bin")):
+            with self.subTest(target=target), self.host(("--check-data-only", *arguments)) as host, \
+                    patch.object(preflight, "check_data_storage") as storage:
+                preflight.main()
+                storage.assert_called_once_with(build_target=target)
+                for check in host.checks.values():
+                    check.assert_not_called()
+                host.device.assert_not_called()
+                host.ioctl.assert_not_called()
+                self.assertNotIn("PASS", host.stdout.getvalue())
+
+    def test_data_only_mode_propagates_storage_failure(self):
+        with self.host(("--check-data-only", "--build-target", "sonic-vs.bin")) as host, \
+                patch.object(preflight, "check_data_storage", side_effect=RuntimeError("storage rejected")):
+            with self.assertRaisesRegex(RuntimeError, "storage rejected"):
+                preflight.main()
+            for check in host.checks.values():
+                check.assert_not_called()
 
 
 if __name__ == "__main__":

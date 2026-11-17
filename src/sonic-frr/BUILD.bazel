@@ -1,0 +1,874 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_pkg//pkg:mappings.bzl", "REMOVE_BASE_DIRECTORY", "pkg_attributes", "pkg_files", "pkg_mkdirs", "strip_prefix")
+load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages", "runtime_packages_group")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(glob(["patch/*.patch"]) + [
+    "dplane_fpm_sonic/dplane_fpm_sonic.c",
+    "patch/series",
+    "test_generation.py",
+    "upstream_tests.py",
+    "upstream_tests.bzl",
+    "source.BUILD.bazel",
+    "0001-bazel-xrelfo.patch",
+    "0002-bazel-documentation.patch",
+    "0003-distroless-shared-link-sequences.patch",
+])
+
+bool_flag(name = "tcmalloc", build_setting_default = True)
+bool_flag(name = "snmp", build_setting_default = True)
+config_setting(name = "tcmalloc_enabled", flag_values = {":tcmalloc": "true"})
+config_setting(name = "snmp_enabled", flag_values = {":snmp": "true"})
+
+config_setting(name = "bookworm", constraint_values = ["@sonic_build_infra//platforms:bookworm"])
+config_setting(name = "bookworm_amd64", constraint_values = ["@sonic_build_infra//platforms:bookworm", "@platforms//cpu:x86_64"])
+config_setting(name = "bookworm_arm64", constraint_values = ["@sonic_build_infra//platforms:bookworm", "@platforms//cpu:aarch64"])
+
+alias(name = "cap", actual = select({":bookworm": "@frr_bookworm_deps//libcap-dev:libcap_cc", "//conditions:default": "@frr_deps//libcap-dev:libcap_cc"}))
+alias(name = "json_c", actual = select({":bookworm": "@frr_bookworm_deps//libjson-c-dev:libjson-c_cc", "//conditions:default": "@frr_deps//libjson-c-dev:libjson-c_cc"}))
+alias(name = "readline", actual = select({":bookworm": "@frr_bookworm_deps//libreadline-dev:libreadline_cc", "//conditions:default": "@frr_deps//libreadline-dev:libreadline_cc"}))
+alias(name = "elf", actual = select({":bookworm": "@frr_bookworm_deps//libelf-dev:libelf_cc", "//conditions:default": "@frr_deps//libelf-dev:libelf_cc"}))
+alias(name = "crypt", actual = select({":bookworm": "@frr_bookworm_deps//libcrypt-dev:libcrypt_cc", "//conditions:default": "@frr_deps//libcrypt-dev:libcrypt_cc"}))
+
+alias(name = "cap_headers", actual = select({":bookworm": "@frr_bookworm_deps//libcap-dev:libcap_headers", "//conditions:default": "@frr_deps//libcap-dev:libcap_headers"}))
+alias(name = "json_c_headers", actual = select({":bookworm": "@frr_bookworm_deps//libjson-c-dev:libjson-c_headers", "//conditions:default": "@frr_deps//libjson-c-dev:libjson-c_headers"}))
+alias(name = "readline_headers", actual = select({":bookworm": "@frr_bookworm_deps//libreadline-dev:libreadline_headers", "//conditions:default": "@frr_deps//libreadline-dev:libreadline_headers"}))
+alias(name = "elf_headers", actual = select({":bookworm": "@frr_bookworm_deps//libelf-dev:libelf_headers", "//conditions:default": "@frr_deps//libelf-dev:libelf_headers"}))
+alias(name = "cares_headers", actual = select({":bookworm": "@frr_bookworm_deps//libc-ares-dev:libc-ares_headers", "//conditions:default": "@frr_deps//libc-ares-dev:libc-ares_headers"}))
+alias(name = "pam_headers", actual = select({":bookworm": "@frr_bookworm_deps//libpam0g-dev:libpam0g_headers", "//conditions:default": "@frr_deps//libpam0g-dev:libpam0g_headers"}))
+alias(name = "pcre2_headers", actual = select({":bookworm": "@frr_bookworm_deps//libpcre2-dev:libpcre2_headers", "//conditions:default": "@frr_deps//libpcre2-dev:libpcre2_headers"}))
+alias(name = "unwind_headers", actual = select({":bookworm": "@frr_bookworm_deps//libunwind-dev:libunwind_headers", "//conditions:default": "@frr_deps//libunwind-dev:libunwind_headers"}))
+alias(name = "cunit_headers", actual = select({":bookworm": "@frr_bookworm_deps//libcunit1-dev:libcunit1_headers", "//conditions:default": "@frr_deps//libcunit1-dev:libcunit1_headers"}))
+alias(name = "net_snmp_headers", actual = select({":bookworm": "@net_snmp//:headers", "//conditions:default": "@frr_deps//libsnmp-dev:libsnmp_headers"}))
+
+alias(name = "elf_runtime", actual = select({":bookworm": "@frr_bookworm_deps//libelf-dev", "//conditions:default": "@frr_deps//libelf-dev"}))
+
+filegroup(
+    name = "target_runtime",
+    srcs = select({
+        ":bookworm": ["@frr_bookworm_deps//" + package for package in [
+            "libc-ares-dev", "libcap-dev", "libjson-c-dev", "libpam0g-dev",
+            "libpcre2-dev", "libreadline-dev", "libgoogle-perftools-dev",
+            "libunwind-dev", "libelf-dev", "libcrypt-dev", "libcunit1-dev",
+        ]],
+        "//conditions:default": ["@frr_deps//" + package for package in [
+        "libc-ares-dev", "libcap-dev", "libjson-c-dev", "libpam0g-dev",
+        "libpcre2-dev", "libreadline-dev", "libsnmp-dev",
+        "libgoogle-perftools-dev", "libunwind-dev", "libelf-dev",
+        "libcrypt-dev", "libcunit1-dev",
+        ]],
+    }),
+)
+
+
+py_binary(name = "test_generation", srcs = ["test_generation.py"])
+# Release metadata is bound to the fixed 10.5.4 source's first Debian stanza.
+expand_template(
+    name = "package_changelog",
+    template = "@frr_source//:debian/changelog",
+    out = "metadata/changelog.Debian",
+    substitutions = {
+        "frr (10.5.4-0) unstable; urgency=medium": "frr (10.5.4-sonic-0) UNRELEASED; urgency=medium\n\n  * Build the SONiC-patched FRRouting sources.\n\n -- SONiC <sonicproject@googlegroups.com>  Mon, 20 Apr 2026 02:00:00 -0600\n\nfrr (10.5.4-0) unstable; urgency=medium",
+    },
+)
+
+gzip_compress(
+    name = "package_changelog_gzip",
+    src = ":package_changelog",
+    level = 9,
+)
+
+alias(name = "metadata/changelog.Debian.gz", actual = ":package_changelog_gzip")
+
+_SUBSTITUTIONS = {
+    "DFLT_NAME": "traditional",
+    "GRPC_TRUE": "#",
+    "PACKAGE_BUGREPORT": "https://github.com/frrouting/frr/issues",
+    "PACKAGE_NAME": "frr",
+    "PACKAGE_STRING": "frr 10.5.4",
+    "PACKAGE_TARNAME": "frr",
+    "PACKAGE_URL": "https://frrouting.org/",
+    "PACKAGE_VERSION": "10.5.4",
+    "SCRIPTING_TRUE": "#",
+    "TIMEOUT_MIN": "2",
+    "ZEROMQ_TRUE": "#",
+    "e_bindir": "/usr/bin",
+    "e_frr_libstatedir": "/var/lib/frr",
+    "e_frr_runstatedir": "/var/run/frr",
+    "e_frr_sysconfdir": "/etc/frr",
+    "e_sbindir": "/usr/lib/frr",
+    "e_scriptdir": "/etc/frr/scripts",
+    "e_vtysh_bin": "/usr/bin/vtysh",
+    "e_watchfrr_sh": "/usr/lib/frr/watchfrr.sh",
+    "e_yangmodelsdir": "/usr/share/yang",
+    "enable_configfile_mask": "0640",
+    "enable_group": "frr",
+    "enable_user": "frr",
+    "enable_vty_group": "frrvty"
+}
+
+[
+    expand_template(
+        name = name + "_configured",
+        template = "@frr_source//:tools/" + name + ".in",
+        out = "resources/" + name,
+        substitutions = {"@" + key + "@": value for key, value in _SUBSTITUTIONS.items()},
+    )
+    for name in ["frrcommon.sh", "frrinit.sh", "watchfrr.sh", "frr.service", "frr@.service"]
+]
+
+[
+    expand_template(
+        name = path.rsplit("/", 1)[1] + "_configured",
+        template = "@frr_source//:" + path,
+        out = "resources/" + path.rsplit("/", 1)[1],
+        substitutions = {"#!/usr/bin/env python3": "#!/usr/bin/python3"},
+    )
+    for path in ["tools/frr-reload.py", "tools/generate_support_bundle.py", "tools/frr_babeltrace.py", "ospfclient/ospfclient.py"]
+]
+
+pkg_files(
+    name = "configuration_files",
+    srcs = ["@frr_source//:" + path for path in [
+        "tools/etc/frr/daemons",
+        "tools/etc/frr/frr.conf",
+        "tools/etc/frr/support_bundle_commands.conf",
+        "tools/etc/frr/vtysh.conf",
+        "tools/etc/iproute2/rt_protos.d/frr.conf",
+        "tools/etc/logrotate.d/frr",
+        "tools/etc/rsyslog.d/45-frr.conf",
+    ]],
+    strip_prefix = strip_prefix.from_root("tools"),
+)
+
+pkg_files(
+    name = "service_data",
+    srcs = [
+        "@frr_source//:debian/frr.pam",
+        "@frr_source//:debian/frr.conf",
+        "@frr_source//:debian/frr.lintian-overrides",
+        ":frr.service_configured",
+        ":frr@.service_configured",
+    ],
+    renames = {
+        "@frr_source//:debian/frr.pam": "etc/pam.d/frr",
+        "@frr_source//:debian/frr.conf": "usr/lib/tmpfiles.d/frr.conf",
+        "@frr_source//:debian/frr.lintian-overrides": "usr/share/lintian/overrides/frr",
+        ":frr.service_configured": "usr/lib/systemd/system/frr.service",
+        ":frr@.service_configured": "usr/lib/systemd/system/frr@.service",
+    },
+)
+
+pkg_files(
+    name = "service_programs",
+    srcs = ["@frr_source//:tools/frr-reload"] + [":" + name + "_configured" for name in ["frrcommon.sh", "frrinit.sh", "watchfrr.sh"]],
+    prefix = "usr/lib/frr",
+    attributes = pkg_attributes(mode = "0755"),
+)
+
+pkg_files(
+    name = "sysv_init",
+    srcs = [":frrinit.sh_configured"],
+    renames = {":frrinit.sh_configured": "etc/init.d/frr"},
+    attributes = pkg_attributes(mode = "0755"),
+)
+
+pkg_files(
+    name = "yang_model_files",
+    srcs = ["@frr_source//:yang_models"],
+    prefix = "usr/share/yang",
+    strip_prefix = strip_prefix.from_root("yang"),
+)
+
+pkg_mkdirs(
+    name = "runtime_directories",
+    dirs = ["etc/frr", "etc/iproute2/rt_protos.d", "var/log/frr"],
+    attributes = pkg_attributes(mode = "0755"),
+)
+
+[
+    pkg_files(
+        name = package + "_copyright_changelog",
+        srcs = ["@frr_source//:debian/copyright", ":metadata/changelog.Debian.gz"],
+        prefix = "usr/share/doc/" + package,
+    )
+    for package in ["frr", "frr-pythontools", "frr-snmp"]
+]
+
+pkg_files(
+    name = "readme_and_emacs",
+    srcs = ["@frr_source//:debian/README.Debian", "@frr_source//:tools/zebra.el"],
+    prefix = "usr/share/doc/frr",
+)
+
+# The epoch is the date of the fixed source's first debian/changelog stanza.
+_DOCUMENTATION_EPOCH = "1776672000"
+# FRR's upstream conf.py accepts the declared version; all docs stay in place.
+[
+    run_binary(
+        name = "documentation_" + builder,
+        tool = "@sonic_build_infra//tools/build_tools:sphinx",
+        srcs = ["@frr_source//:documentation_sources", "@frr_source//:doc/" + source + "/conf.py"],
+        out_dirs = ["documentation/" + builder],
+        args = [
+            "--builder", builder,
+            "--source-config", "$(execpath @frr_source//:doc/" + source + "/conf.py)",
+            "--output", "$(RULEDIR)/documentation/" + builder,
+        ],
+        env = {
+            "SOURCE_DATE_EPOCH": _DOCUMENTATION_EPOCH,
+            "TZ": "UTC",
+            "FRR_DOCUMENTATION_VERSION": _SUBSTITUTIONS["PACKAGE_VERSION"],
+        },
+    )
+    for builder, source in [("man", "manpages"), ("html", "user"), ("texinfo", "user")]
+]
+
+run_binary(
+    name = "documentation_info",
+    tool = "@sonic_build_infra//tools/build_tools:makeinfo",
+    srcs = [":documentation_texinfo"],
+    outs = ["documentation/info/frr.info"],
+    args = ["--no-split", "-o", "$(execpath :documentation/info/frr.info)", "$(execpath :documentation_texinfo)/frr.texi"],
+    env = {"SOURCE_DATE_EPOCH": _DOCUMENTATION_EPOCH, "TZ": "UTC"},
+)
+
+filegroup(
+    name = "documentation",
+    srcs = [":documentation_" + kind for kind in ["man", "html", "texinfo", "info"]],
+)
+
+# Exact install outputs of upstream doc/manpages/conf.py:man_pages.
+_MANPAGES = [('frr-bfdd', 8), ('frr-bgpd', 8), ('frr-eigrpd', 8), ('frr-fabricd', 8), ('frr-isisd', 8), ('frr-ldpd', 8), ('frr-nhrpd', 8), ('frr-ospf6d', 8), ('frr-ospfclient', 8), ('frr-ospfd', 8), ('frr-pbrd', 8), ('frr-pimd', 8), ('frr-ripd', 8), ('frr-ripngd', 8), ('frr-sharpd', 8), ('frr-staticd', 8), ('frr-vrrpd', 8), ('frr-watchfrr', 8), ('frr-zebra', 8), ('frr', 1), ('mtracebis', 8), ('vtysh', 1)]
+[
+    genrule(
+        name = "manual_" + name,
+        srcs = [":documentation_man"],
+        tools = ["@sonic_build_infra//tools/gzip:reproducible_gzip"],
+        outs = ["manpages/man" + str(section) + "/" + name + "." + str(section) + ".gz"],
+        cmd = "$(location @sonic_build_infra//tools/gzip:reproducible_gzip) -9 -c $(location :documentation_man)/" + name + "." + str(section) + " > $@",
+    )
+    for name, section in _MANPAGES
+]
+
+filegroup(
+    name = "compressed_manpages",
+    srcs = [":manual_" + name for name, _section in _MANPAGES],
+)
+
+pkg_files(
+    name = "manual_files",
+    srcs = [":compressed_manpages"],
+    prefix = "usr/share/man",
+    strip_prefix = strip_prefix.from_pkg("manpages"),
+)
+
+pkg_tar(
+    name = "resources",
+    srcs = [
+        ":configuration_files", ":service_data", ":service_programs", ":sysv_init",
+        ":yang_model_files", ":runtime_directories", ":frr_copyright_changelog",
+        ":readme_and_emacs", ":manual_files",
+    ],
+    mtime = 0,
+    portable_mtime = False,
+)
+
+pkg_files(
+    name = "python_programs",
+    srcs = [":" + name + "_configured" for name in ["frr-reload.py", "generate_support_bundle.py", "frr_babeltrace.py", "ospfclient.py"]],
+    prefix = "usr/lib/frr",
+    attributes = pkg_attributes(mode = "0755"),
+)
+
+[
+    pkg_files(
+        name = package + "_lintian",
+        srcs = ["@frr_source//:debian/" + package + ".lintian-overrides"],
+        renames = {"@frr_source//:debian/" + package + ".lintian-overrides": "usr/share/lintian/overrides/" + package},
+    )
+    for package in ["frr-pythontools", "frr-snmp"]
+]
+
+pkg_tar(
+    name = "pythontools_layout",
+    srcs = [":python_programs", ":frr-pythontools_copyright_changelog", ":frr-pythontools_lintian"],
+    mtime = 0,
+    portable_mtime = False,
+)
+
+pkg_tar(
+    name = "snmp_resources",
+    srcs = [":frr-snmp_copyright_changelog", ":frr-snmp_lintian"],
+    mtime = 0,
+    portable_mtime = False,
+)
+
+sonic_deploy_tar(
+    name = "frr_elf_x86_64",
+    binaries = {
+        "usr/bin/mtracebis type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/mtracebis",
+        "usr/bin/vtysh type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:vtysh/vtysh",
+        "usr/lib/frr/zebra type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:zebra/zebra",
+        "usr/lib/frr/watchfrr type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:watchfrr/watchfrr",
+        "usr/lib/frr/mgmtd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:mgmtd/mgmtd",
+        "usr/lib/frr/bgpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:bgpd/bgpd",
+        "usr/lib/frr/ripd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ripd/ripd",
+        "usr/lib/frr/ripngd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ripngd/ripngd",
+        "usr/lib/frr/ospfd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ospfd/ospfd",
+        "usr/lib/frr/ospf6d type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ospf6d/ospf6d",
+        "usr/lib/frr/isisd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:isisd/isisd",
+        "usr/lib/frr/fabricd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:isisd/fabricd",
+        "usr/lib/frr/nhrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:nhrpd/nhrpd",
+        "usr/lib/frr/ldpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ldpd/ldpd",
+        "usr/lib/frr/babeld type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:babeld/babeld",
+        "usr/lib/frr/eigrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:eigrpd/eigrpd",
+        "usr/lib/frr/sharpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:sharpd/sharpd",
+        "usr/lib/frr/pimd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/pimd",
+        "usr/lib/frr/pim6d type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/pim6d",
+        "usr/lib/frr/pbrd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pbrd/pbrd",
+        "usr/lib/frr/staticd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:staticd/staticd",
+        "usr/lib/frr/bfdd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:bfdd/bfdd",
+        "usr/lib/frr/vrrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:vrrpd/vrrpd",
+        "usr/lib/frr/pathd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pathd/pathd",
+        "usr/lib/x86_64-linux-gnu/frr/libfrr.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrr_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/libfrrcares.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrrcares_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/libmgmt_be_nb.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:mgmtd_libmgmt_be_nb_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/libfrrospfapiclient.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospfclient_libfrrospfapiclient_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/zebra_fpm.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_fpm_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/zebra_cumulus_mlag.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_cumulus_mlag_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/dplane_fpm_nl.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_dplane_fpm_nl_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/dplane_fpm_sonic.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_dplane_fpm_sonic_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/bgpd_bmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:bgpd_bgpd_bmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/pathd_pcep.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:pathd_pathd_pcep_la_shared",
+    },
+    mtree = [
+        "usr/lib/x86_64-linux-gnu/frr/libfrr.so.0 type=link uid=0 gid=0 mode=0777 link=libfrr.so.0.0.0",
+        "usr/lib/x86_64-linux-gnu/frr/libfrrcares.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrcares.so.0.0.0",
+        "usr/lib/x86_64-linux-gnu/frr/libmgmt_be_nb.so.0 type=link uid=0 gid=0 mode=0777 link=libmgmt_be_nb.so.0.0.0",
+        "usr/lib/x86_64-linux-gnu/frr/libfrrospfapiclient.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrospfapiclient.so.0.0.0",
+    ],
+    debug_symlinks = {
+        "usr/share/doc/frr-dbgsym": "frr",
+    },
+    force_debug_build = True,
+    preserve_install_rpath = True,
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
+sonic_deploy_tar(
+    name = "frr_snmp_elf_x86_64",
+    binaries = {
+        "usr/lib/x86_64-linux-gnu/frr/libfrrsnmp.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrrsnmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/zebra_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/bgpd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:bgpd_bgpd_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/ripd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ripd_ripd_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/ospfd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospfd_ospfd_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/ospf6d_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospf6d_ospf6d_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/isisd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:isisd_isisd_snmp_la_shared",
+        "usr/lib/x86_64-linux-gnu/frr/modules/ldpd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ldpd_ldpd_snmp_la_shared",
+    },
+    mtree = ["usr/lib/x86_64-linux-gnu/frr/libfrrsnmp.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrsnmp.so.0.0.0"],
+    debug_symlinks = {
+        "usr/share/doc/frr-snmp-dbgsym": "frr-snmp",
+    },
+    force_debug_build = True,
+    preserve_install_rpath = True,
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
+sonic_deploy_tar(
+    name = "frr_elf_aarch64",
+    binaries = {
+        "usr/bin/mtracebis type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/mtracebis",
+        "usr/bin/vtysh type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:vtysh/vtysh",
+        "usr/lib/frr/zebra type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:zebra/zebra",
+        "usr/lib/frr/watchfrr type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:watchfrr/watchfrr",
+        "usr/lib/frr/mgmtd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:mgmtd/mgmtd",
+        "usr/lib/frr/bgpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:bgpd/bgpd",
+        "usr/lib/frr/ripd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ripd/ripd",
+        "usr/lib/frr/ripngd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ripngd/ripngd",
+        "usr/lib/frr/ospfd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ospfd/ospfd",
+        "usr/lib/frr/ospf6d type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ospf6d/ospf6d",
+        "usr/lib/frr/isisd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:isisd/isisd",
+        "usr/lib/frr/fabricd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:isisd/fabricd",
+        "usr/lib/frr/nhrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:nhrpd/nhrpd",
+        "usr/lib/frr/ldpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:ldpd/ldpd",
+        "usr/lib/frr/babeld type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:babeld/babeld",
+        "usr/lib/frr/eigrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:eigrpd/eigrpd",
+        "usr/lib/frr/sharpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:sharpd/sharpd",
+        "usr/lib/frr/pimd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/pimd",
+        "usr/lib/frr/pim6d type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pimd/pim6d",
+        "usr/lib/frr/pbrd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pbrd/pbrd",
+        "usr/lib/frr/staticd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:staticd/staticd",
+        "usr/lib/frr/bfdd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:bfdd/bfdd",
+        "usr/lib/frr/vrrpd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:vrrpd/vrrpd",
+        "usr/lib/frr/pathd type=file uid=0 gid=0 mode=0755 time=0": "@frr_source//:pathd/pathd",
+        "usr/lib/aarch64-linux-gnu/frr/libfrr.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrr_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/libfrrcares.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrrcares_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/libmgmt_be_nb.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:mgmtd_libmgmt_be_nb_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/libfrrospfapiclient.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospfclient_libfrrospfapiclient_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/zebra_fpm.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_fpm_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/zebra_cumulus_mlag.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_cumulus_mlag_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/dplane_fpm_nl.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_dplane_fpm_nl_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/dplane_fpm_sonic.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_dplane_fpm_sonic_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/bgpd_bmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:bgpd_bgpd_bmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/pathd_pcep.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:pathd_pathd_pcep_la_shared",
+    },
+    mtree = [
+        "usr/lib/aarch64-linux-gnu/frr/libfrr.so.0 type=link uid=0 gid=0 mode=0777 link=libfrr.so.0.0.0",
+        "usr/lib/aarch64-linux-gnu/frr/libfrrcares.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrcares.so.0.0.0",
+        "usr/lib/aarch64-linux-gnu/frr/libmgmt_be_nb.so.0 type=link uid=0 gid=0 mode=0777 link=libmgmt_be_nb.so.0.0.0",
+        "usr/lib/aarch64-linux-gnu/frr/libfrrospfapiclient.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrospfapiclient.so.0.0.0",
+    ],
+    debug_symlinks = {
+        "usr/share/doc/frr-dbgsym": "frr",
+    },
+    force_debug_build = True,
+    preserve_install_rpath = True,
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//cpu:aarch64"],
+)
+
+sonic_deploy_tar(
+    name = "frr_snmp_elf_aarch64",
+    binaries = {
+        "usr/lib/aarch64-linux-gnu/frr/libfrrsnmp.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:lib_libfrrsnmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/zebra_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:zebra_zebra_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/bgpd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:bgpd_bgpd_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/ripd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ripd_ripd_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/ospfd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospfd_ospfd_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/ospf6d_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ospf6d_ospf6d_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/isisd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:isisd_isisd_snmp_la_shared",
+        "usr/lib/aarch64-linux-gnu/frr/modules/ldpd_snmp.so type=file uid=0 gid=0 mode=0644 time=0": "@frr_source//:ldpd_ldpd_snmp_la_shared",
+    },
+    mtree = ["usr/lib/aarch64-linux-gnu/frr/libfrrsnmp.so.0 type=link uid=0 gid=0 mode=0777 link=libfrrsnmp.so.0.0.0"],
+    debug_symlinks = {
+        "usr/share/doc/frr-snmp-dbgsym": "frr-snmp",
+    },
+    force_debug_build = True,
+    preserve_install_rpath = True,
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//cpu:aarch64"],
+)
+
+alias(
+    name = "frr_elf",
+    actual = select({
+        "@platforms//cpu:x86_64": ":frr_elf_x86_64",
+        "@platforms//cpu:aarch64": ":frr_elf_aarch64",
+    }),
+)
+
+alias(
+    name = "frr_elf.debug_symbols",
+    actual = select({
+        "@platforms//cpu:x86_64": ":frr_elf_x86_64.debug_symbols",
+        "@platforms//cpu:aarch64": ":frr_elf_aarch64.debug_symbols",
+    }),
+)
+
+alias(
+    name = "frr_snmp_elf",
+    actual = select({
+        "@platforms//cpu:x86_64": ":frr_snmp_elf_x86_64",
+        "@platforms//cpu:aarch64": ":frr_snmp_elf_aarch64",
+    }),
+)
+
+alias(
+    name = "frr_snmp_elf.debug_symbols",
+    actual = select({
+        "@platforms//cpu:x86_64": ":frr_snmp_elf_x86_64.debug_symbols",
+        "@platforms//cpu:aarch64": ":frr_snmp_elf_aarch64.debug_symbols",
+    }),
+)
+
+pkg_tar(
+    name = "frr_layout",
+    deps = [
+        ":frr_elf",
+        ":resources",
+    ],
+    create_parents = False,
+    portable_mtime = False,
+    mtime = 0,
+    allow_duplicates_from_deps = False,
+    allow_duplicates_with_different_content = False,
+)
+
+pkg_tar(
+    name = "frr_snmp_layout",
+    deps = [
+        ":frr_snmp_elf",
+        ":snmp_resources",
+    ],
+    create_parents = False,
+    portable_mtime = False,
+    mtime = 0,
+    allow_duplicates_from_deps = False,
+    allow_duplicates_with_different_content = False,
+)
+
+# OCI package metadata follows the Trixie libyang producer interface.
+runtime_packages(
+    name = "runtime_package_metadata",
+    target_compatible_with = select({":bookworm": ["@platforms//:incompatible"], "//conditions:default": []}),
+    control = "@frr_source//:debian/control",
+    changelog = ":package_changelog",
+    debian_files = {"compat": "@frr_source//:debian/compat"},
+    module_name = "sonic-buildimage",
+    packages = {"frr": ":frr_layout", "frr-pythontools": ":pythontools_layout"},
+    dependencies = ["@libyang//:runtime_packages.json", "//src/libraries/sonic-fib:runtime_packages.json"],
+    apt_packages = {
+        "@frr_deps//" + package + ":data": "@frr_deps//" + package + ":control"
+        for package in [
+            "libcares2", "libcap2", "libcrypt1", "libjson-c5", "libpam0g",
+            "libpcre2-posix3", "libreadline8t64", "libgoogle-perftools4t64",
+            "libunwind8", "libsnmp40t64",
+        ]
+    },
+    required_paths = {"frr": ["usr/lib/frr/bgpd", "usr/lib/frr/zebra"], "frr-pythontools": ["usr/lib/frr/frr-reload.py"]},
+)
+
+runtime_packages(
+    name = "snmp_package_metadata",
+    target_compatible_with = select({":bookworm": ["@platforms//:incompatible"], "//conditions:default": []}),
+    control = "@frr_source//:debian/control",
+    changelog = ":package_changelog",
+    debian_files = {"compat": "@frr_source//:debian/compat"},
+    module_name = "sonic-buildimage",
+    packages = {"frr-snmp": ":frr_snmp_layout"},
+    dependencies = [":runtime_package_metadata"],
+    apt_packages = {"@frr_deps//libsnmp40t64:data": "@frr_deps//libsnmp40t64:control"},
+    required_paths = {"frr-snmp": ["usr/lib/{multiarch}/frr/modules/bgpd_snmp.so"]},
+)
+
+runtime_packages_group(
+    name = "runtime_packages.json",
+    target_compatible_with = select({":bookworm": ["@platforms//:incompatible"], "//conditions:default": []}),
+    packages = [":runtime_package_metadata"] + select({
+        ":snmp_enabled": [":snmp_package_metadata"],
+        "//conditions:default": [],
+    }),
+)
+
+# All source compilation belongs to the pinned, patched source repository.
+alias(name = "clippy", actual = "@frr_source//:clippy")
+alias(name = "programs", actual = "@frr_source//:programs")
+alias(name = "modules", actual = "@frr_source//:modules")
+alias(name = "check_programs", actual = "@frr_source//:check_programs")
+test_suite(name = "upstream_check", tests = ["@frr_source//:upstream_check"])
+test_suite(name = "upstream_native_check", tests = ["@frr_source//:upstream_native_check"])
+
+_COMMON_HEADER_DEFINES = [
+    "#define BFD_LINUX 1",
+    "#define CRYPTO_INTERNAL 1",
+    "#define DFLT_NAME \"traditional\"",
+    "#define DISABLE_BGP_ANNOUNCE 0",
+    "#define ENABLE_BGP_VNC 1",
+    "#define ENABLE_VERSION_BUILD_CONFIG 1",
+    "#define FRR_GROUP \"frr\"",
+    "#define FRR_USER \"frr\"",
+    "#define GNU_LINUX 1",
+    "#define HAVE_ASM_TYPES_H 1",
+    "#define HAVE_BABELD 1",
+    "#define HAVE_BFDD 1",
+    "#define HAVE_BGPD 1",
+    "#define HAVE_CAPABILITIES 1",
+    "#define HAVE_CLOCK_NANOSLEEP 1",
+    "#define HAVE_DECL_BE32DEC 0",
+    "#define HAVE_DECL_BE32ENC 0",
+    "#define HAVE_DLFCN_H 1",
+    "#define HAVE_EIGRPD 1",
+    "#define HAVE_EXPLICIT_BZERO 1",
+    "#define HAVE_FABRICD 1",
+    "#define HAVE_GETGROUPLIST 1",
+    "#define HAVE_GETLOADAVG 1",
+    "#define HAVE_INTTYPES_H 1",
+    "#define HAVE_IP_FREEBIND 1",
+    "#define HAVE_IP_PKTINFO 1",
+    "#define HAVE_ISISD 1",
+    "#define HAVE_LCAPS 1",
+    "#define HAVE_LDPD 1",
+    "#define HAVE_LIBUNWIND 1",
+    "#define HAVE_MALLINFO 1",
+    "#define HAVE_MALLINFO2 1",
+    "#define HAVE_MALLOC_H 1",
+    "#define HAVE_MALLOC_USABLE_SIZE 1",
+    "#define HAVE_MGMTD 1",
+    "#define HAVE_NETINET_IP_ICMP_H 1",
+    "#define HAVE_NETLINK 1",
+    "#define HAVE_OPENAT 1",
+    "#define HAVE_OSPF6D 1",
+    "#define HAVE_OSPFD 1",
+    "#define HAVE_PATHD 1",
+    "#define HAVE_PBRD 1",
+    "#define HAVE_PIM6D 1",
+    "#define HAVE_PIMD 1",
+    "#define HAVE_POSIX_FALLOCATE 1",
+    "#define HAVE_PR_SET_KEEPCAPS 1",
+    "#define HAVE_PTHREAD_PRIO_INHERIT 1",
+    "#define HAVE_PTHREAD_SETNAME_NP 1",
+    "#define HAVE_RIPD 1",
+    "#define HAVE_RIPNGD 1",
+    "#define HAVE_SENDMMSG 1",
+    "#define HAVE_STATICD 1",
+    "#define HAVE_STDATOMIC_H 1",
+    "#define HAVE_STDINT_H 1",
+    "#define HAVE_STDIO_H 1",
+    "#define HAVE_STDLIB_H 1",
+    "#define HAVE_STRINGS_H 1",
+    "#define HAVE_STRING_H 1",
+    "#define HAVE_STRUCT_MMSGHDR_MSG_HDR 1",
+    "#define HAVE_STRUCT_ND_OPT_ADV_INTERVAL 1",
+    "#define HAVE_STRUCT_UTSNAME_DOMAINNAME 1",
+    "#define HAVE_SYNC_LINUX_FUTEX",
+    "#define HAVE_SYS_CAPABILITY_H 1",
+    "#define HAVE_SYS_STAT_H 1",
+    "#define HAVE_SYS_TYPES_H 1",
+    "#define HAVE_UCONTEXT_H 1",
+    "#define HAVE_UNISTD_H 1",
+    "#define HAVE_UNLINKAT 1",
+    "#define HAVE_VRRPD 1",
+    "#define HAVE_WCHAR_H 1",
+    "#define IPV6_MINHOPCOUNT 73",
+    "#define LINUX_IPV6 1",
+    "#define LOG_TIMESTAMP_PRECISION 0",
+    "#define LT_OBJDIR \".libs/\"",
+    "#define NETLINK_DEBUG 1",
+    "#define PACKAGE \"frr\"",
+    "#define PACKAGE_BUGREPORT \"https://github.com/frrouting/frr/issues\"",
+    "#define PACKAGE_NAME \"frr\"",
+    "#define PACKAGE_STRING \"frr 10.5.4\"",
+    "#define PACKAGE_TARNAME \"frr\"",
+    "#define PACKAGE_URL \"\"",
+    "#define PACKAGE_VERSION \"10.5.4\"",
+    "#define STDC_HEADERS 1",
+    "#define SUPPORT_OSPF_API 1",
+    "#define VERSION \"10.5.4\"",
+    "#define VICI_SOCKET \"/var/run/charon.vici\"",
+    "#define YYTEXT_POINTER 1"
+]
+
+_TARGET_HEADER_DEFINES = [
+    "#define CONFIGFILE_MASK 0640",
+    "#define HAVE_APPEND_HISTORY 1",
+    "#define HAVE_DECL_TCP_MD5SIG 1",
+    "#define HAVE_DLINFO_LINKMAP 1",
+    "#define HAVE_DLINFO_ORIGIN 1",
+    "#define HAVE_JSON_C_JSON_H 1",
+    "#define HAVE_LIBCRYPT 1",
+    "#define HAVE_LIBPCRE2_POSIX 1",
+    "#define HAVE_LIBYANG 1",
+    "#define HAVE_LINK_H 1",
+    "#define HAVE_LINUX_MROUTE6_H 1",
+    "#define HAVE_LINUX_MROUTE_H 1",
+    "#define HAVE_LYD_TRIM_XPATH 1",
+    "#define HAVE_LY_STRVECODE 1",
+    "#define HAVE_NETNS 1",
+    "#define HAVE_NHRPD 1",
+    "#define HAVE_PAM_MISC_H 1",
+    "#define HAVE_PPOLL 1",
+    "#define HAVE_RFC3678 1",
+    "#define HAVE_RL_CLEAR_VISIBLE_LINE 1",
+    "#define HAVE_SETNS 1",
+    "#define HAVE_SHARPD 1",
+    "#define HAVE_STRUCT_IGMPMSG 1",
+    "#define HAVE_STRUCT_IP_MREQN_IMR_IFINDEX 1",
+    "#define HAVE_STRUCT_MFCCTL 1",
+    "#define HAVE_STRUCT_SIOC_SG_REQ 1",
+    "#define HAVE_STRUCT_SIOC_VIF_REQ 1",
+    "#define HAVE_STRUCT_VIFCTL 1",
+    "#define HAVE_VIFI_T 1",
+    "#define ISIS_METHOD ISIS_METHOD_PFPACKET",
+    "#define ISIS_METHOD_BPF 3",
+    "#define ISIS_METHOD_DLPI 2",
+    "#define ISIS_METHOD_PFPACKET 1",
+    "#define LOGFILE_MASK 0640",
+    "#define MULTIPATH_NUM 514",
+    "#define PAM_CONV_FUNC misc_conv",
+    "#define SNMP_AGENTX 1",
+    "#define USE_PAM 1",
+    "#define VTYSH 1",
+    "#define VTYSH_PAGER \"/usr/bin/pager\"",
+    "#define VTY_GROUP \"frrvty\""
+]
+
+
+
+config_setting(
+    name = "trixie_amd64_tcmalloc",
+    constraint_values = ["@sonic_build_infra//platforms:trixie", "@platforms//cpu:x86_64"],
+    flag_values = {":tcmalloc": "true"},
+)
+
+config_setting(
+    name = "trixie_arm64_tcmalloc",
+    constraint_values = ["@sonic_build_infra//platforms:trixie", "@platforms//cpu:aarch64"],
+    flag_values = {":tcmalloc": "true"},
+)
+
+config_setting(
+    name = "bookworm_amd64_tcmalloc",
+    constraint_values = ["@sonic_build_infra//platforms:bookworm", "@platforms//cpu:x86_64"],
+    flag_values = {":tcmalloc": "true"},
+)
+
+config_setting(
+    name = "bookworm_arm64_tcmalloc",
+    constraint_values = ["@sonic_build_infra//platforms:bookworm", "@platforms//cpu:aarch64"],
+    flag_values = {":tcmalloc": "true"},
+)
+
+expand_template(
+    name = "configuration_header",
+    template = "config.h.in",
+    out = "configuration/config.h",
+    substitutions = select({
+        "@platforms//cpu:x86_64": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_ELF_GETDATA_RAWCHUNK 1", "#define HAVE_GELF_GETNOTE 1", "#define HAVE_LIBELF 1", "#define HAVE_STRLCAT 1", "#define HAVE_STRLCPY 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_GREGS 1", "#define INTERP \"/lib64/ld-linux-x86-64.so.2\""])},
+        "@platforms//cpu:aarch64": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_STRLCAT 1", "#define HAVE_STRLCPY 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_REGS 1", "#define INTERP \"/lib/ld-linux-aarch64.so.1\""])},
+        ":bookworm_amd64": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_ELF_GETDATA_RAWCHUNK 1", "#define HAVE_GELF_GETNOTE 1", "#define HAVE_LIBELF 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_GREGS 1", "#define INTERP \"/lib64/ld-linux-x86-64.so.2\""])},
+        ":bookworm_arm64": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_UCONTEXT_T_UC_MCONTEXT_REGS 1", "#define INTERP \"/lib/ld-linux-aarch64.so.1\""])},
+        ":trixie_amd64_tcmalloc": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_ELF_GETDATA_RAWCHUNK 1", "#define HAVE_GELF_GETNOTE 1", "#define HAVE_LIBELF 1", "#define HAVE_STRLCAT 1", "#define HAVE_STRLCPY 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_GREGS 1", "#define INTERP \"/lib64/ld-linux-x86-64.so.2\"", "#define HAVE_TCMALLOC 1", "#define HAVE_TC_MALLINFO2 1"])},
+        ":trixie_arm64_tcmalloc": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_STRLCAT 1", "#define HAVE_STRLCPY 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_REGS 1", "#define INTERP \"/lib/ld-linux-aarch64.so.1\"", "#define HAVE_TCMALLOC 1", "#define HAVE_TC_MALLINFO2 1"])},
+        ":bookworm_amd64_tcmalloc": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_ELF_GETDATA_RAWCHUNK 1", "#define HAVE_GELF_GETNOTE 1", "#define HAVE_LIBELF 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_GREGS 1", "#define INTERP \"/lib64/ld-linux-x86-64.so.2\"", "#define HAVE_TCMALLOC 1"])},
+        ":bookworm_arm64_tcmalloc": {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + _TARGET_HEADER_DEFINES + ["#define HAVE_UCONTEXT_T_UC_MCONTEXT_REGS 1", "#define INTERP \"/lib/ld-linux-aarch64.so.1\"", "#define HAVE_TCMALLOC 1"])},
+    }),
+)
+
+expand_template(
+    name = "configuration_version",
+    template = "@frr_source//:lib/version.h.in",
+    out = "configuration/lib/version.h",
+    substitutions = select({":tcmalloc_enabled": dict([("@" + key + "@", _SUBSTITUTIONS[key]) for key in ["PACKAGE_BUGREPORT", "PACKAGE_NAME", "PACKAGE_VERSION"]] + [("@configure_input@", "Generated by Bazel."), ("@CONFIG_ARGS@", "Bazel (tcmalloc enabled)")]), "//conditions:default": dict([("@" + key + "@", _SUBSTITUTIONS[key]) for key in ["PACKAGE_BUGREPORT", "PACKAGE_NAME", "PACKAGE_VERSION"]] + [("@configure_input@", "Generated by Bazel."), ("@CONFIG_ARGS@", "Bazel")])}),
+)
+
+expand_template(
+    name = "configuration_paths",
+    template = "@frr_source//:lib/config_paths.h.in",
+    out = "configuration/lib/config_paths.h",
+    substitutions = select({
+        "@platforms//cpu:x86_64": dict([("@" + key + "@", _SUBSTITUTIONS[key]) for key in ["e_frr_libstatedir", "e_frr_runstatedir", "e_frr_sysconfdir", "e_scriptdir", "e_vtysh_bin", "e_watchfrr_sh", "e_yangmodelsdir"]] + [("@e_moduledir@", "/usr/lib/x86_64-linux-gnu/frr/modules")]),
+        "@platforms//cpu:aarch64": dict([("@" + key + "@", _SUBSTITUTIONS[key]) for key in ["e_frr_libstatedir", "e_frr_runstatedir", "e_frr_sysconfdir", "e_scriptdir", "e_vtysh_bin", "e_watchfrr_sh", "e_yangmodelsdir"]] + [("@e_moduledir@", "/usr/lib/aarch64-linux-gnu/frr/modules")]),
+    }),
+)
+
+expand_template(
+    name = "clippy_configuration_header",
+    template = "config.h.in",
+    out = "clippy_configuration/config.h",
+    substitutions = {"@DEFINES@": "\n".join(_COMMON_HEADER_DEFINES + ["#define CONFIGFILE_MASK 0600", "#define HAVE_ELF_GETDATA_RAWCHUNK 1", "#define HAVE_GELF_GETNOTE 1", "#define HAVE_LIBELF 1", "#define HAVE_STRLCAT 1", "#define HAVE_STRLCPY 1", "#define HAVE_UCONTEXT_T_UC_MCONTEXT_GREGS 1", "#define INTERP \"/lib64/ld-linux-x86-64.so.2\"", "#define LOGFILE_MASK 0600", "#define MULTIPATH_NUM 16", "#define VTYSH_PAGER \"more\""])},
+)
+
+expand_template(
+    name = "clippy_configuration_version",
+    template = "@frr_source//:lib/version.h.in",
+    out = "clippy_configuration/lib/version.h",
+    substitutions = dict([("@" + key + "@", _SUBSTITUTIONS[key]) for key in ["PACKAGE_BUGREPORT", "PACKAGE_NAME", "PACKAGE_VERSION"]] + [("@configure_input@", "Generated by Bazel."), ("@CONFIG_ARGS@", "Bazel")]),
+)
+
+expand_template(
+    name = "clippy_configuration_paths",
+    template = "@frr_source//:lib/config_paths.h.in",
+    out = "clippy_configuration/lib/config_paths.h",
+    substitutions = {"@e_frr_libstatedir@": "/usr/local/var/lib/frr", "@e_frr_runstatedir@": "/usr/local/var/run/frr", "@e_frr_sysconfdir@": "/usr/local/etc/frr", "@e_scriptdir@": "/usr/local/etc/frr/scripts", "@e_vtysh_bin@": "/usr/local/bin/vtysh", "@e_watchfrr_sh@": "/usr/local/sbin/watchfrr.sh", "@e_yangmodelsdir@": "/usr/local/share/yang", "@e_moduledir@": "/usr/local/lib/frr/modules"},
+)
+
+write_file(
+    name = "configuration_gitversion",
+    out = "configuration/lib/gitversion.h",
+    content = ["/* GIT_VERSION disabled for the fixed source archive. */", ""],
+)
+
+filegroup(
+    name = "configuration_headers",
+    srcs = [
+        ":configuration/config.h",
+        ":configuration/lib/version.h",
+        ":configuration/lib/config_paths.h",
+        ":configuration/lib/gitversion.h",
+    ],
+)
+
+cc_library(
+    name = "configuration",
+    hdrs = [":configuration_headers"],
+    strip_include_prefix = "configuration",
+)
+
+write_file(
+    name = "clippy_configuration_gitversion",
+    out = "clippy_configuration/lib/gitversion.h",
+    content = ["/* GIT_VERSION disabled for the fixed source archive. */", ""],
+)
+
+filegroup(
+    name = "clippy_configuration_headers",
+    srcs = [
+        ":clippy_configuration/config.h",
+        ":clippy_configuration/lib/version.h",
+        ":clippy_configuration/lib/config_paths.h",
+        ":clippy_configuration/lib/gitversion.h",
+    ],
+)
+
+cc_library(
+    name = "clippy_configuration",
+    hdrs = [":clippy_configuration_headers"],
+    strip_include_prefix = "clippy_configuration",
+)
+
+expand_template(
+    name = "upstream_cli_reference",
+    template = "@frr_source//:tests/lib/cli/test_cli.refout.in",
+    out = "upstream_check/test_cli.refout",
+    substitutions = {"@" + key + "@": _SUBSTITUTIONS[key] for key in ["PACKAGE_VERSION", "DFLT_NAME"]},
+)
+
+write_file(
+    name = "upstream_config_status",
+    out = "upstream_check/config.status",
+    content = ["S[" + json.encode(key) + "]=" + json.encode(_SUBSTITUTIONS[key]) for key in ["GRPC_TRUE", "SCRIPTING_TRUE", "ZEROMQ_TRUE"]] + [""],
+)
+
+alias(name = "tcmalloc_library", actual = select({":bookworm": "@frr_bookworm_deps//libgoogle-perftools-dev:libtcmalloc_cc", "//conditions:default": "@frr_deps//libgoogle-perftools-dev:libtcmalloc_cc"}))
+alias(name = "tcmalloc_shared", actual = select({":bookworm": "@frr_bookworm_deps//libgoogle-perftools-dev:libtcmalloc_shared", "//conditions:default": "@frr_deps//libgoogle-perftools-dev:libtcmalloc_shared"}))
+alias(name = "cares", actual = select({":bookworm": "@frr_bookworm_deps//libc-ares-dev:libcares_cc", "//conditions:default": "@frr_deps//libc-ares-dev:libcares_cc"}))
+alias(name = "pcre2", actual = select({":bookworm": "@frr_bookworm_deps//libpcre2-dev:libpcre2-posix_cc", "//conditions:default": "@frr_deps//libpcre2-dev:libpcre2-posix_cc"}))
+alias(name = "cunit", actual = select({":bookworm": "@frr_bookworm_deps//libcunit1-dev:libcunit_cc", "//conditions:default": "@frr_deps//libcunit1-dev:libcunit_cc"}))
+alias(name = "unwind", actual = select({":bookworm": "@frr_bookworm_deps//libunwind-dev:libunwind_cc", "//conditions:default": "@frr_deps//libunwind-dev:libunwind_cc"}))
+
+cc_library(
+    name = "tcmalloc_link",
+    deps = [":tcmalloc_library"],
+    additional_linker_inputs = [":tcmalloc_shared"],
+    linkopts = ["-Wl,--push-state,--no-as-needed,$(location :tcmalloc_shared),--pop-state"],
+)
+
+cc_library(
+    name = "pam",
+    deps = select({
+        ":bookworm": ["@frr_bookworm_deps//libpam0g-dev:libpam_cc", "@frr_bookworm_deps//libpam0g-dev:libpam_misc_cc"],
+        "//conditions:default": ["@frr_deps//libpam0g-dev:libpam_cc", "@frr_deps//libpam0g-dev:libpam_misc_cc"],
+    }),
+)
+
+cc_library(
+    name = "net_snmp",
+    deps = select({
+        ":bookworm": ["@net_snmp//:netsnmpagent", "@net_snmp//:netsnmpmibs", "@net_snmp//:netsnmp"],
+        "//conditions:default": ["@frr_deps//libsnmp-dev:libnetsnmpagent_cc", "@frr_deps//libsnmp-dev:libnetsnmpmibs_cc", "@frr_deps//libsnmp-dev:libnetsnmp_cc"],
+    }),
+)

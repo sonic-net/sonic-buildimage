@@ -22,6 +22,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# Apply patch series
 	patch -p1 < ../patch/0001-pr2362-lyd_validate_noextdeps.patch
+	patch -p1 < ../patch/0002-fix-headless-interactive-tests.patch
+	patch -p1 < ../patch/0003-fail-on-test-harness-errors.patch
 
 	# Debian buster and below do not have new enough versions of xxhash and
 	# build fails.  xxhash is an optimization, not a real dependency.

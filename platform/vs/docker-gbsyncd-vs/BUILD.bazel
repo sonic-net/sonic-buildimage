@@ -1,0 +1,329 @@
+"""VS gearbox images reuse the Syncd package graph and own their service setup."""
+
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@syncd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@tar.bzl", "tar")
+load("//platform/vs/docker-syncd-vs:source_packages.bzl", "NATIVE_POLICY", "OWNER_METADATA", "SOURCE_MODULES", "SOURCE_PACKAGES")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+load("//tools/bazel/oci:source_contract.bzl", "source_contract")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "Dockerfile.j2",
+    "start.sh",
+    "supervisord.conf",
+    "critical_processes",
+])
+
+_COMPATIBLE_WITH = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "//platform/vs/docker-syncd-vs:supported_source_configuration": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+_APT_POLICY = {
+    "schema": 1,
+    "image": "docker-gbsyncd-vs",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "source",
+    "features": {},
+}
+
+alias(
+    name = "config_engine_base_layout",
+    actual = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+)
+
+# The same owner TARs install gbsyncdmgrd, ordinary VS Syncd and the selected
+# DASH executable/dependencies. The image never reconstructs package contents.
+source_contract(
+    name = "source_contract",
+    architecture = "amd64",
+    distribution = "trixie",
+    image = "docker-gbsyncd-vs",
+    owner_metadata = OWNER_METADATA,
+    source_modules = SOURCE_MODULES,
+    sources = SOURCE_PACKAGES,
+)
+
+run_binary(
+    name = "checked_source_runtime",
+    srcs = [
+        ":config_engine_base_layout",
+        ":source_contract",
+    ] + SOURCE_PACKAGES.values() + SOURCE_MODULES.values(),
+    outs = [
+        "source_packages.receipt.json",
+        "source_runtime.tar",
+    ],
+    args = [
+               "--contract=$(execpath :source_contract)",
+               "--base=$(execpath :config_engine_base_layout)",
+               "--out-tar=$(execpath source_runtime.tar)",
+               "--receipt=$(execpath source_packages.receipt.json)",
+           ] + ["--module=" + name + "=$(execpath " + label + ")" for name, label in SOURCE_MODULES.items()] +
+           ["--package=" + name + "=$(execpath " + label + ")" for name, label in SOURCE_PACKAGES.items()] +
+           ["--package-target=" + name + "=" + label for name, label in SOURCE_PACKAGES.items()],
+    mnemonic = "ValidateGearboxSourceRuntime",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tool = "//tools/bazel/oci:package_contract",
+)
+
+filegroup(
+    name = "source_runtime",
+    srcs = ["source_runtime.tar"],
+)
+
+filegroup(
+    name = "source_package_receipt",
+    srcs = ["source_packages.receipt.json"],
+)
+
+apt_layer(
+    name = "runtime_layer",
+    base = ":config_engine_base_layout",
+    dependency_set = "syncd_vs_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["syncd_vs_debian"]["amd64"],
+    policy = _APT_POLICY,
+    source_receipt = ":source_package_receipt",
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":runtime_layer"],
+    output_group = "selection",
+)
+
+# Share source and symbol composition, while keeping final images independent.
+alias(
+    name = "runtime_packages",
+    actual = "//platform/vs/docker-syncd-vs:runtime_packages",
+)
+
+alias(
+    name = "all_debug_symbols",
+    actual = "//platform/vs/docker-syncd-vs:debug_packages",
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = ":config_engine_base_layout",
+    controls = [label + ":control" for label in APT_INPUTS["syncd_vs_debian"]["amd64"].values()],
+    source_receipt = ":source_package_receipt",
+    source_spec = ":source_contract",
+    sources = SOURCE_PACKAGES,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/gbsyncd-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-gbsyncd-vs",
+    base = ":config_engine_base_layout",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = "//:target/bazel-manifests/docker-gbsyncd-vs/image.env",
+    labels = "//platform/vs/docker-gbsyncd-vs/config:labels",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tars = [
+        ":runtime_layer",
+        ":runtime_packages",
+        ":installed_package_state",
+        "//platform/vs/docker-syncd-vs:installation_links",
+        "//platform/vs/docker-gbsyncd-vs/config:groups",
+        "//platform/vs/docker-gbsyncd-vs/config:files",
+    ],
+)
+
+sonic_docker_archive(
+    name = "docker-gbsyncd-vs.gz",
+    image = ":docker-gbsyncd-vs",
+)
+
+apt_layer(
+    name = "debug_layer",
+    base = ":docker-gbsyncd-vs",
+    base_package_metadata = ":runtime_package_metadata",
+    dependency_set = "syncd_vs_vim_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["syncd_vs_vim_debug_debian"]["amd64"],
+    policy = _APT_POLICY,
+    source_receipt = ":source_package_receipt",
+    variant = "debug",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debug_layer"],
+    output_group = "selection",
+)
+
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debug_layer",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+write_file(
+    name = "debug_source_packages",
+    out = "debug-source-packages.json",
+    content = [json.encode({
+        "schema": 1,
+        "packages": {},
+    })],
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-gbsyncd-vs",
+    controls = [label + ":control" for label in APT_INPUTS["syncd_vs_vim_debug_debian"]["amd64"].values()],
+    source_spec = ":debug_source_packages",
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_installed_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/gbsyncd-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-gbsyncd-vs-dbg",
+    base = ":docker-gbsyncd-vs",
+    labels = "//platform/vs/docker-gbsyncd-vs/config:debug_labels",
+    target_compatible_with = _COMPATIBLE_WITH,
+    tars = [
+        ":debug_tools",
+        ":all_debug_symbols",
+        ":debug_installed_package_state",
+    ],
+)
+
+sonic_docker_archive(
+    name = "docker-gbsyncd-vs-dbg.gz",
+    image = ":docker-gbsyncd-vs-dbg",
+)
+
+# Private installed-service acceptance uses the existing locked Redis fixture.
+sonic_layer(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@frr_image_test_debian//redis-server"],
+)
+
+# Share exact package/ELF guarantees while retaining gearbox image identity.
+write_file(
+    name = "package_policy",
+    out = "package_policy.json",
+    content = [json.encode(dict(
+        _APT_POLICY,
+        debug_tools = [
+            "gdb",
+            "gdbserver",
+            "sshpass",
+            "strace",
+            "vim",
+        ],
+        image_validation = {
+            "entrypoint": ["/usr/local/bin/supervisord"],
+            "command": None,
+            "environment": {"DEBIAN_FRONTEND": "noninteractive"},
+            "startup_files": {
+                "usr/bin/start.sh": {
+                    "source": "platform/vs/docker-gbsyncd-vs/start.sh",
+                    "mode": 0o755,
+                },
+                "etc/supervisor/conf.d/supervisord.conf": {
+                    "source": "platform/vs/docker-gbsyncd-vs/supervisord.conf",
+                    "mode": 0o644,
+                },
+                "etc/supervisor/critical_processes": {
+                    "source": "platform/vs/docker-gbsyncd-vs/critical_processes",
+                    "mode": 0o644,
+                },
+                "usr/lib/tmpfiles.d/openssh-client.conf": {
+                    "source": "platform/vs/docker-syncd-vs/config/openssh-client.conf",
+                    "mode": 0o644,
+                },
+            },
+            "required_elf_paths": [
+                "usr/bin/syncd",
+                "usr/bin/syncd_dash",
+            ],
+            "debug_alternatives": [
+                {
+                    "paths": ["etc/alternatives/" + name for name in [
+                        "editor",
+                        "ex",
+                        "rview",
+                        "vi",
+                        "view",
+                    ]],
+                    "before": "/usr/bin/vim.tiny",
+                    "after": "/usr/bin/vim.basic",
+                },
+                {
+                    "paths": ["usr/bin/vim"],
+                    "before": "usr/bin/vim.tiny",
+                    "before_kind": "hardlink",
+                    "before_mode": 0o755,
+                    "after": "/etc/alternatives/vim",
+                },
+            ],
+            "runtime_tag": "docker-gbsyncd-vs:latest",
+            "debug_tag": "docker-gbsyncd-vs-dbg:latest",
+            "package_state": False,
+        },
+        native = NATIVE_POLICY,
+        retained_requirements = [],
+    ))],
+)

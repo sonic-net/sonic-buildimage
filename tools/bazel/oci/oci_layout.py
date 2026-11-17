@@ -17,15 +17,20 @@ class OciLayout(NamedTuple):
     layers: tuple[Path, ...]
 
 
-def validate_layout(directory: Path, expected_platform: str) -> OciLayout:
+def validate_layout(directory: Path, expected_platform: str, *, digest_file=None) -> OciLayout:
     """Require one complete image and return its validated metadata and layers."""
     try:
-        return _validate_layout(directory, expected_platform)
+        return _validate_layout(directory, expected_platform, digest_file or _digest_file)
     except (AttributeError, KeyError, TypeError) as error:
         raise ValueError("invalid OCI layout metadata structure") from error
 
 
-def _validate_layout(directory: Path, expected_platform: str) -> OciLayout:
+def _digest_file(path):
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def _validate_layout(directory: Path, expected_platform: str, digest_file) -> OciLayout:
     if len(expected_platform.split("/")) != 2 or not all(expected_platform.split("/")):
         raise ValueError("expected platform must be os/architecture")
     marker = json.loads((directory / "oci-layout").read_bytes())
@@ -40,13 +45,7 @@ def _validate_layout(directory: Path, expected_platform: str) -> OciLayout:
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
             raise ValueError("invalid OCI SHA256 blob reference")
         path = directory / "blobs" / "sha256" / digest[7:]
-        hasher = hashlib.sha256()
-        size = 0
-        with path.open("rb") as source:
-            for chunk in iter(lambda: source.read(1024 * 1024), b""):
-                hasher.update(chunk)
-                size += len(chunk)
-        if hasher.hexdigest() != digest[7:] or size != descriptor.get("size"):
+        if digest_file(path) != digest[7:] or path.stat().st_size != descriptor.get("size"):
             raise ValueError("OCI blob digest or size mismatch: " + digest)
         return path
 

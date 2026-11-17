@@ -1,0 +1,186 @@
+name: Bazel FRR Python
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    name: FRR Python packages (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: AMD64
+            architecture: amd64
+            machine: x86_64
+            runner: ubuntu-24.04
+            platform: x86_64_trixie
+          - name: ARM64
+            architecture: arm64
+            machine: aarch64
+            runner: ubuntu-24.04-arm
+            platform: aarch64_trixie
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential ca-certificates \
+            git libtool libxml2 pkg-config python3 tar unzip zstd
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify native architecture
+        run: |
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: buildimage-frr-python-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Build wheels and runtime TARs and run complete upstream suites
+        env:
+          NATIVE_PLATFORM: ${{ matrix.platform }}
+          NATIVE_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          set -euo pipefail
+          options=(--platforms="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
+                   --host_platform="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
+                   --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000
+                   --lockfile_mode=update)
+          bazel build "${options[@]}" \
+            //src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel \
+            //src/sonic-frr-mgmt-framework:runtime \
+            //src/sonic-bgpcfgd:sonic_bgpcfgd_wheel \
+            //src/sonic-bgpcfgd:runtime
+          bazel test "${options[@]}" --nocache_test_results --test_output=errors \
+            //src/sonic-frr-mgmt-framework:upstream_tests \
+            //src/sonic-bgpcfgd:upstream_tests
+          # The new installed-wheel acceptance is scoped to native AMD64.
+          # Preserve the existing ARM64 source suite without extending its scope.
+          if [[ "$NATIVE_ARCHITECTURE" == amd64 ]]; then
+            bazel test "${options[@]}" --nocache_test_results --test_output=errors \
+              //src/sonic-frr-mgmt-framework:installed_wheel_test \
+              //src/sonic-bgpcfgd:installed_wheel_test
+          fi
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          from tools.bazel.ci.python_packages import test_output, test_result
+
+          directory = Path("artifacts/frr-python")
+          directory.mkdir(parents=True)
+          platform = "@sonic_build_infra//platforms:" + os.environ["NATIVE_PLATFORM"]
+          options = ["--platforms=" + platform, "--host_platform=" + platform,
+                     "--lockfile_mode=update"]
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+          pull = event.get("pull_request", {})
+          revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          # cat-file preserves parent headers even with checkout's shallow history.
+          commit = subprocess.check_output(["git", "cat-file", "-p", "HEAD"], text=True)
+          parents = [line.split()[1] for line in commit.split("\n\n", 1)[0].splitlines()
+                     if line.startswith("parent ")]
+          receipt = {
+              "tested_commit": revision, "tested_parents": parents,
+              "pull_request_head": pull.get("head", {}).get("sha"),
+              "pull_request_base": pull.get("base", {}).get("sha"),
+              "architecture": os.environ["NATIVE_ARCHITECTURE"], "components": {},
+          }
+          for component in ("sonic-frr-mgmt-framework", "sonic-bgpcfgd"):
+              package = "//src/" + component
+              source = Path("bazel-testlogs/src") / component / "upstream_tests"
+              counts = test_result(source / "test.xml")
+              inventory = json.loads(test_output(source, "pytest-inventory.json"))
+              if (inventory["collected"] != counts["tests"]
+                      or len(inventory["tests"]) != counts["tests"]
+                      or counts["tests"] <= counts["skipped"]
+                      or not inventory["python"].startswith("3.13.")):
+                  raise ValueError("Incomplete Python 3.13 upstream suite: " + component)
+              outputs = []
+              for target in (component.replace("-", "_") + "_wheel", "runtime"):
+                  paths = subprocess.check_output(
+                      ["bazel", "cquery", *options, "--output=files", package + ":" + target],
+                      text=True).splitlines()
+                  if len(paths) != 1:
+                      raise ValueError("Expected one package output: " + repr(paths))
+                  path = Path(paths[0])
+                  if not path.is_file() or not path.stat().st_size:
+                      raise ValueError("Missing package output: " + str(path))
+                  destination = directory / component / path.name
+                  destination.parent.mkdir(exist_ok=True)
+                  shutil.copyfile(path, destination)
+                  outputs.append({"target": package + ":" + target,
+                                  "path": str(destination.relative_to(directory)),
+                                  "sha256": hashlib.sha256(destination.read_bytes()).hexdigest()})
+              receipt["components"][component] = {
+                  "test_target": package + ":upstream_tests", "tests": counts,
+                  "python": inventory["python"].split()[0], "outputs": outputs,
+              }
+              if os.environ["NATIVE_ARCHITECTURE"] == "amd64":
+                  source = Path("bazel-testlogs/src") / component / "installed_wheel_test"
+                  installed_counts = test_result(source / "test.xml")
+                  installed = json.loads(test_output(source, "wheels.json"))
+                  wheel = next(output for output in outputs if output["path"].endswith(".whl"))
+                  if (installed_counts["skipped"] or installed["status"] != "passed"
+                          or installed["architecture"] != "x86_64"
+                          or not installed["python"].startswith("3.13.")
+                          or installed["component"] != component
+                          or installed["wheels"] != [{"filename": Path(wheel["path"]).name,
+                                                      "sha256": wheel["sha256"]}]):
+                      raise ValueError("Installed test does not match retained wheel: " + component)
+                  receipt["components"][component]["installed_wheel"] = installed
+                  receipt["components"][component]["installed_tests"] = installed_counts
+          receipt["status"] = "passed"
+          (directory / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          PY
+
+      - name: Verify wheel and TAR rebuild behavior (AMD64)
+        if: matrix.architecture == 'amd64'
+        run: |
+          python3 tools/bazel/ci/frr_python_rebuild.py \
+            --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --bazel-arg=--jobs=4 \
+            --output=artifacts/frr-python/rebuild.json
+          git diff --exit-code
+
+      - name: Upload packages and bounded validation receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frr-python-${{ matrix.architecture }}
+          path: artifacts/frr-python/
+          if-no-files-found: error

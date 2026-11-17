@@ -12,7 +12,8 @@ import tempfile
 import zlib
 
 from tools.bazel.ci import artifact_validation as validation
-from tools.bazel.oci.oci_inventory import apply_layer, resolve_path
+from tools.bazel.oci.oci_inventory import resolve_path
+from tools.bazel.oci.image_validation import assert_ancestry, image_inventory, verify_file
 from tools.bazel.oci.oci_layout import validate_layout
 
 METADATA_NAMES = ("usr/share/sonic/bazel/base-packages.json",
@@ -61,12 +62,7 @@ def workspace_identity(package, report, module_path):
 
 
 def inventory(layout):
-    files, origins = {}, {}
-    for index, layer in enumerate(layout.layers):
-        entries = apply_layer(layer, files)
-        origins = {name: origin for name, origin in origins.items() if name in files}
-        origins.update({name: index for name in entries})
-    return files, origins
+    return image_inventory(layout)
 
 
 def extract_selected(layout, files, origins, names, destination):
@@ -99,8 +95,7 @@ def extract_selected(layout, files, origins, names, destination):
 
 
 def same_file(expected, actual, name):
-    require(actual.get("kind") == "file" and all(actual.get(key) == expected[key]
-            for key in ("sha256", "mode", "uid", "gid")), "image changed declared source file: " + name)
+    verify_file({name: actual}, name, {key: expected[key] for key in ("sha256", "mode", "uid", "gid")})
 
 
 def elf(path, readelf):
@@ -134,10 +129,9 @@ def validate_source_base(runtime_path, debug_path, *, metadata_paths, source_deb
     require(architecture in MACHINES, "unsupported source-base architecture")
     machine, triplet = MACHINES[architecture]
     require(len(metadata_paths) == 2, "base and config-engine metadata are both required")
-    runtime = validate_layout(Path(runtime_path), "linux/" + architecture)
-    debug = validate_layout(Path(debug_path), "linux/" + architecture)
-    require(debug.manifest["layers"][:len(runtime.layers)] == runtime.manifest["layers"],
-            "debug image does not extend this runtime image")
+    runtime = validate_layout(Path(runtime_path), "linux/" + architecture, digest_file=validation.sha)
+    debug = validate_layout(Path(debug_path), "linux/" + architecture, digest_file=validation.sha)
+    assert_ancestry(runtime, debug, "debug image does not extend this runtime image")
     runtime_files, runtime_origins = inventory(runtime)
     debug_files, debug_origins = inventory(debug)
     native, reports, workspace_sources = {}, [], []

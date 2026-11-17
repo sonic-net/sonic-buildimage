@@ -67,3 +67,32 @@ $(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
 
 $(DOCKER_GNMI)_FILES += $(GNMI_RSYSLOG_CONF)
+
+# Reuse the source-owned TARs for the native VS profile. Other configurations
+# retain the existing Make package and Docker recipes above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_GNMI) $(DOCKER_GNMI_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK):$(ENABLE_TRANSLIB_WRITE):$(ENABLE_NATIVE_WRITE),y:vs:amd64:y:dbg:y:y)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+ifeq ($(wildcard $(DOCKERS_PATH)/$(DOCKER_GNMI_STEM)/Dockerfile.gnmi.custom.j2),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_GNMI)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_GNMI_DBG)
+$(DOCKER_GNMI)_BAZEL_TARGET = //dockers/docker-sonic-gnmi:$(DOCKER_GNMI)
+$(DOCKER_GNMI_DBG)_BAZEL_TARGET = //dockers/docker-sonic-gnmi:$(DOCKER_GNMI_DBG)
+$(DOCKER_GNMI)_BAZEL_ARGS = --@sonic_gnmi//tools/bazel:enable_dialout=$(if $(filter n,$(ENABLE_DIALOUT)),false,true)
+$(DOCKER_GNMI_DBG)_BAZEL_ARGS = $($(DOCKER_GNMI)_BAZEL_ARGS)
+SONIC_BAZEL_MANIFESTS += docker-sonic-gnmi docker-sonic-gnmi-$(DBG_IMAGE_MARK)
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-sonic-gnmi
+docker-sonic-gnmi_MANIFEST_IMAGE = $(DOCKER_GNMI)
+docker-sonic-gnmi-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_GNMI)
+docker-sonic-gnmi-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_GNMI)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-gnmi/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-gnmi/image.env
+$(DOCKER_GNMI_DBG)_BAZEL_DEPENDS = $($(DOCKER_GNMI)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-gnmi-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif
+endif

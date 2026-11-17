@@ -1,1 +1,3 @@
 exports_files(["arp_update"])
+
+exports_files(["update_chassisdb_config"])

@@ -7,6 +7,7 @@ fixtures; no image, native package or Debian package is built.
 """
 
 from pathlib import Path
+import tarfile
 import tempfile
 import unittest
 
@@ -19,6 +20,62 @@ class OciInventoryTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="oci-inventory-test-")
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+
+    def protobuf_link(self, filename, *, mode, uid=0, gid=0,
+                      target="libprotobuf.so.32.0.12", kind=tarfile.SYMTYPE):
+        path = self.root / filename
+        with tarfile.open(path, "w") as archive:
+            member = tarfile.TarInfo("usr/lib/x86_64-linux-gnu/libprotobuf.so.32")
+            member.type, member.mode = kind, mode
+            member.uid, member.gid, member.linkname = uid, gid, target
+            archive.addfile(member)
+        return path
+
+    def protobuf_base(self):
+        path = self.root / "protobuf-base.tar"
+        elf = b"\x7fELF\x02\x01" + b"\0" * 10 + b"\x03\0\x3e\0"
+        path.write_bytes(layer([("usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12", elf, 0o644)]))
+        files = {}
+        subject.apply_layer(path, files)
+        subject.apply_layer(self.protobuf_link("debian-link.tar", mode=0o777), files)
+        return files
+
+    def test_source_protobuf_link_matches_installed_debian_link(self):
+        """The source TAR's 0000 link and Debian's 0777 link install identically on Linux."""
+        files = self.protobuf_base()
+        before = dict(files)
+        source = self.protobuf_link("source-link.tar", mode=0)
+        subject.apply_layer(source, files, checked_overlay=True)
+        self.assertEqual(files, before)
+        self.assertEqual(files["usr/lib/x86_64-linux-gnu/libprotobuf.so.32"]["mode"], 0o777)
+        with tarfile.open(source) as archive:
+            self.assertEqual(archive.getmembers()[0].mode, 0)
+
+    def test_symlink_mode_normalization_keeps_target_owner_and_kind_checks(self):
+        """Only header mode is irrelevant; a redirected, reowned or replaced ELF link still fails."""
+        base = self.protobuf_base()
+        replacements = (
+            {"target": "libprotobuf.so.other"},
+            {"uid": 123},
+            {"gid": 456},
+            {"kind": tarfile.LNKTYPE, "target": "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12"},
+        )
+        for replacement in replacements:
+            with self.subTest(replacement=replacement):
+                source = self.protobuf_link("changed-link.tar", mode=0, **replacement)
+                with self.assertRaisesRegex(ValueError, "changes a base ELF link"):
+                    subject.apply_layer(source, dict(base), checked_overlay=True)
+
+    def test_hardlink_modes_remain_significant(self):
+        """Hardlinks retain their TAR permissions and cannot change an inherited ELF link's mode."""
+        files = self.protobuf_base()
+        target = "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12"
+        subject.apply_layer(self.protobuf_link("hardlink.tar", mode=0o644, kind=tarfile.LNKTYPE,
+                                              target=target), files)
+        self.assertEqual(files["usr/lib/x86_64-linux-gnu/libprotobuf.so.32"]["mode"], 0o644)
+        changed = self.protobuf_link("changed-hardlink.tar", mode=0o777, kind=tarfile.LNKTYPE, target=target)
+        with self.assertRaisesRegex(ValueError, "changes a base ELF link"):
+            subject.apply_layer(changed, files, checked_overlay=True)
 
     def test_opaque_whiteout_removes_only_lower_layer_entries(self):
         """Apply an opaque whiteout to older contents while keeping files added in the same layer."""

@@ -28,6 +28,14 @@ export EXTERNAL_KERNEL_PATCH_LOC
 LINUX_HEADERS_COMMON = linux-headers-$(KERNEL_VERSION)$(KERNEL_ABISUFFIX)-common-$(KERNEL_FEATURESET)_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_all.deb
 $(LINUX_HEADERS_COMMON)_SRC_PATH = $(SRC_PATH)/sonic-linux-kernel
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+ifneq ($(filter-out y n,$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))$(word 2,$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD)),)
+$(error SONIC_BAZEL_KERNEL_REMOTE_UPLOAD must be y or n)
+endif
+ifeq ($(strip $(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD)),y)
+ifeq ($(strip $(SONIC_BAZEL_KERNEL_REMOTE_CACHE)),)
+$(error SONIC_BAZEL_KERNEL_REMOTE_UPLOAD requires SONIC_BAZEL_KERNEL_REMOTE_CACHE)
+endif
+endif
 # One lazy prerequisite serves every transitive consumer, including direct
 # header/module requests. Bazel runs in the Linux sandbox as the slave user.
 .PHONY: bazel-kernel-ensure
@@ -39,7 +47,9 @@ SONIC_BAZEL_KERNEL_CONFIG := CONFIGURED_ARCH CONFIGURED_PLATFORM BLDENV \
 bazel-kernel-ensure:
 	python3 -B tools/bazel/kernel/prepare.py ensure --debs-directory '$(subst ','"'"',$(DEBS_PATH))' \
 		$(foreach setting,$(SONIC_BAZEL_KERNEL_CONFIG),--kernel-config '$(setting)=$(subst ','"'"',$(if $(filter SECURE_UPGRADE_MODE,$(setting)),$(subst ",,$($(setting))),$($(setting))))') \
-		$(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),--cache-directory /bazel_cache)
+		$(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),--cache-directory /bazel_cache) \
+		$(if $(strip $(SONIC_BAZEL_KERNEL_REMOTE_CACHE)),--remote-cache '$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))') \
+		$(if $(filter y,$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD)),--upload-local-results)
 else
 SONIC_MAKE_DEBS += $(LINUX_HEADERS_COMMON)
 endif

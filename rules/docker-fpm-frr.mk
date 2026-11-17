@@ -54,3 +54,32 @@ $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += prefix_list:/usr/bin/prefix_list
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_FPM_FRR)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_FPM_FRR_DBG)
+
+# The source OCI graph implements the native Trixie VS/FIPS profile, including
+# both FRR features, the standard dbg suffix and service IDs from rules/config. Other settings
+# retain the legacy recipe and its package/host-wrapper declarations above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_FPM_FRR) $(DOCKER_FPM_FRR_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS),y:vs:amd64:y)
+ifeq ($(ENABLE_FRR_TCMALLOC):$(ENABLE_FRR_SNMP_AGENT):$(FRR_USER_UID):$(FRR_USER_GID):$(DBG_IMAGE_MARK),y:y:300:300:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_FPM_FRR)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_FPM_FRR_DBG)
+$(DOCKER_FPM_FRR_DBG)_PATH = $($(DOCKER_FPM_FRR)_PATH)
+$(DOCKER_FPM_FRR)_BAZEL_TARGET = //dockers/docker-fpm-frr:$(DOCKER_FPM_FRR)
+$(DOCKER_FPM_FRR_DBG)_BAZEL_TARGET = //dockers/docker-fpm-frr:$(DOCKER_FPM_FRR_DBG)
+$(DOCKER_FPM_FRR)_BAZEL_ARGS = --//src/sonic-frr:tcmalloc=true --//src/sonic-frr:snmp=true --//dockers/docker-fpm-frr:image_version=$(SONIC_IMAGE_VERSION)
+$(DOCKER_FPM_FRR_DBG)_BAZEL_ARGS = $($(DOCKER_FPM_FRR)_BAZEL_ARGS)
+SONIC_BAZEL_MANIFESTS += docker-fpm-frr docker-fpm-frr-$(DBG_IMAGE_MARK)
+docker-fpm-frr_MANIFEST_IMAGE = $(DOCKER_FPM_FRR)
+docker-fpm-frr-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_FPM_FRR)
+docker-fpm-frr-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_FPM_FRR)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-fpm-frr/manifest.json
+$(DOCKER_FPM_FRR_DBG)_BAZEL_DEPENDS = $($(DOCKER_FPM_FRR)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-fpm-frr-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif
+endif

@@ -23,7 +23,7 @@ END = "2026-10-10T00:10:00Z"
 def pr(number=1, branch="feature", sha=SHA, repo=REPO):
     return {"number": number, "title": "A public change", "state": "open", "draft": True,
             "head": {"ref": branch, "sha": sha, "repo": {"full_name": repo}},
-            "base": {"sha": OTHER_SHA}, "updated_at": END, "merged_at": None}
+            "base": {"ref": "master", "sha": OTHER_SHA}, "updated_at": END, "merged_at": None}
 
 
 def run(attempt=1, run_id=10, status="completed", conclusion="success", **extra):
@@ -66,6 +66,8 @@ class FakeAPI:
         self.calls.append(endpoint)
         if endpoint == f"repos/{REPO}":
             return {"full_name": REPO, "private": False, "default_branch": "master"}
+        if endpoint == f"repos/{REPO}/git/ref/heads/master":
+            return {"ref": "refs/heads/master", "object": {"type": "commit", "sha": "c" * 40}}
         if endpoint in self.attempts:
             return self.attempts[endpoint]
         if endpoint.startswith(f"repos/{REPO}/actions/runs/"):
@@ -78,7 +80,9 @@ class FakeAPI:
         if "/pulls?state=" in endpoint:
             return self.pulls
         if "/workflows/" in endpoint:
-            return self.latest if "bazel-swss-oci.yml" in endpoint else []
+            workflow = endpoint.split("/workflows/", 1)[1].split("/", 1)[0]
+            return [item for item in self.latest
+                    if item["path"].split("@", 1)[0].rsplit("/", 1)[-1] == workflow]
         if "/commits/" in endpoint:
             return self.linked
         if endpoint.endswith("/jobs"):
@@ -124,9 +128,17 @@ class TimingTests(unittest.TestCase):
         value = job()
         value["name"] = "SWSS source layers (AMD64)"
         self.assertIsNone(collector.normalize_job(value, REPO, 10)["image_build_seconds"])
-        value["name"] = "Bazel VS installer (AMD64)"
-        value["steps"][0]["name"] = "Build and verify sonic-vs.bin with Bazel"
-        self.assertEqual(collector.normalize_job(value, REPO, 10)["image_build_seconds"], 600)
+        for name, step in [
+            ("Bazel VS installer (AMD64)", "Build and verify sonic-vs.bin with Bazel"),
+            ("Unprivileged sonic-vs.bin assembly (AMD64)",
+             "Run Make inside an unprivileged SONiC builder and verify the installer"),
+        ]:
+            value["name"] = name
+            value["steps"][0]["name"] = step
+            normalized = collector.normalize_job(value, REPO, 10)
+            self.assertEqual(normalized["kind"], "bazel-vs")
+            self.assertEqual(normalized["image_build_seconds"], 600)
+            self.assertEqual(normalized["phases"]["build"], 600)
         value["name"] = "Something containing VS"
         self.assertEqual(collector.job_kind(value["name"]), "other")
 
@@ -134,6 +146,65 @@ class TimingTests(unittest.TestCase):
         value = job()
         value["steps"][0]["name"] = "Build the VS image and both OCI container variants"
         self.assertEqual(collector.normalize_job(value, REPO, 10)["image_build_seconds"], 600)
+    def test_current_vs_and_oci_step_preserves_image_outcomes(self):
+        for conclusion in ("success", "failure", "cancelled", "skipped"):
+            with self.subTest(conclusion=conclusion):
+                value = job(conclusion)
+                value["steps"][0]["name"] = "Build the VS image and both OCI container variants"
+                normalized = collector.normalize_job(value, REPO, 10)
+                self.assertEqual(normalized["image_build_seconds"], 600 if conclusion == "success" else None)
+                self.assertEqual(normalized["image_build_elapsed_seconds"], None if conclusion == "skipped" else 600)
+
+    def test_separate_validation_does_not_count_as_image_build_time(self):
+        for name, conclusion in (
+            ("Build the VS image", "success"), ("Build the VS image", "failure"),
+            ("Build the VS installer (.bin)", "success"), ("Build the VS installer (.bin)", "failure"),
+        ):
+            with self.subTest(step=name, validation=conclusion):
+                value = job(conclusion)
+                value["steps"] = [
+                    {"number": 1, "name": name, "status": "completed",
+                     "conclusion": "success", "started_at": START,
+                     "completed_at": "2026-10-10T00:06:00Z"},
+                    {"number": 2, "name": "Validate VS container pairs and P4 debug symbols",
+                     "status": "completed", "conclusion": conclusion,
+                     "started_at": "2026-10-10T00:06:00Z", "completed_at": END},
+                ]
+                normalized = collector.normalize_job(value, REPO, 10)
+                self.assertEqual(normalized["image_build_seconds"], 360)
+                self.assertEqual(normalized["image_build_elapsed_seconds"], 360)
+                self.assertEqual(normalized["phases"]["build"], 360)
+                self.assertEqual(normalized["phases"]["validation"], 240)
+                self.assertEqual(normalized["duration_seconds"], 600)
+                self.assertEqual(normalized["conclusion"], conclusion)
+
+    def test_pr72_image_step_identity_keeps_step_and_job_times_separate(self):
+        fixture = json.loads((Path(__file__).with_name("testdata") / "pr72-carried-image-execution.json").read_text())
+        value = dict(fixture["job"], id=fixture["attempt2"]["job_id"])
+        normalized = collector.normalize_job(value, REPO, fixture["run_id"])
+        self.assertEqual(normalized["image_build_seconds"], 2329)
+        self.assertEqual(normalized["image_build_step_numbers"], [10])
+        self.assertEqual(normalized["started_at"], "2026-10-30T11:50:35Z")
+        self.assertEqual(normalized["completed_at"], "2026-10-30T13:27:57Z")
+        image_step = next(step for step in normalized["steps"] if step["number"] == 10)
+        self.assertEqual(image_step["started_at"], "2026-10-30T11:55:36Z")
+        self.assertEqual(image_step["completed_at"], "2026-10-30T12:34:25Z")
+        value = copy.deepcopy(value)
+        value["steps"].append(copy.deepcopy(next(step for step in value["steps"] if step["number"] == 10)))
+        self.assertIsNone(collector.normalize_job(value, REPO, fixture["run_id"])["image_build_step_numbers"])
+
+    def test_pr64_short_make_step_preserves_observed_duration(self):
+        # PR64 job 123845988910 reported this exact successful 1,738-second step.
+        value = job()
+        value.update(id=123845988910, started_at="2026-10-30T09:00:27Z",
+                     completed_at="2026-10-30T10:28:48Z")
+        value["steps"] = [{"number": 10, "name": "Build the VS image", "status": "completed",
+                           "conclusion": "success", "started_at": "2026-10-30T09:04:56Z",
+                           "completed_at": "2026-10-30T09:33:54Z"}]
+        normalized = collector.normalize_job(value, REPO, 40988556063)
+        self.assertEqual(normalized["image_build_seconds"], 1738)
+        self.assertEqual(normalized["image_build_elapsed_seconds"], 1738)
+        self.assertEqual(normalized["phases"]["build"], 1738)
 
     def test_fields_and_urls_are_allowlisted(self):
         value = job()
@@ -208,8 +279,176 @@ class AssociationTests(unittest.TestCase):
         self.assertEqual(self.identify(run(pull_requests=[], head_branch="master"), [pr(branch="master")]), ([], "none"))
         self.assertEqual(self.identify(run(pull_requests=[], head_repository={"full_name": "someone/fork"}), [pr()]), ([], "none"))
 
+    def test_fork_pr_requires_unique_exact_repository_branch_and_head(self):
+        value = run(pull_requests=[], head_repository={"full_name": "contributor/sonic-buildimage"})
+        current = pr(repo="contributor/sonic-buildimage")
+        self.assertEqual(self.identify(value, [pr(number=2), current]), ([1], "commit"))
+        for changed in (dict(sha=OTHER_SHA), dict(branch="different"), dict(repo="another/sonic-buildimage")):
+            with self.subTest(changed=changed):
+                self.assertEqual(self.identify(value, [pr(**({"repo": "contributor/sonic-buildimage"} | changed))]), ([], "none"))
+        self.assertEqual(self.identify(value, [current, pr(number=2, repo="contributor/sonic-buildimage")]), ([], "none"))
+        for event in ("push", "workflow_dispatch", "pull_request_target"):
+            with self.subTest(event=event):
+                self.assertEqual(self.identify(dict(value, event=event), [current]), ([], "none"))
+
+    def test_fork_default_branch_and_case_insensitive_repository_match(self):
+        value = run(pull_requests=[], head_branch="master",
+                    head_repository={"full_name": "Contributor/sonic-buildimage"})
+        self.assertEqual(self.identify(value, [pr(branch="master", repo="contributor/sonic-buildimage")]),
+                         ([1], "commit"))
+
+    def test_completed_unassociated_fork_attempt_refreshes_without_job_reads(self):
+        value = run(pull_requests=[], conclusion="action_required",
+                    head_repository={"full_name": "contributor/sonic-buildimage"})
+        api = FakeAPI(latest=[value], pulls=[pr(repo="contributor/sonic-buildimage")])
+        api.jobs[f"repos/{REPO}/actions/runs/10/attempts/1/jobs"] = []
+        initial = collector.collect(api, REPO, empty())
+        initial["runs"][0].update(pr_numbers=[], pr_association="none")
+        retry = FakeAPI(latest=[value], pulls=api.pulls)
+        result = collector.collect(retry, REPO, initial)
+        self.assertEqual(result["runs"][0]["pr_numbers"], [1])
+        self.assertEqual(result["runs"][0]["conclusion"], "action_required")
+        self.assertEqual(result["runs"][0]["jobs"], [])
+        self.assertEqual(result["runs"][0]["event_bases"], [])
+        self.assertFalse(any(endpoint.endswith("/jobs") for endpoint in retry.calls))
+        mismatch = FakeAPI(latest=[dict(value, head_repository={"full_name": "other/fork"})], pulls=api.pulls)
+        self.assertEqual(collector.collect(mismatch, REPO, initial)["runs"][0]["pr_numbers"], [])
+
+    def test_cached_association_rejects_changed_attempt_source(self):
+        initial = collector.collect(FakeAPI(), REPO, empty())
+        initial["runs"][0].update(pr_numbers=[], pr_association="none")
+        api = FakeAPI(latest=[run(head_sha=OTHER_SHA)])
+        with self.assertRaises(collector.CollectionError):
+            collector.collect(api, REPO, initial)
+
+    def test_prior_unassociated_attempt_uses_its_own_fork_metadata(self):
+        old = run(pull_requests=[], conclusion="action_required",
+                  head_repository={"full_name": "contributor/sonic-buildimage"})
+        first = FakeAPI(latest=[old], pulls=[pr(repo="contributor/sonic-buildimage")])
+        endpoint = f"repos/{REPO}/actions/runs/10/attempts/1/jobs"
+        first.jobs[endpoint] = []
+        initial = collector.collect(first, REPO, empty())
+        initial["runs"][0].update(pr_numbers=[], pr_association="none")
+        retry = FakeAPI(latest=[dict(old, run_attempt=2, head_repository={"full_name": "another/fork"})],
+                        pulls=first.pulls)
+        attempt = f"repos/{REPO}/actions/runs/10/attempts/1"
+        retry.attempts[attempt] = old
+        result = collector.collect(retry, REPO, initial)
+        self.assertIn(attempt, retry.calls)
+        self.assertNotIn(endpoint, retry.calls)
+        self.assertEqual(result["runs"][0]["pr_numbers"], [])
+        self.assertEqual(result["runs"][1]["pr_numbers"], [1])
+
+        # Unrelated historical commits need no extra lookup on every refresh.
+        initial["runs"][0]["source_sha"] = OTHER_SHA
+        retry.calls.clear()
+        collector.collect(retry, REPO, initial)
+        self.assertNotIn(attempt, retry.calls)
+
 
 class CollectionTests(unittest.TestCase):
+    def test_cached_retry_start_requires_matching_observed_provenance(self):
+        retry_start = "2026-10-10T00:20:00Z"
+        updated = "2026-10-10T00:21:00Z"
+        original = run(created_at=START)
+        fallback = run(attempt=2, run_started_at=None, created_at=START, updated_at=updated)
+        original_job = collector.normalize_job(job(), REPO, 10)
+        alias = job(); alias["id"] = 100
+        alias_job = collector.normalize_job(alias, REPO, 10)
+        old1 = collector.normalize_run(original, "bazel-swss-oci.yml", REPO, [original_job], ([1], "github"))
+        old2 = collector.normalize_run(fallback, "bazel-swss-oci.yml", REPO, [alias_job], ([1], "github"))
+        self.assertEqual(old2["started_at"], START)
+        self.assertEqual(old2["started_at_source"], "created_at")
+        old1.pop("started_at_source"); old2.pop("started_at_source")
+        history = dict(empty(), runs=[old2, old1])
+        for observed in [None, retry_start]:
+            with self.subTest(observed=observed):
+                latest = run(attempt=2, run_started_at=observed, created_at=START, updated_at=updated)
+                api = FakeAPI(latest=[latest])
+                result = collector.collect(api, REPO, copy.deepcopy(history), log_jobs=0)
+                retry = next(value for value in result["runs"] if value["attempt"] == 2)
+                self.assertEqual(retry["started_at"], observed or START)
+                self.assertEqual(retry.get("started_at_source"), "run_started_at" if observed else None)
+                retained_job = copy.deepcopy(retry["jobs"][0])
+                for step in retained_job["steps"]:
+                    step.pop("breakdown", None)
+                self.assertEqual(retained_job, alias_job)
+                self.assertFalse(any(endpoint.endswith("/jobs") for endpoint in api.calls))
+                self.assertNotIn("started_at_source", next(value for value in result["runs"] if value["attempt"] == 1))
+        wrong_head = run(attempt=2, run_started_at=retry_start, created_at=START, updated_at=updated, head_sha=OTHER_SHA)
+        self.assertEqual(collector.retain_verified_start(old2, wrong_head, "bazel-swss-oci.yml"), old2)
+
+    def test_cancelled_unprivileged_attempt_keeps_its_historical_revision(self):
+        # Public PR76 fields for the two cancelled jobs in run 41033358115.
+        historical_sha = "c2b124fb1b66d338ada38d1bcbb2abdb89b98831"
+        current_sha = "4fec0d72939a226641a708293425b288871ce380"
+        branch = "codex/bazel-vs-unprivileged-assembly"
+        attempt = run(run_id=41033358115, conclusion="cancelled", head_branch=branch,
+                      head_sha=historical_sha, path=".github/workflows/bazel-vs-unprivileged.yml",
+                      name="Bazel VS unprivileged assembly", pull_requests=[{"number": 76}],
+                      run_started_at="2026-10-30T09:25:46Z", updated_at="2026-10-30T10:20:53Z")
+        current = pr(number=76, branch=branch, sha=current_sha)
+        current["base"]["sha"] = "8fb9a93de16bfed545ae148d84943da14d5de2d2"
+        api = FakeAPI(latest=[attempt], pulls=[current])
+        api.jobs[f"repos/{REPO}/actions/runs/41033358115/attempts/1/jobs"] = [
+            {"id": 123989169804, "name": "Native Make prerequisites (AMD64)",
+             "status": "completed", "conclusion": "cancelled", "started_at": "2026-10-30T09:28:20Z",
+             "completed_at": "2026-10-30T10:20:52Z", "steps": []},
+            {"id": 124010400469, "name": "Unprivileged sonic-vs.bin assembly (AMD64)",
+             "status": "completed", "conclusion": "cancelled", "started_at": "2026-10-30T10:20:52Z",
+             "completed_at": "2026-10-30T10:20:52Z", "steps": []},
+        ]
+        result = collector.collect(api, REPO, empty(), workers=1, log_jobs=0)
+        self.assertEqual(result["pull_requests"][0]["head_sha"], current_sha)
+        self.assertEqual(len(result["runs"]), 1)
+        saved = result["runs"][0]
+        self.assertEqual((saved["run_id"], saved["attempt"], saved["source_sha"]),
+                         (41033358115, 1, historical_sha))
+        self.assertEqual(saved["workflow_path"], ".github/workflows/bazel-vs-unprivileged.yml")
+        self.assertEqual(saved["started_at"], "2026-10-30T09:25:46Z")
+        self.assertEqual(saved["pr_numbers"], [76])
+        self.assertEqual((saved["status"], saved["conclusion"]), ("completed", "cancelled"))
+        self.assertEqual([item["kind"] for item in saved["jobs"]], ["other", "bazel-vs"])
+        for item in saved["jobs"]:
+            self.assertEqual((item["status"], item["conclusion"]), ("completed", "cancelled"))
+            self.assertIsNone(item["image_build_seconds"])
+            self.assertEqual(item["steps"], [])
+        self.assertEqual(saved["jobs"][1]["url"],
+                         f"https://github.com/{REPO}/actions/runs/41033358115/job/124010400469")
+
+    def test_selected_base_is_separate_from_historical_and_event_bases(self):
+        event_pr = {"number": 1, "base": {"ref": "master", "sha": "d" * 40}}
+        api = FakeAPI(latest=[run(pull_requests=[event_pr])], pulls=[pr(), pr(number=2)])
+        result = collector.collect(api, REPO, empty())
+        self.assertEqual(result["pull_requests"][0]["base_sha"], OTHER_SHA)
+        self.assertEqual(result["pull_requests"][0]["base_target_sha"], "c" * 40)
+        self.assertEqual(api.calls.count(f"repos/{REPO}/git/ref/heads/master"), 1)
+        self.assertEqual(result["runs"][0]["event_bases"], [{"number": 1, "ref": "master", "sha": "d" * 40}])
+        # A matching source head still provides no independently verified checkout base.
+        self.assertNotIn("checkout_base_sha", result["runs"][0])
+
+    def test_selected_base_ref_is_encoded_and_missing_is_not_historical_fallback(self):
+        value = pr()
+        value["base"]["ref"] = "stack/feature"
+        api = FakeAPI(pulls=[value])
+        with mock.patch.object(api, "get", side_effect=collector.CollectionError("Gone", http_status=404)) as get:
+            self.assertEqual(collector.selected_bases(api, REPO, [value]), {"stack/feature": None})
+        get.assert_called_once_with(f"repos/{REPO}/git/ref/heads/stack%2Ffeature")
+        normalized = collector.normalize_pr(value, REPO, {"stack/feature": None}, END)
+        self.assertIsNone(normalized["base_target_sha"])
+        self.assertEqual(normalized["base_sha"], OTHER_SHA)
+        with mock.patch.object(api, "get", side_effect=collector.CollectionError("Unavailable", http_status=503)):
+            with self.assertRaises(collector.CollectionError):
+                collector.selected_bases(api, REPO, [value])
+
+    def test_cached_history_gets_event_metadata_without_current_base_substitution(self):
+        initial = collector.collect(FakeAPI(), REPO, empty())
+        del initial["runs"][0]["event_bases"]
+        api = FakeAPI(latest=[run(pull_requests=[{"number": 1, "base": {"ref": "old-base", "sha": "d" * 40}}])])
+        result = collector.collect(api, REPO, initial)
+        self.assertEqual(result["runs"][0]["event_bases"][0]["sha"], "d" * 40)
+        self.assertFalse(any(endpoint.endswith("/jobs") for endpoint in api.calls))
+
     def test_new_attempt_preserves_prior_and_collects_all(self):
         api = FakeAPI(latest=[run(attempt=3)])
         api.attempts[f"repos/{REPO}/actions/runs/10/attempts/1"] = run(conclusion="failure")
@@ -235,6 +474,39 @@ class CollectionTests(unittest.TestCase):
         api.attempts[f"repos/{REPO}/actions/runs/10/attempts/1"] = run()
         collector.collect(api, REPO, initial, backfill=True)
         self.assertEqual(sum(call.endswith("/jobs") for call in api.calls), 2)
+
+    def test_completed_run_refreshes_unfinished_job_details(self):
+        for unfinished in ("job", "step"):
+            with self.subTest(unfinished=unfinished):
+                first = FakeAPI()
+                stale_job = job()
+                target = stale_job if unfinished == "job" else stale_job["steps"][0]
+                target.update(status="in_progress", conclusion=None, completed_at=None)
+                endpoint = f"repos/{REPO}/actions/runs/10/attempts/1/jobs"
+                first.jobs[endpoint] = [stale_job]
+                initial = collector.collect(first, REPO, empty())
+                refresh = FakeAPI()
+                result = collector.collect(refresh, REPO, initial)
+                self.assertIn(endpoint, refresh.calls)
+                refreshed = result["runs"][0]["jobs"][0]
+                self.assertEqual(refreshed["status"], "completed")
+                self.assertEqual(refreshed["steps"][0]["status"], "completed")
+                self.assertEqual(refreshed["image_build_seconds"], 600)
+                cached = FakeAPI()
+                collector.collect(cached, REPO, result)
+                self.assertNotIn(endpoint, cached.calls)
+
+    def test_prior_attempt_refreshes_unfinished_jobs(self):
+        first = FakeAPI()
+        endpoint = f"repos/{REPO}/actions/runs/10/attempts/1/jobs"
+        first.jobs[endpoint] = [job(status="queued", conclusion=None)]
+        initial = collector.collect(first, REPO, empty())
+        refresh = FakeAPI(latest=[run(attempt=2)])
+        refresh.attempts[f"repos/{REPO}/actions/runs/10/attempts/1"] = run()
+        result = collector.collect(refresh, REPO, initial)
+        self.assertIn(endpoint, refresh.calls)
+        self.assertEqual([r["attempt"] for r in result["runs"]], [2, 1])
+        self.assertEqual(result["runs"][1]["jobs"][0]["status"], "completed")
 
     def test_nonterminal_always_refetches_and_expired_history_is_retained(self):
         api = FakeAPI(latest=[run(status="in_progress", conclusion=None)])
@@ -276,6 +548,42 @@ class CollectionTests(unittest.TestCase):
 
 
 class IOTests(unittest.TestCase):
+    def test_history_is_compact_deterministic_and_lossless(self):
+        history = collector.collect(FakeAPI(), REPO, empty())
+        history["pull_requests"][0]["title"] = "Build timings: \u6d4b\u8bd5"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            collector.write_atomic(path, history)
+            encoded = path.read_bytes()
+            self.assertEqual(json.loads(encoded), history)
+            self.assertEqual(collector.load_history(path, REPO), history)
+            self.assertEqual(encoded, (
+                json.dumps(history, separators=(",", ":"), sort_keys=True, allow_nan=False) + "\n"
+            ).encode())
+            self.assertLess(len(encoded), len(json.dumps(history, indent=2).encode()))
+            collector.write_atomic(path, history)
+            self.assertEqual(path.read_bytes(), encoded)
+
+    def test_history_size_budget_checks_exact_output_bytes_before_replacement(self):
+        history = empty()
+        encoded = (json.dumps(history, separators=(",", ":"), sort_keys=True) + "\n").encode()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded)):
+                collector.write_atomic(path, history)
+            self.assertEqual(path.read_bytes(), encoded)
+            for existing in (True, False):
+                with self.subTest(existing=existing):
+                    if not existing:
+                        path.unlink()
+                    with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded) - 1):
+                        with self.assertRaisesRegex(collector.CollectionError, "publication budget"):
+                            collector.write_atomic(path, history)
+                    self.assertEqual(path.exists(), existing)
+                    if existing:
+                        self.assertEqual(path.read_bytes(), encoded)
+                    self.assertEqual(list(Path(directory).glob(".history-*")), [])
+
     def test_cli_loads_reviewed_sibling_with_safe_path_outside_source_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             # A same-name module in the caller's directory must not be loaded.

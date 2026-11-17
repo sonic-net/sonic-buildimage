@@ -1,0 +1,15 @@
+load("//tools/bazel/oci:apt_layer.bzl", "apt_subset_lock")
+
+package(default_visibility = ["//dockers/docker-lldp:__pkg__"])
+
+exports_files([
+    "source_paths.json",
+    "debug_source_paths.json",
+])
+
+apt_subset_lock(
+    name = "runtime_lock_view",
+    selection = "@lldp_runtime_apt_inputs//:apt_manifest.json",
+    dependency_set = "lldp_runtime_debian",
+    out = "apt.lock.json",
+)

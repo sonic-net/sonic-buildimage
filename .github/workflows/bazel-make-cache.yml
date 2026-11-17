@@ -1,0 +1,195 @@
+name: Common cache reuse through Make
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      seed_run:
+        description: Successful Common cache workflow run with seed_for_make enabled
+        type: string
+        default: ""
+      preflight_only:
+        description: Check cache access and native sonic-slave availability without building
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  checks:
+    name: Make cache regression tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          python3 -B -m unittest \
+            tools.bazel.tests.remote_cache_test \
+            tools.bazel.tests.make_cache_test \
+            tools.bazel.tests.make_cache_sandbox_test \
+            tools.bazel.tests.build_helpers_test \
+            tools.bazel.tests.cache_mount_test \
+            tools.bazel.tests.docker_test
+
+  native:
+    name: Make in sonic-slave (${{ matrix.architecture }})
+    if: github.event_name == 'workflow_dispatch'
+    needs: checks
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare space and Make host tools
+        run: |
+          # These unused SDKs belong to this disposable GitHub-hosted runner.
+          df -h . /var/lib/docker
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-venv jq dpkg-dev apparmor
+          python3 -m venv "$RUNNER_TEMP/make-host-tools"
+          "$RUNNER_TEMP/make-host-tools/bin/pip" install jinjanator==26.2.0
+          echo "$RUNNER_TEMP/make-host-tools/bin" >> "$GITHUB_PATH"
+          df -h . /var/lib/docker
+      - name: Verify cache access without exposing credentials
+        env:
+          BAZEL_REMOTE_AUTH: ${{ secrets.BAZEL_REMOTE_AUTH }}
+        run: |
+          python3 -B tools/bazel/cache/credentials.py probe \
+            --output artifacts/make-cache/cache-access.json
+      - name: Pin and pull the native production builder
+        run: python3 -B tools/bazel/ci/make_cache.py preflight --architecture '${{ matrix.architecture }}'
+      - name: Verify the Common seed run
+        if: ${{ !inputs.preflight_only }}
+        id: seed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SEED_RUN: ${{ inputs.seed_run }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          from pathlib import Path
+          run_id = os.environ['SEED_RUN']
+          if not re.fullmatch(r'[0-9]+', run_id):
+              raise SystemExit('seed_run must be a successful Common workflow run ID')
+          request = urllib.request.Request(
+              'https://api.github.com/repos/securely1g/sonic-swss-common/actions/runs/' + run_id,
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                       'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request) as response:
+              run = json.load(response)
+          if (run['status'] != 'completed' or run['conclusion'] != 'success'
+                  or run['path'] not in ('.github/workflows/bazel-buildimage-cache.yml',
+                                         '.github/workflows/bazel-remote-cache.yml')
+                  or run['event'] != 'workflow_dispatch'
+                  or run['head_repository']['full_name'] != 'securely1g/sonic-swss-common'
+                  or not re.fullmatch(r'[0-9a-f]{40}', run['head_sha'])):
+              raise SystemExit('Expected a successful manual Common cache seed run')
+          receipt = {key: run[key] for key in ('id', 'html_url', 'head_sha', 'path', 'event', 'conclusion')}
+          Path('artifacts/make-cache/seed-run.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('revision=' + run['head_sha'] + '\n')
+          PY
+      - name: Download only the seed evidence
+        if: ${{ !inputs.preflight_only }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          repository: securely1g/sonic-swss-common
+          run-id: ${{ inputs.seed_run }}
+          github-token: ${{ github.token }}
+          name: common-buildimage-cache-${{ matrix.architecture }}
+          path: artifacts/make-cache/seed
+      - name: Checkout exactly the seeded Common source
+        if: ${{ !inputs.preflight_only }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: securely1g/sonic-swss-common
+          ref: ${{ steps.seed.outputs.revision }}
+          path: artifacts/private/common-checkout
+          persist-credentials: false
+      - name: Prepare fresh sources and probe the sandbox before host changes
+        if: ${{ !inputs.preflight_only }}
+        run: python3 -B tools/bazel/ci/make_cache.py prepare --architecture '${{ matrix.architecture }}'
+      - name: Allow namespaces only for this job's Bazel sandbox
+        if: ${{ !inputs.preflight_only }}
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,RUNNER_ENVIRONMENT \
+            python3 tools/bazel/ci/make_cache_sandbox.py install \
+              --job "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${{ matrix.architecture }}" \
+              --receipt artifacts/make-cache/sandbox-host.json
+      - name: Build the actual Make image with cache writes disabled
+        if: ${{ !inputs.preflight_only }}
+        env:
+          BAZEL_REMOTE_AUTH: ${{ secrets.BAZEL_REMOTE_AUTH }}
+        run: python3 -B tools/bazel/ci/make_cache.py build --architecture '${{ matrix.architecture }}'
+      - name: Run the seeded Common library and Python binding in the image
+        if: ${{ !inputs.preflight_only }}
+        env:
+          EXPECTED_ARCH: ${{ matrix.architecture }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          directory = Path('artifacts/make-cache')
+          receipt = json.loads((directory / 'result.json').read_text())
+          assert receipt['passed'] and receipt['architecture'] == os.environ['EXPECTED_ARCH']
+          archive = Path(receipt['image']['path'])
+          with archive.open('rb') as stream:
+              assert hashlib.file_digest(stream, 'sha256').hexdigest() == receipt['image']['sha256']
+          subprocess.run(['docker', 'load', '--input', str(archive)], check=True)
+          image = 'docker-config-engine-trixie:latest'
+          installed = json.loads(subprocess.check_output(['docker', 'image', 'inspect', image]))[0]
+          assert installed['Architecture'] == os.environ['EXPECTED_ARCH'] and installed['Os'] == 'linux'
+          multiarch = 'x86_64-linux-gnu' if os.environ['EXPECTED_ARCH'] == 'amd64' else 'aarch64-linux-gnu'
+          library = '/usr/lib/' + multiarch + '/libswsscommon.so.0.0.0'
+          script = '''import ctypes, hashlib, json, sys
+          from swsscommon import swsscommon
+          ctypes.CDLL('libswsscommon.so.0')
+          assert swsscommon.DBConnector
+          with open(sys.argv[1], 'rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          print(json.dumps({'library_sha256': digest, 'python_binding_imported': True}))
+          '''
+          output = subprocess.check_output([
+              'docker', 'run', '--rm', '--network=none', '--read-only', '--cap-drop=ALL',
+              '--security-opt=no-new-privileges', '--pids-limit=128', '--memory=1g',
+              '--entrypoint', '/usr/bin/python3', image, '-B', '-c', script, library], text=True)
+          result = json.loads(output)
+          target = '@sonic_swss_common//dist:libswsscommon_pkg'
+          assert result['library_sha256'] == receipt['artifacts'][target]['library_sha256']
+          result.update(passed=True, architecture=os.environ['EXPECTED_ARCH'], image_id=installed['Id'])
+          (directory / 'runtime.json').write_text(json.dumps(result, indent=2) + '\n')
+          print('Installed Common library and Python binding match the CI seed')
+          PY
+      - name: Remove only this job's sandbox permission
+        if: ${{ always() && !inputs.preflight_only }}
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,RUNNER_ENVIRONMENT \
+            python3 tools/bazel/ci/make_cache_sandbox.py remove \
+              --job "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${{ matrix.architecture }}" \
+              --receipt artifacts/make-cache/sandbox-host.json
+      - name: Retain sanitized cache and image evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: make-common-cache-${{ matrix.architecture }}
+          path: |
+            artifacts/make-cache/*.json
+            artifacts/make-cache/*-MODULE.bazel.lock
+            artifacts/make-cache/seed/*.json
+            artifacts/make-cache/seed/*-MODULE.bazel.lock
+          if-no-files-found: error
+          retention-days: 14

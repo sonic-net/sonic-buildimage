@@ -2,9 +2,9 @@
 
 load("@rules_python//python:defs.bzl", "py_test")
 
-def image_assembly_test(name, tar_split = None, openssl = None, grub_editenv = None, zstd = None, **kwargs):
+def image_assembly_test(name, tar_split_json = None, tar_split = None, openssl = None, grub_editenv = None, zstd = None, pigz = None, **kwargs):
     """Supply real tools to enable Docker roundtrip, CMS and GRUB checks."""
-    tools = {"tar-split": tar_split, "openssl": openssl, "grub-editenv": grub_editenv, "zstd": zstd}
+    tools = {"tar-split-json": tar_split_json, "tar-split": tar_split, "openssl": openssl, "grub-editenv": grub_editenv, "zstd": zstd, "pigz": pigz}
     py_test(
         name = name,
         srcs = [Label(":assembly_test.py")],

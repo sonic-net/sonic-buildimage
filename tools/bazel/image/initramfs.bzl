@@ -4,8 +4,10 @@
 def _initramfs_impl(ctx):
     output = ctx.actions.declare_file(ctx.attr.out)
     report = ctx.actions.declare_file(ctx.label.name + ".audit.json")
+    indexes = ctx.actions.declare_file(ctx.label.name + ".module-indexes.tar")
+    links = ctx.actions.declare_file(ctx.label.name + ".kernel-links.tar")
     request = ctx.actions.declare_file(ctx.label.name + ".inputs.json")
-    layers = []
+    layers = list(ctx.files.package_layers)
     for target in ctx.attr.layers:
         files = target[DefaultInfo].files.to_list()
         if len(files) != 1:
@@ -24,19 +26,20 @@ def _initramfs_impl(ctx):
         "modprobe": ctx.executable.modprobe.path,
         "depmod": ctx.executable.depmod.path,
         "zstd": ctx.executable.zstd.path if ctx.attr.zstd else None,
+        "pigz": ctx.executable.pigz.path,
         "busybox_applets": ctx.file.busybox_applets.path,
     }))
     ctx.actions.run(
         executable = ctx.attr._tool[DefaultInfo].files_to_run,
-        arguments = [request.path, output.path, report.path],
+        arguments = [request.path, output.path, report.path, indexes.path, links.path],
         inputs = [request, ctx.file.kernel_metadata, ctx.file.busybox_applets] + layers + ctx.files.extra_config,
-        outputs = [output, report],
-        tools = [tool[DefaultInfo].files_to_run for tool in [ctx.attr.modprobe, ctx.attr.depmod, ctx.attr.zstd] if tool],
+        outputs = [output, report, indexes, links],
+        tools = [tool[DefaultInfo].files_to_run for tool in [ctx.attr.modprobe, ctx.attr.depmod, ctx.attr.zstd, ctx.attr.pigz] if tool],
         env = {"LC_ALL": "C", "TZ": "UTC", "PYTHONHASHSEED": "0"},
         mnemonic = "SonicInitramfs",
         progress_message = "Generating SONiC initramfs %{label}",
     )
-    return [DefaultInfo(files = depset([output])), OutputGroupInfo(audit = depset([report]))]
+    return [DefaultInfo(files = depset([output])), OutputGroupInfo(audit = depset([report]), module_indexes = depset([indexes]), kernel_links = depset([links]))]
 
 
 sonic_initramfs = rule(
@@ -44,6 +47,7 @@ sonic_initramfs = rule(
     doc = "Generate initrd from the caller-selected boot or kdump rootfs state; never execute target programs.",
     attrs = {
         "layers": attr.label_list(allow_files = True, mandatory = True),
+        "package_layers": attr.label_list(allow_files = True, doc = "APT package TAR closures applied directly before the explicitly ordered layers; no flatten/recompression."),
         "kernel_metadata": attr.label(allow_single_file = [".json"], mandatory = True),
         "config_dir": attr.string(default = "/etc/initramfs-tools"),
         "extra_config": attr.label_list(allow_files = True),
@@ -51,6 +55,7 @@ sonic_initramfs = rule(
         "compression_level": attr.int(default = -1),
         "modules": attr.string(default = "most", values = ["most", "list"]),
         "out": attr.string(mandatory = True),
+        "pigz": attr.label(default = "@sonic_build_infra//tools/build_tools:pigz", executable = True, cfg = "exec"),
         "busybox_applets": attr.label(allow_single_file = [".json"], mandatory = True),
         "modprobe": attr.label(executable = True, cfg = "exec", mandatory = True),
         "depmod": attr.label(executable = True, cfg = "exec", mandatory = True),

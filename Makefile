@@ -131,6 +131,8 @@ clean showtag docker-cleanup clean-docker sonic-slave-build sonic-slave-bash :
 freeze:
 	@scripts/versions_manager.py freeze $(FREEZE_VERSION_OPTIONS)
 
+include tools/bazel/direct_image_goals.mk
+
 # Let the inner build check changed sources and Make/Bazel builder switches even
 # when these outputs already exist. Keep the outputs non-phony so they retain
 # the implicit forwarding recipe above, in both builder modes.

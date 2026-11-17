@@ -138,3 +138,16 @@ apt-retries-count
 **/Cargo.Bazel.lock
 /.bazelrc.user
 /artifacts/swss/
+/artifacts/sflow/
+/artifacts/gnmi/
+/artifacts/orchagent/
+/artifacts/orchagent-owner/
+/artifacts/orchagent-download/
+
+# Evidence produced by the shared OCI jobs before source-image validation.
+/artifacts/gbsyncd/
+/artifacts/archive/
+/artifacts/swss-layer/
+/artifacts/config-engine/
+
+/artifacts/dash-ha/

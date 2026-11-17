@@ -7,59 +7,82 @@ module(
 )
 
 include("//src/sonic-supervisord-utilities-rs:deps.MODULE.bazel")
+include("//src/sonic-frr:deps.MODULE.bazel")
 
-bazel_dep(name = "aspect_bazel_lib", version = "2.14.0")
-bazel_dep(name = "bazel_skylib", version = "1.9.0")
-bazel_dep(name = "gawk", version = "5.3.2.bcr.3")
+# Cache Go module ZIPs by reviewed archive digests.
+bazel_dep(name = "gazelle", version = "0.54.0.sonic.1", repo_name = "bazel_gazelle")
+bazel_dep(name = "rules_go", version = "0.64.1-sonic.1", repo_name = "io_bazel_rules_go")
+go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+go_deps.zip_lock(file = "//tools/bazel/go:go.zip.sums.json")
+use_repo(go_deps, go_zip_lock_plan = "bazel_gazelle_go_repository_config")
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "gawk", version = "5.3.2.sonic.1")
 bazel_dep(name = "googletest", version = "1.16.0")
-bazel_dep(name = "pigz", version = "2.8.bcr.2")
+bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
 
 # P4 producers retain their upstream Make/configure builds and export TARs.
-bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.2", repo_name = "p4lang_pi")
-bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.2", repo_name = "p4lang_bmv2")
-bazel_dep(name = "p4c", version = "1.2.4.2.sonic.2")
-bazel_dep(name = "sonic-dash", version = "0.0.2-5c9305403585a7ae54f86918219acb8ed39f740a", repo_name = "sonic_dash")
+bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.4", repo_name = "p4lang_pi")
+bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.3", repo_name = "p4lang_bmv2")
+bazel_dep(name = "p4c", version = "1.2.4.2.sonic.3")
+bazel_dep(name = "sonic-dash", version = "0.0.3-2cbfdfa1205c0d03003444e5c80f89adb8c3df59", repo_name = "sonic_dash")
 
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.
 bazel_dep(name = "libyang-python", version = "3.1.0.sonic.6", repo_name = "libyang_python")
 bazel_dep(name = "rules_cc", version = "0.2.20")
+bazel_dep(name = "rules_pkg", version = "1.1.0")
+bazel_dep(name = "net-snmp", version = "5.9.3.sonic.1", repo_name = "net_snmp")
 
-# The patched release sorts above upstream 0.9.4 without a root override.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.13")
+# Share APT lock metadata across dependency sets.
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.21")
+# Shared-only pkg-config ordering anchors carry no static object code.
+single_version_override(
+    module_name = "rules_distroless",
+    version = "0.9.4.sonic.21",
+    patches = ["//src/sonic-frr:0003-distroless-shared-link-sequences.patch"],
+    patch_strip = 1,
+)
 # Preserve system and quote headers in the P4/DASH Make builds.
 bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
-bazel_dep(name = "rules_multirun", version = "0.14.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
-bazel_dep(name = "rules_python", version = "1.8.0")
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
 bazel_dep(name = "rules_rs", version = "0.1.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
-bazel_dep(name = "tar.bzl", version = "0.10.5-sonic.1")
+bazel_dep(name = "tar.bzl", version = "0.10.5.sonic.2")
 bazel_dep(name = "toolchain_utils", version = "1.0.2")
 
 # rules_gzip owns compression; this toolchain keeps gzip headers reproducible.
-register_toolchains("//tools/bazel/gzip:toolchain")
+register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 
 # Build SWSS and its runtime libraries from source without changing the source
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.25-17a1e555291c64be1a6ff008f33352bffc4f8e5c",
+    version = "0.0.37-d31541a95fdf477302f1b109f2105eee81c86617",
     repo_name = "sonic_build_infra",
 )
+bazel_dep(name = "grub", version = "2.12.sonic.1")
 bazel_dep(
     name = "sonic-dash-api",
-    version = "0.0.4-2a6e390b96a4fc17c191fa0da4b7ed1f40aed069",
+    version = "0.0.5-9b2893e890734a2db0c53a5e5c64b031ec0dcfbd",
     repo_name = "sonic_dash_api",
 )
 bazel_dep(
     name = "sonic-sairedis",
-    version = "0.0.3-5e765149371aeca207254641873791db76a95f5f",
+    version = "0.0.4-ee19458a7d1b417317aaf34fe48969da7293d670",
     repo_name = "sonic_sairedis",
 )
-bazel_dep(name = "sonic-swss", version = "0.0.0", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-swss-common", version = "0.0.7-f7fda40c02b3a8b4bbbff3d17fca3dff83f4cbad", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-swss", version = "0.0.2-ee5a197adb6ae19c891a8844017d590969a10e4c", repo_name = "sonic_swss")
+bazel_dep(name = "sonic-platform-common", version = "1.0.0", repo_name = "sonic_platform_common")
+bazel_dep(name = "sonic-snmpagent", version = "2.1.0-a27e093fac394f7871ec1b19bb12ca6739c29fa9", repo_name = "sonic_snmpagent")
+bazel_dep(name = "sonic-swss-common", version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61", repo_name = "sonic_swss_common")
+bazel_dep(name = "hsflowd", version = "2.1.26.sonic.1")
+bazel_dep(name = "sflowtool", version = "6.11.0.sonic.3")
+bazel_dep(name = "libpsample", version = "1.1.0.sonic.2")
+bazel_dep(name = "scapy", version = "2.6.1.sonic.2")
 bazel_dep(
     name = "sonic-yang-mgmt",
     version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
@@ -71,18 +94,11 @@ bazel_dep(
     repo_name = "sonic_yang_models",
 )
 
-# SWSS is not registered yet. Select its maintained-branch merge explicitly.
-git_override(
-    module_name = "sonic-swss",
-    commit = "252a506ae5a94e36a4e330b736a3781a9f7bcf9b",
-    remote = "https://github.com/securely1g/sonic-swss.git",
-)
-
 # Dependency overrides do not propagate from Common. Keep its cgo header
 # repair selected when another module requests the unpatched stable release.
 single_version_override(
     module_name = "rules_go",
-    version = "0.64.1-sonic.1",
+    version = "0.65.0.sonic.1",
 )
 
 single_version_override(
@@ -92,12 +108,12 @@ single_version_override(
 
 single_version_override(
     module_name = "tar.bzl",
-    version = "0.10.5-sonic.1",
+    version = "0.10.5.sonic.2",
 )
 
 single_version_override(
     module_name = "libnl3",
-    version = "3.7.0.sonic.6",
+    version = "3.7.0.sonic.7",
 )
 
 single_version_override(
@@ -192,9 +208,10 @@ use_repo(toolchains, "bsd_tar_toolchains")
 
 register_toolchains("@bsd_tar_toolchains//:all")
 
-# Import exact package sources and dependency sets from the reviewed lock.
+# All image and source-package consumers share the infrastructure owner's
+# reviewed APT identities, dependency edges and snapshot sources.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-apt.import_lock(lock = "//dockers/docker-orchagent/bazel:apt.lock.json")
+apt.import_lock(lock = "@sonic_build_infra//apt:apt.lock.json")
 use_repo(apt, "orchagent_debian", "orchagent_debug_debian", "trixie")
 
 # Generate BUILD input labels from the same reviewed lock during repository setup.
@@ -202,7 +219,58 @@ apt_inputs = use_repo_rule("@sonic_build_infra//apt:inputs_repository.bzl", "apt
 
 apt_inputs(
     name = "orchagent_apt_inputs",
-    lock = "//dockers/docker-orchagent/bazel:apt.lock.json",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+# The SWSS parent adds three external roots from the production APT lock.
+apt_inputs(
+    name = "swss_layer_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    dependency_set = "orchagent_debian",
+    architecture = "amd64",
+    root_packages = ["iputils-ping", "libjemalloc2", "libyaml-cpp0.8"],
+)
+
+# Teamd consumes owner TARs; its external runtime candidates are already in
+# the parent. The standard selector checks their identities against that parent.
+use_repo(apt, "libteam_deps")
+apt_inputs(
+    name = "teamd_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+apt_inputs(
+    name = "teamd_runtime_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    dependency_set = "libteam_deps",
+    architecture = "amd64",
+    root_packages = ["libdaemon0", "libdbus-1-3", "libjansson4", "libzmq5"],
+)
+
+# FRR runtime, debug tools and private test Redis share the production lock.
+use_repo(apt, "frr_image_debian", "frr_image_debug_debian", "frr_image_test_debian")
+
+apt_inputs(
+    name = "frr_image_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+# Orchagent debug selects its seven roots from the shared snapshot lock without
+# pulling openssh-server's libwtmpdb0 dependency from sysmgr_debug_debian.
+apt_inputs(
+    name = "orchagent_debug_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    dependency_set = "sysmgr_debug_debian",
+    architecture = "amd64",
+    root_packages = [
+        "gdb",
+        "gdbserver",
+        "libedit2",
+        "libfido2-1",
+        "sshpass",
+        "strace",
+        "vim",
+    ],
 )
 
 # eventd owns its Lua runtime and the private Redis service used by its tests.
@@ -233,34 +301,61 @@ oci.pull(
 )
 use_repo(oci, "debian_trixie", "debian_trixie_linux_amd64", "debian_trixie_linux_arm64_v8")
 
-# Import the reviewed package closure directly. No expanded package list is
-# checked in beside the lock.
-apt.import_lock(lock = "//dockers/docker-base-trixie/bazel:apt.lock.json")
-use_repo(apt, "base_debian", "base_debug_debian", "config_engine_debian")
+# Select the base and config-engine sets from the same canonical lock.
+use_repo(apt, "base_debian", "base_debug_debian", "config_engine_debian", "radv_runtime_debian")
 
 apt_inputs(
     name = "base_apt_inputs",
-    lock = "//dockers/docker-base-trixie/bazel:apt.lock.json",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
 )
 
-bazel_dep(name = "socat", version = "1.8.0.2.sonic.3")
-bazel_dep(name = "iproute2", version = "6.15.0.sonic.3")
-bazel_dep(name = "libnl3", version = "3.7.0.sonic.6")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.5")
+# Redis server and tools have the same package closure as the shared management test set.
+use_repo(apt, "mgmt_test_deps")
+
+pip.parse(
+    hub_name = "database_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-database/bazel:requirements_lock.txt",
+)
+use_repo(pip, "database_pip")
+
+bazel_dep(name = "socat", version = "1.8.0.2.sonic.6")
+bazel_dep(name = "iproute2", version = "6.15.0.sonic.6")
+bazel_dep(name = "libnl3", version = "3.7.0.sonic.7")
+bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.6")
 
 single_version_override(
     module_name = "sonic-rust-deps",
-    version = "0.0.4-6d9c70f708d7420e9e2b2cdc906b80cee6b140f1",
+    version = "0.0.5-dd364f207d7b320a5af12c81da6d10893f292205",
 )
 
-bazel_dep(name = "sonic-fips", version = "0.0.3-d1a2c8f692d4197295269ed445022c3890b0f1a6", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", repo_name = "sonic_wpa_supplicant")
 
-# Select the shared producer-file checks while older consumers retain
-# their previous infrastructure declarations.
-single_version_override(
-    module_name = "sonic-build-infra",
-    version = "0.0.25-17a1e555291c64be1a6ff008f33352bffc4f8e5c",
+# MACsec runtime/debug and private Redis checks share the production APT lock.
+use_repo(apt, "macsec_debian")
+apt_inputs(
+    name = "macsec_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
 )
+
+# Fixed target C/C++ runtime and JSON headers for sonic-fib.
+apt.install(
+    dependency_set = "fib_deps",
+    packages = ["libc6", "libstdc++6", "libgcc-s1", "nlohmann-json3-dev"],
+    suites = ["trixie", "trixie-updates", "trixie-security"],
+)
+use_repo(apt, "fib_deps")
+
+# Reuse the isolated Bookworm snapshot declared by the FRR dependency include.
+apt_bookworm_metadata = use_extension("@sonic_build_infra//toolchains/bookworm:apt.bzl", "apt")
+apt_bookworm_metadata.install(
+    dependency_set = "fib_bookworm_deps",
+    packages = ["libc6", "libstdc++6", "libgcc-s1", "nlohmann-json3-dev"],
+    suites = ["bookworm", "bookworm-updates", "bookworm-security"],
+)
+use_repo(apt_bookworm_metadata, "fib_bookworm_deps")
 
 # Bind image receipts to the modules that Bazel actually selected.
 source_modules = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "source_modules")
@@ -268,39 +363,48 @@ source_modules = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "so
 source_modules(
     name = "image_source_modules",
     modules = {
+        "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
+        "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
+        "@libteam//:MODULE.bazel": "libteam",
+        "@sonic_dash_api//:MODULE.bazel": "sonic-dash-api",
+        "@sonic_dash_ha//:MODULE.bazel": "sonic-dash-ha",
         "@socat//:MODULE.bazel": "socat",
         "@iproute2//:MODULE.bazel": "iproute2",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
+        "@sonic_wpa_supplicant//:MODULE.bazel": "sonic-wpa-supplicant",
+        "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
         "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
+        "@hsflowd//:MODULE.bazel": "hsflowd",
+        "@sflowtool//:MODULE.bazel": "sflowtool",
+        "@libpsample//:MODULE.bazel": "libpsample",
+        "@sonic_mgmt_common//:MODULE.bazel": "sonic-mgmt-common",
+        "@sonic_gnmi//:MODULE.bazel": "sonic-gnmi",
+        "@scapy//:MODULE.bazel": "scapy",
         "@libyang//:MODULE.bazel": "libyang",
         "@libyang_python//:MODULE.bazel": "libyang-python",
         "@libnl3//:MODULE.bazel": "libnl3",
         "//:MODULE.bazel": "sonic-buildimage",
+        "@sonic_sysmgr//:MODULE.bazel": "sonic-sysmgr",
+        "@sonic_protobuf//:MODULE.bazel": "protobuf-legacy",
     },
 )
 
 single_version_override(
     module_name = "sonic-swss-common",
-    version = "0.0.7-f7fda40c02b3a8b4bbbff3d17fca3dff83f4cbad",
+    version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61",
 )
 
 single_version_override(
     module_name = "sonic-sairedis",
-    version = "0.0.3-5e765149371aeca207254641873791db76a95f5f",
+    version = "0.0.4-ee19458a7d1b417317aaf34fe48969da7293d670",
 )
 
-single_version_override(
-    module_name = "sonic-fips",
-    version = "0.0.3-d1a2c8f692d4197295269ed445022c3890b0f1a6",
-)
-
-# Syncd uses the same pinned Debian snapshot as its source-built base.
-apt.import_lock(lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json")
-use_repo(apt, "syncd_vs_debian", "syncd_vs_debug_debian")
+# Preserve Syncd's Vim debug roots independently of the shared Vim-nox set.
+use_repo(apt, "syncd_vs_debian", "syncd_vs_vim_debug_debian")
 
 apt_inputs(
     name = "syncd_apt_inputs",
-    lock = "//platform/vs/docker-syncd-vs/bazel:apt.lock.json",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
 )
 
 # Bind the shared library payload receipts to the modules actually resolved by
@@ -330,4 +434,219 @@ source_files(
         "@sonic_swss//dist:BUILD.bazel": "dist-BUILD.bazel.txt",
         "@sonic_swss//:debian/swss.install": "swss.install.txt",
     },
+)
+
+# The source owner is maintained in this same checkout as a standalone module.
+bazel_dep(name = "sonic-sysmgr", version = "0.0.0.sonic-buildimage", repo_name = "sonic_sysmgr")
+local_path_override(
+    module_name = "sonic-sysmgr",
+    path = "src/sonic-sysmgr",
+)
+
+bazel_dep(name = "protobuf-legacy", version = "3.21.12.sonic.2", repo_name = "sonic_protobuf")
+
+use_repo(apt, "sysmgr_debian", "sysmgr_debug_debian", "sysmgr_test_debian")
+
+apt_inputs(
+    name = "sysmgr_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+# sFlow adds only locked distro runtime tools to its source-built parent and
+# reuses the shared debug and test collections from the canonical lock.
+use_repo(apt, "sflow_debian")
+
+apt_inputs(
+    name = "sflow_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+# The gNMI and schema owners supply direct runtime TARs; the image adds only
+# its original startup/configuration files and pinned external dependencies.
+bazel_dep(name = "sonic-gnmi", version = "0.1.0-3cc2cba22ba980128518aafe4ddae14aeebebb08", repo_name = "sonic_gnmi")
+bazel_dep(name = "sonic-mgmt-common", version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b", repo_name = "sonic_mgmt_common")
+bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.1-20200309174518-a00bece872fc", repo_name = "com_github_openconfig_goyang")
+bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.1", repo_name = "com_github_openconfig_ygot")
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.25.9")
+
+use_repo(apt, "gnmi_debian", "gnmi_debug_debian", "gnmi_test_debian")
+
+apt_inputs(
+    name = "gnmi_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+
+go_deps.from_file(go_work = "@sonic_gnmi//:go.bazel.work")
+
+go_patches = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps", dev_dependency = True)
+
+# The public goyang/ygot owners supply the same Go types as Management
+# Common. Keep the remaining upstream Go dependency settings unchanged.
+go_patches.gazelle_override(
+    directives = ["gazelle:proto disable_global"],
+    path = "github.com/openconfig/gnmi",
+)
+
+# These modules ship C++/proto Bazel files for their own workspace. Generate
+# their checked-in Go bindings as native Go packages for this consuming graph.
+[go_patches.gazelle_override(
+    build_file_generation = "clean",
+    directives = ["gazelle:proto disable_global"],
+    path = path,
+) for path in [
+    "github.com/openconfig/gnoi",
+    "github.com/openconfig/gnsi",
+]]
+
+# These are the existing Make/vendor patches, applied to isolated dependency
+# repositories. Build actions never modify go.mod, vendor, or the checkout.
+go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_mgmt_common//patches:jsonquery.patch"],
+    path = "github.com/antchfx/jsonquery",
+)
+go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_mgmt_common//patches:xmlquery.patch"],
+    path = "github.com/antchfx/xmlquery",
+)
+go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_mgmt_common//patches:xpath.patch"],
+    path = "github.com/antchfx/xpath",
+)
+
+[go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_gnmi//patches/bazel:" + patch] + (["@sonic_gnmi//patches/bazel:" + {
+        "0001-gnxi.patch": "0005-gnxi-build.patch",
+        "0002-gnmi.patch": "0006-gnmi-build.patch",
+    }[patch]] if path in [
+        "github.com/google/gnxi",
+        "github.com/openconfig/gnmi",
+    ] else []),
+    path = path,
+) for path, patch in [
+    ("github.com/google/gnxi", "0001-gnxi.patch"),
+    ("github.com/openconfig/gnmi", "0002-gnmi.patch"),
+    ("github.com/fsnotify/fsnotify", "0003-fsnotify.patch"),
+    ("google.golang.org/grpc/security/advancedtls", "0004-advancedtls.patch"),
+]]
+# Native gNMI deliberately omits Common's glog.patch for glog v1.2.4.
+
+go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_gnmi//patches/bazel:0007-gnoi-build.patch"],
+    path = "github.com/openconfig/gnoi",
+)
+go_patches.module_override(
+    patch_strip = 1,
+    patches = ["@sonic_gnmi//patches/bazel:0008-pam-build.patch"],
+    path = "github.com/msteinert/pam",
+)
+
+single_version_override(
+    module_name = "sonic-mgmt-common",
+    version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b",
+)
+
+# Framework shares the root gNMI Go selection and public generator identities.
+# Its registration follows the standard non-root go.mod dependency mechanism;
+# the reviewed registry entry supplies that wiring.
+bazel_dep(name = "sonic-mgmt-framework", version = "1.0.0-d48ffb1ebae56f6525f24e14d39562a0ba825daa", repo_name = "sonic_mgmt_framework")
+
+# The old pre-flag.Parse glog diagnostic patch does not apply to glog1.2.4.
+# Preserve the shared root's current glog API and all other SONiC Go patches.
+pip.parse(
+    hub_name = "image_framework_pip",
+    python_version = "3.13",
+    requirements_lock = "@sonic_mgmt_framework//:requirements_lock.txt",
+)
+use_repo(pip, "image_framework_pip")
+
+use_repo(apt, "framework_cli_target_debian")
+
+apt_inputs(
+    name = "framework_runtime_apt_inputs",
+    architecture = "amd64",
+    dependency_set = "framework_cli_target_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    root_packages = [
+        "libcjson1",
+        "libcurl4t64",
+        "libpython3.13",
+        "libxml2",
+    ],
+)
+
+# Pinned comparison tool; no image or package build is scheduled by this include.
+include("//tools/bazel/equivalence_checker:equivalence.MODULE.bazel")
+
+# Resolve the deployed image's Python versions from the Make SNMP version list.
+# The smbus source distribution compiles its bundled i2c library and extension.
+pip.parse(
+    environment = {"CC": "gcc"},
+    hub_name = "image_snmp_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-snmp:requirements_lock.txt",
+)
+use_repo(pip, "image_snmp_pip")
+
+# Select SNMP's runtime, debug and test-only Redis packages from the shared lock.
+use_repo(apt, "snmp_debian", "snmp_debug_debian", "snmp_test_debian")
+
+apt_inputs(
+    name = "snmp_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+# LLDP runtime comes from lldpd and DBSyncd. Select its six external runtime
+# library roots from the reviewed native build dependencies.
+bazel_dep(name = "lldpd", version = "1.0.16.sonic.1")
+bazel_dep(name = "sonic-dbsyncd", version = "2.0.0-8a3830704d3f6067823f7c10b3b31913965add81", repo_name = "sonic_dbsyncd")
+use_repo(apt, "lldpd_deps")
+
+apt_inputs(
+    name = "lldp_runtime_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    dependency_set = "lldpd_deps",
+    architecture = "amd64",
+    root_packages = ["libbsd0", "libcap2", "libevent-2.1-7t64", "libreadline8t64", "libsnmp40t64", "libxml2"],
+)
+
+
+# MUX consumes the Linkmgrd runtime and debug TARs.
+bazel_dep(name = "sonic-linkmgrd", version = "1.0.0-e0f9f94901c30ed30f5fe82af6dafca38f8b35d7", repo_name = "sonic_linkmgrd")
+
+apt_inputs(
+    name = "mux_runtime_apt_inputs",
+    architecture = "amd64",
+    dependency_set = "trixie",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    root_packages = [
+        "libboost-filesystem1.83.0",
+        "libboost-log1.83.0",
+        "libboost-program-options1.83.0",
+        "libboost-thread1.83.0",
+    ],
+)
+
+bazel_dep(name = "sonic-dash-ha", version = "0.0.1-502377912f3530c9bb6c27007822919f6f32aeb7", repo_name = "sonic_dash_ha")
+
+# The shared infrastructure lock provides separate runtime, debug and test collections.
+use_repo(apt, "dash_ha_debian", "dash_ha_debug_debian", "dash_ha_test_debian")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# The APT tar-split CLI always gzip-compresses metadata. Use its fixed official
+# API to emit raw JSON; the image action owns the required pigz compression.
+http_archive(
+    name = "tar_split_api_src",
+    urls = ["https://github.com/vbatts/tar-split/archive/refs/tags/v0.11.6.tar.gz"],
+    sha256 = "5655f13638895ec2e959a1631c5764a8720e7520158a4e4648fc9d2f856561c1",
+    strip_prefix = "tar-split-0.11.6",
+    build_file = "//tools/bazel/image/tar_split_json:upstream.BUILD.bazel",
 )

@@ -12,26 +12,15 @@ load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
-load(":runtime.bzl", "common_runtime_test")
 
 package(default_visibility = ["//visibility:public"])
 
-# Run the unchanged Rust tests with Common's declared native runtime. The owner
-# helper, runtime TAR and Rust binary are all inputs to the Bazel test action.
-sh_test(
+exports_files(["integration/frr_python_wheel_probe.py"])
+
+# Preserve the old build label; CI executes the source owner's real test rule.
+alias(
     name = "swss_common_rust_test",
-    srcs = ["@sonic_swss_common//tools/bazel/runtime:run_with_runtime.py"],
-    args = [
-        "$(rootpath @sonic_swss_common//tools/bazel/runtime:test_runtime)",
-        "-",
-    ] + select({
-        "@sonic_swss_common//tools/bazel:yang_modules_enabled": ["enabled"],
-        "//conditions:default": ["disabled"],
-    }) + ["$(rootpath @sonic_swss//crates/countersyncd:common_rust_test)"],
-    data = [
-        "@sonic_swss//crates/countersyncd:common_rust_test",
-        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
-    ],
+    actual = "@sonic_swss//crates/countersyncd:common_rust_test",
 )
 
 _OCI_OWNER_POLICIES = [
@@ -55,7 +44,11 @@ py_test(
         "--policy=$(rootpath //dockers/docker-orchagent:package_policy)",
         "--runtime=$(rootpath //dockers/docker-orchagent:ci_swss)",
         "--library=protobuf.tar=$(rootpath //dockers/docker-orchagent:ci_protobuf)",
+        "--library=libteam.tar=$(rootpath //dockers/docker-orchagent:ci_libteam)",
+        "--library=libteamdctl.tar=$(rootpath //dockers/docker-orchagent:ci_libteamdctl)",
         "--dependencies=$(rootpath //dockers/docker-orchagent:ci_rdeps)",
+        "--source-layer-excludes=$(rootpath //tools/bazel/dpkg:dpkg_excludes.txt)",
+        "--source-layer-includes=$(rootpath //tools/bazel/dpkg:oci_includes.txt)",
         "--config=$(rootpath //dockers/docker-orchagent:ci_config)",
         "--debug-symbols=$(rootpath //dockers/docker-orchagent:ci_debug_symbols)",
         "--source-file=dist/BUILD.bazel=$(rootpath @swss_install_contract//:dist-BUILD.bazel.txt)",
@@ -74,10 +67,14 @@ py_test(
     data = [
         "//dockers/docker-orchagent:ci_config",
         "//dockers/docker-orchagent:ci_debug_symbols",
+        "//dockers/docker-orchagent:ci_libteam",
+        "//dockers/docker-orchagent:ci_libteamdctl",
         "//dockers/docker-orchagent:ci_protobuf",
         "//dockers/docker-orchagent:ci_rdeps",
         "//dockers/docker-orchagent:ci_swss",
         "//dockers/docker-orchagent:package_policy",
+        "//tools/bazel/dpkg:dpkg_excludes.txt",
+        "//tools/bazel/dpkg:oci_includes.txt",
         "@sonic_build_infra//toolchains/binutils:objcopy",
         "@sonic_build_infra//toolchains/binutils:readelf",
         "@sonic_swss//cfgmgr:lua_files",
@@ -97,6 +94,7 @@ py_test(
     ],
     deps = [
         "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:container_validation",
         "//tools/bazel/oci:package_contract_lib",
     ],
 )
@@ -609,6 +607,19 @@ py_test(
 
 # Layer checks are shared by APT selection and both containers' CI suites.
 py_test(
+    name = "validation_inputs_test",
+    size = "small",
+    srcs = ["validation_inputs_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:oci_inventory",
+        "//tools/bazel/oci:package_contract_lib",
+    ],
+)
+
+py_test(
     name = "oci_inventory_test",
     size = "small",
     srcs = ["integration/oci_inventory_test.py"],
@@ -676,6 +687,7 @@ py_test(
     srcs = ["source_base_validation_test.py"],
     deps = [
         ":oci_base_fixture_lib",
+        "//tools/bazel/ci:validation_inputs",
         "//tools/bazel/oci:source_base_validation",
     ],
 )
@@ -700,7 +712,8 @@ py_test(
     args = [
         "$(rootpath @orchagent_apt_inputs//:apt_inputs.bzl)",
         "$(rootpath //dockers/docker-orchagent:runtime_layer_policy)",
-        "$(rootpath //dockers/docker-orchagent/bazel:apt.lock.json)",
+        "$(rootpath @sonic_build_infra//apt:apt.lock.json)",
+        "$(rootpath //platform/vs/docker-syncd-vs:Dockerfile.j2)",
         "$(rootpath @orchagent_debian//arping/amd64:deb)",
         "$(rootpath @orchagent_debian//arping/amd64:control)",
         "$(rootpath @orchagent_debug_debian//gdbserver/amd64:deb)",
@@ -708,7 +721,8 @@ py_test(
     ],
     data = [
         "//dockers/docker-orchagent:runtime_layer_policy",
-        "//dockers/docker-orchagent/bazel:apt.lock.json",
+        "//platform/vs/docker-syncd-vs:Dockerfile.j2",
+        "@sonic_build_infra//apt:apt.lock.json",
         "@orchagent_apt_inputs//:apt_inputs.bzl",
         "@orchagent_debian//arping/amd64:control",
         "@orchagent_debian//arping/amd64:deb",
@@ -969,9 +983,12 @@ py_binary(
 
 run_binary(
     name = "oci_license_fixture_tar",
-    tool = ":oci_license_fixture",
-    args = ["--write", "$(location oci-license-fixture.tar)"],
     outs = ["oci-license-fixture.tar"],
+    args = [
+        "--write",
+        "$(location oci-license-fixture.tar)",
+    ],
+    tool = ":oci_license_fixture",
 )
 
 dpkg_filter(
@@ -987,19 +1004,29 @@ sonic_layer(
 py_test(
     name = "oci_license_filter_test",
     srcs = ["integration/oci_license_filter_test.py"],
-    main = "integration/oci_license_filter_test.py",
     args = [
+        "$(rootpath :oci_license_fixture_tar)",
+        "$(rootpath //tools/bazel/dpkg:dpkg_excludes.txt)",
+        "$(rootpath //tools/bazel/dpkg:oci_includes.txt)",
         "$(rootpath :oci_license_filtered)",
         "$(rootpath :oci_license_refiltered)",
     ],
-    data = [":oci_license_filtered", ":oci_license_refiltered"],
+    data = [
+        ":oci_license_fixture_tar",
+        "//tools/bazel/dpkg:dpkg_excludes.txt",
+        "//tools/bazel/dpkg:oci_includes.txt",
+        ":oci_license_filtered",
+        ":oci_license_refiltered",
+    ],
+    main = "integration/oci_license_filter_test.py",
+    deps = ["//tools/bazel/oci:container_validation"],
 )
 
-# Rust links Common's shared library; its indirect runtime imports need the
-# same pinned package closure used by Common's own native consumer tests.
-common_runtime_test(
+# Keep the compatibility build label; the owner test already provides its
+# declared Common runtime. CI selects the owner test rule directly.
+alias(
     name = "common_rust_runtime_test",
-    binary = "@sonic_swss//crates/countersyncd:common_rust_test",
+    actual = "@sonic_swss//crates/countersyncd:common_rust_test",
 )
 
 # Shared OCI regression fixtures exercise the same algorithms for both owners.
@@ -1013,6 +1040,7 @@ py_library(
 
 _OCI_TEST_DEPS = [
     ":oci_contract_fixture",
+    "//tools/bazel/ci:validation_inputs",
     "//tools/bazel/oci:package_contract_lib",
     "//tools/bazel/oci:package_state_lib",
     "//tools/bazel/oci:container_validation",
@@ -1138,7 +1166,7 @@ _SYNCD_P4_IMAGE_INPUTS = {
     "runtime_manifest_path": "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
     "debug_manifest_path": "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
     "source_contract_path": _SYNCD_OWNER + ":source_contract",
-    "apt_lock_path": _SYNCD_OWNER + "/bazel:apt.lock.json",
+    "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
     "dpkg_filter_path": "//dockers/docker-base-trixie:dpkg_01_drop",
     "base_path": _SYNCD_OWNER + ":config_engine_base_layout",
     "apt_layer": _SYNCD_OWNER + ":apt_deps",
@@ -1163,6 +1191,22 @@ _SYNCD_P4_IMAGE_INPUTS = {
 }
 
 py_test(
+    name = "syncd_validation_timing_test",
+    size = "small",
+    srcs = [
+        "integration/syncd_p4_images_test.py",
+        "syncd_validation_timing_test.py",
+    ],
+    main = "syncd_validation_timing_test.py",
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
     name = "syncd_p4_images_test",
     size = "large",
     srcs = ["integration/syncd_p4_images_test.py"],
@@ -1181,6 +1225,7 @@ py_test(
     ],
     deps = [
         "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
         "//tools/bazel/oci:container_validation",
         "//tools/bazel/oci:source_base_validation",
     ],
@@ -1191,4 +1236,144 @@ py_test(
     srcs = ["integration/source_contract_test.py"],
     main = "integration/source_contract_test.py",
     deps = ["//tools/bazel/oci:source_contract_lib"],
+)
+
+# The owner composes native/configuration TARs directly and retains libteam's
+# generated package receipt for APT ownership. Validate both against the OCI.
+_SWSS_OWNER = "//dockers/docker-orchagent"
+
+_SWSS_IMAGE_INPUTS = {
+    "runtime_path": _SWSS_OWNER + ":docker-orchagent",
+    "debug_path": _SWSS_OWNER + ":docker-orchagent-dbg",
+    "runtime_manifest_path": "//:target/bazel-manifests/docker-orchagent/manifest.json",
+    "debug_manifest_path": "//:target/bazel-manifests/docker-orchagent-dbg/manifest.json",
+    "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
+    "debug_apt_lock_path": _SWSS_OWNER + "/bazel:debug_apt.lock.json",
+    "base_path": _SWSS_OWNER + ":config_engine_base_layout",
+    "apt_layer": _SWSS_OWNER + ":apt_deps",
+    "debug_tools_layer": _SWSS_OWNER + ":debug_tools",
+    "runtime_apt_selection": _SWSS_OWNER + ":runtime_apt_selection",
+    "debug_apt_selection": _SWSS_OWNER + ":debug_apt_selection",
+    "package_state_contract": _SWSS_OWNER + "/bazel:package_state.json",
+    "runtime_archive": _SWSS_OWNER + ":docker-orchagent.gz",
+    "debug_archive": _SWSS_OWNER + ":docker-orchagent-dbg.gz",
+    "source_contract_path": _SWSS_OWNER + ":libteam_source_contract",
+    "source_runtime_tar": _SWSS_OWNER + ":libteam_source_runtime.tar",
+    "source_debug_tar": _SWSS_OWNER + ":docker-orchagent.debug_symbols",
+    "source_receipt": _SWSS_OWNER + ":libteam_source_receipt",
+    "source_layer_excludes": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source_layer_includes": "//tools/bazel/dpkg:oci_includes.txt",
+    "base_symbols": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+    "base_metadata": "//dockers/docker-base-trixie:runtime_package_metadata",
+    "config_metadata": "//dockers/docker-config-engine-trixie:runtime_package_metadata",
+    "workspace_module": "@image_source_modules//:sonic-buildimage.MODULE.bazel",
+    "policy": _SWSS_OWNER + ":package_policy",
+    "make_runtime_archive": "//:target/docker-orchagent.gz",
+    "make_debug_archive": "//:target/docker-orchagent-dbg.gz",
+    "readelf": "@sonic_build_infra//toolchains/binutils:readelf",
+    "objcopy": "@sonic_build_infra//toolchains/binutils:objcopy",
+}
+
+_SWSS_RUNTIME_LAYERS = [
+    _SWSS_OWNER + ":rdeps",
+    _SWSS_OWNER + ":runtime_alternatives",
+    _SWSS_OWNER + "/config:python_runtime",
+    _SWSS_OWNER + "/config:files",
+    _SWSS_OWNER + ":installed_package_state",
+]
+
+_SWSS_DEBUG_LAYERS = [
+    _SWSS_OWNER + ":docker-orchagent.debug_symbols",
+    _SWSS_OWNER + ":debug_client",
+    _SWSS_OWNER + ":debug_client_symbols",
+    _SWSS_OWNER + ":debug_accounts",
+    _SWSS_OWNER + ":debug_package_state",
+]
+
+py_test(
+    name = "swss_images_test",
+    size = "large",
+    srcs = ["integration/oci_images_test.py"],
+    args = ["--" + name.replace("_", "-") + "=$(rootpath " + label + ")" for name, label in _SWSS_IMAGE_INPUTS.items()] +
+           ["--runtime-payload-layer=$(rootpath " + label + ")" for label in _SWSS_RUNTIME_LAYERS] +
+           ["--debug-payload-layer=$(rootpath " + label + ")" for label in _SWSS_DEBUG_LAYERS],
+    data = depset(_SWSS_IMAGE_INPUTS.values() + _SWSS_RUNTIME_LAYERS + _SWSS_DEBUG_LAYERS).to_list(),
+    main = "integration/oci_images_test.py",
+    tags = ["manual"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+# Each image family must use the same configuration as its Make build: SWSS
+# uses the default flags, while Syncd uses --config=syncd-dash. The runtime
+# validator combines these policies and checks the shared base is identical.
+_INSTALLED_IMAGE_FAMILIES = {
+    "swss": (_SWSS_OWNER, "docker-orchagent"),
+    "syncd": (_SYNCD_OWNER, "docker-syncd-vs"),
+}
+
+_INSTALLED_BASE = "//dockers/docker-config-engine-trixie"
+
+[
+    run_binary(
+        name = family + "_installed_images_policy",
+        srcs = [
+            _INSTALLED_BASE + ":installed_checks",
+            owner + ":installed_checks",
+            _INSTALLED_BASE + ":docker-config-engine-trixie",
+            _INSTALLED_BASE + ":docker-config-engine-trixie.gz",
+            owner + ":" + image,
+            owner + ":" + image + ".gz",
+            owner + ":" + image + "-dbg",
+            owner + ":" + image + "-dbg.gz",
+        ],
+        outs = [family + "-installed-images-policy.json"],
+        args = [
+            "--architecture",
+            "amd64",
+            "--out",
+            "$(location " + family + "-installed-images-policy.json)",
+            "--policy=$(location " + _INSTALLED_BASE + ":installed_checks)",
+            "--policy=$(location " + owner + ":installed_checks)",
+        ] + [arg for name, image_owner in [
+            ("docker-config-engine-trixie", _INSTALLED_BASE),
+            (image, owner),
+            (
+                image + "-dbg",
+                owner,
+            ),
+        ] for arg in [
+            "--layout",
+            name,
+            "$(location " + image_owner + ":" + name + ")",
+            "--archive",
+            name,
+            "$(location " + image_owner + ":" + name + ".gz)",
+        ]],
+        target_compatible_with = [
+            "@platforms//cpu:x86_64",
+            "@platforms//os:linux",
+        ],
+        tool = "//tools/bazel/oci:installed_images_policy",
+    )
+    for family, (owner, image) in _INSTALLED_IMAGE_FAMILIES.items()
+]
+
+py_test(
+    name = "gbsyncd_make_test",
+    srcs = ["gbsyncd_make_test.py"],
+    data = [
+        "//:platform/template/docker-gbsyncd-trixie.mk",
+        "//:platform/vs/docker-gbsyncd-vs.mk",
+        "//platform/vs/docker-gbsyncd-vs:Dockerfile.j2",
+        "//platform/vs/docker-syncd-vs:Dockerfile.j2",
+    ],
+    python_version = "3.11",
 )

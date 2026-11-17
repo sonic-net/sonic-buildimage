@@ -1,0 +1,112 @@
+Hold each CLI test endpoint reservation until its switch has exited.
+The test commands and exact expected-output checks remain unchanged.
+
+--- a/targets/simple_switch/tests/CLI_tests/run_one_test.py.in
++++ b/targets/simple_switch/tests/CLI_tests/run_one_test.py.in
+@@ -48,7 +48,6 @@
+             file = self.lockName(index)
+             try:
+                 os.makedirs(file)
+-                os.rmdir(file)
+                 return index
+             except:
+                 time.sleep(1)
+@@ -72,36 +71,46 @@
+     rand = concurrent.generate()
+     if rand is None:
+         sys.exit(2)
++    sys.exit(run_test(concurrent, rand, command_path, output_path, json_path,
++                      CLI_extra_args))
++
++
++def run_test(concurrent, rand, command_path, output_path, json_path,
++             CLI_extra_args):
+     thrift_port = str(9090 + rand)
+     device_id = str(rand)
+     # TODO(antonin): fragile if the name changes in the bmv2 code
+     rpc_path = "/tmp/bmv2-{}-notifications.ipc".format(device_id)
++    simple_switch_p = None
++    try:
++        # makes sure that the switch will start right away
++        warmup = subprocess.Popen(
++            ["@abs_top_builddir@/targets/simple_switch/simple_switch", "-h"],
++            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
++        warmup.wait()
+
+-    # makes sure that the switch will start right away
+-    simple_switch_p = subprocess.Popen(
+-        ["@abs_top_builddir@/targets/simple_switch/simple_switch", "-h"],
+-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+-    simple_switch_p.wait()
++        simple_switch_p = subprocess.Popen(
++            ["@abs_top_builddir@/targets/simple_switch/simple_switch",
++             json_path, "--thrift-port", thrift_port, "--device-id", device_id],
++            stdout=subprocess.PIPE)
++        time.sleep(1)
++        return run_cli(thrift_port, command_path, output_path, CLI_extra_args)
++    finally:
++        if simple_switch_p is not None:
++            try:
++                simple_switch_p.kill()
++            except ProcessLookupError:
++                pass
++            # Do not release a reservation while its endpoint may still be live.
++            simple_switch_p.wait()
++            try:
++                os.remove(rpc_path)
++            except FileNotFoundError:
++                pass
++        concurrent.release(rand)
+
+-    # start simple_switch
+-    simple_switch_p = subprocess.Popen(
+-        ["@abs_top_builddir@/targets/simple_switch/simple_switch",
+-         json_path, "--thrift-port", thrift_port, "--device-id", device_id],
+-        stdout=subprocess.PIPE)
+-    # while True:
+-    #     line = simple_switch_p.stdout.readline()
+-    #     if "Thrift" in line:
+-    #         break
+
+-    time.sleep(1)
+-
+-    def cleanup():
+-        simple_switch_p.kill()
+-        try:
+-            os.remove(rpc_path)
+-        except:
+-            pass
+-
++def run_cli(thrift_port, command_path, output_path, CLI_extra_args):
+     cmd = ["@abs_top_srcdir@/tools/runtime_CLI.py",
+            "--thrift-port", thrift_port]
+     cmd += CLI_extra_args
+@@ -118,8 +127,7 @@
+         rc = p.returncode
+
+         if rc:
+-            cleanup()
+-            sys.exit(3)
++            return 3
+
+     assert(out)
+     out = out.decode()
+@@ -143,16 +151,14 @@
+                 success = False
+
+         if success:
+-            cleanup()
+-            sys.exit(0)
++            return 0
+         else:
+             print("Expected")
+             print("\n".join(expected_parse))
+             print("But got")
+             print("\n".join(out_parsed))
+
+-    cleanup()
+-    sys.exit(4)
++    return 4
+
+
+ if __name__ == '__main__':

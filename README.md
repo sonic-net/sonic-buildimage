@@ -83,9 +83,10 @@ Any server can be a build image server as long as it has:
 * Multiple cores to increase build speed
 * Plenty of RAM (less than 8 GiB is likely to cause issues)
 * 300G of free disk space
-* KVM Virtualization Support.
+* KVM virtualization support for VS VM images (`target/sonic-vs.img.gz`).
+  Building the ONIE installer (`target/sonic-vs.bin`) does not require KVM.
 
-> Note: If you are in a VM, make sure you have support for nested virtualization.
+> Note: For targets that boot VMs, a build host running inside a VM needs nested virtualization.
 > Some cases (e.g. building OVS image) also requires extra configuration
 > options to expose the full KVM interface to the VM
 > (e.g. [the KVM paravirtualization support on VirtualBox](https://www.virtualbox.org/manual/ch10.html#gimproviders)).
@@ -348,6 +349,23 @@ it is recommended to read this short [Documentation](README.buildsystem.md).
 SONiC build system supports building dockers and ONIE-image with debug tools
 and debug symbols, to help with live & core debugging.
 For details refer to [SONiC Buildimage Guide](https://github.com/sonic-net/sonic-buildimage/blob/master/README.buildsystem.md).
+
+With `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`, `make target/sonic-vs.bin`
+automatically builds both runtime and debug archives for supported Bazel
+containers in the VS builder. Each pair shares one Bazel build invocation.
+The normal VS image still installs runtime containers; `INSTALL_DEBUG_TOOLS=y`
+selects debug containers for installation. The additional debug archives remain
+available under `target/` for debugging and CI validation. CI reports this build
+separately from the archive and P4 validation that follows it. Validation uses
+the existing `sonic-slave-run` builder entrypoint and retains the P4 package
+prerequisites and checks. See the
+[Bazel Make bridge](tools/bazel/README.md#build-runtime-and-debug-archives-with-the-vs-image)
+for the supported scope.
+
+The CI artifact contains `sonic-vs.bin`, the installable ONIE image. Generating
+BIOS/UEFI VM disks and booting them belongs to `target/sonic-vs.img.gz`; those
+checks are not exercised by the `.bin` build. Archive, P4 debug-symbol and source
+package validation still run after installer construction.
 
 ## SAI Version
 

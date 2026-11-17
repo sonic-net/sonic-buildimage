@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,7 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.build_helpers import cache_options
+from tools.bazel.ci.public_artifacts import LOCAL_PATH, PublicArtifactError, safe_text
 
 
 TARGET = "//tools/bazel/tests:archive-fixture.gz"
@@ -78,6 +80,46 @@ def snapshot(source, destination):
             shutil.copy2(original, target, follow_symlinks=False)
 
 
+def print_failure_tail(path):
+    """Expose a bounded diagnostic without publishing raw command/environment data."""
+    with path.open("rb") as log:
+        log.seek(0, os.SEEK_END)
+        start = max(0, log.tell() - 65536)
+        log.seek(start)
+        tail = log.read(65536)
+        if start:
+            tail = tail.partition(b"\n")[2]  # Discard a possibly truncated credential or URL.
+        lines = tail.decode("utf-8", errors="replace").splitlines()[-80:]
+    secrets = [part for name, value in os.environ.items()
+               if any(word in name.upper() for word in
+                      ("TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "API_KEY", "ACCESS_KEY", "PRIVATE_KEY"))
+               for part in value.splitlines() if part]
+    rendered = []
+    remaining = 16384
+    for line in reversed(lines):
+        for secret in secrets:
+            line = line.replace(secret, "[redacted]")
+        line = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", line)
+        line = LOCAL_PATH.sub("[local]/", line)
+        try:
+            # Actions trims whitespace for :: commands and recognizes ##[ anywhere.
+            if line.lstrip().startswith("::") or "##[" in line:
+                raise PublicArtifactError("workflow-command")
+            if re.search(r"authorization|cookie|token|secret|password|credential|api[_-]?key", line, re.I):
+                raise PublicArtifactError("credential-diagnostic")
+            safe_text(line)
+        except PublicArtifactError:
+            line = "[withheld unsafe diagnostic line]"
+        # Redaction can expand short values; bound rendered UTF-8 bytes as well.
+        line = line.encode("utf-8")[:min(2048, remaining) - 3].decode("utf-8", errors="ignore")
+        output = "  " + line + "\n"
+        rendered.append(output)
+        remaining -= len(output.encode("utf-8"))
+        if remaining < 3:
+            break
+    sys.stderr.write("".join(reversed(rendered)))
+
+
 def run_build(args, phase, checkout, cache, output_base):
     evidence = args.artifacts / phase
     evidence.mkdir()
@@ -95,7 +137,8 @@ def run_build(args, phase, checkout, cache, output_base):
                "--output_base=" + visible_output,
                "--output_user_root=" + visible_user,
                "build", *args.bazel_arg, *options,
-               "--remote_cache=", "--remote_executor=", "--lockfile_mode=update",
+               "--remote_cache=", "--remote_executor=", "--experimental_remote_downloader=",
+               "--lockfile_mode=update",
                "--execution_log_json_file=" + visible_evidence + "/execution.json",
                "--build_event_json_file=" + visible_evidence + "/events.jsonl", TARGET]
     if in_container:
@@ -115,7 +158,12 @@ def run_build(args, phase, checkout, cache, output_base):
     with (evidence / "build.log").open("w") as log:
         result = subprocess.run(command, cwd=checkout, stdout=log, stderr=subprocess.STDOUT)
     if result.returncode:
-        raise RuntimeError(f"{phase} build failed; see {evidence / 'build.log'}")
+        print(f"{phase} build failed with exit code {result.returncode}; last log lines:",
+              file=sys.stderr, flush=True)
+        print_failure_tail(evidence / "build.log")
+        sys.stderr.flush()
+        raise RuntimeError(
+            f"{phase} build failed with exit code {result.returncode}; see {evidence / 'build.log'}")
     actions = action_evidence(evidence / "execution.json")
     output = archive_output(evidence / "events.jsonl")
     if in_container:

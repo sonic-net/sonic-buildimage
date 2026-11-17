@@ -55,3 +55,8 @@ Makefile
 # Ignore generated files
 build/gen
 rebootbackend/reboot_dbus.h
+
+# Generated Bazel state
+/bazel-*
+/MODULE.bazel.lock
+/artifacts/

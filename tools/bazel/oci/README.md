@@ -161,9 +161,12 @@ manifest_labels(
 ```
 
 Set each `oci_image` target's `labels` attribute to the corresponding action.
-The `manifest_labels` macro accepts one manifest and an optional `out` filename.
-Its Python tool validates a JSON object and writes one compact JSON label line,
-preserving all manifest fields. The declared input lets Bazel invalidate the
+The `manifest_labels` macro takes the manifest, an optional `out` filename and
+an optional `image_version` string build setting. It encodes the JSON manifest
+on one line and writes Make's `Tag` label when the caller supplies a version setting.
+Owners can also pass `package_receipt` from their installed package receipt and
+`version_packages` for the components that Make labels with a name and version.
+The declared input lets Bazel invalidate the
 label action whenever Make publishes changed metadata. Runtime and debug labels
 have separate actions.
 
@@ -230,17 +233,16 @@ registered outputs can also be requested as direct Make targets.
 Add the resulting `$(TARGET_PATH)/docker-example-base.oci` to the consuming
 container's `_BAZEL_DEPENDS` as in the [bridge example](../README.md#example-another-runtime-and-debug-archive).
 
-Non-FIPS SWSS builds use this interface to publish `target/docker-config-engine-trixie.oci`
-from the Make-built `target/docker-config-engine-trixie.gz`, with image platform
-`linux/amd64`. FIPS SWSS builds and source-built syncd VS consume
-`//dockers/docker-config-engine-trixie:docker-config-engine-trixie` directly.
-Make passes `--//dockers/docker-orchagent:source_config_engine=true` to both
-SWSS archive variants when `INCLUDE_FIPS=y`, and prepares the base and
-config-engine manifests instead of extracting the Docker archive. Direct Bazel
-reproductions of that configuration must use the same flag and manifests.
-Each owner keeps its own configuration guards. The syncd VS
+Use this interface only when the base producer is Make and its archive already
+contains native OCI entries. SWSS and source-built syncd VS instead consume
+`//dockers/docker-config-engine-trixie:docker-config-engine-trixie` directly;
+its Bazel-produced Docker installer archive is not an OCI import source.
+SWSS uses this source base with or without FIPS, preparing the base and
+config-engine manifests instead of extracting the Docker archive. Each owner
+keeps its own configuration guards. The syncd VS
 [owner guide](../../../platform/vs/docker-syncd-vs/bazel/README.md) records its
 image validation requirements and remaining runtime checks.
+
 The pinned Docker 28.5.2 saves both
 Docker metadata and an OCI layout in the same archive. Make extracts the existing
 OCI files without changing the index, config or layer bytes. Both outputs
@@ -250,8 +252,7 @@ The shared producer is `tools/bazel/oci/prepare_oci_base.py`, also exposed as
 `//tools/bazel/oci:prepare_oci_base`. It imports the sibling `oci_layout` validator;
 neither helper depends on the SWSS build package.
 
-Declare the prepared layout files as Bazel inputs; the root `BUILD.bazel` does
-this for SWSS's config-engine base. The
+Declare the prepared layout files as Bazel inputs in the consuming package. The
 `oci_base_layout` macro validates descriptor digests, sizes and the requested OS
 and architecture, then uses upstream `copy_to_directory` to assemble the directory
 consumed by `oci_image`. The check reads the image config even when the index has
@@ -324,3 +325,8 @@ the build host filesystem. Shared payload and image validators use
 `normalize_layer.py` for reviewed merged-usr paths. Owners declare their input
 layers and package expectations in BUILD; the shared selector and inventory
 helpers apply them without image-specific package names or feature settings.
+
+The selected Common producer already uses canonical `run/redis/sonic-db` paths.
+SWSS inherits that runtime from config-engine. The source-layer alias guard
+protects against older TARs that used `var/run`, alongside other overlays that
+would replace the base's directory symlinks.

@@ -1,0 +1,92 @@
+"""SNMP startup files, declared service account and Make metadata."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load(":environment.bzl", "image_environment")
+
+package(default_visibility = ["//dockers/docker-snmp:__pkg__"])
+
+image_environment(
+    name = "environment",
+    version = "//dockers/docker-snmp:image_version",
+)
+
+_CONFIGS = {
+    "docker-snmp-init.sh": "usr/bin/docker-snmp-init.sh",
+    "start.sh": "usr/bin/start.sh",
+    "snmp_yml_to_configdb.py": "usr/bin/snmp_yml_to_configdb.py",
+    "Dockerfile.j2": "usr/share/sonic/templates/Dockerfile.j2",
+    "snmpd.conf.j2": "usr/share/sonic/templates/snmpd.conf.j2",
+    "supervisord.conf.j2": "usr/share/sonic/templates/supervisord.conf.j2",
+    "sysDescription.j2": "usr/share/sonic/templates/sysDescription.j2",
+    "critical_processes": "etc/supervisor/critical_processes",
+}
+
+# Apply snmpd postinst's group-readable configuration ownership declaratively.
+genrule(
+    name = "default_snmpd_config",
+    srcs = ["@snmp_debian//snmpd:data"],
+    outs = ["snmpd.conf"],
+    cmd = '"$(BSDTAR_BIN)" -xOf "$(execpath @snmp_debian//snmpd:data)" ./etc/snmp/snmpd.conf > "$@"',
+    toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+)
+
+tar(
+    name = "files",
+    srcs = [":default_snmpd_config"] + ["//dockers/docker-snmp:" + src for src in _CONFIGS],
+    mtree = [
+        "./" + dest + " uid=0 gid=0 mode=" + ("0755" if dest.startswith("usr/bin/") else "0644") + " time=0 type=file content=$(location //dockers/docker-snmp:" + src + ")"
+        for src, dest in _CONFIGS.items()
+    ] + [
+        # snmpd's postinst creates/chowns this persistent directory. Its service
+        # runs as Debian-snmp; the account's numeric IDs are declared below.
+        "./var/lib/snmp uid=101 gid=102 mode=0755 time=0 type=dir",
+        "./etc/snmp/snmpd.conf uid=0 gid=102 mode=0640 time=0 type=file content=$(location :default_snmpd_config)",
+    ],
+)
+
+account_layer(
+    name = "accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    groups = [{
+        "name": "Debian-snmp",
+        "password": "x",
+        "gid": 102,
+    }],
+    users = [{
+        "username": "Debian-snmp",
+        "password": "x",
+        "uid": 101,
+        "gid": 102,
+        "home": "/var/lib/snmp",
+        "shell": "/bin/false",
+    }],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-snmp" + suffix + "/manifest.json",
+        image_version = "//dockers/docker-snmp:image_version",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# The FIPS owner reserves this group for the debug client's setgid ssh-agent.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-snmp:docker-snmp",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

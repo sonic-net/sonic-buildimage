@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "packages": {
+    "hsflowd": {
+      "required_paths": [
+        "usr/sbin/hsflowd",
+        "etc/hsflowd/modules/mod_sonic.so",
+        "etc/init.d/hsflowd"
+      ]
+    },
+    "sflowtool": {
+      "required_paths": [
+        "usr/bin/sflowtool"
+      ]
+    },
+    "psample": {
+      "required_paths": [
+        "usr/bin/psample",
+        "usr/lib/x86_64-linux-gnu/libpsample.so.1.0"
+      ]
+    }
+  }
+}

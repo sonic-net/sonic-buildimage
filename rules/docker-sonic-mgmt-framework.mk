@@ -40,3 +40,26 @@ $(DOCKER_MGMT_FRAMEWORK)_BASE_IMAGE_FILES += sonic-cli:/usr/bin/sonic-cli
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_MGMT_FRAMEWORK)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_MGMT_FRAMEWORK_DBG)
+
+# Source TARs feed the existing archive bridge for the selected native VS profile.
+# Other profiles retain the original Make prerequisites and package path above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_MGMT_FRAMEWORK) $(DOCKER_MGMT_FRAMEWORK_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_MGMT_FRAMEWORK)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_MGMT_FRAMEWORK_DBG)
+$(DOCKER_MGMT_FRAMEWORK)_BAZEL_TARGET = //dockers/docker-sonic-mgmt-framework:$(DOCKER_MGMT_FRAMEWORK)
+$(DOCKER_MGMT_FRAMEWORK_DBG)_BAZEL_TARGET = //dockers/docker-sonic-mgmt-framework:$(DOCKER_MGMT_FRAMEWORK_DBG)
+SONIC_BAZEL_MANIFESTS += docker-sonic-mgmt-framework docker-sonic-mgmt-framework-$(DBG_IMAGE_MARK)
+docker-sonic-mgmt-framework_MANIFEST_IMAGE = $(DOCKER_MGMT_FRAMEWORK)
+docker-sonic-mgmt-framework-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_MGMT_FRAMEWORK)
+docker-sonic-mgmt-framework-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_MGMT_FRAMEWORK)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-mgmt-framework/manifest.json
+$(DOCKER_MGMT_FRAMEWORK_DBG)_BAZEL_DEPENDS = $($(DOCKER_MGMT_FRAMEWORK)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-mgmt-framework-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

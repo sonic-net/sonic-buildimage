@@ -1,0 +1,130 @@
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@swss_layer_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+manifest_labels(
+    name = "labels",
+    out = "manifest.labels",
+    manifest = "//:target/bazel-manifests/docker-swss-layer-trixie/manifest.json",
+)
+
+# Source payload added over config-engine. Common (libswsscommon and its
+# configuration) is owned by the config-engine parent and is not repeated here.
+sonic_layer(
+    name = "source_runtime",
+    root_owned = True,
+    tars = [
+        "@sonic_swss//dist:swss_pkg",
+        "@sonic_sairedis//lib:libsairedis_pkg",
+        "@sonic_sairedis//meta:libsaimetadata_pkg",
+        "@sonic_dash_api//:libdashapi_pkg",
+        "@sonic_dash_api//:protobuf_runtime_pkg",
+        "@libteam//:libteam_runtime",
+        "@libteam//:libteamdctl_runtime",
+    ],
+)
+
+debug_symbols_layer(
+    name = "source_debug_symbols",
+    image = ":source_runtime",
+)
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "swss_layer_debian",
+    lock = "//dockers/docker-swss-layer-trixie/bazel:apt.lock.json",
+    packages = APT_INPUTS["orchagent_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-swss-layer-trixie",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+# Preserve the parent's checked package records and add the selected external
+# APT packages. libteam5 and libteamdctl0 are recorded here, where their files
+# are installed, from libteam's recipe-derived package identity. Other source
+# TARs remain source artifacts without invented dpkg records.
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in APT_INPUTS["orchagent_debian"]["amd64"].values()],
+    owner_metadata = ["@libteam//:library_runtime_packages.json"],
+    source_modules = {"libteam": "@image_source_modules//:libteam.MODULE.bazel"},
+    source_spec = "//dockers/docker-swss-layer-trixie/bazel:source_paths.json",
+    sources = {
+        "libteam5": "@libteam//:libteam_runtime",
+        "libteamdctl0": "@libteam//:libteamdctl_runtime",
+    },
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [":installed_packages", ":runtime_package_metadata"],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/swss-layer-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-swss-layer-trixie",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ] + select({
+        "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-swss-layer-trixie.debug_symbols",
+    image = ":docker-swss-layer-trixie",
+)
+
+sonic_docker_archive(
+    name = "docker-swss-layer-trixie.gz",
+    image = ":docker-swss-layer-trixie",
+)

@@ -1,6 +1,5 @@
 """Shared image naming, boot references and streaming archive codecs."""
 from contextlib import contextmanager
-import gzip
 import re
 import shlex
 import subprocess
@@ -63,29 +62,28 @@ def boot_config(text, kernel, options, version=None, root=None):
 
 
 @contextmanager
-def compressed_output(path, compression, zstd=None):
+def compressed_output(path, compression, zstd=None, pigz=None):
     if compression not in ('none', 'gzip', 'zstd'):
         raise ValueError('unsupported archive compression: ' + compression)
-    if compression == 'zstd' and not zstd:
-        raise ValueError('zstd output requires a declared zstd executable')
+    tool = pigz if compression == 'gzip' else zstd
+    if compression != 'none' and not tool:
+        raise ValueError(compression + ' output requires a declared ' + ('pigz' if compression == 'gzip' else 'zstd') + ' executable')
     with open(path, 'wb') as raw:
-        if compression == 'gzip':
-            with gzip.GzipFile(filename='', fileobj=raw, mode='wb', mtime=0) as stream:
-                yield stream
-        elif compression == 'zstd':
-            process = subprocess.Popen([zstd, '-q', '-c'], stdin=subprocess.PIPE, stdout=raw)
-            try:
-                yield process.stdin
-            finally:
-                try:
-                    process.stdin.close()
-                except BrokenPipeError:
-                    pass
-                status = process.wait()
-                if status:
-                    raise ValueError('zstd compression failed')
-        else:
+        if compression == 'none':
             yield raw
+            return
+        command = [tool, '-n', '-c'] if compression == 'gzip' else [tool, '-q', '-c']
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=raw)
+        try:
+            yield process.stdin
+        finally:
+            try:
+                process.stdin.close()
+            except BrokenPipeError:
+                pass
+            status = process.wait()
+            if status:
+                raise ValueError(compression + ' compression failed')
 
 
 @contextmanager

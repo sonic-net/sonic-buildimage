@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Run the shared updater with this workspace's declared Gazelle plan."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(__file__).resolve().parents[2]
+bazel = os.environ.get('BAZEL', 'bazel')
+env = {**os.environ, 'SONIC_GO_LOCK_UPDATE': '1'}
+def command(*args):
+    return subprocess.check_output([bazel, *args], cwd=root, env=env, text=True).strip()
+mapping = json.loads(command('mod', 'dump_repo_mapping', ''))
+repo = mapping['sonic_build_infra']
+command('fetch', '--repo=@@' + repo)
+base = Path(command('info', 'output_base'))
+os.execve(sys.executable, [sys.executable, str(base / 'external' / repo / 'go/lock.py'),
+                          '--workspace', str(root), '--bazel', bazel,
+                          '--plan', '@go_zip_lock_plan//:zip-lock.json', *sys.argv[1:]], env)

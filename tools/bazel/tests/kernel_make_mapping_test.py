@@ -45,7 +45,8 @@ class KernelMakeMappingTest(unittest.TestCase):
 
     def run_make(self, makefile, *targets, cwd=None, **variables):
         environment = os.environ.copy()
-        for name in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL"):
+        for name in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL",
+                     "SONIC_BAZEL_KERNEL_REMOTE_CACHE", "SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"):
             environment.pop(name, None)
         return subprocess.run(
             ["make", "--no-print-directory", "--no-builtin-rules", "-f", str(makefile),
@@ -53,11 +54,14 @@ class KernelMakeMappingTest(unittest.TestCase):
             cwd=cwd or self.workspace, env=environment, capture_output=True, text=True,
         )
 
-    def docker_arguments(self, workspace=None, cache=None, native=True, enabled=True):
+    def docker_arguments(self, workspace=None, cache=None, native=True, enabled=True,
+                         remote_cache="", upload="n"):
         workspace = workspace or self.workspace
         work = (ROOT / "Makefile.work").read_text()
         git_mounts = between(work, "# Empty by default; only set when building from a git worktree", "# Consider removing the --ulimit")
         cache_mounts = between(work, "# Reuse downloads and action outputs across disposable builder containers.", "# User name and tag for")
+        remote_cache_flags = between(work, "DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=",
+                               "# Reuse downloads and action outputs")
         capture = self.root / "docker-argv.json"
         recorder = self.root / "docker-recorder.py"
         recorder.write_text("import json,sys\nfrom pathlib import Path\nPath(sys.argv[1]).write_text(json.dumps(sys.argv[2:]))\n")
@@ -67,10 +71,14 @@ class KernelMakeMappingTest(unittest.TestCase):
             + f"PWD := {workspace}\nBUILD_WITH_BAZEL_WHEN_AVAILABLE := {'y' if enabled else 'n'}\n"
             + f"SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD := {'y' if native else 'n'}\n"
             + f"SONIC_BAZEL_CACHE_SOURCE := {cache or ''}\n"
+            + f"SONIC_BAZEL_REMOTE_CACHE := {remote_cache}\n"
+            + f"SONIC_BAZEL_REMOTE_UPLOAD := {upload}\n"
+            + f"SONIC_BAZEL_KERNEL_REMOTE_CACHE := {remote_cache}\n"
+            + f"SONIC_BAZEL_KERNEL_REMOTE_UPLOAD := {upload}\n"
             + git_mounts
             + "\nDOCKER_RUN := " + shlex.join([sys.executable, str(recorder), str(capture)])
             + ' -v "$(PWD):/sonic" $(GIT_WORKTREE_MOUNTS)\n'
-            + cache_mounts
+            + remote_cache_flags + cache_mounts
             + "\nall:\n\t$(SONIC_WT_GITDIR_FIXUP)\n\t$(DOCKER_RUN) fixture-slave\n"
         )
         result = self.run_make(makefile, cwd=workspace)
@@ -106,6 +114,19 @@ class KernelMakeMappingTest(unittest.TestCase):
                 self.assertNotIn(self.workspace, mounts)
                 self.assertNotIn(cache, mounts)
                 self.assertFalse(any(name.startswith("_SONIC_BAZEL_HOST_") for name in environment))
+
+    def test_isolated_kernel_remote_policy_reaches_slave_without_requiring_local_cache(self):
+        endpoint = "grpc://cache.example:9092/owner's"
+        for cache in (None, self.root / "shared cache"):
+            for upload in ("n", "y"):
+                with self.subTest(cache=cache, upload=upload):
+                    mounts, environment = self.docker_arguments(
+                        cache=cache, remote_cache=endpoint, upload=upload)
+                    self.assertEqual(environment["SONIC_BAZEL_REMOTE_CACHE"], endpoint)
+                    self.assertEqual(environment["SONIC_BAZEL_REMOTE_UPLOAD"], upload)
+                    self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_CACHE"], endpoint)
+                    self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"], upload)
+                    self.assertEqual(Path("/bazel_cache") in mounts, cache is not None)
 
     def submodule_fixture(self):
         source = self.root / "kernel-source"
@@ -221,11 +242,47 @@ class KernelMakeMappingTest(unittest.TestCase):
 
     def kernel_arguments(self):
         arguments = json.loads((self.workspace / "arguments.json").read_text())
+        upload = "--upload-local-results" in arguments
+        arguments = [argument for argument in arguments if argument != "--upload-local-results"]
         self.assertEqual(len(arguments) % 2, 0)
         pairs = list(zip(arguments[::2], arguments[1::2]))
         config = dict(value.split("=", 1) for flag, value in pairs if flag == "--kernel-config")
         options = {flag: value for flag, value in pairs if flag != "--kernel-config"}
+        if upload:
+            options["--upload-local-results"] = True
         return config, options
+
+    def test_kernel_make_remote_cache_is_explicit_and_read_only_unless_upload_is_enabled(self):
+        makefile = self.lazy_make_fixture()
+        endpoint = "grpc://cache.example:9092/owner's"
+        for upload in ("n", "y"):
+            with self.subTest(upload=upload):
+                result = self.run_make(
+                    makefile, "bazel-kernel-ensure", SONIC_BAZEL_CACHE_SOURCE="/host/cache",
+                    SONIC_BAZEL_KERNEL_REMOTE_CACHE=endpoint, SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=upload)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                expected = {"--debs-directory": "target/debs/trixie",
+                            "--cache-directory": "/bazel_cache", "--remote-cache": endpoint}
+                if upload == "y":
+                    expected["--upload-local-results"] = True
+                self.assertEqual(self.kernel_arguments()[1], expected)
+        result = self.run_make(makefile, "bazel-kernel-ensure")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.kernel_arguments()[1], {"--debs-directory": "target/debs/trixie"})
+
+    def test_kernel_make_rejects_invalid_remote_upload_policy_before_launch(self):
+        makefile = self.lazy_make_fixture()
+        for endpoint, upload, message in (
+                ("", "y", "requires SONIC_BAZEL_KERNEL_REMOTE_CACHE"),
+                ("grpc://cache.example:9092", "true", "must be y or n"),
+                ("grpc://cache.example:9092", "n y", "must be y or n")):
+            with self.subTest(endpoint=endpoint, upload=upload):
+                result = self.run_make(
+                    makefile, "bazel-kernel-ensure",
+                    SONIC_BAZEL_KERNEL_REMOTE_CACHE=endpoint, SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=upload)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(message, result.stderr)
+                self.assertFalse((self.workspace / "arguments.json").exists())
 
     def test_lazy_ensure_runs_directly_with_only_the_visible_cache_path(self):
         makefile = self.lazy_make_fixture()

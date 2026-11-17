@@ -13,6 +13,7 @@ import re
 import shlex
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import tempfile
@@ -24,6 +25,22 @@ def absolute_path(name):
     if '..' in path.parts or '\x00' in name:
         raise ValueError('Unsafe image path: ' + name)
     return '/' + str(path).lstrip('/')
+
+
+def inspect_files(paths, aliases, *, root=Path('/')):
+    """Inspect declared files after the container engine has applied its layers."""
+    files = {}
+    for name in paths:
+        path = root / absolute_path(name).lstrip('/')
+        value = path.lstat()
+        if not stat.S_ISREG(value.st_mode):
+            raise ValueError('Expected an installed regular file: ' + name)
+        with path.open('rb') as stream:
+            digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+        files[name] = {'kind': 'file', 'sha256': digest, 'mode': stat.S_IMODE(value.st_mode),
+                       'uid': value.st_uid, 'gid': value.st_gid}
+    return {'files': files, 'directory_aliases': {
+        name: os.readlink(root / absolute_path(name).lstrip('/')) for name in aliases}}
 
 
 def command(argv, timeout=30):
@@ -257,9 +274,18 @@ def redis_fixture(config):
     socket_path = data['INSTANCES']['redis']['unix_socket_path']
     if Path(socket_path).resolve() != Path('/run/redis/redis.sock'):
         raise ValueError('Unexpected Redis socket path in installed database config')
+    # Some unmodified SONiC services use the configured TCP endpoint. Opt in
+    # only inside the caller's isolated network namespace; retain Unix-only
+    # behavior for existing probes and never bind an external interface.
+    port = 0
+    if config.get('loopback_tcp', False):
+        instance = data['INSTANCES']['redis']
+        port = instance.get('port')
+        if instance.get('hostname') != '127.0.0.1' or type(port) is not int or not 1024 <= port <= 65535:
+            raise ValueError('Redis fixture TCP endpoint must be unprivileged loopback')
     with tempfile.TemporaryDirectory(prefix='sonic-redis-smoke-') as name:
         directory = Path(name)
-        argv = [str(executable), '--port', '0', '--save', '', '--appendonly', 'no',
+        argv = [str(executable), '--port', str(port), '--bind', '127.0.0.1', '--save', '', '--appendonly', 'no',
                 '--unixsocket', socket_path, '--unixsocketperm', '700',
                 '--dir', str(directory), '--databases', '32']
         with (directory / 'redis.log').open('w+') as log:
@@ -283,7 +309,7 @@ def redis_fixture(config):
                     raise ValueError('Isolated Redis did not become ready: ' + log.read()[-4000:])
                 yield {'version': version['stdout'].strip(), 'sha256': config['sha256'],
                        'database_config_sha256': hashlib.sha256(database.read_bytes()).hexdigest(),
-                       'unix_socket': socket_path, 'tcp_disabled': True,
+                       'unix_socket': socket_path, 'tcp_disabled': port == 0, 'process_id': process.pid,
                        'scope': 'Explicit test helper, not an installed image component.'}
             finally:
                 if process.poll() is None:
@@ -367,8 +393,15 @@ def probe_installed(inputs, variant):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variant', choices=['runtime', 'debug'], required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--variant', choices=['runtime', 'debug'])
+    mode.add_argument('--inspect-files', type=json.loads,
+                      help='Declared file and directory-alias paths to inspect as JSON')
     args = parser.parse_args()
+    if args.inspect_files is not None:
+        print(json.dumps(inspect_files(args.inspect_files['files'], args.inspect_files['directory_aliases']),
+                         sort_keys=True))
+        return 0
     result = probe(json.load(sys.stdin), args.variant)
     print(json.dumps(result, sort_keys=True))
     return 0 if result['passed'] else 1

@@ -703,7 +703,16 @@ export build_date="$(date -u)"
 export build_number="${BUILD_NUMBER:-0}"
 export built_by="$USER@$BUILD_HOSTNAME"
 export sonic_os_version="${SONIC_OS_VERSION}"
-j2 files/build_templates/sonic_version.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sonic_version.yml
+# Render and validate before replacing the version file. A renderer failure
+# must stop the build instead of being hidden by a successful tee command.
+sonic_version_tmp=$(mktemp)
+trap_push 'rm -f "$sonic_version_tmp"'
+j2 files/build_templates/sonic_version.yml.j2 > "$sonic_version_tmp"
+python3 scripts/validate_sonic_version.py \
+    --secure-upgrade-mode "$SECURE_UPGRADE_MODE" "$sonic_version_tmp"
+sudo install -o root -g root -m 0644 "$sonic_version_tmp" \
+    "$FILESYSTEM_ROOT/etc/sonic/sonic_version.yml"
+rm -f "$sonic_version_tmp"
 
 if [ -f sonic_debian_extension.sh ]; then
     ./sonic_debian_extension.sh $FILESYSTEM_ROOT $PLATFORM_DIR $IMAGE_DISTRO

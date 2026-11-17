@@ -38,3 +38,28 @@ $(DOCKER_DASH_HA)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_DASH_HA)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_DASH_HA_DBG)
+
+
+# Native source OCI images reuse the SWSS parent and HA owner TARs.
+# Preserve every legacy prerequisite and all excluded profiles above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_DASH_HA) $(DOCKER_DASH_HA_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_DASH_HA)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_DASH_HA_DBG)
+$(DOCKER_DASH_HA_DBG)_PATH = $($(DOCKER_DASH_HA)_PATH)
+$(DOCKER_DASH_HA)_BAZEL_TARGET = //dockers/docker-dash-ha:$(DOCKER_DASH_HA)
+$(DOCKER_DASH_HA_DBG)_BAZEL_TARGET = //dockers/docker-dash-ha:$(DOCKER_DASH_HA_DBG)
+SONIC_BAZEL_MANIFESTS += docker-dash-ha docker-dash-ha-$(DBG_IMAGE_MARK)
+docker-dash-ha_MANIFEST_IMAGE = $(DOCKER_DASH_HA)
+docker-dash-ha-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_DASH_HA)
+docker-dash-ha-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_DASH_HA)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-dash-ha/manifest.json
+$(DOCKER_DASH_HA_DBG)_BAZEL_DEPENDS = $($(DOCKER_DASH_HA)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-dash-ha-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

@@ -3,10 +3,12 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import signal
 import subprocess
 import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -148,6 +150,63 @@ class ShellBoundaryTests(ReceiptTestCase):
     def shell(self, script, **env):
         return subprocess.run(["bash", "-e", "-c", script], cwd=self.cwd,
                               env=dict(self.env, **env), text=True, capture_output=True, timeout=20)
+
+    def test_host_make_workflow_emits_parseable_markers_and_preserves_make_failure(self):
+        from test_collect import collector, job
+
+        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
+        block = workflow.split("      - name: Build sonic-vs.bin through the host Make wrapper\n", 1)[1]
+        header, script = block.split("\n      - name:", 1)[0].split("        run: |\n", 1)
+        environment = {"TERM": "xterm", **dict(re.findall(r"^          (TERM): (\S+)$", header, re.MULTILINE))}
+        script = textwrap.dedent(script)
+        (self.cwd / "artifacts/vs").mkdir(parents=True)
+        (self.cwd / "target").mkdir()
+        helper = self.cwd / "tools/bazel/ci/build_vs.sh"
+        helper.parent.mkdir(parents=True)
+        helper.write_text((ROOT / "tools/bazel/ci/build_vs.sh").read_text())
+        self.assertIn('@echo "+++ --- Making $@ --- +++"', (ROOT / "Makefile").read_text())
+        # Exercise the real logger without touching its host-global target list.
+        logger = (ROOT / "update_screen.sh").read_text().replace(
+            "target_list_file=/tmp/target_list", 'target_list_file="$TEST_WORKSPACE/target_list"')
+        (self.cwd / "update_screen.sh").write_text(logger)
+        stubs = """
+lockfile() { :; }
+export -f lockfile
+git() { echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; }
+make() {
+    echo "+++ --- Making target/sonic-vs.bin --- +++"
+    for target in target/docker-base-trixie.gz target/sonic-vs.bin__vs__rfs.squashfs target/sonic-vs.bin; do
+        bash ./update_screen.sh -a "$target"
+        bash ./update_screen.sh -d "$target"
+    done
+    printf installer > target/sonic-vs.bin
+    printf archives > target/sonic-vs.bin.dockers
+    return "$MAKE_STATUS"
+}
+export -f git make
+"""
+        for status in (0, 37):
+            with self.subTest(make_status=status):
+                result = self.shell(stubs + script, **environment,
+                                    RUNNER_TEMP=str(self.cwd), TEST_WORKSPACE=str(self.cwd),
+                                    MAKE_STATUS=str(status), SONIC_CI_CONTAINER_LABEL="fixture=vs",
+                                    BAZEL="/fixture/bazel")
+                self.assertEqual(result.returncode, status, result.stderr)
+                self.assertIn("[ building ] [ target/sonic-vs.bin ]", result.stdout)
+                self.assertIn("[ finished ] [ target/sonic-vs.bin ]", result.stdout)
+                if status:
+                    continue
+                lines = ["2026-10-10T00:00:00.2000000Z ##[group]Run set -euo pipefail"]
+                lines.extend(f"2026-10-10T00:00:{index:02d}Z {line}"
+                             for index, line in enumerate(result.stdout.splitlines(), 1))
+                lines.append("2026-10-10T00:10:00.4000000Z ##[group]Run validate installer")
+                step = dict(job()["steps"][0], name="Build sonic-vs.bin through the host Make wrapper")
+                value = collector.breakdown.parse_log(("\n".join(lines) + "\n").encode(), step)
+                self.assertTrue(collector.breakdown.valid(value))
+                self.assertEqual(value["status"], "available")
+                self.assertEqual([section["id"] for section in value["sections"]], ["vs-image-1"])
+                self.assertEqual([task["id"] for task in value["sections"][0]["tasks"]],
+                                 ["base-1", "rootfs-1", "final-image-1"])
 
     def test_real_make_relay_bypasses_target_log_and_preserves_failure(self):
         source = (ROOT / "slave.mk").read_text()

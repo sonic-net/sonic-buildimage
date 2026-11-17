@@ -37,60 +37,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install independent format readers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends grub-common openssl tar-split zstd
-      - name: Load the OCI reader from the registered infrastructure source
-        run: |
-          python3 - <<'PY'
-          import base64
-          import hashlib
-          import io
-          import json
-          import os
-          from pathlib import Path
-          import re
-          import tarfile
-          import urllib.request
-
-          module = Path('MODULE.bazel').read_text()
-          versions = re.findall(r'(?:name|module_name)\s*=\s*"sonic-build-infra"[^)]*?version\s*=\s*"([^"]+)"', module)
-          version = versions[-1]
-          registry = 'https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main'
-          metadata_url = registry + '/modules/sonic-build-infra/' + version + '/source.json'
-          with urllib.request.urlopen(metadata_url) as response:
-              source = json.load(response)
-          url = source['url'].replace('https://github.com/', 'https://codeload.github.com/').replace('/archive/', '/tar.gz/').removesuffix('.tar.gz')
-          with urllib.request.urlopen(url) as response:
-              archive = response.read()
-          digest = 'sha256-' + base64.b64encode(hashlib.sha256(archive).digest()).decode()
-          if digest != source['integrity']:
-              raise SystemExit('Infrastructure source integrity mismatch')
-          destination = Path(os.environ['RUNNER_TEMP']) / 'image-rule-reader'
-          destination.mkdir()
-          # Only the standalone OCI Python reader is needed by these contracts.
-          prefix = source['strip_prefix'] + '/oci/sonic_oci/'
-          with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-              for member in tar:
-                  if member.isfile() and member.name.startswith(prefix) and member.name.endswith('.py'):
-                      relative = Path(member.name.removeprefix(prefix))
-                      if relative.is_absolute() or '..' in relative.parts:
-                          raise SystemExit('Unsafe infrastructure reader path')
-                      output = destination / 'sonic_oci' / relative
-                      output.parent.mkdir(parents=True, exist_ok=True)
-                      output.write_bytes(tar.extractfile(member).read())
-          with open(os.environ['GITHUB_ENV'], 'a') as env:
-              env.write('OCI_READER=' + str(destination) + '\n')
-          print('Validated OCI reader:', version, digest)
-          PY
-      - name: Check assembly formats with real tools
-        run: |
-          export PYTHONPATH="$PWD/tools/bazel/image:$OCI_READER"
-          python3 -B tools/bazel/image/assembly_test.py \
-            --tar-split /usr/bin/tar-split --openssl /usr/bin/openssl \
-            --grub-editenv /usr/bin/grub-editenv --zstd /usr/bin/zstd
-          python3 -B tools/bazel/image/mkinitramfs_test.py
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -105,7 +51,15 @@ jobs:
           mkdir -p artifacts/image-rule-actions
           git rev-parse HEAD > artifacts/image-rule-actions/revision.txt
           test ! -e MODULE.bazel.lock
-          bazel test //tools/bazel/image/action_test:action_test \
+          disk_targets=()
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            disk_targets=(//tools/bazel/image/action_test:disk_action_test)
+          fi
+          bazel test //tools/bazel/image:assembly_formats_test \
+            //tools/bazel/image:mkinitramfs_test \
+            //tools/bazel/image:kernel_deb_test \
+            //tools/bazel/image/tar_split_json:format_test \
+            //tools/bazel/image/action_test:action_test "${disk_targets[@]}" \
             --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --spawn_strategy=processwrapper-sandbox --nocache_test_results \
@@ -121,15 +75,25 @@ jobs:
           retained = resolution.collect(Path.cwd(), directory)
           (directory / 'resolution.json').write_text(json.dumps(retained, indent=2) + '\n')
           PY
-          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.log artifacts/image-rule-actions/
-          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.xml artifacts/image-rule-actions/
+          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
+            directory="artifacts/image-rule-actions/${target%%/*}"
+            mkdir -p "$directory"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.xml" "$directory/"
+          done
           cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.outputs/outputs.zip artifacts/image-rule-actions/
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            mkdir -p artifacts/image-rule-actions/disk_action_test
+            cp bazel-testlogs/tools/bazel/image/action_test/disk_action_test/test.{log,xml} artifacts/image-rule-actions/disk_action_test/
+          fi
           test -s artifacts/image-rule-actions/MODULE.bazel.lock
           test -s artifacts/image-rule-actions/module-graph.json
           test -s artifacts/image-rule-actions/module-graph-inspection.json
           test -s artifacts/image-rule-actions/resolution.json
-          test -s artifacts/image-rule-actions/test.log
-          test -s artifacts/image-rule-actions/test.xml
+          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
+            test -s "artifacts/image-rule-actions/$target/test.log"
+            test -s "artifacts/image-rule-actions/$target/test.xml"
+          done
           test -s artifacts/image-rule-actions/outputs.zip
           git diff --exit-code
       - name: Retain public rule action evidence

@@ -13,7 +13,7 @@ import shutil
 import tempfile
 import unittest
 
-from tools.bazel.oci import package_contract
+from tools.bazel.oci import image_validation, package_contract
 from tools.bazel.ci import artifact_validation
 
 
@@ -39,13 +39,21 @@ def archive_hashes(paths):
 
 
 def verify_layers(runtime_path, dependencies_path, configuration_path, symbols_path,
-                  libraries, source, policy, *, readelf, objcopy):
+                  libraries, source, policy, *, source_layer_excludes, source_layer_includes, readelf, objcopy):
     """Compare real archives with source declarations and native debug requirements."""
     archives = [runtime_path, dependencies_path, configuration_path, symbols_path, *libraries.values()]
     validated_hashes = archive_hashes(archives)
     runtime = artifact_validation.payload(runtime_path)
     programs = package_contract.validate_install_inventory(source, runtime, policy["install_inventory"])
     dependencies = artifact_validation.payload(dependencies_path)
+    # Source overlays sit on Debian's normalized base. A legacy Common TAR,
+    # for example, must not recreate var/run/redis through var/run -> /run.
+    for name in dependencies:
+        artifact_validation.require(
+            not any(name == alias or name.startswith(alias + "/")
+                    for alias in package_contract.normalization.DIRECTORY_ALIASES),
+            "source layer replaces an inherited directory alias: " + name,
+        )
     for name, metadata in runtime.items():
         if metadata["kind"] != "directory":
             artifact_validation.require(dependencies.get(name) == metadata,
@@ -54,7 +62,12 @@ def verify_layers(runtime_path, dependencies_path, configuration_path, symbols_p
                                 "library inputs differ from the declared package policy")
     for name, library_policy in policy["libraries"].items():
         original = artifact_validation.payload(libraries[name], require_root=False)
-        package_contract.validate_library_payload(dependencies, original, library_policy)
+        retained = image_validation.oci_filtered(original, source_layer_excludes, source_layer_includes)
+        for path in original.keys() - retained.keys():
+            artifact_validation.require("elf_machine" not in original[path], "OCI filter removes a source ELF: " + path)
+            if original[path]["kind"] != "directory":
+                artifact_validation.require(path not in dependencies, "filtered library path is present in the OCI layer: " + path)
+        package_contract.validate_library_payload(dependencies, retained, library_policy)
     debug = artifact_validation.debug_archives(
         dependencies_path, symbols_path,
         expected_machine=package_contract.elf_machine(policy["architecture"]),
@@ -118,6 +131,8 @@ class SourceLayersContractTest(unittest.TestCase):
                 Path(OPTIONS.runtime), Path(OPTIONS.dependencies), Path(OPTIONS.config),
                 Path(OPTIONS.debug_symbols), bindings(OPTIONS.library), source,
                 package_contract.read_policy(Path(OPTIONS.policy)),
+                source_layer_excludes=Path(OPTIONS.source_layer_excludes),
+                source_layer_includes=Path(OPTIONS.source_layer_includes),
                 readelf=os.path.abspath(OPTIONS.readelf), objcopy=os.path.abspath(OPTIONS.objcopy),
             )
 
@@ -130,7 +145,7 @@ class SourceLayersContractTest(unittest.TestCase):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     for argument in ("runtime", "dependencies", "config", "debug-symbols", "source-anchor",
-                     "source-anchor-relative", "readelf", "objcopy", "policy"):
+                     "source-anchor-relative", "readelf", "objcopy", "policy", "source-layer-excludes", "source-layer-includes"):
         parser.add_argument("--" + argument, required=True)
     parser.add_argument("--library", action="append", default=[])
     parser.add_argument("--source-file", action="append", default=[])

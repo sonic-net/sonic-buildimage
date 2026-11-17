@@ -1,0 +1,18 @@
+{
+  "0001-libteam-Temporarily-remove-redundant-debug-messages.patch": "bb6e9d87119f6adf17f43a5feb4fc5071d47f50c7a4256f681fa70b1dc825b5f",
+  "0002-teamd-lacp-runner-will-send-lacp-update-right-after-.patch": "546d5d743a73900f0ca38e2e11b3c97aaaddd431b5bad91a8366b4cba280741d",
+  "0003-libteam-Add-fallback-support-for-single-member-port-.patch": "30a3491034f5d72860a669edb79a29dc88ebb60933c278dc41367b65de04e006",
+  "0005-Increase-default-buffer-size-from-98304-to-2097152.patch": "a5457708f0dc6d9192043ba3489e88777ccf134bcfb474f3362a67b6cd24c7d6",
+  "0006-teamd-Administratively-shutdown-port-channel-has-mem.patch": "b55327e5ea82ae86f1c7391c2da1aef5ee474704024863fbbe35c7e8c3af65f6",
+  "0008-libteam-Add-warm_reboot-mode.patch": "09a496460855b817215844bb178e08bef893201f25c32a6fc1924b27f597b74b",
+  "0011-Remove-extensive-debug-output.patch": "7423c031611f14c109a85692b3d6836c6253b12975ddf99a3542677405061667",
+  "0012-Increase-min_ports-upper-limit-to-1024.patch": "0c11132755f2fdd25b38f6af0498627ec1507f6da61096a7e73164638b850bf4",
+  "0013-set-port-to-disabled-state-during-removal.patch": "b24d4bdfd84ddfd119391b28d5f7025d4ccc320c0ac942290a60052babd014b5",
+  "0014-dont-move-the-port-state-from-disabled-when-admin-state-is-down.patch": "aa3c83e1727462cca8a6bd01827d24166e7bf10b99adfc736b249836fc78d72d",
+  "0015-add-support-for-custom-retry.patch": "d1b4ab33d79927a70bff9995010a772980a968306b41666cb78d9785bf65dd2b",
+  "0016-block-retry-count-changes.patch": "3d8f43bda867e986e2500fe3284609c1621f49555aadc91e2b3c3a1f81677f06",
+  "0017-Specify-netlink-recv-buffer-size-to-avoid-a-syscall.patch": "e8b409907b7f43cf28ad0fd6ea0554d35808913bd1c65eff2701b0f26fb29885",
+  "0018-Replace-FD_SET-select-with-poll-to-avoid-FD_SETSIZE-abort.patch": "08664ba1af8da6cd4497f743cd2bdfe8dfe56a3417e2a73480a8d221240d4a36",
+  "0019-fix-event-fd-init-and-free.patch": "fe3e9765e70fea94a221b2a311678e6042777c88e03d221e7b564e24fd3ee666",
+  "0020-Extend-LACP-fallback-support-to-multiple-ports.patch": "0eeaefef42a4f680242df208f7c1b69d9d4366bba992b9002f7febcb9ed3a97b"
+}

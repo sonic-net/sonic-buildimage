@@ -26,6 +26,30 @@ class ManifestLabelsTest(unittest.TestCase):
         self.assertEqual(json.loads(value), manifest)
         self.assertTrue(label.endswith("\n"))
 
+    def test_image_version_sets_make_tag_including_an_empty_version(self):
+        for version in ("", "SONiC.HEAD.12-34", "test=value"):
+            with self.subTest(version=version):
+                self.assertEqual(
+                    manifest_labels.manifest_label("{}", version),
+                    "com.azure.sonic.manifest={}\nTag=" + version + "\n",
+                )
+
+    def test_component_labels_use_only_requested_installed_versions(self):
+        packages = {
+            name: {"Package": name, "Version": version}
+            for name, version in (("libswsscommon", "1.2.3"), ("other", "2:1.0-1"))
+        }
+        receipt = json.dumps({"dependency_check": {"packages": packages}})
+        self.assertEqual(manifest_labels.component_labels(receipt, ["libswsscommon"]),
+                         "com.azure.sonic.versions.libswsscommon=1.2.3\n")
+        with self.assertRaisesRegex(ValueError, "unknown"):
+            manifest_labels.component_labels(receipt, ["unknown"])
+
+    def test_multiline_image_version_is_rejected(self):
+        for version in ("a\nb", "a\rb"):
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "one line"):
+                manifest_labels.manifest_label("{}", version)
+
     def test_json_formatting_does_not_change_label(self):
         """Avoid changing image labels when only JSON whitespace changes."""
         manifest = {"package": {"name": "swss", "version": "1.0.0"}}

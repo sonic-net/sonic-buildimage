@@ -1,0 +1,80 @@
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+
+exports_files(
+    [
+        "debian/changelog",
+        "debian/control",
+    ],
+    visibility = ["//tests:__pkg__"],
+)
+
+sonic_deploy_tar(
+    name = "sysmgr_pkg",
+    srcs = ["//rebootbackend"],
+    binaries = {
+        "./usr/bin/rebootbackend type=file uid=0 gid=0 mode=0755 time=0": "//rebootbackend:rebootbackend",
+        "./usr/lib/x86_64-linux-gnu/librebootgnoi.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": "//rebootbackend:librebootgnoi.so.0.0.0",
+    },
+    force_debug_build = True,
+    mtree = [
+        "./usr type=dir uid=0 gid=0 mode=0755 time=0",
+        "./usr/bin type=dir uid=0 gid=0 mode=0755 time=0",
+        "./usr/lib type=dir uid=0 gid=0 mode=0755 time=0",
+        "./usr/lib/x86_64-linux-gnu type=dir uid=0 gid=0 mode=0755 time=0",
+        # The soname and the linker name, as libtool lays them out.
+        "./usr/lib/x86_64-linux-gnu/librebootgnoi.so.0 type=link link=librebootgnoi.so.0.0.0 uid=0 gid=0 time=0",
+        "./usr/lib/x86_64-linux-gnu/librebootgnoi.so type=link link=librebootgnoi.so.0.0.0 uid=0 gid=0 time=0",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Map the deployment payload to Make's existing package for equivalence checks.
+# Keep the tag outside sonic_deploy_tar, which propagates tags to internal rules.
+filegroup(
+    name = "sysmgr_runtime_equivalence",
+    srcs = [":sysmgr_pkg"],
+    tags = ["make-deb:sysmgr_1.0.0_amd64.deb"],
+    visibility = ["//visibility:public"],
+)
+
+# Preserve the existing tool label for consumers using the shared normalizer.
+alias(
+    name = "root_owned_tar",
+    actual = "@sonic_build_infra//tar:root_owned_tar",
+    visibility = ["//visibility:public"],
+)
+
+# Shared deployment tars already normalize every debug archive header.
+filegroup(
+    name = "sysmgr_debug_pkg",
+    srcs = [":sysmgr_pkg.debug_symbols"],
+    tags = ["make-deb:sysmgr-dbg_1.0.0_amd64.deb"],
+    visibility = ["//visibility:public"],
+)
+
+# Derive the OCI package record from the existing recipe and actual target TAR.
+runtime_packages(
+    name = "runtime_packages.json",
+    apt_packages = {
+        "@trixie//" + package + ":data": "@trixie//" + package + ":control"
+        for package in [
+            "libdbus-1-3",
+            "libdbus-c++-1-0v5",
+        ]
+    },
+    changelog = "debian/changelog",
+    control = "debian/control",
+    debian_files = {"compat": "debian/compat"},
+    dependencies = [
+        "@sonic_protobuf//:runtime_packages.json",
+        "@sonic_swss_common//:runtime_packages.json",
+    ],
+    packages = {"sysmgr": ":sysmgr_pkg"},
+    required_paths = {"sysmgr": [
+        "usr/bin/rebootbackend",
+        "usr/lib/{multiarch}/librebootgnoi.so.0",
+        "usr/lib/{multiarch}/librebootgnoi.so.0.0.0",
+    ]},
+    visibility = ["//visibility:public"],
+)

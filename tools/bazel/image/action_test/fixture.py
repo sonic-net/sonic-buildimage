@@ -1,5 +1,4 @@
 """Write small declared inputs that let Bazel execute all four assembly helpers."""
-import gzip
 import hashlib
 import io
 import json
@@ -22,7 +21,7 @@ with tarfile.open(fileobj=layer, mode="w", format=tarfile.PAX_FORMAT) as archive
 layer_bytes = layer.getvalue()
 paths["layer"].write_bytes(layer_bytes)
 paths["onie_boot"].write_bytes(layer_bytes)
-paths["platform_archive"].write_bytes(gzip.compress(layer_bytes, mtime=0))
+paths["platform_archive"].write_bytes(layer_bytes)
 
 boot = paths["boot_files"] / "boot"
 boot.mkdir(parents=True)
@@ -48,14 +47,12 @@ contents = {
 }
 for name, value in contents.items():
     paths[name].write_text(value)
-assets = paths["grub_assets"] / "i386-pc"
-assets.mkdir(parents=True)
-(assets / "boot.img").write_bytes(b"boot")
 paths["partition_layout"].write_text(json.dumps({
     "firmware": "bios",
     "partitions": [
-        {"number": 2, "role": "onie", "start_mib": 2, "size_mib": 8, "type": "8300", "label": "ONIE-BOOT"},
-        {"number": 3, "role": "sonic", "start_mib": 10, "type": "8300", "label": "SONiC-OS"},
+        {"number": 1, "role": "bios", "start_mib": 1, "size_mib": 1, "type": "EF02", "label": "BIOS-BOOT"},
+        {"number": 2, "role": "onie", "start_mib": 2, "size_mib": 32, "type": "8300", "label": "ONIE-BOOT"},
+        {"number": 3, "role": "sonic", "start_mib": 34, "type": "8300", "label": "SONiC-OS"},
     ],
     "grub_partition_role": "onie", "grub_directory": "grub", "grub_platform": "i386-pc",
     "grub_prefix": "(hd0,gpt2)/grub", "grub_modules": [],

@@ -1,0 +1,1 @@
+{"schema": 1, "packages": {"sonic-linkmgrd": {"required_paths": ["usr/sbin/linkmgrd", "usr/share/doc/sonic-linkmgrd/changelog.Debian.gz"]}}}

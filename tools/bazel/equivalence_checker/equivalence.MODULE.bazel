@@ -1,0 +1,15 @@
+"""External dependencies only the equivalence checker needs."""
+
+# elfcompare, which reports the semantic differences between two ELF artifacts.
+# We overlay a very simple build on top of it.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "compare_elf",
+    build_file = "//tools/bazel/equivalence_checker/compare_elf:compare_elf.BUILD.bazel",
+    patch_args = ["-p1"],
+    patches = ["//tools/bazel/equivalence_checker/compare_elf:compare_elf_env.patch"],
+    sha256 = "e77de8666533ef29a97064a55234c2ae54526a82cda32428dc65c13caea9172e",
+    strip_prefix = "compareELF-5f79c6208ccaad40d8c769304b8148f8c07a901e",
+    urls = ["https://github.com/dzfdzfdzf/compareELF/archive/5f79c6208ccaad40d8c769304b8148f8c07a901e.tar.gz"],
+)

@@ -1,0 +1,38 @@
+--- a/python/xrelfo.py
++++ b/python/xrelfo.py
+@@ -329,8 +329,9 @@
+         self._xrefs = []
+         self.note_warn = False
+ 
+-    def load_file(self, filename):
+-        orig_filename = filename
++    def load_file(self, filename, orig_filename=None):
++        if orig_filename is None:
++            orig_filename = filename
+         if filename.endswith(".la") or filename.endswith(".lo"):
+             with open(filename, "r") as fd:
+                 for line in fd:
+@@ -455,6 +456,10 @@
+     argp.add_argument("-Werror", action="store_const", const=True)
+     argp.add_argument("--profile", action="store_const", const=True)
+     argp.add_argument(
++        "--origin", action="append", nargs=2, default=[], metavar=("FILE", "NAME"),
++        help="use NAME as the logical origin of FILE",
++    )
++    argp.add_argument(
+         "binaries",
+         metavar="BINARY",
+         nargs="+",
+@@ -474,10 +479,11 @@
+ def _main(args):
+     errors = 0
+     xrelfo = Xrelfo()
++    origins = dict(args.origin)
+ 
+     for fn in args.binaries:
+         try:
+-            xrelfo.load_file(fn)
++            xrelfo.load_file(fn, origins.get(fn))
+         except:
+             errors += 1
+             sys.stderr.write("while processing %s:\n" % (fn))

@@ -17,6 +17,7 @@ NOTICES = (
     "./usr/share/doc/another-runtime/dependency-license.txt",
     "./usr/share/doc/another-runtime/notice.txt",
     "./usr/share/doc/another-runtime/copyright",
+    "usr/share/doc/nested-runtime/dependencies/example/NOTICE.txt",
 )
 RUNTIME = ("usr/bin/example", "./usr/lib/libexample.so")
 EXCLUDED = (
@@ -24,6 +25,8 @@ EXCLUDED = (
     "./usr/share/doc/another-runtime/changelog.gz",
     "usr/share/man/man1/example.1",
     "./usr/share/locale/fr/example.mo",
+    "./usr/share/doc/another-runtime/nested/README.md",
+    "usr/share/pyshared/twisted/example/test/nested.py",
 )
 
 
@@ -65,7 +68,16 @@ if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--write":
         write_fixture(Path(sys.argv[2]))
     else:
-        assert len(sys.argv) == 3, "Expected the first and repeated filter outputs"
-        for value in sys.argv[1:]:
-            check(Path(value))
-        print("OCI notices and runtime bytes survive both filters; ordinary documentation is excluded")
+        assert len(sys.argv) == 6, "Expected raw input, filter lists and both real filter outputs"
+        from tools.bazel.oci import image_validation
+
+        raw, excludes, includes, *outputs = map(Path, sys.argv[1:])
+        original = {}
+        image_validation.apply_layer(raw, original)
+        expected = image_validation.oci_filtered(original, excludes, includes)
+        for path in outputs:
+            check(path)
+            actual = {}
+            image_validation.apply_layer(path, actual)
+            assert actual == expected, "Receipt filtering differs from the actual bsdtar pipeline"
+        print("OCI receipt filtering matches both real passes, preserving notices, runtime bytes and metadata")

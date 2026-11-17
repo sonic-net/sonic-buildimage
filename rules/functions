@@ -181,6 +181,15 @@ rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst 
 
 expand = $(foreach d,$(1),$(call expand,$($(d)_$(2)),$(2))) $(1)
 
+# SONiC's package manager compares these component versions across images.
+# The input is the runtime archive whose registered dependencies provide them.
+docker_component_version_labels = $(strip $(foreach component, \
+    $(call expand,$($(1)_DEPENDS),RDEPENDS) \
+    $(call expand,$($(1)_PYTHON_DEBS)) \
+    $(call expand,$($(1)_PYTHON_WHEELS)), \
+    $(if $(and $($(component)_NAME),$($(component)_VERSION)), \
+        com.azure.sonic.versions.$($(component)_NAME)=$($(component)_VERSION))))
+
 ###############################################################################
 ## Uninstall debs
 ###############################################################################

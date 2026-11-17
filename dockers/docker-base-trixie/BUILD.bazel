@@ -1,10 +1,12 @@
 load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@config_engine_pip//:requirements.bzl", "whl_requirement")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
 load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
 load("@tar.bzl", "tar")
+load("//dockers/docker-config-engine-trixie:validation.bzl", "DIRECTORY_ALIASES")
 load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
@@ -44,7 +46,7 @@ oci_image(
         name = "debian_runtime_" + arch,
         base = ":debian_base",
         dependency_set = "base_debian",
-        lock = "//dockers/docker-base-trixie/bazel:apt.lock.json",
+        lock = "@sonic_build_infra//apt:apt.lock.json",
         packages = APT_INPUTS["base_debian"][arch],
         policy = {
             "schema": 1,
@@ -216,3 +218,32 @@ sonic_docker_archive(
         "labels": "labels",
     }.items()
 ]
+
+[
+    write_file(
+        name = "installed_checks_" + arch,
+        out = "installed_checks_" + arch + ".json",
+        content = [json.encode({
+            "architecture": arch,
+            "images": [{
+                "name": "docker-base-trixie",
+                "archive": "docker-base-trixie.gz",
+                "tag": "docker-base-trixie:latest",
+                "files": {},
+                "directory_aliases": DIRECTORY_ALIASES,
+            }],
+        })],
+    )
+    for arch in [
+        "amd64",
+        "arm64",
+    ]
+]
+
+alias(
+    name = "installed_checks",
+    actual = select({
+        "@platforms//cpu:x86_64": ":installed_checks_amd64",
+        "@platforms//cpu:arm64": ":installed_checks_arm64",
+    }),
+)

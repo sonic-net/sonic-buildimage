@@ -52,8 +52,8 @@ filegroup(
     srcs = [
         ":debug_labels",
         ":labels",
-        ":manifest-dbg.json",
         ":manifest.json",
+        ":manifest-dbg.json",
     ],
 )
 
@@ -81,8 +81,12 @@ wheel_layer(
     name = "python_runtime",
     headers = "/usr/local/include/python3.13",
     site_packages = "/usr/local/lib/python3.13/dist-packages",
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
     wheels = [
-        "//:target/python-wheels/trixie/scapy-2.6.1.dev0-py3-none-any.whl",
+        "@scapy//:wheel",
         "@swss_config_pip//pyroute2:whl",
     ],
 )
@@ -157,5 +161,9 @@ tar(
     ] + [
         "./usr/share/sonic/templates/" + name + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location //dockers/docker-orchagent:" + name + ")"
         for name in _TEMPLATES
+    ],
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
     ],
 )

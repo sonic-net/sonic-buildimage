@@ -27,13 +27,15 @@ import merge_layers
 
 _parser = argparse.ArgumentParser(add_help=False)
 _parser.add_argument("--tar-split")
+_parser.add_argument("--tar-split-json")
 _parser.add_argument("--zstd")
 _parser.add_argument("--openssl")
 _parser.add_argument("--grub-editenv")
+_parser.add_argument("--pigz")
 TOOLS, _arguments = _parser.parse_known_args()
 for _name, _value in vars(TOOLS).items():
     if _value:
-        setattr(TOOLS, _name, str(Path(_value).resolve()))
+        setattr(TOOLS, _name, str(Path(_value).absolute()))
 sys.argv = [sys.argv[0]] + _arguments
 
 
@@ -78,11 +80,11 @@ class AssemblyTest(unittest.TestCase):
         self.write("oci/oci-layout", b'{"imageLayoutVersion":"1.0.0"}')
         return self.root / "oci", actual_diff[7:]
 
-    @unittest.skipUnless(TOOLS.tar_split, "pass a declared tar-split tool for Docker integration")
+    @unittest.skipUnless(TOOLS.tar_split_json and TOOLS.pigz, "supply tar_split_json and pigz for Docker integration")
     def test_dockerfs_preserves_inode_semantics_and_deduplicates_shared_layers(self):
         layout, chain = self.layout()
         output = self.root / "dockerfs.tar"
-        overlay2_store.build([(layout, "app:latest,app:{version}"), (layout, "other:latest")], "release", "linux/amd64", output, tar_split=TOOLS.tar_split)
+        overlay2_store.build([(layout, "app:latest,app:{version}"), (layout, "other:latest")], "release", "linux/amd64", output, tar_split_json=TOOLS.tar_split_json, compression="none", pigz=TOOLS.pigz)
         with tarfile.open(output) as archive:
             owned = archive.getmember("overlay2/" + chain + "/diff/data/owned")
             self.assertEqual((owned.uid, owned.gid, owned.mode), (1001, 42, 0o4750))
@@ -101,11 +103,11 @@ class AssemblyTest(unittest.TestCase):
             self.assertEqual(repos["app"]["app:latest"], repos["app"]["app:release"])
             self.assertEqual(repos["app"]["app:latest"], repos["other"]["other:latest"])
 
-    @unittest.skipUnless(TOOLS.tar_split, "pass a declared tar-split tool for Docker integration")
+    @unittest.skipUnless(TOOLS.tar_split_json and TOOLS.pigz, "supply tar_split_json and pigz for Docker integration")
     def test_dockerfs_rejects_uncompressed_digest_mismatch(self):
         layout, _ = self.layout("sha256:" + "0" * 64)
         with self.assertRaisesRegex(ValueError, "diff digest mismatch"):
-            overlay2_store.build([(layout, "app:latest")], "", "linux/amd64", self.root / "bad.tar", tar_split=TOOLS.tar_split)
+            overlay2_store.build([(layout, "app:latest")], "", "linux/amd64", self.root / "bad.tar", tar_split_json=TOOLS.tar_split_json, compression="none", pigz=TOOLS.pigz)
 
     def onie_spec(self):
         kernel = self.write("boot/boot/vmlinuz-test-release", b"kernel bytes")
@@ -114,6 +116,7 @@ class AssemblyTest(unittest.TestCase):
             path = self.write("boot/boot/" + name + "-test-release", content)
             records[name] = {"path": "boot/" + path.name, "sha256": hashlib.sha256(content).hexdigest()}
         spec = {
+            "pigz": TOOLS.pigz,
             "boot_files": str(kernel.parent.parent),
             "kernel_metadata": str(self.write("kernel.json", json.dumps({"schema": 1, "kernel_release": "test-release", "architecture": "amd64", "boot": records}).encode())),
             "initrd": str(self.write("initrd", b"initrd bytes")),
@@ -136,6 +139,25 @@ class AssemblyTest(unittest.TestCase):
         self.write("boot/boot/efi/shimx64.efi", b"MZsigned-shim")
         self.write("boot/boot/device-tree.dtb", b"device-tree")
         return spec, kernel
+
+    def test_declared_image_version_file_reaches_installer_script(self):
+        spec, _ = self.onie_spec()
+        spec["version_file"] = str(self.write("declared-version", b"selected-build-version\n"))
+        onie.build(spec)
+        _, body = Path(spec['out']).read_bytes().split(b'exit_marker\n', 1)
+        with tarfile.open(fileobj=io.BytesIO(body)) as archive:
+            self.assertIn(b"version=selected-build-version", archive.extractfile("installer/install.sh").read())
+
+    def test_amd64_installer_without_optional_arch_configuration(self):
+        # installer/install.sh loads onie-image-[arch].conf only if present;
+        # the mainline AMD64 source tree supplies no architecture override.
+        spec, _ = self.onie_spec()
+        del spec['arch_image_conf']
+        onie.build(spec)
+        _, body = Path(spec['out']).read_bytes().split(b'exit_marker\n', 1)
+        with tarfile.open(fileobj=io.BytesIO(body)) as archive:
+            self.assertNotIn('installer/onie-image-amd64.conf', archive.getnames())
+            self.assertIn('installer/onie-image.conf', archive.getnames())
 
     def test_onie_nested_zip_and_self_extracting_digest(self):
         spec, kernel = self.onie_spec()
@@ -163,6 +185,7 @@ class AssemblyTest(unittest.TestCase):
                 self.assertEqual(payload.read("boot/initrd.img-test-release"), b"initrd bytes")
                 self.assertEqual(gzip.decompress(payload.read("dockerfs.tar.gz")), b"docker bytes")
                 self.assertEqual(payload.getinfo("fs.squashfs").compress_type, zipfile.ZIP_STORED)
+                self.assertEqual(payload.getinfo("boot/initrd.img-test-release").compress_type, zipfile.ZIP_STORED)
                 self.assertEqual(payload.getinfo("boot/vmlinuz-test-release").compress_type, zipfile.ZIP_DEFLATED)
                 # Real ONIE BusyBox 1.25.1 rejects data descriptors (flag 8).
                 for info in payload.infolist():
@@ -185,6 +208,10 @@ class AssemblyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires a gzip"):
             onie.build(spec)
         spec["dockerfs_compression"] = "none"
+        if not TOOLS.pigz:
+            with self.assertRaisesRegex(ValueError, "declared pigz executable"):
+                onie.build(spec)
+            return
         onie.build(spec)
         body = Path(spec["out"]).read_bytes().split(b"exit_marker\n", 1)[1]
         with tarfile.open(fileobj=io.BytesIO(body)) as outer:
@@ -205,14 +232,15 @@ class AssemblyTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "conflicts"):
                 onie.build(spec)
 
-    @unittest.skipUnless(TOOLS.tar_split, "pass a declared tar-split tool for Docker integration")
+    @unittest.skipUnless(TOOLS.tar_split_json and TOOLS.pigz, "supply tar_split_json and pigz for Docker integration")
+    @unittest.skipUnless(TOOLS.tar_split, "supply the independent APT tar-split assembler")
     def test_tar_split_reassembles_original_layer_and_payload_size(self):
         layout, chain = self.layout()
         source_layer = next(p for p in (layout / "blobs/sha256").iterdir() if p.name == chain)
         for compression in ("none", "gzip"):
             output = self.root / (compression + ".tar")
             overlay2_store.build([(layout, "roundtrip:latest")], "", "linux/amd64", output,
-                                 tar_split=TOOLS.tar_split, compression=compression)
+                                 tar_split_json=TOOLS.tar_split_json, compression=compression, pigz=TOOLS.pigz)
             with tarfile.open(output) as archive:
                 prefix = "image/overlay2/layerdb/sha256/" + chain + "/"
                 self.assertEqual(archive.extractfile(prefix + "size").read(), b"7")
@@ -304,12 +332,12 @@ class AssemblyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ARCH differs"):
             onie.build(spec)
 
-    @unittest.skipUnless(TOOLS.zstd and TOOLS.tar_split, "supply zstd and tar-split for codec interoperability")
+    @unittest.skipUnless(TOOLS.zstd and TOOLS.tar_split_json and TOOLS.pigz, "supply zstd, tar_split_json and pigz for codec interoperability")
     def test_zstd_docker_output_and_installer_ram_payload(self):
         layout, chain = self.layout()
         output = self.root / "docker.zst"
         overlay2_store.build([(layout, "zstd:latest")], "", "linux/amd64", output,
-                             tar_split=TOOLS.tar_split, compression="zstd", zstd=TOOLS.zstd)
+                             tar_split_json=TOOLS.tar_split_json, compression="zstd", zstd=TOOLS.zstd, pigz=TOOLS.pigz)
         decoded = subprocess.check_output([TOOLS.zstd, "-q", "-d", "-c", str(output)])
         with tarfile.open(fileobj=io.BytesIO(decoded)) as archive:
             self.assertEqual(archive.extractfile("overlay2/" + chain + "/diff/data/owned").read(), b"payload")

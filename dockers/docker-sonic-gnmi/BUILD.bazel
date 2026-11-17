@@ -1,0 +1,248 @@
+"""Native AMD64 gNMI images built from the public source-owner TARs."""
+
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@gnmi_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "start.sh",
+    "gnmi-native.sh",
+    "dialout.sh",
+    "telemetry_vars.j2",
+    "supervisord.conf",
+    "critical_processes",
+])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# Export the owner's exact probe bytes as a declared generated artifact.
+copy_file(
+    name = "installed_probe",
+    src = "@sonic_gnmi//tools/bazel:installed_probe.py",
+    out = "gnmi-installed-probe.py",
+    target_compatible_with = _COMPATIBLE,
+)
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-sonic-gnmi",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "gnmi_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["gnmi_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in APT_INPUTS["gnmi_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_gnmi//dist:runtime_packages.json"],
+    source_modules = {"sonic-gnmi": "@image_source_modules//:sonic-gnmi.MODULE.bazel"},
+    source_spec = "//dockers/docker-sonic-gnmi/bazel:source_paths.json",
+    sources = {"sonic-gnmi": "@sonic_gnmi//dist:runtime"},
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/gnmi-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+# Common's native libraries, libyang and all libnl runtime owners are already
+# provided by the config-engine parent. Management Common contributes schemas.
+flatten(
+    name = "source_runtime",
+    deduplicate = True,
+    tars = [
+        "@sonic_mgmt_common//dist:runtime",
+        "@sonic_gnmi//dist:runtime",
+    ],
+)
+
+oci_image(
+    name = "docker-sonic-gnmi",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = "//:target/bazel-manifests/docker-sonic-gnmi/image.env",
+    labels = "//dockers/docker-sonic-gnmi/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        "//dockers/docker-sonic-gnmi/config:files",
+        ":installed_package_state",
+    ] + select({
+        "@sonic_gnmi//tools/bazel:dialout_enabled": ["//dockers/docker-sonic-gnmi/config:dialout_launcher"],
+        "//conditions:default": [],
+    }),
+)
+
+# Keep all owner symbols explicitly, including those behind flattened archives.
+flatten(
+    name = "docker-sonic-gnmi.debug_symbols",
+    deduplicate = True,
+    tars = [
+        "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+        "@sonic_gnmi//dist:runtime.debug_symbols",
+    ],
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-sonic-gnmi",
+    dependency_set = "gnmi_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["gnmi_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+# Replace the inherited vim.tiny hardlink with the declared full-Vim alternative.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-sonic-gnmi",
+    controls = [label + ":control" for label in APT_INPUTS["gnmi_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-sonic-gnmi/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/gnmi-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sonic-gnmi-dbg",
+    base = ":docker-sonic-gnmi",
+    labels = "//dockers/docker-sonic-gnmi/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-sonic-gnmi.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-sonic-gnmi/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-sonic-gnmi" + suffix + ".gz",
+        image = ":docker-sonic-gnmi" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-sonic-gnmi.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@gnmi_test_debian//redis-server"],
+)
