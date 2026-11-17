@@ -2690,7 +2690,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['ACL_TABLE'] = filter_acl_table_bindings(acls, neighbors, pcs, pc_members, sub_role, current_device['type'] if current_device else None, is_storage_device, vlan_members)
     # A DPU's gnmi must keep its ephemeral-TLS listener on 8080, which the NPU's
     # DPU proxy dials; GNMI|certs would move it to 50051 with certs a DPU lacks.
-    if switch_type != 'dpu':
+    if switch_type != 'dpu' and device_type != 'SmartSwitchDPU':
         results['GNMI'] = {
             'gnmi': {
                 'client_auth': 'true',
