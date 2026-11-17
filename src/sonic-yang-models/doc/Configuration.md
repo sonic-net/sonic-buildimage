@@ -1679,6 +1679,31 @@ The **GNMI_CLIENT** table holds the credentials this device presents when it act
 }
 ```
 
+### GRPCCLIENT
+
+The **GRPCCLIENT** table configures the gRPC channel that ycabled opens to the SoC (`soc_ipv4` in **MUX_CABLE**) of each active-active port in a dual ToR.
+
+```
+{
+    "GRPCCLIENT": {
+        "config": {
+            "type": "secure",
+            "auth_level": "mutual"
+        },
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/ca.pem",
+            "client_crt": "/etc/sonic/credentials/grpcclient.crt",
+            "client_key": "/etc/sonic/credentials/grpcclient.key",
+            "grpc_ssl_credential": "soc.example.com"
+        }
+    }
+}
+```
+
+- `type`: `secure` for a TLS channel, `insecure` for a plaintext one. Without a `config` row, the channel is plaintext.
+- `auth_level`, for TLS: `server` verifies the SoC's certificate with `ca_crt`; `mutual` also presents `client_crt` and `client_key` to the SoC. ycabled does not recognize `client`, and sets up no channel with it.
+- `grpc_ssl_credential`, for TLS: the name the SoC's certificate must match.
+
 ### Hash
 
 Generic hash allows user to configure various aspects of hashing algorithm.
