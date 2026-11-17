@@ -8,5 +8,25 @@
                     }
             }
         }
+    },
+    "GRPCCLIENT_CONFIG_AUTH_LEVEL_MUTUAL": {
+        "sonic-grpcclient:sonic-grpcclient": {
+            "sonic-grpcclient:GRPCCLIENT": {
+                "sonic-grpcclient:config": {
+                    "type": "secure",
+                    "auth_level": "mutual"
+                }
+            }
+        }
+    },
+    "GRPCCLIENT_CONFIG_INVALID_AUTH_LEVEL": {
+        "sonic-grpcclient:sonic-grpcclient": {
+            "sonic-grpcclient:GRPCCLIENT": {
+                "sonic-grpcclient:config": {
+                    "type": "secure",
+                    "auth_level": "none"
+                }
+            }
+        }
     }
 }
