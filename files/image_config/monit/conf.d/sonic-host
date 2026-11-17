@@ -82,3 +82,13 @@ check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
 # check if NTP is synchronized
 #check program ntp with path "/usr/local/bin/check_ntp_status.sh"
 #    if status != 0 for 3 cycle then alert repeat every 5 cycles
+
+# Watches the CPO ports of a SONiC switch together with their OE / ELS, the
+# fiber path, the PHY/SerDes signal and the link quality, so that a hardware
+# defect or a signal-quality regression shows up as one line per transition
+# instead of a stream of repeats.
+# from both port_check.py & monit.
+#
+check program PortCheck with path "/usr/local/bin/port_check.py"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
