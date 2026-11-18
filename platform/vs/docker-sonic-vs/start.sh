@@ -173,6 +173,8 @@ supervisorctl start nbrmgrd
 
 supervisorctl start vxlanmgrd
 
+supervisorctl start vnetmgrd
+
 supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd
