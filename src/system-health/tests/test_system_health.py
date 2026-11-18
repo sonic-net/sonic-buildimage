@@ -222,6 +222,10 @@ def test_optional_containers(mock_check_docker_image):
         container_name: {'state': 'enabled'}
         for container_name in ('otel', 'hft', 'missing', 'present', 'invalid', 'regular')
     }
+    feature_table['host-service'] = {
+        'state': 'enabled',
+        'runtime_type': 'host',
+    }
     config = Config()
     config.optional_containers = {
         'missing': 'docker-missing',
@@ -247,6 +251,119 @@ def test_optional_containers(mock_check_docker_image):
         config
     )
     assert expected == {'configured'}
+
+
+@pytest.mark.parametrize('active_state', ['active', 'reloading', 'refreshing'])
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.subprocess.run')
+def test_host_feature_services(mock_run, active_state):
+    mock_run.side_effect = [
+        Mock(returncode=0, stdout='ActiveState={}\n'.format(active_state)),
+        Mock(returncode=0, stdout='ActiveState=failed\nResult=exit-code\n'),
+    ]
+    checker = ServiceChecker()
+    checker.check_host_services({
+        'dldd': {'state': 'enabled', 'runtime_type': 'host'},
+        'failed-host': {'state': 'enabled', 'runtime_type': 'host'},
+        'disabled-host': {'state': 'disabled', 'runtime_type': 'host'},
+        'container': {'state': 'enabled'},
+    }, Config())
+
+    assert checker._info['dldd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert checker._info['failed-host'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'disabled-host' not in checker._info
+    assert 'container' not in checker._info
+    assert mock_run.call_args_list == [
+        call(
+            ['systemctl', 'show', 'dldd.service',
+             '--property=ActiveState,Result,ExecMainCode,ExecMainStatus,SuccessExitStatus'],
+            capture_output=True,
+            text=True,
+            timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
+            check=False,
+        ),
+        call(
+            ['systemctl', 'show', 'failed-host.service',
+             '--property=ActiveState,Result,ExecMainCode,ExecMainStatus,SuccessExitStatus'],
+            capture_output=True,
+            text=True,
+            timeout=ServiceChecker.SYSTEMD_CHECK_TIMEOUT,
+            check=False,
+        ),
+    ]
+    HealthChecker.summary = HealthChecker.STATUS_OK
+
+
+@pytest.mark.parametrize('unit_file_state', ['enabled', 'static'])
+@pytest.mark.parametrize('overrides,expected', [
+    ({}, HealthChecker.STATUS_OK),
+    ({'SuccessExitStatus': '2 3 4'}, HealthChecker.STATUS_OK),
+    # Configured service stopped normally by an administrator.
+    ({'ExecMainStatus': '0'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainStatus': '0', 'SuccessExitStatus': '0 3'}, HealthChecker.STATUS_NOT_OK),
+    # Genuine failure or signal must not inherit the no-configuration result.
+    ({'Result': 'exit-code'}, HealthChecker.STATUS_NOT_OK),
+    ({'Result': 'exit-code', 'ExecMainStatus': '1'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainCode': '2'}, HealthChecker.STATUS_NOT_OK),
+    # A nonzero result is accepted only when the unit declares it successful.
+    ({'SuccessExitStatus': ''}, HealthChecker.STATUS_NOT_OK),
+    ({'SuccessExitStatus': '33'}, HealthChecker.STATUS_NOT_OK),
+    ({'ActiveState': 'failed'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainCode': '0', 'ExecMainStatus': '0'}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainStatus': ''}, HealthChecker.STATUS_NOT_OK),
+    ({'ExecMainStatus': 'invalid'}, HealthChecker.STATUS_NOT_OK),
+])
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.subprocess.run')
+def test_host_feature_explicit_successful_exit(mock_run, overrides, expected, unit_file_state, monkeypatch):
+    properties = {
+        'Id': 'diagnostic.service', 'LoadState': 'loaded',
+        'UnitFileState': unit_file_state, 'Type': 'simple', 'SubState': 'dead',
+        'ActiveState': 'inactive', 'Result': 'success',
+        'ExecMainCode': '1', 'ExecMainStatus': '3', 'SuccessExitStatus': '3',
+    }
+    properties.update(overrides)
+    output = '\n'.join('{}={}'.format(key, value) for key, value in properties.items())
+    mock_run.return_value = Mock(
+        returncode=0,
+        stdout=output,
+    )
+    checker = ServiceChecker()
+    feature_table = {
+        'diagnostic': {'state': 'enabled', 'runtime_type': 'host'},
+    }
+    checker.check_host_services(feature_table, Config())
+
+    assert checker._info['diagnostic'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == expected
+    mock_run.assert_called_once()
+    HealthChecker.summary = HealthChecker.STATUS_OK
+
+    # Readiness must agree with host health for the same systemd snapshot.
+    # Keep the real FEATURE enumeration, systemctl parsing and STATE_DB writes.
+    monkeypatch.setattr(utils, 'run_command', Mock(return_value=output))
+    monkeypatch.setattr(Config, 'load_config', no_op)
+    monkeypatch.setattr(sysmonitor_module.glob, 'glob', Mock(return_value=[]))
+    monkeypatch.setattr(multi_asic, 'is_multi_asic', Mock(return_value=False))
+    monkeypatch.setattr(device_info, 'get_device_runtime_metadata', Mock(return_value={}))
+    sysmon = Sysmonitor()
+    sysmon.config_db = Mock(
+        get_table=lambda table: feature_table if table == 'FEATURE' else {})
+    sysmon.state_db = MockConnector(use_unix_socket_path=True)
+    sysmon.state_db.data = {}
+    monkeypatch.setattr(sysmon, 'print_console_message', Mock())
+    healthy = expected == HealthChecker.STATUS_OK
+    # Exercise an actual transition and publication in either direction.
+    monkeypatch.setattr(sysmonitor_module, 'system_allsrv_state', 'DOWN' if healthy else 'UP')
+
+    assert sysmon.get_all_service_list() == ['diagnostic.service']
+    assert sysmon.get_unit_status('diagnostic.service') == ('OK' if healthy else 'NOT OK')
+    sysmon.update_system_status()
+
+    assert sysmon.dnsrvs_name == (set() if healthy else {'diagnostic.service'})
+    assert sysmon.state_db.data['SYSTEM_READY|SYSTEM_STATE']['Status'] == ('UP' if healthy else 'DOWN')
+    service_status = sysmon.state_db.data['ALL_SERVICE_STATUS|diagnostic']
+    assert service_status['service_status'] == ('OK' if healthy else 'Down')
+    assert service_status['app_ready_status'] == ('OK' if healthy else 'Down')
 
 
 @patch('health_checker.utils.run_command')
@@ -1368,7 +1485,7 @@ def test_run_systemctl_show_uses_argv(mock_run_command):
     mock_run_command.assert_called_once_with([
         'systemctl',
         'show',
-        '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+        '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic,ExecMainCode,ExecMainStatus,SuccessExitStatus',
         '--',
         'sample.service'
     ])

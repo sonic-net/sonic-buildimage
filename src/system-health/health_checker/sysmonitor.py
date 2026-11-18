@@ -317,7 +317,7 @@ class Sysmonitor(ThreadTaskBase):
         command = [
             'systemctl',
             'show',
-            '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic',
+            '--property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult,ConditionTimestampMonotonic,ExecMainCode,ExecMainStatus,SuccessExitStatus',
             '--',
             service
         ]
@@ -404,7 +404,8 @@ class Sysmonitor(ThreadTaskBase):
                                 and condition_ts not in ("0", "", None))
                         is_known_non_blocking = (srv_type == "oneshot"
                                 or service_name in spl_srv_list
-                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS
+                                or utils.successful_inactive_service(sysctl_show))
                         if is_known_non_blocking or condition_unmet:
                             service_status = "OK"
                             service_up_status = "OK"

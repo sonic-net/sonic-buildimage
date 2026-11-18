@@ -1,0 +1,32 @@
+{
+    "DLDD_CONFIG_WITH_VALID_VALUES": {
+        "desc": "Valid DLDD configuration."
+    },
+    "DLDD_CONFIG_WITH_VALID_ZERO_THRESHOLDS": {
+        "desc": "DLDD thresholds, grace period, and retention period may be zero."
+    },
+    "DLDD_CONFIG_WITH_ZERO_POLLING_INTERVAL": {
+        "desc": "DLDD polling intervals must be positive.",
+        "eStrKey": "Range"
+    },
+    "DLDD_CONFIG_WITH_ZERO_RECOVERY_SAMPLES": {
+        "desc": "DLDD source recovery samples must be positive.",
+        "eStrKey": "Range"
+    },
+    "DLDD_CONFIG_WITH_ZERO_ACK_TIMEOUT": {
+        "desc": "DLDD fault evidence acknowledgement timeout must be positive.",
+        "eStrKey": "Range"
+    },
+    "DLDD_CONFIG_WITH_ZERO_RECHECK_INTERVAL": {
+        "desc": "DLDD active fault recheck interval must be positive.",
+        "eStrKey": "Range"
+    },
+    "DLDD_CONFIG_WITH_ZERO_SETTLE_TIME": {
+        "desc": "DLDD rules inbox settle time must be positive.",
+        "eStrKey": "Range"
+    },
+    "DLDD_CONFIG_WITH_INVALID_THRESHOLD": {
+        "desc": "DLDD thresholds must be unsigned integers.",
+        "eStrKey": "InvalidValue"
+    }
+}

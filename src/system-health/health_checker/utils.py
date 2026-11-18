@@ -15,6 +15,19 @@ logger = SysLogger(
 )
 
 
+def successful_inactive_service(properties):
+    """Recognize an explicit successful nonzero process outcome."""
+    try:
+        status = int(properties.get('ExecMainStatus', ''))
+    except ValueError:
+        return False
+    return (properties.get('ActiveState') == 'inactive'
+            and properties.get('Result') == 'success'
+            and properties.get('ExecMainCode') == '1'  # CLD_EXITED
+            and status > 0
+            and str(status) in properties.get('SuccessExitStatus', '').split())
+
+
 def run_command(command, timeout=None):
     """
     Utility function to run a command and return the output.
