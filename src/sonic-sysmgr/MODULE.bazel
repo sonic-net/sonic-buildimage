@@ -43,6 +43,33 @@ single_version_override(
     version = "0.65.0.sonic.1",
 )
 
+# Match the image's published ABI, Python, Rust and model dependencies when
+# SWSS Common and YANG management are resolved from this standalone root.
+single_version_override(
+    module_name = "libnl3",
+    version = "3.7.0.sonic.8",
+)
+
+single_version_override(
+    module_name = "libyang",
+    version = "3.12.2.sonic.7",
+)
+
+single_version_override(
+    module_name = "libyang-python",
+    version = "3.1.0.sonic.6",
+)
+
+single_version_override(
+    module_name = "sonic-rust-deps",
+    version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
+)
+
+single_version_override(
+    module_name = "sonic-yang-models",
+    version = "1.0.1-b0a9362a7a1b4b5e1b7188c019d256f7c8aaff9f",
+)
+
 gcc = use_extension("@sonic_build_infra//toolchains/gcc:extensions.bzl", "gcc")
 use_repo(gcc, "gcc_toolchains")
 
