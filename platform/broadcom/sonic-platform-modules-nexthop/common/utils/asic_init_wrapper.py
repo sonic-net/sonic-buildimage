@@ -49,38 +49,6 @@ def is_warm_boot_post_kexec() -> bool:
     return bool(WARM_BOOT_CMDLINE_RE.search(cmdline))
 
 
-def get_asic_bdfs() -> list[str]:
-    """Look up every candidate ASIC BDF (e.g. "01:00.0") from the
-    platform's pcie-variables.yaml. The yaml exposes each ASIC bridge's
-    secondary bus number as `asic_bus` or `asic_<N>_bus`; the ASIC itself
-    enumerates as device 0, function 0 on that bus.
-    """
-    try:
-        name_to_cmd = pcie_lib.get_var_name_to_cmd_map(
-            f"{pcie_lib.PLATFORM_FOLDER}/pcie-variables.yaml"
-        )
-    except Exception as e:
-        # Catch broadly: a missing/corrupt pcie-variables.yaml must NOT
-        # prevent the cold-boot fallback to asic_init.sh.
-        log_err(f"Failed to read pcie-variables.yaml: {e}")
-        return []
-
-    bdfs: list[str] = []
-    for name, cmd in name_to_cmd.items():
-        if pcie_lib.device_type_for_var_name(name) != pcie_lib.PcieDeviceType.ASIC:
-            continue
-        try:
-            bus = pcie_lib.get_cmd_output(cmd)
-        except Exception as e:
-            # Tolerate per-slot lookup failures: an unpopulated slot on a
-            # multi-ASIC platform can legitimately fail to resolve.
-            log_err(f"Failed to resolve {name}: {e}")
-            continue
-        if bus:
-            bdfs.append(f"{bus}:00.0")
-    return bdfs
-
-
 def asic_present_on_pci_bus(bdf: str) -> bool:
     """Return True if `lspci -n` reports a device at the given BDF. Logs and
     returns False on any failure so the boot path can fall back gracefully.
@@ -129,7 +97,10 @@ def handle_warm_boot_post_kexec() -> bool:
     """Returns True iff warm-boot interrupt cleanup succeeded for at
     least one ASIC and the caller should skip asic_init.sh.
     """
-    candidate_bdfs = get_asic_bdfs()
+    # Last boot's pcie.yaml, which is the enumeration we are still running on.
+    candidate_bdfs = pcie_lib.get_pcie_device_bdfs(
+        device_type=pcie_lib.PcieDeviceType.ASIC
+    )
     if not candidate_bdfs:
         log_err("Warm boot: Cannot determine ASIC BDF")
         return False

@@ -31,6 +31,11 @@ device:
 bcm_device:
     0:
         global:
+            # to support overlay ECMP
+            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_secondary_mem_size: 4096
+            # to support IPinIP and SRv6
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 2048
             l3_alpm_template: 1
