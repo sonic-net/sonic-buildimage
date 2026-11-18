@@ -37,6 +37,9 @@ endif
 $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
 $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+# gNSI Certz writes rotated credentials, their symlinks and grpc-version.json
+# next to the configured gNMI certificates.
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic/telemetry:/etc/sonic/telemetry:rw
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 ifneq ($(strip $(GNMI_REDIS_POOL_SIZE)),)
 $(DOCKER_GNMI)_RUN_OPT += -e GNMI_REDIS_POOL_SIZE=$(GNMI_REDIS_POOL_SIZE)
