@@ -42,7 +42,6 @@ except ImportError as error:
 
 CPO_TYPES = {
     "bailly": OeId.BROADCOM_BAILLY,
-    "davisson": OeId.BROADCOM_DAVISSON,
 }
 
 
