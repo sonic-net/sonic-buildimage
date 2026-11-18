@@ -132,7 +132,7 @@ class ValidateNativePackagesTest(unittest.TestCase):
         if with_local_code:
             helper = self.root / "launcher_helper.c"
             helper.write_text("int launcher_helper(void) { return 7; }\n")
-            local = ["-g", str(helper)]
+            local = ["-g", "-ffile-prefix-map=" + str(self.root) + "=.", str(helper)]
         subprocess.run(["cc", *local, "-Wl,--build-id=sha1", "-Wl,--no-as-needed", str(original), "-o", str(launcher)],
                        check=True, capture_output=True)
         launcher_id = re.search(r"Build ID: ([0-9a-f]+)", subprocess.check_output(
@@ -177,6 +177,17 @@ class ValidateNativePackagesTest(unittest.TestCase):
         self.assertFalse(launcher["has_dwarf"])
         self.assertEqual(launcher["debug_forwarding"]["symbol"], "main")
         self.assertEqual(launcher["debug_forwarding"]["provider"], self.soname_path)
+
+    def test_forwarded_launcher_compile_units_match_its_split_symbols(self):
+        self.forwarding_fixture(with_local_code=True)
+        forwarding = self.policy["native"]["debug_forwarding"]["usr/bin/launcher"]
+        forwarding["launcher_compile_units"] = ["launcher_helper.c"]
+        pairs = self.validate()["paired_symbols"]
+        launcher = next(pair for pair in pairs if pair["path"] == "usr/bin/launcher")
+        self.assertEqual(launcher["debug_forwarding"]["launcher_compile_units"], ["launcher_helper.c"])
+        forwarding["launcher_compile_units"] = ["other.c"]
+        with self.assertRaisesRegex(ValueError, "compile units differ"):
+            self.validate()
 
     def test_source_free_launcher_requires_the_explicit_contract(self):
         self.forwarding_fixture()

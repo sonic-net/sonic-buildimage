@@ -328,6 +328,13 @@ class ForwardedSourceSymbolsTest(unittest.TestCase):
         self.assertEqual(pairs[0]["debug_forwarding"]["symbol"], "main")
         self.assertEqual(pairs[0]["debug_forwarding"]["source"], "forward_main.c")
 
+    def test_image_rejects_a_declared_launcher_unit_missing_from_the_symbols(self):
+        def declare_unit(root, native, runtime, symbols, forwarding):
+            forwarding["usr/bin/launcher"]["launcher_compile_units"] = ["other.c"]
+
+        with self.assertRaisesRegex(ValueError, "compile units differ"):
+            self.check_fixture(declare_unit, with_local_code=True)
+
     def test_existing_native_contract_rejects_invalid_provider_and_symbols(self):
         for with_local_code in (False, True):
             for option in ("wrong_provider", "no_provider_dwarf", "missing_needed", "corrupt_stub"):

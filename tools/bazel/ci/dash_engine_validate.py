@@ -14,6 +14,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 # Its native toolkit helpers also have local DWARF; verify both debug identities
 # and CRCs while retaining the implementation-provider contract.
 DEBUG_FORWARDING = {"usr/bin/pi_CLI_dummy": {
+    "launcher_compile_units": ["lib/_assert.c", "lib/read_file.c", "lib/vector.c"],
     "provider": "usr/lib/x86_64-linux-gnu/libpicli.so.0", "symbol": "main", "source": "main.c"}}
 
 

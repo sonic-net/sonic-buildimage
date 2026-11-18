@@ -41,7 +41,7 @@ The static check binds both image stages to their exact parents, source TARs,
 APT selections and installed package state. It preserves inherited account rows,
 file metadata and runtime ELFs, and verifies every project ELF's matching build
 ID, DWARF and debuglink (with the existing sealed SymCrypt contract). PI's
-CRT launcher retains its own matching debug identity and forwards `main` to the
+launcher retains matching debug symbols for its three PI utility sources and forwards `main` to the
 source-owned `libpicli.so.0`; the existing package verifier checks that declared
 provider, and the installed probe requires GDB source/line/type lookup with a
 missing-symbol negative control. The debug image adds the source OpenSSH client, matching symbols and full Vim.
@@ -62,8 +62,8 @@ The DASH engine archive job in `bazel-oci.yml` builds both images on the
 `bazel-x64, vs` pool with its own scratch directory. It runs in parallel with
 the common archive job. The installed-service job downloads those archives on `ubuntu-24.04`
 and reports its result to the required AMD64 archive check. Public artifacts
-include the 19 declared payloads and selected receipts, including the runtime
-APT layer used for non-ELF replacement checks. The public reports omit command
+include the runtime APT layer for non-ELF replacement checks and both filter
+files used to verify source ownership. The public reports omit command
 environments and local cache paths.
 
 ## Build inputs

@@ -127,7 +127,7 @@ def verify_forwarded_symbols(root, native, runtime, symbols, forwarding):
                            "forwarding launcher symbols differ: " + name)
         validation.verify_debuglink(root / name, root / debug_name, name)
         contract = native_packages.debug_forwarding(
-            name, spec, runtime, symbols, info, readelf="readelf", objcopy="objcopy")
+            name, spec, runtime, symbols, info, launcher_symbols=root / debug_name, readelf="readelf", objcopy="objcopy")
         pairs.append({"path": name, "build_id": identifier, "debug_path": debug_name,
                       "debug_forwarding": contract})
     return pairs

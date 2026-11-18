@@ -45,6 +45,7 @@ SOURCE_MODULES = {
 NATIVE_POLICY = {
     "debug_forwarding": {
         "usr/bin/pi_CLI_dummy": {
+            "launcher_compile_units": ["lib/_assert.c", "lib/read_file.c", "lib/vector.c"],
             "provider": "usr/lib/x86_64-linux-gnu/libpicli.so.0",
             "symbol": "main",
             "source": "main.c",

@@ -30,10 +30,19 @@ def dynamic_function(path, symbol, *, undefined, readelf):
     return False
 
 
-def debug_forwarding(name, spec, runtime, debug, info, *, readelf, objcopy):
+def debug_forwarding(name, spec, runtime, debug, info, *, launcher_symbols, readelf, objcopy):
     """Prove a launcher imports its declared function from a packaged DSO."""
-    require(isinstance(spec, dict) and set(spec) == {"provider", "symbol", "source"},
+    require(isinstance(spec, dict) and set(spec) - {"launcher_compile_units"} == {"provider", "symbol", "source"},
             "invalid debug forwarding contract: " + name)
+    if "launcher_compile_units" in spec:
+        units = spec["launcher_compile_units"]
+        require(isinstance(units, list) and units and
+                all(isinstance(unit, str) and unit and path_name(unit) == unit for unit in units) and
+                len(set(units)) == len(units), "invalid forwarding launcher compile units: " + name)
+        lines = subprocess.check_output([readelf, "--debug-dump=decodedline", "--wide", str(launcher_symbols)],
+                                        text=True, stderr=subprocess.PIPE, timeout=120)
+        observed = [str(PurePosixPath(unit)) for unit in re.findall(r"^CU: (.+):$", lines, re.MULTILINE)]
+        require(sorted(observed) == sorted(units), "forwarding launcher compile units differ: " + name)
     provider_name, symbol, source = spec["provider"], spec["symbol"], spec["source"]
     require(isinstance(provider_name, str) and path_name(provider_name) == provider_name and
             provider_name != name and isinstance(symbol, str) and re.fullmatch(r"[A-Za-z_]\w*", symbol) and
@@ -414,7 +423,8 @@ def validate_native(runtime_manifest, debug_manifest, *, policy, source_contract
                     require(info["has_debuglink"] and not info["has_dwarf"],
                             "debug forwarding requires a stripped launcher: " + name)
                     record["debug_forwarding"] = debug_forwarding(
-                        name, forwarding[name], runtime, debug, info, readelf=readelf, objcopy=objcopy)
+                        name, forwarding[name], runtime, debug, info, launcher_symbols=symbols["file"],
+                        readelf=readelf, objcopy=objcopy)
                 paired.append(record)
             elif info["has_dwarf"]:
                 embedded.append(record)
