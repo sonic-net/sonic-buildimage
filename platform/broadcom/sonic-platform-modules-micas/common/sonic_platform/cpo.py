@@ -114,11 +114,10 @@ class _BaillyEepromAccessMixin:
 
 
 class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
-    def __init__(self, oe_id, oe_config, hardware_info, bank=0, base_page=0):
+    def __init__(self, oe_id, oe_config, hardware_info, bank=0):
         self.oe_id = int(oe_id)
         cmis_path = oe_config.get("i2c_path")
         self._eeprom_path = os.path.join(cmis_path, "eeprom") if cmis_path else ""
-        self.base_page = int(base_page)
         super().__init__(hardware_info, bank=bank)
 
     def get_eeprom_path(self) -> str:
