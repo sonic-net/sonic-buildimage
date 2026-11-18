@@ -163,6 +163,19 @@ class VerificationWorkflowTest(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
         for job in ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive"):
             self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"][job]["steps"]])
+        kernel_only = [
+            workflow["jobs"][name] for name in (
+                "dash_ha_runtime", "macsec_runtime", "database_runtime", "lldp_runtime",
+                "mux_runtime", "swss_layer_runtime", "sysmgr_runtime", "gnmi_native",
+                "gnmi_runtime", "mgmt_framework_runtime",
+            )
+        ]
+        for filename, name in (("bazel-frr-python.yml", "packages"), ("bazel-frr.yml", "native")):
+            kernel_only.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
+        for job in kernel_only:
+            steps = job["steps"]
+            register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
+            self.assertEqual(steps[register + 1].get("run"), f"bash {script} --kernel-only")
 
         env = dict(os.environ, GIT_ALLOW_PROTOCOL="file")
 
@@ -195,15 +208,52 @@ class VerificationWorkflowTest(unittest.TestCase):
             pinned = git(source, "rev-parse", "HEAD")
 
             gnoi, pins, unused = "src/sonic-sysmgr/gnoi", "src/sonic-p4rt/sonic-pins", "unused module"
-            for path in (gnoi, pins, unused):
+            kernel = "src/sonic-linux-kernel"
+            for path in (gnoi, pins, unused, kernel):
                 git(parent, "submodule", "add", "-q", str(source), path)
             git(parent, "commit", "-qm", "pin submodules")
             git(root, "clone", "-q", str(parent), str(checkout))
             git(checkout, "submodule", "init", "--", unused)
 
-            def prepare(check=True):
-                return subprocess.run(["bash", ROOT / script], cwd=checkout, env=env,
+            def prepare(*args, check=True, protocol="file"):
+                return subprocess.run(["bash", ROOT / script, *args], cwd=checkout,
+                                      env=dict(env, GITHUB_WORKSPACE=str(checkout), GIT_ALLOW_PROTOCOL=protocol),
                                       capture_output=True, text=True, check=check)
+
+            prepare("--kernel-only", protocol="")
+            self.assertFalse((checkout / kernel / ".git").exists())
+            self.assertFalse((checkout / gnoi / ".git").exists())
+            git(checkout, "submodule", "update", "--init", "--", kernel)
+            prepare("--kernel-only", protocol="")
+            retained_kernel = checkout / kernel
+            git(retained_kernel, "checkout", "-q", old)
+            git(checkout, "config", "--remove-section", f"submodule.{kernel}")
+            (retained_kernel / "new.txt").write_text("keep untracked work\n")
+            self.assertNotEqual(prepare("--kernel-only", check=False).returncode, 0)
+            self.assertEqual((retained_kernel / "new.txt").read_text(), "keep untracked work\n")
+            (retained_kernel / "new.txt").unlink()
+            (retained_kernel / "input").write_text("keep local edits\n")
+            git(retained_kernel, "add", "input")
+            self.assertNotEqual(prepare("--kernel-only", check=False).returncode, 0)
+            self.assertEqual(git(retained_kernel, "show", ":input"), "keep local edits")
+            self.assertEqual(git(retained_kernel, "rev-parse", "HEAD"), old)
+            git(retained_kernel, "restore", "--staged", "--worktree", "input")
+            git(checkout, "add", kernel)
+            self.assertNotEqual(prepare("--kernel-only", check=False).returncode, 0)
+            self.assertEqual(git(checkout, "rev-parse", f":{kernel}"), old)
+            git(checkout, "restore", "--staged", kernel)
+            prepare("--kernel-only", protocol="")
+            self.assertEqual(git(retained_kernel, "rev-parse", "HEAD"), pinned)
+            self.assertFalse((checkout / gnoi / ".git").exists())
+
+            # A newly pinned revision may only be available from the kernel remote.
+            (source / "input").write_text("new kernel\n")
+            git(source, "commit", "-qam", "next kernel")
+            next_kernel = git(source, "rev-parse", "HEAD")
+            git(checkout, "update-index", "--cacheinfo", "160000", next_kernel, kernel)
+            git(checkout, "commit", "-qm", "pin new kernel")
+            prepare("--kernel-only")
+            self.assertEqual(git(retained_kernel, "rev-parse", "HEAD"), next_kernel)
 
             prepare()
             self.assertEqual(git(checkout / gnoi, "rev-parse", "HEAD"), pinned)

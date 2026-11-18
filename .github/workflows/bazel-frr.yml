@@ -13,6 +13,7 @@ on:
       - .bazelrc
       - tools/bazel/common.bazelrc
       - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/prepare_image_submodules.sh
       - tools/bazel/ci/preserve_setup_bazel_cache.py
       - tools/bazel/ci/source_mirrors.py
       - tools/bazel/debian_mirrors.cfg
@@ -58,6 +59,8 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - name: Align retained kernel checkout
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --kernel-only
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0

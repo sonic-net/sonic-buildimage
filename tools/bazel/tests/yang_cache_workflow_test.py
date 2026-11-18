@@ -131,14 +131,15 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
         steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]["steps"]
         prepare = next(step["run"] for step in steps
                        if step.get("name") == "Prepare pinned source submodules")
+        self.assertEqual(prepare, "bash tools/bazel/ci/prepare_image_submodules.sh")
         selected = set()
         for path in WORKFLOW.parent.glob("*.yml"):
             for name, job in yaml.safe_load(path.read_text())["jobs"].items():
                 for index, step in enumerate(job.get("steps", [])):
                     command = step.get("run", "")
-                    if "submodule update --init --checkout -- src/sonic-sysmgr/gnoi" in command:
-                        self.assertEqual(command, prepare)
-                    elif command != "bash tools/bazel/ci/prepare_image_submodules.sh":
+                    expected = (prepare.replace("bash ", "bash target/ci-bazel-cleanup-controller/")
+                                if path.name == "bazel-base-images.yml" else prepare)
+                    if command != expected:
                         continue
                     with self.subTest(workflow=path.name, job=name):
                         self.assertTrue(any(
@@ -203,6 +204,9 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             work = root / "checkout"
             component = work / "src/sonic-yang-models"
             component.mkdir(parents=True)
+            helper = Path("tools/bazel/ci/prepare_image_submodules.sh")
+            (work / helper).parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / helper, work / helper)
             tracked = component / "setup.py"
             tracked.write_text("original source\n")
             git(work, "init", "--quiet")

@@ -1805,6 +1805,9 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - &align_retained_kernel
+        name: Align retained kernel checkout
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --kernel-only
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -1866,6 +1869,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -1920,6 +1924,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -1989,6 +1994,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -2043,6 +2049,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -2781,6 +2788,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -2955,6 +2963,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - name: Bind the tested checkout identity
         id: checkout_identity
         env:
@@ -3224,11 +3233,7 @@ jobs:
         run: df -h "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Prepare pinned source submodules
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -4102,6 +4107,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -4219,6 +4225,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - *reclaim_unused_images
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -4291,11 +4298,7 @@ jobs:
         with:
           migrated-job: 'true'
       - name: Initialize the pinned gNOI source
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -4399,6 +4402,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *align_retained_kernel
       - *reclaim_unused_images
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -4482,11 +4486,7 @@ jobs:
             --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
             --github-output "$GITHUB_OUTPUT"
       - name: Prepare pinned source submodules
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
       - name: Register post-job Bazel cleanup
         id: bazel_cleanup_register
         uses: ./.github/actions/bazel-post-job-cleanup

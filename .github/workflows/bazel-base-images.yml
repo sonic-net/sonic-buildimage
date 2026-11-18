@@ -105,11 +105,7 @@ jobs:
           python3 -B tools/bazel/ci/base_review.py
 
       - name: Prepare pinned source submodules
-        run: |
-          set -euo pipefail
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
-            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
-          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+        run: bash target/ci-bazel-cleanup-controller/tools/bazel/ci/prepare_image_submodules.sh
 
       - name: Check clean dependency inputs
         run: |

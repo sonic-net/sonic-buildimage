@@ -58,9 +58,9 @@ CI uses the same maintained endpoint. A clean normal Make invocation needs only
 the shared switch.
 
 The kernel module and gitlink select landed commit
-`34a53faaecd325509e9d8f1016ed0108ab558a23` from
-[kernel #5](https://github.com/securely1g/sonic-linux-kernel/pull/5).
-[Registry #139](https://github.com/securely1g/sonic-bazel-registry/pull/139)
+`96c621843a2bc9dbbe17eb890c8c6e1cea5e834b` from
+[kernel #7](https://github.com/securely1g/sonic-linux-kernel/pull/7).
+[Registry #359](https://github.com/securely1g/sonic-bazel-registry/pull/359)
 registers that landed source version on `main`.
 
 ## Explicit source/cache validation
@@ -281,8 +281,8 @@ boot a guest, load a module into a running guest or establish forwarding.
 ## Dependency state
 
 Local builds and CI use the maintained registry endpoint on `main`. The published
-[kernel module](https://github.com/securely1g/sonic-bazel-registry/pull/139)
-requires [build-infra 0.0.22](https://github.com/securely1g/sonic-bazel-registry/pull/120).
+[kernel module](https://github.com/securely1g/sonic-bazel-registry/pull/359)
+requires [build-infra 0.0.38](https://github.com/securely1g/sonic-bazel-registry/pull/334).
 Both source and tools revisions are fixed in `MODULE.bazel`, and the kernel
 source revision must match the buildimage gitlink. Native AMD64 and ARM64
 source/cache validation runs on self-hosted Linux with unprivileged user namespaces;

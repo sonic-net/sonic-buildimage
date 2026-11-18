@@ -1,5 +1,5 @@
 # The registered source version must match the buildimage kernel gitlink.
 module(name = "sonic-kernel-cache-consumer")
 
-bazel_dep(name = "sonic-linux-kernel", version = "0.0.2-34a53faaecd325509e9d8f1016ed0108ab558a23", repo_name = "sonic_linux_kernel")
-bazel_dep(name = "sonic-build-infra", version = "0.0.22-a12bc826d6f811a157db5c7c02a2fe033896cc14", repo_name = "sonic_build_infra")
+bazel_dep(name = "sonic-linux-kernel", version = "0.0.2-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b", repo_name = "sonic_linux_kernel")
+bazel_dep(name = "sonic-build-infra", version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe", repo_name = "sonic_build_infra")
