@@ -1,0 +1,126 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load(":tests.bzl", "image_assembly_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+    "initramfs.bzl",
+    "tests.bzl",
+    "assembly_test.py",
+])
+
+py_library(
+    name = "newc",
+    srcs = ["newc.py"],
+    imports = ["."],
+)
+
+py_library(
+    name = "ldcache",
+    srcs = ["ldcache.py"],
+    imports = ["."],
+)
+
+py_library(
+    name = "kernel_inputs",
+    srcs = [
+        "image_config.py",
+        "kernel_inputs.py",
+    ],
+    imports = ["."],
+)
+
+py_library(
+    name = "assembly_lib",
+    srcs = [
+        "disk_image.py",
+        "merge_layers.py",
+        "onie.py",
+        "overlay2_store.py",
+    ],
+    imports = ["."],
+    deps = [
+        ":kernel_inputs",
+        "@sonic_build_infra//oci:package_metadata",
+    ],
+)
+
+py_binary(
+    name = "merge_layers",
+    srcs = ["merge_layers.py"],
+)
+
+py_binary(
+    name = "overlay2_store",
+    srcs = ["overlay2_store.py"],
+    deps = [":assembly_lib"],
+)
+
+py_binary(
+    name = "onie",
+    srcs = ["onie.py"],
+    deps = [":kernel_inputs"],
+)
+
+py_binary(
+    name = "disk_image",
+    srcs = ["disk_image.py"],
+    deps = [":assembly_lib"],
+)
+
+py_binary(
+    name = "mkinitramfs",
+    srcs = ["mkinitramfs.py"],
+    deps = [
+        ":kernel_inputs",
+        ":ldcache",
+        ":newc",
+    ],
+)
+
+py_test(
+    name = "assembly_test",
+    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
+    data = ["@sonic_build_infra//tools/build_tools:pigz"],
+    srcs = ["assembly_test.py"],
+    deps = [":assembly_lib"],
+)
+
+py_test(
+    name = "mkinitramfs_test",
+    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
+    data = ["@sonic_build_infra//tools/build_tools:pigz"],
+    srcs = [
+        "mkinitramfs.py",
+        "mkinitramfs_test.py",
+    ],
+    deps = [
+        ":kernel_inputs",
+        ":ldcache",
+        ":newc",
+    ],
+)
+
+# Read output formats using the same pinned tool closures as production actions.
+image_assembly_test(
+    name = "assembly_formats_test",
+    tar_split_json = "//tools/bazel/image/tar_split_json:tar_split_json",
+    tar_split = "@sonic_build_infra//tools/build_tools:tar-split",
+    openssl = "@sonic_build_infra//tools/build_tools:openssl",
+    grub_editenv = "@sonic_build_infra//tools/build_tools:grub-editenv",
+    zstd = "@sonic_build_infra//tools/build_tools:zstd",
+    pigz = "@sonic_build_infra//tools/build_tools:pigz",
+)
+
+py_binary(
+    name = "kernel_deb",
+    srcs = ["kernel_deb.py"],
+)
+
+py_test(
+    name = "kernel_deb_test",
+    imports = ["."],
+    srcs = ["kernel_deb_test.py", "kernel_deb.py"],
+    main = "kernel_deb_test.py",
+)
