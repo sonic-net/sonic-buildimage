@@ -2220,6 +2220,8 @@ jobs:
         with:
           name: dash-engine-source-amd64-${{ github.sha }}
           path: |
+            ${{ steps.dash_scratch.outputs.directory }}/source-excludes.txt
+            ${{ steps.dash_scratch.outputs.directory }}/source-includes.txt
             ${{ steps.dash_scratch.outputs.directory }}/*.gz
             ${{ steps.dash_scratch.outputs.directory }}/*.tar
             ${{ steps.dash_scratch.outputs.directory }}/*.status
