@@ -25,6 +25,8 @@ BASE = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
 IMAGES = ("docker-gbsyncd-vs", "docker-gbsyncd-vs-dbg")
 OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000", "--config=syncd-dash"]
 TARGETS = {
+    "source-excludes.txt": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source-includes.txt": "//tools/bazel/dpkg:oci_includes",
     **{name + ".gz": OWNER + name + ".gz" for name in IMAGES},
     "source-runtime.tar": OWNER + "source_runtime",
     "source-debug.tar": SHARED + "source_debug_payloads",
@@ -142,6 +144,7 @@ def validate_images(directory):
     clean_source(directory)
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built" and identity()["revision"] == receipt["revision"], "build/source identity differs")
+    check.require(set(receipt["artifacts"]) == set(TARGETS), "incomplete artifact inventory")
     for name, artifact in receipt["artifacts"].items():
         check.require(check.sha(directory / name) == artifact["sha256"], "artifact changed: " + name)
     runtime, debug = [ROOT / receipt["layouts"][name] for name in IMAGES]
@@ -156,6 +159,7 @@ def validate_images(directory):
     images = image_validation.validate_images(runtime, debug, None, None,
         ROOT / "target/bazel-manifests/docker-gbsyncd-vs/manifest.json",
         ROOT / "target/bazel-manifests/docker-gbsyncd-vs-dbg/manifest.json", ROOT, policy=policy, **source,
+        source_layer_excludes=directory / "source-excludes.txt", source_layer_includes=directory / "source-includes.txt",
         apt_lock_path=directory / "apt.lock.json",
         apt_layer=directory / "runtime-apt.tar", debug_tools_layer=directory / "debug-tools.tar",
         runtime_links_layer=directory / "installation-links.tar", runtime_apt_selection=directory / "runtime-apt.json",

@@ -2020,6 +2020,8 @@ jobs:
         with:
           name: gbsyncd-source-amd64-${{ github.sha }}
           path: |
+            artifacts/gbsyncd/source-excludes.txt
+            artifacts/gbsyncd/source-includes.txt
             artifacts/gbsyncd/*.gz
             artifacts/gbsyncd/*.tar
             artifacts/gbsyncd/validation.json

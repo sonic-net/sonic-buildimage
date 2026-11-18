@@ -462,6 +462,28 @@ class ValidateImageTest(unittest.TestCase):
         self.assertEqual(result["validation_mode"], "complete")
         self.assertIn(changelog, result["source_packages"]["packages"][0]["files"])
 
+    def test_receipted_package_images_apply_the_declared_source_filter(self):
+        changelog = "usr/share/doc/example/changelog.Debian.gz"
+        notice = "usr/share/doc/example/NOTICE"
+        inputs = self.complete_receipted_layers(
+            extra_runtime=[(changelog, b"history", 0o644), (notice, b"legal notice", 0o644)],
+            omitted_runtime=[changelog])
+        inputs.pop("runtime_payload_layers")
+        inputs.pop("debug_payload_layers")
+        unfiltered = {key: value for key, value in inputs.items()
+                      if key not in ("source_layer_excludes", "source_layer_includes")}
+        with self.assertRaisesRegex(ValueError, "runtime source package payload.*changelog"):
+            self.validate_direct_images(unfiltered)
+        result = self.validate_direct_images(inputs)
+        self.assertEqual(result["validation_mode"], "complete")
+        self.assertIn(changelog, result["source_packages"]["packages"][0]["files"])
+        inputs["source_layer_excludes"].write_text("usr/share/man/*\n")
+        with self.assertRaisesRegex(ValueError, "runtime source package payload.*changelog"):
+            self.validate_direct_images(inputs)
+        inputs["source_layer_excludes"].write_text("usr/share/doc/*\nusr/lib/*\n")
+        with self.assertRaisesRegex(ValueError, "filter removes a required source path or ELF"):
+            self.validate_direct_images(inputs)
+
     def test_receipted_layers_reject_missing_legal_notice_or_library(self):
         """Filtering must not turn absent retained files into an accepted source subset."""
         notice = "usr/share/doc/example/NOTICE"

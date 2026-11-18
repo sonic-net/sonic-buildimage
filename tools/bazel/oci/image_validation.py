@@ -352,17 +352,18 @@ def validate_images(runtime_path, debug_path, runtime_handoff, debug_handoff,
     filter_inputs = (source_layer_excludes, source_layer_includes)
     require(all(path is not None for path in filter_inputs) or all(path is None for path in filter_inputs),
             "OCI source filter inputs must be supplied together")
-    require(not any(path is not None for path in filter_inputs) or (direct_layers and has_source),
-            "OCI source filtering requires direct receipted runtime layers")
+    require(not any(path is not None for path in filter_inputs) or has_source,
+            "OCI source filtering requires a receipted runtime")
+    if direct_layers and has_source:
+        require(all(path is not None for path in filter_inputs),
+                "direct receipted runtime requires its declared OCI filter policy")
+    if has_source and all(path is not None for path in filter_inputs):
+        filtered_runtime = oci_filtered(expected_source_runtime, *filter_inputs)
+        required = {name for record in source_contract["packages"] for name in record["required_paths"]}
+        required.update(name for name, item in expected_source_runtime.items() if "elf_machine" in item)
+        require(required <= filtered_runtime.keys(), "OCI filter removes a required source path or ELF")
+        expected_source_runtime = filtered_runtime
     if direct_layers:
-        if has_source:
-            require(all(path is not None for path in filter_inputs),
-                    "direct receipted runtime requires its declared OCI filter policy")
-            filtered_runtime = oci_filtered(expected_source_runtime, *filter_inputs)
-            required = {name for record in source_contract["packages"] for name in record["required_paths"]}
-            required.update(name for name, item in expected_source_runtime.items() if "elf_machine" in item)
-            require(required <= filtered_runtime.keys(), "OCI filter removes a required source path or ELF")
-            expected_source_runtime = filtered_runtime
         declared_runtime, declared_debug = {}, {}
         for path in runtime_payload_layers:
             apply_layer(Path(path), declared_runtime)
