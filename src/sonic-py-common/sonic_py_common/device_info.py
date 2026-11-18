@@ -247,11 +247,11 @@ def get_cpo_data() -> Optional[dict]:
     try:
         with open(cpo_file, 'r') as f:
             cpo_data = json.loads(f.read())
-    except (json.JSONDecodeError, IOError, TypeError, ValueError):
-        # Handle any file reading and JSON parsing errors
+        _normalize_cpo_data(cpo_data)
+    except (json.JSONDecodeError, IOError, TypeError, ValueError, KeyError):
+        # Handle file reading, JSON parsing and topology normalization errors.
         return None
 
-    _normalize_cpo_data(cpo_data)
     return cpo_data
 
 
