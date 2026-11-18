@@ -3,6 +3,8 @@ name: Bazel Rust supervisor
 on:
   pull_request:
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
       - .github/workflows/bazel-supervisor-rust.yml
       - .bazelrc
       - .bazelversion
@@ -20,6 +22,8 @@ on:
   push:
     branches: [master]
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
       - .github/workflows/bazel-supervisor-rust.yml
       - .bazelrc
       - .bazelversion
@@ -60,7 +64,9 @@ jobs:
             debian_arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
-    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     env:
       BAZEL: tools/bazel/ci/libteam_draft_bazel.sh
     defaults:
@@ -76,8 +82,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - uses: ./.github/actions/bazel-post-job-cleanup
+        id: bazel_cleanup_register
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -118,6 +130,7 @@ jobs:
           git diff --exit-code
 
       - name: Audit and test source runtime and debug packages
+        id: rust_packages
         env:
           MACHINE: ${{ matrix.machine }}
           BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
@@ -146,6 +159,7 @@ jobs:
           git diff --exit-code
 
       - name: Retain source and installed-package evidence
+        id: bazel_upload_rust_packages
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -153,3 +167,8 @@ jobs:
           path: artifacts/supervisor-rust/
           if-no-files-found: error
           retention-days: 14
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts

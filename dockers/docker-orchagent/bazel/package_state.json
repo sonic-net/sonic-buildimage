@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "apt_lock_sha256": "689fbb8eca5647f6ff1f78e2a545e778ec1d97acd29571c5d30802db703d0d49",
+  "apt_lock_sha256": "06d17b5bc5dbb01e0d1ebd313dd47bae87c9104bae290f5cb6c64f24dcee6a12",
   "entries": [
     {
       "path": "etc/alternatives/traceroute6",

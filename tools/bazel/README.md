@@ -163,8 +163,8 @@ When returning to Make, the cache loader must replace the Bazel archive even if
 the destination already exists. The shared bridge requests a staged restore of
 that archive from a matching Make cache; a failed extraction preserves the prior
 archive and leaves the newer stamp in place for a retry.
-Archives selected for Bazel cannot appear in `SONIC_PACKAGES_LOCAL`: the shared
-archive macro supplies `:latest`, while that Make mode expects versioned tags.
+The shared archive macro exports `:latest`. For images in `SONIC_PACKAGES_LOCAL`,
+the installer loads the archive and adds the `SONIC_IMAGE_VERSION` tag.
 The base/config-engine images and service images register their own Bazel
 producers. SWSS supports native AMD64 Trixie VS without ASAN. Other SWSS configurations
 keep the Make build even with `BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`.
@@ -409,13 +409,11 @@ BAZEL=bazel make -f slave.mk target/docker-example.gz \
   BUILD_WITH_BAZEL_WHEN_AVAILABLE=y
 ```
 
-Each independent Bazel recipe in the Make installer build uses a private local
-server and output directory. The build, its queries and its exports use the same
-server, including both archives of a grouped runtime/debug build. Exports resolve
-against the producing server's execution root. Parallel recipes can therefore
-build from the same checkout while sharing the configured repository, disk and
-remote caches. Temporary build state is removed after the recipe, including on
-failure. Size the action and memory limits for the number of concurrent builds.
+Make image recipes use the workspace's normal Bazel server and output links.
+Concurrent requests wait on that server's lock; each recipe does not start or
+shut down a private server. Grouped runtime/debug archives still build together,
+and unchanged exports retain their timestamps. P4RT's separate workspace and
+pinned Bazel version, and the kernel's isolated launcher, remain separate.
 
 Set `SONIC_BAZEL_REMOTE_CACHE` for a common endpoint across image, P4RT and
 kernel builds. The default is read-only. Set `SONIC_BAZEL_REMOTE_UPLOAD=y` to

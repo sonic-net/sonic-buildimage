@@ -141,7 +141,28 @@ def safe_text(value):
         require(not names & {"sig", "token", "access_token", "api_key", "key", "auth", "password", "secret"}, "sensitive-url-query")
 
 
-def safe_json(value):
+# Gazelle records public dependency names as object keys in these two lock maps.
+OTEL_GO_REPO_SPECS = ("moduleExtensions", "@@otelcol-contrib+//bazel:collector_deps.bzl%go_deps",
+                      "general", "generatedRepoSpecs")
+OTEL_GO_IMPORT_PATHS = OTEL_GO_REPO_SPECS + ("bazel_gazelle_go_repository_config", "attributes", "importpaths")
+GO_MODULE_NAMES = {
+    "com_github_aws_aws_sdk_go_v2_credentials": "github.com/aws/aws-sdk-go-v2/credentials",
+    "com_github_gsterjov_go_libsecret": "github.com/gsterjov/go-libsecret",
+}
+
+
+def public_go_module_name(lock_path, key, value):
+    importpath = GO_MODULE_NAMES.get(key)
+    if importpath is None:
+        return False
+    if lock_path == OTEL_GO_IMPORT_PATHS:
+        return value == importpath
+    return (lock_path == OTEL_GO_REPO_SPECS and isinstance(value, dict)
+            and value.get("repoRuleId") == "@@gazelle+//internal:go_repository.bzl%go_repository"
+            and isinstance(value.get("attributes"), dict) and value["attributes"].get("importpath") == importpath)
+
+
+def safe_json(value, *, lock_path=None):
     if isinstance(value, dict):
         for key, child in value.items():
             require(isinstance(key, str), "invalid-json-key")
@@ -151,9 +172,10 @@ def safe_json(value):
             require(normalized not in DIAGNOSTIC_KEYS, "diagnostic-json-field")
             require(not normalized.endswith(("token", "tokens", "password", "passwords", "secret", "secrets",
                                              "credential", "credentials", "authorization", "apikey", "privatekey",
-                                             "accesskey", "secretkey", "cookie", "cookies")), "credential-json-field")
+                                             "accesskey", "secretkey", "cookie", "cookies"))
+                    or public_go_module_name(lock_path, key, child), "credential-json-field")
             safe_text(key)
-            safe_json(child)
+            safe_json(child, lock_path=None if lock_path is None else (*lock_path, key))
     elif isinstance(value, list):
         for child in value:
             safe_json(child)
@@ -217,10 +239,34 @@ def dependency_json(value, kind):
                 require(set(action) == {"runner", "cache_hit"}, "invalid-cache-action")
                 require(isinstance(action["cache_hit"], bool), "invalid-cache-hit")
                 require(action["runner"] is None or isinstance(action["runner"], str) and re.fullmatch(r"[A-Za-z0-9_. -]{1,80}", action["runner"]), "invalid-cache-runner")
-    safe_json(value)
+    safe_json(value, lock_path=() if kind == "lock" else None)
 
 
-def bep_summary(lines, partial=False):
+def bep_action_summary(value):
+    """Keep only typed action/cache counts from Bazel's structured metrics."""
+    require(isinstance(value, dict), "missing-bep-action-summary")
+    executed = value.get("actionsExecuted", 0)
+    if isinstance(executed, str) and re.fullmatch(r"0|[1-9][0-9]*", executed):
+        executed = int(executed)
+    executed = integer(executed)
+    statistics = value.get("actionCacheStatistics")
+    require(isinstance(statistics, dict), "missing-bep-action-cache-statistics")
+    hits = integer(statistics.get("hits", 0))
+    records = value.get("runnerCount")
+    require(isinstance(records, list) and records, "missing-bep-runner-counts")
+    runners = {}
+    for record in records:
+        require(isinstance(record, dict) and set(record) <= {"name", "count", "execKind"},
+                "invalid-bep-runner-record")
+        name = record.get("name")
+        require(isinstance(name, str) and re.fullmatch(r"[A-Za-z0-9_. -]{1,80}", name)
+                and name not in runners, "invalid-or-duplicate-bep-runner")
+        runners[name] = integer(record.get("count", 0))
+    require("total" in runners, "missing-bep-runner-total")
+    return {"actions_executed": executed, "action_cache_hits": hits, "runners": runners}
+
+
+def bep_summary(lines, partial=False, *, include_action_summary=False):
     result = {"event_count": 0, "command": None, "bazel_version": None, "targets": {}, "tests": {}, "finished": None, "truncated": False}
     for raw in lines:
         try:
@@ -260,6 +306,11 @@ def bep_summary(lines, partial=False):
             code = finished.get("exitCode", {}).get("code", 0 if success else None)
             require(code is None or isinstance(code, int), "invalid-exit-code")
             result["finished"] = {"success": success, "exit_code": code}
+        elif "buildMetrics" in identifier and include_action_summary:
+            require("action_summary" not in result, "duplicate-bep-action-summary")
+            result["action_summary"] = bep_action_summary(event.get("buildMetrics", {}).get("actionSummary"))
+    if include_action_summary:
+        require("action_summary" in result, "missing-bep-action-summary")
     return result
 
 

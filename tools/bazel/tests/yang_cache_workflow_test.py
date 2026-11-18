@@ -124,6 +124,158 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             subprocess.run(["bash", "-euc", setup], cwd=work, env=dict(os.environ, HOME=str(home), BASH_ENV="/dev/null"), check=True)
             self.assertTrue((work / ".bazelrc.user").read_text().startswith(before))
 
+    def test_native_workflows_prepare_retained_submodules_consistently(self):
+        steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]["steps"]
+        prepare = next(step["run"] for step in steps
+                       if step.get("name") == "Prepare pinned source submodules")
+        selected = set()
+        for path in WORKFLOW.parent.glob("*.yml"):
+            for name, job in yaml.safe_load(path.read_text())["jobs"].items():
+                for index, step in enumerate(job.get("steps", [])):
+                    command = step.get("run", "")
+                    if "submodule update --init --checkout -- src/sonic-sysmgr/gnoi" in command:
+                        self.assertEqual(command, prepare)
+                    elif command != "bash tools/bazel/ci/prepare_image_submodules.sh":
+                        continue
+                    with self.subTest(workflow=path.name, job=name):
+                        self.assertTrue(any(
+                            earlier.get("uses", "").startswith("actions/checkout@")
+                            for earlier in job["steps"][:index]
+                        ))
+                        selection = next((i for i, earlier in enumerate(job["steps"])
+                                          if earlier.get("name") == "Select the reviewed source and registry"), None)
+                        if selection is not None:
+                            self.assertLess(selection, index)
+                        selected.add((path.name, name))
+        self.assertEqual(selected, {
+            ("bazel-oci.yml", name) for name in
+            ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "checks", "mgmt_framework_native", "radv_native")
+        } | {
+            ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+            ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),
+            ("bazel-libteam.yml", "native"), ("bazel-sysmgr.yml", "native"),
+        })
+
+    def test_preparation_restores_pins_without_cloning_unrelated_modules_or_losing_edits(self):
+        _, build = self.steps()
+        command = build.strip().splitlines()[-1]
+        self.assertEqual(command, "git diff --exit-code HEAD")
+        steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]["steps"]
+        prepare = next(step["run"] for step in steps
+                       if step.get("name") == "Prepare pinned source submodules")
+
+        def git(directory, *arguments):
+            return subprocess.run(
+                ["git", "-C", str(directory), "-c", "user.name=YANG Test",
+                 "-c", "user.email=yang-test@example.invalid", *arguments],
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+
+        with tempfile.TemporaryDirectory(prefix="yang source check ") as temporary:
+            root = Path(temporary)
+            nested_source = root / "nested source"
+            nested_source.mkdir()
+            git(nested_source, "init", "--quiet")
+            (nested_source / "nested.txt").write_text("previous nested source\n")
+            git(nested_source, "add", ".")
+            git(nested_source, "commit", "--quiet", "-m", "Previous nested pin")
+            nested_previous = git(nested_source, "rev-parse", "HEAD")
+            (nested_source / "nested.txt").write_text("current nested source\n")
+            git(nested_source, "commit", "--quiet", "-am", "Current nested pin")
+            nested_expected = git(nested_source, "rev-parse", "HEAD")
+            source = root / "pins source"
+            source.mkdir()
+            git(source, "init", "--quiet")
+            (source / "source.txt").write_text("previous job\n")
+            git(source, "-c", "protocol.file.allow=always", "submodule", "add",
+                str(nested_source), "nested")
+            git(source / "nested", "checkout", "--detach", nested_previous)
+            git(source, "add", ".")
+            git(source, "commit", "--quiet", "-m", "Previous pin")
+            previous = git(source, "rev-parse", "HEAD")
+            (source / "source.txt").write_text("current pin\n")
+            git(source / "nested", "checkout", "--detach", nested_expected)
+            git(source, "commit", "--quiet", "-am", "Current pin")
+
+            work = root / "checkout"
+            component = work / "src/sonic-yang-models"
+            component.mkdir(parents=True)
+            tracked = component / "setup.py"
+            tracked.write_text("original source\n")
+            git(work, "init", "--quiet")
+            git(work, "-c", "protocol.file.allow=always", "submodule", "add",
+                str(source), "src/sonic-p4rt/sonic-pins")
+            for name in ("src/sonic-sysmgr/gnoi", "src/unused"):
+                git(work, "-c", "protocol.file.allow=always", "submodule", "add",
+                    str(source), name)
+            git(work, "add", ".")
+            git(work, "commit", "--quiet", "-m", "Distribution and pinned source")
+            for name in ("src/sonic-sysmgr/gnoi", "src/unused"):
+                git(work, "submodule", "deinit", "--", name)
+            git(work, "config", "submodule.src/unused.url", str(source))
+            git(work / "src/sonic-p4rt/sonic-pins", "checkout", "--detach", previous)
+            git(work / "src/sonic-p4rt/sonic-pins", "-c", "protocol.file.allow=always",
+                "submodule", "update", "--init", "--", "nested")
+
+            (source / "source.txt").write_text("newly pinned source\n")
+            git(source, "commit", "--quiet", "-am", "New pin absent from retained clone")
+            expected = git(source, "rev-parse", "HEAD")
+            git(work, "update-index", "--cacheinfo",
+                "160000," + expected + ",src/sonic-p4rt/sonic-pins")
+            git(work, "commit", "--quiet", "-m", "Update the recorded pin")
+            baseline = subprocess.run(
+                ["git", "diff", "--exit-code"], cwd=component,
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(baseline.returncode, 0)
+            self.assertIn("Subproject commit", baseline.stdout)
+
+            environment = dict(os.environ, GITHUB_WORKSPACE=str(work),
+                               GIT_ALLOW_PROTOCOL="file", BASH_ENV="/dev/null")
+            for attempt in range(2):
+                prepared = subprocess.run(
+                    ["bash", "-euc", prepare], cwd=work, env=environment,
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(prepared.returncode, 0,
+                                 f"Attempt {attempt}: {prepared.stdout}{prepared.stderr}")
+                self.assertEqual(git(work / "src/sonic-p4rt/sonic-pins",
+                                     "rev-parse", "HEAD"), expected)
+                self.assertEqual(git(work / "src/sonic-p4rt/sonic-pins/nested",
+                                     "rev-parse", "HEAD"), nested_expected)
+                self.assertTrue((work / "src/sonic-sysmgr/gnoi/.git").is_file())
+                self.assertFalse((work / "src/unused/.git").exists())
+
+            def check():
+                return subprocess.run(
+                    ["bash", "-euc", command], cwd=component,
+                    env=dict(os.environ, BASH_ENV="/dev/null"),
+                    capture_output=True, text=True, check=False,
+                )
+
+            clean = check()
+            self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+            tracked.write_text("changed source\n")
+            for staged in (False, True):
+                with self.subTest(staged=staged):
+                    if staged:
+                        git(work, "add", "src/sonic-yang-models/setup.py")
+                    changed = check()
+                    self.assertNotEqual(changed.returncode, 0)
+                    self.assertIn("changed source", changed.stdout)
+
+            pins = work / "src/sonic-p4rt/sonic-pins"
+            git(pins, "checkout", "--detach", previous)
+            dirty = pins / "source.txt"
+            dirty.write_text("uncommitted source to preserve\n")
+            rejected = subprocess.run(
+                ["bash", "-euc", prepare], cwd=work, env=environment,
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("would be overwritten", rejected.stderr)
+            self.assertEqual(dirty.read_text(), "uncommitted source to preserve\n")
+
     def test_missing_or_duplicate_cache_settings_leave_local_rc_unchanged(self):
         setup, _ = self.steps()
         for settings in ("", "build --disk_cache=/disk\n", "build --disk_cache=/one\nbuild --disk_cache=/two\n"):

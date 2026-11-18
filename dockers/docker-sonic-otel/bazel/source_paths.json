@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "packages": {
+    "otelcol-contrib": {
+      "required_paths": [
+        "usr/bin/otelcol-contrib",
+        "usr/lib/systemd/system/otelcol-contrib.service",
+        "etc/otelcol-contrib/config.yaml",
+        "etc/otelcol-contrib/otelcol-contrib.conf"
+      ]
+    }
+  }
+}

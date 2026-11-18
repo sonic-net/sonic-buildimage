@@ -992,6 +992,29 @@ class PublicArtifactsTest(unittest.TestCase):
         with self.assertRaises(artifacts.PublicArtifactError):
             artifacts.dependency_json(value, "lock")
 
+    def test_otel_go_module_names_in_gazelle_lock_maps(self):
+        for name, importpath in (
+                ("com_github_aws_aws_sdk_go_v2_credentials", "github.com/aws/aws-sdk-go-v2/credentials"),
+                ("com_github_gsterjov_go_libsecret", "github.com/gsterjov/go-libsecret")):
+            with self.subTest(module=name):
+                spec = {"repoRuleId": "@@gazelle+//internal:go_repository.bzl%go_repository",
+                        "attributes": {"importpath": importpath}}
+                imports = {name: importpath}
+                repos = {name: spec, "bazel_gazelle_go_repository_config": {"attributes": {"importpaths": imports}}}
+                value = lock()
+                value["moduleExtensions"]["@@otelcol-contrib+//bazel:collector_deps.bzl%go_deps"] = {
+                    "general": {"generatedRepoSpecs": repos}}
+                artifacts.dependency_json(value, "lock")
+
+                for mapping, field, bad in ((value, "facts", {name: importpath}), (imports, name, SENTINEL),
+                                            (spec, "repoRuleId", "unknown"), (spec["attributes"], "importpath", SENTINEL),
+                                            (spec["attributes"], "authorization", SENTINEL)):
+                    with self.subTest(field=field), mock.patch.dict(mapping, {field: bad}):
+                        with self.assertRaisesRegex(artifacts.PublicArtifactError, "credential-json-field"):
+                            artifacts.dependency_json(value, "lock")
+                with self.assertRaisesRegex(artifacts.PublicArtifactError, "credential-json-field"):
+                    artifacts.safe_json(value)
+
     def test_installation_job_token_in_dependency_data_blocks_upload(self):
         unsafe_lock = lock()
         unsafe_lock["facts"] = {"fixture": SYNTHETIC_INSTALLATION_TOKEN}

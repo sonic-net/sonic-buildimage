@@ -132,6 +132,18 @@ class CacheReuseTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.collect()
 
+    def test_explicit_noop_allows_empty_spawns_only_with_complete_successful_bep(self):
+        self.log.write_text('')
+        result = cache_reuse.collect(self.log, self.events, self.target, allow_empty=True)
+        self.assertEqual((result['action_count'], result['cache_hit_count'], result['executed_count']), (0, 0, 0))
+        self.assertEqual(result['actions'], [])
+        with self.assertRaises(ValueError): self.collect()
+        self.build_events[-1].pop('lastMessage')
+        self.records = []
+        self.write()
+        with self.assertRaises(ValueError):
+            cache_reuse.collect(self.log, self.events, self.target, allow_empty=True)
+
     def test_invalid_execution_fields_fail_without_echoing_private_values(self):
         """Reject unsafe labels, false cache claims and failed spawns."""
         changes = (

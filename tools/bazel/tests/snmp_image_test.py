@@ -97,7 +97,7 @@ class SnmpImageBuildTest(unittest.TestCase):
         self.assertIn("snmp_image.py incremental ", build_step["run"])
         upload = next(step for step in archive if step.get("name") == "Retain SNMP archives and build evidence")
         publish = next(step for step in archive if step.get("id") == "snmp_public")
-        self.assertIn('mktemp -d "$RUNNER_TEMP/snmp.XXXXXXXX"', build_step["run"])
+        self.assertIn('mktemp -d "$SONIC_BAZEL_JOB_TEMP/snmp.XXXXXXXX"', build_step["run"])
         self.assertEqual(publish["env"]["snmp_artifacts"], "${{ steps.snmp_build.outputs.directory }}")
         self.assertIn("steps.snmp_build.outputs.directory != ''", publish["if"])
         self.assertEqual(upload["with"]["path"], "${{ steps.snmp_build.outputs.directory }}/public")
@@ -158,7 +158,8 @@ class SnmpArtifactsWorkflowTest(unittest.TestCase):
             command.chmod(0o755)
         result = subprocess.run(
             ["bash", "-e", "-o", "pipefail", "-c", self.build["run"]],
-            env=dict(os.environ, RUNNER_TEMP=str(temporary), GITHUB_OUTPUT=str(output),
+            env=dict(os.environ, RUNNER_TEMP=str(temporary), SONIC_BAZEL_JOB_TEMP=str(temporary),
+                     GITHUB_OUTPUT=str(output),
                      BAZEL="fixture-bazel", PATH=str(commands) + os.pathsep + os.environ["PATH"]),
             text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -183,7 +184,7 @@ class SnmpArtifactsWorkflowTest(unittest.TestCase):
             self.assertEqual((first / "public/docker-snmp.gz").read_bytes(), payload.read_bytes())
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
-                env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(first)),
+                env=dict(os.environ, SONIC_BAZEL_JOB_TEMP=str(root), SNMP_ARTIFACTS=str(first)),
                 text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertFalse(first.exists())
@@ -191,11 +192,11 @@ class SnmpArtifactsWorkflowTest(unittest.TestCase):
             self.assertEqual(list(second.iterdir()), [])
 
     def test_cleanup_follows_successful_upload_and_removes_only_the_allocated_directory(self):
-        upload = next(step for step in self.steps if step.get("id") == "snmp_upload")
+        upload = next(step for step in self.steps if step.get("id") == "bazel_upload_snmp_public")
         self.assertLess(self.steps.index(upload), self.steps.index(self.cleanup))
         self.assertEqual(self.cleanup["if"],
                          "always() && steps.snmp_build.outputs.directory != '' "
-                         "&& steps.snmp_upload.outcome == 'success'")
+                         "&& steps.bazel_upload_snmp_public.outcome == 'success'")
         with tempfile.TemporaryDirectory(prefix="snmp artifacts ") as temporary:
             root = Path(temporary)
             selected = self.allocate_directory(root)
@@ -205,7 +206,7 @@ class SnmpArtifactsWorkflowTest(unittest.TestCase):
             (other / "keep").write_bytes(b"another job")
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
-                env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(selected)),
+                env=dict(os.environ, SONIC_BAZEL_JOB_TEMP=str(root), SNMP_ARTIFACTS=str(selected)),
                 text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertFalse(selected.exists())
@@ -224,7 +225,7 @@ class SnmpArtifactsWorkflowTest(unittest.TestCase):
                 with self.subTest(directory=directory):
                     result = subprocess.run(
                         ["bash", "-e", "-o", "pipefail", "-c", self.cleanup["run"]],
-                        env=dict(os.environ, RUNNER_TEMP=str(root), SNMP_ARTIFACTS=str(directory)),
+                        env=dict(os.environ, SONIC_BAZEL_JOB_TEMP=str(root), SNMP_ARTIFACTS=str(directory)),
                         text=True, capture_output=True)
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn("Refusing to remove", result.stderr)

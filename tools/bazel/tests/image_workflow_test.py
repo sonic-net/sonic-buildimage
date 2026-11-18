@@ -18,6 +18,86 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class VerificationWorkflowTest(unittest.TestCase):
+    def test_image_jobs_restore_populated_submodules_on_reused_checkouts(self):
+        script = Path("tools/bazel/ci/prepare_image_submodules.sh")
+        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        for job in ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive"):
+            self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"][job]["steps"]])
+
+        env = dict(os.environ, GIT_ALLOW_PROTOCOL="file")
+
+        def git(repo, *args):
+            return subprocess.check_output(
+                ["git", "-c", "user.name=Fixture", "-c", "user.email=ci@example.org", *args],
+                cwd=repo, env=env, text=True, stderr=subprocess.PIPE,
+            ).strip()
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, parent, checkout = (root / name for name in ("source", "parent", "checkout"))
+            git(root, "init", "-q", str(source))
+            git(root, "init", "-q", str(parent))
+            (source / "input").write_text("old\n")
+            git(source, "add", "input")
+            git(source, "commit", "-qm", "old")
+            old = git(source, "rev-parse", "HEAD")
+            (source / "input").write_text("pinned\n")
+            git(source, "commit", "-qam", "pinned")
+            pinned = git(source, "rev-parse", "HEAD")
+
+            # Pin a nested copy of the original repository before the top-level
+            # source gains a submodule of its own.
+            nested = root / "nested source"
+            git(root, "clone", "-q", str(source), str(nested))
+            git(source, "submodule", "add", "-q", str(nested), "nested module")
+            git(source, "commit", "-qm", "pin nested module")
+            nested_pin = pinned
+            pinned = git(source, "rev-parse", "HEAD")
+
+            gnoi, pins, unused = "src/sonic-sysmgr/gnoi", "src/sonic-p4rt/sonic-pins", "unused module"
+            for path in (gnoi, pins, unused):
+                git(parent, "submodule", "add", "-q", str(source), path)
+            git(parent, "commit", "-qm", "pin submodules")
+            git(root, "clone", "-q", str(parent), str(checkout))
+            git(checkout, "submodule", "init", "--", unused)
+
+            def prepare(check=True):
+                return subprocess.run(["bash", ROOT / script], cwd=checkout, env=env,
+                                      capture_output=True, text=True, check=check)
+
+            prepare()
+            self.assertEqual(git(checkout / gnoi, "rev-parse", "HEAD"), pinned)
+            self.assertFalse((checkout / pins / ".git").exists())
+            self.assertFalse((checkout / unused / ".git").exists())
+
+            git(checkout, "submodule", "update", "--init", "--", pins)
+            git(checkout / pins, "checkout", "-q", old)
+            git(checkout, "reset", "--hard", "HEAD")
+            self.assertIn(pins, git(checkout, "diff", "--name-only", "--ignore-submodules=none", "HEAD"))
+            # A populated worktree can also lose its local registration.
+            git(checkout, "config", "--remove-section", f"submodule.{pins}")
+            prepare()
+            self.assertEqual(git(checkout / pins, "rev-parse", "HEAD"), pinned)
+            self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
+            self.assertFalse((checkout / unused / ".git").exists())
+
+            git(checkout / pins, "submodule", "update", "--init", "--", "nested module")
+            retained = checkout / pins / "nested module"
+            git(retained, "checkout", "-q", old)
+            git(checkout / pins, "config", "--remove-section", "submodule.nested module")
+            prepare()
+            self.assertEqual(git(retained, "rev-parse", "HEAD"), nested_pin)
+            self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
+
+            # Already-pinned local edits remain visible to the strict build check.
+            (checkout / gnoi / "input").write_text("local edit\n")
+            prepare()
+            self.assertIn(gnoi, git(checkout, "diff", "--name-only", "--ignore-submodules=none", "HEAD"))
+            git(checkout / pins, "checkout", "-q", old)
+            (checkout / pins / "input").write_text("conflicting edit\n")
+            self.assertNotEqual(prepare(check=False).returncode, 0)
+            self.assertEqual((checkout / pins / "input").read_text(), "conflicting edit\n")
+
     def run_sysmgr_public_evidence(self, directory):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
         step = next(step for step in workflow["jobs"]["archive"]["steps"]
@@ -74,7 +154,27 @@ class VerificationWorkflowTest(unittest.TestCase):
         archive = jobs["archive"]
         gate = jobs["eventd_runtime"]
         self.assertEqual(gate["name"], "Container archive (AMD64)")
-        self.assertIn("archive", gate["needs"])
+        self.assertEqual(gate["needs"], [
+            "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
+            "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
+            "otel_runtime", "dash_engine_runtime",
+        ])
+        self.assertEqual(jobs["otel_runtime"]["needs"], "otel_archive")
+        dash = jobs["dash_engine_archive"]
+        self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
+        self.assertEqual(dash["timeout-minutes"], 360)
+        self.assertEqual(shlex.split(dash["env"]["SONIC_CONTAINER_BAZEL_OPTIONS"]), [
+            "--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache",
+            "--experimental_build_event_upload_strategy=local",
+        ])
+        self.assertNotIn("needs", dash)
+        self.assertEqual(jobs["dash_engine_runtime"]["needs"], "dash_engine_archive")
+        self.assertEqual(jobs["dash_engine_runtime"]["runs-on"], "ubuntu-24.04")
+        self.assertTrue(any("dash_engine_loaded.py" in step.get("run", "")
+                            for step in jobs["dash_engine_runtime"]["steps"]))
+        self.assertEqual(jobs["macsec_runtime"]["needs"], "archive")
+        self.assertTrue(any("macsec_loaded.py" in step.get("run", "")
+                            for step in jobs["macsec_runtime"]["steps"]))
         self.assertEqual(gate["if"], "always() && (" + archive["if"] + ")")
         build = next(step for step in archive["steps"] if step.get("id") == "eventd_build")
         self.assertEqual(build["if"], "matrix.architecture == 'amd64'")
@@ -97,6 +197,13 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertTrue(any("eventd_loaded.py" in step.get("run", "") for step in gate["steps"]))
         guard = gate["steps"][0]
         self.assertEqual(guard["env"]["JOB_RESULTS"], "${{ toJSON(needs.*.result) }}")
+        self.assertNotIn("continue-on-error", guard)
+        self.assertNotIn("if", guard)
+        for malformed_or_empty in ("[]", "null", "not-json"):
+            with self.subTest(results=malformed_or_empty):
+                result = subprocess.run(["bash", "-ec", guard["run"]], capture_output=True,
+                                        env=dict(os.environ, JOB_RESULTS=malformed_or_empty))
+                self.assertNotEqual(result.returncode, 0)
         for position in range(len(gate["needs"])):
             for status in ("success", "failure", "skipped", "cancelled"):
                 with self.subTest(job=gate["needs"][position], status=status):
@@ -133,7 +240,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -148,7 +255,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(set(scratch.glob("pre-sysmgr-artifacts.*")), set(destinations))
@@ -158,7 +265,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
@@ -180,7 +288,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             for value in ("first", "second"):
@@ -225,7 +333,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 return subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory)),
+                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
                 )
 
             destinations = []
@@ -292,7 +400,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                     cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch)),
+                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertFalse(artifacts.exists())
@@ -310,7 +418,8 @@ class VerificationWorkflowTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
                 cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing")),
+                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
+                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
@@ -522,8 +631,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="image configs ") as temporary:
             directory = Path(temporary)
             (directory / "artifacts/vs").mkdir(parents=True)
-            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py",
-                           "tools/bazel/private_server.sh"):
+            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py"):
                 destination = directory / source
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / source, destination)
@@ -537,16 +645,15 @@ class VerificationWorkflowTest(unittest.TestCase):
                 args = sys.argv[1:]
                 with Path(os.environ['CALLS']).open('a') as output:
                     output.write(json.dumps(args) + '\\n')
-                base = Path(next(arg.split('=', 1)[1] for arg in args if arg.startswith('--output_base=')))
-                command = next(arg for arg in args if arg in ('test', 'build', 'info', 'cquery', 'shutdown'))
+                command = args[0]
                 config = 'dash' if '--config=syncd-dash' in args else 'default'
-                execution_root = base / 'execroot/main'
-                logs = execution_root / 'bazel-out' / config / 'testlogs'
-                if command == 'info':
-                    sys.exit('info cannot resolve apparent Bzlmod platform labels')
+                logs = Path('testlogs') / config
+                logs.mkdir(parents=True, exist_ok=True)
+                link = Path('bazel-testlogs')
+                link.unlink(missing_ok=True)
+                link.symlink_to(logs, target_is_directory=True)
                 if command == 'build':
-                    (execution_root / 'bazel-out').mkdir(parents=True, exist_ok=True)
-                    (execution_root / 'policy.json').write_text(config)
+                    Path('policy.json').write_text(config)
                 if command == 'cquery':
                     print('policy.json')
                 if command == 'test':
@@ -569,7 +676,7 @@ class VerificationWorkflowTest(unittest.TestCase):
 
     def check_static_workflow(self, directory, script, bazel, calls, swss_exit, syncd_exit):
         calls.unlink(missing_ok=True)
-        for name in ("artifacts/vs/swss-images", "artifacts/vs/syncd-p4-images"):
+        for name in ("testlogs", "artifacts/vs/swss-images", "artifacts/vs/syncd-p4-images"):
             shutil.rmtree(directory / name, ignore_errors=True)
         outputs = [directory / "artifacts/vs" / (family + "-installed-images-policy.json")
                    for family in ("swss", "syncd")]

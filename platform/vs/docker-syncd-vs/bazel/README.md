@@ -75,7 +75,7 @@ bazel build --config=syncd-dash \
 | FIPS OpenSSH client | `@sonic_fips//openssh:openssh_client_pkg` |
 | libnl development files | Source-owned headers, static libraries and link/pkg-config files matching the two Make development packages. |
 | PI | `@p4lang_pi//:runtime` |
-| BMv2 | `@p4lang_bmv2//:runtime` |
+| BMv2 | `@p4lang_bmv2//:p4lang-bmv2.runtime` |
 | P4C | `@p4c//:p4c_pkg` |
 | DASH SAI | `@sonic_dash//:runtime` |
 

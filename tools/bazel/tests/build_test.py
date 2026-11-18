@@ -65,6 +65,17 @@ else:
             return build.collect_archives(self.workspace, self.directory, self.receipt, self.targets,
                                           bazel=str(self.bazel), options=self.options)
 
+    def test_layout_and_lock_can_be_built_with_the_archives(self):
+        extra = ["//image:layout", "@infra//apt:lock"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            paths = build.collect_archives(self.workspace, self.directory, self.receipt,
+                                          self.targets, bazel=str(self.bazel),
+                                          additional_targets=extra)
+        self.assertEqual(set(paths), set(self.targets))
+        commands = [command["argv"] for command in self.receipt["commands"]]
+        self.assertEqual(commands[0][-4:], [*self.targets.values(), *extra])
+        self.assertEqual([query[-1] for query in commands[1:]], list(self.targets.values()))
+
     def test_two_consumers_keep_labels_options_bytes_and_hash_receipts(self):
         """Export unrelated targets with correct evidence and preserve unchanged mtimes."""
         paths = self.collect()

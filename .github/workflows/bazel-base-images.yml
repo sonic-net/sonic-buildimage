@@ -40,6 +40,7 @@ jobs:
     timeout-minutes: 120
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -61,6 +62,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Stage cleanup independently of the reviewed source checkout
+        run: |
+          set -euo pipefail
+          controller=target/ci-bazel-cleanup-controller
+          mkdir -p "$controller/.github/actions" "$controller/tools/bazel"
+          cp -R .github/actions/bazel-post-job-cleanup "$controller/.github/actions/"
+          cp -R tools/bazel/ci "$controller/tools/bazel/"
+      - uses: ./target/ci-bazel-cleanup-controller/.github/actions/bazel-post-job-cleanup
+        id: bazel_cleanup_register
+        env:
+          SONIC_BAZEL_CLEANUP_CONTROLLER: ${{ github.workspace }}/target/ci-bazel-cleanup-controller
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -89,14 +101,19 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 -B tools/bazel/ci/base_review.py
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
 
       - name: Check clean dependency inputs
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test ! -e MODULE.bazel.lock
       - name: Build and inspect runtime images and matching symbols
+        id: base_images_build
         env:
           # Bazel records its client environment in retained build events.
           BAZELISK_GITHUB_TOKEN: ""
@@ -124,6 +141,7 @@ jobs:
             --output artifacts/base-images/config-engine-rebuild.json
           git diff --exit-code
       - name: Retain images, symbols and build evidence
+        id: bazel_upload_base_images_build
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -139,6 +157,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: |
+          cd target/ci-bazel-cleanup-controller
+          python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   runtime:
     name: Run the installed base image (${{ matrix.architecture }})

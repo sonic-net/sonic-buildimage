@@ -225,7 +225,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
     name: Container archive (${{ matrix.name }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.architecture == 'amd64' && 300 || 60 }}
+    timeout-minutes: ${{ matrix.architecture == 'amd64' && 360 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -292,8 +292,11 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -528,6 +531,7 @@ jobs:
             --github-output "$GITHUB_OUTPUT"
 
       - name: Upload public archive evidence
+        id: bazel_upload_public_artifacts
         if: always() && steps.public_artifacts.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -561,6 +565,7 @@ jobs:
         run: python3 -B tools/bazel/ci/eventd_image.py publish --artifacts artifacts/eventd
 
       - name: Upload Eventd archives and public evidence
+        id: bazel_upload_eventd_public
         if: always() && steps.eventd_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -587,7 +592,7 @@ jobs:
           # outside the checkout while the source-only image fence runs.
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-sysmgr-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-sysmgr-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed archive evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -640,6 +645,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain Sysmgr image artifacts and evidence
+        id: bazel_upload_sysmgr_public
         if: always() && matrix.architecture == 'amd64' && steps.sysmgr_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -669,7 +675,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-swss-layer-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-swss-layer-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed Sysmgr evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -678,7 +684,7 @@ jobs:
         id: snmp_build
         if: matrix.architecture == 'amd64'
         run: |
-          snmp_artifacts=$(mktemp -d "$RUNNER_TEMP/snmp.XXXXXXXX")
+          snmp_artifacts=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/snmp.XXXXXXXX")
           printf 'directory=%s\n' "$snmp_artifacts" >> "$GITHUB_OUTPUT"
           python3 -B tools/bazel/ci/snmp_image.py build --bazel "$BAZEL" --artifacts "$snmp_artifacts"
           python3 -B tools/bazel/ci/snmp_image.py validate --artifacts "$snmp_artifacts"
@@ -691,7 +697,7 @@ jobs:
           snmp_artifacts: ${{ steps.snmp_build.outputs.directory }}
         run: python3 -B tools/bazel/ci/snmp_image.py publish --artifacts "$snmp_artifacts"
       - name: Retain SNMP archives and build evidence
-        id: snmp_upload
+        id: bazel_upload_snmp_public
         if: always() && steps.snmp_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -753,6 +759,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain FRR images and reviewed build evidence
+        id: bazel_upload_frr_public
         if: always() && steps.frr_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -826,6 +833,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain Teamd images and reviewed build evidence
+        id: bazel_upload_teamd_public
         if: always() && matrix.architecture == 'amd64' && steps.teamd_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -917,6 +925,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PY
       - name: Retain reviewed artifacts and receipts
+        id: bazel_upload_swss_layer_public
         if: always() && matrix.architecture == 'amd64' && steps.swss_layer_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -946,7 +955,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-sflow-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-sflow-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed SWSS layer evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -1032,6 +1041,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain sFlow archives and source evidence
+        id: bazel_upload_sflow_public
         if: always() && matrix.architecture == 'amd64' && steps.sflow_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1067,7 +1077,7 @@ jobs:
         run: |
           if [[ -d artifacts ]]; then
             umask 077
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-orchagent-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-orchagent-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
             printf 'Completed sFlow evidence preserved at %s/artifacts\n' "$preserved"
           fi
@@ -1091,8 +1101,8 @@ jobs:
           set -euo pipefail
           rc_flags=(--nosystem_rc --nohome_rc --noworkspace_rc "--bazelrc=$PWD/tools/bazel/common.bazelrc")
           bazel "${rc_flags[@]}" shutdown >/dev/null 2>&1 || true
-          owner_output="$(mktemp -d "$RUNNER_TEMP/orchagent-owner-output.XXXXXXXX")"
-          owner_bazel="$(mktemp "$RUNNER_TEMP/orchagent-owner-bazel.XXXXXXXX")"
+          owner_output="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-output.XXXXXXXX")"
+          owner_bazel="$(mktemp "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-bazel.XXXXXXXX")"
           export OWNER_OUTPUT="$owner_output"
           owner_jvm="--host_jvm_args=-Xmx6g"
           cleanup_owner_output() {
@@ -1200,6 +1210,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYORCH
       - name: Retain Orchagent archives and source evidence
+        id: bazel_upload_orchagent_public
         if: always() && matrix.architecture == 'amd64' && steps.orchagent_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1285,6 +1296,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - name: Upload Database archives and public evidence
+        id: bazel_upload_database_public_evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && matrix.architecture == 'amd64' && steps.database_public_evidence.outcome == 'success'
         with:
@@ -1309,7 +1321,7 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           if [[ -d artifacts ]]; then
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-lldp-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-lldp-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
           fi
 
@@ -1376,6 +1388,7 @@ jobs:
           (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           PYCODE
       - name: Retain images and reviewed build evidence
+        id: bazel_upload_lldp_public
         if: always() && steps.lldp_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1402,7 +1415,7 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           if [[ -d artifacts ]]; then
-            preserved="$(mktemp -d "$RUNNER_TEMP/pre-mux-artifacts.XXXXXXXX")"
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-mux-artifacts.XXXXXXXX")"
             mv artifacts "$preserved/artifacts"
           fi
 
@@ -1455,6 +1468,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - name: Retain MUX images and evidence
+        id: bazel_upload_mux_public
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && matrix.architecture == 'amd64' && steps.mux_public.outcome == 'success'
         with:
@@ -1474,8 +1488,97 @@ jobs:
           retention-days: 14
           compression-level: 1
 
+      - name: Preserve completed Orchagent evidence before MACsec acceptance
+        if: matrix.architecture == 'amd64'
+        run: |
+          if [[ -d artifacts ]]; then
+            umask 077
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-macsec-artifacts.XXXXXXXX")"
+            mv artifacts "$preserved/artifacts"
+            printf 'Completed Orchagent evidence preserved at %s/artifacts\n' "$preserved"
+          fi
+
+      - name: Build MACsec runtime and debug images from source owners
+        id: macsec_build
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+          BAZELISK_GITHUB_TOKEN: ""
+        run: python3 -B tools/bazel/ci/macsec_image.py build --bazel "$BAZEL" --artifacts artifacts/macsec
+      - name: Validate MACsec installed payloads and matching symbols
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/macsec_image.py validate --artifacts artifacts/macsec
+      - name: Verify MACsec no-op, configuration edit and restored archives
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          python3 -B tools/bazel/ci/macsec_image.py incremental --bazel "$BAZEL" --artifacts artifacts/macsec
+          git diff --exit-code
+      - name: Review public MACsec evidence
+        id: macsec_public
+        if: always() && matrix.architecture == 'amd64' && (steps.macsec_build.outcome == 'success' || steps.macsec_build.outcome == 'failure')
+        run: |
+          python3 - <<'PYMACSEC'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summary
+          root = Path('artifacts/macsec')
+          root.mkdir(parents=True, exist_ok=True)
+          if (root / 'build-receipt.json').exists():
+              receipt = json.loads((root / 'build-receipt.json').read_text())
+              public = {key: receipt[key] for key in ('status', 'architecture', 'revision', 'artifacts') if key in receipt}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          names = ['validation.json', 'action-audit.json', 'incremental.json', 'runtime-apt.json', 'debug-apt.json']
+          names += [path.name for path in root.glob('*.validation.json')]
+          names += [path.name for path in root.glob('*.packages.json')]
+          for name in names:
+              path = root / name
+              if path.exists():
+                  safe_json(json.loads(path.read_text()))
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          summary = {str(path.relative_to(root)): bep_summary(path.read_text().splitlines(), partial=True)
+                     for path in root.rglob('*events.json*')}
+          safe_json(summary)
+          (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          PYMACSEC
+      - name: Retain MACsec archives and reviewed evidence
+        id: bazel_upload_macsec_public
+        if: always() && matrix.architecture == 'amd64' && steps.macsec_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: macsec-image-amd64-${{ github.sha }}
+          path: |
+            artifacts/macsec/*.gz
+            artifacts/macsec/*.tar
+            artifacts/macsec/*.status
+            artifacts/macsec/*.packages.json
+            artifacts/macsec/*.validation.json
+            artifacts/macsec/validation.json
+            artifacts/macsec/public-receipt.json
+            artifacts/macsec/runtime-apt.json
+            artifacts/macsec/debug-apt.json
+            artifacts/macsec/action-audit.json
+            artifacts/macsec/incremental.json
+            artifacts/macsec/build-summary.json
+            artifacts/macsec/MODULE.bazel.lock
+            artifacts/macsec/module-graph.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
       - name: Remove uploaded SNMP temporary artifacts
-        if: always() && steps.snmp_build.outputs.directory != '' && steps.snmp_upload.outcome == 'success'
+        if: always() && steps.snmp_build.outputs.directory != '' && steps.bazel_upload_snmp_public.outcome == 'success'
         env:
           SNMP_ARTIFACTS: ${{ steps.snmp_build.outputs.directory }}
         run: |
@@ -1485,13 +1588,163 @@ jobs:
           import shutil
 
           directory = Path(os.environ["SNMP_ARTIFACTS"])
-          temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+          temporary = Path(os.environ["SONIC_BAZEL_JOB_TEMP"]).resolve()
           if (not directory.is_absolute() or directory.is_symlink()
                   or directory.parent.resolve() != temporary
                   or not directory.name.startswith("snmp.")):
               raise ValueError("Refusing to remove an unexpected SNMP artifacts directory")
           shutil.rmtree(directory)
           PY
+
+      - name: Preserve completed archive evidence before DASH HA acceptance
+        if: matrix.architecture == 'amd64'
+        run: |
+          if [[ -d artifacts ]]; then
+            preserved="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/pre-dash-ha-artifacts.XXXXXXXX")"
+            mv artifacts "$preserved/artifacts"
+          fi
+
+      - name: Build DASH HA runtime and debug images
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          python3 -B tools/bazel/ci/dash_ha_image.py build --bazel "$BAZEL" --artifacts artifacts/dash-ha
+      - name: Validate DASH HA image contents and cache reuse
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          python3 -B tools/bazel/ci/dash_ha_image.py validate --artifacts artifacts/dash-ha
+          python3 -B tools/bazel/ci/dash_ha_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dash-ha
+      - name: Review DASH HA build evidence
+        id: dash_ha_public
+        if: always() && matrix.architecture == 'amd64'
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summary
+          root = Path('artifacts/dash-ha')
+          root.mkdir(parents=True, exist_ok=True)
+          if (root / 'build-receipt.json').exists():
+              receipt = json.loads((root / 'build-receipt.json').read_text())
+              public = {key: receipt[key] for key in ('status', 'architecture', 'revision', 'artifacts') if key in receipt}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          names = ['validation.json', 'action-audit.json', 'incremental.json', 'runtime-apt.json', 'debug-apt.json']
+          names += [path.name for path in root.glob('*.validation.json')]
+          names += [path.name for path in root.glob('*.packages.json')]
+          for name in names:
+              path = root / name
+              if path.exists():
+                  safe_json(json.loads(path.read_text()))
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          summary = {str(path.relative_to(root)): bep_summary(path.read_text().splitlines(), partial=True)
+                     for path in root.rglob('*events.json*')}
+          safe_json(summary)
+          (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          PYCODE
+      - name: Retain DASH HA image artifacts and evidence
+        id: bazel_upload_dash_ha_public
+        if: always() && matrix.architecture == 'amd64' && steps.dash_ha_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-ha-images-amd64-${{ github.sha }}
+          path: |
+            artifacts/dash-ha/*.gz
+            artifacts/dash-ha/*.tar
+            artifacts/dash-ha/*.packages.json
+            artifacts/dash-ha/*.validation.json
+            artifacts/dash-ha/validation.json
+            artifacts/dash-ha/public-receipt.json
+            artifacts/dash-ha/runtime-apt.json
+            artifacts/dash-ha/debug-apt.json
+            artifacts/dash-ha/action-audit.json
+            artifacts/dash-ha/incremental.json
+            artifacts/dash-ha/build-summary.json
+            artifacts/dash-ha/module-graph.json
+            artifacts/dash-ha/*.status
+            artifacts/dash-ha/MODULE.bazel.lock
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  dash_ha_runtime:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    name: Load and run DASH HA images (AMD64)
+    needs: archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dash-ha-images-amd64-${{ github.sha }}
+          path: artifacts/dash-ha
+      - name: Check installed HA startup, peer routing and PMON reset state
+        env:
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 -B tools/bazel/ci/dash_ha_loaded.py --artifacts artifacts/dash-ha
+      - name: Retain installed HA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-ha-installed-amd64-${{ github.sha }}
+          path: artifacts/dash-ha/*.runtime.json
+          if-no-files-found: error
+          retention-days: 14
+
+  macsec_runtime:
+    name: Run installed MACsec images (AMD64)
+    needs: archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: macsec-image-amd64-${{ github.sha }}
+          path: artifacts/macsec
+      - name: Exercise installed MACsec manager and actual WPA child
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/macsec_loaded.py --artifacts artifacts/macsec
+      - name: Retain installed MACsec evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: macsec-runtime-amd64-${{ github.sha }}
+          path: artifacts/macsec/*.runtime.json
+          if-no-files-found: error
+          retention-days: 14
 
   database_runtime:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
@@ -1626,10 +1879,12 @@ jobs:
   gearbox_archive:
     name: Gearbox archive (AMD64)
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
-    runs-on: [self-hosted, linux, bazel-x64]
+    # Use the VS build pool for the Syncd debug layer and both Gearbox archives.
+    runs-on: [self-hosted, linux, bazel-x64, vs]
     timeout-minutes: 360
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     env:
       # Shared CI entry point with the canonical registry; the full Make VS job is separate.
       BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
@@ -1676,8 +1931,11 @@ jobs:
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -1749,6 +2007,7 @@ jobs:
               (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
           PYCODE
       - name: Retain gearbox archives and source evidence
+        id: bazel_upload_gearbox_public
         if: always() && steps.gearbox_public.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1775,6 +2034,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   gearbox_runtime:
     name: Load and run gearbox images (AMD64)
@@ -1812,11 +2077,427 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  dash_engine_archive:
+    name: DASH engine archive (AMD64)
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    # Both image variants and their source payloads need a fresh large workspace.
+    runs-on: [self-hosted, linux, bazel-x64, vs]
+    timeout-minutes: 360
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    env:
+      # Shared CI entry point with the canonical registry; the full Make VS job is separate.
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+      # Keep action execution and the build-event file available during cache outages.
+      SONIC_CONTAINER_BAZEL_OPTIONS: >-
+        --remote_local_fallback
+        --incompatible_remote_local_fallback_for_remote_cache
+        --experimental_build_event_upload_strategy=local
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libarchive-tools libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+          for tool in bsdtar gdb readelf objcopy; do
+            command -v "$tool"
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
+
+      - name: Reserve scratch for DASH engine validation
+        id: dash_scratch
+        run: |
+          for path in "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME"; do
+            available=$(df --output=avail --block-size=1 "$path" | tail -n 1)
+            printf '%s bytes free on %s\n' "$available" "$path"
+            if (( available < 45 * 1024 * 1024 * 1024 )); then
+              echo 'Source image validation requires 45 GiB of free build space.' >&2
+              exit 1
+            fi
+          done
+          directory=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/dash-engine.XXXXXXXX")
+          printf 'directory=%s\n' "$directory" >> "$GITHUB_OUTPUT"
+          printf 'DASH_ARTIFACTS=%s\n' "$directory" >> "$GITHUB_ENV"
+
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: dash-engine-amd64
+          cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Build DASH engine runtime and debug images from source owners
+        id: dash_engine_build
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/dash_engine_image.py build --bazel "$BAZEL" --artifacts "$DASH_ARTIFACTS"
+      - name: Validate DASH engine payloads and matching symbols
+        run: python3 -B tools/bazel/ci/dash_engine_image.py validate --artifacts "$DASH_ARTIFACTS"
+      - name: Validate nnpy in the selected image dependency graph
+        run: |
+          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+            --platforms=@sonic_build_infra//platforms:x86_64_trixie
+            --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+          audit=()
+          for option in "${options[@]}"; do audit+=("--bazel-arg=$option"); done
+          python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit[@]}" \
+            --output "$DASH_ARTIFACTS/owner-action-audit.json" @nnpy//:package_test
+          "$BAZEL" test "${options[@]}" --test_output=errors @nnpy//:package_test
+          mkdir -p "$DASH_ARTIFACTS/tests"
+          test -s bazel-testlogs/external/nnpy+/package_test/test.xml
+          cp bazel-testlogs/external/nnpy+/package_test/test.xml "$DASH_ARTIFACTS/tests/test.xml"
+      - name: Verify DASH engine no-op, startup edit and restored archives
+        run: python3 -B tools/bazel/ci/dash_engine_image.py incremental --bazel "$BAZEL" --artifacts "$DASH_ARTIFACTS"
+      - name: Review public DASH engine evidence
+        id: dash_engine_public
+        if: always() && steps.dash_engine_build.outcome != 'skipped'
+        run: python3 -B tools/bazel/ci/dash_engine_public.py --artifacts "$DASH_ARTIFACTS"
+      - name: Retain DASH engine archives and source evidence
+        id: bazel_upload_dash_engine_public
+        if: always() && steps.dash_engine_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-engine-source-amd64-${{ github.sha }}
+          path: |
+            ${{ steps.dash_scratch.outputs.directory }}/*.gz
+            ${{ steps.dash_scratch.outputs.directory }}/*.tar
+            ${{ steps.dash_scratch.outputs.directory }}/*.status
+            ${{ steps.dash_scratch.outputs.directory }}/*-apt.json
+            ${{ steps.dash_scratch.outputs.directory }}/*.packages.json
+            ${{ steps.dash_scratch.outputs.directory }}/*.validation.json
+            ${{ steps.dash_scratch.outputs.directory }}/validation.json
+            ${{ steps.dash_scratch.outputs.directory }}/public-receipt.json
+            ${{ steps.dash_scratch.outputs.directory }}/action-audit.json
+            ${{ steps.dash_scratch.outputs.directory }}/owner-action-audit.json
+            ${{ steps.dash_scratch.outputs.directory }}/incremental.json
+            ${{ steps.dash_scratch.outputs.directory }}/MODULE.bazel.lock
+            ${{ steps.dash_scratch.outputs.directory }}/module-graph.json
+            ${{ steps.dash_scratch.outputs.directory }}/tests/test.xml
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  dash_engine_runtime:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    name: Load and run DASH engine images (AMD64)
+    needs: dash_engine_archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dash-engine-source-amd64-${{ github.sha }}
+          path: artifacts/dash-engine
+      - name: Exercise original startup and installed controller interfaces
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/dash_engine_loaded.py --artifacts artifacts/dash-engine
+      - name: Retain installed DASH engine evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dash-engine-runtime-amd64-${{ github.sha }}
+          path: |
+            artifacts/dash-engine/*.runtime.json
+            artifacts/dash-engine/loaded-validation.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  otel_archive:
+    name: OTEL archive (AMD64)
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    runs-on: [self-hosted, linux, bazel-x64]
+    timeout-minutes: 360
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    env:
+      # Shared CI entry point with the canonical registry; the full Make VS job is separate.
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libarchive-tools libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+          for tool in bsdtar gdb readelf objcopy; do
+            command -v "$tool"
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: otel-amd64
+          cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Check the otel Make handoff
+        run: python3 -B tools/bazel/tests/otel_make_test.py
+
+      - name: Build OTEL runtime and debug images from source owners
+        id: otel_build
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/otel_image.py build --bazel "$BAZEL" --artifacts artifacts/otel
+      - name: Validate OTEL installed payloads and matching symbols
+        run: python3 -B tools/bazel/ci/otel_image.py validate --artifacts artifacts/otel
+      - name: Validate OTEL producer contracts
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+            --platforms=@sonic_build_infra//platforms:x86_64_trixie
+            --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+          targets=(@otelcol_contrib//distributions/otelcol-contrib:source_contract_test
+            @otelcol_contrib//bazel:components_output_test
+            @otelcol_contrib//distributions/otelcol-contrib:package_test)
+          audit=()
+          for option in "${options[@]}"; do audit+=("--bazel-arg=$option"); done
+          python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit[@]}" \
+            --output artifacts/otel/owner-action-audit.json "${targets[@]}"
+          "$BAZEL" test "${options[@]}" --test_output=errors "${targets[@]}"
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          owner_root = Path('bazel-testlogs/external/otelcol-contrib+')
+          matches = list(owner_root.rglob('test.xml'))
+          assert len(matches) == 3, matches
+          for xml in matches:
+              directory = Path('artifacts/otel/tests') / xml.parent.relative_to(owner_root)
+              directory.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(xml, directory / 'test.xml')
+          PY
+      - name: Verify OTEL no-op, launcher source edit and restored archives
+        run: python3 -B tools/bazel/ci/otel_image.py incremental --bazel "$BAZEL" --artifacts artifacts/otel
+      - name: Review public OTEL evidence
+        id: otel_public
+        if: always() && steps.otel_build.outcome != 'skipped'
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json
+          root = Path('artifacts/otel')
+          names = ('validation.json', 'action-audit.json', 'owner-action-audit.json', 'incremental.json', 'runtime-apt.json', 'debug-apt.json', 'otel.packages.json', 'otel-debug.packages.json', 'base.packages.json', 'config-engine.packages.json')
+          for path in list(root.glob('*.validation.json')) + [root / name for name in names]:
+              if path.exists():
+                  safe_json(json.loads(path.read_text()))
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          receipt = root / 'build-receipt.json'
+          if receipt.exists():
+              source = json.loads(receipt.read_text())
+              public = {key: source[key] for key in ('status', 'revision', 'architecture', 'image_version', 'artifacts', 'tested_revision_parents') if key in source}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          PY
+      - name: Retain OTEL archives and source evidence
+        id: bazel_upload_otel_public
+        if: always() && steps.otel_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: otel-source-amd64-${{ github.sha }}
+          path: |
+            artifacts/otel/*.gz
+            artifacts/otel/*.tar
+            artifacts/otel/runtime-apt.json
+            artifacts/otel/debug-apt.json
+            artifacts/otel/otel.packages.json
+            artifacts/otel/otel-debug.packages.json
+            artifacts/otel/base.packages.json
+            artifacts/otel/config-engine.packages.json
+            artifacts/otel/otel.status
+            artifacts/otel/otel-debug.status
+            artifacts/otel/*.validation.json
+            artifacts/otel/validation.json
+            artifacts/otel/public-receipt.json
+            artifacts/otel/action-audit.json
+            artifacts/otel/owner-action-audit.json
+            artifacts/otel/incremental.json
+            artifacts/otel/MODULE.bazel.lock
+            artifacts/otel/module-graph.json
+            artifacts/otel/tests/**/test.xml
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  otel_runtime:
+    name: Load and run OTEL images (AMD64)
+    needs: otel_archive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: otel-source-amd64-${{ github.sha }}
+          path: artifacts/otel
+      - name: Exercise installed collector launchers and telemetry
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/otel_loaded.py --artifacts artifacts/otel
+      - name: Retain installed OTEL evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: otel-runtime-amd64-${{ github.sha }}
+          path: artifacts/otel/*.runtime.json
+          if-no-files-found: warn
+          retention-days: 14
+
   eventd_runtime:
     # Keep the required status on the job that actually loads and tests both archives.
     name: Container archive (AMD64)
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')
-    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime]
+    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime, macsec_runtime, otel_runtime, dash_engine_runtime]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2196,7 +2877,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl \
-            gdb git j2cli jq libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-yaml redis-server squashfs-tools tar unzip zstd
+            gdb git j2cli jq libarchive-tools libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-yaml redis-server squashfs-tools tar unzip zstd
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -2213,8 +2894,12 @@ jobs:
       - name: Check hosted storage
         run: df -h "$GITHUB_WORKSPACE" "$HOME"
 
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
@@ -2761,9 +3446,9 @@ jobs:
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
       SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
-      # Four concurrent Make recipes share the runner's Bazel action budget.
+      # Image recipes serialize through one Bazel server on this runner.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=2 --local_resources=cpu=2 --local_resources=memory=3072
+        --jobs=4 --local_resources=memory=12288
         --experimental_remote_downloader=grpc://172.16.0.4:9092
         --experimental_remote_downloader_local_fallback
         --distdir=/bazel_cache/distdir/ape-1.0.1
@@ -2846,10 +3531,6 @@ jobs:
               fi
             fi
           done
-          # Four image builds can start JVMs on this eight-CPU runner at once.
-          # Match each JVM to its two-CPU action budget and allow a busy start.
-          printf '\n%s\n%s\n' 'startup --host_jvm_args=-XX:ActiveProcessorCount=2' \
-            'startup --local_startup_timeout_secs=300' >> .bazelrc.user
           python3 -B tools/bazel/gzip/source_archive.py \
             --archives-dir artifacts/vs/repository-inputs \
             --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json
@@ -3228,7 +3909,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Initialize the pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -3355,6 +4040,7 @@ jobs:
     timeout-minutes: 180
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -3389,8 +4075,15 @@ jobs:
             --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
             --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
             --github-output "$GITHUB_OUTPUT"
-      - name: Initialize Sysmgr's pinned gNOI source
-        run: git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init -- src/sonic-sysmgr/gnoi
+      - name: Prepare pinned source submodules
+        run: |
+          set -euo pipefail
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule foreach --recursive \
+            'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" -C "$toplevel" submodule update --checkout -- "$sm_path"'
+          git -c safe.directory="$GITHUB_WORKSPACE" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -3454,6 +4147,7 @@ jobs:
               (root / 'build-summary.json').write_text(json.dumps(value, indent=2) + '\n')
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: bazel_upload_public_evidence
         if: always() && steps.public_evidence.outcome == 'success'
         with:
           name: radv-image-amd64-${{ github.sha }}
@@ -3471,6 +4165,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   radv_runtime:
     name: Run installed Router Advertiser images (AMD64)

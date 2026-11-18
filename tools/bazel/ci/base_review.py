@@ -45,7 +45,9 @@ def main():
 
     # Keep the dispatcher's registry selection and mirror/cache setup when the
     # requested source predates those helpers. Both build phases use this copy.
-    control = Path(tempfile.mkdtemp(prefix="base-review-", dir=os.environ["RUNNER_TEMP"]))
+    control = Path(tempfile.mkdtemp(
+        prefix="base-review-",
+        dir=os.environ.get("SONIC_BAZEL_JOB_TEMP", os.environ["RUNNER_TEMP"])))
     bazel = control / "bazel"
     shutil.copy2(Path(__file__).with_name("libteam_draft_bazel.sh"), bazel)
     subprocess.run(["git", "fetch", "--quiet", "--no-tags", "--depth=1",

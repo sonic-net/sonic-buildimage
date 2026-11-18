@@ -51,6 +51,7 @@ IMAGE_STEPS = {
 }
 MAX_LOG_JOBS = 20
 LOG_TIMEOUT_SECONDS = 45
+MAX_HISTORY_BYTES = 95 * 1024**2
 
 
 class LogReadError(RuntimeError):
@@ -707,10 +708,16 @@ def write_atomic(path, data):
     try:
         with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, prefix=".history-", suffix=".json", delete=False) as handle:
             temporary = Path(handle.name)
-            json.dump(data, handle, indent=2, sort_keys=True, allow_nan=False)
+            json.dump(data, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
+        size = temporary.stat().st_size
+        if size > MAX_HISTORY_BYTES:
+            raise CollectionError(
+                f"Timing history is {size:,} bytes, exceeding the {MAX_HISTORY_BYTES:,}-byte "
+                "publication budget below GitHub's 100 MiB file limit; split the history "
+                "before publishing. No records were discarded.")
         os.replace(temporary, path)
     finally:
         if temporary is not None:
@@ -740,7 +747,8 @@ def main():
     except CollectionError as error:
         print(f"Collection failed; published history was not replaced: {error}", file=sys.stderr)
         return 1
-    print(f"Collected {len(result['runs'])} run attempts and {len(result['pull_requests'])} PRs into {args.output}")
+    print(f"Collected {len(result['runs'])} run attempts and {len(result['pull_requests'])} PRs "
+          f"into {args.output} ({args.output.stat().st_size:,} bytes)")
     return 0
 
 

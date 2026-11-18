@@ -50,3 +50,26 @@ $(DOCKER_MACSEC)_CLI_CONFIG_PLUGIN = /cli/config/plugins/macsec.py
 $(DOCKER_MACSEC)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_macsec.py
 $(DOCKER_MACSEC)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_macsec_counter.py
 
+# Native source OCI images reuse the SWSS parent and WPA owner TARs.
+# Preserve every legacy prerequisite and all excluded profiles above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_MACSEC) $(DOCKER_MACSEC_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_MACSEC)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_MACSEC_DBG)
+$(DOCKER_MACSEC_DBG)_PATH = $($(DOCKER_MACSEC)_PATH)
+$(DOCKER_MACSEC)_BAZEL_TARGET = //dockers/docker-macsec:$(DOCKER_MACSEC)
+$(DOCKER_MACSEC_DBG)_BAZEL_TARGET = //dockers/docker-macsec:$(DOCKER_MACSEC_DBG)
+SONIC_BAZEL_MANIFESTS += docker-macsec docker-macsec-$(DBG_IMAGE_MARK)
+docker-macsec_MANIFEST_IMAGE = $(DOCKER_MACSEC)
+docker-macsec-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_MACSEC)
+docker-macsec-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_MACSEC)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-macsec/manifest.json
+$(DOCKER_MACSEC_DBG)_BAZEL_DEPENDS = $($(DOCKER_MACSEC)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-macsec-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

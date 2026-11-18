@@ -179,6 +179,16 @@ persists the new JSON before the static site is deployed through the official
 Pages artifact/deployment actions. Publications are serialized through the end
 of deployment to prevent an older run from replacing a newer site.
 
+History is serialized as compact, deterministically ordered JSON; all collected
+records and the schema remain unchanged. Existing indented history is read
+normally and compacted on the next successful collection. The collector reports
+the output byte size and rejects files above 95 MiB before replacing the output,
+leaving headroom below GitHub's 100 MiB per-file limit. It does not silently prune
+older records to meet this budget. If compact history eventually reaches that
+budget, split storage and update the collector and dashboard readers together;
+retrying the same oversized output or enabling Git LFS alone does not fix the
+static JSON publication path.
+
 The publishing job always uses trusted `master` code. A `workflow_run` event
 never supplies executable PR code, artifacts, scripts, or cached executables.
 The GitHub token stays in the workflow and is not included in the static site.
