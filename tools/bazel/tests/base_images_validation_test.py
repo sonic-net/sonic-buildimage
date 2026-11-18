@@ -323,10 +323,16 @@ class ForwardedSourceSymbolsTest(unittest.TestCase):
         self.assertEqual(pairs[0]["debug_forwarding"]["symbol"], "main")
         self.assertEqual(pairs[0]["debug_forwarding"]["source"], "forward_main.c")
 
+    def test_launcher_with_local_code_keeps_forwarded_main_contract(self):
+        pairs = self.check_fixture(with_local_code=True)
+        self.assertEqual(pairs[0]["debug_forwarding"]["symbol"], "main")
+        self.assertEqual(pairs[0]["debug_forwarding"]["source"], "forward_main.c")
+
     def test_existing_native_contract_rejects_invalid_provider_and_symbols(self):
-        for option in ("wrong_provider", "no_provider_dwarf", "missing_needed", "corrupt_stub"):
-            with self.subTest(option=option), self.assertRaises(ValueError):
-                self.check_fixture(**{option: True})
+        for with_local_code in (False, True):
+            for option in ("wrong_provider", "no_provider_dwarf", "missing_needed", "corrupt_stub"):
+                with self.subTest(option=option, with_local_code=with_local_code), self.assertRaises(ValueError):
+                    self.check_fixture(with_local_code=with_local_code, **{option: True})
 
     def test_forwarding_cannot_bypass_covered_native_inventory(self):
         for remove in ("usr/bin/launcher", "usr/lib/x86_64-linux-gnu/libsample.so.0.0.0"):

@@ -95,7 +95,7 @@ def verify_editor_commands(files):
 
 
 def verify_forwarded_symbols(root, native, runtime, symbols, forwarding):
-    """Use the declared native-package contract for source-free ELF launchers."""
+    """Verify launchers and their declared implementation providers independently."""
     validation.require(isinstance(forwarding, dict) and set(forwarding).issubset(native),
                        "debug forwarding names an uncovered launcher")
     runtime = {name: {**item, "path": name, **({"file": root / name} if "elf_machine" in item else {})}
@@ -117,12 +117,14 @@ def verify_forwarded_symbols(root, native, runtime, symbols, forwarding):
         info = validation.elf_info(root / name, dynamic=True)
         identifier = info["build_id"]
         validation.require(identifier and info["has_debuglink"] and not info["has_dwarf"],
-                           "debug forwarding requires a stripped source-free launcher: " + name)
+                           "debug forwarding requires a stripped launcher: " + name)
         debug_name = "usr/lib/debug/.build-id/" + identifier[:2] + "/" + identifier[2:] + ".debug"
         validation.require(debug_name in symbols, "forwarding launcher symbols are absent: " + name)
         symbol_info = validation.elf_info(root / debug_name)
-        validation.require(symbol_info["build_id"] == identifier and not symbol_info["has_dwarf"],
-                           "forwarding launcher symbols differ or contain source DWARF: " + name)
+        # A launcher may also link local helper code with its own DWARF. Its
+        # imported function must still resolve to the declared provider below.
+        validation.require(symbol_info["build_id"] == identifier,
+                           "forwarding launcher symbols differ: " + name)
         validation.verify_debuglink(root / name, root / debug_name, name)
         contract = native_packages.debug_forwarding(
             name, spec, runtime, symbols, info, readelf="readelf", objcopy="objcopy")
