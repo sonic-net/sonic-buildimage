@@ -12,7 +12,7 @@ that are not available in test environments.
 
 import types
 
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 from fixtures.fake_swsscommon import fake_swsscommon_modules
 
 
@@ -59,6 +59,7 @@ def mock_syslog_modules():
 
     class MockSysLogger:
         # Methods as mocks so tests can assert calls
+        log_notice = Mock()
         log_info = Mock()
         log_error = Mock()
         log_warning = Mock()
@@ -68,15 +69,19 @@ def mock_syslog_modules():
         def __init__(self, *args, **kwargs):
             pass
 
-    syslogger = Mock()
+    syslogger = MagicMock()
     syslogger.SysLogger = MockSysLogger
+    
+    logger = MagicMock()
+    logger.Logger = MockSysLogger
 
-    syslog = Mock()
+    syslog = MagicMock()
     syslog.SYSLOG_IDENTIFIER_THERMAL = "nh_thermal"
     syslog.NhLoggerMixin = MockSysLogger
 
     return {
         "sonic_py_common.syslogger": syslogger,
+        "sonic_py_common.logger": logger,
         "sonic_platform.syslog": syslog,
     }
 
