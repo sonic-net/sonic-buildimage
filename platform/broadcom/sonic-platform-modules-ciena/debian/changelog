@@ -1,0 +1,9 @@
+sonic-platform-modules-ciena (1.0.0) unstable; urgency=low
+
+  * Initial release for SONiC
+  * Support for Ciena 8140 platforms
+  * I2C controller drivers (i2c-ciena, i2c-ciena-smb, i2c-fpga-mux)
+  * Common modules: thermal, fan, GPIO, reset, LED, regmap
+  * Platform-specific CIC driver (rudra40_cic)
+
+ -- Ciena <support@ciena.com>  Sun, 16 Feb 2026 09:00:00 +0000

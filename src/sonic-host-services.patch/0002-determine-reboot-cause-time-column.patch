@@ -1,0 +1,55 @@
+Subject: [PATCH] determine-reboot-cause: surface platform event time in Time column
+
+A platform-provided hardware reboot cause may include its event time as a
+"[Time: ...]" suffix.  get_reboot_cause_dict() previously only
+parsed the time for User-issued / Kernel Panic / Heartbeat causes, so such a
+timestamp stayed embedded in the cause text with an N/A Time column.  Add a
+generic fallback that moves a "[Time: ...]" suffix into the reboot-history
+Time column and strips it from the displayed cause.
+
+
+diff --git a/scripts/determine-reboot-cause b/scripts/determine-reboot-cause
+index d1f1d97..37afd52 100755
+--- a/scripts/determine-reboot-cause
++++ b/scripts/determine-reboot-cause
+@@ -171,6 +171,15 @@ def get_reboot_cause_dict(previous_reboot_cause, comment, gen_time):
+     elif re.search(r'Heartbeat with the Supervisor card lost', previous_reboot_cause):
+         reboot_cause_dict['cause'] = 'Heartbeat with the Supervisor card lost'
+ 
++    # Generic fallback: a platform/hardware cause may carry its event time in a
++    # "[Time: ...]" suffix.  Surface it into the Time column and strip it from the shown cause.
++    if reboot_cause_dict['time'] == "N/A":
++        match = re.search(r'\[Time: (.*)\]', previous_reboot_cause)
++        if match is not None:
++            reboot_cause_dict['time'] = match.group(1)
++            reboot_cause_dict['cause'] = re.sub(
++                r'\s*\[Time:[^\]]*\]', '', reboot_cause_dict['cause']).strip()
++
+     return reboot_cause_dict
+ 
+ def determine_reboot_cause():
+diff --git a/tests/determine-reboot-cause_test.py b/tests/determine-reboot-cause_test.py
+index c87fee1..20cd2cb 100644
+--- a/tests/determine-reboot-cause_test.py
++++ b/tests/determine-reboot-cause_test.py
+@@ -171,6 +171,17 @@ class TestDetermineRebootCause(object):
+         reboot_cause_dict = determine_reboot_cause.get_reboot_cause_dict(REBOOT_CAUSE_HEARTBEAT_LOSS, "", GEN_TIME_USER)
+         assert reboot_cause_dict == EXPECTED_HEATBEAT_LOSS_REBOOT_CAUSE_DICT
+ 
++    def test_get_reboot_cause_dict_hardware_time_suffix(self):
++        # A platform/hardware cause may carry its event time in a "[Time: ...]"
++        # suffix; it must be surfaced into the Time column and stripped from the
++        # displayed cause.
++        cause = "Power Loss (Cold power-on / power-cycle detected [Time: 08/31/2026 08:02:19 PM UTC (BMC SEL)])"
++        reboot_cause_dict = determine_reboot_cause.get_reboot_cause_dict(cause, "N/A", "2026_08_31_20_05_51")
++        assert reboot_cause_dict['cause'] == "Power Loss (Cold power-on / power-cycle detected)"
++        assert reboot_cause_dict['time'] == "08/31/2026 08:02:19 PM UTC (BMC SEL)"
++        assert reboot_cause_dict['user'] == "N/A"
++        assert reboot_cause_dict['comment'] == "N/A"
++
+     def test_determine_reboot_cause_hardware(self):
+         with mock.patch("determine_reboot_cause.find_proc_cmdline_reboot_cause", return_value=None):
+             with mock.patch("determine_reboot_cause.find_software_reboot_cause", return_value=REBOOT_CAUSE_UNKNOWN):
+-- 
+2.52.0
+
