@@ -1,0 +1,107 @@
+name: Image assembly rule contracts
+
+on:
+  pull_request:
+    paths:
+      - tools/bazel/image/**
+      - tools/bazel/image-assembly-design.md
+      - MODULE.bazel
+      - .github/workflows/bazel-image-rules.yml
+  push:
+    branches: [master]
+    paths:
+      - tools/bazel/image/**
+      - MODULE.bazel
+      - .github/workflows/bazel-image-rules.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Image assembly contracts (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            platform: x86_64_trixie
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            platform: aarch64_trixie
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: image-rule-actions-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+      - name: Run public Bazel rule actions
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          mkdir -p artifacts/image-rule-actions
+          git rev-parse HEAD > artifacts/image-rule-actions/revision.txt
+          test ! -e MODULE.bazel.lock
+          disk_targets=()
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            disk_targets=(//tools/bazel/image/action_test:disk_action_test)
+          fi
+          bazel test //tools/bazel/image:assembly_formats_test \
+            //tools/bazel/image:mkinitramfs_test \
+            //tools/bazel/image:kernel_deb_test \
+            //tools/bazel/image/tar_split_json:format_test \
+            //tools/bazel/image/action_test:action_test "${disk_targets[@]}" \
+            --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --spawn_strategy=processwrapper-sandbox --nocache_test_results \
+            --nozip_undeclared_test_outputs
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, 'tools/bazel/ci')
+          import resolution
+
+          directory = Path('artifacts/image-rule-actions')
+          retained = resolution.collect(Path.cwd(), directory)
+          (directory / 'resolution.json').write_text(json.dumps(retained, indent=2) + '\n')
+          PY
+          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
+            directory="artifacts/image-rule-actions/${target%%/*}"
+            mkdir -p "$directory"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.xml" "$directory/"
+          done
+          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.outputs/action-receipt.json artifacts/image-rule-actions/
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            mkdir -p artifacts/image-rule-actions/disk_action_test
+            cp bazel-testlogs/tools/bazel/image/action_test/disk_action_test/test.{log,xml} artifacts/image-rule-actions/disk_action_test/
+          fi
+          test -s artifacts/image-rule-actions/MODULE.bazel.lock
+          test -s artifacts/image-rule-actions/module-graph.json
+          test -s artifacts/image-rule-actions/module-graph-inspection.json
+          test -s artifacts/image-rule-actions/resolution.json
+          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
+            test -s "artifacts/image-rule-actions/$target/test.log"
+            test -s "artifacts/image-rule-actions/$target/test.xml"
+          done
+          test -s artifacts/image-rule-actions/action-receipt.json
+          git diff --exit-code
+      - name: Retain public rule action evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-rule-actions-${{ matrix.architecture }}
+          path: artifacts/image-rule-actions/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1

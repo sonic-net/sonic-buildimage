@@ -37,6 +37,13 @@ bazel_dep(name = "net-snmp", version = "5.9.3.sonic.1", repo_name = "net_snmp")
 
 # Share APT lock metadata across dependency sets.
 bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.21")
+# Shared-only pkg-config ordering anchors carry no static object code.
+single_version_override(
+    module_name = "rules_distroless",
+    version = "0.9.4.sonic.21",
+    patches = ["//src/sonic-frr:0003-distroless-shared-link-sequences.patch"],
+    patch_strip = 1,
+)
 # Preserve system and quote headers in the P4/DASH Make builds.
 bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
@@ -57,6 +64,7 @@ bazel_dep(
     version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe",
     repo_name = "sonic_build_infra",
 )
+bazel_dep(name = "grub", version = "2.12.sonic.1")
 bazel_dep(
     name = "sonic-dash-api",
     version = "0.0.5-9b2893e890734a2db0c53a5e5c64b031ec0dcfbd",
@@ -631,6 +639,18 @@ bazel_dep(name = "sonic-dash-ha", version = "0.0.1-502377912f3530c9bb6c270078229
 
 # The shared infrastructure lock provides separate runtime, debug and test collections.
 use_repo(apt, "dash_ha_debian", "dash_ha_debug_debian", "dash_ha_test_debian")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# The APT tar-split CLI always gzip-compresses metadata. Use its fixed official
+# API to emit raw JSON; the image action owns the required pigz compression.
+http_archive(
+    name = "tar_split_api_src",
+    urls = ["https://github.com/vbatts/tar-split/archive/refs/tags/v0.11.6.tar.gz"],
+    sha256 = "5655f13638895ec2e959a1631c5764a8720e7520158a4e4648fc9d2f856561c1",
+    strip_prefix = "tar-split-0.11.6",
+    build_file = "//tools/bazel/image/tar_split_json:upstream.BUILD.bazel",
+)
 
 bazel_dep(name = "otelcol-contrib", version = "0.144.0.sonic.1", repo_name = "otelcol_contrib")
 
