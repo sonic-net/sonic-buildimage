@@ -6,7 +6,7 @@ module(
 bazel_dep(name = "rules_python", version = "1.8.0")
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
+    version = "0.0.37-d31541a95fdf477302f1b109f2105eee81c86617",
     repo_name = "sonic_build_infra",
 )
 
@@ -22,8 +22,8 @@ pip.parse(
 )
 use_repo(pip, "sonic_yang_models_pip")
 
-# Commit suffixes do not sort by source date; keep the selected compiler revision.
+# Keep the published source-install API selected for standalone consumers.
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.17-8baf1ad829c5095297d85148b042145b87d623a3",
+    version = "0.0.37-d31541a95fdf477302f1b109f2105eee81c86617",
 )

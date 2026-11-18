@@ -176,12 +176,13 @@ filegroup(
         "yang-models/*.yang",
         "yang-templates/*.yang.j2",
         "tests/*.py",
+    ]) + glob([
         "LICENSE*",
         "LICENCE*",
         "COPYING*",
         "NOTICE*",
         "AUTHORS*",
-    ]),
+    ], allow_empty = True),
     visibility = ["//tools/bazel/tests:__pkg__"],
 )
 
