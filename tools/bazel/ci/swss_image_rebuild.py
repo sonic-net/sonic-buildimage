@@ -3,10 +3,13 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
+import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -31,20 +34,32 @@ def main():
     args = parser.parse_args()
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
-    # This consumer pins Bazel 8.5.1 with Bzlmod and the standard execution root.
-    # info execution_root constructs a configuration before apparent labels map;
-    # output_base does not. Keep the wrapper and all caller options unchanged.
-    result = subprocess.run([args.bazel, "info", *args.bazel_arg, "output_base"],
+    job_temp = os.environ.get("SONIC_BAZEL_JOB_TEMP")
+    scratch = os.environ.get("RUNNER_TEMP")
+    if job_temp:
+        scratch = Path(job_temp) / "archive-bazel"
+        scratch.mkdir(exist_ok=True)
+    output_base = Path(tempfile.mkdtemp(prefix="swss-source-probe.", dir=scratch)).resolve()
+    bazel = [args.bazel, "--output_base=" + str(output_base)]
+    try:
+        probe_image(args, bazel, output_base)
+    finally:
+        # Preserve the base for post-job cleanup if Bazel cannot confirm shutdown.
+        subprocess.run([*bazel, "shutdown"], check=True)
+        shutil.rmtree(output_base)
+
+
+def probe_image(args, bazel, output_base):
+    options = [*args.bazel_arg, "--repo_contents_cache=", "--symlink_prefix=/"]
+    result = subprocess.run([*bazel, "info", *options, "output_base"],
                             capture_output=True, text=True, check=True)
-    roots = result.stdout.splitlines()
-    require(len(roots) == 1 and roots[0], "expected one Bazel output base")
-    output_base = Path(roots[0])
+    require(result.stdout.splitlines() == [str(output_base)], "Bazel did not select the private output base")
+    # Materialize the registry-pinned source in this invocation's execroot.
+    subprocess.run([*bazel, "build", *options, SOURCE_LABEL], check=True)
     execution_root = output_base / "execroot" / "_main"
-    require(output_base.is_absolute() and execution_root.is_dir(),
-            "missing Bazel 8.5.1 Bzlmod execution root")
 
     def query(target):
-        result = subprocess.run([args.bazel, "cquery", *args.bazel_arg, target, "--output=files"],
+        result = subprocess.run([*bazel, "cquery", *options, target, "--output=files"],
                                 capture_output=True, text=True, check=True)
         paths = [execution_root / line for line in result.stdout.splitlines() if line.strip()]
         require(len(paths) == 1 and paths[0].is_file(), "missing SWSS source or archive: " + target)
@@ -57,8 +72,8 @@ def main():
             relative.parts[1] not in (".", "..") and Path(*relative.parts[2:]) == SOURCE_PATH,
             "SWSS source is not the selected external owner file")
     owner = (execution_root / "external" / relative.parts[1]).resolve(strict=True)
-    require(not source.is_symlink() and source.parent.resolve(strict=True) == owner / SOURCE_PATH.parent and
-            source.resolve(strict=True).is_relative_to(owner),
+    require(owner == output_base / "external" / relative.parts[1] and not source.is_symlink() and
+            source.parent.resolve(strict=True) == owner / SOURCE_PATH.parent and source.stat().st_nlink == 1,
             "SWSS source escapes its selected owner")
     original = source.read_bytes()
     original_mode = stat.S_IMODE(source.stat().st_mode)
@@ -71,7 +86,7 @@ def main():
 
     def build(phase):
         start = time.monotonic()
-        subprocess.run([args.bazel, "build", *args.bazel_arg, "--jobs=2",
+        subprocess.run([*bazel, "build", *options, "--jobs=2",
                         "--build_event_json_file=" + str(args.output / (phase + "-events.json")), *targets], check=True)
         digests = {}
         for target in targets:

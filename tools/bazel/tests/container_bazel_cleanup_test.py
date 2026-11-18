@@ -124,9 +124,13 @@ class ContainerBazelCleanupTest(unittest.TestCase):
             self.assertTrue((self.artifacts / "image.gz").is_file())
 
     def test_missing_authorization_preserves_evidence(self):
+        probe = self.directory / "archive-bazel/interrupted-probe"
+        probe.mkdir(parents=True)
+        (probe / "edited-source").write_bytes(b"probe")
         with contextlib.redirect_stdout(io.StringIO()) as logs:
             self.cleanup()
         self.assertIn("no upload-cleanup authorization", logs.getvalue())
+        self.assertFalse(probe.parent.exists())
         self.assertTrue(self.directory.exists())
         self.assertTrue(self.artifacts.exists())
         self.assertFalse((self.cache / "bazel").exists())

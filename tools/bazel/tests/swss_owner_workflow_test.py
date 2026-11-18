@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -108,6 +109,44 @@ class SwssOwnerWorkflowTest(unittest.TestCase):
             self.assertIn("--nohome_rc", args)
             self.assertIn("--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"+CATALOG, args)
             self.assertEqual(args[-2:], ["--disk_cache=/private/disk", "@sonic_swss//crates/countersyncd:common_rust_test"])
+
+    def test_amd64_archive_attempts_keep_caches_and_get_fresh_owner_trees(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        name = "Isolate the AMD64 archive producer's fetched repositories"
+        self.assertEqual([job for job, spec in jobs.items() if any(step.get("name") == name
+                         for step in spec.get("steps", []))], ["archive"])
+        steps = jobs["archive"]["steps"]
+        setup = next(step for step in steps if step.get("name") == name)
+        producer = next(step for step in steps if step.get("id") == "swss_layer_build")
+        self.assertLess(steps.index(setup), steps.index(producer))
+        self.assertEqual(setup["if"], "matrix.architecture == 'amd64'")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            old_base = root / "existing-output"
+            old_base.mkdir()
+            marker = old_base / "marker"
+            marker.write_text("interrupted probe")
+            rc = root / ".bazelrc.user"
+            caches = "build --disk_cache=/actions/disk\ncommon --repository_cache=/actions/repository\n"
+            bases = []
+            for attempt in range(2):
+                job_temp = root / str(attempt)
+                job_temp.mkdir()
+                env = dict(os.environ, SONIC_BAZEL_JOB_TEMP=str(job_temp), BASH_ENV="/dev/null")
+                rc.write_text(caches)
+                subprocess.run(["bash", "-eu", "-c", setup["run"]], cwd=root, env=env, check=True)
+                self.assertTrue(rc.read_text().startswith(caches))
+                options = [shlex.split(line) for line in rc.read_text().splitlines()]
+                [startup] = [arg for scope, arg in options if scope == "startup"]
+                self.assertTrue(startup.startswith("--output_base="))
+                base = Path(startup.split("=", 1)[1])
+                self.assertEqual(base, job_temp / "archive-bazel/producer")
+                self.assertEqual(list(base.iterdir()), [])
+                bases.append(base)
+                self.assertIn(["common", "--repo_contents_cache="], options)
+            self.assertNotEqual(*bases)
+            self.assertNotIn(old_base, bases)
+            self.assertEqual(marker.read_text(), "interrupted probe")
 
     def test_source_interfaces_keep_cache_tests_and_probe(self):
         document = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())

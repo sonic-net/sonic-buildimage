@@ -317,6 +317,13 @@ jobs:
           # common.bazelrc imports this ignored file, including through Draft wrappers.
           printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
 
+      - name: Isolate the AMD64 archive producer's fetched repositories
+        if: matrix.architecture == 'amd64'
+        run: |
+          base="$SONIC_BAZEL_JOB_TEMP/archive-bazel/producer"
+          mkdir -p "$base"
+          printf 'startup --output_base="%s"\ncommon --repo_contents_cache=\n' "$base" >> .bazelrc.user
+
       - name: Check Make OCI bases and reproducible Docker archives
         run: |
           set -euo pipefail
