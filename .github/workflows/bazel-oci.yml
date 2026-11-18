@@ -645,6 +645,10 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: Release published eventd payload copies
+        if: steps.bazel_upload_eventd_public.outcome == 'success' && steps.bazel_upload_eventd_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py eventd
+
       - name: Preserve completed archive evidence before Sysmgr acceptance
         if: matrix.architecture == 'amd64'
         run: |
@@ -730,6 +734,10 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: Release published sysmgr payload copies
+        if: steps.bazel_upload_sysmgr_public.outcome == 'success' && steps.bazel_upload_sysmgr_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py sysmgr
+
       - name: Preserve completed Sysmgr evidence before SWSS layer acceptance
         if: matrix.architecture == 'amd64'
         run: |
@@ -766,6 +774,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Remove uploaded SNMP temporary artifacts
+        if: always() && steps.snmp_build.outputs.directory != '' && steps.bazel_upload_snmp_public.outcome == 'success'
+        env:
+          SNMP_ARTIFACTS: ${{ steps.snmp_build.outputs.directory }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import shutil
+
+          directory = Path(os.environ["SNMP_ARTIFACTS"])
+          temporary = Path(os.environ["SONIC_BAZEL_JOB_TEMP"]).resolve()
+          if (not directory.is_absolute() or directory.is_symlink()
+                  or directory.parent.resolve() != temporary
+                  or not directory.name.startswith("snmp.")):
+              raise ValueError("Refusing to remove an unexpected SNMP artifacts directory")
+          shutil.rmtree(directory)
+          PY
 
       - name: Build FRR runtime and debug images from source owners
         id: frr_build
@@ -840,6 +867,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published frr payload copies
+        if: steps.bazel_upload_frr_public.outcome == 'success' && steps.bazel_upload_frr_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py frr
 
       - name: Build Teamd runtime and debug images from source owners
         id: teamd_build
@@ -916,6 +947,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published teamd payload copies
+        if: steps.bazel_upload_teamd_public.outcome == 'success' && steps.bazel_upload_teamd_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py teamd
 
       - name: Build and inspect the shared runtime and symbols
         id: swss_layer_build
@@ -1009,6 +1044,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published swss-layer payload copies
+        if: steps.bazel_upload_swss_layer_public.outcome == 'success' && steps.bazel_upload_swss_layer_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py swss-layer
 
       - name: Preserve completed SWSS layer evidence before sFlow acceptance
         if: matrix.architecture == 'amd64'
@@ -1131,6 +1170,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published sflow payload copies
+        if: steps.bazel_upload_sflow_public.outcome == 'success' && steps.bazel_upload_sflow_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py sflow
 
       - name: Preserve completed sFlow evidence before Orchagent acceptance
         if: matrix.architecture == 'amd64'
@@ -1302,6 +1345,10 @@ jobs:
           retention-days: 14
           compression-level: 1
 
+      - name: Release published orchagent payload copies
+        if: steps.bazel_upload_orchagent_public.outcome == 'success' && steps.bazel_upload_orchagent_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py orchagent
+
       - name: Validate Database Make handoff and event database selection
         if: matrix.architecture == 'amd64'
         run: |
@@ -1376,6 +1423,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published database payload copies
+        if: steps.bazel_upload_database_public_evidence.outcome == 'success' && steps.bazel_upload_database_public_evidence.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py database
 
       - name: Preserve completed archive evidence before LLDP acceptance
         if: matrix.architecture == 'amd64'
@@ -1470,6 +1521,9 @@ jobs:
           retention-days: 14
           compression-level: 1
 
+      - name: Release published lldp payload copies
+        if: steps.bazel_upload_lldp_public.outcome == 'success' && steps.bazel_upload_lldp_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py lldp
 
       - name: Preserve completed archive evidence before MUX acceptance
         if: matrix.architecture == 'amd64'
@@ -1547,6 +1601,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+      - name: Release published mux payload copies
+        if: steps.bazel_upload_mux_public.outcome == 'success' && steps.bazel_upload_mux_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py mux
 
       - name: Preserve completed Orchagent evidence before MACsec acceptance
         if: matrix.architecture == 'amd64'
@@ -1637,24 +1695,9 @@ jobs:
           retention-days: 14
           compression-level: 1
 
-      - name: Remove uploaded SNMP temporary artifacts
-        if: always() && steps.snmp_build.outputs.directory != '' && steps.bazel_upload_snmp_public.outcome == 'success'
-        env:
-          SNMP_ARTIFACTS: ${{ steps.snmp_build.outputs.directory }}
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          import shutil
-
-          directory = Path(os.environ["SNMP_ARTIFACTS"])
-          temporary = Path(os.environ["SONIC_BAZEL_JOB_TEMP"]).resolve()
-          if (not directory.is_absolute() or directory.is_symlink()
-                  or directory.parent.resolve() != temporary
-                  or not directory.name.startswith("snmp.")):
-              raise ValueError("Refusing to remove an unexpected SNMP artifacts directory")
-          shutil.rmtree(directory)
-          PY
+      - name: Release published macsec payload copies
+        if: steps.bazel_upload_macsec_public.outcome == 'success' && steps.bazel_upload_macsec_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py macsec
 
       - name: Preserve completed archive evidence before DASH HA acceptance
         if: matrix.architecture == 'amd64'
@@ -1734,6 +1777,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+      - name: Release published dash-ha payload copies
+        if: steps.bazel_upload_dash_ha_public.outcome == 'success' && steps.bazel_upload_dash_ha_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py dash-ha
 
       - name: Authorize published artifacts for post-job cleanup
         if: always() && steps.bazel_cleanup_register.outcome == 'success'
