@@ -1,7 +1,9 @@
 load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
 load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
 load(":prepared_yang_models.bzl", "prepared_yang_models")
+load(":render_model.bzl", "render_model", "validate_manifest")
 
 package(default_visibility = ["//visibility:private"])
 
@@ -51,9 +53,9 @@ filegroup(
 
 wheel_layer(
     name = "yang_models_pkg",
-    wheels = [":yang_models_wheel"],
     site_packages = "/usr/local/lib/python3.13/dist-packages",
     visibility = ["//visibility:public"],
+    wheels = [":yang_models_wheel"],
 )
 
 py_test(
@@ -64,7 +66,127 @@ py_test(
         "$(location :yang_models_wheel)",
         "$(location :yang_models)",
     ],
-    data = [":yang_models_pkg", ":yang_models_wheel", ":yang_models"],
+    data = [
+        ":yang_models",
+        ":yang_models_pkg",
+        ":yang_models_wheel",
+    ],
     python_version = "3.13",
     visibility = ["//visibility:public"],
+)
+
+# Direct source installation preserves setup.py metadata and original wheel API.
+py_binary(
+    name = "render_model_tool",
+    srcs = ["render_model.py"],
+    main = "render_model.py",
+    python_version = "3.13",
+    deps = ["@sonic_yang_models_pip//jinja2"],
+)
+
+_MODEL_TEMPLATES = glob(["yang-templates/*.yang.j2"])
+
+validate_manifest(
+    name = "validate_native_manifest",
+    setup = "setup.py",
+    sources = glob([
+        "yang-models/*.yang",
+        "yang-templates/*.yang.j2",
+    ]),
+)
+
+[render_model(
+    name = "render_" + p.split("/")[-1][:-3],
+    cvl = "rendered/cvl/" + p.split("/")[-1][:-3],
+    py = "rendered/py/" + p.split("/")[-1][:-3],
+    template = p,
+    validation = ":validate_native_manifest",
+) for p in _MODEL_TEMPLATES]
+
+[filegroup(
+    name = "cvl_" + p.split("/")[-1],
+    srcs = [p],
+) for p in glob(["yang-models/*.yang"])]
+
+site_packages(
+    name = "sonic-yang-models.runtime",
+    author = "lnos-coders",
+    author_email = "lnos-coders@linkedin.com",
+    classifiers = [
+        "Development Status :: 2 - Pre-Alpha",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
+    data_prefix = "/usr/local",
+    description_file = "README.rst",
+    distribution = "sonic-yang-models",
+    extra_distinfo_files = {
+        "LICENSE": "licenses/LICENSE",
+        "AUTHORS.rst": "licenses/AUTHORS.rst",
+    },
+    extra_requires = {"testing": [
+        "pytest",
+        "ijson>=3.2.3",
+    ]},
+    files = {p: p for p in glob(["tests/*.py"])} | {p: "sonic_yang_models-1.0.data/data/yang-models/" + p.split("/")[-1] for p in glob(["yang-models/*.yang"])} |
+            {":" + "rendered/" + kind + "/" + p.split("/")[-1][:-3]: "sonic_yang_models-1.0.data/data/" + dest + "/" + p.split("/")[-1][:-3] for p in _MODEL_TEMPLATES for kind, dest in [
+                ("py", "yang-models"),
+                ("cvl", "cvlyang-models"),
+            ]} |
+            {":cvl_" + p.split("/")[-1]: "sonic_yang_models-1.0.data/data/cvlyang-models/" + p.split("/")[-1] for p in glob(["yang-models/*.yang"])},
+    headers = "/usr/local/include",
+    interpreter = "/usr/bin/python3",
+    keywords = "sonic-yang-models",
+    license = "GNU General Public License v3",
+    license_files = [
+        "LICENSE",
+        "AUTHORS.rst",
+    ],
+    python_requires = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
+    regular_file_mode = "0644",
+    scripts = "/usr/local/bin",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    summary = "Package contains YANG models for sonic.",
+    version = "1.0",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "sonic-yang-models.runtime_metadata",
+    srcs = [":sonic-yang-models.runtime"],
+    output_group = "metadata",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_install_test_sources",
+    testonly = True,
+    srcs = [
+        "README.rst",
+        "setup.py",
+    ] + glob([
+        "yang-models/*.yang",
+        "yang-templates/*.yang.j2",
+        "tests/*.py",
+    ]) + glob([
+        "LICENSE*",
+        "LICENCE*",
+        "COPYING*",
+        "NOTICE*",
+        "AUTHORS*",
+    ], allow_empty = True),
+    visibility = ["//tools/bazel/tests:__pkg__"],
+)
+
+exports_files(
+    ["setup.py"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
 )

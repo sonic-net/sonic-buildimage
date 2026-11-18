@@ -433,6 +433,7 @@ jobs:
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
+            //tools/bazel/tests:source_installation_test \
             //tools/bazel/tests:containercfgd_full_test \
             //tools/bazel/tests:containercfgd_wheel_test \
             //tools/bazel/tests:supervisor_python_full_test \
@@ -462,6 +463,7 @@ jobs:
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
+            //tools/bazel/tests:source_installation_test \
             //tools/bazel/tests:containercfgd_full_test \
             //tools/bazel/tests:containercfgd_wheel_test \
             //tools/bazel/tests:supervisor_python_full_test \

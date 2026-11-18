@@ -1,8 +1,12 @@
 load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["requirements.in", "setup.py"])
+exports_files([
+    "requirements.in",
+    "setup.py",
+])
 
 # Standard wheel installers replace #!python with their selected interpreter.
 # Keep the rest of the existing script unchanged.
@@ -13,21 +17,96 @@ genrule(
     cmd = "sed '1s|.*|#!python|' $(location scripts/supervisor-proc-exit-listener) > $@ && chmod 755 $@",
 )
 
+_SOURCE_DISTRIBUTION = "sonic-supervisord-utilities"
+
+_SOURCE_LICENSE = "Apache 2.0"
+
+_SOURCE_PYTHON_TAG = "py3"
+
+_SOURCE_REQUIRES = [
+    "supervisor",
+    "sonic-py-common",
+]
+
+_SOURCE_SUMMARY = "SONiC supervisord utilities"
+
+_SOURCE_VERSION = "1.0"
+
 py_wheel(
     name = "sonic_supervisord_utilities_wheel",
     data_files = {":wheel_listener_script": "scripts/supervisor-proc-exit-listener"},
-    distribution = "sonic-supervisord-utilities",
-    license = "Apache 2.0",
-    python_tag = "py3",
-    requires = ["supervisor", "sonic-py-common"],
-    summary = "SONiC supervisord utilities",
-    version = "1.0",
+    distribution = _SOURCE_DISTRIBUTION,
+    license = _SOURCE_LICENSE,
+    python_tag = _SOURCE_PYTHON_TAG,
+    requires = _SOURCE_REQUIRES,
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
 )
 
 filegroup(
     name = "test_sources",
     srcs = glob(
-        ["scripts/*", "tests/**"],
-        exclude = ["**/__pycache__/**", "**/*.pyc"],
-    ) + ["setup.py", "pytest.ini"],
+        [
+            "scripts/*",
+            "tests/**",
+        ],
+        exclude = [
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ) + [
+        "pytest.ini",
+        "setup.py",
+    ],
+)
+
+# Direct source installation preserves setup.py metadata and original wheel API.
+site_packages(
+    name = "sonic-supervisord-utilities.runtime",
+    author = "SONiC Team",
+    author_email = "linuxnetdev@microsoft.com",
+    classifiers = [
+        "Development Status :: 4 - Beta",
+        "Environment :: No Input/Output (Daemon)",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Information Technology",
+        "Intended Audience :: System Administrators",
+        "License :: OSI Approved :: Apache Software License",
+        "Natural Language :: English",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.7",
+        "Topic :: System :: Hardware",
+    ],
+    data_prefix = "/usr/local",
+    distribution = _SOURCE_DISTRIBUTION,
+    executable_files = ["sonic_supervisord_utilities-1.0.data/scripts/supervisor-proc-exit-listener"],
+    files = {"scripts/supervisor-proc-exit-listener": "sonic_supervisord_utilities-1.0.data/scripts/supervisor-proc-exit-listener"},
+    headers = "/usr/local/include",
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    interpreter = "/usr/bin/python3",
+    keywords = "SONiC sonic",
+    license = _SOURCE_LICENSE,
+    normalize_scripts = True,
+    python_tag = _SOURCE_PYTHON_TAG,
+    regular_file_mode = "0644",
+    requires = _SOURCE_REQUIRES,
+    scripts = "/usr/local/bin",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
+    runtime_deps = ["//src/sonic-py-common:sonic-py-common.runtime"],
+)
+
+filegroup(
+    name = "sonic-supervisord-utilities.runtime_metadata",
+    srcs = [":sonic-supervisord-utilities.runtime"],
+    output_group = "metadata",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_install_test_sources",
+    testonly = True,
+    srcs = [":test_sources"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
 )

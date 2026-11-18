@@ -2,6 +2,7 @@ load("@config_engine_pip//:requirements.bzl", "requirement")
 load("@rules_python//python:packaging.bzl", "py_wheel")
 load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//python:py_library.bzl", "py_library")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -92,29 +93,45 @@ filegroup(
     srcs = _PACKAGE_SOURCES,
 )
 
+_SOURCE_DISTRIBUTION = "sonic-py-common"
+
+_SOURCE_ENTRY_POINTS = {
+    "console_scripts": [
+        "sonic-db-load = sonic_py_common.sonic_db_dump_load:sonic_db_dump_load",
+        "sonic-db-dump = sonic_py_common.sonic_db_dump_load:sonic_db_dump_load",
+    ],
+}
+
+_SOURCE_EXTRA_DISTINFO_FILES = {"proto/LICENSE": "licenses/proto/LICENSE"}
+
+_SOURCE_EXTRA_REQUIRES = {"testing": ["pytest"]}
+
+_SOURCE_LICENSE = "Apache 2.0"
+
+_SOURCE_REQUIRES = [
+    "natsort",
+    "pyyaml",
+    "redis-dump-load",
+    "grpcio>=1.71.0",
+    "protobuf>=5.29.6,<8",
+]
+
+_SOURCE_SUMMARY = "Common Python libraries for SONiC"
+
+_SOURCE_VERSION = "1.0"
+
 py_wheel(
     name = "sonic_py_common_wheel",
-    distribution = "sonic-py-common",
-    entry_points = {
-        "console_scripts": [
-            "sonic-db-load = sonic_py_common.sonic_db_dump_load:sonic_db_dump_load",
-            "sonic-db-dump = sonic_py_common.sonic_db_dump_load:sonic_db_dump_load",
-        ],
-    },
-    extra_distinfo_files = {"proto/LICENSE": "licenses/proto/LICENSE"},
-    extra_requires = {"testing": ["pytest"]},
-    license = "Apache 2.0",
+    distribution = _SOURCE_DISTRIBUTION,
+    entry_points = _SOURCE_ENTRY_POINTS,
+    extra_distinfo_files = _SOURCE_EXTRA_DISTINFO_FILES,
+    extra_requires = _SOURCE_EXTRA_REQUIRES,
+    license = _SOURCE_LICENSE,
     python_tag = "py3",
-    requires = [
-        "natsort",
-        "pyyaml",
-        "redis-dump-load",
-        "grpcio>=1.71.0",
-        "protobuf>=5.29.6,<8",
-    ],
+    requires = _SOURCE_REQUIRES,
     strip_path_prefixes = ["src/sonic-py-common/"],
-    summary = "Common Python libraries for SONiC",
-    version = "1.0",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
     deps = [":wheel_payload"],
 )
 
@@ -156,4 +173,59 @@ filegroup(
 test_suite(
     name = "sonic_py_common_test",
     tests = ["//tools/bazel/tests:sonic_py_common_test"],
+)
+
+# Direct source installation preserves setup.py metadata and original wheel API.
+site_packages(
+    name = "sonic-py-common.runtime",
+    author = "SONiC Team",
+    author_email = "linuxnetdev@microsoft.com",
+    classifiers = [
+        "Intended Audience :: Developers",
+        "Operating System :: Linux",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python",
+    ],
+    data_prefix = "/usr/local",
+    distribution = _SOURCE_DISTRIBUTION,
+    entry_points = _SOURCE_ENTRY_POINTS,
+    extra_distinfo_files = _SOURCE_EXTRA_DISTINFO_FILES,
+    extra_requires = _SOURCE_EXTRA_REQUIRES,
+    files = {p: p for p in glob(
+        [
+            "sonic_py_common/*.py",
+            "sonic_grpc/*.py",
+            "sonic_grpc/gnoi/*.py",
+        ],
+        exclude = ["sonic_grpc/gnoi/*_pb2*.py"],
+    )} | {":" + p: p for p in _GENERATED_PROTOS},
+    headers = "/usr/local/include",
+    homepage = "https://github.com/Azure/SONiC",
+    interpreter = "/usr/bin/python3",
+    keywords = "SONiC sonic PYTHON python COMMON common",
+    license = _SOURCE_LICENSE,
+    license_files = ["proto/LICENSE"],
+    maintainer = "Joe LeVeque",
+    maintainer_email = "jolevequ@microsoft.com",
+    regular_file_mode = "0644",
+    requires = _SOURCE_REQUIRES,
+    scripts = "/usr/local/bin",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
+)
+
+filegroup(
+    name = "sonic-py-common.runtime_metadata",
+    srcs = [":sonic-py-common.runtime"],
+    output_group = "metadata",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_install_test_sources",
+    testonly = True,
+    srcs = [":wheel_sources"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
 )
