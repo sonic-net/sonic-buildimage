@@ -63,7 +63,7 @@ pygments==2.14.0
 pygobject==3.42.2
 pynacl==1.6.2
 pyparsing==3.0.9
-pyrasite==2.0
+pyrasite==2.2.0
 pyro4==4.82
 pyroute2==0.7.2
 pysubnettree==0.38.1
