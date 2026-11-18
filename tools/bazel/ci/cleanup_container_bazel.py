@@ -23,6 +23,23 @@ AUTHORIZATION = "bazel-cleanup-authorization.json"
 IDENTITY = "job-identity.json"
 CONTAINER_JOBS = {"archive", "gearbox_archive", "dash_engine_archive", "radv_native", "native", "otel_archive"}
 SUPPORTED_JOBS = CONTAINER_JOBS | {"package"}
+MIGRATED_JOBS = {
+    "bazel-frr-python.yml": {"packages"},
+    "bazel-frr.yml": {"native"},
+    "bazel-libteam.yml": {"native"},
+    "bazel-sysmgr.yml": {"native"},
+    "bazel-make-cache.yml": {"checks"},
+    "bazel-oci.yml": {
+        "checks", "source_image_inputs", "gnmi_native", "mgmt_framework_native",
+        "dash_ha_runtime", "macsec_runtime", "database_runtime", "lldp_runtime",
+        "mux_runtime", "gearbox_runtime", "eventd_runtime", "swss_layer_runtime",
+        "snmp_runtime", "sysmgr_runtime", "frr_runtime", "teamd_runtime",
+        "gnmi_runtime", "mgmt_framework_runtime", "radv_runtime",
+    },
+    "build-dashboard.yml": {"checks", "publish"},
+    "runner-manager.yml": {"tests"},
+    "runtime-image-validation.yml": {"native-tests"},
+}
 
 
 def owner(workspace):
@@ -35,7 +52,7 @@ def owner(workspace):
         "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
         "job": os.environ["GITHUB_JOB"],
     }
-    if (identity["job"] not in SUPPORTED_JOBS or
+    if (identity["job"] not in SUPPORTED_JOBS | set().union(*MIGRATED_JOBS.values()) or
             not all(re.fullmatch(r"[1-9][0-9]*", identity[key])
                     for key in ("run_id", "run_attempt"))):
         raise ValueError("Cleanup requires a supported Bazel job and numeric run identity")
@@ -99,12 +116,33 @@ def publication_status(steps):
     return succeeded, "Uploads completed" if succeeded else "No artifact upload succeeded"
 
 
-def mark_artifacts(workspace, runner_temp, directory, steps):
-    eligible, reason = publication_status(steps)
+def migrated_publication_status(steps, uploads, status, has_artifacts):
+    if (not isinstance(steps, dict) or not isinstance(uploads, list) or
+            any(not isinstance(name, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", name)
+                for name in uploads) or len(set(uploads)) != len(uploads) or
+            status not in {"success", "failure", "cancelled"}):
+        raise ValueError("Invalid migrated-job publication status")
+    outcomes = []
+    for name in uploads:
+        record = steps.get(name)
+        if not isinstance(record, dict) or record.get("outcome") not in {
+                "success", "failure", "cancelled", "skipped"}:
+            raise ValueError(f"Missing or invalid upload status: {name}")
+        outcomes.append(record["outcome"])
+    if status != "success":
+        return False, "Job did not succeed"
+    if any(outcome in {"failure", "cancelled"} for outcome in outcomes):
+        return False, "Artifact upload did not succeed"
+    if has_artifacts and "success" not in outcomes:
+        return False, "No artifact upload succeeded"
+    return True, "Job succeeded and generated evidence was published"
+
+
+def mark_artifacts(workspace, runner_temp, directory, steps, migrated=False):
     job_identity(workspace, runner_temp, directory)
     with ExitStack() as descriptors:
         artifact_identities = {}
-        for relative in artifact_directories():
+        for relative in artifact_directories(migrated=migrated):
             path = workspace / relative
             try:
                 artifacts = open_directory(path, descriptors)
@@ -113,6 +151,12 @@ def mark_artifacts(workspace, runner_temp, directory, steps):
             check_mounts(path)
             stat = os.fstat(artifacts)
             artifact_identities[relative] = [stat.st_dev, stat.st_ino]
+        if migrated:
+            eligible, reason = migrated_publication_status(
+                steps, json.loads(os.environ["BAZEL_CLEANUP_UPLOAD_STEPS"]),
+                os.environ["BAZEL_CLEANUP_JOB_STATUS"], bool(artifact_identities))
+        else:
+            eligible, reason = publication_status(steps)
         report = {
             "schema": 1, **owner(workspace), "eligible": eligible, "reason": reason,
             "artifacts": artifact_identities,
@@ -125,7 +169,11 @@ def mark_artifacts(workspace, runner_temp, directory, steps):
     print(f"Artifact cleanup authorization: {reason}")
 
 
-def artifact_directories():
+def artifact_directories(migrated=False):
+    if migrated:
+        if os.environ["GITHUB_JOB"] == "publish":
+            return ("site", "history")
+        return ("artifacts",)
     if os.environ["GITHUB_JOB"] == "dash_engine_archive":
         # DASH evidence lives entirely inside the registered job directory.
         return ()
@@ -228,7 +276,7 @@ def remove_selected(parent_path, names, expected=None):
             os.rmdir(name, dir_fd=parent)
 
 
-def cleanup_artifacts(workspace, runner_temp, directory, host=False):
+def cleanup_artifacts(workspace, runner_temp, directory, host=False, migrated=False):
     identity = job_identity(workspace, runner_temp, directory)
     with ExitStack() as descriptors:
         parent = open_directory(directory, descriptors)
@@ -248,7 +296,7 @@ def cleanup_artifacts(workspace, runner_temp, directory, host=False):
             return
     artifacts = report.get("artifacts")
     if (not isinstance(artifacts, dict) or
-            any(relative not in artifact_directories() or not isinstance(expected, list) or
+            any(relative not in artifact_directories(migrated=migrated) or not isinstance(expected, list) or
                 len(expected) != 2 or any(type(value) is not int for value in expected)
                 for relative, expected in artifacts.items())):
         raise ValueError("Artifact authorization includes an unexpected cleanup directory")
@@ -279,21 +327,43 @@ def cleanup_host_bases(home, workspace, bazel):
         remove_selected(base.parent, (base.name,))
 
 
-def cleanup(home, workspace, runner_temp, directory, bazel="bazel", host=False):
+def repair_workspace(workspace, runner_temp, host):
+    workspace, _ = host_paths(workspace, runner_temp)
+    check_mounts(workspace)
+    if host:
+        check_container_users(workspace)
+        uid, gid = os.geteuid(), os.getegid()
+    else:
+        # The repository's parent belongs to the runner, not the root job container.
+        parent = workspace.parent.stat()
+        uid, gid = parent.st_uid, parent.st_gid
+    privilege = [] if os.geteuid() == 0 else ["sudo", "-n"]
+    find = [*privilege, "find", "-P", str(workspace), "-xdev"]
+    for selection, operation in (
+            (["-type", "d"], ["chown", "--no-dereference", "--", f"{uid}:{gid}"]),
+            (["-type", "d"], ["chmod", "u+rwx", "--"]),
+            (["-type", "f", "-links", "1"],
+             ["chown", "--no-dereference", "--", f"{uid}:{gid}"])):
+        subprocess.run([*find, *selection, "-exec", *operation, "{}", "+"], check=True)
+
+
+def cleanup(home, workspace, runner_temp, directory, bazel="bazel", host=False, migrated=False):
     job_identity(workspace, runner_temp, directory)
     stop_servers(workspace.resolve(strict=True), home, directory, bazel, private_home=not host)
-    if host:
-        cleanup_host_bases(home, workspace, bazel)
-    else:
+    if migrated:
+        repair_workspace(workspace, runner_temp, host)
+    if not host:
         cache = home / ".cache"
         if cache.exists() or cache.is_symlink():
             remove_selected(cache, LOCAL_CACHES)
         else:
             print("No container-local Bazel caches to remove")
+    elif not migrated:
+        cleanup_host_bases(home, workspace, bazel)
     if os.environ["GITHUB_JOB"] == "archive":
         # Source probes may be interrupted before an artifact upload is eligible.
         remove_selected(directory, ("archive-bazel",))
-    cleanup_artifacts(workspace, runner_temp, directory, host=host)
+    cleanup_artifacts(workspace, runner_temp, directory, host=host, migrated=migrated)
 
 
 def host_paths(workspace, runner_temp):
@@ -316,29 +386,42 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--prepare", action="store_true")
     mode.add_argument("--mark-artifacts", action="store_true")
+    parser.add_argument("--migrated-job", action="store_true")
     parser.add_argument("--job-directory", type=Path)
     args = parser.parse_args()
     try:
         workspace = Path(os.environ["GITHUB_WORKSPACE"])
         runner_temp = Path(os.environ["RUNNER_TEMP"])
         home = Path(os.environ["HOME"])
+        if args.migrated_job:
+            prefix = os.environ["GITHUB_REPOSITORY"] + "/.github/workflows/"
+            reference = os.environ["GITHUB_WORKFLOW_REF"]
+            workflow = reference.removeprefix(prefix).split("@", 1)[0]
+            if (os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
+                    not reference.startswith(prefix) or "@" not in reference or
+                    os.environ["GITHUB_JOB"] not in MIGRATED_JOBS.get(workflow, set())):
+                raise ValueError("Cleanup requires an explicitly supported migrated self-hosted job")
+        elif os.environ["GITHUB_JOB"] not in SUPPORTED_JOBS:
+            raise ValueError("Cleanup requires a supported Bazel job")
         container = home == Path("/github/home") and os.geteuid() == 0 and Path("/.dockerenv").is_file()
-        host = (not Path("/.dockerenv").is_file() and os.environ["GITHUB_JOB"] == "package" and
+        host = (not Path("/.dockerenv").is_file() and
+                (args.migrated_job or os.environ["GITHUB_JOB"] == "package") and
                 workspace.parent.parent == runner_temp.parent and
                 workspace.name == os.environ.get("GITHUB_REPOSITORY", "").rsplit("/", 1)[-1])
         if os.environ.get("GITHUB_ACTIONS") != "true" or not (container or host):
             raise ValueError("Cleanup requires a GitHub Bazel job container or the YANG host job")
-        if host:
+        if host or args.migrated_job:
             workspace, runner_temp = host_paths(workspace, runner_temp)
         if args.prepare:
             print(json.dumps({"directory": str(prepare(workspace, runner_temp))}))
         elif args.mark_artifacts:
             mark_artifacts(workspace, runner_temp, Path(os.environ["SONIC_BAZEL_JOB_TEMP"]),
-                           json.loads(os.environ["BAZEL_CLEANUP_STEPS"]))
+                           json.loads(os.environ["BAZEL_CLEANUP_STEPS"]), migrated=args.migrated_job)
         else:
             if args.job_directory is None:
                 raise ValueError("Cleanup requires its registered job directory")
-            cleanup(home, workspace, runner_temp, args.job_directory, host=host)
+            cleanup(home, workspace, runner_temp, args.job_directory, host=host,
+                    migrated=args.migrated_job)
     except (KeyError, OSError, ValueError, subprocess.SubprocessError) as error:
         parser.exit(1, f"Container Bazel cleanup failed: {error}\n")
 

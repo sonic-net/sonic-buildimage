@@ -38,6 +38,9 @@ jobs:
             selection: amd64
     runs-on: &base_runner [self-hosted, linux, "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 120
+    outputs:
+      amd64_artifact_id: ${{ steps.artifact_identity.outputs.amd64_artifact_id }}
+      arm64_artifact_id: ${{ steps.artifact_identity.outputs.arm64_artifact_id }}
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
       options: --init
@@ -157,6 +160,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Export this architecture's uploaded artifact identity
+        id: artifact_identity
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          ARTIFACT_ID: ${{ steps.bazel_upload_base_images_build.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          case "$ARCHITECTURE" in
+            amd64|arm64) ;;
+            *) echo "Unsupported artifact architecture: $ARCHITECTURE" >&2; exit 1 ;;
+          esac
+          if [[ ! "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'Successful base-image publication requires a numeric artifact ID.' >&2
+            exit 1
+          fi
+          printf '%s_artifact_id=%s\n' "$ARCHITECTURE" "$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
       - name: Authorize published artifacts for post-job cleanup
         if: always() && steps.bazel_cleanup_register.outcome == 'success'
         env:
@@ -211,9 +230,27 @@ jobs:
         with:
           ref: ${{ inputs.source_revision || github.sha }}
           persist-credentials: false
+      - name: Reclaim unused images and build cache
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          docker system df
+          docker image prune --all --force
+          docker builder prune --all --force
+          docker system df
+      - name: Require this architecture's producer artifact
+        env:
+          ARTIFACT_ID: ${{ needs.native.outputs[format('{0}_artifact_id', matrix.architecture)] }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'Missing successful base-image producer artifact ID.' >&2
+            exit 1
+          fi
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: source-base-${{ matrix.architecture }}
+          artifact-ids: ${{ needs.native.outputs[format('{0}_artifact_id', matrix.architecture)] }}
+          merge-multiple: true
           path: artifacts/base-images
       - name: Load only this run's verified image
         env:

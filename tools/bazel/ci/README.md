@@ -47,6 +47,15 @@ cleanup was specific to disposable GitHub-hosted runners. Provision sufficient
 build storage and manage host Docker/cache retention outside the job without
 deleting active builds.
 
+Base-image producers export separate AMD64/ARM64 artifact-ID job outputs.
+Each matrix leg sets only its own output, so completion order cannot replace
+the other architecture's identity. Runtime validation downloads the exact
+producer artifact ID into the existing flat artifact directory, not an artifact
+selected by name. This avoids failed-build evidence with the same name from an
+earlier run attempt. Failed producers still upload diagnostic evidence but do
+not export a successful handoff. Runtime-only reruns reuse the successful
+producer's ID; receipt, revision, architecture and checksum checks still apply.
+
 AMD64 archive jobs upload generic evidence before Sysmgr acceptance, Sysmgr
 evidence before SWSS layer acceptance, and SWSS layer evidence before Orchagent
 acceptance. Each step preserves its completed artifacts outside the checkout in
@@ -125,8 +134,29 @@ Base-image reviews may check out an older source revision. Their small cleanup
 controller is staged under ignored `target/ci-bazel-cleanup-controller` before
 cache setup, keeping the post hook independent of that checkout.
 
-This cleanup does not run on the VS installer agent, delete runner metadata,
-touch shared NFS/remote caches or prune Docker images. Agents already unable to
+The general Ubuntu migration opts into the same action with `migrated-job: 'true'`.
+Its controller verifies the self-hosted environment and workflow/job allowlist.
+Host jobs repair access before checkout; the post hook repairs ownership again
+without following links or changing hardlinked files. Root job containers use
+the runner-owned repository parent's UID/GID, not container root's identity.
+Migrated jobs retain evidence if the job fails, even if an upload succeeded.
+Otherwise all declared uploads must have valid successful/skipped outcomes,
+and existing generated artifacts require at least one successful upload.
+Jobs without generated artifacts or uploads can reclaim their empty registered
+temporary directory. Dashboard publication authorizes only `site` and `history`;
+other migrated jobs authorize only `artifacts`. These host jobs stop their own
+Bazel servers but preserve host output bases and shared caches. Acceptance-only
+gates and Pages deployment create no checkout/build state and need no hook.
+The mixed validator matrix registers cleanup only for its self-hosted AMD64 leg.
+
+This post-job cleanup does not run on the VS installer agent, delete runner metadata,
+touch shared NFS/remote caches or prune Docker images. Self-hosted image-runtime
+host jobs separately reuse the VS installer's pre-download Docker image and
+builder-cache pruning step. Their VMs must have exclusive use of the daemon,
+with no concurrent jobs or background container builds. Container-based build
+jobs and GitHub-hosted runtime jobs do not receive that step. No additional
+host hook is required; containers and volumes are not pruned.
+Agents already unable to
 start a job need a separate one-time cleanup while idle; a post hook cannot
 recover an agent that fails before checkout. Continue managing host Docker
 retention outside active jobs.
@@ -189,6 +219,11 @@ output bases and repository/disk caches are retained. Other startup failures
 and a failed recovery preserve Bazel's exit code and stop the job; installation
 timestamps are never patched to bypass Bazel's validation.
 
+The DASH HA runtime job binds checkout identity before downloading its build
+artifacts. Its strict source check receives the pinned merge's actual base and
+PR head from `checkout_identity.py`, not the potentially stale event base.
+Archive revision and runtime checkout equality checks remain enabled.
+
 The Bazel OCI workflow enables remote action-cache uploads for the AMD64 and
 ARM64 archive builds and VS builds only on pushes to `master`. Pull requests
 and manual runs remain read-only. The archive job overrides the default in its
@@ -222,7 +257,7 @@ package expectations remain in the owner declarations and tests.
 
 [`.github/workflows/bazel-oci.yml`](../../../.github/workflows/bazel-oci.yml) is
 the shared entrypoint for Bazel OCI container CI. It runs common AMD64/ARM64
-archive checks, lightweight hosted regressions and the full VS integration
+archive checks, lightweight OCI regressions and the full VS integration
 job. The active `vs_container` job builds inside a privileged SONiC slave,
 then runs shared SWSS/Syncd static image checks and Docker-load validation in
 that same worker. Build and validation share its Bazel server and caches.
@@ -238,8 +273,8 @@ and [`platform/vs/docker-syncd-vs/BUILD.bazel`](../../../platform/vs/docker-sync
 The shared runner accepts either package path; it does not require owners to
 live under `dockers/`.
 Manual runs default to `skip_vs=true`; same-repository PRs retain the full VS
-job after hosted regressions and dependency resolution pass. Fork PRs and
-manual `skip_vs=true` runs omit source-package/full-image validation; hosted
+job after OCI regressions and dependency resolution pass. Fork PRs and
+manual `skip_vs=true` runs omit source-package/full-image validation; regression
 success alone does not establish those results.
 
 SWSS compilation, package contents and component tests are validated in the

@@ -442,11 +442,13 @@ class ContainerBazelCleanupTest(unittest.TestCase):
 
 
 class ContainerCleanupWorkflowTest(unittest.TestCase):
-    def test_only_bazel_agent_container_jobs_register_before_setup_cache_posts(self):
+    def test_original_bazel_container_jobs_keep_their_specialized_cleanup(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
         action = "./.github/actions/bazel-post-job-cleanup"
         selected = {name for name, job in jobs.items()
-                    if any(step.get("uses") == action for step in job["steps"])}
+                    if any(step.get("uses") == action and
+                           step.get("with", {}).get("migrated-job") != "true"
+                           for step in job["steps"])}
         self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "radv_native"})
         self.assertLessEqual(selected, subject.CONTAINER_JOBS)
         self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
@@ -570,7 +572,8 @@ else:
             self.assertEqual((root / "env").read_text(),
                              f"SONIC_BAZEL_JOB_TEMP={root / 'job-temp'}\n")
             self.assertEqual((root / "state").read_text(),
-                             f"cleanup_directory={root / 'job-temp'}\ncleanup_controller={root}\n")
+                             f"cleanup_directory={root / 'job-temp'}\ncleanup_controller={root}\n"
+                             "cleanup_migrated_job=false\n")
             environment["STATE_cleanup_directory"] = str(root / "job-temp")
             environment["STATE_cleanup_controller"] = str(root)
             for status in (0, 19):

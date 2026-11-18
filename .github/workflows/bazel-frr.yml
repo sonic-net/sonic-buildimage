@@ -3,6 +3,10 @@ name: Bazel FRR and sonic-fib
 on:
   pull_request:
     paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
       - src/sonic-frr/**
       - src/libraries/sonic-fib/**
       - MODULE.bazel
@@ -31,10 +35,12 @@ jobs:
         include:
           - architecture: amd64
             cpu: x86_64
-            runner: ubuntu-24.04
+            runner: [self-hosted, linux, bazel-x64]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
-    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -46,6 +52,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
@@ -54,7 +66,7 @@ jobs:
           disk-cache: frr-${{ matrix.architecture }}-${{ matrix.distribution }}
           cache-version: "8.5.1"
       - name: Preserve setup-bazel caches for source checks
-        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Configure shared source download mirrors
         run: |
           python3 -B tools/bazel/ci/source_mirrors.py \
@@ -153,6 +165,7 @@ jobs:
             cp -aL bazel-testlogs artifacts/testlogs
           fi
       - name: Upload source outputs and validation evidence
+        id: runner_cleanup_upload_0
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -161,3 +174,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

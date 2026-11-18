@@ -14,10 +14,110 @@ layout. The job validates the installer and the SWSS and Syncd runtime/debug
 image pairs before publishing them. Building this ONIE installer does not require
 KVM.
 
-GitHub-hosted Ubuntu runs the OCI regression checks and supplies verified
+The self-hosted `ubuntu-x64` pool runs the OCI regression checks and supplies verified
 source inputs to the installer job. The separate AMD64 and ARM64 archive jobs
 run on the self-hosted `bazel-x64` and `bazel-arm64` pools. Fork PRs and manual
 runs with `skip_vs=true` skip the native installer.
+
+## General Ubuntu x64 jobs
+
+Most jobs previously selecting `ubuntu-24.04` now require all four labels:
+`[self-hosted, Linux, X64, ubuntu-x64]`. This includes the dashboard and runner
+manager tests, as well as direct and matrix-selected AMD64 CI jobs. Provision
+this pool separately with an Ubuntu 24.04 x64 environment, Docker, passwordless
+sudo, and the tools required by each workflow. These selectors do not register
+or provision runners. Existing Bazel-specific pools are unchanged.
+
+Reused agents also need writable workspaces and sufficient Docker/containerd
+storage, not just installed tools. Root job containers can leave artifacts and
+Python bytecode that the runner service user cannot remove at the next checkout.
+The migrated host jobs reuse the guarded pre-checkout ownership repair from
+[the kernel workflow](../../../.github/workflows/bazel-kernel-bundle.yml).
+They run it outside the checkout, including when a previous checkout was left
+incomplete. Do not disable checkout cleaning to hide this state.
+Ephemeral runner registration alone does not reset a reused VM's filesystem.
+
+Every migrated job that checks out source also registers the
+[post-job cleanup action](../../../.github/actions/bazel-post-job-cleanup/action.yml)
+before cache setup. Cleanup runs after cache-save hooks and artifact uploads,
+repairs workspace directory access and single-link file ownership, stops
+checkout-owned Bazel servers, and removes private job-container Bazel caches.
+Successful jobs with completed uploads also remove their verified artifact
+directories and registered job temporary directory. Dashboard publication
+instead cleans its generated `site` and `history` directories. Failed jobs,
+failed/cancelled uploads and missing authorization retain evidence with an
+explicit warning. Jobs without uploads retain any unexpected artifact directory.
+Retained evidence is not durable storage: a later checkout may clean it, so
+recover needed unuploaded diagnostics before reusing a failed agent.
+
+The four acceptance-only gates and Pages deployment do not check out source
+or create build outputs, so they do not acquire a workspace cleanup hook.
+The hosted ARM64 validator is unchanged. Shared host caches, other job temporary
+directories, source checkouts and global Docker/containerd state are not deleted.
+Host cleanup requires Python 3, passwordless sudo and working Docker access
+to reject paths still referenced by containers. A job that cannot reach checkout
+and registration still needs one-time repair on a drained agent.
+
+Check both free blocks and inodes on the filesystems holding `/var/lib/docker`
+and `/var/lib/containerd`; mounting a larger Docker data root does not
+necessarily move containerd's snapshot storage. For agent diagnostics:
+
+```sh
+sudo -n true
+df -h /var/lib/docker /var/lib/containerd
+df -i /var/lib/docker /var/lib/containerd
+docker info --format '{{.DockerRootDir}}'
+docker system df
+```
+
+Reimage drained disposable agents or reclaim only verified job-owned data.
+Do not prune Docker/containerd state while another job is using the daemon.
+
+Self-hosted image-runtime jobs in the OCI and source base-image workflows reuse
+the VS installer's "Reclaim unused images and build cache" step before downloading
+artifacts. It runs `docker image prune --all --force` and
+`docker builder prune --all --force`, reporting Docker disk usage before/after.
+Pruning failures stop the job; container-based build jobs and GitHub-hosted jobs
+do not receive this step. No runner hook or additional agent installation is
+required.
+
+These pools must use dedicated VMs with one active job and exclusive use of the
+Docker daemon: no other runner listeners, container workloads or background
+builders may share it. The step removes unused images/cache regardless of age;
+future jobs may need to pull or rebuild them. It does not prune containers,
+volumes, networks, Bazel caches or workspaces, and never directly deletes
+Docker/containerd files. Stopped containers retain their referenced images.
+Post-job workspace cleanup and failed-evidence retention remain unchanged.
+Pruning prevents accumulation, but a clean agent still needs enough disk space
+for downloaded archives and unpacked runtime/debug images.
+
+The native libteam/SWSS consumer and FRR Python builds instead use
+`[self-hosted, linux, bazel-x64]` for AMD64 and
+`[self-hosted, linux, bazel-arm64]` for ARM64. The AMD64 FRR/sonic-fib,
+gNMI image, Framework image, and Sysmgr package builds also use `bazel-x64`.
+These jobs opt in to the private remote cache and downloader through
+`preserve_setup_bazel_cache.py --private-remote-cache`, while retaining the
+setup-bazel disk/repository caches and disabling remote uploads by default.
+Tests explicitly requesting `--nocache_test_results` still execute.
+
+The Gearbox installed-image runtime job uses `bazel-x64` rather than the general
+`ubuntu-x64` pool after repeated containerd capacity failures there. It remains
+a host job with workspace repair and post-job cleanup. The pool must still have
+enough storage for both downloaded archives and unpacked runtime/debug images;
+the selector does not increase disk capacity.
+
+Sysmgr runs in its own Bazel workspace and ignores workspace RC files. Its
+workflow passes the generated root `.bazelrc.user` explicitly through the
+build driver's `--startup-arg=--bazelrc=...` option and disables remote uploads
+in that RC file; it does not modify the source module. It also selects local
+build-event artifact URIs so its evidence collector can copy test XML and
+undeclared outputs from disk even when remote caching is enabled.
+
+The manually triggered native AMD64 Make-cache build remains on
+`ubuntu-24.04`: its sandbox setup explicitly permits only disposable
+GitHub-hosted runners, and its preparation removes hosted-image SDKs.
+The Make-cache regression job uses `ubuntu-x64`. Other ARM64 jobs selecting
+`ubuntu-24.04-arm` are unchanged.
 
 ## Legacy one-job runner helpers
 

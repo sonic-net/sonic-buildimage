@@ -355,13 +355,13 @@ class SourceWorkflowTest(unittest.TestCase):
     def recorded(self):
         return [json.loads(line) for line in self.calls.read_text().splitlines()]
 
-    def test_hosted_regressions_gate_vs_without_source_compilation(self):
+    def test_regressions_gate_vs_without_source_compilation(self):
         workflow_jobs = jobs()
         self.assertNotIn("source", workflow_jobs)
         self.assertNotIn("syncd-contracts", workflow_jobs)
         checks = workflow_jobs["checks"]
         self.assertIn("name: OCI regression checks (AMD64)", checks)
-        self.assertIn("runs-on: ubuntu-24.04", checks)
+        self.assertIn("runs-on: [self-hosted, Linux, X64, ubuntu-x64]", checks)
         self.assertRegex(workflow_jobs["vs"], r"(?m)^    needs: (?:checks|\[checks\])$")
         for name, step in steps(checks).items():
             script = shell(step)

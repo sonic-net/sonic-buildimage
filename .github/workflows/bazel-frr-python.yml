@@ -21,14 +21,16 @@ jobs:
           - name: AMD64
             architecture: amd64
             machine: x86_64
-            runner: ubuntu-24.04
+            runner: [self-hosted, linux, bazel-x64]
             platform: x86_64_trixie
           - name: ARM64
             architecture: arm64
             machine: aarch64
-            runner: ubuntu-24.04-arm
+            runner: [self-hosted, linux, bazel-arm64]
             platform: aarch64_trixie
-    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
     defaults:
       run:
         shell: bash
@@ -45,6 +47,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
       - name: Verify native architecture
         run: |
           test "$(uname -m)" = "${{ matrix.machine }}"
@@ -61,6 +69,9 @@ jobs:
           repository-cache: true
           disk-cache: buildimage-frr-python-${{ matrix.architecture }}
           cache-version: "8.5.1"
+
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
 
       - name: Configure shared source download mirrors
         run: |
@@ -179,8 +190,16 @@ jobs:
           git diff --exit-code
 
       - name: Upload packages and bounded validation receipt
+        id: runner_cleanup_upload_0
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: frr-python-${{ matrix.architecture }}
           path: artifacts/frr-python/
           if-no-files-found: error
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

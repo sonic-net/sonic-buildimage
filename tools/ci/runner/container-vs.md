@@ -225,7 +225,7 @@ fixes remain a separate component change in
 [sonic-dhcp-relay #1](https://github.com/securely1g/sonic-dhcp-relay/pull/1).
 
 The native P4 dependencies still use their existing Make/Debian producers.
-The GitHub-hosted Ubuntu OCI regression job stages the nine source files pinned in
+The self-hosted `ubuntu-x64` OCI regression job stages the nine source files pinned in
 [`src/p4lang/source-inputs.json`](../../../src/p4lang/source-inputs.json).
 It uploads a per-run artifact; the native job selects its exact artifact ID
 and independently checks every file's SHA256, size and descriptor identity.

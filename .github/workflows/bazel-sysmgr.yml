@@ -3,14 +3,24 @@ name: Bazel Sysmgr source packages
 on:
   pull_request:
     paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
       - src/sonic-sysmgr/**
       - tools/bazel/ci/bazel_commands.py
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
       - .github/workflows/bazel-sysmgr.yml
   push:
     branches: [master]
     paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
       - src/sonic-sysmgr/**
       - tools/bazel/ci/bazel_commands.py
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
       - .github/workflows/bazel-sysmgr.yml
   workflow_dispatch:
 
@@ -20,13 +30,13 @@ permissions:
 jobs:
   native:
     name: Native Sysmgr packages (amd64)
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, bazel-x64]
     timeout-minutes: 45
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
       # Nested Linux sandboxes must remount /proc; Docker's masked system paths
       # otherwise prevent Bazel from registering the required sandbox strategy.
-      options: --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
+      options: --init --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
     defaults:
       run:
         shell: bash
@@ -39,6 +49,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
       - name: Prepare pinned source submodules
         run: |
           set -euo pipefail
@@ -53,6 +69,14 @@ jobs:
           repository-cache: true
           disk-cache: sysmgr-amd64
           cache-version: "8.5.1"
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure read-only cache and local test evidence
+        run: |
+          printf '%s\n' \
+            'build --remote_upload_local_results=false' \
+            'build --experimental_build_event_upload_strategy=local' \
+            >> "$GITHUB_WORKSPACE/.bazelrc.user"
       - name: Audit, build and validate installed packages and original tests
         env:
           BAZELISK_GITHUB_TOKEN: ""
@@ -60,9 +84,11 @@ jobs:
         run: |
           mkdir -p artifacts/sysmgr
           python3 -B src/sonic-sysmgr/bazel/ci.py \
+            --startup-arg="--bazelrc=$GITHUB_WORKSPACE/.bazelrc.user" \
             --registry https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
             --artifacts artifacts/sysmgr 2>&1 | tee artifacts/sysmgr/ci.log
       - name: Upload packages, original XML and installed-package evidence
+        id: runner_cleanup_upload_0
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -71,3 +97,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
