@@ -148,5 +148,46 @@ def port(db, interface):
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 
+@ipv4.command()
+@click.argument("match_name", required=False)
+@clicommon.pass_db
+def match(db, match_name):
+    """Show one exact match name, or all matches when MATCH_NAME is omitted."""
+    headers = ["Match", "Type", "Value"]
+    table = []
+    dbconn = db.db
+    if match_name is None:
+        keys = dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|*")
+    else:
+        key = "DHCP_SERVER_IPV4_MATCH|" + match_name
+        keys = [key] if dbconn.exists("CONFIG_DB", key) else []
+    for key in sorted(keys):
+        entry = dbconn.get_all("CONFIG_DB", key)
+        name = key.split("|", 1)[1]
+        table.append([name, entry.get("type", ""), repr(entry.get("value", ""))])
+    click.echo(tabulate(table, headers=headers, tablefmt="grid", disable_numparse=True))
+
+
+@ipv4.command()
+@click.argument("dhcp_interface", required=False, default="*")
+@clicommon.pass_db
+def binding(db, dhcp_interface):
+    headers = ["Interface", "Binding", "Matches", "IPs", "Ranges"]
+    table = []
+    dbconn = db.db
+    pattern = "DHCP_SERVER_IPV4_BINDING|{}|*".format(dhcp_interface)
+    for key in sorted(dbconn.keys("CONFIG_DB", pattern)):
+        _, interface, binding_name = key.split("|", 2)
+        entry = dbconn.get_all("CONFIG_DB", key)
+        table.append([
+            interface,
+            binding_name,
+            entry.get("matches@", "").replace(",", "\n"),
+            entry.get("ips@", "").replace(",", "\n"),
+            entry.get("ranges@", "").replace(",", "\n"),
+        ])
+    click.echo(tabulate(table, headers=headers, tablefmt="grid", disable_numparse=True))
+
+
 def register(cli):
     cli.add_command(dhcp_server)

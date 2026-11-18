@@ -3,6 +3,19 @@
 mkdir -p /etc/frr
 mkdir -p /etc/supervisor/conf.d
 
+get_restart_enable()
+{
+    local value
+    if ! value=$(sonic-db-cli STATE_DB hget "$1" enable); then
+        logger -p error "Failed to read '$1' from STATE_DB, assuming it is not enabled"
+    fi
+    echo "$value"
+}
+
+SYSTEM_WARM_START=$(get_restart_enable "WARM_RESTART_ENABLE_TABLE|system")
+BGP_WARM_START=$(get_restart_enable "WARM_RESTART_ENABLE_TABLE|bgp")
+SYSTEM_FAST_REBOOT=$(get_restart_enable "FAST_RESTART_ENABLE_TABLE|system")
+
 CFGGEN_PARAMS=" \
     -d \
     -y /etc/sonic/constants.yml \
@@ -126,5 +139,15 @@ chmod 0755 /usr/sbin/bgp-unisolate
 
 mkdir -p /var/sonic
 echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
+
+# This value reflects the reboot state and the rendered FRR config at container startup.
+BGPD_GRACEFUL_RESTART_ARG=""
+if grep -qsE '^\s*bgp graceful-restart\s*$' /etc/frr/bgpd.conf /etc/frr/frr.conf &&
+   { [[ "$SYSTEM_WARM_START" == "true" ]] ||
+     [[ "$SYSTEM_FAST_REBOOT" == "true" ]] ||
+     [[ "$BGP_WARM_START" == "true" ]]; }; then
+    BGPD_GRACEFUL_RESTART_ARG="-K"
+fi
+export BGPD_GRACEFUL_RESTART_ARG
 
 exec /usr/local/bin/supervisord

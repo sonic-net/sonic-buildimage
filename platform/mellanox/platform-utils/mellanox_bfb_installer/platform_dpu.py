@@ -25,10 +25,11 @@ import subprocess
 import sys
 from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
-
-from sonic_py_common import device_info
 from sonic_platform.device_data import DeviceDataManager, DpuInterfaceEnum
+from sonic_py_common import device_info
+
+
+logger = logging.getLogger(__name__)
 
 # PCI Device IDs
 BFSOC_DEV_ID = "15b3:c2d5"  # rshim device
@@ -82,6 +83,30 @@ def rshim2dpu(rshim: str) -> Optional[str]:
         if isinstance(info, dict) and info.get(DpuInterfaceEnum.RSHIM_INT.value) == rshim:
             return dpu
     return None
+
+
+def get_rshim_pci_mappings() -> Dict[str, str]:
+    """Return every platform RShim name mapped to its live-detected PCI BDF.
+
+    Returns:
+        An ordered mapping following the DPU order in ``platform.json``.
+
+    Raises:
+        ValueError: If a platform DPU has no live RShim BDF or has a duplicate RShim name.
+    """
+    detected_bus_ids = get_dpus_detected_pci_bus_ids()
+    mappings: Dict[str, str] = {}
+    for dpu in list_dpus():
+        rshim = dpu2rshim(dpu)
+        bus_id = detected_bus_ids.get(dpu, {}).get(
+            DpuInterfaceEnum.RSHIM_PCIE_INT.value
+        )
+        if not rshim or not bus_id:
+            raise ValueError(f"DPU {dpu} has an incomplete RShim mapping")
+        if rshim in mappings:
+            raise ValueError(f"Duplicate RShim name in platform data: {rshim}")
+        mappings[rshim] = bus_id
+    return mappings
 
 
 def _run_lspci_d_n() -> str:
@@ -184,15 +209,28 @@ def get_dpus_detected_pci_bus_ids() -> Dict[str, Dict[str, str]]:
     return detected_bus_ids
 
 
-def remove_cx7_pci_device(pci_bus_id: str, log_prefix: str) -> None:
-    """If the CX PCI device for the DPU is present, remove it.
+def unbind_cx7_pci_device(pci_bus_id: str, log_prefix: str) -> bool:
+    """Unbind a DPU CX PCI device while leaving it discoverable.
 
     Logging messages will be prefixed with the log_prefix value (e.g. "rshim0: ").
+
+    Returns:
+        ``True`` when the device is left bound to no driver.
     """
-    logger.info("%sRemoving CX PCI device %s", log_prefix, pci_bus_id)
-    remove_path = f"/sys/bus/pci/devices/{pci_bus_id}/remove"
+    driver_path = f"/sys/bus/pci/devices/{pci_bus_id}/driver"
+    if not os.path.exists(driver_path):
+        logger.info(
+            "%sCX PCI device %s is not bound to any driver; skipping unbind",
+            log_prefix,
+            pci_bus_id,
+        )
+        return True
+    logger.info("%sUnbinding CX PCI device %s from its driver", log_prefix, pci_bus_id)
+    unbind_path = f"{driver_path}/unbind"
     try:
-        with open(remove_path, "w") as f:
-            f.write("1")
+        with open(unbind_path, "w") as unbind_file:
+            unbind_file.write(pci_bus_id)
     except OSError as e:
-        logger.error("Failed to remove PCI device %s: %s", pci_bus_id, e)
+        logger.error("Failed to unbind PCI device %s: %s", pci_bus_id, e)
+        return False
+    return True

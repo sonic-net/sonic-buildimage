@@ -48,7 +48,8 @@ module sonic-kubernetes_master {
                 }
 
                 leaf insecure {
-                    description "Whether to use HTTP instead of HTTPS for downloading Kubernetes CA certificate";
+                    description "Whether to disable HTTPS server certificate verification
+                                when downloading the Kubernetes CA certificate";
                     type stypes:boolean_type;
                     default "false";
                 }

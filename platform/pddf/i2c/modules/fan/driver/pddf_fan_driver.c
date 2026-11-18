@@ -565,8 +565,6 @@ static void pddf_fan_remove(struct i2c_client *client)
 	int i = 0, ret = 0;
 	struct sensor_device_attribute *ptr = NULL;
     struct fan_data *data = i2c_get_clientdata(client);
-	FAN_PDATA *platdata = (FAN_PDATA *)client->dev.platform_data;
-	FAN_DATA_ATTR *platdata_sub = platdata->fan_attrs;
 
 	if (pddf_fan_ops.pre_remove)
 	{
@@ -585,14 +583,6 @@ static void pddf_fan_remove(struct i2c_client *client)
     pddf_dbg(FAN, KERN_ERR "%s: Freed all the memory allocated for attributes\n", __FUNCTION__);
     kfree(data);
 
-	if (platdata_sub) {
-		printk(KERN_DEBUG "%s: Freeing platform subdata\n", __FUNCTION__);
-		kfree(platdata_sub);
-	}
-	if (platdata) {
-		printk(KERN_DEBUG "%s: Freeing platform data\n", __FUNCTION__);
-		kfree(platdata);
-	}
 
     if (pddf_fan_ops.post_remove)
     {

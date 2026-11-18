@@ -49,6 +49,11 @@ module sonic-bgp-common {
     description
         "SONIC BGP common YANG attributes for Neighbors and Peer group";
 
+    revision 2026-09-08 {
+        description
+            "Reject newline characters in template-based BGP neighbor descriptions.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -557,7 +562,9 @@ module sonic-bgp-common {
         }
 
         leaf name {
-            type string;
+            type string {
+                pattern '[^\n\r]*';
+            }
             description "Human-readable description text for this BGP peer.";
         }
 

@@ -220,7 +220,6 @@ The supported ASIC vendors are:
 * PLATFORM=marvell-teralynx
 * PLATFORM=mellanox
 * PLATFORM=centec
-* PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
 * PLATFORM=vs
 
@@ -246,18 +245,18 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 make target/sonic-marvell-prestera-armhf.bin
 ```
 
-To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian buster
+To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian bookworm
 using cross-compilation, run the following commands:
 
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 \
+CROSS_BLDENV=1 \
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
+CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
@@ -306,8 +305,6 @@ ONIE image is used for all other Broadcom ASIC based devices.
 
 ```shell
 make configure PLATFORM=broadcom
-# build debian stretch required targets
-BLDENV=stretch make stretch
 # build ONIE image
 make target/sonic-broadcom.bin
 # build EOS image
@@ -400,8 +397,6 @@ reproducibility notes, and known limitations.
     and Cavium switch ASIC (gzip tar archive)
   * docker-syncd-mlnx.gz: docker image for the daemon to sync database
     and Mellanox switch ASIC (gzip tar archive)
-  * docker-syncd-nephos.gz: docker image for the daemon to sync database
-    and Nephos switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
     and Marvell-Teralynx switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-prestera.gz: docker image for the daemon to sync database

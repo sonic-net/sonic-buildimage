@@ -58,9 +58,9 @@
             }
         },
         
-        "duty_cycle_to_pwm": "lambda dc: ((dc*100.0)/625)",
+        "duty_cycle_to_pwm": {"input_offset": 0, "multiplier": 100, "pre_divide_offset": 0, "divisor": 625, "output_offset": 0, "divide_before_multiply": false, "force_float": true},
 
-        "pwm_to_duty_cycle": "lambda pwm: ((pwm*625.0)/100)"
+        "pwm_to_duty_cycle": {"input_offset": 0, "multiplier": 625, "pre_divide_offset": 0, "divisor": 100, "output_offset": 0, "divide_before_multiply": false, "force_float": true}
     }
 
 }
