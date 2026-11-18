@@ -214,7 +214,7 @@ class Cpo(CpoBase, SfpOptoeBase):
         return self._port_id
 
     def is_replaceable(self):
-        return False
+        return self.elsfp.is_replaceable()
 
     def get_eeprom_path(self):
         return self.oe.get_eeprom_path()
