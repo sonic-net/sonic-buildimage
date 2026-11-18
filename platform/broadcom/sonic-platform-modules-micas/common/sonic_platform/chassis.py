@@ -730,6 +730,10 @@ class Chassis(ChassisBase):
                 els_name, els_bank = associations["external_laser_source"]
                 oe_config = self._cpo_devices[oe_name]
                 hardware_info = self._cpo_hardware_info
+                # Bailly base_page shifts ELS/RLM pages: 0 selects B0-B2,
+                # 4 selects B4-B6. Elsfp reads it from els_config; its factory
+                # passes it to BaillyElsfpMemMap. The OE-only map no longer
+                # consumes the legacy OE base_page argument below.
                 els_config = self._cpo_devices[els_name]
                 oe = Oe(int(oe_name[2:]), oe_config, hardware_info, bank=oe_bank,
                              base_page=els_config.get("base_page", 0))

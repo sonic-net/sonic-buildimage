@@ -147,6 +147,8 @@ class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
         self.els_id = int(els_id)
         self._presence_config = dict(els_config.get("els_presence") or {})
         self._eeprom_path = eeprom_path or ""
+        # Bailly RLM page displacement from cpo.json devices.ELSx.base_page.
+        # The ELS API factory passes it to BaillyElsfpMemMap.
         self.base_page = int(els_config.get("base_page", 0))
         super().__init__(hardware_info, bank=bank)
 
