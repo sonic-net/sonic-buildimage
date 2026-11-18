@@ -449,6 +449,7 @@ echo "warmboot-finalizer.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install watchdog
 sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.sh $FILESYSTEM_ROOT/usr/local/bin/watchdog-control.sh
 sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+# Setup default SONiC watchdog config
 while IFS= read -r line; do
     [[ "$line" =~ ^[[:space:]]*($|#) ]] && continue
     [[ "$line" == *"="* ]] || continue
