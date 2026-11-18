@@ -741,10 +741,17 @@ class Chassis(ChassisBase):
                 elsfp = Elsfp(int(els_name[3:]), els_config, oe.get_eeprom_path(), hardware_info, bank=els_bank)
                 cpo_list[port_id] = Cpo(port_id, name, oe, elsfp, lasers)
 
-        # All banks must be accessible before any endpoint API is used. The
-        # topology already declares the capacity; configure each OE only once.
+        # Configure each OE once before API access. A failed sysfs write must
+        # not discard the topology or prevent setup of the remaining OEs.
         for oe_name, oe in oe_devices.items():
-            oe.set_optoe_max_bank_size(int(self._cpo_devices[oe_name].get("max_banks", 1)))
+            bank_count = int(self._cpo_devices[oe_name].get("max_banks", 1))
+            try:
+                oe.set_optoe_max_bank_size(bank_count)
+            except OSError as exc:
+                syslog.syslog(
+                    syslog.LOG_ERR,
+                    "Failed to configure Optoe bank capacity for {} ({} banks): {}".format(
+                        oe_name, bank_count, exc))
 
         # Publish only after every configured port has been constructed.
         self.port_start_index = port_start_index
