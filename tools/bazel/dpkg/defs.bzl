@@ -85,13 +85,23 @@ def _dpkg_filter_impl(ctx):
     )
 
     output = ctx.actions.declare_file(ctx.attr.name + ".tar")
-    merged = ctx.actions.declare_file(ctx.attr.name + "_merged.tar") if ctx.attr.root_owned else output
+    merged = ctx.actions.declare_file(ctx.attr.name + "_merged.tar")
     _copy(ctx, "DpkgMerge", bsdtar, merged, [excluded, included])
+    # Producers use both ./usr and usr. Docker treats these as one path, while
+    # flatten's spelling-based deduplication and the include merge retain both.
+    unique = ctx.actions.declare_file(ctx.attr.name + "_unique.tar") if ctx.attr.root_owned else output
+    ctx.actions.run(
+        executable = ctx.executable._unique_tar,
+        arguments = [merged.path, unique.path],
+        inputs = [merged],
+        outputs = [unique],
+        mnemonic = "UniqueLayerPaths",
+    )
     if ctx.attr.root_owned:
         ctx.actions.run(
             executable = ctx.executable._root_owned_tar,
-            arguments = [merged.path, output.path],
-            inputs = [merged],
+            arguments = [unique.path, output.path],
+            inputs = [unique],
             outputs = [output],
             mnemonic = "RootOwnedLayer",
         )
@@ -132,6 +142,11 @@ So we need to build the excluded first, then the included, and then merge them.
         ),
         "_root_owned_tar": attr.label(
             default = Label("@sonic_build_infra//tar:root_owned_tar"),
+            executable = True,
+            cfg = "exec",
+        ),
+        "_unique_tar": attr.label(
+            default = Label("//tools/bazel/dpkg:unique_tar"),
             executable = True,
             cfg = "exec",
         ),
