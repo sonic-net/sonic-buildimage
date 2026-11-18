@@ -491,6 +491,7 @@ jobs:
             //tools/bazel/tests:wheel_contract_test \
             //src/sonic-config-engine:sonic_cfggen_cli_test \
             //tools/bazel/tests:manifest_labels_test \
+            //tools/bazel/image/vs/metadata:metadata_test \
             //tools/bazel/tests:manifest_labels_action_test \
             //tools/bazel/tests:cfggen_template_test \
             //tools/bazel/tests:swss_render_test \
@@ -521,6 +522,7 @@ jobs:
             //tools/bazel/tests:wheel_contract_test \
             //src/sonic-config-engine:sonic_cfggen_cli_test \
             //tools/bazel/tests:manifest_labels_test \
+            //tools/bazel/image/vs/metadata:metadata_test \
             //tools/bazel/tests:manifest_labels_action_test \
             //tools/bazel/tests:cfggen_template_test \
             //tools/bazel/tests:swss_render_test \
