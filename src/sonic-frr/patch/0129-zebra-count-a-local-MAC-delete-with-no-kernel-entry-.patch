@@ -1,0 +1,65 @@
+From c136f26432f9e38ae0b63ba3933b23e09116b135 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 6 Oct 2026 16:48:10 -0700
+Subject: [PATCH] zebra: count a local MAC delete with no kernel entry as done
+
+In SONiC's FPM MAC sync mode, dplane_fpm_sonic installs a sync MAC (a
+host the Ethernet Segment peer advertises) in the ASIC as a static entry
+when zebra writes the MAC as static, and removes the entry when zebra
+deletes the MAC. It sees zebra's MAC writes after the kernel has made
+them.
+
+When the kernel has no entry for the MAC, it answers zebra's delete with
+ENOENT. zebra's dataplane (zebra_dplane.c) hands each request to its
+providers in turn, the kernel first and then dplane_fpm_sonic, and
+returns a request the kernel fails to zebra at once
+(dplane_thread_loop()), so dplane_fpm_sonic never sees the delete: the
+ASIC keeps the static entry, and every FPM reconnect installs it again.
+zebra is the only writer of these kernel entries, but in this mode it
+ignores the kernel's FDB messages for local ports, so it does not notice
+when an entry is removed outside FRR, for instance by bridge fdb del.
+
+zebra asked for the entry to be gone, and it is, so report such a delete
+as done, as netlink_parse_error() already does for a route delete
+answered with ENODEV or ESRCH. Remote MAC deletes still fail on ENOENT:
+one request removes both the bridge entry and the VXLAN device entry,
+and the kernel stops at the bridge entry's ENOENT, so the VXLAN device
+entry may still be there.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/kernel_netlink.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/kernel_netlink.c b/zebra/kernel_netlink.c
+index 55b0312f64..894f0c3219 100644
+--- a/zebra/kernel_netlink.c
++++ b/zebra/kernel_netlink.c
+@@ -1145,6 +1145,18 @@ int netlink_request(struct nlsock *nl, void *req)
+ 	return 0;
+ }
+ 
++/* The entry is already gone, so later providers (e.g. FPM) must still see it. */
++static bool nl_local_mac_del_already_gone(struct zebra_dplane_ctx *ctx,
++					  struct nlmsghdr *h)
++{
++	struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(h);
++
++	return err->error == -ENOENT &&
++	       dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_DELETE &&
++	       !CHECK_FLAG(dplane_ctx_mac_get_update_flags(ctx),
++			   DPLANE_MAC_REMOTE);
++}
++
+ static int nl_batch_read_resp(struct nl_batch *bth, struct nlsock *nl)
+ {
+ 	struct nlmsghdr *h;
+@@ -1266,7 +1278,7 @@ static int nl_batch_read_resp(struct nl_batch *bth, struct nlsock *nl)
+ 			int err = netlink_parse_error(nl, h, bth->zns->is_cmd,
+ 						      false);
+ 
+-			if (err == -1)
++			if (err == -1 && !nl_local_mac_del_already_gone(ctx, h))
+ 				dplane_ctx_set_status(
+ 					ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+ 
