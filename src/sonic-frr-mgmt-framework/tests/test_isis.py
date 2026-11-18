@@ -1,457 +1,450 @@
-"""Named-instance, per-level, AF and lifecycle regressions.
-
-The four AF combinations and retained settings extend gs1571's original tests.
-Native command execution and DUT forwarding are separate acceptance gates.
-"""
+"""IS-IS composite-key events, restart parity, and failed application handling."""
 import copy
+import queue
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from jinja2 import Environment, FileSystemLoader
-from sonic_isis import effective
-from frrcfgd.isis_config import desired, render
-from frrcfgd.isis_readback import parse
-from frrcfgd.isis_manager import plan, conflict
-from frrcfgd.isis_recovery import Identity, NativeSnapshot, RecoveryKernel, AtomicJSONStore
-from frrcfgd.isis_startup import prepare
+
 from .test_config import mockmapping
 
-NET = '49.0001.0000.0000.0001.00'
+
+class ConfigDB:
+    def __init__(self):
+        self.tables = {}
+
+    def get_entry(self, table, key):
+        key = '|'.join(key) if isinstance(key, tuple) else key
+        return copy.deepcopy(self.tables.get(table, {}).get(key, {}))
+
+    def get_table(self, table):
+        return copy.deepcopy(self.tables.get(table, {}))
+
+    def set(self, table, key, row):
+        rows = self.tables.setdefault(table, {})
+        if row is None:
+            rows.pop(key, None)
+        else:
+            rows[key] = copy.deepcopy(row)
 
 
-def config(vrf='default', instance='CORE'):
-    return {
-        'VRF': {vrf: {}},
-        'INTERFACE': {'Ethernet0': {'vrf_name': vrf}},
-        'ISIS_INSTANCE': {(vrf, instance): {'enabled': 'true', 'net_titles': [NET]}},
-        'ISIS_INTERFACE': {'Ethernet0': {'vrf': vrf, 'instance': instance, 'enabled': 'true',
-                                         'ipv4_enabled': 'true', 'ipv6_enabled': 'true', 'passive': 'true',
-                                         'network_type': 'point-to-point'}},
-        'ISIS_INTERFACE_LEVEL': {('Ethernet0', 'level-1'): {'metric': '30'}},
-    }
+@pytest.fixture
+def daemon():
+    with patch.dict('sys.modules', **mockmapping):
+        from frrcfgd.frrcfgd import BGPConfigDaemon
+        instance = BGPConfigDaemon()
+        instance.config_db = ConfigDB()
+        instance.table_data_cache = {}
+        instance.bgp_message = queue.Queue()
+        instance.isis_interface_vrfs = {}
+        instance.isis_interface_bindings = {}
+        instance._BGPConfigDaemon__run_command = MagicMock(return_value=True)
+        yield instance
 
 
-def native_text(tables):
-    return 'frr version 10.7.1\n' + '\n'.join(render(tables)) + '\nend\n'
+def event(daemon, table, key, row):
+    daemon.config_db.set(table, key, row)
+    daemon.isis_handler(table, key, copy.deepcopy(row))
+    call = daemon._BGPConfigDaemon__run_command.call_args
+    return call[0][1][2::2] if call else []
 
 
-@pytest.mark.parametrize('ipv4,ipv6', [(True, True), (False, True), (True, False), (False, False)])
-@pytest.mark.parametrize('vrf', ['default', 'VrfA'])
-def test_independent_af_startup_runtime_and_readback(ipv4, ipv6, vrf):
-    tables = config(vrf)
-    tables['ISIS_INTERFACE']['Ethernet0'].update(ipv4_enabled=str(ipv4).lower(), ipv6_enabled=str(ipv6).lower())
-    snapshot = desired(tables).snapshot
-    output = render(tables)
-    commands = [line.strip() for line in output]
-    if ipv4 or ipv6:
-        assert ('ip router isis CORE' in commands) == ipv4
-        assert ('ipv6 router isis CORE' in commands) == ipv6
-        assert 'isis metric level-1 30' in commands
-        assert 'isis passive' in commands
-    else:
-        assert not any(' router isis CORE' in line for line in output)
-        assert not any('isis metric' in line for line in output)
-    assert parse(native_text(tables)).objects == snapshot.objects
-    loader = FileSystemLoader(str(Path(__file__).parents[1] / 'templates/isisd'))
-    template = Environment(loader=loader).get_template('isisd.conf.j2')
-    assert [line for line in template.render(ISIS_CONFIG_LINES=output).splitlines()
-            if line and not line.startswith('!')] == [line for line in output if line != '!']
-
-
-def test_same_vrf_names_and_same_name_other_vrf():
-    tables = config()
-    tables['VRF']['VrfA'] = {}
-    tables['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
-    tables['ISIS_INSTANCE'][('VrfA', 'CORE')] = {'enabled': 'true', 'net_titles': ['49.0001.0000.0000.0002.00']}
-    commands = render(tables)
-    assert {'router isis CORE', 'router isis EDGE', 'router isis CORE vrf VrfA'} <= set(commands)
-    assert parse(native_text(tables)).objects == desired(tables).snapshot.objects
-    tables['ISIS_INSTANCE'][('default', 'EDGE')]['net_titles'] = ['49.0001.0000.0000.0002.00']
-    with pytest.raises(ValueError, match='system ID'):
-        desired(tables)
-
-
-def test_explicit_binding_and_vrf_move_never_selects_another_parent():
-    tables = config('VrfA')
-    before = desired(tables).snapshot
-    tables['VRF']['VrfB'] = {}
-    tables['ISIS_INSTANCE'][('VrfB', 'CORE')] = {'enabled': 'true', 'net_titles': [NET]}
-    tables['INTERFACE']['Ethernet0']['vrf_name'] = 'VrfB'
-    after = desired(tables).snapshot
-    binding = Identity('isis-binding', 'Ethernet0')
-    assert binding not in after.objects
-    mutation = plan(before, after, set(before.objects) | set(after.objects))
-    assert 'no ip router isis CORE' in mutation.payload[0].commands
-    assert 'interface Ethernet0 vrf VrfA' in mutation.payload[0].commands
-    tables['ISIS_INTERFACE']['Ethernet0']['vrf'] = 'VrfB'
-    assert desired(tables).snapshot.objects[binding]['process'] == 'VrfB|CORE'
-    del tables['ISIS_INTERFACE']['Ethernet0']['instance']
-    with pytest.raises(ValueError, match='explicit valid parent'):
-        desired(tables)
-
-
-def test_disabled_parent_retains_desired_values_and_reenable_restores():
-    tables = config()
-    tables['ISIS_INSTANCE_LEVEL'] = {('default', 'CORE', 'level-1'): {
-        'lsp_refresh_interval': '100', 'lsp_maximum_lifetime': '500'}}
-    original = copy.deepcopy(tables)
-    before = desired(tables).snapshot
-    tables['ISIS_INSTANCE'][('default', 'CORE')]['enabled'] = 'false'
-    after = desired(tables).snapshot
-    assert not after.objects
-    mutation = plan(before, after, set(before.objects))
-    assert 'no ipv6 router isis CORE' in mutation.payload[0].commands
-    assert 'no router isis CORE' in mutation.payload[1].commands
-    tables['ISIS_INSTANCE'][('default', 'CORE')]['enabled'] = 'true'
-    assert desired(tables).snapshot.objects == before.objects
-    assert tables == original
-
-
-def test_levels_defaults_resets_and_atomic_lsp_command():
-    tables = config()
-    tables['ISIS_INSTANCE_LEVEL'] = {
-        ('default', 'CORE', 'level-1'): {'lsp_refresh_interval': '100', 'lsp_maximum_lifetime': '500',
-                                         'spf_minimum_interval': '7'},
-        ('default', 'CORE', 'level-2'): {'lsp_generation_interval': '50'},
-    }
-    commands = [line.strip() for line in render(tables)]
-    assert 'lsp-timers level-1 gen-interval 30 refresh-interval 100 max-lifetime 500' in commands
-    assert 'lsp-timers level-2 gen-interval 50 refresh-interval 900 max-lifetime 1200' in commands
-    assert 'spf-interval level-1 7' in commands
+def test_instance_row_defaults_and_net_replacement(daemon):
+    commands = event(daemon, 'ISIS_GLOBALS', 'VrfBlue|CORE', {'NULL': 'NULL'})
+    assert 'router isis CORE vrf VrfBlue' in commands
+    assert 'metric-style wide' in commands
     assert 'lsp-mtu 1497' in commands
-    tables['ISIS_INSTANCE'][('default', 'CORE')]['lsp_mtu'] = '1492'
-    assert ' lsp-mtu 1492' in render(tables)
-    del tables['ISIS_INTERFACE_LEVEL'][('Ethernet0', 'level-1')]['metric']
-    assert effective('ISIS_INTERFACE_LEVEL', {})['metric'] == '10'
-    assert ' isis metric level-1 10' in render(tables)
-    tables['ISIS_INSTANCE_LEVEL'][('default', 'CORE', 'level-1')]['lsp_refresh_interval'] = '900'
-    with pytest.raises(ValueError, match='refresh'):
-        desired(tables)
+    assert 'no topology ipv6-unicast' in commands
+    assert 'hostname dynamic' in commands
+    assert 'lsp-timers level-1 gen-interval 30 refresh-interval 900 max-lifetime 1200' in commands
+    assert daemon.table_data_cache['ISIS_GLOBALS&&VrfBlue|CORE'] == {'NULL': 'NULL'}
+    old = '49.0001.0000.0000.0001.00'
+    new = '49.0002.0000.0000.0001.00'
+    event(daemon, 'ISIS_GLOBALS', 'VrfBlue|CORE', {'net_title': old})
+    commands = event(daemon, 'ISIS_GLOBALS', 'VrfBlue|CORE', {'net_title': new})
+    assert commands.index('no net ' + old) < commands.index('net ' + new)
+    commands = event(daemon, 'ISIS_GLOBALS', 'VrfBlue|CORE', {'NULL': 'NULL'})
+    assert 'no net ' + new in commands
+    assert 'no router isis CORE vrf VrfBlue' in event(daemon, 'ISIS_GLOBALS', 'VrfBlue|CORE', None)
 
 
-def test_overload_spf_and_redistribution_roundtrip():
-    tables = config()
-    tables['ROUTE_MAP_SET'] = {'EXPORT': {}}
-    tables['ROUTE_MAP'] = {('EXPORT', '10'): {}}
-    tables['ISIS_INSTANCE'][('default', 'CORE')].update(
-        overload='true', overload_on_startup='30', spf_init_delay='50', spf_short_delay='100',
-        spf_long_delay='1000', spf_hold_down='10000', spf_time_to_learn='5000')
-    tables['ISIS_REDISTRIBUTE'] = {('default', 'CORE', 'ipv4', 'connected', 'level-1'): {
-        'metric': '20', 'route_map': 'EXPORT'}}
-    before = desired(tables).snapshot
-    assert parse(native_text(tables)).objects == before.objects
-    assert ' redistribute ipv4 connected level-1 metric 20 route-map EXPORT' in render(tables)
-    tables['ISIS_REDISTRIBUTE'].clear()
-    mutation = plan(before, desired(tables).snapshot, set(before.objects))
-    assert 'no redistribute ipv4 connected level-1' in mutation.payload[0].commands
+def test_full_lsp_timers_preserve_other_values_and_backoff(daemon):
+    row = {'lsp_generation_interval_level_1': '40', 'lsp_refresh_interval_level_1': '1000',
+           'lsp_lifetime_level_1': '1500', 'spf_minimum_interval_level_2': '5',
+           'spf_init_delay': '0', 'spf_short_delay': '50', 'spf_long_delay': '100',
+           'spf_hold_down': '1000', 'spf_time_to_learn': '500'}
+    commands = event(daemon, 'ISIS_GLOBALS', 'default|A', row)
+    assert 'lsp-timers level-1 gen-interval 40 refresh-interval 1000 max-lifetime 1500' in commands
+    assert 'spf-interval level-2 5' in commands
+    assert 'spf-delay-ietf init-delay 0 short-delay 50 long-delay 100 holddown 1000 time-to-learn 500' in commands
+    commands = event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    assert 'no spf-delay-ietf' in commands
 
 
-@pytest.mark.parametrize('change', [
-    lambda c: c['ISIS_INSTANCE'][('default', 'CORE')].update(spf_init_delay='1'),
-    lambda c: c['ISIS_INSTANCE'][('default', 'CORE')].update(overload_on_startup='86401'),
-    lambda c: c['ISIS_INTERFACE']['Ethernet0'].update(instance='missing'),
-    lambda c: c.update(ISIS_INTERFACE_LEVEL={('missing', 'level-1'): {'metric': '10'}}),
-    lambda c: c.update(ISIS_REDISTRIBUTE={('default', 'CORE', 'ipv6', 'ospf', 'level-1'): {}}),
-    lambda c: c['ISIS_INSTANCE'][('default', 'CORE')].update(net_titles=['49.0001.00']),
-    lambda c: c['ISIS_INSTANCE'][('default', 'CORE')].update(lsp_mtu='1497\nend'),
+def test_af_detach_clears_attributes_and_reenable_uses_defaults(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'level': 'level-2'})
+    row = {'instance_name': 'A', 'ipv4_enabled': 'true', 'metric_level_1': '0',
+           'hello_interval_level_2': '10', 'network_type': 'p2p'}
+    commands = event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row)
+    assert 'isis circuit-type level-2-only' in commands
+    assert 'ip router isis A' in commands
+    assert 'no ipv6 router isis A' in commands
+    assert 'isis hello-interval level-2 10' in commands
+    commands = event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', None)
+    assert 'no ip router isis A' in commands
+    assert 'no isis metric' in commands
+    assert 'no isis hello-interval' in commands
+    assert not daemon.isis_interface_bindings
+    commands = event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0',
+                     {'instance_name': 'A', 'ipv6_enabled': 'true'})
+    assert 'no isis metric level-1' in commands
+    assert 'no isis hello-interval level-2' in commands
+
+
+def test_parent_level_update_recalculates_interface_without_rewriting_row(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    row = {'instance_name': 'A', 'ipv4_enabled': 'true', 'level': 'level-1-2'}
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row)
+    event(daemon, 'ISIS_REDISTRIBUTE', 'default|A|ipv4|table|level-1|10', {'metric': '20'})
+    run = daemon._BGPConfigDaemon__run_command
+    run.reset_mock()
+    commands = event(daemon, 'ISIS_GLOBALS', 'default|A', {'level': 'level-1'})
+    assert commands == ['configure terminal', 'interface Ethernet0', 'isis circuit-type level-1', 'end']
+    assert len(run.call_args_list) == 2
+    assert all(call[0][0] != 'ISIS_REDISTRIBUTE' for call in run.call_args_list)
+    assert daemon.config_db.get_entry('ISIS_INTERFACE', 'default|Ethernet0') == row
+
+
+def test_mtu_update_leaves_interfaces_and_table_policies_untouched(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'lsp_mtu': '1300'})
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0',
+          {'instance_name': 'A', 'ipv4_enabled': 'true', 'network_type': 'p2p'})
+    event(daemon, 'ISIS_REDISTRIBUTE', 'default|A|ipv4|table|level-2|10', {'metric': '20'})
+    run = daemon._BGPConfigDaemon__run_command
+    run.reset_mock()
+    commands = event(daemon, 'ISIS_GLOBALS', 'default|A', {'lsp_mtu': '1400'})
+    assert commands == ['configure terminal', 'router isis A', 'lsp-mtu 1400', 'end']
+    assert run.call_count == 1
+
+
+@pytest.mark.parametrize('table,key,row', [
+    ('ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'}),
+    ('ISIS_INTERFACE', 'default|Ethernet0', {'instance_name': 'A', 'ipv4_enabled': 'true'}),
+    ('ISIS_REDISTRIBUTE', 'default|A|ipv4|table|level-2|10', {'metric': '20'}),
 ])
-def test_invalid_graph_never_renders(change):
-    tables = config()
-    change(tables)
-    with pytest.raises(ValueError):
-        render(tables)
+def test_unchanged_event_does_not_send_frr_commands(daemon, table, key, row):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    event(daemon, table, key, row)
+    run = daemon._BGPConfigDaemon__run_command
+    run.reset_mock()
+    event(daemon, table, key, row)
+    run.assert_not_called()
+    assert daemon.table_data_cache[table + '&&' + key] == row
 
 
-def test_startup_registration_then_offline_delete_uses_durable_ownership(tmp_path):
-    tables = config()
-    store = AtomicJSONStore(tmp_path / "owned.json")
-    prepared = prepare(tables, store, clock=lambda: 1,
-                       boot_id_supplier=lambda: '00000000-0000-0000-0000-000000000001')
-    assert prepared['ISIS_CONFIG_LINES'] == render(tables)
-    assert store.load().status == 'prepared' and store.load().deadline is None
-    observed = desired(tables).snapshot
-    # Slow container initialization must not spend the worker's recovery budget.
-    kernel = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 302, conflict_check=conflict)
-    assert kernel.step(lambda: desired(tables), lambda: observed, plan, lambda _: False, 30).status == 'applied'
-    # Daemon stopped: remove all desired IS-IS rows, keep native state and journal.
-    empty = copy.deepcopy(tables)
-    empty['ISIS_INSTANCE'] = {}
-    empty['ISIS_INTERFACE'] = {}
-    empty['ISIS_INTERFACE_LEVEL'] = {}
-    applied = []
-
-    def apply(operations):
-        nonlocal observed
-        applied.extend(operations)
-        observed = NativeSnapshot({})
-        return True
-
-    restarted = RecoveryKernel(store, owner='isis-northbound-v1', clock=lambda: 303, conflict_check=conflict)
-    result = restarted.step(lambda: desired(empty), lambda: observed, plan, apply, 30)
-    assert result.status == 'applied'
-    assert applied[0].commands[1] == 'interface Ethernet0'
-    assert 'no router isis CORE' in applied[1].commands
+def test_interface_metric_af_and_reset_only_apply_related_commands(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    row = {'instance_name': 'A', 'ipv4_enabled': 'true', 'metric_level_1': '10'}
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row)
+    row['metric_level_1'] = '20'
+    assert event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row) == [
+        'configure terminal', 'interface Ethernet0', 'isis metric level-1 20', 'end']
+    row['ipv6_enabled'] = 'true'
+    assert event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row) == [
+        'configure terminal', 'interface Ethernet0', 'ipv6 router isis A', 'end']
+    row.pop('metric_level_1')
+    assert event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row) == [
+        'configure terminal', 'interface Ethernet0', 'no isis metric level-1', 'end']
 
 
-def test_unowned_native_objects_and_incomplete_readback_are_not_adopted():
-    tables = config()
-    wanted = desired(tables)
-    assert conflict(wanted.snapshot, wanted.snapshot, set())
-    for text in ('', 'router isis CORE\nend', 'frr version 10.7.1\nrouter isis CORE'):
-        with pytest.raises(ValueError):
-            parse(text)
-    text = native_text(tables).replace(' metric-style wide', ' segment-routing srv6')
-    assert parse(text).unsupported
+def test_changed_lsp_and_backoff_groups_preserve_unchanged_values(daemon):
+    row = {'lsp_generation_interval_level_1': '40', 'lsp_refresh_interval_level_1': '1000',
+           'lsp_lifetime_level_1': '1500', 'spf_init_delay': '0', 'spf_short_delay': '50',
+           'spf_long_delay': '100', 'spf_hold_down': '1000', 'spf_time_to_learn': '500'}
+    event(daemon, 'ISIS_GLOBALS', 'default|A', row)
+    row['lsp_generation_interval_level_1'] = '50'
+    assert event(daemon, 'ISIS_GLOBALS', 'default|A', row) == [
+        'configure terminal', 'router isis A',
+        'lsp-timers level-1 gen-interval 50 refresh-interval 1000 max-lifetime 1500', 'end']
+    row.pop('lsp_generation_interval_level_1')
+    assert event(daemon, 'ISIS_GLOBALS', 'default|A', row) == [
+        'configure terminal', 'router isis A',
+        'lsp-timers level-1 gen-interval 30 refresh-interval 1000 max-lifetime 1500', 'end']
+    row['spf_short_delay'] = '60'
+    assert event(daemon, 'ISIS_GLOBALS', 'default|A', row) == [
+        'configure terminal', 'router isis A',
+        'spf-delay-ietf init-delay 0 short-delay 60 long-delay 100 holddown 1000 time-to-learn 500', 'end']
 
 
-@patch.dict('sys.modules', **mockmapping)
-def test_native_worker_is_independent_of_bgp_callbacks():
-    from frrcfgd.frrcfgd import BGPConfigDaemon
-    daemon = BGPConfigDaemon()
-    daemon.isis_worker = MagicMock()
-    daemon.isis_table_handler('ISIS_INSTANCE', 'default|CORE', {})
-    daemon.isis_worker.notify.assert_called_once()
-    daemon.isis_worker.reset_mock()
-    daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0|10.0.0.1/31', {})
-    daemon.isis_worker.notify.assert_not_called()
-    daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0', {'vrf_name': 'VrfA'})
-    daemon.isis_worker.notify.assert_called_once()
-    assert all(handler == daemon.isis_table_handler for table, handler in daemon.table_handler_list
-               if table.startswith('ISIS_'))
-
-
-def test_shared_system_id_change_removes_all_old_areas_before_recreation():
-    tables = config()
-    tables['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
-    before = desired(tables).snapshot
-    for row in tables['ISIS_INSTANCE'].values():
-        row['net_titles'] = ['49.0001.0000.0000.0002.00']
-    after = desired(tables).snapshot
-    mutation = plan(before, after, set(before.objects))
-    commands = [command for op in mutation.payload for command in op.commands]
-    assert commands.index('no ipv6 router isis CORE') < commands.index('no router isis CORE')
-    assert max(commands.index('no router isis ' + name) for name in ('CORE', 'EDGE')) < min(
-        commands.index('router isis ' + name) for name in ('CORE', 'EDGE'))
-    assert commands.index('router isis EDGE') < commands.index('ip router isis CORE')
-    from frrcfgd.isis_recovery import RecoveryError
-    with pytest.raises(RecoveryError, match='Unowned'):
-        plan(before, after, set(before.objects) - {Identity('isis-process', 'default|EDGE')})
-
-
-def test_level_reduction_withdraws_policy_before_native_level_change():
-    tables = config()
-    tables['ISIS_REDISTRIBUTE'] = {('default', 'CORE', 'ipv4', 'connected', 'level-1'): {}}
-    before = desired(tables).snapshot
-    tables['ISIS_REDISTRIBUTE'].clear()
-    tables['ISIS_INSTANCE'][('default', 'CORE')]['level_type'] = 'level-2-only'
-    commands = plan(before, desired(tables).snapshot, set(before.objects)).payload[0].commands
-    assert commands.index('no redistribute ipv4 connected level-1') < commands.index('is-type level-2-only')
-
-
-def test_becoming_aggregate_member_detaches_retained_binding():
-    tables = config()
-    before = desired(tables).snapshot
-    tables['PORTCHANNEL_MEMBER'] = {('PortChannel1', 'Ethernet0'): {}}
-    after = desired(tables).snapshot
-    assert Identity('isis-binding', 'Ethernet0') not in after.objects
-    assert tables['ISIS_INTERFACE']['Ethernet0']['instance'] == 'CORE'
-    mutation = plan(before, after, set(before.objects))
-    assert 'no ip router isis CORE' in mutation.payload[0].commands
-
-
-def test_template_rejects_missing_startup_preparation():
-    from jinja2 import UndefinedError
-    loader = FileSystemLoader(str(Path(__file__).parents[1] / 'templates/isisd'))
-    template = Environment(loader=loader).get_template('isisd.conf.j2')
-    with pytest.raises(UndefinedError, match='ISIS_CONFIG_LINES'):
-        template.render(ISIS_INSTANCE={'default|CORE': {'enabled': 'true'}})
-    assert 'router isis' not in template.render()
-
-
-def test_duplicate_native_interface_readback_is_not_silently_overwritten():
-    from frrcfgd.isis_recovery import RecoveryError
-    text = native_text(config()).replace('end\n', 'interface Ethernet0\n description duplicate\nend\n')
-    with pytest.raises(RecoveryError, match='Duplicate native interface'):
-        parse(text)
-
-
-@patch.dict('sys.modules', **mockmapping)
-def test_hup_requests_only_isis_retry():
-    import signal
-    from frrcfgd import frrcfgd
-    with patch.object(frrcfgd, 'BGPConfigDaemon') as daemon, \
-            patch.object(frrcfgd, 'BgpdClientMgr'), \
-            patch.object(frrcfgd, 'main_loop', False), \
-            patch.object(frrcfgd.signal, 'signal') as register:
-        frrcfgd.main()
-        handler = next(call.args[1] for call in register.call_args_list if call.args[0] == signal.SIGHUP)
-        handler(signal.SIGHUP, None)
-        daemon.return_value.isis_worker.request_retry.assert_called_once_with()
-        daemon.return_value.start.assert_called_once_with()
-        daemon.return_value.stop.assert_called_once_with()
-
-
-AF_STATES = ((False, False), (False, True), (True, False), (True, True))
-
-
-@pytest.mark.parametrize('before_af', AF_STATES)
-@pytest.mark.parametrize('after_af', AF_STATES)
-@pytest.mark.parametrize('vrf', ['default', 'VrfA'])
-def test_every_af_transition_preserves_circuit_settings(before_af, after_af, vrf):
-    """Exercise planner transitions, including destruction when the last AF leaves.
-
-    This checks command ordering and retained policy, not native FRR execution.
-    The latter remains a separate acceptance gate.
-    """
-    tables = config(vrf)
-    row = tables['ISIS_INTERFACE']['Ethernet0']
-    row.update(ipv4_enabled=str(before_af[0]).lower(), ipv6_enabled=str(before_af[1]).lower())
-    before = desired(tables).snapshot
-    row.update(ipv4_enabled=str(after_af[0]).lower(), ipv6_enabled=str(after_af[1]).lower())
-    after = desired(tables).snapshot
-    mutation = plan(before, after, set(before.objects))
-    if before_af == after_af:
-        assert mutation is None
-        return
-    binding = Identity('isis-binding', 'Ethernet0')
-    assert mutation.identities == frozenset({binding})
-    assert len(mutation.payload) == 1
-    commands = mutation.payload[0].commands
-    expected_header = 'interface Ethernet0' + (' vrf ' + vrf if vrf != 'default' else '')
-    assert commands[1] == expected_header
-    for enabled, prefix in zip(after_af, ('ip', 'ipv6')):
-        assert (('' if enabled else 'no ') + prefix + ' router isis CORE') in commands
-    if any(after_af):
-        # FRR may recreate the circuit when switching away from the last active
-        # family. All retained policy must follow the new family binding.
-        last_bind = max(commands.index(prefix + ' router isis CORE')
-                        for enabled, prefix in zip(after_af, ('ip', 'ipv6')) if enabled)
-        for setting in ('isis passive', 'isis network point-to-point',
-                        'isis metric level-1 30', 'isis metric level-2 10'):
-            assert commands.index(setting) > last_bind
-        assert after.objects[binding]['levels']['level-1']['metric'] == '30'
-    else:
-        assert binding not in after.objects
-        assert not any(command.startswith('isis ') for command in commands)
-        assert row['passive'] == 'true' and row['instance'] == 'CORE'
-
-
-@pytest.mark.parametrize('vrf', ['default', 'VrfBlue'])
-def test_native_writer_without_vrf_uses_zebra_observation(vrf):
-    from frrcfgd.isis_readback import interface_vrfs
-    # Actual FRR 10.7.1 isisd writer omits the interface VRF suffix.
-    text = 'frr version 10.7.1\ninterface Ethernet4\n ip router isis CORE\nexit\nend\n'
-    observed = interface_vrfs('{"Ethernet4":{"vrfName":"' + vrf + '"}}')
-    binding = parse(text, observed).objects[Identity('isis-binding', 'Ethernet4')]
-    assert binding['vrf'] == vrf
-    assert binding['process'] == vrf + '|CORE'
-
-
-@pytest.mark.parametrize('observed', [{}, {'Ethernet4': 'default'}])
-def test_missing_or_contradictory_native_interface_vrf_fails_closed(observed):
-    from frrcfgd.isis_recovery import RecoveryError
-    text = 'frr version 10.7.1\ninterface Ethernet4 vrf VrfBlue\n ip router isis CORE\nexit\nend\n'
-    with pytest.raises(RecoveryError):
-        parse(text, observed)
-
-
-@pytest.mark.parametrize('text', ['[]', '{} trailing', '{"Ethernet4":{}}', '{"Ethernet4":null}'])
-def test_invalid_native_vrf_inventory_fails_closed(text):
-    from frrcfgd.isis_readback import interface_vrfs
-    from frrcfgd.isis_recovery import RecoveryError
-    with pytest.raises(RecoveryError):
-        interface_vrfs(text)
-
-
-def test_vrf_move_during_native_readback_is_not_confirmed(tmp_path):
-    from frrcfgd.isis_manager import RecoveryWorker
-    from frrcfgd.isis_recovery import RecoveryError
-    client = MagicMock()
-    client.query.side_effect = [
-        '{"Ethernet4":{"vrfName":"default"}}',
-        'frr version 10.7.1\ninterface Ethernet4\n ip router isis CORE\nexit\n',
-        '{"Ethernet4":{"vrfName":"VrfBlue"}}',
+def test_startup_child_replay_does_not_rebuild_already_restored_table_policy(daemon):
+    snapshot = [
+        ('ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'}),
+        ('ISIS_INTERFACE', 'default|Ethernet0', {'instance_name': 'A', 'ipv4_enabled': 'true'}),
+        ('ISIS_REDISTRIBUTE', 'default|A|ipv4|table|level-2|10', {'metric': '20'}),
     ]
-    worker = RecoveryWorker(client=client, journal=str(tmp_path / 'ownership.json'))
-    with pytest.raises(RecoveryError, match='changed during readback'):
-        worker.readback()
-    assert not (tmp_path / 'ownership.json').exists()
+    for table, key, row in snapshot:
+        daemon.config_db.set(table, key, row)
+    with patch.object(daemon.config_db, 'serialize_key', side_effect=lambda key: key, create=True):
+        for table, key, row in snapshot:
+            daemon._BGPConfigDaemon__replay_table_entry(table, key, copy.deepcopy(row))
+    calls = daemon._BGPConfigDaemon__run_command.call_args_list
+    assert [call[0][0] for call in calls] == ['ISIS_GLOBALS', 'ISIS_INTERFACE', 'ISIS_REDISTRIBUTE']
+    assert 'no redistribute ipv4 table 10 level-2' not in calls[-1][0][1]
+    for table, key, row in snapshot:
+        assert daemon.table_data_cache[table + '&&' + key] == row
 
 
-@pytest.mark.parametrize('action', ['delete', 'disable'])
-def test_multi_area_retirement_is_rejected_before_live_mutation(action):
-    from sonic_isis import validate_transition
-    from frrcfgd.isis_recovery import RecoveryError
-    before = config()
-    before['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
-    after = copy.deepcopy(before)
-    if action == 'delete':
-        del after['ISIS_INSTANCE'][('default', 'EDGE')]
-    else:
-        after['ISIS_INSTANCE'][('default', 'EDGE')]['enabled'] = 'false'
-    with pytest.raises(ValueError, match='operation refused until FRR is fixed'):
-        validate_transition(before, after)
-    old, new = desired(before).snapshot, desired(after).snapshot
-    with pytest.raises(RecoveryError, match='native mutation refused'):
-        plan(old, new, set(old.objects))
+def test_parent_applies_child_cache_before_child_event(daemon):
+    key = 'default|A|ipv4|table|level-2|10'
+    daemon.config_db.set('ISIS_REDISTRIBUTE', key, {'metric': '20'})
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    assert daemon.table_data_cache['ISIS_REDISTRIBUTE&&' + key] == {'metric': '20'}
+    commands = event(daemon, 'ISIS_REDISTRIBUTE', key, {'metric': '30'})
+    assert 'no redistribute ipv4 table 10 level-2' in commands
 
 
-def test_foreign_sibling_also_blocks_area_removal():
-    from frrcfgd.isis_recovery import RecoveryError
-    before = config()
-    before['ISIS_INSTANCE'][('default', 'FOREIGN')] = {'enabled': 'true', 'net_titles': [NET]}
-    old = desired(before).snapshot
-    owned = set(old.objects) - {Identity('isis-process', 'default|FOREIGN')}
-    with pytest.raises(RecoveryError, match='native mutation refused'):
-        plan(old, NativeSnapshot({}), owned)
+def test_failed_child_does_not_replay_successful_parent_net(daemon):
+    key = 'default|A|ipv4|table|level-2|10'
+    daemon.config_db.set('ISIS_REDISTRIBUTE', key, {'metric': '20'})
+    run = daemon._BGPConfigDaemon__run_command
+    run.side_effect = [True, False]
+    row = {'net_title': '49.0001.0000.0000.0001.00'}
+    event(daemon, 'ISIS_GLOBALS', 'default|A', row)
+    assert daemon.table_data_cache['ISIS_GLOBALS&&default|A'] == row
+    assert 'ISIS_REDISTRIBUTE&&' + key not in daemon.table_data_cache
+    run.side_effect = None
+    run.reset_mock()
+    commands = event(daemon, 'ISIS_REDISTRIBUTE', key, {'metric': '30'})
+    assert len(run.call_args_list) == 1
+    assert 'net ' + row['net_title'] not in run.call_args[0][1]
+    assert 'redistribute ipv4 table 10 level-2 metric 30' in commands
+    assert daemon.table_data_cache['ISIS_REDISTRIBUTE&&' + key] == {'metric': '30'}
 
 
-def test_transition_guard_allows_single_area_and_atomic_full_shutdown():
-    from sonic_isis import validate_transition
-    before = config()
-    validate_transition(before, {})
-    before['ISIS_INSTANCE'][('default', 'EDGE')] = {'enabled': 'true', 'net_titles': [NET]}
-    validate_transition(before, {})
-    after = copy.deepcopy(before)
-    after['ISIS_INSTANCE'][('VrfA', 'BLUE')] = {'enabled': 'true', 'net_titles': [NET]}
-    validate_transition(before, after)
-    validate_transition(after, before)
+def test_table_policy_replacement_and_late_delete(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    key = 'default|A|ipv6|table|level-2|10'
+    commands = event(daemon, 'ISIS_REDISTRIBUTE', key, {'metric': '20', 'route_map': ['FILTER']})
+    assert 'redistribute ipv6 table 10 level-2 metric 20 route-map FILTER' in commands
+    assert 'no redistribute ipv6 table 10 level-2' not in commands
+    commands = event(daemon, 'ISIS_REDISTRIBUTE', key, {'metric': '0'})
+    assert commands.index('no redistribute ipv6 table 10 level-2') < commands.index(
+        'redistribute ipv6 table 10 level-2 metric 0')
+    event(daemon, 'ISIS_GLOBALS', 'default|A', None)
+    daemon._BGPConfigDaemon__run_command.reset_mock()
+    event(daemon, 'ISIS_REDISTRIBUTE', key, None)
+    daemon._BGPConfigDaemon__run_command.assert_not_called()
+    assert 'ISIS_REDISTRIBUTE&&' + key not in daemon.table_data_cache
 
 
-def test_net_replacement_never_temporarily_removes_last_net_or_exceeds_limit():
-    from frrcfgd.isis_config import process_commands
-    before = config()
-    before['ISIS_INSTANCE'][('default', 'CORE')]['net_titles'] = [
-        '49.%04d.0000.0000.0001.00' % area for area in (1, 2, 3)]
-    after = copy.deepcopy(before)
-    after['ISIS_INSTANCE'][('default', 'CORE')]['net_titles'] = [
-        '49.%04d.0000.0000.0001.00' % area for area in (4, 5, 6)]
-    identity = Identity('isis-process', 'default|CORE')
-    old, new = desired(before).snapshot.objects[identity], desired(after).snapshot.objects[identity]
-    nets = set(old['net_titles'])
-    for command in process_commands(identity.key, new, old):
-        if command.startswith('no net '):
-            nets.remove(command.split()[-1])
-        elif command.startswith('net '):
-            nets.add(command.split()[-1])
-        assert 1 <= len(nets) <= 3
-    assert nets == set(new['net_titles'])
-
-
-@pytest.mark.parametrize('summary', [
-    '{"vrfs":[{"vrf":"default"}]}',
-    '{"vrfs":[{"vrf":"default","system-id":"0000.0000.0002"}]}',
-    '{"vrfs":[]}', '[]', '{"vrfs":{}}',
+@pytest.mark.parametrize('table,key,old,new,next_row,expected_commands,next_command', [
+    ('ISIS_GLOBALS', 'default|A', {'lsp_mtu': '1300'}, {'lsp_mtu': '1400'},
+     {'lsp_mtu': '1500'},
+     ['configure terminal', 'router isis A', 'lsp-mtu 1400', 'end'], 'lsp-mtu 1500'),
+    ('ISIS_REDISTRIBUTE', 'default|A|ipv4|table|level-2|10',
+     {'metric': '20', 'route_map': ['FILTER']}, {'metric': '30'}, {'metric': '40'},
+     ['configure terminal', 'router isis A', 'no redistribute ipv4 table 10 level-2',
+      'redistribute ipv4 table 10 level-2 metric 30', 'end'],
+     'redistribute ipv4 table 10 level-2 metric 40'),
 ])
-def test_configured_net_without_matching_runtime_system_id_is_not_applied(summary):
-    from frrcfgd.isis_readback import check_system_ids
-    from frrcfgd.isis_recovery import RecoveryError
-    with pytest.raises(RecoveryError):
-        check_system_ids(desired(config()).snapshot, summary)
+def test_failed_event_keeps_cache_without_compensation_and_next_event_applies(
+        daemon, table, key, old, new, next_row, expected_commands, next_command):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    event(daemon, table, key, old)
+    run = daemon._BGPConfigDaemon__run_command
+    run.reset_mock()
+    run.return_value = False
+    with patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+        commands = event(daemon, table, key, new)
+    assert commands == expected_commands
+    assert run.call_count == 1
+    assert daemon.config_db.get_entry(table, key) == new
+    assert daemon.table_data_cache[table + '&&' + key] == old
+    assert any('failed running {} config command'.format(table) in str(call) for call in log.call_args_list)
+    run.return_value = True
+    run.reset_mock()
+    assert next_command in event(daemon, table, key, next_row)
+    assert run.call_count == 1
+    assert daemon.table_data_cache[table + '&&' + key] == next_row
 
 
-def test_matching_runtime_system_id_is_accepted():
-    from frrcfgd.isis_readback import check_system_ids
-    check_system_ids(desired(config()).snapshot,
-                     '{"vrfs":[{"vrf":"default","system-id":"0000.0000.0001"}]}')
+def test_failed_interface_update_keeps_applied_binding_and_cache(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    key = 'default|Ethernet0'
+    old = {'instance_name': 'A', 'ipv4_enabled': 'true', 'metric_level_1': '10'}
+    new = dict(old, metric_level_1='20')
+    event(daemon, 'ISIS_INTERFACE', key, old)
+    run = daemon._BGPConfigDaemon__run_command
+    run.return_value = False
+    event(daemon, 'ISIS_INTERFACE', key, new)
+    assert daemon.table_data_cache['ISIS_INTERFACE&&' + key] == old
+    assert daemon.isis_interface_bindings[key] == ('default', 'A')
+    assert daemon.config_db.get_entry('ISIS_INTERFACE', key) == new
+    run.return_value = True
+    commands = event(daemon, 'ISIS_INTERFACE', key, None)
+    assert 'no ip router isis A' in commands
+    assert not daemon.isis_interface_bindings
+    assert 'ISIS_INTERFACE&&' + key not in daemon.table_data_cache
+
+
+def test_routed_vrf_change_detaches_old_binding(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', {'instance_name': 'A', 'ipv4_enabled': 'true'})
+    daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0', {'vrf_name': 'VrfBlue'})
+    assert 'no ip router isis A' in daemon._BGPConfigDaemon__run_command.call_args[0][1]
+    assert not daemon.isis_interface_bindings
+
+
+def test_full_key_dispatch_validation(daemon):
+    run = daemon._BGPConfigDaemon__run_command
+    daemon.isis_handler('ISIS_GLOBALS', ('default', 'A'), {'NULL': 'NULL'})
+    assert 'router isis A' in run.call_args[0][1]
+    run.reset_mock()
+    for key in ('default', 'default|A|extra', 'default|A\nexit'):
+        daemon.isis_handler('ISIS_GLOBALS', key, {'NULL': 'NULL'})
+    run.assert_not_called()
+
+
+@pytest.mark.parametrize('full_attributes', [False, True])
+def test_template_runtime_parity(daemon, full_attributes):
+    config = {
+        'ISIS_GLOBALS': {'VrfBlue|A': {'net_title': '49.0001.0000.0000.0001.00', 'level': 'level-2',
+                                     'lsp_lifetime_level_1': '1500', 'overload': 'true'}},
+        'ISIS_INTERFACE': {'VrfBlue|Ethernet0': {'instance_name': 'A', 'ipv6_enabled': 'true',
+                                               'hello_interval_level_2': '10', 'network_type': 'p2p'}},
+        'ISIS_REDISTRIBUTE': {'VrfBlue|A|ipv6|table|level-2|10': {'metric': '20', 'route_map': ['FILTER']}},
+        'INTERFACE': {'Ethernet0': {'vrf_name': 'VrfBlue'}},
+    }
+    if full_attributes:
+        config['ISIS_GLOBALS']['VrfBlue|A'].update(
+            dynamic_hostname='false', lsp_mtu='1400', ipv6_multi_topology='true',
+            overload_on_startup='60', lsp_generation_interval_level_1='40',
+            lsp_refresh_interval_level_1='1000', lsp_generation_interval_level_2='50',
+            lsp_refresh_interval_level_2='600', lsp_lifetime_level_2='1400',
+            spf_minimum_interval_level_1='5', spf_minimum_interval_level_2='6',
+            spf_init_delay='0', spf_short_delay='50', spf_long_delay='100',
+            spf_hold_down='1000', spf_time_to_learn='500')
+        config['ISIS_INTERFACE']['VrfBlue|Ethernet0'].update(
+            ipv4_enabled='true', passive='true', metric_level_1='20', metric_level_2='30',
+            hello_interval_level_1='5', hello_multiplier_level_1='4', hello_multiplier_level_2='5')
+    templates = Path(__file__).resolve().parents[1] / 'templates'
+    template = Environment(loader=FileSystemLoader(str(templates / 'isisd'))).get_template('isisd.conf.j2')
+    output = template.render(**config)
+    daemon.isis_interface_vrfs['Ethernet0'] = 'VrfBlue'
+    runtime = []
+    for table in ('ISIS_GLOBALS', 'ISIS_INTERFACE', 'ISIS_REDISTRIBUTE'):
+        key, row = next(iter(config[table].items()))
+        runtime.extend(event(daemon, table, key, row))
+    startup_lines = {line.strip() for line in output.splitlines() if line.strip() and not line.startswith('!')}
+    # AF disable commands aren't needed in a fresh process; compare effective configuration.
+    runtime_lines = set(runtime) - {'configure terminal', 'end', 'no ip router isis A'}
+    assert startup_lines == runtime_lines
+    assert 'isis hello-interval level-2 10' in startup_lines
+    tuple_config = {}
+    for table, rows in config.items():
+        tuple_config[table] = {(tuple(key.split('|')) if '|' in key else key): row for key, row in rows.items()}
+    assert template.render(**tuple_config) == output
+
+
+@pytest.mark.parametrize('interface,field,value,command,reset_command', [
+    (False, 'level', 'level-1', 'is-type level-1', 'is-type level-1-2'),
+    (False, 'dynamic_hostname', 'false', 'no hostname dynamic', 'hostname dynamic'),
+    (False, 'lsp_mtu', '1400', 'lsp-mtu 1400', 'lsp-mtu 1497'),
+    (False, 'ipv6_multi_topology', 'true', 'topology ipv6-unicast', 'no topology ipv6-unicast'),
+    (False, 'overload', 'true', 'set-overload-bit', 'no set-overload-bit'),
+    (False, 'overload_on_startup', '60', 'set-overload-bit on-startup 60', 'no set-overload-bit on-startup'),
+    (True, 'level', 'level-1', 'isis circuit-type level-1', 'isis circuit-type level-1-2'),
+    (True, 'network_type', 'p2p', 'isis network point-to-point', 'no isis network point-to-point'),
+    (True, 'passive', 'true', 'isis passive', 'no isis passive'),
+])
+def test_scalar_field_delta_and_reset_mapping(daemon, interface, field, value, command, reset_command):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'net_title': '49.0001.0000.0000.0001.00'})
+    table, key = ('ISIS_INTERFACE', 'default|Ethernet0') if interface else ('ISIS_GLOBALS', 'default|A')
+    baseline = ({'instance_name': 'A', 'ipv4_enabled': 'true'} if interface
+                else {'net_title': '49.0001.0000.0000.0001.00'})
+    event(daemon, table, key, baseline)
+    run = daemon._BGPConfigDaemon__run_command
+    context = 'interface Ethernet0' if interface else 'router isis A'
+    for row, expected in ((dict(baseline, **{field: value}), command), (baseline, reset_command)):
+        run.reset_mock()
+        assert event(daemon, table, key, row) == ['configure terminal', context, expected, 'end']
+        assert run.call_count == 1
+        assert run.call_args[0][0] == table
+        assert daemon.table_data_cache[table + '&&' + key] == row
+
+
+@pytest.mark.parametrize('interface,field,value,command,reset_command,level', [
+    values + (n,)
+    for values in [
+        (False, 'lsp_generation_interval', '40',
+         'lsp-timers level-{} gen-interval 40 refresh-interval 900 max-lifetime 1200',
+         'lsp-timers level-{} gen-interval 30 refresh-interval 900 max-lifetime 1200'),
+        (False, 'lsp_refresh_interval', '600',
+         'lsp-timers level-{} gen-interval 30 refresh-interval 600 max-lifetime 1200',
+         'lsp-timers level-{} gen-interval 30 refresh-interval 900 max-lifetime 1200'),
+        (False, 'lsp_lifetime', '1500',
+         'lsp-timers level-{} gen-interval 30 refresh-interval 900 max-lifetime 1500',
+         'lsp-timers level-{} gen-interval 30 refresh-interval 900 max-lifetime 1200'),
+        (False, 'spf_minimum_interval', '5', 'spf-interval level-{} 5', 'spf-interval level-{} 1'),
+        (True, 'metric', '20', 'isis metric level-{} 20', 'no isis metric level-{}'),
+        (True, 'hello_interval', '5', 'isis hello-interval level-{} 5', 'no isis hello-interval level-{}'),
+        (True, 'hello_multiplier', '4', 'isis hello-multiplier level-{} 4', 'no isis hello-multiplier level-{}'),
+    ]
+    for n in (1, 2)
+])
+def test_per_level_field_delta_and_reset_mapping(
+        daemon, interface, field, value, command, reset_command, level):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'net_title': '49.0001.0000.0000.0001.00'})
+    table, key = ('ISIS_INTERFACE', 'default|Ethernet0') if interface else ('ISIS_GLOBALS', 'default|A')
+    baseline = ({'instance_name': 'A', 'ipv4_enabled': 'true'} if interface
+                else {'net_title': '49.0001.0000.0000.0001.00'})
+    event(daemon, table, key, baseline)
+    run = daemon._BGPConfigDaemon__run_command
+    context = 'interface Ethernet0' if interface else 'router isis A'
+    for row, expected in ((dict(baseline, **{field + '_level_' + str(level): value}), command),
+                          (baseline, reset_command)):
+        run.reset_mock()
+        assert event(daemon, table, key, row) == [
+            'configure terminal', context, expected.format(level), 'end']
+        assert run.call_count == 1
+        assert daemon.table_data_cache[table + '&&' + key] == row
+
+
+@pytest.mark.parametrize('af,source', [('ipv4', 'ospf'), ('ipv6', 'ospf6')])
+def test_ordinary_policy_replacement_and_delete(daemon, af, source):
+    event(daemon, 'ISIS_GLOBALS', 'VrfBlue|A', {'NULL': 'NULL'})
+    key = 'VrfBlue|A|{}|{}|level-1|0'.format(af, source)
+    policy = 'redistribute {} {} level-1'.format(af, source)
+    for row, expected in (({'metric': '20', 'route_map': ['FILTER']}, policy + ' metric 20 route-map FILTER'),
+                          ({'metric': '0'}, policy + ' metric 0'), (None, 'no ' + policy)):
+        daemon._BGPConfigDaemon__run_command.reset_mock()
+        assert event(daemon, 'ISIS_REDISTRIBUTE', key, row) == [
+            'configure terminal', 'router isis A vrf VrfBlue', expected, 'end']
+        assert daemon._BGPConfigDaemon__run_command.call_count == 1
+
+
+@pytest.mark.parametrize('changed_row', [{'vrf_name': 'VrfBlue'}, None])
+def test_routed_owner_change_and_restore_binding(daemon, changed_row):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    row = {'instance_name': 'A', 'ipv6_enabled': 'true', 'hello_multiplier_level_2': '4'}
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', row)
+    daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0', changed_row)
+    assert 'no ipv6 router isis A' in daemon._BGPConfigDaemon__run_command.call_args[0][1]
+    assert not daemon.isis_interface_bindings
+    assert daemon.config_db.get_entry('ISIS_INTERFACE', 'default|Ethernet0') == row
+    daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0', {})
+    assert daemon.isis_interface_bindings == {'default|Ethernet0': ('default', 'A')}
+    assert 'ipv6 router isis A' in daemon._BGPConfigDaemon__run_command.call_args[0][1]
+    assert 'isis hello-multiplier level-2 4' in daemon._BGPConfigDaemon__run_command.call_args[0][1]
+
+
+def test_prefix_only_routed_event_does_not_move_binding(daemon):
+    event(daemon, 'ISIS_GLOBALS', 'default|A', {'NULL': 'NULL'})
+    event(daemon, 'ISIS_INTERFACE', 'default|Ethernet0', {'instance_name': 'A', 'ipv4_enabled': 'true'})
+    run = daemon._BGPConfigDaemon__run_command
+    run.reset_mock()
+    for key in ('Ethernet0|192.0.2.1/31', ('Ethernet0', '2001:db8::1/64')):
+        daemon.isis_routed_interface_handler('INTERFACE', key, None)
+    run.assert_not_called()
+    assert daemon.isis_interface_bindings == {'default|Ethernet0': ('default', 'A')}

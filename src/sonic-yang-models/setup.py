@@ -145,6 +145,7 @@ yang_files = [
     'sonic-interface.yang',
     'sonic-isis-global.yang',
     'sonic-isis-interface.yang',
+    'sonic-isis-redistribute.yang',
     'sonic-kdump.yang',
     'sonic-kubernetes_master.yang',
     'sonic-leak-control.yang',
