@@ -54,7 +54,7 @@ library. The existing Make build and runtime metadata declarations are retained;
 a recipe dependency alone is not proof of an ELF loader dependency.
 
 Native builds use the maintained registry `main`, including Net-SNMP
-`5.9.3.sonic.1`, libyang `3.12.2.sonic.7` and libnl3 `3.7.0.sonic.8`.
+`5.9.3.sonic.1`, libyang `3.12.2.sonic.8` and libnl3 `3.7.0.sonic.8`.
 The root selects published build infrastructure
 `0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe` for the libFIB collections.
 The source and ordered

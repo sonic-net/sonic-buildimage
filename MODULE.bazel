@@ -316,7 +316,7 @@ bazel_dep(name = "socat", version = "1.8.0.2.sonic.7")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.7")
 bazel_dep(name = "libnl3", version = "3.7.0.sonic.8")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.7")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.8")
 
 single_version_override(
     module_name = "sonic-rust-deps",
