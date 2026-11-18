@@ -15,6 +15,11 @@ VALUE_OPTIONS = {
     "--remote_timeout",
     "--repository_cache",
 }
+FIXED_OPTIONS = {
+    "--remote_local_fallback",
+    "--incompatible_remote_local_fallback_for_remote_cache",
+    "--experimental_build_event_upload_strategy=local",
+}
 BOOLEAN_OPTIONS = {
     "--experimental_remote_downloader_local_fallback",
     "--noexperimental_remote_downloader_local_fallback",
@@ -50,7 +55,7 @@ def configuration(workspace, home):
                     if value is None or value.startswith("--"):
                         raise ValueError("missing cache option value for " + name)
                     token += "=" + value
-                elif name not in VALUE_OPTIONS and name not in BOOLEAN_OPTIONS:
+                elif name not in VALUE_OPTIONS and name not in BOOLEAN_OPTIONS and token not in FIXED_OPTIONS:
                     continue
                 lines.append(tokens[0] + " " + shlex.quote(token))
     return "\n".join(lines) + "\n"

@@ -109,6 +109,7 @@ build --override_module=owner=/not-accepted
 common --repository_cache=/existing/local-downloads
 common --experimental_repository_cache_hardlinks
 common --registry=https://example.invalid/second-catalog
+build --experimental_build_event_upload_strategy=remote
 try-import /not-imported
 ''')
         result = rc.configuration(self.workspace, self.home)
@@ -120,6 +121,7 @@ try-import /not-imported
         self.assertIn(['common', '--distdir=/verified source downloads'], parsed)
         self.assertIn(['common', '--experimental_repository_cache_hardlinks'], parsed)
         self.assertNotIn('--registry', result)
+        self.assertNotIn('--experimental_build_event_upload_strategy=remote', result)
         self.assertNotIn('--override_module', result)
         self.assertNotIn('try-import', result)
         self.assertEqual((self.workspace / 'tools/bazel/common.bazelrc').read_text(), self.common)
