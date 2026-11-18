@@ -17,6 +17,7 @@
 # HISTORY:
 #    mm/dd/yyyy (A.D.)#   
 #    10/24/2019:Jostar create for as4630_54pe thermal plan
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -26,6 +27,7 @@ try:
     import logging.config
     import logging.handlers
     import time
+    import sonic_platform.platform
     from as4630_54pe.fanutil import FanUtil
     from as4630_54pe.thermalutil import ThermalUtil
     from sonic_py_common.general import getstatusoutput_noshell
@@ -35,6 +37,9 @@ except ImportError as e:
 # Deafults
 VERSION = '1.0'
 FUNCTION_NAME = '/usr/local/bin/accton_as4630_54pe_monitor'
+
+DUTY_MAX = 100
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 global log_file
 global log_level
@@ -92,6 +97,13 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+        self.thermal = ThermalUtil()
+        self.fan = FanUtil()
+
+        self.platform_chassis = sonic_platform.platform.Platform().get_chassis()
+        self.fan_list = self.platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -111,7 +123,24 @@ class device_monitor(object):
         sys_handler = handler = logging.handlers.SysLogHandler(address = '/dev/log')
         sys_handler.setLevel(logging.WARNING)       
         logging.getLogger('').addHandler(sys_handler)
-          
+
+        self.set_fans_tolerance_mode("off")
+        self.fan.set_fan_duty_cycle(50)
+        self.fan_timer_start = time.time()
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
+
     def get_state_from_fan_policy(self, temp, policy):
         state=0
         for i in range(0, len(policy)):
@@ -136,18 +165,21 @@ class device_monitor(object):
         LEVEL_TEMP_CRITICAL=4
         fan_policy = {
            LEVEL_FAN_MIN:       [50,   8, 0,      140000],
-           LEVEL_FAN_NORMAL:    [62,  10, 140000, 150000],
+           LEVEL_FAN_NORMAL:    [63,  10, 140000, 150000],
            LEVEL_FAN_MID:       [75,  12, 150000, 160000],
            LEVEL_FAN_HIGH:      [88,  14, 160000, 240000],
            LEVEL_TEMP_CRITICAL: [100, 16, 240000, 300000],
         }
         temp = [0, 0 , 0]
         temp_fail=0
-        thermal = ThermalUtil()
-        fan = FanUtil()
+        thermal = self.thermal
+        fan = self.fan
         ori_duty_cycle=fan.get_fan_duty_cycle()
         new_duty_cycle=0
-        
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
+
         if test_temp==0:
             for i in range(0,3):
                 temp[i]=thermal._get_thermal_val(i+1)
@@ -172,17 +204,17 @@ class device_monitor(object):
             temp_val+=temp[i]
         
         #Check Fan status
+        fan_fail=0
         for i in range (fan.FAN_NUM_1_IDX, fan.FAN_NUM_ON_MAIN_BROAD+1):
             if fan.get_fan_status(i)==0:
-                new_pwm=100
                 logging.warning('Fan_%d fail, set pwm to 100',i)                
                 if test_temp==0:
                     fan_fail=1
-                    fan.set_fan_duty_cycle(new_pwm)
+                    self.set_fans_tolerance_mode("off")
+                    fan.set_fan_duty_cycle(DUTY_MAX)
+                    self.fan_timer_start = time.time()
                     break
-            else:
-                fan_fail=0
-        
+
         ori_state=fan_policy_state        
         fan_policy_state=self.get_state_from_fan_policy(temp_val, fan_policy)
         
@@ -193,7 +225,9 @@ class device_monitor(object):
         #Decision : Decide new fan pwm percent.
         if fan_fail==0 and ori_duty_cycle!=fan_policy[fan_policy_state][0]:
             new_duty_cycle = fan_policy[fan_policy_state][0];
+            self.set_fans_tolerance_mode("off")
             fan.set_fan_duty_cycle(new_duty_cycle)
+            self.fan_timer_start = time.time()
 
         if temp[0] >= 70000: #LM75-48    
             #critical case*/
@@ -248,10 +282,7 @@ def main(argv):
             test_temp = 1   
             log_level = logging.DEBUG
             print(test_temp_list)                       
-    
-    fan = FanUtil()
-    fan.set_fan_duty_cycle(50)
-    print("set default fan speed to 50%")
+
     monitor = device_monitor(log_file, log_level)
     # Loop forever, doing something useful hopefully:
     while True:
