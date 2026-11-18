@@ -147,6 +147,7 @@ jobs:
           fi
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
           if [ $(secure_boot_enabled) == yes ]; then
+            ls -l $(pwd)/db.crt $(pwd)/db.key
             BUILD_OPTIONS="$BUILD_OPTIONS SECURE_UPGRADE_MODE=dev SECURE_UPGRADE_DEV_SIGNING_KEY=$(pwd)/db.key SECURE_UPGRADE_SIGNING_CERT=$(pwd)/db.crt"
           fi
           if [ $(GROUP_NAME) == pensando ]; then
