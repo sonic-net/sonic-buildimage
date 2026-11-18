@@ -26,7 +26,7 @@ bazel_dep(name = "platforms", version = "1.1.0")
 # PI and BMv2 export their native Bazel outputs as installation TARs.
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.6", repo_name = "p4lang_pi")
 bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.5", repo_name = "p4lang_bmv2")
-bazel_dep(name = "p4c", version = "1.2.4.2.sonic.3")
+bazel_dep(name = "p4c", version = "1.2.4.2.sonic.4")
 bazel_dep(name = "sonic-dash", version = "0.0.1-a9b799bb664b3b3b9d6e9a19cedd38b620e769de", repo_name = "sonic_dash")
 
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.
@@ -106,7 +106,7 @@ single_version_override(
 
 single_version_override(
     module_name = "libnl3",
-    version = "3.7.0.sonic.7",
+    version = "3.7.0.sonic.8",
 )
 
 single_version_override(
@@ -314,13 +314,13 @@ use_repo(pip, "database_pip")
 
 bazel_dep(name = "socat", version = "1.8.0.2.sonic.7")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.7")
-bazel_dep(name = "libnl3", version = "3.7.0.sonic.7")
+bazel_dep(name = "libnl3", version = "3.7.0.sonic.8")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.6")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.7")
 
 single_version_override(
     module_name = "sonic-rust-deps",
-    version = "0.0.5-dd364f207d7b320a5af12c81da6d10893f292205",
+    version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
 )
 
 bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
@@ -613,7 +613,7 @@ apt_inputs(
 
 
 # MUX consumes the Linkmgrd runtime and debug TARs.
-bazel_dep(name = "sonic-linkmgrd", version = "1.0.0-e0f9f94901c30ed30f5fe82af6dafca38f8b35d7", repo_name = "sonic_linkmgrd")
+bazel_dep(name = "sonic-linkmgrd", version = "1.0.0-92c78b468b678e3c2ed2877d2cb0a52306f2297f", repo_name = "sonic_linkmgrd")
 
 apt_inputs(
     name = "mux_runtime_apt_inputs",

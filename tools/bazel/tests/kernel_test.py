@@ -55,7 +55,7 @@ class KernelBundleTest(unittest.TestCase):
         (source_tools / "build.py").write_text(
             'BAZEL_URL = "https://releases.bazel.build/8.5.1/release/bazel-8.5.1-linux-x86_64"\n'
             'BAZEL_SHA256 = "' + "b" * 64 + '"\n'
-            "ARCHITECTURES = {'amd64': {'bazel_url': BAZEL_URL, 'bazel_sha256': BAZEL_SHA256}, "
+            "HOST_ARCHITECTURES = {'amd64': {'bazel_url': BAZEL_URL, 'bazel_sha256': BAZEL_SHA256}, "
             "'arm64': {'bazel_url': 'https://releases.bazel.build/8.5.1/release/bazel-8.5.1-linux-arm64', 'bazel_sha256': '" + "c" * 64 + "'}}\n"
             "raise SystemExit('fixture does not run Bazel')\n")
         (self.source / ".bazelversion").write_text("8.5.1\n")
@@ -124,6 +124,24 @@ class KernelBundleTest(unittest.TestCase):
                            "target": kernel.TARGET, "resolution": self.selected,
                            "consumer_inputs_sha256": self.state["consumer_inputs_sha256"]}
         self.write_manifest()
+
+    def test_launcher_selects_the_native_host_executable(self):
+        for architecture, digest in (("amd64", "b" * 64), ("arm64", "c" * 64)):
+            with self.subTest(architecture=architecture):
+                result = kernel.launcher_contract(self.root, self.source, architecture)
+                self.assertEqual(result["architecture"], architecture)
+                self.assertEqual(result["bazel_sha256"], digest)
+                self.assertEqual(result["bazel_version"], "8.5.1")
+
+    def test_launcher_rejects_wrong_host_binary_or_missing_digest(self):
+        launcher = self.source / "tools/bazel/build.py"
+        original = launcher.read_text()
+        for contents in (original.replace("-linux-arm64", "-linux-x86_64"),
+                         original.replace("c" * 64, "")):
+            with self.subTest(contents=contents):
+                launcher.write_text(contents)
+                with self.assertRaisesRegex(ValueError, "pin its native Bazel executable"):
+                    kernel.launcher_contract(self.root, self.source, "arm64")
 
     def write_deb(self, name, metadata):
         package_root = self.root / "package-root"
@@ -255,6 +273,9 @@ class KernelBundleTest(unittest.TestCase):
     def test_changed_contract_source_archives_tools_and_metadata_are_rejected(self):
         original = copy.deepcopy(self.manifest)
         mutations = [
+            lambda value: value.update(schema=3),
+            lambda value: value.pop("host_architecture"),
+            lambda value: value.update(host_architecture="arm64" if self.architecture == "amd64" else "amd64"),
             lambda value: value.update(kernel_abi="other-abi"),
             lambda value: value.update(signing="signed"),
             lambda value: value.update(source_tree_sha256="0" * 64),
@@ -443,7 +464,8 @@ class KernelBundleTest(unittest.TestCase):
                 str(outputs / name) + "\n" for name in [kernel.MANIFEST, *self.packages]))
             metadata = self.resolution_files(workdir, consumer)
             (workdir / "invocation.json").write_text(json.dumps({
-                "schema": 2, "target": kernel.TARGET, "uid": 1000, "host_machine": {"amd64": "x86_64", "arm64": "aarch64"}[self.architecture],
+                "schema": 3, "target": kernel.TARGET, "uid": 1000, "host_machine": {"amd64": "x86_64", "arm64": "aarch64"}[self.architecture],
+                "host_architecture": self.architecture,
                 "kernel_config": self.state["kernel_config"], **self.state["launcher"],
                 "remote_cache": "http://127.0.0.1:8080", "remote_cache_read_only": True, "disk_cache": None}))
 
@@ -519,8 +541,10 @@ class KernelBundleTest(unittest.TestCase):
     def test_build_rejects_privileged_or_weakened_launcher_invocations(self):
         for index, override in enumerate((
             {"uid": 0}, {"uid": True}, {"execution_strategy": "local"},
-            {"schema": 1}, {"bazel_sha256": "0" * 64},
+            {"schema": 1}, {"schema": 2}, {"bazel_sha256": "0" * 64},
             {"host_machine": "aarch64" if self.architecture == "amd64" else "x86_64"},
+            {"host_architecture": "arm64" if self.architecture == "amd64" else "amd64"},
+            {"host_architecture": None},
             {"kernel_config": {}},
         )):
             with self.subTest(override=override):
@@ -528,8 +552,9 @@ class KernelBundleTest(unittest.TestCase):
                     workdir = Path(command[command.index("--work-dir") + 1])
                     workdir.mkdir(parents=True)
                     invocation = {
-                        "schema": 2, "target": kernel.TARGET, "uid": 1000, "host_machine": {"amd64": "x86_64", "arm64": "aarch64"}[self.architecture],
-                "kernel_config": self.state["kernel_config"],
+                        "schema": 3, "target": kernel.TARGET, "uid": 1000, "host_machine": {"amd64": "x86_64", "arm64": "aarch64"}[self.architecture],
+                        "host_architecture": self.architecture,
+                        "kernel_config": self.state["kernel_config"],
                         **self.state["launcher"], "remote_cache": None,
                         "remote_cache_read_only": True, "disk_cache": None,
                         **override,

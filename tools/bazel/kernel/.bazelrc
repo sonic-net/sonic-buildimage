@@ -5,3 +5,6 @@ common --lockfile_mode=update
 common --downloader_config=debian_mirrors.cfg
 # Bazel-built bootstrap tools must run independently of the host libc version.
 build --host_features=fully_static_link
+
+# Restore the full producer tool tree, including directory symlinks, on cache hits.
+build --remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$

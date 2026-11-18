@@ -15,8 +15,8 @@ from kernel_deb import unpack
 
 class KernelDebTest(unittest.TestCase):
     def test_debian_payload_and_boot_identity(self):
-        for suffix, compress in [('.xz', lzma.compress), ('.gz', gzip.compress), ('', lambda data: data)]:
-            with self.subTest(compression=suffix), tempfile.TemporaryDirectory() as directory:
+        for schema, suffix, compress in [(4, '.xz', lzma.compress), (3, '.gz', gzip.compress), (4, '', lambda data: data)]:
+            with self.subTest(compression=suffix, schema=schema), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory); abi = '6.12.41+deb13-sonic-amd64'
                 stream = io.BytesIO()
                 with tarfile.open(fileobj=stream, mode='w') as archive:
@@ -41,7 +41,11 @@ class KernelDebTest(unittest.TestCase):
                         output.write(content)
                         if len(content) % 2: output.write(b'\n')
                 receipt = root / 'receipt.json'
-                receipt.write_text(json.dumps({'schema': 3, 'kernel_abi': abi, 'architecture': 'amd64', 'packages': [{'name': deb.name, 'kind': 'runtime', 'sha256': hashlib.sha256(deb.read_bytes()).hexdigest()}]}))
+                record = {'name': deb.name, 'kind': 'runtime', 'sha256': hashlib.sha256(deb.read_bytes()).hexdigest()}
+                manifest = {'schema': schema, 'kernel_abi': abi, 'architecture': 'amd64', 'packages': [record]}
+                if schema == 4:
+                    manifest['host_architecture'] = 'amd64'
+                receipt.write_text(json.dumps(manifest))
                 unpack(str(deb), str(receipt), str(root/'runtime.tar'), str(root/'boot'), str(root/'metadata.json'), '/unused', str(root/'control.tar'))
                 self.assertEqual((root/'control.tar').read_bytes(), control_stream.getvalue())
                 metadata = json.loads((root/'metadata.json').read_text())

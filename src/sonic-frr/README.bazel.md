@@ -54,12 +54,9 @@ library. The existing Make build and runtime metadata declarations are retained;
 a recipe dependency alone is not proof of an ELF loader dependency.
 
 Native builds use the maintained registry `main`, including Net-SNMP
-`5.9.3.sonic.1`, libyang `3.12.2.sonic.6` and libnl3 `3.7.0.sonic.7`.
-The root selects published infrastructure
-`0.0.30-c8e5486df0147c5652d015bb5ddd49b6dce6b655` from merged registry
-PR #305. Its source is the maintained-master merge of infra PR #97, including
-the libFIB collections missing from `.29`. All modules use canonical registry
-`main`; the temporary source override and frozen candidate catalog are removed.
+`5.9.3.sonic.1`, libyang `3.12.2.sonic.7` and libnl3 `3.7.0.sonic.8`.
+The root selects published build infrastructure
+`0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe` for the libFIB collections.
 The source and ordered
 SONiC patches remain unchanged. Installation targets retain
 `preserve_install_rpath = True` for FRR's private shared libraries.

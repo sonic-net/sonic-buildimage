@@ -128,7 +128,7 @@ def native_architecture():
 
 
 def launcher_contract(workspace, source, architecture="amd64"):
-    names = {"BAZEL_URL", "BAZEL_SHA256", "ARCHITECTURES"}
+    names = {"BAZEL_URL", "BAZEL_SHA256", "HOST_ARCHITECTURES"}
     values = {}
     def literal(node):
         if isinstance(node, ast.Name) and node.id in values:
@@ -144,7 +144,7 @@ def launcher_contract(workspace, source, architecture="amd64"):
     require(version == (source / ".bazelversion").read_text().strip()
             and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version),
             "kernel consumer Bazel version differs from its source launcher")
-    selected = values.get("ARCHITECTURES", {}).get(architecture, {})
+    selected = values.get("HOST_ARCHITECTURES", {}).get(architecture, {})
     suffix = {"amd64": "x86_64", "arm64": "arm64"}.get(architecture)
     require(set(values) == names and suffix
             and selected.get("bazel_url") == "https://releases.bazel.build/" + version + "/release/bazel-" + version + "-linux-" + suffix
@@ -216,7 +216,8 @@ def contract(workspace, architecture=None, kernel_config=None):
     abi = version + values["KERNEL_ABISUFFIX"]
     feature = values["KERNEL_FEATURESET"]
     kernel = values["KVERSION"]
-    expected = {"schema": 3, "architecture": architecture, "platform": values["CONFIGURED_PLATFORM"],
+    expected = {"schema": 4, "architecture": architecture, "host_architecture": architecture,
+                "platform": values["CONFIGURED_PLATFORM"],
                 "kernel_version": version, "kernel_abi": kernel,
                 "package_version": release,
                 # Make signs installed boot files during image assembly, after
@@ -712,13 +713,14 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
                 if source.is_file() and not source.is_symlink():
                     shutil.copyfile(source, timings / destination)
     invocation = json.loads(regular(state / "build/invocation.json").read_text())
-    require(invocation.get("schema") == 2 and invocation.get("target") == TARGET
+    require(invocation.get("schema") == 3 and invocation.get("target") == TARGET
             and invocation.get("execution_strategy") == "linux-sandbox"
             and type(invocation.get("uid")) is int and invocation["uid"] > 0
             and invocation.get("bazel_version") == prepared["source"]["launcher"]["bazel_version"]
             and invocation.get("bazel_sha256") == prepared["source"]["launcher"]["bazel_sha256"]
             and invocation.get("kernel_config") == prepared["source"]["kernel_config"]
             and invocation.get("architecture") == architecture
+            and invocation.get("host_architecture") == architecture
             and invocation.get("host_machine") == {"amd64": "x86_64", "arm64": "aarch64"}[architecture]
             and invocation.get("remote_cache") == prepared["remote_cache"]
             and invocation.get("remote_cache_read_only") is (not prepared["upload_local_results"])

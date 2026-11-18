@@ -1,4 +1,4 @@
-"""Adapt the source-owned kernel DEB and its schema-3 receipt without repacking."""
+"""Adapt the source-owned kernel DEB and verify its producer receipt without repacking."""
 import gzip
 import hashlib
 import json
@@ -35,7 +35,7 @@ def sha256(path):
 
 def unpack(deb, receipt, runtime, boot, metadata, zstd, control=None):
     manifest = json.loads(Path(receipt).read_text())
-    if manifest.get('schema') != 3:
+    if manifest.get('schema') not in (3, 4):
         raise ValueError('unsupported kernel package receipt')
     records = [p for p in manifest['packages'] if p['name'] == Path(deb).name and p['kind'] == 'runtime']
     digest = sha256(deb)

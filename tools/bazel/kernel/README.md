@@ -58,9 +58,9 @@ CI uses the same maintained endpoint. A clean normal Make invocation needs only
 the shared switch.
 
 The kernel module and gitlink select landed commit
-`fbfb9d6bb89705ad2c49fd48cfc608061cf0d83a` from
-[kernel #3](https://github.com/securely1g/sonic-linux-kernel/pull/3).
-[Registry #124](https://github.com/securely1g/sonic-bazel-registry/pull/124)
+`34a53faaecd325509e9d8f1016ed0108ab558a23` from
+[kernel #5](https://github.com/securely1g/sonic-linux-kernel/pull/5).
+[Registry #139](https://github.com/securely1g/sonic-bazel-registry/pull/139)
 registers that landed source version on `main`.
 
 ## Explicit source/cache validation
@@ -170,7 +170,7 @@ sidecars alongside packages from other producers:
 | `linux-headers-ABI_6.12.41-1_ARCH.deb` | Architecture headers and generated configuration/Module.symvers |
 | `linux-headers-6.12.41+deb13-common-sonic_6.12.41-1_all.deb` | Common headers |
 | `linux-kbuild-6.12.41+deb13_6.12.41-1_ARCH.deb` | External-module build tools |
-| `kernel-packages.json` | Schema 3 source/archive/tools identity, package checksums/control fields, debug pairing and all created packages |
+| `kernel-packages.json` | Schema 4 host/target architecture, source/archive/tools identity, package checksums/control fields, debug pairing and all created packages |
 | `kernel-provenance.json` | Original buildimage commit, handoff-input digest, kernel gitlink, target and verified registry resolution |
 
 `ABI` includes the architecture suffix and `ARCH` is `amd64` or `arm64`.
@@ -280,12 +280,9 @@ boot a guest, load a module into a running guest or establish forwarding.
 
 ## Dependency state
 
-Local builds and CI use the maintained registry endpoint on `main`. The direct
-sandbox build selects the landed
-[shared tools #62](https://github.com/securely1g/sonic-build-infra/pull/62),
-[tools registration #122](https://github.com/securely1g/sonic-bazel-registry/pull/122),
-[kernel source #3](https://github.com/securely1g/sonic-linux-kernel/pull/3) and
-[kernel registration #124](https://github.com/securely1g/sonic-bazel-registry/pull/124).
+Local builds and CI use the maintained registry endpoint on `main`. The published
+[kernel module](https://github.com/securely1g/sonic-bazel-registry/pull/139)
+requires [build-infra 0.0.22](https://github.com/securely1g/sonic-bazel-registry/pull/120).
 Both source and tools revisions are fixed in `MODULE.bazel`, and the kernel
 source revision must match the buildimage gitlink. Native AMD64 and ARM64
 source/cache validation runs on self-hosted Linux with unprivileged user namespaces;
