@@ -1,0 +1,148 @@
+#!/usr/bin/python3
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+import sys
+import os
+import time
+import json
+import shutil
+
+from ztp.ZTPObjects import URL, DynamicURL
+from ztp.ZTPSections import ConfigSection
+from ztp.ZTPLib import runCommand, getField, isString, updateActivity
+from ztp.Logger import logger
+
+class PlatformIntf:
+
+    '''
+    This class handle the 'platform-intf' plugin
+    '''
+
+    def __init__(self, input_file):
+        if isString(input_file) is not True:
+            raise TypeError('PlatformIntf provided with invalid argument type.')
+        self.__input_file = input_file
+
+    ## Abort the plugin. Return a non zero return code.
+    def __bailout(self, text):
+        logger.error('platform-intf: Error \'%s\' encountered.' % (text))
+        sys.exit(1)
+
+    ## Extract destination file requested by user
+    def __destination_file(self, url_data):
+        if isinstance(url_data, dict):
+            return url_data.get('destination')
+        else:
+            return None
+
+    def __get_pid_name(self):
+        with open('/host/machine.conf', 'r') as f:
+            line = f.readline()
+            while(line):
+                if 'onie_platform=' in line:
+                    line = line.rstrip("\n")
+                    break;
+                else:
+                    line = f.readline()
+            plat = line.replace('onie_platform=','',1)
+            return plat
+
+    def read_default_sku(self, file_path):
+        """
+        Read default_sku file and extract SKU information
+
+        Returns:
+            dict: Contains SKU info (first_word, line_card, full_line)
+        """
+        try:
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"SKU file not found: {file_path}")
+
+            with open(file_path, 'r') as file:
+                line = file.readline().strip()
+
+                if not line:
+                    raise ValueError("SKU file is empty")
+
+                parts = line.split()
+                return (parts[0] if parts else None)
+
+        except Exception as e:
+            print(f"Error reading SKU file: {e}")
+            return None
+
+    def main(self):
+
+        # Read the section name
+        try:
+            obj_section = ConfigSection(self.__input_file)
+            keys = obj_section.jsonDict.keys()
+            if len(keys) == 0:
+                self.__bailout('Missing valid platform_cisco_cfg.yaml data')
+            section_name = next(iter(keys))
+        except Exception as e:
+            self.__bailout(str(e))
+
+        # Extract data from the section which is relevant to the platform-intf
+        try:
+            section_data = obj_section.jsonDict.get(section_name)
+
+            # Handle "url" or "dynamic-url"
+            if section_data.get('dynamic-url') is not None:
+                objURL = DynamicURL(section_data.get('dynamic-url'))
+                final_dest_file = self.__destination_file(section_data.get('dynamic-url'))
+            elif section_data.get('url') is not None:
+                objURL = URL(section_data.get('url'))
+                final_dest_file = self.__destination_file(section_data.get('url'))
+            else:
+                self.__bailout('Either "url" or "dynamic_url" should be provided')
+
+        except Exception as e:
+            self.__bailout(str(e))
+
+        # Check if either a URL or a dynamic URL has been provided
+        if objURL is None:
+            self.__bailout('Valid URL or dynamic URL not defined')
+
+        # Download platform_cisco_cfg.yaml
+        try:
+            url_str = objURL.getSource()
+            logger.info('platform-intf: Downloading platform_cisco_cfg.yaml file from \'%s\'.' % url_str)
+            updateActivity('platform-intf: Downloading platform_cisco_cfg.yaml file from \'%s\'.' % url_str)
+            (rc, dest_file) = objURL.download(destination='/tmp/platform_dl.yaml')
+            if rc != 0 or dest_file is None:
+                self.__bailout('Error (%d) encountered while downloading \'%s\'' % (rc, url_str))
+        except Exception as e:
+            self.__bailout(str(e))
+
+        # Check if the downloaded file has failed
+        if os.path.isfile(dest_file) is False:
+            self.__bailout('Download of [%s] failed' % (dest_file))
+
+        # Invoke platform_cisco_cfg script to generate port_config.ini and serdes.json
+        pid_name = self.__get_pid_name()
+        sku_file = os.path.join("/usr/share/sonic/device", pid_name, 'default_sku')
+        sku = self.read_default_sku(sku_file)
+        if sku is None:
+            logger.error('platform-intf: Command \'%s\' failed to read default sku')
+            sys.exit()
+        dst_path = os.path.join("/usr/share/sonic/device", pid_name, sku, 'platform_cisco_cfg.yaml')
+        logger.info(f'platform-intf: platform_cisco_cfg.yaml dst_path {dst_path}')
+        shutil.copy('/tmp/platform_dl.yaml', dst_path)
+        logger.info('platform-intf: Invoking /opt/cisco/bin/platform_cisco_cfg.py')
+        updateActivity('platform-intf: Invoking /opt/cisco/bin/platform_cisco_cfg.py')
+        cmd = '/opt/cisco/bin/platform_cisco_cfg.py'
+        rc = runCommand(cmd, capture_stdout=False)
+        if rc != 0:
+            logger.error('platform-intf: Command \'%s\' failed with exit code (%d).' %(cmd, rc))
+            sys.exit(rc)
+
+
+if __name__== "__main__":       # pragma: no cover
+    if len(sys.argv) != 2:
+        print('platform-intf: Error %s missing input.json data.' % (sys.argv[0]))
+        sys.exit(1)
+    platform_intf = PlatformIntf(sys.argv[1])
+    platform_intf.main()
