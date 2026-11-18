@@ -44,7 +44,9 @@ else:
 
 # Common modules for python2 and python3
 py_modules = [
+    'config_encoder',
     'config_samples',
+    'device_desc',
     'minigraph',
     'minigraph_ext',
     'openconfig_acl',
