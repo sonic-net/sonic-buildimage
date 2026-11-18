@@ -29,6 +29,70 @@
             }
         }
     },
+    "SWITCH_HASH_PKT_TYPE_VALID": {
+        "sonic-hash:sonic-hash": {
+            "sonic-hash:SWITCH_HASH": {
+                "sonic-hash:GLOBAL": {
+                    "ecmp_hash_ipv4": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "L4_DST_PORT",
+                        "L4_SRC_PORT"
+                    ],
+                    "ecmp_hash_ipv6": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "IPV6_FLOW_LABEL"
+                    ],
+                    "ecmp_hash_ipnip": [
+                        "INNER_DST_IP",
+                        "INNER_SRC_IP"
+                    ],
+                    "ecmp_hash_ipv4_rdma": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "RDMA_BTH_OPCODE",
+                        "RDMA_BTH_DEST_QP"
+                    ],
+                    "ecmp_hash_ipv6_rdma": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "IPV6_FLOW_LABEL",
+                        "RDMA_BTH_OPCODE",
+                        "RDMA_BTH_DEST_QP"
+                    ],
+                    "lag_hash_ipv4": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "L4_DST_PORT",
+                        "L4_SRC_PORT"
+                    ],
+                    "lag_hash_ipv6": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "IPV6_FLOW_LABEL"
+                    ],
+                    "lag_hash_ipnip": [
+                        "INNER_DST_IP",
+                        "INNER_SRC_IP"
+                    ],
+                    "lag_hash_ipv4_rdma": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "RDMA_BTH_OPCODE",
+                        "RDMA_BTH_DEST_QP"
+                    ],
+                    "lag_hash_ipv6_rdma": [
+                        "DST_IP",
+                        "SRC_IP",
+                        "IPV6_FLOW_LABEL",
+                        "RDMA_BTH_OPCODE",
+                        "RDMA_BTH_DEST_QP"
+                    ]
+                }
+            }
+        }
+    },
     "SWITCH_HASH_INVALID_ECMP_HASH": {
         "sonic-hash:sonic-hash": {
             "sonic-hash:SWITCH_HASH": {
@@ -65,6 +129,28 @@
             "sonic-hash:SWITCH_HASH": {
                 "sonic-hash:GLOBAL": {
                     "lag_hash_algorithm": "INVALID_VALUE"
+                }
+            }
+        }
+    },
+    "SWITCH_HASH_INVALID_ECMP_HASH_IPV4": {
+        "sonic-hash:sonic-hash": {
+            "sonic-hash:SWITCH_HASH": {
+                "sonic-hash:GLOBAL": {
+                    "ecmp_hash_ipv4": [
+                        "INVALID_VALUE"
+                    ]
+                }
+            }
+        }
+    },
+    "SWITCH_HASH_INVALID_LAG_HASH_IPV4_RDMA": {
+        "sonic-hash:sonic-hash": {
+            "sonic-hash:SWITCH_HASH": {
+                "sonic-hash:GLOBAL": {
+                    "lag_hash_ipv4_rdma": [
+                        "INVALID_VALUE"
+                    ]
                 }
             }
         }
