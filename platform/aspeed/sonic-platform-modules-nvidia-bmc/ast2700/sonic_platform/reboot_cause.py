@@ -37,14 +37,10 @@ class RebootCause:
     _BMC_RESET_DIR = "bmc"
 
     def __init__(self):
-        self._reboot_major_cause_dict = {
-            'reset_security_watchdog2': ChassisBase.REBOOT_CAUSE_WATCHDOG,
-            'reset_cpu': ChassisBase.REBOOT_CAUSE_HARDWARE_CPU,
-            'reset_other': ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER,
-            'reset_power_on': ChassisBase.REBOOT_CAUSE_POWER_LOSS,
+        self._reboot_cause_dict = {
+            'reset_pwr_cycle': ChassisBase.REBOOT_CAUSE_POWER_LOSS,
+            'reset_soft_reboot': ChassisBase.REBOOT_CAUSE_NON_HARDWARE,
         }
-        self._watchdog_file = 'reset_watchdog'
-        self._power_on_file = 'reset_power_on'
 
     def get_reboot_cause(self):
         """
@@ -52,17 +48,10 @@ class RebootCause:
             tuple(str, str): `(cause, description)`. `cause` is one of the
             `ChassisBase.REBOOT_CAUSE_*` constants.
         """
-        if (hwmgmt_flag_is_set(self._BMC_RESET_DIR, self._watchdog_file)
-                and hwmgmt_flag_is_set(self._BMC_RESET_DIR, self._power_on_file)):
-            logger.log_info(
-                f"Reboot cause: {self._watchdog_file} and {self._power_on_file} (software watchdog)"
-            )
-            return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
-
-        for reset_file, reset_cause in self._reboot_major_cause_dict.items():
+        for reset_file, reboot_cause in self._reboot_cause_dict.items():
             if hwmgmt_flag_is_set(self._BMC_RESET_DIR, reset_file):
-                logger.log_info(f"Hardware reboot cause: {reset_file}")
-                return reset_cause, ''
+                logger.log_info(f"Reboot cause: {reset_file}")
+                return reboot_cause, ''
 
-        logger.log_info("No hardware reboot cause found")
+        logger.log_info("No reboot cause flag found")
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''

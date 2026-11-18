@@ -1,0 +1,7 @@
+debian==20261111T000935Z
+debian-security==20261111T001116Z
+download.docker.com_linux_debian_dists_trixie==2026-11-11T11:05:38Z
+packages.trafficmanager.net_snapshot_debian-security_20261111T001116Z_dists_trixie-security==2026-11-11T00:02:28Z
+packages.trafficmanager.net_snapshot_debian_20261111T000935Z_dists_trixie==2026-09-12T07:55:41Z
+packages.trafficmanager.net_snapshot_debian_20261111T000935Z_dists_trixie-backports==2026-11-10T20:25:11Z
+packages.trafficmanager.net_snapshot_debian_20261111T000935Z_dists_trixie-updates==2026-11-10T20:25:11Z

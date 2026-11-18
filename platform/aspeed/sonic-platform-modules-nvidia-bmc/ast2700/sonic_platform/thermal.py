@@ -36,7 +36,6 @@ class ThermalBMC(ThermalBase):
 
     HW_MGMT_ROOT = hw_mgmt_path("thermal")
     TEMP_SCALE = 1000.0
-    NA = "N/A"
 
     def __init__(self):
         ThermalBase.__init__(self)
@@ -44,12 +43,11 @@ class ThermalBMC(ThermalBase):
         self.name = "BMC Ambient"
         self.input_path = os.path.join(self.HW_MGMT_ROOT, "bmc_temp_input")
         self.max_path = os.path.join(self.HW_MGMT_ROOT, "bmc_temp")
-        self.min_path = os.path.join(self.HW_MGMT_ROOT, "bmc_min")
 
     def _read_scaled(self, path):
         value = read_sysfs_float(path)
         if value is None:
-            return self.NA
+            return None
         return value / self.TEMP_SCALE
 
     def get_name(self):
@@ -61,13 +59,49 @@ class ThermalBMC(ThermalBase):
         """
         return self.name
 
+    def get_presence(self):
+        """
+        Retrieve the presence of the thermal sensor.
+
+        Returns:
+            bool: Always True.
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieve the model of the thermal sensor.
+
+        Returns:
+            str: Model identifier for the sensor, or None if not available.
+        """
+        return None
+
+    def get_serial(self):
+        """
+        Retrieve the serial number of the thermal sensor.
+
+        Returns:
+            str: Serial number of the sensor, or None if not available.
+        """
+        return None
+
+    def get_status(self):
+        """
+        Retrieve the operational status of the thermal sensor.
+
+        Returns:
+            bool: True if the sensor is present and reporting a valid temperature.
+        """
+        return self.get_temperature() is not None
+
     def get_temperature(self):
         """
         Retrieve the current temperature reading from the thermal sensor.
 
         Returns:
             The current temperature in Celsius to the nearest thousandth of a degree (e.g. 30.125),
-            or `"N/A"` if unavailable.
+            or None if unavailable.
         """
         return self._read_scaled(self.input_path)
 
@@ -76,7 +110,7 @@ class ThermalBMC(ThermalBase):
         Retrieve the high threshold temperature of the thermal sensor.
 
         Returns:
-            The high threshold temperature in Celsius, or `"N/A"` if unavailable.
+            The high threshold temperature in Celsius, or None if unavailable.
         """
         return self._read_scaled(self.max_path)
 
@@ -85,24 +119,40 @@ class ThermalBMC(ThermalBase):
         Retrieve the low threshold temperature of the thermal sensor.
 
         Returns:
-            The low threshold temperature in Celsius, or `"N/A"` if unavailable.
+            None -- the BMC ambient sensor has no low threshold.
         """
-        return self._read_scaled(self.min_path)
+        return None
 
     def get_high_critical_threshold(self):
         """
         Retrieve the high critical threshold temperature of the thermal sensor.
 
         Returns:
-            `"N/A"` -- the BMC ambient sensor has no critical threshold.
+            None -- the BMC ambient sensor has no critical threshold.
         """
-        return self.NA
+        return None
 
     def get_low_critical_threshold(self):
         """
         Retrieve the low critical threshold temperature of the thermal sensor.
 
         Returns:
-            `"N/A"` -- the BMC ambient sensor has no critical threshold.
+            None -- the BMC ambient sensor has no critical threshold.
         """
-        return self.NA
+        return None
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device
+        Returns:
+            integer: The 1-based relative physical position in parent device
+        """
+        return 1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from sonic_platform import eeprom_utils
+from nexthop_utils import eeprom_utils
 
 BMC_EEPROM_PATH = "/sys/bus/i2c/devices/4-0050/eeprom"
 
@@ -12,7 +12,7 @@ class Eeprom(eeprom_utils.Eeprom):
 
     - Uses Nexthop Eeprom subclass so Vendor Extension TLVs
       (IANA 63074 + custom field codes) map to friendly names like
-      "Switch Host Serial Number".
+      "Switch-Host Serial Number".
     """
 
     def __init__(self):

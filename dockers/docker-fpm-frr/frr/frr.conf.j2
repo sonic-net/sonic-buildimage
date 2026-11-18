@@ -9,7 +9,9 @@
 {% include "common/daemons.common.conf.j2" %}
 {% from "common/functions.conf.j2" import get_ipv4_loopback_address, get_ipv6_loopback_address %}
 !
+{% if not (constants is defined and constants.frr is defined and constants.frr.enable_snmp_agent is defined and not constants.frr.enable_snmp_agent) %}
 agentx
+{% endif %}
 !
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !

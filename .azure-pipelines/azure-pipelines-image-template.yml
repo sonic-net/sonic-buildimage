@@ -76,6 +76,7 @@ jobs:
           ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$PLATFORM_NAME PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
         displayName: 'Make configure'
     postSteps:
+      - template: azure-pipelines-cleanup-signing.yml
       - script: |
           BUILD_REASON=$(Build.Reason)
           PTF_MODIFIED_IN_PR="False"
@@ -113,14 +114,7 @@ jobs:
           BRANCH=$(Build.SourceBranchName)
           echo "Branch = $BRANCH"
           PUSH_DOCKER="False"
-          if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
-          then
-            LABELS="$BRANCH"
-            [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
-            DOCKERS=$(ls target/docker-ptf.gz)
-            PUSH_DOCKER="True"
-          elif [[ "$PTF_MODIFIED_IN_PR" == "True" ]]
-          then
+          if [[ "$PTF_MODIFIED_IN_PR" == "True" ]]; then
             LABELS="ptf-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
             DOCKERS=$(ls target/docker-ptf.gz)
             PUSH_DOCKER="True"
@@ -131,12 +125,14 @@ jobs:
             for f in $DOCKERS; do
               echo $f
               echo "Labels = $LABELS"
-              ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
+              ./push_docker.sh "$f" "$REGISTRY_SERVER_PUBLIC" "$PORT" "$REGISTRY_USERNAME" "$LABELS"
             done
           fi
           mkdir -p $(Build.ArtifactStagingDirectory)/target
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         env:
+          REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
+          REGISTRY_USERNAME: $(REGISTRY_USERNAME)
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         name: PublishAndSetPtfTag
         displayName: Publish to Docker Registry and Copy Artifacts

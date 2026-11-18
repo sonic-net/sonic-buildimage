@@ -10,11 +10,12 @@ use mio::Token;
 use scopeguard::guard;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 // Global state for progressive time mocking
 static TIME_MOCK_COUNTER: AtomicU32 = AtomicU32::new(0);
 static TIME_MOCK_START: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+static FATAL_KILL_CALLED: AtomicBool = AtomicBool::new(false);
 
 /// Initialize the time mocker with a start time
 pub fn init_time_mocker(start_time: f64) {
@@ -435,6 +436,96 @@ impl TestSupervisorListener {
 
 
 
+    /// Test that PROCESS_STATE_FATAL for a critical process with autorestart=enabled
+    /// causes the listener to call kill(SIGTERM) on supervisord.
+    /// This FAILS before the fix (FATAL arm is absent) and PASSES after.
+    pub fn test_fatal_critical_process_autorestart_enabled(&self) -> Result<(), String> {
+        let mut injector = InjectorPP::new();
+
+        // Use a global static to track whether kill() was called
+        // (injectorpp::fake! cannot capture dynamic environment)
+        FATAL_KILL_CALLED.store(false, Ordering::SeqCst);
+
+        injector
+            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
+                returns: {
+                    FATAL_KILL_CALLED.store(true, Ordering::SeqCst);
+                    Ok(())
+                }
+            ));
+
+        let stdin_path = format!("{}/tests/dev/stdin_fatal_swss", env!("CARGO_MANIFEST_DIR"));
+        let stdin_reader = MockStdin::from_file(&stdin_path)
+            .map_err(|e| format!("Failed to open stdin_fatal_swss: {}", e))?;
+
+        let args = Args {
+            container_name: "swss".to_string(),
+            use_unix_socket_path: true,
+        };
+
+        let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
+        let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
+        let mock_poller = MockPoller::new();
+
+        let _ = main_with_parsed_args_and_stdin(
+            args, stdin_reader, &critical_path, &watch_path, &self.mock_configdb, mock_poller,
+        );
+
+        if FATAL_KILL_CALLED.load(Ordering::SeqCst) {
+            println!("✓ kill() was called on PROCESS_STATE_FATAL for critical process (autorestart=enabled)");
+            Ok(())
+        } else {
+            Err("FAIL: kill() was NOT called — PROCESS_STATE_FATAL not handled (bug present)".to_string())
+        }
+    }
+
+    /// Test that PROCESS_STATE_FATAL for a process with autorestart=disabled
+    /// does NOT call kill() — process should be added to alerting instead.
+    /// This PASSES both before and after the fix (correct behavior in disabled case).
+    pub fn test_fatal_critical_process_autorestart_disabled(&self) -> Result<(), String> {
+        let mut injector = InjectorPP::new();
+
+        // kill() must NOT be called
+        injector
+            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
+                returns: panic!("kill() must NOT be called when autorestart=disabled")
+            ));
+
+        let stdin_path = format!("{}/tests/dev/stdin_fatal_snmp", env!("CARGO_MANIFEST_DIR"));
+        let stdin_reader = MockStdin::from_file(&stdin_path)
+            .map_err(|e| format!("Failed to open stdin_fatal_snmp: {}", e))?;
+
+        // snmpd is not in the swss critical_processes file — use a temp file listing snmpd
+        let mut tmp = tempfile::NamedTempFile::new()
+            .map_err(|e| format!("tempfile: {}", e))?;
+        use std::io::Write;
+        writeln!(tmp, "program:snmpd").map_err(|e| format!("write tempfile: {}", e))?;
+
+        let args = Args {
+            container_name: "snmp".to_string(),
+            use_unix_socket_path: true,
+        };
+
+        let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
+        let mock_poller = MockPoller::new();
+
+        let _ = main_with_parsed_args_and_stdin(
+            args, stdin_reader,
+            tmp.path().to_str().unwrap(),
+            &watch_path,
+            &self.mock_configdb,
+            mock_poller,
+        );
+
+        // If we get here without panic, kill() was not called — correct
+        println!("✓ kill() was NOT called on PROCESS_STATE_FATAL for autorestart=disabled container");
+        Ok(())
+    }
+
     /// Run all tests
     pub fn run_all_tests(&self) -> Result<(), String> {
         println!("Running test_main_swss_no_container...");
@@ -448,6 +539,14 @@ impl TestSupervisorListener {
         println!("Running test_main_snmp...");
         self.test_main_snmp()?;
         println!("✓ test_main_snmp passed");
+
+        println!("Running test_fatal_critical_process_autorestart_enabled...");
+        self.test_fatal_critical_process_autorestart_enabled()?;
+        println!("✓ test_fatal_critical_process_autorestart_enabled passed");
+
+        println!("Running test_fatal_critical_process_autorestart_disabled...");
+        self.test_fatal_critical_process_autorestart_disabled()?;
+        println!("✓ test_fatal_critical_process_autorestart_disabled passed");
         
         println!("\nAll tests passed! ✓");
         Ok(())
@@ -596,6 +695,18 @@ mod tests {
         // 3. The mock framework is set up correctly
         
         println!("✓ Mock kill setup for auto-restart enabled scenario");
+    }
+
+    #[test]
+    fn test_fatal_critical_process_autorestart_enabled() {
+        let test_listener = TestSupervisorListener::new();
+        test_listener.test_fatal_critical_process_autorestart_enabled().unwrap();
+    }
+
+    #[test]
+    fn test_fatal_critical_process_autorestart_disabled() {
+        let test_listener = TestSupervisorListener::new();
+        test_listener.test_fatal_critical_process_autorestart_disabled().unwrap();
     }
 
     #[test]

@@ -16,19 +16,23 @@
 # limitations under the License.
 #
 
+import importlib
 import os
 import sys
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from mellanox_component_versions import main as main_module
 from mellanox_component_versions.main import (
     parse_fw_version_sw,
     parse_fw_version_dpu,
     parse_compiled_components_file,
     get_platform_component_versions,
     get_current_version,
-    get_component_rules
+    get_component_rules,
 )
 
 
@@ -153,3 +157,244 @@ class TestGetCurrentVersion:
         unique, version = get_current_version("MFT")
         assert unique == True
         assert version == "N/A"
+
+
+class TestSdkVersionReporting:
+    @pytest.mark.parametrize(
+        ("package_versions", "expected_result"),
+        [
+            pytest.param(["1.mlnx.4.10.1144"], (True, "4.10.1144"), id="numeric-release"),
+            pytest.param(["1.mlnx.dev.037"], (True, "dev.037"), id="alphabetic-build"),
+            pytest.param(
+                ["1.mlnx.dev.037", "1.mlnx.dev.037"],
+                (True, "dev.037"),
+                id="multi-asic-same-version",
+            ),
+            pytest.param(
+                ["1.mlnx.dev.037", "1.mlnx.dev.038"],
+                (False, ["dev.037", "dev.038"]),
+                id="multi-asic-different-versions",
+            ),
+        ],
+    )
+    def test_sdk_version_parses_package_versions_from_syncd(self, package_versions, expected_result):
+        device_data = mock.Mock()
+        device_data.get_asic_count.return_value = len(package_versions)
+
+        with mock.patch.object(main_module, "get_asic_type", return_value="mellanox"), \
+                mock.patch.object(main_module, "get_device_data_manager", return_value=device_data), \
+                mock.patch.object(main_module.subprocess, "run",
+                                  side_effect=[mock.Mock(stdout=version) for version in package_versions]) as mock_run:
+            result = main_module.process_rule(main_module.COMPONENT_RULES_SW["SDK"])
+
+        assert result == expected_result
+        containers = ["syncd"] if len(package_versions) == 1 else [
+            f"syncd{index}" for index in range(len(package_versions))
+        ]
+        assert mock_run.call_args_list == [
+            mock.call(
+                ["docker", "exec", container, "dpkg-query", "-W", "-f=${Version}", "sys-sdk-main"],
+                shell=False,
+                stdout=main_module.subprocess.PIPE,
+                text=True,
+            )
+            for container in containers
+        ]
+
+
+class TestFirmwareReporting:
+    @pytest.mark.parametrize(
+        ("device_xml", "expected_actual"),
+        [
+            pytest.param(
+                '<Device type="N/A" pciName="0000:01:00.0">'
+                '<Versions><FW current="--"/></Versions></Device>',
+                "N/A",
+                id="unavailable-device-type",
+            ),
+            pytest.param("", "N/A", id="empty-inventory"),
+            pytest.param(
+                '<Device type="Spectrum7" pciName="0000:01:00.0">'
+                '<Versions><FW current="37.2020.5678"/></Versions></Device>',
+                "2020.5678",
+                id="recognized-device",
+            ),
+        ],
+    )
+    def test_main_preserves_fw_compilation_row(self, device_xml, expected_actual, tmp_path, capsys):
+        compilation_file = tmp_path / "component-versions"
+        compilation_file.write_text("FW 2020.1234\n", encoding="utf-8")
+        device_data = mock.Mock()
+        device_data.get_asic_count.return_value = 1
+        device_data.is_simx_platform.return_value = True
+        device_data.get_simx_version.return_value = "N/A"
+
+        with mock.patch.object(main_module.os, "getuid", return_value=0), \
+                mock.patch.object(main_module, "get_asic_type", return_value="mellanox"), \
+                mock.patch.object(main_module, "get_device_data_manager", return_value=device_data), \
+                mock.patch.object(main_module, "get_component_rules",
+                                  return_value={"FW": main_module.COMPONENT_RULES_SW["FW"]}), \
+                mock.patch.object(main_module, "COMPONENT_VERSIONS_FILE", str(compilation_file)), \
+                mock.patch.object(main_module.subprocess, "run",
+                                  return_value=mock.Mock(stdout=f"<Devices>{device_xml}</Devices>")):
+            main_module.main()
+
+        rows = [line.split() for line in capsys.readouterr().out.splitlines()]
+        fw_rows = [row for row in rows if row and row[0] == "FW"]
+        assert fw_rows == [["FW", "2020.1234", expected_actual]]
+
+
+class TestBmcPlatform:
+    """aspeed (SONiC BMC): sonic_platform there is
+    sonic-platform-modules-nvidia-bmc, which has no device_data module."""
+
+    def test_main_imports_without_sonic_platform(self):
+        with mock.patch.dict(sys.modules, {'sonic_platform': None,
+                                           'sonic_platform.device_data': None}):
+            importlib.reload(main_module)
+
+    def test_get_component_rules_returns_bmc_rules_on_aspeed(self):
+        with mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'):
+            main_module.get_component_rules.cache_clear()
+            rules = main_module.get_component_rules()
+        main_module.get_component_rules.cache_clear()
+
+        assert set(rules) == {"HW_MANAGEMENT", "KERNEL"}
+
+    def test_hw_management_queries_the_bmc_only_package(self):
+        captured = self._run_bmc_rule("HW_MANAGEMENT", "1.mlnx.7.0070.1013")
+        assert "hw-management-bmc" in captured["cmd"]
+
+    def test_hw_management_version_strips_the_mlnx_prefix(self):
+        captured = self._run_bmc_rule("HW_MANAGEMENT", "1.mlnx.7.0070.1013")
+        assert captured["version"] == "7.0070.1013"
+
+    def test_kernel_version_strips_the_flavour_suffix(self):
+        captured = self._run_bmc_rule("KERNEL", "6.1.0-29-2-arm64")
+        assert captured["version"] == "6.1.0-29-2"
+
+    @staticmethod
+    def _run_bmc_rule(component, command_output):
+        """Drive one BMC rule end to end with the shelled-out command stubbed."""
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured["cmd"] = " ".join(cmd)
+            return mock.Mock(stdout=command_output)
+
+        with mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'), \
+                mock.patch.object(main_module.subprocess, 'run', side_effect=fake_run):
+            main_module.get_component_rules.cache_clear()
+            unique, version = main_module.get_current_version(component)
+        main_module.get_component_rules.cache_clear()
+
+        assert unique is True
+        captured["version"] = version
+        return captured
+
+    def test_main_does_not_query_fwutil_on_bmc(self):
+        with mock.patch.object(main_module, 'get_pdp') as mock_get_pdp:
+            self._run_main_on_bmc()
+        mock_get_pdp.assert_not_called()
+
+    def test_main_omits_platform_component_rows_on_bmc(self):
+        output = self._run_main_on_bmc()
+        for component in main_module.UNAVAILABLE_PLATFORM_VERSIONS:
+            assert component not in output
+
+    def test_main_reports_the_bmc_components(self):
+        output = self._run_main_on_bmc()
+        assert "HW_MANAGEMENT" in output
+        assert "KERNEL" in output
+
+    @staticmethod
+    def _run_main_on_bmc(uid=0):
+        """Run main() as it runs on the BMC and return what it printed."""
+        with mock.patch.object(main_module.os, 'getuid', return_value=uid), \
+                mock.patch.object(main_module, 'COMPONENT_VERSIONS_FILE',
+                                  '/nonexistent/component-versions'), \
+                mock.patch.object(main_module, 'get_asic_type', return_value='aspeed'), \
+                mock.patch.object(main_module.subprocess, 'run',
+                                  return_value=mock.Mock(stdout="1.mlnx.7.0070.1013")), \
+                mock.patch('builtins.print') as mock_print:
+            main_module.get_component_rules.cache_clear()
+            main_module.main()
+        main_module.get_component_rules.cache_clear()
+        return "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+
+    def test_main_does_not_require_root_on_bmc(self):
+        """The BMC rules only read a deb version and uname -r."""
+        output = self._run_main_on_bmc(uid=1000)
+        assert "HW_MANAGEMENT" in output
+
+    def test_main_still_requires_root_on_switch_platforms(self):
+        """Guard: relaxing root on the BMC must not relax it for switches."""
+        with mock.patch.object(main_module.os, 'getuid', return_value=1000), \
+                mock.patch.object(main_module, 'get_asic_type', return_value='mellanox'), \
+                mock.patch('builtins.print') as mock_print:
+            main_module.get_component_rules.cache_clear()
+            main_module.main()
+        main_module.get_component_rules.cache_clear()
+
+        output = "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+        assert "Root privileges are required" in output
+
+
+class TestOeFw:
+
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=False)
+    def test_no_row_on_non_cpo(self, _cpo, _asic):
+        get_component_rules.cache_clear()
+        try:
+            assert "OE_FW" not in get_component_rules()
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('mellanox_fw_manager.vmod.get_image_version', return_value="95.10.0762")
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    def test_compiled_is_the_mfa_version(self, _cpo, _asic, _image, _exists):
+        get_component_rules.cache_clear()
+        try:
+            assert parse_compiled_components_file()["OE_FW"] == "95.10.0762"
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('mellanox_fw_manager.vmod.get_image_version', side_effect=OSError("flint not found"))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    def test_compiled_is_na_when_the_read_raises(self, _cpo, _asic, _image, _exists):
+        get_component_rules.cache_clear()
+        try:
+            assert parse_compiled_components_file()["OE_FW"] == "N/A"
+        finally:
+            get_component_rules.cache_clear()
+
+    @mock.patch('mellanox_component_versions.main.get_device_data_manager',
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=["95.10.0762"])
+    @mock.patch('mellanox_component_versions.main.subprocess.run')
+    def test_actual_is_the_running_version(self, mock_run, _running, _cpo, _asic, _count):
+        get_component_rules.cache_clear()
+        try:
+            assert get_current_version("OE_FW") == (True, "95.10.0762")
+        finally:
+            get_component_rules.cache_clear()
+        mock_run.assert_not_called()
+
+    @mock.patch('mellanox_component_versions.main.get_device_data_manager',
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=[])
+    def test_actual_is_na_without_asics(self, _running, _cpo, _asic, _count):
+        get_component_rules.cache_clear()
+        try:
+            assert get_current_version("OE_FW") == (True, "N/A")
+        finally:
+            get_component_rules.cache_clear()

@@ -45,7 +45,7 @@ read_device_metadata() {
 
 declare -A prefix_type_devices
 prefix_type_devices=(
-    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter"
+    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter UpperRegionalHub"
     ["SUPPRESS_PREFIX"]=""
 )
 
@@ -68,7 +68,12 @@ validate_device_for_type() {
 
 # Function to skip operation on chassis supervisor
 skip_chassis_supervisor() {
-    if [ -f /etc/sonic/chassisdb.conf ]; then
+    local PLATFORM supervisor
+    PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+    [ -f "/usr/share/sonic/device/$PLATFORM/platform_env.conf" ] && \
+        . "/usr/share/sonic/device/$PLATFORM/platform_env.conf"
+
+    if [ "$supervisor" = "1" ]; then
         echo "Skipping Operation on chassis supervisor"
         exit 0
     fi

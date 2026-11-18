@@ -7,10 +7,13 @@
 DHCPSERVD_READY_FLAG="/tmp/dhcpservd_ready"
 TIMEOUT=120
 
+# Do NOT remove the flag: the dependent-startup plugin may launch this
+# checker more than once (the program has startsecs=0 and exits quickly).
+# dhcpservd does not restart within a container, and docker_init.sh clears the stale
+# flag on container start, so leaving it in place keeps re-runs idempotent.
 for i in $(seq 1 $TIMEOUT); do
     if [ -f "$DHCPSERVD_READY_FLAG" ]; then
-        rm -f "$DHCPSERVD_READY_FLAG"
-        logger -p daemon.info "wait_for_dhcpservd: dhcpservd is ready (flag file found and removed after ${i}s)"
+        logger -p daemon.info "wait_for_dhcpservd: dhcpservd is ready (flag file found after ${i}s)"
         exit 0
     fi
     sleep 1

@@ -1,0 +1,606 @@
+"""
+Unit tests for the BMC watchdog IPC layer.
+
+These exercise the hw-watchdog-mgrd daemon's IPC server (with the hardware
+device ioctls mocked) driven through the shared sonic_platform_base BMCWatchdog
+IPC client, validating arm/disarm/is_armed/get_remaining_time end to end as well
+as the JSON intent-file persistence and startup-adoption logic.
+"""
+
+import importlib.util
+import json
+import os
+import select
+import sys
+import threading
+import types
+
+import pytest
+
+TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+NEXTHOP_DIR = os.path.dirname(TEST_DIR)
+ASPEED_DIR = os.path.dirname(NEXTHOP_DIR)
+REPO_ROOT = os.path.dirname(os.path.dirname(ASPEED_DIR))
+# The watchdog client now lives in the sonic-platform-common submodule as the
+# shared BMCWatchdog implementation.
+CLIENT_PATH = os.path.join(
+    REPO_ROOT, "src", "sonic-platform-common", "sonic_platform_base",
+    "bmc_watchdog.py")
+DAEMON_PATH = os.path.join(
+    ASPEED_DIR, "aspeed-platform-services", "scripts", "hw-watchdog-mgrd.py")
+
+# sonic_platform_base is not available in the unit-test environment; stub the
+# only piece the watchdog client needs.
+if "sonic_platform_base" not in sys.modules:
+    base = types.ModuleType("sonic_platform_base")
+    wb = types.ModuleType("sonic_platform_base.watchdog_base")
+
+    class WatchdogBase:
+        pass
+
+    wb.WatchdogBase = WatchdogBase
+    base.watchdog_base = wb
+    sys.modules["sonic_platform_base"] = base
+    sys.modules["sonic_platform_base.watchdog_base"] = wb
+
+
+def _load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+wdtd = _load("hw_watchdog_mgrd", DAEMON_PATH)
+wdtc = _load("watchdog_client", CLIENT_PATH)
+
+
+@pytest.fixture
+def ipc(tmp_path):
+    """Start the daemon IPC server with mocked device ioctls, yield a client."""
+    sock_path = str(tmp_path / "wdt.sock")
+    wdtd.SOCKET_PATH = sock_path
+    # Keep intent-file writes out of /run during tests.
+    wdtd.INTENT_FILE = str(tmp_path / "intent.json")
+
+    # In-memory model of the hardware watchdog state.
+    hw = {"armed": False, "timeout": 0}
+
+    def fake_ioctl(fd, op, arg=None, mutate=True):
+        if op == wdtd.WDIOC_SETTIMEOUT:
+            hw["timeout"] = int(arg[0])
+        elif op == wdtd.WDIOC_SETOPTIONS:
+            opt = int(arg[0])
+            if opt == wdtd.WDIOS_ENABLECARD:
+                hw["armed"] = True
+            elif opt == wdtd.WDIOS_DISABLECARD:
+                hw["armed"] = False
+        elif op == wdtd.WDIOC_KEEPALIVE:
+            pass
+        return 0
+
+    daemon = wdtd.WatchdogManager()
+    daemon.fd = 999
+    daemon._open_device = lambda: True
+    daemon._read_sysfs_str = lambda f: "active" if hw["armed"] else "inactive"
+    orig_ioctl = wdtd.fcntl.ioctl
+    wdtd.fcntl.ioctl = fake_ioctl
+
+    server = daemon._create_socket()
+    stop = threading.Event()
+
+    def serve():
+        while not stop.is_set():
+            readable, _, _ = select.select([server], [], [], 0.1)
+            for s in readable:
+                daemon._handle_connection(s)
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+
+    client = wdtc.BMCWatchdog(socket_path=sock_path)
+
+    yield client, hw
+
+    stop.set()
+    thread.join(timeout=2)
+    server.close()
+    wdtd.fcntl.ioctl = orig_ioctl
+
+
+def test_arm_disarm_status(ipc):
+    client, hw = ipc
+    assert client.is_armed() is False
+    assert client.arm(120) == 120
+    assert hw["armed"] is True
+    assert hw["timeout"] == 120
+    assert client.is_armed() is True
+    remaining = client.get_remaining_time()
+    assert 0 <= remaining <= 120
+    assert client.disarm() is True
+    assert hw["armed"] is False
+    assert client.is_armed() is False
+    assert client.get_remaining_time() == -1
+
+
+def test_arm_rejects_out_of_range(ipc):
+    client, hw = ipc
+    assert client.arm(-1) == -1
+    # 0 means "unknown" to the kernel (not "disable") and tiny timeouts risk an
+    # almost-immediate reset, so anything below MIN_TIMEOUT is rejected.
+    assert client.arm(0) == -1
+    assert client.arm(wdtd.MIN_TIMEOUT - 1) == -1
+    assert client.arm(wdtd.MAX_TIMEOUT + 1) == -1
+    assert hw["armed"] is False
+
+
+def test_arm_accepts_minimum_timeout(ipc):
+    client, hw = ipc
+    assert client.arm(wdtd.MIN_TIMEOUT) == wdtd.MIN_TIMEOUT
+    assert hw["armed"] is True
+    assert hw["timeout"] == wdtd.MIN_TIMEOUT
+
+
+def test_rearm_keeps_armed(ipc):
+    client, hw = ipc
+    assert client.arm(120) == 120
+    # Re-arming at the same timeout should ping, leaving it armed.
+    assert client.arm(120) == 120
+    assert client.is_armed() is True
+
+
+def test_unknown_command(ipc):
+    client, _ = ipc
+    resp = client._request("bogus")
+    assert resp is not None and "error" in resp
+
+
+def test_client_handles_daemon_unavailable(tmp_path):
+    # Point the sysfs fallback at a path that does not exist so the test is
+    # hermetic regardless of any real watchdog device on the host.
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(tmp_path / "no-sysfs") + "/")
+    assert client.arm(60) == -1
+    assert client.disarm() is False
+    assert client.is_armed() is False
+    assert client.get_remaining_time() == -1
+
+
+def test_is_armed_falls_back_to_sysfs_when_daemon_down(tmp_path):
+    # Simulates a daemon crash: the socket is gone but the hardware watchdog is
+    # still armed (counting down).  is_armed() must report the true hw state.
+    sysfs = tmp_path / "sysfs"
+    sysfs.mkdir()
+    client = wdtc.BMCWatchdog(
+        socket_path=str(tmp_path / "nonexistent.sock"),
+        sysfs_path=str(sysfs) + "/")
+
+    (sysfs / "state").write_text("active\n")
+    assert client.is_armed() is True
+
+    (sysfs / "state").write_text("inactive\n")
+    assert client.is_armed() is False
+
+
+def test_arm_writes_intent_file(ipc):
+    client, _ = ipc
+    client.arm(120)
+    with open(wdtd.INTENT_FILE) as f:
+        assert json.load(f) == {"armed": True, "timeout": 120}
+    client.disarm()
+    with open(wdtd.INTENT_FILE) as f:
+        # Disarm clears the armed flag but preserves the timeout for reference.
+        assert json.load(f) == {"armed": False, "timeout": 120}
+
+
+def _build_daemon(tmp_path, monkeypatch, hw):
+    """Build a daemon with mocked device/sysfs and an isolated intent file."""
+    monkeypatch.setattr(wdtd, "INTENT_FILE", str(tmp_path / "intent.json"))
+
+    def fake_ioctl(fd, op, arg=None, mutate=True):
+        if op == wdtd.WDIOC_SETTIMEOUT:
+            hw["timeout"] = int(arg[0])
+        elif op == wdtd.WDIOC_SETOPTIONS:
+            opt = int(arg[0])
+            if opt == wdtd.WDIOS_ENABLECARD:
+                hw["armed"] = True
+            elif opt == wdtd.WDIOS_DISABLECARD:
+                hw["armed"] = False
+        return 0
+
+    monkeypatch.setattr(wdtd.fcntl, "ioctl", fake_ioctl)
+    daemon = wdtd.WatchdogManager()
+    daemon.fd = 999
+    daemon._open_device = lambda: True
+    daemon._read_sysfs_str = lambda f: (
+        str(hw["timeout"]) if f == "timeout"
+        else ("active" if hw["armed"] else "inactive"))
+    return daemon
+
+
+def test_startup_arms_from_intent(tmp_path, monkeypatch):
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon._write_intent(True, 150)
+    daemon._startup_arm()
+    assert daemon.armed is True
+    assert hw["armed"] is True
+    assert hw["timeout"] == 150
+
+
+def test_startup_no_intent_boot_arm_disabled(tmp_path, monkeypatch):
+    # Fresh boot (no tmpfs intent) with boot_arm policy off: the platform.json
+    # value is the source of truth, so the daemon actively disarms to ensure the
+    # hardware watchdog is off (even if the bootloader had armed it).
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = False
+    daemon._startup_arm()
+    assert daemon.armed is False
+    assert hw["armed"] is False
+
+
+def test_startup_no_intent_boot_arm_enabled(tmp_path, monkeypatch):
+    # Fresh boot (no tmpfs intent) with boot_arm policy on: the daemon arms the
+    # watchdog at the default timeout per platform policy.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = True
+    daemon._startup_arm()
+    assert daemon.armed is True
+    assert hw["armed"] is True
+    assert hw["timeout"] == wdtd.DEFAULT_TIMEOUT
+
+
+def test_pet_interval_scales_with_timeout():
+    # Long timeouts are capped at the nominal keepalive interval; short timeouts
+    # pet at half the window so they cannot expire before the next pet.
+    daemon = wdtd.WatchdogManager()
+    assert daemon._pet_interval_for(wdtd.DEFAULT_TIMEOUT) == \
+        wdtd.KEEPALIVE_INTERVAL
+    assert daemon._pet_interval_for(wdtd.KEEPALIVE_INTERVAL * 2) == \
+        wdtd.KEEPALIVE_INTERVAL
+    assert daemon._pet_interval_for(40) == 20
+    # At the minimum armable timeout the interval is half of it, and never drops
+    # below that floor even for smaller (non-armable) values.
+    assert daemon._pet_interval_for(wdtd.MIN_TIMEOUT) == wdtd.MIN_TIMEOUT // 2
+    assert daemon._pet_interval_for(1) == wdtd.MIN_TIMEOUT // 2
+    assert daemon._pet_interval_for(0) == wdtd.MIN_TIMEOUT // 2
+
+
+def test_arm_short_timeout_pets_within_window(tmp_path, monkeypatch):
+    # A timeout below the nominal 60s keepalive interval must shrink the pet
+    # cadence so the hardware is refreshed before it can expire and reset the box.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    assert daemon.arm(40) == 40
+    assert daemon.pet_interval == 20
+    assert daemon.pet_interval < daemon.timeout
+    # The next pet is scheduled one interval after the arming pet.
+    assert daemon.next_ping == daemon.last_ping + daemon.pet_interval
+
+
+def test_arm_long_timeout_caps_pet_interval(tmp_path, monkeypatch):
+    # A long timeout keeps the nominal 60s cadence rather than petting needlessly
+    # often, while still staying inside the hardware window.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    assert daemon.arm(wdtd.DEFAULT_TIMEOUT) == wdtd.DEFAULT_TIMEOUT
+    assert daemon.pet_interval == wdtd.KEEPALIVE_INTERVAL
+    assert daemon.pet_interval < daemon.timeout
+
+
+def test_default_policy_enabled():
+    # Both protections default on so the box is protected out of the box, even
+    # when platform.json omits the watchdog section entirely.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.boot_arm is True
+    assert daemon.shutdown_protect is True
+
+
+def test_load_platform_config_defaults_enabled(monkeypatch):
+    # platform.json without a "watchdog" section leaves both protections on.
+    daemon = wdtd.WatchdogManager()
+    daemon.boot_arm = False
+    daemon.shutdown_protect = False
+    monkeypatch.setattr(wdtd, "get_platform_json_data", lambda: {})
+    daemon._load_platform_config()
+    assert daemon.boot_arm is True
+    assert daemon.shutdown_protect is True
+
+
+def test_load_platform_config_explicit_opt_out(monkeypatch):
+    # platform.json can still explicitly disable each protection.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": False, "shutdown_protect": False}})
+    daemon._load_platform_config()
+    assert daemon.boot_arm is False
+    assert daemon.shutdown_protect is False
+
+
+def test_startup_intent_disarmed_overrides_boot_arm(tmp_path, monkeypatch):
+    # A runtime disarm earlier in this boot session (intent present, armed false)
+    # must win over boot_arm on a daemon restart.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.boot_arm = True
+    daemon._write_intent(False, wdtd.DEFAULT_TIMEOUT)
+    daemon._startup_arm()
+    assert daemon.armed is False
+    assert hw["armed"] is False
+
+
+def test_startup_intent_disarmed_stops_active_hw(tmp_path, monkeypatch):
+    # Crash mid-disarm: the intent was recorded disarmed but the hardware is
+    # still ACTIVE.  Startup must complete the disarm (honour the intent), not
+    # re-adopt the watchdog.
+    hw = {"armed": True, "timeout": 90}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon._write_intent(False, 90)
+    daemon._startup_arm()
+    assert daemon.armed is False
+    assert hw["armed"] is False
+
+
+def test_startup_adopts_active_hardware(tmp_path, monkeypatch):
+    # Safety net: no intent recorded (e.g. an intent-write failure), but the
+    # hardware watchdog is ACTIVE and would not be petted by the kernel once its
+    # opener is gone.  The new instance must adopt it instead of leaving it
+    # unpetted.
+    hw = {"armed": True, "timeout": 90}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon._startup_arm()
+    assert daemon.armed is True
+    assert hw["armed"] is True
+    assert daemon.timeout == 90
+
+
+def _cleanup_capture(daemon, monkeypatch):
+    """Run cleanup() with os write/close/unlink and keepalive captured."""
+    writes = []
+    closed = []
+    keepalives = []
+    monkeypatch.setattr(wdtd.os, "write", lambda fd, b: writes.append(b))
+    monkeypatch.setattr(wdtd.os, "close", lambda fd: closed.append(fd))
+    monkeypatch.setattr(wdtd.os, "unlink", lambda p: None)
+    monkeypatch.setattr(daemon, "_keepalive", lambda: keepalives.append(True))
+    with pytest.raises(SystemExit):
+        daemon.cleanup()
+    return writes, closed, keepalives
+
+
+def test_cleanup_shutdown_protect_skips_magic_close(tmp_path, monkeypatch):
+    # During a system shutdown with shutdown_protect on, the daemon pets once and
+    # closes WITHOUT the magic 'V', leaving the watchdog armed for reboot
+    # protection.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = True
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    writes, closed, keepalives = _cleanup_capture(daemon, monkeypatch)
+    assert keepalives == [True]
+    assert b"V" not in writes
+    assert closed == [999]
+
+
+def test_cleanup_normal_stop_magic_closes(tmp_path, monkeypatch):
+    # A normal daemon stop/restart (not a system shutdown) disarms via
+    # magic-close even when shutdown_protect is enabled.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = True
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
+    assert writes == [b"V"]
+    assert closed == [999]
+
+
+def test_cleanup_no_shutdown_protect_magic_closes(tmp_path, monkeypatch):
+    # With shutdown_protect off, the daemon disarms via magic-close even during a
+    # system shutdown.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    daemon.shutdown_protect = False
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    writes, closed, _ = _cleanup_capture(daemon, monkeypatch)
+    assert writes == [b"V"]
+    assert closed == [999]
+
+
+def _stage_marker_capture(daemon, monkeypatch):
+    """Capture stage marker values written by cleanup()."""
+    markers = []
+    monkeypatch.setattr(daemon, "_write_stage_marker",
+                        lambda v: markers.append(v))
+    return markers
+
+
+def test_cleanup_system_stopping_writes_shutdown_marker(tmp_path, monkeypatch):
+    # During a system shutdown/reboot the daemon stamps the shutdown stage so a
+    # hang on the reboot path is attributed correctly on the next boot.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: True)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == [wdtd.STAGE_MARKER_DAEMON_SHUTDOWN]
+
+
+def test_cleanup_normal_stop_keeps_stage_marker(tmp_path, monkeypatch):
+    # A plain daemon stop/restart is not a shutdown: the resident marker (0x24
+    # armed) must be left alone so a WDT reset before the daemon comes back is
+    # not misattributed to the shutdown stage.
+    hw = {"armed": False, "timeout": 0}
+    daemon = _build_daemon(tmp_path, monkeypatch, hw)
+    daemon.armed = True
+    daemon.timeout = 180
+    monkeypatch.setattr(daemon, "_system_is_stopping", lambda: False)
+    markers = _stage_marker_capture(daemon, monkeypatch)
+    _cleanup_capture(daemon, monkeypatch)
+    assert markers == []
+
+
+# ------------------------------------------------- boot-stage attribution
+MARKER_CMD = "/usr/local/bin/watchdog-stage-marker.sh"
+
+
+def _marker_cmd_capture(monkeypatch, fail=False, executable=True, stderr=b""):
+    """Capture the subprocess invocations made by _write_stage_marker."""
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        if fail:
+            raise wdtd.subprocess.CalledProcessError(1, argv)
+        return wdtd.subprocess.CompletedProcess(argv, 0, stdout=b"",
+                                                stderr=stderr)
+
+    monkeypatch.setattr(wdtd.subprocess, "run", fake_run)
+    monkeypatch.setattr(wdtd.os, "access", lambda path, mode: executable)
+    return calls
+
+
+def _policy_log_capture(monkeypatch, daemon):
+    logged = []
+    monkeypatch.setattr(daemon, "log", lambda msg, *a, **k: logged.append(msg))
+    return logged
+
+
+def test_write_stage_marker_runs_platform_command(monkeypatch):
+    # The daemon delegates the register write to the platform's command, so
+    # the address, the write protocol and the monotonic rule live in one place.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == [[MARKER_CMD, "0x24"]]
+
+
+def test_write_stage_marker_noop_without_command(monkeypatch):
+    # Platforms without stage_marker_cmd in platform.json never run anything.
+    daemon = wdtd.WatchdogManager()
+    assert daemon.stage_marker_cmd is None
+    calls = _marker_cmd_capture(monkeypatch)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+
+
+def test_write_stage_marker_skips_missing_command(monkeypatch):
+    # The command ships in a lazily installed platform package, so it may not
+    # exist yet on the first boot: skip with a warning, never raise.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, executable=False)
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == []
+    assert any("not executable" in m for m in logged)
+
+
+def test_write_stage_marker_failure_is_swallowed(monkeypatch):
+    # A failing command is logged; attribution never affects petting.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(monkeypatch, fail=True)
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_SHUTDOWN)
+    assert calls == [[MARKER_CMD, "0x25"]]
+    assert any("failed" in m for m in logged)
+
+
+def test_write_stage_marker_reports_stderr(monkeypatch):
+    # The marker script exits 0 even when the register write fails and only
+    # reports it on stderr, so that text must reach the log instead of the
+    # "wrote marker" success line.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    calls = _marker_cmd_capture(
+        monkeypatch, stderr=b"watchdog-stage-marker: failed to clear\n")
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._write_stage_marker(wdtd.STAGE_MARKER_DAEMON_ARMED)
+    assert calls == [[MARKER_CMD, "0x24"]]
+    assert any("failed to clear" in m for m in logged)
+    assert not any("wrote marker" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd(monkeypatch):
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_marker_cmd": MARKER_CMD}})
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd == MARKER_CMD
+
+
+def test_load_platform_config_stage_marker_cmd_absent(monkeypatch):
+    # Absent key -> attribution disabled, even if a stale value was set.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": True}})
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+
+
+@pytest.mark.parametrize("bad", [
+    "watchdog-stage-marker.sh",            # relative
+    "/usr/local/bin/marker.sh 0x99",       # embedded argument
+    "",
+    42,
+    ["/usr/local/bin/marker.sh"],
+])
+def test_load_platform_config_stage_marker_cmd_rejects_invalid(monkeypatch, bad):
+    # The command runs as root: anything but a bare absolute path disables
+    # attribution and is logged, and the "Loaded watchdog policy" line is
+    # still emitted.
+    daemon = wdtd.WatchdogManager()
+    daemon.stage_marker_cmd = MARKER_CMD
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"stage_marker_cmd": bad}})
+    logged = _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert any("ignoring watchdog.stage_marker_cmd" in m for m in logged)
+    assert any(m.startswith("Loaded watchdog policy") and
+               "stage_marker_cmd=none" in m for m in logged)
+
+
+def test_load_platform_config_stage_marker_cmd_keeps_other_policy(monkeypatch):
+    # A bad command must not discard boot_arm / shutdown_protect parsed
+    # alongside it.
+    daemon = wdtd.WatchdogManager()
+    monkeypatch.setattr(
+        wdtd, "get_platform_json_data",
+        lambda: {"watchdog": {"boot_arm": False, "shutdown_protect": False,
+                              "stage_marker_cmd": "relative"}})
+    _policy_log_capture(monkeypatch, daemon)
+    daemon._load_platform_config()
+    assert daemon.stage_marker_cmd is None
+    assert daemon.boot_arm is False
+    assert daemon.shutdown_protect is False
+
+
+def test_b27_platform_json_names_the_marker_script():
+    # The b27 opts in by pointing the daemon at watchdog-stage-marker.sh; the
+    # install path must match where debian/rules puts common/scripts.
+    import json
+    pj = os.path.join(REPO_ROOT, "device", "nexthop", "arm64-nexthop_b27-r0",
+                      "platform.json")
+    with open(pj) as f:
+        cmd = json.load(f)["watchdog"]["stage_marker_cmd"]
+    assert cmd == MARKER_CMD
+    assert os.path.exists(os.path.join(
+        NEXTHOP_DIR, "common", "scripts", os.path.basename(cmd)))

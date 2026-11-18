@@ -32,7 +32,7 @@
 
 #define DEBUG 0
 #define MAX_PSU_NUM 2
-#define MAX_FANTRAY_NUM 6
+#define MAX_FANTRAY_NUM 8
 #define MAX_PORT_NUM (48 * 8)
 LED_OPS_DATA sys_led_ops_data[1]={0};
 LED_OPS_DATA psu_led_ops_data[MAX_PSU_NUM]={0};

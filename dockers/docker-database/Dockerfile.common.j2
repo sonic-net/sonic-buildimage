@@ -1,0 +1,25 @@
+{# Common Dockerfile for docker-database
+   Shared between standalone docker-database and docker-sonic-vs.
+   Configures redis server settings.
+   When included via --build-context, set copy_from="database" to use COPY --from=database
+#}
+{% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
+
+# Configure redis settings
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
+             s/^daemonize yes$/daemonize no/;            \
+             s/^logfile .*$/logfile ""/;                 \
+             s/^# syslog-enabled no$/syslog-enabled no/; \
+             s/^# unixsocket/unixsocket/;                \
+             s/redis-server.sock/redis.sock/g;           \
+             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
+             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^databases [0-9]+$/databases 100/ \
+            ' /etc/redis/redis.conf
+
+COPY {{ _from }}["flush_unused_database", "/usr/local/bin/"]
+COPY {{ _from }}["docker-database-init.sh", "/usr/local/bin/"]
+COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
+COPY {{ _from }}["database_config.json.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["database_global.json.j2", "/usr/share/sonic/templates/"]
+COPY {{ _from }}["multi_database_config.json.j2", "/usr/share/sonic/templates/"]

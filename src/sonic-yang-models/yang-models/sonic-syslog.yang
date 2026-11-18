@@ -177,7 +177,9 @@ module sonic-syslog {
 
                 leaf welf_firewall_name {
                     description "WELF format Firewall name";
-                    type string;
+                    type string {
+                        pattern '[^\n\r"\\%]*';
+                    }
                     must "(../format != 'standard')";
                 }
 

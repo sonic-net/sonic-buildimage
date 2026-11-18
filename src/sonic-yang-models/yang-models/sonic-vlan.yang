@@ -41,7 +41,19 @@ module sonic-vlan {
 		prefix svnet;
 	}
 
+	import sonic-static-anycast-gateway {
+		prefix sag;
+	}
+
 	description "VLAN yang Module for SONiC OS";
+
+	revision 2026-10-30 {
+		description "Count priority-tagged VLAN members in the one-untagged-VLAN-per-port check.";
+	}
+
+	revision 2025-04-22 {
+		description "Add SAG support";
+	}
 
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
@@ -135,6 +147,19 @@ module sonic-vlan {
 					description "Enable/Disable IPv6 link local address on vlan interface";
 					type stypes:mode-status;
 					default disable;
+				}
+
+				leaf static_anycast_gateway {
+					description
+						"Enable/disable static anycast gateway for the vlan interface.
+						 Requires SAG GLOBAL gateway_mac to be configured when enabled.";
+					type stypes:boolean_type;
+					default "false";
+					/* SAG GLOBAL gateway_mac must exist before enabling static anycast gateway on a VLAN interface. */
+					must "current() = 'false' or /sag:sonic-static-anycast-gateway/sag:SAG/sag:SAG_LIST[sag:name='GLOBAL']/sag:gateway_mac" {
+						error-message "static_anycast_gateway requires SAG GLOBAL gateway_mac to be configured";
+						error-app-tag static-anycast-gateway-requires-global-mac;
+					}
 				}
 
 				leaf mac_addr {
@@ -305,12 +330,15 @@ module sonic-vlan {
 					must "not(/intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()])" {
 						error-message "Port is a router interface.";
 					}
-					must "count(../../vlan:VLAN_MEMBER_LIST[vlan:port=current() and vlan:tagging_mode='untagged']) <= 1" {
-						error-message "Port can be untagged in at most one VLAN.";
+					/* Untagged and priority-tagged members both set the port VLAN ID, and a port has only one. */
+					must "count(../../vlan:VLAN_MEMBER_LIST[vlan:port=current() and
+						(vlan:tagging_mode='untagged' or vlan:tagging_mode='priority_tagged')]) <= 1" {
+						error-message "Port can be untagged or priority-tagged in at most one VLAN.";
+						error-app-tag vlan-member-multiple-pvid;
 					}
 				}
 				leaf tagging_mode {
-					description "Whether frames on this port are IEEE 802.1Q tagged or untagged";
+					description "Whether frames on this port are IEEE 802.1Q tagged, untagged, or priority-tagged";
 					mandatory true;
 					type stypes:vlan_tagging_mode;
 				}

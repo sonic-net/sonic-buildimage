@@ -1,16 +1,27 @@
 {
     "chassis": {
-        "name": "Goldfinch",
+        "name": "SKU_GOLDFINCH",
         "thermal_manager": false,
         "status_led": {},
         "components": [
             {
-                "name": "BIOS"
+                "name": "Ast2720()"
+            },
+            {
+                "name": "Uboot()"
+            },
+            {
+                "name": "SysCpld(addr=12-0043)"
             }
         ],
         "fans": [],
         "psus": [],
-        "thermals": [],
+        "thermals": [
+            {
+                "name": "BMC temp sensor",
+                "controllable": false
+            }
+        ],
         "sfps": []
     },
     "interfaces": {}

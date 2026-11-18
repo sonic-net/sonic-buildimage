@@ -22,6 +22,8 @@ try:
     from sonic_platform.switch_host_module import SwitchHostModule
     from sonic_platform.eeprom import EepromBMC
     from sonic_platform.reboot_cause import RebootCause
+    from sonic_platform.component import ComponentBMC
+    from sonic_platform.watchdog import Watchdog
     from sonic_py_common import device_info
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
@@ -32,6 +34,14 @@ class Chassis(ChassisBase):
     Platform-specific Chassis class for the NVIDIA AST2700 BMC.
     """
 
+    # Stable platform identity reported by get_name(). fwutil keys its
+    # chassis-component map on this value and cross-checks it against the
+    # top-level key in platform_components.json, so it must match that file
+    # exactly (currently "NVIDIA-AST2700-BMC"). It is intentionally decoupled
+    # from the EEPROM product name, which varies per board (e.g. P3809 vs
+    # P4102-A01) and would otherwise break the firmware schema validation.
+    PLATFORM_NAME = "NVIDIA-AST2700-BMC"
+
     def __init__(self):
         super().__init__()
 
@@ -41,6 +51,8 @@ class Chassis(ChassisBase):
         self._liquid_cooling = None
         self._eeprom = EepromBMC()
         self._reboot_cause = RebootCause()
+        self._component_list = [ComponentBMC()]
+        self._watchdog = Watchdog()
 
     def get_reboot_cause(self):
         """
@@ -65,10 +77,14 @@ class Chassis(ChassisBase):
         """
         Retrieves the name of the device
 
+        Returns a fixed platform identifier rather than the EEPROM product
+        name so that ``fwutil`` sees a stable chassis name that matches the
+        top-level key in ``platform_components.json`` across all boards.
+
         Returns:
             string: The name of the device
         """
-        return self._eeprom.get_product_name()
+        return self.PLATFORM_NAME
 
     def get_model(self):
         """
@@ -157,3 +173,54 @@ class Chassis(ChassisBase):
             from sonic_platform.liquid_cooling import LiquidCooling
             self._liquid_cooling = LiquidCooling()
         return self._liquid_cooling
+
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, only SWITCH-HOST is supported
+        Returns:
+            An integer, the index of the ModuleBase object in the module_list
+        """
+        if module_name != self._switch_host_module.get_name():
+            return None
+        return 0
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+
+        Returns:
+            integer: The 1-based relative physical position in parent device,
+            or -1 if the position cannot be determined.
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Not available on this platform
+        """
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Not available on this platform
+        """
+        return self.STATUS_LED_COLOR_OFF

@@ -38,7 +38,7 @@ class BfdMgr(Manager):
         """
         try:
             # Use pgrep to check if the process is running
-            subprocess.check_output(["pgrep", "-f", "bfdd"])
+            subprocess.check_output(["pgrep", "-x", "bfdd"])
             return True
         except subprocess.CalledProcessError:
             # Start bfdd process

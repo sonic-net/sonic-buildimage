@@ -1,0 +1,997 @@
+From 866de577a8536a53a7a6123070fbe72226f62a96 Mon Sep 17 00:00:00 2001
+From: Brian Carr <brcarr@nvidia.com>
+Date: Tue, 2 Jun 2026 19:36:45 +0300
+Subject: [PATCH 4/6] pldm-fw: add unit tests for protocol, packaging and
+ update flow
+
+Add an initial test suite covering the significant success and error
+behaviours of the firmware update implementation, validated against
+DSP0267 1.3.0.
+
+src/lib.rs (protocol codecs):
+  - descriptor decode for known types and rejection of unknown types
+  - DeviceIdentifiers::matches_device subset rule (8.1): exact match, FD
+    supersets, order-independence, missing-descriptor and empty-record
+    rejection
+  - encode/decode round-trips for GetStatus, RequestUpdate,
+    FirmwareParameters, UpdateComponent responses, plus rejection of an
+    unknown firmware-device state
+
+src/pkg.rs (package parsing):
+  - a small in-memory v1.1.x package builder and temp-file helper
+  - parsing of single- and multi-component packages, including the
+    component bitmap and image read-back
+  - header error paths: bad CRC-32 checksum and unknown package UUID
+  - read_component boundary/zero-pad behaviour (12.6)
+
+src/ua.rs (Update Agent flow):
+  - mock mctp ReqChannel/Listener/RespChannel transport that replays
+    scripted FD responses and records what the UA sends
+  - RequestUpdate reports the actual component count, surfaces command
+    failures, and requires the Idle state
+  - PassComponentTable success and unsupported-component rejection
+  - the full UpdateComponent transfer: serving image data, zero-padding
+    past the image end, rejecting oversized (INVALID_TRANSFER_LENGTH) and
+    out-of-range (DATA_OUT_OF_RANGE) RequestFirmwareData, and reporting a
+    verify failure
+  - ActivateFirmware success, ACTIVATION_NOT_REQUIRED-as-success, and
+    other-failure handling
+---
+ pldm-fw/Cargo.toml |   3 +
+ pldm-fw/src/lib.rs | 153 +++++++++++++
+ pldm-fw/src/pkg.rs | 237 +++++++++++++++++++++
+ pldm-fw/src/ua.rs  | 522 +++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 915 insertions(+)
+
+diff --git a/pldm-fw/Cargo.toml b/pldm-fw/Cargo.toml
+index 40bed56..dfb778e 100644
+--- a/pldm-fw/Cargo.toml
++++ b/pldm-fw/Cargo.toml
+@@ -24,4 +24,7 @@
+ [features]
+ default = ["std"]
+ alloc = ["pldm/alloc", "nom/alloc"]
+ std = ["alloc", "pldm/std", "mctp/std", "nom/std", "chrono/clock", "uuid/std", "dep:thiserror"]
++
++[dev-dependencies]
++tempfile = "3"
+diff --git a/pldm-fw/src/lib.rs b/pldm-fw/src/lib.rs
+index e55653f..7cb3f8f 100644
+--- a/pldm-fw/src/lib.rs
++++ b/pldm-fw/src/lib.rs
+@@ -1444,4 +1444,157 @@ mod tests {
+         ];
+         assert_eq!(sendbuf, expect);
+     }
++
++    #[test]
++    fn descriptor_parse_known_and_unknown() {
++        // PCI Vendor ID (type 0x0000), length 2
++        let buf = [0x00, 0x00, 0x02, 0x00, 0xcd, 0xab];
++        let (rest, d) = Descriptor::parse(&buf).unwrap();
++        assert!(rest.is_empty());
++        assert_eq!(d, Descriptor::PciVid(0xabcd));
++
++        // IANA Enterprise ID (type 0x0001), length 4
++        let buf = [0x01, 0x00, 0x04, 0x00, 0xd2, 0x04, 0x00, 0x00];
++        let (_, d) = Descriptor::parse(&buf).unwrap();
++        assert_eq!(d, Descriptor::Iana(1234));
++
++        // An unknown descriptor type is rejected rather than silently
++        // accepted (DSP0267 Table 7 enumerates the valid types).
++        let buf = [0x34, 0x12, 0x01, 0x00, 0x00];
++        assert!(Descriptor::parse(&buf).is_err());
++    }
++
++    #[test]
++    fn matches_device_subset_rule() {
++        // DSP0267 8.1: a package record matches when all of its descriptors
++        // are present in the descriptors the FD reports; the FD may report
++        // additional descriptors and ordering is not significant.
++        let record = DeviceIdentifiers {
++            ids: vec![Descriptor::PciVid(0x1234)],
++        };
++
++        // Exact match, plus FD reporting an additional descriptor.
++        let fd = DeviceIdentifiers {
++            ids: vec![Descriptor::PciVid(0x1234), Descriptor::PciDid(0x9)],
++        };
++        assert!(record.matches_device(&fd));
++
++        // Order of the FD's descriptors does not matter.
++        let fd_reordered = DeviceIdentifiers {
++            ids: vec![Descriptor::PciDid(0x9), Descriptor::PciVid(0x1234)],
++        };
++        assert!(record.matches_device(&fd_reordered));
++
++        // A record descriptor not present in the FD means no match.
++        let two = DeviceIdentifiers {
++            ids: vec![Descriptor::PciVid(0x1234), Descriptor::Iana(7)],
++        };
++        assert!(!two.matches_device(&fd));
++
++        // The full record must match: a single mismatching value fails.
++        let other_vid = DeviceIdentifiers {
++            ids: vec![Descriptor::PciVid(0xbeef)],
++        };
++        assert!(!other_vid.matches_device(&fd));
++
++        // An empty record never matches (records must carry >= 1 descriptor).
++        let empty = DeviceIdentifiers { ids: vec![] };
++        assert!(!empty.matches_device(&fd));
++    }
++
++    #[test]
++    fn get_status_response_roundtrip() {
++        let s = GetStatusResponse {
++            current_state: PldmFDState::ReadyXfer,
++            previous_state: PldmFDState::LearnComponents,
++            aux_state: 1,
++            aux_state_status: 2,
++            progress_percent: 50,
++            reason_code: 3,
++            update_option_flags_enabled: 0xdead_beef,
++        };
++
++        let mut buf = [0u8; 32];
++        let l = s.write_buf(&mut buf).unwrap();
++        // current(1) prev(1) aux(1) aux_status(1) progress(1) reason(1) flags(4)
++        assert_eq!(l, 10);
++
++        let (rest, p) = GetStatusResponse::parse(&buf[..l]).unwrap();
++        assert!(rest.is_empty());
++        assert_eq!(p.current_state, PldmFDState::ReadyXfer);
++        assert_eq!(p.previous_state, PldmFDState::LearnComponents);
++        assert_eq!(p.aux_state, 1);
++        assert_eq!(p.aux_state_status, 2);
++        assert_eq!(p.progress_percent, 50);
++        assert_eq!(p.reason_code, 3);
++        assert_eq!(p.update_option_flags_enabled, 0xdead_beef);
++    }
++
++    #[test]
++    fn get_status_rejects_unknown_state() {
++        // State value 0x07 is not a defined PldmFDState.
++        let buf = [0x07, 0, 0, 0, 0, 0, 0, 0, 0, 0];
++        assert!(GetStatusResponse::parse(&buf).is_err());
++    }
++
++    #[test]
++    fn request_update_response_roundtrip() {
++        let r = RequestUpdateResponse {
++            fd_metadata_len: 0x1234,
++            fd_will_sent_gpd: 1,
++        };
++        let mut buf = [0u8; 8];
++        let l = r.write_buf(&mut buf).unwrap();
++        assert_eq!(l, 3);
++        let (rest, p) = RequestUpdateResponse::parse(&buf[..l]).unwrap();
++        assert!(rest.is_empty());
++        assert_eq!(p.fd_metadata_len, 0x1234);
++        assert_eq!(p.fd_will_sent_gpd, 1);
++    }
++
++    #[test]
++    fn firmware_parameters_roundtrip() {
++        let fp = FirmwareParameters {
++            caps: DeviceCapabilities::from_u32(0),
++            components: vec![Component {
++                classification: ComponentClassification::Firmware,
++                identifier: 0x10,
++                classificationindex: 3,
++                active: ComponentVersion::new_str("active12").unwrap(),
++                pending: ComponentVersion::new_str("pending34").unwrap(),
++                activation_methods: ActivationMethods::default(),
++                caps_during_update: ComponentCapabilities::default(),
++            }]
++            .into(),
++            active: DescriptorString::new_str("AAAA").unwrap(),
++            pending: DescriptorString::new_str("BBBB").unwrap(),
++        };
++
++        let mut buf = [0u8; 256];
++        let l = fp.write_buf(&mut buf).unwrap();
++
++        let (rest, p) = FirmwareParameters::parse(&buf[..l]).unwrap();
++        assert!(rest.is_empty());
++        assert_eq!(p.components.len(), 1);
++
++        let c = &p.components.as_ref()[0];
++        assert_eq!(c.classification, ComponentClassification::Firmware);
++        assert_eq!(c.identifier, 0x10);
++        assert_eq!(c.classificationindex, 3);
++        assert_eq!(format!("{}", c.active.version), "active12");
++        assert_eq!(format!("{}", c.pending.version), "pending34");
++        assert_eq!(format!("{}", p.active), "AAAA");
++        assert_eq!(format!("{}", p.pending), "BBBB");
++    }
++
++    #[test]
++    fn update_component_response_parse() {
++        // _response(1) response_code(1) update_flags(4) estimate_time(2)
++        let buf = [0x00, 0x06, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00];
++        let (rest, r) = UpdateComponentResponse::parse(&buf).unwrap();
++        assert!(rest.is_empty());
++        assert_eq!(r.response_code, 0x06);
++        assert_eq!(r.update_flags, 1);
++        assert_eq!(r.estimate_time, 5);
++    }
+ }
+diff --git a/pldm-fw/src/pkg.rs b/pldm-fw/src/pkg.rs
+index e302921..e97d24c 100644
+--- a/pldm-fw/src/pkg.rs
++++ b/pldm-fw/src/pkg.rs
+@@ -328,3 +328,240 @@ impl Package {
+         Ok(n)
+     }
+ }
++
++/// Write `bytes` to a fresh temporary file and return a read handle to it.
++///
++/// Uses [`tempfile::NamedTempFile`] for an unpredictable path. `reopen()`
++/// yields the returned [`std::fs::File`] at offset 0; dropping the
++/// `NamedTempFile` then unlinks the path while the handle keeps the inode.
++#[cfg(test)]
++pub(crate) fn temp_file_with(bytes: &[u8]) -> std::fs::File {
++    use std::io::Write;
++
++    let mut tmp = tempfile::NamedTempFile::new().unwrap();
++    tmp.write_all(bytes).unwrap();
++    tmp.flush().unwrap();
++    tmp.reopen().unwrap()
++}
++
++/// Build the bytes of a minimal, well-formed v1.1.x firmware update package.
++///
++/// The package describes a single device identified by one PCI Vendor ID
++/// descriptor (`vid`), whose component bitmap selects every supplied
++/// component. Each entry of `components` becomes a component image appended
++/// after the (CRC-protected) package header, with matching file offset/size
++/// fields.
++#[cfg(test)]
++pub(crate) fn build_v11_package(vid: u16, components: &[&[u8]]) -> Vec<u8> {
++    let ncomp = components.len();
++    assert!(ncomp >= 1);
++
++    // --- single device record ---
++    let bitmap_bytes = ncomp.div_ceil(8);
++    let mut bitmap = vec![0u8; bitmap_bytes];
++    for i in 0..ncomp {
++        bitmap[i / 8] |= 1u8 << (i % 8);
++    }
++    let set_ver = b"0000";
++
++    let mut descs = Vec::new();
++    descs.extend_from_slice(&0x0000u16.to_le_bytes()); // type: PCI Vendor ID
++    descs.extend_from_slice(&2u16.to_le_bytes()); // length
++    descs.extend_from_slice(&vid.to_le_bytes()); // data
++    let desc_count = 1u8;
++    let pkg_data_len = 0u16;
++
++    let mut rec_body = Vec::new();
++    rec_body.extend_from_slice(&bitmap);
++    rec_body.extend_from_slice(set_ver);
++    rec_body.extend_from_slice(&descs);
++    let rec_len = (11 + rec_body.len()) as u16;
++
++    let mut device = Vec::new();
++    device.extend_from_slice(&rec_len.to_le_bytes());
++    device.push(desc_count);
++    device.extend_from_slice(&0u32.to_le_bytes()); // option flags
++    device.push(1u8); // set version string type (utf-8)
++    device.push(set_ver.len() as u8);
++    device.extend_from_slice(&pkg_data_len.to_le_bytes());
++    device.extend_from_slice(&rec_body);
++
++    // Header bytes following the 19-byte init region, excluding the trailing
++    // 4-byte checksum. `offsets` carries each component's absolute file offset.
++    let build_pre = |offsets: &[usize]| -> Vec<u8> {
++        let mut pre = Vec::new();
++        pre.extend_from_slice(&[0u8; 13]); // release date/time
++        pre.extend_from_slice(&(ncomp as u16).to_le_bytes()); // bitmap length (bits)
++        // package version string (type, length, data)
++        pre.push(1u8);
++        pre.push(4u8);
++        pre.extend_from_slice(b"0000");
++        // device id record area
++        pre.push(1u8); // device count
++        pre.extend_from_slice(&device);
++        // downstream device id record area (1.1.x): none
++        pre.push(0u8);
++        // component image information area
++        pre.extend_from_slice(&(ncomp as u16).to_le_bytes());
++        for (i, c) in components.iter().enumerate() {
++            pre.extend_from_slice(&0x000du16.to_le_bytes()); // classification: firmware
++            pre.extend_from_slice(&(i as u16).to_le_bytes()); // identifier
++            pre.extend_from_slice(&0u32.to_le_bytes()); // comparison stamp
++            pre.extend_from_slice(&0u16.to_le_bytes()); // options
++            pre.extend_from_slice(&0u16.to_le_bytes()); // activation method
++            pre.extend_from_slice(&(offsets[i] as u32).to_le_bytes());
++            pre.extend_from_slice(&(c.len() as u32).to_le_bytes());
++            // component version string (type, length, data)
++            pre.push(1u8);
++            pre.push(4u8);
++            pre.extend_from_slice(b"0000");
++        }
++        pre
++    };
++
++    const HDR_INIT_SIZE: usize = 16 + 1 + 2;
++
++    // First pass with placeholder offsets to learn the header size, which is
++    // independent of the (fixed-size) offset field values.
++    let pre_len = build_pre(&vec![0usize; ncomp]).len();
++    let hdr_size = HDR_INIT_SIZE + pre_len + 4;
++
++    // Second pass: real offsets point past the header into the payload area.
++    let mut offsets = vec![0usize; ncomp];
++    let mut cum = hdr_size;
++    for (i, c) in components.iter().enumerate() {
++        offsets[i] = cum;
++        cum += c.len();
++    }
++    let pre = build_pre(&offsets);
++
++    let mut header = Vec::new();
++    header.extend_from_slice(PKG_UUID_1_1_X.as_bytes());
++    header.push(1u8); // header format revision
++    header.extend_from_slice(&(hdr_size as u16).to_le_bytes());
++    header.extend_from_slice(&pre);
++
++    let crc32 = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
++    let checksum = crc32.checksum(&header);
++    header.extend_from_slice(&checksum.to_le_bytes());
++    assert_eq!(header.len(), hdr_size);
++
++    let mut file = header;
++    for c in components {
++        file.extend_from_slice(c);
++    }
++    file
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn parse_minimal_package() {
++        let img = [0xa5u8; 64];
++        let bytes = build_v11_package(0xabcd, &[&img[..]]);
++        let pkg = Package::parse(temp_file_with(&bytes)).unwrap();
++
++        assert_eq!(pkg.identifier, PKG_UUID_1_1_X);
++        assert_eq!(pkg.devices.len(), 1);
++        assert_eq!(pkg.components.len(), 1);
++        assert_eq!(
++            pkg.devices[0].ids,
++            DeviceIdentifiers {
++                ids: vec![Descriptor::PciVid(0xabcd)]
++            }
++        );
++        // The component bitmap selects component 0 for this device.
++        assert_eq!(pkg.devices[0].components.as_index_vec(), vec![0]);
++        assert_eq!(pkg.components[0].file_size, 64);
++
++        // The component image is readable and matches what was written.
++        let mut buf = [0u8; 64];
++        let n = pkg.read_component(&pkg.components[0], 0, &mut buf).unwrap();
++        assert_eq!(n, 64);
++        assert_eq!(buf, img);
++    }
++
++    #[test]
++    fn parse_multiple_components() {
++        let a = [0x11u8; 48];
++        let b = [0x22u8; 80];
++        let bytes = build_v11_package(0x1234, &[&a[..], &b[..]]);
++        let pkg = Package::parse(temp_file_with(&bytes)).unwrap();
++
++        assert_eq!(pkg.components.len(), 2);
++        assert_eq!(pkg.components[0].file_size, 48);
++        assert_eq!(pkg.components[1].file_size, 80);
++        assert_eq!(pkg.devices[0].components.as_index_vec(), vec![0, 1]);
++
++        // The second component reads back from its own (offset) region.
++        let mut buf = [0u8; 80];
++        let n = pkg.read_component(&pkg.components[1], 0, &mut buf).unwrap();
++        assert_eq!(n, 80);
++        assert!(buf.iter().all(|&x| x == 0x22));
++    }
++
++    #[test]
++    fn parse_rejects_bad_checksum() {
++        let img = [0u8; 64];
++        let mut bytes = build_v11_package(0xabcd, &[&img[..]]);
++        // Corrupt a byte inside the CRC-protected header (release date area).
++        bytes[20] ^= 0xff;
++        let err = Package::parse(temp_file_with(&bytes)).unwrap_err();
++        assert!(matches!(err, PldmPackageError::Format(_)));
++        assert!(format!("{err}").contains("checksum"));
++    }
++
++    #[test]
++    fn parse_rejects_unknown_uuid() {
++        let img = [0u8; 64];
++        let mut bytes = build_v11_package(0xabcd, &[&img[..]]);
++        // Replace the package UUID with one that is neither 1.0.x nor 1.1.x.
++        // (The unknown-UUID check happens before the header checksum check.)
++        let unknown = uuid::uuid!("00000000-0000-0000-0000-000000000000");
++        bytes[..16].copy_from_slice(unknown.as_bytes());
++        let err = Package::parse(temp_file_with(&bytes)).unwrap_err();
++        assert!(format!("{err}").contains("unknown package UUID"));
++    }
++
++    #[test]
++    fn read_component_pads_past_image_end() {
++        // new_virtual builds a single-component package backed directly by the
++        // payload file (file_offset 0, file_size == payload length).
++        let img: Vec<u8> = (0..40u8).collect();
++        let pkg = Package::new_virtual(
++            ComponentClassification::Firmware,
++            0,
++            temp_file_with(&img),
++        )
++        .unwrap();
++        let comp = &pkg.components[0];
++        assert_eq!(comp.file_size, 40);
++
++        let mut buf = [0xeeu8; 32];
++        let n = pkg.read_component(comp, 16, &mut buf).unwrap();
++        // Only 24 real bytes remain in the image past offset 16.
++        assert_eq!(n, 24);
++        assert_eq!(&buf[..24], &img[16..40]);
++        // The remainder is zero-padded rather than reading adjacent data.
++        assert!(buf[24..].iter().all(|&x| x == 0));
++    }
++
++    #[test]
++    fn read_component_within_image() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let pkg = Package::new_virtual(
++            ComponentClassification::Firmware,
++            0,
++            temp_file_with(&img),
++        )
++        .unwrap();
++        let comp = &pkg.components[0];
++
++        let mut buf = [0u8; 32];
++        let n = pkg.read_component(comp, 8, &mut buf).unwrap();
++        assert_eq!(n, 32);
++        assert_eq!(buf, img[8..40]);
++    }
++}
+diff --git a/pldm-fw/src/ua.rs b/pldm-fw/src/ua.rs
+index 311ca95..db211a4 100644
+--- a/pldm-fw/src/ua.rs
++++ b/pldm-fw/src/ua.rs
+@@ -620,3 +620,525 @@ fn check_fd_state(
+ 
+     Ok(())
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::{
++        activate_firmware, pass_component_table, request_update,
++        update_component, PldmUpdateError, Update,
++    };
++    use crate::{
++        DeviceCapabilities, Descriptor, DescriptorString, DeviceIdentifiers,
++        FirmwareParameters, FwCode, GetStatusResponse, PldmFDState,
++        PLDM_FW_BASELINE_TRANSFER, PLDM_TYPE_FW,
++    };
++    use mctp::{
++        Eid, Listener, MsgIC, MsgType, ReqChannel, RespChannel,
++        MCTP_TYPE_PLDM,
++    };
++    use std::cell::RefCell;
++    use std::collections::VecDeque;
++    use std::rc::Rc;
++
++    // --- Mock MCTP transport ---------------------------------------------
++    //
++    // The UA drives two channels: a `ReqChannel` (`comm`) for commands it
++    // initiates (GetStatus, RequestUpdate, ...) and a `Listener` for the
++    // commands the FD initiates during the data transfer (RequestFirmwareData,
++    // TransferComplete, VerifyComplete, ApplyComplete). The mocks below replay
++    // a scripted set of FD responses/requests and record everything the UA
++    // sends so tests can assert on the wire format.
++
++    #[derive(Default)]
++    struct CommState {
++        responses: VecDeque<Vec<u8>>,
++        sent: Vec<Vec<u8>>,
++    }
++
++    #[derive(Clone, Default)]
++    struct MockComm {
++        st: Rc<RefCell<CommState>>,
++    }
++
++    impl MockComm {
++        fn new(responses: Vec<Vec<u8>>) -> Self {
++            Self {
++                st: Rc::new(RefCell::new(CommState {
++                    responses: responses.into(),
++                    sent: Vec::new(),
++                })),
++            }
++        }
++
++        fn sent(&self) -> Vec<Vec<u8>> {
++            self.st.borrow().sent.clone()
++        }
++    }
++
++    impl ReqChannel for MockComm {
++        fn send_vectored(
++            &mut self,
++            _typ: MsgType,
++            _ic: MsgIC,
++            bufs: &[&[u8]],
++        ) -> mctp::Result<()> {
++            let mut msg = Vec::new();
++            for b in bufs {
++                msg.extend_from_slice(b);
++            }
++            self.st.borrow_mut().sent.push(msg);
++            Ok(())
++        }
++
++        fn recv<'f>(
++            &mut self,
++            buf: &'f mut [u8],
++        ) -> mctp::Result<(MsgType, MsgIC, &'f mut [u8])> {
++            let resp = self
++                .st
++                .borrow_mut()
++                .responses
++                .pop_front()
++                .ok_or(mctp::Error::RxFailure)?;
++            buf[..resp.len()].copy_from_slice(&resp);
++            Ok((MCTP_TYPE_PLDM, MsgIC(false), &mut buf[..resp.len()]))
++        }
++
++        fn remote_eid(&self) -> Eid {
++            Eid(8)
++        }
++    }
++
++    struct MockResp {
++        sent: Rc<RefCell<Vec<Vec<u8>>>>,
++    }
++
++    impl RespChannel for MockResp {
++        type ReqChannel = MockComm;
++
++        fn send_vectored(
++            &mut self,
++            _ic: MsgIC,
++            bufs: &[&[u8]],
++        ) -> mctp::Result<()> {
++            let mut msg = Vec::new();
++            for b in bufs {
++                msg.extend_from_slice(b);
++            }
++            self.sent.borrow_mut().push(msg);
++            Ok(())
++        }
++
++        fn remote_eid(&self) -> Eid {
++            Eid(8)
++        }
++
++        fn req_channel(&self) -> mctp::Result<MockComm> {
++            Ok(MockComm::default())
++        }
++    }
++
++    #[derive(Default)]
++    struct MockListener {
++        requests: VecDeque<Vec<u8>>,
++        sent: Rc<RefCell<Vec<Vec<u8>>>>,
++    }
++
++    impl MockListener {
++        fn new(requests: Vec<Vec<u8>>) -> Self {
++            Self {
++                requests: requests.into(),
++                sent: Rc::new(RefCell::new(Vec::new())),
++            }
++        }
++
++        fn sent(&self) -> Vec<Vec<u8>> {
++            self.sent.borrow().clone()
++        }
++    }
++
++    impl Listener for MockListener {
++        type RespChannel<'a>
++            = MockResp
++        where
++            Self: 'a;
++
++        fn recv<'f>(
++            &mut self,
++            buf: &'f mut [u8],
++        ) -> mctp::Result<(MsgType, MsgIC, &'f mut [u8], MockResp)> {
++            let req = self
++                .requests
++                .pop_front()
++                .ok_or(mctp::Error::RxFailure)?;
++            buf[..req.len()].copy_from_slice(&req);
++            let ep = MockResp {
++                sent: self.sent.clone(),
++            };
++            Ok((MCTP_TYPE_PLDM, MsgIC(false), &mut buf[..req.len()], ep))
++        }
++    }
++
++    // --- frame helpers ---------------------------------------------------
++
++    /// A PLDM response frame as returned by the FD over `comm`.
++    fn resp_frame(cmd: u8, cc: u8, data: &[u8]) -> Vec<u8> {
++        let mut v = vec![0u8, PLDM_TYPE_FW, cmd, cc];
++        v.extend_from_slice(data);
++        v
++    }
++
++    /// A PLDM request frame as issued by the FD over the listener.
++    fn fd_req_frame(cmd: u8, data: &[u8]) -> Vec<u8> {
++        let mut v = vec![0x80u8, PLDM_TYPE_FW, cmd];
++        v.extend_from_slice(data);
++        v
++    }
++
++    fn status_data(state: PldmFDState) -> Vec<u8> {
++        let s = GetStatusResponse {
++            current_state: state,
++            previous_state: PldmFDState::Idle,
++            aux_state: 0,
++            aux_state_status: 0,
++            progress_percent: 0,
++            reason_code: 0,
++            update_option_flags_enabled: 0,
++        };
++        let mut b = [0u8; 16];
++        let l = s.write_buf(&mut b).unwrap();
++        b[..l].to_vec()
++    }
++
++    /// RequestFirmwareData payload: offset and length, both little-endian u32.
++    fn rfd(offset: u32, len: u32) -> Vec<u8> {
++        let mut v = offset.to_le_bytes().to_vec();
++        v.extend_from_slice(&len.to_le_bytes());
++        v
++    }
++
++    fn make_update(vid: u16, components: &[&[u8]]) -> Update {
++        let bytes = crate::pkg::build_v11_package(vid, components);
++        let pkg =
++            crate::pkg::Package::parse(crate::pkg::temp_file_with(&bytes))
++                .unwrap();
++        let dev = DeviceIdentifiers {
++            ids: vec![Descriptor::PciVid(vid)],
++        };
++        let fwp = FirmwareParameters {
++            caps: DeviceCapabilities::from_u32(0),
++            components: Vec::new().into(),
++            active: DescriptorString::empty(),
++            pending: DescriptorString::empty(),
++        };
++        Update::new(&dev, &fwp, pkg, None, None, vec![]).unwrap()
++    }
++
++    // --- RequestUpdate ---------------------------------------------------
++
++    #[test]
++    fn request_update_reports_actual_component_count() {
++        let img: &[u8] = &[0u8; 64];
++        let update = make_update(0xabcd, &[img, img]);
++
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::Idle)),
++            // RequestUpdateResponse: FirmwareDeviceMetaDataLength + flag
++            resp_frame(0x10, 0, &[0, 0, 0]),
++        ]);
++
++        request_update(&mut comm, &update).unwrap();
++
++        let sent = comm.sent();
++        assert_eq!(sent.len(), 2);
++        // sent[1] is RequestUpdate: [0x80, type, 0x10, <payload>]
++        let ru = &sent[1];
++        assert_eq!(ru[2], 0x10);
++        let data = &ru[3..];
++        // payload: MaxTransferSize(4), NumberOfComponents(2), ...
++        let num_components = u16::from_le_bytes([data[4], data[5]]);
++        assert_eq!(num_components, 2);
++    }
++
++    #[test]
++    fn request_update_surfaces_command_failure() {
++        let img: &[u8] = &[0u8; 64];
++        let update = make_update(0xabcd, &[img]);
++
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::Idle)),
++            resp_frame(0x10, FwCode::UNABLE_TO_INITIATE_UPDATE as u8, &[]),
++        ]);
++
++        let err = request_update(&mut comm, &update).unwrap_err();
++        assert!(matches!(err, PldmUpdateError::Command(0x10, _)));
++    }
++
++    #[test]
++    fn request_update_requires_idle_state() {
++        let img: &[u8] = &[0u8; 64];
++        let update = make_update(0xabcd, &[img]);
++
++        // FD reports it is already updating; GetStatus precondition fails.
++        let mut comm = MockComm::new(vec![resp_frame(
++            0x1b,
++            0,
++            &status_data(PldmFDState::ReadyXfer),
++        )]);
++
++        let err = request_update(&mut comm, &update).unwrap_err();
++        assert!(matches!(err, PldmUpdateError::Protocol(_)));
++    }
++
++    // --- PassComponentTable ---------------------------------------------
++
++    #[test]
++    fn pass_component_table_success() {
++        let img: &[u8] = &[0u8; 64];
++        let update = make_update(0xabcd, &[img]);
++
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::LearnComponents)),
++            // ComponentResponse=0 (can be updated), ComponentResponseCode=0
++            resp_frame(0x13, 0, &[0, 0]),
++        ]);
++
++        pass_component_table(&mut comm, &update).unwrap();
++    }
++
++    #[test]
++    fn pass_component_table_rejects_unsupported_component() {
++        let img: &[u8] = &[0u8; 64];
++        let update = make_update(0xabcd, &[img]);
++
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::LearnComponents)),
++            // ComponentResponse!=0 with code 0x06 (not supported)
++            resp_frame(0x13, 0, &[1, 0x06]),
++        ]);
++
++        let err = pass_component_table(&mut comm, &update).unwrap_err();
++        assert!(matches!(err, PldmUpdateError::Update(_)));
++    }
++
++    // --- UpdateComponent (data transfer) --------------------------------
++
++    fn xfer_comm() -> MockComm {
++        MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::ReadyXfer)),
++            // UpdateComponentResponse: comp resp(1) code(1) flags(4) est(2)
++            resp_frame(0x14, 0, &[0, 0, 0, 0, 0, 0, 0, 0]),
++            // post-transfer GetStatus precondition
++            resp_frame(0x1b, 0, &status_data(PldmFDState::ReadyXfer)),
++        ])
++    }
++
++    #[test]
++    fn update_component_serves_image_and_completes() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]), // TransferComplete: success
++            fd_req_frame(0x17, &[0]), // VerifyComplete: success
++            fd_req_frame(0x18, &[0]), // ApplyComplete: success
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let sent = listener.sent();
++        // The first FD-bound message is the RequestFirmwareData response:
++        // [iid, type, 0x15, cc, <image bytes>]
++        let reply = &sent[0];
++        assert_eq!(reply[2], 0x15);
++        assert_eq!(reply[3], 0); // success completion code
++        assert_eq!(&reply[4..], &img[..]);
++    }
++
++    #[test]
++    fn update_component_pads_past_image_end() {
++        let img: Vec<u8> = (0..40u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            // Request crosses the end of the 40-byte image.
++            fd_req_frame(0x15, &rfd(16, 32)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0]),
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let reply = &listener.sent()[0];
++        assert_eq!(reply[3], 0);
++        let data = &reply[4..];
++        assert_eq!(data.len(), 32);
++        assert_eq!(&data[..24], &img[16..40]);
++        // Bytes past the end of the image are zero-padded.
++        assert!(data[24..].iter().all(|&x| x == 0));
++    }
++
++    #[test]
++    fn update_component_rejects_oversized_transfer_length() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            // Length far above MaximumTransferSize -> INVALID_TRANSFER_LENGTH.
++            fd_req_frame(0x15, &rfd(0, 1_000_000)),
++            // The FD then completes the (aborted) transfer.
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0]),
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let reply = &listener.sent()[0];
++        assert_eq!(reply[2], 0x15);
++        assert_eq!(reply[3], FwCode::INVALID_TRANSFER_LENGTH as u8);
++    }
++
++    #[test]
++    fn update_component_rejects_below_baseline_transfer_length() {
++        let small_len = PLDM_FW_BASELINE_TRANSFER - 1;
++        let img: Vec<u8> = (0..small_len as u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            // First Data transfer below baseline -> INVALID_TRANSFER_LENGTH.
++            fd_req_frame(0x15, &rfd(0, small_len as u32)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0]),
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let reply = &listener.sent()[0];
++        assert_eq!(reply[2], 0x15);
++        assert_eq!(reply[3], FwCode::INVALID_TRANSFER_LENGTH as u8);
++    }
++
++    #[test]
++    fn update_component_rejects_out_of_range_request() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            // offset+len extends past image end + baseline -> DATA_OUT_OF_RANGE
++            fd_req_frame(0x15, &rfd(100, 32)),
++            fd_req_frame(0x16, &[0]),
++            fd_req_frame(0x17, &[0]),
++            fd_req_frame(0x18, &[0]),
++        ]);
++
++        update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap();
++
++        let reply = &listener.sent()[0];
++        assert_eq!(reply[3], FwCode::DATA_OUT_OF_RANGE as u8);
++    }
++
++    #[test]
++    fn update_component_reports_verify_failure() {
++        let img: Vec<u8> = (0..64u8).collect();
++        let update = make_update(0xabcd, &[img.as_slice()]);
++        let component = &update.package.components[0];
++
++        let mut comm = xfer_comm();
++        let mut listener = MockListener::new(vec![
++            fd_req_frame(0x15, &rfd(0, 64)),
++            fd_req_frame(0x16, &[0]),
++            // VerifyComplete with a non-zero result.
++            fd_req_frame(0x17, &[0x02]),
++        ]);
++
++        let err = update_component(
++            &mut comm,
++            &mut listener,
++            &update.package,
++            component,
++            update.index,
++        )
++        .unwrap_err();
++        assert!(matches!(err, PldmUpdateError::Update(_)));
++    }
++
++    // --- ActivateFirmware ------------------------------------------------
++
++    #[test]
++    fn activate_firmware_success() {
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::ReadyXfer)),
++            resp_frame(0x1a, 0, &[0, 0]),
++        ]);
++        activate_firmware(&mut comm, false).unwrap();
++    }
++
++    #[test]
++    fn activate_firmware_activation_not_required_is_ok() {
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::ReadyXfer)),
++            resp_frame(0x1a, FwCode::ACTIVATION_NOT_REQUIRED as u8, &[]),
++        ]);
++        // Per DSP0267 the UA treats ACTIVATION_NOT_REQUIRED as success.
++        activate_firmware(&mut comm, true).unwrap();
++    }
++
++    #[test]
++    fn activate_firmware_surfaces_other_failure() {
++        let mut comm = MockComm::new(vec![
++            resp_frame(0x1b, 0, &status_data(PldmFDState::ReadyXfer)),
++            resp_frame(0x1a, FwCode::INVALID_STATE_FOR_COMMAND as u8, &[]),
++        ]);
++        let err = activate_firmware(&mut comm, false).unwrap_err();
++        assert!(matches!(err, PldmUpdateError::Command(0x1a, _)));
++    }
++}
+-- 
+2.49.0
+

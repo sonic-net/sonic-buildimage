@@ -101,21 +101,33 @@ class TestSwitchHostPowerControl:
             assert module.set_admin_state(False) is True
         assert run.call_args[0][0][1] == "power_off"
 
-    def test_reboot_invokes_reset(self, module):
+    def test_do_power_cycle_invokes_reset(self, module):
         with patch("sonic_platform.switch_host_module.subprocess.run", return_value=self._mock_run()) as run:
+            assert module.do_power_cycle() is True
+        args = run.call_args[0][0]
+        assert args[0] == shm_mod.HW_MGMT_POWERCTRL
+        assert args[1] == "reset"
+
+    def test_do_power_cycle_returns_false_on_non_zero_exit(self, module):
+        fake = self._mock_run(returncode=7, stderr=b"boom")
+        with patch("sonic_platform.switch_host_module.subprocess.run", return_value=fake):
+            assert module.do_power_cycle() is False
+
+    def test_do_power_cycle_returns_false_on_oserror(self, module):
+        with patch("sonic_platform.switch_host_module.subprocess.run", side_effect=OSError("no such binary")):
+            assert module.do_power_cycle() is False
+
+    def test_reboot_delegates_to_do_power_cycle(self, module):
+        with patch.object(module, "do_power_cycle", return_value=True) as do_cycle:
             assert module.reboot() is True
-        assert run.call_args[0][0][1] == "reset"
+        do_cycle.assert_called_once_with()
 
     def test_reboot_unsupported_type_returns_false_without_running(self, module):
-        with patch("sonic_platform.switch_host_module.subprocess.run") as run:
+        with patch.object(module, "do_power_cycle") as do_cycle:
             assert module.reboot(ModuleBase.MODULE_REBOOT_CPU_COMPLEX) is False
-        run.assert_not_called()
+        do_cycle.assert_not_called()
 
     def test_powerctrl_returns_false_on_non_zero_exit(self, module):
         fake = self._mock_run(returncode=7, stderr=b"boom")
         with patch("sonic_platform.switch_host_module.subprocess.run", return_value=fake):
             assert module.set_admin_state(True) is False
-
-    def test_powerctrl_returns_false_on_oserror(self, module):
-        with patch("sonic_platform.switch_host_module.subprocess.run", side_effect=OSError("no such binary")):
-            assert module.reboot() is False

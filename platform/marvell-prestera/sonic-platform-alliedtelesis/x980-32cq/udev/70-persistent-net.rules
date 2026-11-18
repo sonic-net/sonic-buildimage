@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="pci", RUN+="/bin/sh -c 'echo 1 >/sys/bus/pci/devices/0000\:01\:00.0/remove'"
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="igb", KERNELS=="0000:03:00.0", NAME:="eth0"

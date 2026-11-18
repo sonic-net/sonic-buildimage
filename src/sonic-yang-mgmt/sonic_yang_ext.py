@@ -202,8 +202,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             raise Exception("Value not found for {} in {}".format(keys, tableKey))
         # create the keyDict
         keyDict = dict()
+        # Let these new schemas validate the original keys. Trimming first hides
+        # forbidden whitespace and can change references or collapse distinct keys.
+        preserve_key = self.elementPath and self.elementPath[0] in (
+            "DHCP_SERVER_IPV4_MATCH", "DHCP_SERVER_IPV4_BINDING")
         for i in range(len(keyList)):
-            keyDict[keyList[i]] = value[i].strip()
+            keyDict[keyList[i]] = value[i] if preserve_key else value[i].strip()
 
         return keyDict
 
@@ -248,7 +252,21 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # port.adv_speeds in CONFIG DB has value "100,1000,10000", it shall be transferred to [100,1000,10000] as YANG value here to
                 # be compliant with yang model.
                 value = [x.strip() for x in value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])])]
+            # An empty leaf-list is stored in CONFIG DB as `field@ = ""`, which
+            # the Python ConfigDBConnector deserialises to a single empty-string
+            # element (`['']`). This is the CONFIG DB representation of "no
+            # elements", not a real element. libyang1 tolerated it; libyang3
+            # validates the '' against the element's type (e.g. the ip-prefix
+            # pattern of BGP_ALLOWED_PREFIXES) and rejects the whole config,
+            # breaking `config apply-patch` / `config rollback`. Drop the
+            # sentinel so an empty leaf-list is represented as an empty list
+            # (which libyang3 accepts). Only do this for leaf-lists without a
+            # schema default, so the empty-with-default handling below (which
+            # deliberately rejects the empty representation) is left untouched.
+            drop_empty_sentinel = not list(leaf.defaults())
             for v in value:
+                if v == '' and drop_empty_sentinel:
+                    continue
                 vValue.append(_yangConvert(v))
             # SONiC YANG models that allow "logically empty" leaf-lists declare
             # `default ""` (e.g. ACL_TABLE.ports) so libyang accepts the empty
@@ -539,6 +557,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
     """
     xlate ConfigDB json to Yang json
+    Scope traversal state to each table, including when translation fails.
     """
     def _xlateConfigDBtoYang(self, jIn, yangJ):
 
@@ -552,10 +571,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             yangJ[key] = dict() if yangJ.get(key) is None else yangJ[key]
             yangJ[key][subkey] = dict()
             self.sysLog(msg="xlateConfigDBtoYang {}:{}".format(key, subkey))
-            self.elementPath.append(table)
-            self._xlateContainer(cmap['container'], yangJ[key][subkey], \
-                                jIn[table], table)
-            self.elementPath = []
+            self.elementPath = [table]
+            try:
+                self._xlateContainer(
+                    cmap['container'], yangJ[key][subkey], jIn[table], table)
+            finally:
+                self.elementPath = []
 
         return
 

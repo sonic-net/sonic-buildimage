@@ -17,14 +17,15 @@ logger = SysLogger(
 
 def run_command(command, timeout=None):
     """
-    Utility function to run an shell command and return the output.
-    :param command: Shell command string.
-    :return: Output of the shell command.
+    Utility function to run a command and return the output.
+    :param command: Argument list or shell command string.
+    :return: Output of the command.
     """
     try:
+        use_shell = isinstance(command, str)
         process = subprocess.Popen(
             command,
-            shell=True,
+            shell=use_shell,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,

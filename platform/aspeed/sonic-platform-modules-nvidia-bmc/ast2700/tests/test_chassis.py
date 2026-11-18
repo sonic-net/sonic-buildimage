@@ -21,6 +21,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sonic_platform_base.chassis_base import ChassisBase
+from sonic_platform_base.module_base import ModuleBase
+from sonic_platform.watchdog import Watchdog
 
 
 # `EepromBMC` / `EepromSystem` run an `ipmi-fru` subprocess from `__init__` via
@@ -30,6 +32,7 @@ PATCH_EEPROM_BMC = "sonic_platform.chassis.EepromBMC"
 PATCH_THERMAL_BMC = "sonic_platform.chassis.ThermalBMC"
 PATCH_SWITCH_HOST = "sonic_platform.chassis.SwitchHostModule"
 PATCH_REBOOT_CAUSE = "sonic_platform.chassis.RebootCause"
+PATCH_COMPONENT_BMC = "sonic_platform.chassis.ComponentBMC"
 PATCH_PLATFORM_JSON = "sonic_platform.chassis.device_info.get_platform_json_data"
 
 
@@ -39,11 +42,15 @@ def chassis():
     with patch(PATCH_EEPROM_BMC) as eeprom_cls, \
          patch(PATCH_THERMAL_BMC) as thermal_cls, \
          patch(PATCH_SWITCH_HOST) as module_cls, \
-         patch(PATCH_REBOOT_CAUSE) as reboot_cls:
+         patch(PATCH_REBOOT_CAUSE) as reboot_cls, \
+         patch(PATCH_COMPONENT_BMC) as component_cls:
         eeprom_cls.return_value = MagicMock(name="EepromBMC")
         thermal_cls.return_value = MagicMock(name="ThermalBMC")
-        module_cls.return_value = MagicMock(name="SwitchHostModule")
+        switch_host = MagicMock(name="SwitchHostModule")
+        switch_host.get_name.return_value = ModuleBase.MODULE_TYPE_SWITCH_HOST
+        module_cls.return_value = switch_host
         reboot_cls.return_value = MagicMock(name="RebootCause")
+        component_cls.return_value = MagicMock(name="ComponentBMC")
 
         from sonic_platform.chassis import Chassis
         yield Chassis()
@@ -79,17 +86,35 @@ class TestChassis:
             assert chassis.is_liquid_cooled() is False
 
     def test_default_collaborator_lists(self, chassis):
+        from sonic_platform import chassis as chassis_module
+
+        component_cls = chassis_module.ComponentBMC
         assert len(chassis._thermal_list) == 1
         assert len(chassis._module_list) == 1
+        assert len(chassis._component_list) == 1
+        assert chassis._component_list[0] is component_cls.return_value
+        component_cls.assert_called_once_with()
         assert chassis._liquid_cooling is None
+
+    def test_component_list_accessible_via_base_api(self, chassis):
+        assert chassis.get_all_components() == chassis._component_list
 
     def test_get_eeprom_returns_internal_eeprom(self, chassis):
         assert chassis.get_eeprom() is chassis._eeprom
 
-    def test_get_name_delegates_to_eeprom(self, chassis):
-        chassis._eeprom.get_product_name.return_value = "Nvidia-BMC-AST2700"
-        assert chassis.get_name() == "Nvidia-BMC-AST2700"
-        chassis._eeprom.get_product_name.assert_called_once_with()
+    def test_get_watchdog_returns_watchdog(self, chassis):
+        assert isinstance(chassis.get_watchdog(), Watchdog)
+        assert chassis.get_watchdog() is chassis._watchdog
+
+    def test_get_name_returns_fixed_platform_identity(self, chassis):
+        from sonic_platform.chassis import Chassis
+
+        # get_name() must return the stable platform identity that matches the
+        # top-level key in platform_components.json, independent of the EEPROM
+        # product name (which varies per board).
+        chassis._eeprom.get_product_name.return_value = "P3809"
+        assert chassis.get_name() == Chassis.PLATFORM_NAME == "NVIDIA-AST2700-BMC"
+        chassis._eeprom.get_product_name.assert_not_called()
 
     def test_get_model_delegates_to_eeprom(self, chassis):
         chassis._eeprom.get_part_number.return_value = "MBF-AST2700-001"
@@ -148,3 +173,21 @@ class TestChassis:
     def test_thermal_and_module_lists_accessible_via_base_api(self, chassis):
         assert chassis.get_all_thermals() == chassis._thermal_list
         assert chassis.get_all_modules() == chassis._module_list
+
+    def test_get_module_index_switch_host_returns_zero(self, chassis):
+        index = chassis.get_module_index(chassis._switch_host_module.get_name())
+        assert index == 0
+        assert chassis.get_module(index) is chassis._switch_host_module
+
+    @pytest.mark.parametrize("module_name", ["DPU0", "invalid", ""])
+    def test_get_module_index_unknown_name_returns_none(self, chassis, module_name):
+        assert chassis.get_module_index(module_name) is None
+
+    def test_system_led_stubs_do_not_require_hardware(self, chassis):
+        assert chassis.initizalize_system_led() is True
+        assert chassis.set_status_led("green") is False
+        assert chassis.get_status_led() == ChassisBase.STATUS_LED_COLOR_OFF
+
+    def test_get_position_in_parent_and_replaceable(self, chassis):
+        assert chassis.get_position_in_parent() == -1
+        assert chassis.is_replaceable() is False

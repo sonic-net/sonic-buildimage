@@ -30,6 +30,7 @@
 #include "../include/msg_format.h"
 #include "../include/iccp_csm.h"
 #include "../include/iccp_cli.h"
+#include "../include/iccp_utils.h"
 #include "../include/mlacp_link_handler.h"
 /*****************************************
 * Define
@@ -637,7 +638,7 @@ void iccp_csm_correspond_from_msg(struct CSM* csm, struct Msg* msg)
         return;
 
     icc_hdr = (ICCHdr*)msg->buf;
-    NAKTLV* nak = (NAKTLV*)( icc_hdr + sizeof(ICCHdr));
+    NAKTLV* nak = (NAKTLV*)&msg->buf[sizeof(ICCHdr)];
     iccp_csm_check_id_from_msg(csm, msg);
 
     if (icc_hdr->ldp_hdr.msg_type == MSG_T_CAPABILITY)
@@ -722,28 +723,41 @@ void iccp_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
 {
     ICCHdr* icc_hdr = NULL;
     NAKTLV* naktlv = NULL;
+    uint16_t msg_type;
     int type = -1;
     int i = 0;
 
     if (csm == NULL)
     {
         if (msg != NULL)
+        {
+            free(msg->buf);
             free(msg);
+        }
         return;
     }
 
     if (msg == NULL)
         return;
 
+    if (msg->buf == NULL || msg->len < sizeof(ICCHdr))
+        goto invalid_msg;
+
     icc_hdr = (ICCHdr*)msg->buf;
 
-    *(uint16_t *)icc_hdr = ntohs(*(uint16_t *)icc_hdr);
+    memcpy(&msg_type, icc_hdr, sizeof(msg_type));
+    msg_type = ntohs(msg_type);
+    memcpy(icc_hdr, &msg_type, sizeof(msg_type));
+    msg_type = icc_hdr->ldp_hdr.msg_type;
 
-    if (icc_hdr->ldp_hdr.msg_type == MSG_T_RG_APP_DATA)
+    if (iccp_validate_message(msg->buf, msg->len, msg_type) != 0)
+        goto invalid_msg;
+
+    if (msg_type == MSG_T_RG_APP_DATA)
     {
         app_csm_enqueue_msg(csm, msg);
     }
-    else if (icc_hdr->ldp_hdr.msg_type == MSG_T_NOTIFICATION)
+    else if (msg_type == MSG_T_NOTIFICATION)
     {
         naktlv = (NAKTLV*)&msg->buf[sizeof(ICCHdr)];
 
@@ -765,6 +779,13 @@ void iccp_csm_enqueue_msg(struct CSM* csm, struct Msg* msg)
     {
         TAILQ_INSERT_TAIL(&(csm->msg_list), msg, tail);
     }
+    return;
+
+ invalid_msg:
+    ICCPD_LOG_WARN(__FUNCTION__, "Dropping truncated ICCP message of length %zu",
+                   msg->len);
+    free(msg->buf);
+    free(msg);
 }
 
 /* Get received message from message list */

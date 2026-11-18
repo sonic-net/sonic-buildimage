@@ -125,6 +125,18 @@
             }
         }
     },
+    "SONIC_EVENTS_SWSS_PFC_STORM_VALID_WITH_ADDITIONAL_INFO_SCIENTIFIC_NOTATION": {
+        "sonic-events-swss:sonic-events-swss": {
+            "sonic-events-swss:pfc-storm": {
+                "ifname": "Ethernet0",
+                "queue_index": 4,
+                "queue_id": 5910974510925717,
+                "port_id": 281474976710679,
+                "additional_info": "occupancy:0|packets:0|packets_last:0|pfc_rx_packets:0|pfc_rx_packets_last:0|pfc_duration:0|pfc_duration_last:0|timestamp:1776000945.3578|timestamp_last:1776000944.9519|effective_poll_time:402236.793|effective_pfcwd_poll_time_last:3.951830863952637e+5",
+                "timestamp": "2026-04-12T16:35:45.386073Z"
+            }
+        }
+    },
     "SONIC_EVENTS_SWSS_PFC_STORM_WITH_INVALID_ADDITIONAL_INFO_1": {
         "sonic-events-swss:sonic-events-swss": {
             "sonic-events-swss:pfc-storm": {

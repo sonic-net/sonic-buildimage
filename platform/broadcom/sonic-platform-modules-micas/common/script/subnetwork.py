@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 #
 # Copyright (C) 2024 Micas Networks Inc.
 #
@@ -16,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import subprocess
 import sys
 import time
@@ -24,28 +24,57 @@ import time
 
 def start():
     subnet_path = "/sys/class/net/eth0.4088"
+    subnet_addr = "fe80::2/64"
     retry_count = 10
     subnet_cmds = []
     subnet_cmds.append("ip link add link eth0 name eth0.4088 type vlan id 4088")
-    subnet_cmds.append("ip addr add 240.1.1.1/30 brd 240.1.1.3 dev eth0.4088")
+    subnet_cmds.append("ip -6 addr replace fe80::2/64 dev eth0.4088")
     subnet_cmds.append("ip link set dev eth0.4088 up")
 
     retry = 0
-    while not os.path.exists(subnet_path) and retry < retry_count:
+    while retry < retry_count:
         try:
-            for cmd in subnet_cmds:
+            if not os.path.exists(subnet_path):
+                cmd = subnet_cmds[0]
                 subprocess.run(cmd.split(), check=True)
+
+            for cmd in subnet_cmds[1:]:
+                subprocess.run(cmd.split(), check=True)
+
+            cmd = "ip -6 addr show dev eth0.4088"
+            result = subprocess.run(
+                cmd.split(),
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            if subnet_addr in result.stdout:
+                print("Start subnetwork Success.")
+                return
+
+            print("Start subnetwork Failed, address verification failed, retrying: %d" %
+                  (retry + 1))
+
         except subprocess.CalledProcessError as e:
-            print("Start subnetwork Failed, retrying: %d, cmd: %s, returncode: %d" % (retry, cmd, e.returncode))
+            print("Start subnetwork Failed, retrying: %d, cmd: %s, returncode: %d" %
+                  (retry + 1, cmd, e.returncode))
+
         retry = retry + 1
         time.sleep(5)
 
-    if os.path.exists(subnet_path):
-        print("Start subnetwork Success.")
+    print("Start subnetwork Failed: %s not configured after %d retries." %
+          (subnet_addr, retry_count))
+    sys.exit(1)
 
 
 def stop():
     subnet_path = "/sys/class/net/eth0.4088"
+
+    if not os.path.exists(subnet_path):
+        print("Stop subnetwork Success.")
+        return
+
     subnet_cmds = []
     subnet_cmds.append("ip link set dev eth0.4088 down")
     subnet_cmds.append("ip link del eth0.4088")
@@ -54,20 +83,29 @@ def stop():
         for cmd in subnet_cmds:
             subprocess.run(cmd.split(), check=True)
     except subprocess.CalledProcessError as e:
-        print("Stop subnetwork Failed, returncode: " + e.returncode)
+        print("Stop subnetwork Failed, cmd: %s, returncode: %d" %
+              (cmd, e.returncode))
+        sys.exit(1)
 
     if not os.path.exists(subnet_path):
         print("Stop subnetwork Success.")
+    else:
+        print("Stop subnetwork Failed: interface still exists.")
+        sys.exit(1)
 
 
 def main():
-    print(sys.argv[1])
+    if len(sys.argv) != 2:
+        print("Error parameter!\nRequired parameters : start or stop.")
+        sys.exit(1)
+
     if sys.argv[1] == 'start':
         start()
     elif sys.argv[1] == 'stop':
         stop()
     else:
         print("Error parameter!\nRequired parameters : start or stop.")
+        sys.exit(1)
 
 
 if __name__ == '__main__':

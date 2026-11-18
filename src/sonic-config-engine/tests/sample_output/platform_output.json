@@ -40,7 +40,7 @@
     "alias": "Eth25/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet0": {
@@ -110,7 +110,7 @@
     "alias": "Eth5/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet100": {
@@ -133,7 +133,7 @@
     "alias": "Eth9/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet104": {
@@ -166,7 +166,7 @@
     "alias": "Eth24/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet126": {
@@ -298,7 +298,7 @@
     "alias": "Eth14/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet99": {
@@ -309,7 +309,7 @@
     "alias": "Eth25/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet56": {
@@ -353,7 +353,7 @@
     "alias": "Eth19/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet39": {
@@ -364,7 +364,7 @@
     "alias": "Eth10/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet72": {
@@ -507,7 +507,7 @@
     "alias": "Eth15/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet19": {
@@ -518,7 +518,7 @@
     "alias": "Eth5/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet59": {
@@ -529,7 +529,7 @@
     "alias": "Eth15/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet38": {
@@ -540,7 +540,7 @@
     "alias": "Eth10/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet78": {
@@ -551,7 +551,7 @@
     "alias": "Eth20/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet68": {
@@ -573,7 +573,7 @@
     "alias": "Eth4/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet89": {
@@ -606,7 +606,7 @@
     "alias": "Eth30/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2",
+    "subport": "3",
     "tpid": "0x8100"
   },
   "Ethernet119": {
@@ -617,7 +617,7 @@
     "alias": "Eth30/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet116": {
@@ -639,7 +639,7 @@
     "alias": "Eth29/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "tpid": "0x8100"
   },
   "Ethernet80": {
@@ -865,7 +865,7 @@
     "alias": "Eth20/3",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "3",
+    "subport": "4",
     "tpid": "0x8100"
   },
   "Ethernet69": {
@@ -1000,7 +1000,7 @@
     "alias": "Eth36/3",
     "pfc_asym": "off",
     "speed": "50000",
-    "subport": "3",
+    "subport": "2",
     "role": "Dpc"
   },
   "Ethernet144": {

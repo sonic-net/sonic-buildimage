@@ -1,19 +1,22 @@
-[PATCH] From 349e3f758860be0077b69919c39764d3486ec44a Mon Sep 17
-
+From febf65d09a38bf9dfe854d46ccac0ce1929f198f Mon Sep 17 00:00:00 2001
 From: Stepan Blyschak <stepanb@nvidia.com>
 Date: Mon, 16 Jan 2023 11:45:19 +0000
- 00:00:00 2001 Subject: [PATCH] use vrf id instead of table id
+Subject: [PATCH] zebra: use VRF ID instead of table ID for FPM routes
 
+Preserve the SONiC FPM route-notification contract by translating route
+table context through the owning VRF ID.
+
+Original-patch-id: 349e3f758860be0077b69919c39764d3486ec44a
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
 ---
- zebra/rt_netlink.c |   49 +++++++++++++++++++++++++++++++++++++++++++------
+ zebra/rt_netlink.c | 49 ++++++++++++++++++++++++++++++++++++++++------
  1 file changed, 43 insertions(+), 6 deletions(-)
 
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 12a790025..30e8a5245 100644
+index bd5816f916..e081582aa1 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -391,6 +391,31 @@ static inline int proto2zebra(int proto, int family, bool is_nexthop)
+@@ -399,6 +399,31 @@ static inline int proto2zebra(int proto, int family, bool is_nexthop)
  	return proto;
  }
  
@@ -45,7 +48,7 @@ index 12a790025..30e8a5245 100644
  /**
   * @parse_encap_mpls() - Parses encapsulated mpls attributes
   * @tb:         Pointer to rtattr to look for nested items in.
-@@ -2612,12 +2637,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
+@@ -2645,12 +2670,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
  
  	/* Table corresponding to this route. */
  	table_id = dplane_ctx_get_table(ctx);
@@ -76,3 +79,6 @@ index 12a790025..30e8a5245 100644
  	}
  
  	if (IS_ZEBRA_DEBUG_KERNEL)
+-- 
+2.34.1
+

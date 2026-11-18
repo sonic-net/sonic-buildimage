@@ -186,6 +186,7 @@ typedef enum wb_led_e {
     WB_FAN_LED_MODULE  = 10,     /* Fan module indicator */
     WB_PSU_LED_MODULE  = 11,     /* Power module indicator */
     WB_SLOT_LED_MODULE = 12,     /* Sub-card status indicator */
+    WB_OCP_LAN_LED     = 13,     /* Network status indicator */
 } wb_led_t;
 
 extern int g_dfd_dbg_level;

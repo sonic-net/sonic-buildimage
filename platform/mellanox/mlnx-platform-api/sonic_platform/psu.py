@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@
 
 try:
     import os
+    import subprocess
     import time
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common.logger import Logger
@@ -39,6 +41,9 @@ except ImportError as e:
 logger = Logger()
 
 PSU_PATH = '/var/run/hw-management/'
+PLATFORM_SENSORS_CONF = '/usr/share/sonic/platform/sensors.conf'
+ETC_SENSORS_CONF = '/etc/sensors.d/sensors.conf'
+PSU_SENSORS_CONF_UPDATER = '/usr/share/sonic/platform/psu_sensors_conf_updater'
 
 
 class FixedPsu(PsuBase):
@@ -309,11 +314,32 @@ class Psu(FixedPsu):
             string: Model/part number of device
         """
         current_model = self.vpd_parser.get_model()
-        if current_model != self.model and os.path.exists('/usr/share/sonic/platform/psu_sensors_conf_updater'):
-            utils.run_command(['cp', '-f', '/etc/sensors.d/sensors.conf', '/tmp/sensors.conf.orig'])
-            utils.run_command(['bash', '-c','source /usr/share/sonic/platform/psu_sensors_conf_updater && update_psu_sensors_configuration /tmp/sensors.conf.orig'])
-            utils.run_command(['cp', '-f', '/tmp/sensors.conf', '/etc/sensors.d/'])
-            utils.run_command(['service', 'sensord', 'restart'])
+        if current_model != self.model and os.path.exists(PSU_SENSORS_CONF_UPDATER):
+            # Rebuild from platform sensors.conf (source of truth), not from
+            # /etc/sensors.d/sensors.conf which may already be incomplete.
+            # Updater uses flock to serialize concurrent updates.
+            # On failure leave self.model unchanged so the next call can retry.
+            src = PLATFORM_SENSORS_CONF if os.path.isfile(PLATFORM_SENSORS_CONF) else ETC_SENSORS_CONF
+            if not os.path.isfile(src):
+                self.model = current_model
+                return current_model
+
+            try:
+                subprocess.check_call([
+                    'bash', '-c',
+                    f'source "{PSU_SENSORS_CONF_UPDATER}" && '
+                    f'update_psu_sensors_configuration "{src}" "{ETC_SENSORS_CONF}"'
+                ])
+                subprocess.check_call(['service', 'sensord', 'restart'])
+            except subprocess.CalledProcessError as ce:
+                logger.log_error(
+                    'Failed to update PSU sensors configuration, return code={}, cmd={}'.format(
+                        ce.returncode, ce.cmd))
+                return current_model
+            except Exception as e:
+                logger.log_error('Failed to update PSU sensors configuration - {}'.format(e))
+                return current_model
+
         self.model = current_model
         return current_model
 

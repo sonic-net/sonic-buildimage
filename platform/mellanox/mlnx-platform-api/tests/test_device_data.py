@@ -53,13 +53,37 @@ class TestDeviceData:
     def test_get_bios_component(self):
         assert DeviceDataManager.get_bios_component() is not None
 
-    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory')
     @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
-    def test_is_module_host_management_mode(self, mock_read):
-        mock_read.return_value = {}
-        assert not DeviceDataManager.is_module_host_management_mode()
+    def test_is_module_host_management_mode(self, mock_read, mock_hwsku_dir):
+        mock_hwsku_dir.return_value = '/hwsku'
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
         mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
         assert DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=None)
+        mock_read.assert_called_once_with('/hwsku/sai.profile', delimeter='=')
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
+        mock_read.reset_mock()
+        mock_hwsku_dir.reset_mock()
+        mock_read.return_value = {}
+        assert not DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=None)
+        mock_read.assert_called_once_with('/hwsku/sai.profile', delimeter='=')
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory')
+    @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
+    def test_is_module_host_management_mode_multi_asic(self, mock_read, mock_hwsku_dir):
+        mock_hwsku_dir.return_value = '/hwsku/0'
+
+        DeviceDataManager.is_module_host_management_mode.__func__.__wrapped__.return_value = None
+        mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
+        assert DeviceDataManager.is_module_host_management_mode()
+        mock_hwsku_dir.assert_called_once_with(asic_id=0)
+        mock_read.assert_called_once_with('/hwsku/0/sai.profile', delimeter='=')
 
     @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.load_json_file')

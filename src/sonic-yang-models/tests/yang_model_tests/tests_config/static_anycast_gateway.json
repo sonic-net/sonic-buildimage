@@ -1,0 +1,38 @@
+{
+    "SAG_GLOBAL_MAC_TEST": {
+        "sonic-static-anycast-gateway:sonic-static-anycast-gateway": {
+            "sonic-static-anycast-gateway:SAG": {
+                "SAG_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "gateway_mac": "00:11:22:33:44:55"
+                    }
+                ]
+            }
+        }
+    },
+    "SAG_GLOBAL_WITH_INVALID_MAC_TEST": {
+        "sonic-static-anycast-gateway:sonic-static-anycast-gateway": {
+            "sonic-static-anycast-gateway:SAG": {
+                "SAG_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "gateway_mac": "001122334455"
+                    }
+                ]
+            }
+        }
+    },
+    "SAG_INVALID_NAME_TEST": {
+        "sonic-static-anycast-gateway:sonic-static-anycast-gateway": {
+            "sonic-static-anycast-gateway:SAG": {
+                "SAG_LIST": [
+                    {
+                        "name": "DEFAULT",
+                        "gateway_mac": "00:11:22:33:44:55"
+                    }
+                ]
+            }
+        }
+    }
+}

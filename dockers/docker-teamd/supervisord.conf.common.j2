@@ -1,0 +1,52 @@
+{# supervisord.conf.common.j2 — shared teamd supervisord programs
+   Used by both standalone docker-teamd and docker-sonic-vs via _INCLUDE_DOCKER.
+   Variables:
+     teamd_priority_base  — base priority for teamd programs (default 3)
+     teamd_wait_for       — what to wait for before starting (default "start:exited")
+#}
+{% set teamd_priority_base = teamd_priority_base | default(3) %}
+{% set teamd_wait_for = teamd_wait_for | default("start:exited") %}
+
+[program:teammgrd]
+command=/usr/bin/teammgrd
+priority={{ teamd_priority_base }}
+autostart=false
+autorestart=false
+stopwaitsecs=60
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if ENABLE_ASAN is defined and ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/teammgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+dependent_startup=true
+dependent_startup_wait_for={{ teamd_wait_for }}
+
+[program:teamsyncd]
+command=/usr/bin/teamsyncd
+priority={{ teamd_priority_base + 1 }}
+startsecs=5
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if ENABLE_ASAN is defined and ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/teamsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+dependent_startup=true
+dependent_startup_wait_for=teammgrd:running
+
+[program:tlm_teamd]
+command=/usr/bin/tlm_teamd
+priority={{ teamd_priority_base + 1 }}
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for={{ teamd_wait_for }}

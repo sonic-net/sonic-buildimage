@@ -1,0 +1,28 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-64": {
+            "OPTICAL200": {
+                "tx_precoding": {
+                    "lane0": "0x1",
+                    "lane1": "0x1",
+                    "lane2": "0x1",
+                    "lane3": "0x1",
+                    "lane4": "0x1",
+                    "lane5": "0x1",
+                    "lane6": "0x1",
+                    "lane7": "0x1"
+                },
+                "rx_precoding": {
+                    "lane0": "0x1",
+                    "lane1": "0x1",
+                    "lane2": "0x1",
+                    "lane3": "0x1",
+                    "lane4": "0x1",
+                    "lane5": "0x1",
+                    "lane6": "0x1",
+                    "lane7": "0x1"
+                }
+            }
+        }
+    }
+}

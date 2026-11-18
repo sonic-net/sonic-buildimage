@@ -7,6 +7,15 @@ audisp/*
 nsm/*
 !nsm/Makefile
 !nsm/*.patch
+!nss/
+nss/*
+!nss/Makefile
+!nss/patch/
+nss/patch/*
+!nss/patch/*.patch
+!nss/patch/series.local
+!pam/
 pam/*
 !pam/Makefile
 !pam/*.patch
+!pam/series.local

@@ -1,14 +1,16 @@
 [Unit]
 Description=Nokia-7215 Post-init Platform Service
 ConditionPathExists=/usr/local/bin/nokia-7215-postinit.sh
+ConditionPathExists=/usr/local/bin/intf_sync.py
 
 After=nokia-7215init.service
 Wants=nokia-7215init.service
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/local/bin/nokia-7215-postinit.sh
-RemainAfterExit=yes
+Restart=always
+RestartSec=5
 StandardOutput=tty
 
 [Install]

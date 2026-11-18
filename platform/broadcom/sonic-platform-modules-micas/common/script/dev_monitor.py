@@ -22,7 +22,7 @@ import syslog
 import traceback
 import click
 from platform_config import DEV_MONITOR_PARAM
-from platform_util import io_rd, wbi2cget, exec_os_cmd
+from platform_util import io_rd, wbi2cget, exec_os_cmd, get_value
 
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
@@ -93,34 +93,23 @@ class DevMonitor():
         try:
             ret = {}
             ret["status"] = ''
-            gettype = param.get('gettype')
-            presentbit = param.get('presentbit')
+
+            ret_t, val = get_value(param)
+            if ret_t is False:
+                ret["status"] = "NOT OK"
+                devdebuglog("get present status failed, param: %s, log: %s" % (param, val))
+                return ret
+
+            presentbit = param.get('presentbit', 0)
             okval = param.get('okval')
-            if gettype == "io":
-                io_addr = param.get('io_addr')
-                val = io_rd(io_addr)
-                if val is None:
-                    ret["status"] = "NOT OK"
-                    return ret
-                retval = val
-            else:
-                bus = param.get('bus')
-                loc = param.get('loc')
-                offset = param.get('offset')
-                ind, val = wbi2cget(bus, loc, offset)
-                if ind is not True:
-                    ret["status"] = "NOT OK"
-                    return ret
-                retval = val
-            val_t = (int(retval, 16) & (1 << presentbit)) >> presentbit
+            val_t = (val & (1 << presentbit)) >> presentbit
             if val_t != okval:
                 ret["status"] = "ABSENT"
             else:
                 ret["status"] = "PRESENT"
         except Exception as e:
             ret["status"] = "NOT OK"
-            deverror("getpresentstatus error")
-            deverror(str(e))
+            deverror("getpresentstatus error, msg: %s" % (traceback.format_exc()))
         return ret
 
     def removeDev(self, bus, loc):
@@ -249,6 +238,23 @@ class DevMonitor():
         val_t = getattr(DevMonitor, slotsattr, None)
         devdebuglog("slotsattr:value:%s" % (val_t))
         return ret
+    
+    def binddevsmonitor(self):
+        binddevs_conf = DEV_MONITOR_PARAM.get('binddevs')
+        if binddevs_conf is None:
+            return 0
+        binddevsattr = 'binddevsattr'
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        if val_t == 'OK':
+            return 0
+        ret = self.monitor(binddevs_conf)
+        if ret == 0:
+            setattr(DevMonitor, binddevsattr, 'OK')
+        else:
+            setattr(DevMonitor, binddevsattr, 'NOT OK')
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        devdebuglog("binddevsattr:value:%s" % (val_t))
+        return ret
 
     def othersmonitor(self):
         others_conf = DEV_MONITOR_PARAM.get('others')
@@ -274,6 +280,7 @@ def doDevMonitor(devMonitor):
     ret_t += devMonitor.fansmonitor()
     ret_t += devMonitor.slotsmonitor()
     ret_t += devMonitor.othersmonitor()
+    ret_t += devMonitor.binddevsmonitor()
     return ret_t
 
 

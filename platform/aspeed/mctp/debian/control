@@ -1,0 +1,19 @@
+Source: mctp
+Section: net
+Priority: optional
+Maintainer: SONiC <sonic@microsoft.com>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 0.59),
+               ninja-build,
+               pkg-config,
+               libsystemd-dev (>= 247),
+               linux-libc-dev,
+Standards-Version: 4.6.0
+Rules-Requires-Root: no
+
+Package: mctp
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: userspace tools for Linux kernel MCTP stack (CodeConstruct mctp)
+ This package contains the mctp, mctp-client, and mctpd utilities from
+ https://github.com/CodeConstruct/mctp for managing MCTP endpoints and routes.

@@ -37,6 +37,9 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_ORCHAGENT_DBG)
 
 $(DOCKER_ORCHAGENT)_CONTAINER_NAME = swss
 $(DOCKER_ORCHAGENT)_RUN_OPT += -t --cap-add=NET_ADMIN --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
+ifeq ($(ENABLE_ASAN), y)
+$(DOCKER_ORCHAGENT)_RUN_OPT += --cap-add=SYS_PTRACE
+endif
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro

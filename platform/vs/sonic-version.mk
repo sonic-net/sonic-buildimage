@@ -1,6 +1,6 @@
 # sonic version yml file
 
-sonic_version=$(SONIC_GET_VERSION)
+sonic_version=$(SONIC_IMAGE_VERSION)
 sonic_asic_platform=$(CONFIGURED_PLATFORM)
 sonic_os_version=$(SONIC_OS_VERSION)
 
