@@ -315,10 +315,15 @@ def parse_pnpm_lock_yaml(text: str, scope: str, lockfile: str = "") -> list:
         key = line.strip()
         if not (key.startswith("/") and key.endswith(":")):
             continue
-        name, separator, version = key[1:-1].rpartition("@")
+        package_key = key[1:-1]
+        # Skip a leading scope marker, keeping peer context in the version.
+        version_separator = package_key.find("@", 1)
+        if version_separator < 0:
+            continue
+        name = package_key[:version_separator]
+        version = package_key[version_separator + 1:]
         if (
-            not separator
-            or not name
+            not name
             or not version
             or ":" in name
             or ":" in version

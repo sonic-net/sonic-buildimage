@@ -218,13 +218,13 @@ class ServiceChecker(HealthChecker):
                 if not text:
                     continue
                 identifier_key, separator, identifier_value = text.partition(":")
-                if not separator:
+                identifier_key = identifier_key.strip()
+                identifier_value = identifier_value.strip()
+                if not separator or not identifier_key or ":" in identifier_value:
                     if container not in self.bad_containers:
                         self.bad_containers.add(container)
                         logger.log_error('Invalid syntax in critical_processes file of {}'.format(container))
                     continue
-                identifier_key = identifier_key.strip()
-                identifier_value = identifier_value.strip()
                 if identifier_key == "program" and identifier_value:
                     critical_process_list.append(identifier_value)
                 elif identifier_key == "group" and identifier_value:

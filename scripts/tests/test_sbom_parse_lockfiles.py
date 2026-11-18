@@ -2,6 +2,8 @@ import importlib.util
 import time
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT_PATH = Path(__file__).parents[1] / "sbom_parse_lockfiles.py"
 SPEC = importlib.util.spec_from_file_location("sbom_parse_lockfiles", SCRIPT_PATH)
@@ -23,6 +25,24 @@ snapshots:
     assert [(item["name"], item["version"]) for item in components] == [
         ("plain", "1.2.3"),
         ("@scope/package", "4.5.6"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("name", "version"),
+    [
+        ("react-dom", "18.2.0(react@18.2.0)"),
+        ("foo", "1.0.0_react@18.0.0"),
+        ("@scope/pkg", "1.0.0(peer@2.0.0)"),
+    ],
+)
+def test_parse_pnpm_lock_yaml_preserves_peer_versions(name, version):
+    text = f"packages:\n  /{name}@{version}:\n"
+
+    components = SBOM_PARSE_LOCKFILES.parse_pnpm_lock_yaml(text, "docker-test")
+
+    assert [(item["name"], item["version"]) for item in components] == [
+        (name, version),
     ]
 
 
