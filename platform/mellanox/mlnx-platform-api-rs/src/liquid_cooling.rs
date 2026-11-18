@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/liquid_cooling.py`.
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -113,7 +112,11 @@ pub struct LiquidCooling {
 impl LiquidCooling {
     pub fn new() -> PyResult<Arc<LiquidCooling>> {
         crate::imports::liquid_cooling();
-        let num = utils::read_int("/var/run/hw-management/config/leakage_counter", 0, Log::Error);
+        let num = utils::read_int(
+            "/var/run/hw-management/config/leakage_counter",
+            0,
+            Log::Error,
+        );
         let mut files = utils::glob(&format!("{LIQUID_COOLING_SENSOR_PATH}leakage*"));
         // `sort(key=lambda x: int(x.split("leakage")[-1]))`: a name whose
         // suffix is not a number raises, as the constructor does in Python.
@@ -126,13 +129,21 @@ impl LiquidCooling {
         let files: Vec<String> = keyed.into_iter().map(|(_, f)| f).collect();
         // `files[:num]`, with Python's slice semantics for a negative bound.
         let n = files.len() as i128;
-        let end = if num < 0 { (n + num).max(0) } else { num.min(n) };
+        let end = if num < 0 {
+            (n + num).max(0)
+        } else {
+            num.min(n)
+        };
         let sensors = files
             .into_iter()
             .take(usize::try_from(end).unwrap_or(0))
             .map(|path| {
                 let name = path.rsplit('/').next().unwrap_or(&path).to_string();
-                PyVal::obj(LeakageSensor { name, path, leaking: AtomicBool::new(false) })
+                PyVal::obj(LeakageSensor {
+                    name,
+                    path,
+                    leaking: AtomicBool::new(false),
+                })
             })
             .collect();
         Ok(Arc::new(LiquidCooling { sensors }))
@@ -168,10 +179,13 @@ mod tests {
     const SYS: &str = "/var/run/hw-management/system";
 
     fn names(lc: &LiquidCooling) -> Vec<String> {
-        lc.sensors.iter().map(|s| match s {
-            PyVal::Obj(o) => o.get_name().unwrap().py_str(),
-            _ => String::new(),
-        }).collect()
+        lc.sensors
+            .iter()
+            .map(|s| match s {
+                PyVal::Obj(o) => o.get_name().unwrap().py_str(),
+                _ => String::new(),
+            })
+            .collect()
     }
 
     #[test]
@@ -192,7 +206,10 @@ mod tests {
         let lc = LiquidCooling::new().unwrap();
         assert_eq!(lc.num_leak_sensors(), 0);
         assert_eq!(lc.get_all_profiles().unwrap().py_repr(), "[]");
-        assert_eq!((lc.py_class(), lc.get_all_leak_sensors().unwrap().py_repr()), ("LiquidCooling", "[]".to_string()));
+        assert_eq!(
+            (lc.py_class(), lc.get_all_leak_sensors().unwrap().py_repr()),
+            ("LiquidCooling", "[]".to_string())
+        );
         assert_eq!(lc.base_class(), BaseClass::LiquidCoolingBase);
         // A suffix that is no number raises, as the sort's key does.
         root.write(&format!("{SYS}/leakage_x"), "1");
@@ -206,7 +223,8 @@ mod tests {
         root.write(&format!("{SYS}/leakage1"), "1");
         root.write("/var/run/hw-management/config/leakage_counter", "1");
         let lc = LiquidCooling::new().unwrap();
-        let PyVal::Obj(sensor) = &lc.get_all_leak_sensors().unwrap().iter_items().unwrap()[0] else {
+        let PyVal::Obj(sensor) = &lc.get_all_leak_sensors().unwrap().iter_items().unwrap()[0]
+        else {
             panic!("no sensor");
         };
         let read = |v: Option<&str>| {
@@ -214,17 +232,37 @@ mod tests {
                 Some(v) => root.write(&format!("{SYS}/leakage1"), v),
                 None => std::fs::remove_file(root.real(&format!("{SYS}/leakage1"))).unwrap(),
             }
-            (sensor.is_leak().unwrap().py_repr(), sensor.get_leak_severity().unwrap().py_repr())
+            (
+                sensor.is_leak().unwrap().py_repr(),
+                sensor.get_leak_severity().unwrap().py_repr(),
+            )
         };
         assert_eq!(read(Some("1")), ("False".into(), "None".into()));
-        assert_eq!(read(Some("0")), ("True".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into()));
-        // An unreadable value leaves the last state.
-        assert_eq!(read(Some("x")), ("'N/A'".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into()));
-        assert_eq!(read(None), ("'N/A'".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into()));
         assert_eq!(
-            [sensor.is_leak_sensor_ok(), sensor.get_leak_sensor_type(), sensor.get_leak_sensor_location()].map(|v| v.unwrap().py_repr()),
+            read(Some("0")),
+            ("True".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into())
+        );
+        // An unreadable value leaves the last state.
+        assert_eq!(
+            read(Some("x")),
+            ("'N/A'".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into())
+        );
+        assert_eq!(
+            read(None),
+            ("'N/A'".into(), "<LeakSeverity.CRITICAL: 'CRITICAL'>".into())
+        );
+        assert_eq!(
+            [
+                sensor.is_leak_sensor_ok(),
+                sensor.get_leak_sensor_type(),
+                sensor.get_leak_sensor_location()
+            ]
+            .map(|v| v.unwrap().py_repr()),
             ["True", "'unknown'", "'unknown'"]
         );
-        assert_eq!((sensor.py_class(), sensor.base_class()), ("LeakageSensor", BaseClass::LeakageSensorBase));
+        assert_eq!(
+            (sensor.py_class(), sensor.base_class()),
+            ("LeakageSensor", BaseClass::LeakageSensorBase)
+        );
     }
 }

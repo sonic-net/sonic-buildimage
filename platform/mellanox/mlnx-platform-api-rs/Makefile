@@ -37,13 +37,19 @@ TEST = env -u PLATFORM cargo test
 # Build and unit-test the crate on its own.  .SHELLFLAGS carries -e, so a
 # failing test fails the build.
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
+	python3 -m unittest discover -s tests -p test_port_sync.py
+	python3 check_python_port.py
 	$(TEST) --release --manifest-path $(MANIFEST)
 	echo "mlnx-platform-api-rs: tests passed" > $(DEST)/$(MAIN_TARGET)
 
 # Developer checks, not part of the build above.
-.PHONY: ci-lint ci-test
-ci-lint:
+.PHONY: check-port ci-lint ci-test
+check-port:
+	python3 -m unittest discover -s tests -p test_port_sync.py
+	python3 check_python_port.py
+ci-lint: check-port
+	cargo fmt --check --manifest-path $(MANIFEST)
 	cargo clippy --all-targets --manifest-path $(MANIFEST) -- --deny warnings
-ci-test:
+ci-test: check-port
 	$(TEST) --manifest-path $(MANIFEST)
 	$(TEST) --release --manifest-path $(MANIFEST)

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/eeprom.py`: the system EEPROM, read from STATE_DB when
 //! syseepromd has published it and decoded from the VPD file otherwise.
 
@@ -23,9 +22,8 @@ use std::process::Command;
 use std::sync::Mutex;
 
 use platform_base::eeprom_tlvinfo::{
-    hex, TlvInfoDecoder, Visitor, TLV_CODE_CRC_32, TLV_CODE_MAC_BASE,
-    TLV_CODE_PART_NUMBER, TLV_CODE_PRODUCT_NAME, TLV_CODE_SERIAL_NUMBER, TLV_CODE_SERVICE_TAG,
-    TLV_CODE_VENDOR_EXT,
+    hex, TlvInfoDecoder, Visitor, TLV_CODE_CRC_32, TLV_CODE_MAC_BASE, TLV_CODE_PART_NUMBER,
+    TLV_CODE_PRODUCT_NAME, TLV_CODE_SERIAL_NUMBER, TLV_CODE_SERVICE_TAG, TLV_CODE_VENDOR_EXT,
 };
 use platform_base::py::{py_int, PyErr, PyResult, PyVal};
 use platform_base::{io, BaseClass, PyObject};
@@ -54,8 +52,13 @@ pub fn import() -> PyResult<()> {
 
 /// What the module body does, every time it runs.
 fn module_body() -> PyResult<()> {
-    let Some(p) = device_data::get_platform_name()? else { return Ok(()) };
-    if !p.contains("simx") || PLATFORM_SUPPORTING_SIMX.contains(&p.as_str()) || io::exists(EEPROM_SYMLINK) {
+    let Some(p) = device_data::get_platform_name()? else {
+        return Ok(());
+    };
+    if !p.contains("simx")
+        || PLATFORM_SUPPORTING_SIMX.contains(&p.as_str())
+        || io::exists(EEPROM_SYMLINK)
+    {
         return Ok(());
     }
     let dir = if utils::is_host() {
@@ -79,7 +82,14 @@ fn module_body() -> PyResult<()> {
         )),
         // subprocess names the cwd when the child cannot change into it,
         // and the program otherwise.
-        Err(e) => Err(PyErr::from_io(&e, Some(if io::is_dir(&dir) { "/usr/bin/xxd" } else { &dir }))),
+        Err(e) => Err(PyErr::from_io(
+            &e,
+            Some(if io::is_dir(&dir) {
+                "/usr/bin/xxd"
+            } else {
+                &dir
+            }),
+        )),
     }
 }
 
@@ -145,13 +155,17 @@ impl Eeprom {
                 .and_then(|n| py_int(&n).ok())
                 .unwrap_or(0);
             for i in 0..num.max(0) {
-                if let Some(v) = d.redis_hget(&format!("EEPROM_INFO|{ext}"), &format!("Value_{i}"))? {
+                if let Some(v) =
+                    d.redis_hget(&format!("EEPROM_INFO|{ext}"), &format!("Value_{i}"))?
+                {
                     if !v.is_empty() {
                         push_ext(info, &ext, v);
                     }
                 }
             }
-            if let Some(v) = d.redis_hget(&format!("EEPROM_INFO|{}", hex(TLV_CODE_CRC_32)), "Value")? {
+            if let Some(v) =
+                d.redis_hget(&format!("EEPROM_INFO|{}", hex(TLV_CODE_CRC_32)), "Value")?
+            {
                 if !v.is_empty() {
                     info.push((hex(TLV_CODE_CRC_32), PyVal::Str(v)));
                 }
@@ -192,9 +206,9 @@ impl Eeprom {
 
     /// `get_system_eeprom_info()`: `{}` on any failure.
     pub fn get_system_eeprom_info(&self) -> PyVal {
-        let r = self.system_eeprom_info().map(|i| {
-            PyVal::Dict(i.into_iter().map(|(k, v)| (PyVal::Str(k), v)).collect())
-        });
+        let r = self
+            .system_eeprom_info()
+            .map(|i| PyVal::Dict(i.into_iter().map(|(k, v)| (PyVal::Str(k), v)).collect()));
         utils::default_return(PyVal::Dict(Vec::new()), r, "get_system_eeprom_info")
     }
 }
@@ -284,11 +298,21 @@ mod tests {
         assert!(matches!(json_get(&info, "0xfd"), PyVal::List(l) if !l.is_empty()));
         assert_eq!(e.read_eeprom().unwrap(), PyVal::Bytes(MOCK_EEPROM.to_vec()));
         // The decoded TLVs go to STATE_DB.
-        assert_eq!(e.update_eeprom_db(PyVal::Bytes(MOCK_EEPROM.to_vec())).unwrap(), PyVal::Int(0));
+        assert_eq!(
+            e.update_eeprom_db(PyVal::Bytes(MOCK_EEPROM.to_vec()))
+                .unwrap(),
+            PyVal::Int(0)
+        );
         assert!(redis.exists(STATE_DB, "EEPROM_INFO|State"));
         let err = e.update_eeprom_db(PyVal::Int(1)).unwrap_err();
-        assert_eq!((err.exc.name(), err.str()), ("TypeError", "object of type 'int' has no len()".to_string()));
-        assert_eq!((e.py_class(), e.base_class()), ("Eeprom", BaseClass::TlvInfoDecoder));
+        assert_eq!(
+            (err.exc.name(), err.str()),
+            ("TypeError", "object of type 'int' has no len()".to_string())
+        );
+        assert_eq!(
+            (e.py_class(), e.base_class()),
+            ("Eeprom", BaseClass::TlvInfoDecoder)
+        );
     }
 
     fn json_get(d: &PyVal, k: &str) -> PyVal {
@@ -304,25 +328,48 @@ mod tests {
         redis.install(&root);
         redis.flush();
         redis.hset(STATE_DB, "EEPROM_INFO|State", &[("Initialized", "1")]);
-        for (code, v) in [("0x22", "MSN3420-CB2FO"), ("0x21", "MSN3420"), ("0x24", "1C:34:DA:1C:9F:00"),
-                          ("0x23", "MT2019X13878"), ("0x25", "")] {
+        for (code, v) in [
+            ("0x22", "MSN3420-CB2FO"),
+            ("0x21", "MSN3420"),
+            ("0x24", "1C:34:DA:1C:9F:00"),
+            ("0x23", "MT2019X13878"),
+            ("0x25", ""),
+        ] {
             redis.hset(STATE_DB, &format!("EEPROM_INFO|{code}"), &[("Value", v)]);
         }
-        redis.hset(STATE_DB, "EEPROM_INFO|0xfd", &[("Num_vendor_ext", "3"), ("Value_0", "ext1"), ("Value_1", ""), ("Value_2", "ext2")]);
+        redis.hset(
+            STATE_DB,
+            "EEPROM_INFO|0xfd",
+            &[
+                ("Num_vendor_ext", "3"),
+                ("Value_0", "ext1"),
+                ("Value_1", ""),
+                ("Value_2", "ext2"),
+            ],
+        );
         redis.hset(STATE_DB, "EEPROM_INFO|0xfe", &[("Value", "CRC_VALUE")]);
         let info = e.get_system_eeprom_info();
-        assert_eq!(keys(&info), ["0x21", "0x22", "0x23", "0x24", "0xfd", "0xfe"]);
+        assert_eq!(
+            keys(&info),
+            ["0x21", "0x22", "0x23", "0x24", "0xfd", "0xfe"]
+        );
         assert_eq!(e.get_product_name(), PyVal::str("MSN3420"));
         assert_eq!(e.get_part_number(), PyVal::str("MSN3420-CB2FO"));
         assert_eq!(e.get_base_mac(), PyVal::str("1C:34:DA:1C:9F:00"));
         assert_eq!(e.get_serial_number(), PyVal::str("MT2019X13878"));
-        assert_eq!(json_get(&info, "0xfd"), PyVal::List(vec![PyVal::str("ext1"), PyVal::str("ext2")]));
+        assert_eq!(
+            json_get(&info, "0xfd"),
+            PyVal::List(vec![PyVal::str("ext1"), PyVal::str("ext2")])
+        );
         assert_eq!(json_get(&info, "0xfe"), PyVal::str("CRC_VALUE"));
         // A count that is not a number is none.
         let e = eeprom(&root);
         redis.hset(STATE_DB, "EEPROM_INFO|0xfd", &[("Num_vendor_ext", "x")]);
         redis.hdel(STATE_DB, "EEPROM_INFO|0xfe", "Value");
-        assert_eq!(keys(&e.get_system_eeprom_info()), ["0x21", "0x22", "0x23", "0x24"]);
+        assert_eq!(
+            keys(&e.get_system_eeprom_info()),
+            ["0x21", "0x22", "0x23", "0x24"]
+        );
     }
 
     #[test]
@@ -349,17 +396,23 @@ mod tests {
     fn the_content_visitor_keeps_values_and_lists_vendor_extensions() {
         let mut content = Vec::new();
         let mut v = ContentVisitor(&mut content);
-        v.visit_tlv("tlv1", TLV_CODE_PRODUCT_NAME, 7, "MSN3420\0\0").unwrap();
-        v.visit_tlv("tlv1", TLV_CODE_PRODUCT_NAME, 7, "MSN3800").unwrap();
+        v.visit_tlv("tlv1", TLV_CODE_PRODUCT_NAME, 7, "MSN3420\0\0")
+            .unwrap();
+        v.visit_tlv("tlv1", TLV_CODE_PRODUCT_NAME, 7, "MSN3800")
+            .unwrap();
         v.visit_tlv("tlv2", TLV_CODE_VENDOR_EXT, 4, "ext1").unwrap();
         v.visit_tlv("tlv3", TLV_CODE_VENDOR_EXT, 4, "").unwrap();
         v.visit_tlv("tlv3", TLV_CODE_VENDOR_EXT, 4, "\0\0").unwrap();
-        v.visit_tlv("tlv4", TLV_CODE_VENDOR_EXT, 4, "ext2\0").unwrap();
+        v.visit_tlv("tlv4", TLV_CODE_VENDOR_EXT, 4, "ext2\0")
+            .unwrap();
         assert_eq!(
             content,
             vec![
                 ("0x21".to_string(), PyVal::str("MSN3800")),
-                ("0xfd".to_string(), PyVal::List(vec![PyVal::str("ext1"), PyVal::str("ext2")])),
+                (
+                    "0xfd".to_string(),
+                    PyVal::List(vec![PyVal::str("ext1"), PyVal::str("ext2")])
+                ),
             ]
         );
     }
@@ -384,7 +437,11 @@ mod tests {
         root.write("/.dockerenv", "");
         crate::utils::forget_caches();
         let e = module_body().unwrap_err();
-        assert!(matches!(e.exc.name(), "CalledProcessError" | "FileNotFoundError"), "{}", e.repr());
+        assert!(
+            matches!(e.exc.name(), "CalledProcessError" | "FileNotFoundError"),
+            "{}",
+            e.repr()
+        );
         // The file already there, a listed simx platform, or no simx at all:
         // nothing to do.
         root.write(EEPROM_SYMLINK, "");
@@ -402,7 +459,10 @@ mod tests {
         let root = Root::new();
         root.write("/var/run/hw-management", "a file");
         let e = makedirs("/var/run/hw-management/eeprom").unwrap_err();
-        assert_eq!(e.str(), "[Errno 20] Not a directory: '/var/run/hw-management/eeprom'");
+        assert_eq!(
+            e.str(),
+            "[Errno 20] Not a directory: '/var/run/hw-management/eeprom'"
+        );
         std::fs::remove_file(root.real("/var/run/hw-management")).unwrap();
         makedirs("/var/run/hw-management/eeprom").unwrap();
         assert!(root.real("/var/run/hw-management/eeprom").is_dir());

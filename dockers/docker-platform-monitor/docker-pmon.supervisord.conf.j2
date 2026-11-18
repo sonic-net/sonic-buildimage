@@ -81,12 +81,12 @@ dependent_startup=true
     The command is computed into a variable and emitted as a plain expression
     rather than written inline.  A `command=` line that *ends* in a block tag
     loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psud-rspriority=8`,
+    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
     which supervisord reports as `ERROR (no such file)` and never starts.  The
     upstream lines ended in the binary path, so they never hit it; making the
     Rust choice the last thing on the line did.
 #}
-{% set command = "/usr/bin/chassisd-rs --platform-api " ~ (platform_api_chassisd | default("pyo3"))
+{% set command = "/usr/bin/chassisd --platform-api " ~ (platform_api_chassisd | default("pyo3"))
    if use_rust_chassisd
    else "/usr/local/bin/chassisd" %}
 command={{ command }}
@@ -251,13 +251,13 @@ dependent_startup_wait_for=rsyslogd:running
     The command is computed into a variable and emitted as a plain expression
     rather than written inline.  A `command=` line that *ends* in a block tag
     loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psud-rspriority=8`,
+    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
     which supervisord reports as `ERROR (no such file)` and never starts.  The
     upstream lines ended in the binary path, so they never hit it; making the
     Rust choice the last thing on the line did.
 #}
 {% set py3 = API_VERSION == 3 and 'psud' not in python2_daemons %}
-{% set command = "/usr/bin/psud-rs --platform-api " ~ (platform_api_psud | default("pyo3"))
+{% set command = "/usr/bin/psud --platform-api " ~ (platform_api_psud | default("pyo3"))
    if use_rust_psud and py3
    else ("python3 " if py3 else "python2 ") + "/usr/local/bin/psud" %}
 command={{ command }}
@@ -299,13 +299,13 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
     The command is computed into a variable and emitted as a plain expression
     rather than written inline.  A `command=` line that *ends* in a block tag
     loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psud-rspriority=8`,
+    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
     which supervisord reports as `ERROR (no such file)` and never starts.  The
     upstream lines ended in the binary path, so they never hit it; making the
     Rust choice the last thing on the line did.
 #}
 {% set py3 = API_VERSION == 3 and 'syseepromd' not in python2_daemons %}
-{% set command = "/usr/bin/syseepromd-rs --platform-api " ~ (platform_api_syseepromd | default("pyo3"))
+{% set command = "/usr/bin/syseepromd --platform-api " ~ (platform_api_syseepromd | default("pyo3"))
    if use_rust_syseepromd and py3
    else ("python3 " if py3 else "python2 ") + "/usr/local/bin/syseepromd" %}
 command={{ command }}
@@ -345,7 +345,7 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 #}
 {% set py3 = API_VERSION == 3 and 'thermalctld' not in python2_daemons %}
 {% set use_rust = use_rust_thermalctld and py3 %}
-{% set base_command = "/usr/bin/thermalctld-rs"
+{% set base_command = "/usr/bin/thermalctld"
    if use_rust
    else ("python3 " if py3 else "python2 ") + "/usr/local/bin/thermalctld" %}
 {% set options = "" -%}
@@ -421,12 +421,12 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
     The command is computed into a variable and emitted as a plain expression
     rather than written inline.  A `command=` line that *ends* in a block tag
     loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psud-rspriority=8`,
+    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
     which supervisord reports as `ERROR (no such file)` and never starts.  The
     upstream lines ended in the binary path, so they never hit it; making the
     Rust choice the last thing on the line did.
 #}
-{% set command = "/usr/bin/pcied-rs --platform-api " ~ (platform_api_pcied | default("pyo3"))
+{% set command = "/usr/bin/pcied --platform-api " ~ (platform_api_pcied | default("pyo3"))
    if use_rust_pcied
    else "/usr/local/bin/pcied" %}
 command={{ command }}
@@ -490,12 +490,12 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
     The command is computed into a variable and emitted as a plain expression
     rather than written inline.  A `command=` line that *ends* in a block tag
     loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psud-rspriority=8`,
+    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
     which supervisord reports as `ERROR (no such file)` and never starts.  The
     upstream lines ended in the binary path, so they never hit it; making the
     Rust choice the last thing on the line did.
 #}
-{% set command = "/usr/bin/stormond-rs --platform-api " ~ (platform_api_stormond | default("pyo3"))
+{% set command = "/usr/bin/stormond --platform-api " ~ (platform_api_stormond | default("pyo3"))
    if use_rust_stormond
    else "/usr/local/bin/stormond" %}
 command={{ command }}

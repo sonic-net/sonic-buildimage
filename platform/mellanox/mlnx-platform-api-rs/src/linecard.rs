@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! `sonic_platform/module.py`'s `Module`: a line card of a modular chassis.
 //!
 //! Its thermals and SFPs are built while the card is powered, and dropped
@@ -113,7 +111,11 @@ impl LinecardModule {
     /// `_check_state()`.
     fn check_state(&self, st: &mut State) {
         let seq_no = self.get_seq_no();
-        let state = utils::read_int(&format!("/run/hw-management/system/lc{}_powered", self.slot_id), 0, Log::Off);
+        let state = utils::read_int(
+            &format!("/run/hw-management/system/lc{}_powered", self.slot_id),
+            0,
+            Log::Off,
+        );
         // A new power state, or -- powered -- a new card in the slot.
         if state != st.current_state || (!seq_no.py_eq(&st.seq_no) && state == STATE_ACTIVATED) {
             Self::re_init(st);
@@ -134,7 +136,8 @@ impl LinecardModule {
         self.check_state(st);
         if st.current_state == STATE_ACTIVATED && st.thermal_list.is_empty() {
             crate::imports::thermal();
-            st.thermal_list = crate::thermal::initialize_linecard_thermals(&self.name(), self.slot_id);
+            st.thermal_list =
+                crate::thermal::initialize_linecard_thermals(&self.name(), self.slot_id);
         }
     }
 
@@ -190,7 +193,11 @@ impl LinecardModule {
     }
 
     fn sys_int(&self, what: &str) -> i128 {
-        utils::read_int(&format!("/run/hw-management/system/lc{}_{what}", self.slot_id), 0, Log::Error)
+        utils::read_int(
+            &format!("/run/hw-management/system/lc{}_{what}", self.slot_id),
+            0,
+            Log::Error,
+        )
     }
 }
 
@@ -266,7 +273,8 @@ mod tests {
     /// The line card's STATE_DB connection, to the fake server.
     fn redis_for_cards() -> &'static FakeRedis {
         let redis = FakeRedis::get();
-        *REDIS.lock().unwrap() = Some(Db::connect_addr("127.0.0.1", redis.port(), STATE_DB).unwrap());
+        *REDIS.lock().unwrap() =
+            Some(Db::connect_addr("127.0.0.1", redis.port(), STATE_DB).unwrap());
         redis
     }
 
@@ -284,13 +292,26 @@ mod tests {
         let root = Root::new();
         let lc = card(&root);
         assert_eq!(
-            [lc.get_name(), lc.get_type(), lc.get_slot(), lc.get_position_in_parent(), lc.is_replaceable()].map(|v| v.unwrap().py_repr()),
+            [
+                lc.get_name(),
+                lc.get_type(),
+                lc.get_slot(),
+                lc.get_position_in_parent(),
+                lc.is_replaceable()
+            ]
+            .map(|v| v.unwrap().py_repr()),
             ["'LINE-CARD1'", "'LINE-CARD'", "1", "1", "True"]
         );
-        assert_eq!((lc.py_class(), lc.base_class()), ("Module", BaseClass::ModuleBase));
+        assert_eq!(
+            (lc.py_class(), lc.base_class()),
+            ("Module", BaseClass::ModuleBase)
+        );
         // The VPD path keeps its `{}`: no file, and N/A.
         assert_eq!(lc.get_model().unwrap().py_repr(), "'N/A'");
-        root.write("/run/hw-management/lc{}/eeprom/vpd_parsed", "PN_VPD_FIELD: MSN4800-LC\nSN_VPD_FIELD: SN1\nREV_VPD_FIELD: A1\n");
+        root.write(
+            "/run/hw-management/lc{}/eeprom/vpd_parsed",
+            "PN_VPD_FIELD: MSN4800-LC\nSN_VPD_FIELD: SN1\nREV_VPD_FIELD: A1\n",
+        );
         assert_eq!(
             [lc.get_model(), lc.get_serial(), lc.get_revision()].map(|v| v.unwrap().py_repr()),
             ["'MSN4800-LC'", "'SN1'", "'A1'"]
@@ -316,24 +337,46 @@ mod tests {
         let redis = redis_for_cards();
         redis.hset(STATE_DB, "MODULAR_CHASSIS_SLOT|1", &[("seq_no", " 7 ")]);
         // Unpowered: none.
-        assert!(lc.get_all_thermals().unwrap().iter_items().unwrap().is_empty());
+        assert!(lc
+            .get_all_thermals()
+            .unwrap()
+            .iter_items()
+            .unwrap()
+            .is_empty());
         root.write(&format!("{SYS}/lc1_powered"), "1");
         root.write("/run/hw-management/lc1/config/gearbox_counter", "2");
         let t = lc.get_all_thermals().unwrap().iter_items().unwrap();
-        assert_eq!(names(&t), ["LINE-CARD1 Gearbox 1 Temp", "LINE-CARD1 Gearbox 2 Temp"]);
+        assert_eq!(
+            names(&t),
+            ["LINE-CARD1 Gearbox 1 Temp", "LINE-CARD1 Gearbox 2 Temp"]
+        );
         assert_eq!(lc.lock().seq_no.py_repr(), "'7'");
         // The same card: kept, though there are more gearboxes now.
         root.write("/run/hw-management/lc1/config/gearbox_counter", "3");
-        assert_eq!(lc.get_all_thermals().unwrap().iter_items().unwrap().len(), 2);
+        assert_eq!(
+            lc.get_all_thermals().unwrap().iter_items().unwrap().len(),
+            2
+        );
         // Another card in the slot: built again.
         redis.hset(STATE_DB, "MODULAR_CHASSIS_SLOT|1", &[("seq_no", "8")]);
-        assert_eq!(lc.get_all_thermals().unwrap().iter_items().unwrap().len(), 3);
+        assert_eq!(
+            lc.get_all_thermals().unwrap().iter_items().unwrap().len(),
+            3
+        );
         // No seq_no at all reads as 0 -- a change -- and powered off clears.
         redis.hdel(STATE_DB, "MODULAR_CHASSIS_SLOT|1", "seq_no");
-        assert_eq!(lc.get_all_thermals().unwrap().iter_items().unwrap().len(), 3);
+        assert_eq!(
+            lc.get_all_thermals().unwrap().iter_items().unwrap().len(),
+            3
+        );
         assert_eq!(lc.lock().seq_no.py_repr(), "0");
         root.write(&format!("{SYS}/lc1_powered"), "0");
-        assert!(lc.get_all_thermals().unwrap().iter_items().unwrap().is_empty());
+        assert!(lc
+            .get_all_thermals()
+            .unwrap()
+            .iter_items()
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -373,10 +416,19 @@ mod tests {
         root.write(&format!("{SYS}/lc1_powered"), "1");
         let sfps = lc.get_all_sfps().unwrap();
         assert_eq!(sfps.len(), 2);
-        assert_eq!(sfps.iter().flatten().map(|s| s.sdk_index).collect::<Vec<_>>(), [0, 1]);
+        assert_eq!(
+            sfps.iter()
+                .flatten()
+                .map(|s| s.sdk_index)
+                .collect::<Vec<_>>(),
+            [0, 1]
+        );
         // Asked again: the same objects.
         let again = lc.get_all_sfps().unwrap();
-        assert!(Arc::ptr_eq(sfps[1].as_ref().unwrap(), again[1].as_ref().unwrap()));
+        assert!(Arc::ptr_eq(
+            sfps[1].as_ref().unwrap(),
+            again[1].as_ref().unwrap()
+        ));
         // A port left unbuilt is built on the next ask.
         {
             let mut st = lc.lock();
@@ -391,6 +443,9 @@ mod tests {
         root.write("/run/hw-management/config/hotplug_linecards", "0");
         crate::utils::forget_caches();
         let e = lc.get_all_sfps().err().unwrap();
-        assert_eq!((e.exc.name(), e.str()), ("ZeroDivisionError", "integer modulo by zero".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("ZeroDivisionError", "integer modulo by zero".to_string())
+        );
     }
 }

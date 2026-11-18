@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/utils.py`.
 //!
 //! Every sysfs read the platform makes goes through `read_from_file`, and what
@@ -26,8 +25,8 @@
 //! default are all observable, so they are reproduced here exactly.
 
 use std::fmt::Display;
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread::{JoinHandle, ThreadId};
@@ -115,13 +114,15 @@ pub fn read_from_file<T>(
 
 /// `ValueError` and the subclasses of it a read or a write can raise.
 pub(crate) fn caught_value_error(e: &PyErr) -> bool {
-    matches!(e.exc, Exc::ValueError | Exc::Other("UnicodeDecodeError" | "UnicodeEncodeError"))
+    matches!(
+        e.exc,
+        Exc::ValueError | Exc::Other("UnicodeDecodeError" | "UnicodeEncodeError")
+    )
 }
 
 /// `read_str_from_file(path, default='', ...)`.
 pub fn read_str(path: &str, default: &str, log: Log) -> String {
-    read_from_file(path, |s| Ok(s.to_string()), default.to_string(), false, log)
-        .unwrap_or_default()
+    read_from_file(path, |s| Ok(s.to_string()), default.to_string(), false, log).unwrap_or_default()
 }
 
 /// `read_str_from_file(path, raise_exception=True)`.
@@ -155,7 +156,9 @@ pub fn key_value(content: &str, delim: &str) -> PyResult<Vec<(String, String)>> 
     let mut out: Vec<(String, String)> = Vec::new();
     for line in py_splitlines(content) {
         let Some((k, v)) = line.split_once(delim) else {
-            return Err(PyErr::value_error("not enough values to unpack (expected 2, got 1)"));
+            return Err(PyErr::value_error(
+                "not enough values to unpack (expected 2, got 1)",
+            ));
         };
         let (k, v) = (strip(k).to_string(), strip(v).to_string());
         match out.iter_mut().find(|(k2, _)| *k2 == k) {
@@ -182,7 +185,10 @@ pub fn write_file(path: &str, content: &dyn Display, raise: bool, log: Log) -> P
     match io::write_text(path, &text) {
         Ok(()) => Ok(true),
         Err(e) if e.exc.is_os_error() || caught_value_error(&e) => {
-            log.emit(&format!("Failed to write {text} to file {path} - {}", e.repr()));
+            log.emit(&format!(
+                "Failed to write {text} to file {path} - {}",
+                e.repr()
+            ));
             if raise {
                 Err(e)
             } else {
@@ -278,7 +284,11 @@ impl<T: Clone + Truthy> ReadOnlyCache<T> {
     }
 
     fn kept(&self, generation: u64) -> Option<T> {
-        let (g, v) = self.0.lock().unwrap_or_else(PoisonError::into_inner).clone()?;
+        let (g, v) = self
+            .0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()?;
         (g == generation && v.truthy()).then_some(v)
     }
 
@@ -324,7 +334,9 @@ pub fn run_command(command: &[&str]) -> Option<String> {
         .stderr(Stdio::piped())
         .output()
         .ok()?;
-    platform_base::subprocess::text(&out.stdout).ok().map(|t| strip(&t).to_string())
+    platform_base::subprocess::text(&out.stdout)
+        .ok()
+        .map(|t| strip(&t).to_string())
 }
 
 /// `load_json_file(filename, log_func)`.
@@ -338,7 +350,10 @@ pub fn load_json_file(filename: &str, log: Log) -> Option<PyVal> {
             }
         },
         Err(e) => {
-            log.emit(&format!("error occurred while parsing json file: {}", e.str()));
+            log.emit(&format!(
+                "error occurred while parsing json file: {}",
+                e.str()
+            ));
             None
         }
     }
@@ -359,10 +374,18 @@ pub fn get_path_to_hwsku_directory(asic_id: Option<i128>) -> PyResult<String> {
 /// which is the one Python ends up with).
 pub fn get_path_list_to_asic_hwsku_dir(num_of_asics: i128) -> PyResult<Vec<String>> {
     if num_of_asics == 1 {
-        return Ok(vec![io::join(&get_path_to_hwsku_directory(None)?, "hwsku.json")]);
+        return Ok(vec![io::join(
+            &get_path_to_hwsku_directory(None)?,
+            "hwsku.json",
+        )]);
     }
     (0..num_of_asics.max(0))
-        .map(|a| Ok(io::join(&get_path_to_hwsku_directory(Some(a))?, "hwsku.json")))
+        .map(|a| {
+            Ok(io::join(
+                &get_path_to_hwsku_directory(Some(a))?,
+                "hwsku.json",
+            ))
+        })
         .collect()
 }
 
@@ -377,7 +400,9 @@ static SHUTDOWN_EVENT: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new
 fn wait_interval(interval: f64) -> bool {
     let (set, cv) = &SHUTDOWN_EVENT;
     let timeout = Duration::from_secs_f64(interval.clamp(0.0, PY_WAIT_MAX_S));
-    let (set, _) = cv.wait_timeout_while(lock(set), timeout, |set| !*set).unwrap_or_else(PoisonError::into_inner);
+    let (set, _) = cv
+        .wait_timeout_while(lock(set), timeout, |set| !*set)
+        .unwrap_or_else(PoisonError::into_inner);
     *set
 }
 
@@ -487,9 +512,15 @@ pub fn wait_for_file_creation(path: &str, timeout: f64) -> bool {
     }
     let watched = (|| -> PyResult<Option<()>> {
         let mut notifier = crate::inotify_helper::Inotify::new()?;
-        notifier.add_watch(dir, libc::IN_CREATE | libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO)?;
+        notifier.add_watch(
+            dir,
+            libc::IN_CREATE | libc::IN_CLOSE_WRITE | libc::IN_MOVED_TO,
+        )?;
         notifier.event_gen(timeout, |e| {
-            let kind = e.type_names.iter().any(|t| matches!(*t, "IN_CREATE" | "IN_CLOSE_WRITE" | "IN_MOVED_TO"));
+            let kind = e
+                .type_names
+                .iter()
+                .any(|t| matches!(*t, "IN_CREATE" | "IN_CLOSE_WRITE" | "IN_MOVED_TO"));
             if e.filename == name && kind && readable(path) {
                 log_info(&format!("File {path} created and readable"));
                 return Ok(Some(()));
@@ -500,7 +531,10 @@ pub fn wait_for_file_creation(path: &str, timeout: f64) -> bool {
     match watched {
         Ok(Some(())) => return true,
         Ok(None) => {}
-        Err(e) => log_error(&format!("Inotify error while waiting for {path}: {}", e.repr())),
+        Err(e) => log_error(&format!(
+            "Inotify error while waiting for {path}: {}",
+            e.repr()
+        )),
     }
     readable(path)
 }
@@ -515,17 +549,60 @@ pub fn ensure_sysfs_labels_ready() -> bool {
         return true;
     }
     let dir = py_dirname(path).to_string();
-    log_info(&format!("Sysfs labels ready file {path} not accessible, waiting for creation"));
+    log_info(&format!(
+        "Sysfs labels ready file {path} not accessible, waiting for creation"
+    ));
     let deadline = Instant::now() + Duration::from_secs_f64(SYSFS_LABELS_READY_WAIT_TIMEOUT);
-    let remaining = || deadline.saturating_duration_since(Instant::now()).as_secs_f64();
+    let remaining = || {
+        deadline
+            .saturating_duration_since(Instant::now())
+            .as_secs_f64()
+    };
     if !wait_until(|| io::exists(&dir), remaining(), 1.0) {
-        log_error(&format!("Parent directory {dir} not available after timeout"));
+        log_error(&format!(
+            "Parent directory {dir} not available after timeout"
+        ));
         return false;
     }
     if wait_for_file_creation(path, remaining()) {
         return true;
     }
-    log_error(&format!("Sysfs labels ready file {path} not available after timeout"));
+    log_error(&format!(
+        "Sysfs labels ready file {path} not available after timeout"
+    ));
+    false
+}
+
+pub const SYSFS_MLXSW_READY_FILE: &str = "/var/run/hw-management/sysfs_mlxsw_rdy";
+
+/// hw-management's mlxsw tree is ready when its ready file exists.
+pub fn ensure_sysfs_mlxsw_ready() -> bool {
+    let path = SYSFS_MLXSW_READY_FILE;
+    if readable(path) {
+        return true;
+    }
+    let dir = py_dirname(path).to_string();
+    log_info(&format!(
+        "Sysfs mlxsw ready file {path} not accessible, waiting for creation"
+    ));
+    let deadline = Instant::now() + Duration::from_secs(300);
+    let remaining = || {
+        deadline
+            .saturating_duration_since(Instant::now())
+            .as_secs_f64()
+    };
+    if !wait_until(|| io::exists(&dir), remaining(), 1.0) {
+        log_error(&format!(
+            "Parent directory {dir} not available after timeout"
+        ));
+        return false;
+    }
+    if wait_for_file_creation(path, remaining()) {
+        return true;
+    }
+    log_error(&format!(
+        "Sysfs mlxsw ready file {path} not available after timeout"
+    ));
     false
 }
 
@@ -572,7 +649,11 @@ pub fn fnmatch(name: &str, pat: &str) -> bool {
                     return n.first() == Some(&'[') && go(&n[1..], &p[1..]);
                 };
                 let Some(c) = n.first() else { return false };
-                let (neg, set) = if p[1] == '!' { (true, &p[2..end]) } else { (false, &p[1..end]) };
+                let (neg, set) = if p[1] == '!' {
+                    (true, &p[2..end])
+                } else {
+                    (false, &p[1..end])
+                };
                 let mut hit = false;
                 let mut i = 0;
                 while i < set.len() {
@@ -596,14 +677,20 @@ pub fn fnmatch(name: &str, pat: &str) -> bool {
 pub fn py_list_repr(items: &[&str]) -> String {
     format!(
         "[{}]",
-        items.iter().map(|s| platform_base::py::str_repr(s)).collect::<Vec<_>>().join(", ")
+        items
+            .iter()
+            .map(|s| platform_base::py::str_repr(s))
+            .collect::<Vec<_>>()
+            .join(", ")
     )
 }
 
 /// `Popen.returncode`: the exit status, or minus the signal that killed it.
 pub fn py_returncode(s: &std::process::ExitStatus) -> i32 {
     use std::os::unix::process::ExitStatusExt;
-    s.code().or_else(|| s.signal().map(|sig| -sig)).unwrap_or(-1)
+    s.code()
+        .or_else(|| s.signal().map(|sig| -sig))
+        .unwrap_or(-1)
 }
 
 /// Python's `a // b` on integers: toward negative infinity.
@@ -615,7 +702,11 @@ pub fn floor_div(a: i128, b: i128) -> PyResult<i128> {
         ));
     }
     let q = a / b;
-    Ok(if (a % b != 0) && ((a < 0) != (b < 0)) { q - 1 } else { q })
+    Ok(if (a % b != 0) && ((a < 0) != (b < 0)) {
+        q - 1
+    } else {
+        q
+    })
 }
 
 /// Python's `round(x)` on a float: to the nearest integer, halves to even.
@@ -699,7 +790,9 @@ fn extract_ports_index_by_type(port_type: &str, num_of_asics: i128) -> PyResult<
         let Some((_, index)) = name_to_index.iter().find(|(k, _)| k == key) else {
             continue;
         };
-        if json::get(value, "port_type").is_some_and(|t| matches!(t, PyVal::Str(s) if s == port_type)) {
+        if json::get(value, "port_type")
+            .is_some_and(|t| matches!(t, PyVal::Str(s) if s == port_type))
+        {
             let i = py_int(index)? - 1;
             // `list(dict.fromkeys(...))`: first occurrence kept.
             if !out.contains(&i) {
@@ -740,7 +833,10 @@ pub fn extract_cpo_ports_index(num_of_asics: i128) -> PyResult<Option<Vec<i128>>
 /// `extract_asic_id_map(num_of_asics)`: 0-based SFP index to ASIC id.
 pub fn extract_asic_id_map(num_of_asics: i128) -> PyResult<Vec<(i128, i128)>> {
     let mut interface2asic: Vec<(String, i128)> = Vec::new();
-    for (asic_id, hwsku_json) in get_path_list_to_asic_hwsku_dir(num_of_asics)?.iter().enumerate() {
+    for (asic_id, hwsku_json) in get_path_list_to_asic_hwsku_dir(num_of_asics)?
+        .iter()
+        .enumerate()
+    {
         let data = load_json_file(hwsku_json, Log::Error).unwrap_or(PyVal::None);
         for (k, _) in dict_items(json::index(&data, "interfaces")?, "keys")? {
             match interface2asic.iter_mut().find(|(i, _)| *i == k) {
@@ -793,7 +889,9 @@ static SHUTDOWN_WATCH_INSTALLED: Mutex<bool> = Mutex::new(false);
 /// PyO3 bridge runs the Python handler it kept.  Off the main thread it says
 /// so, on every call until the main thread has armed it.
 pub fn watch_shutdown_signals() {
-    let mut installed = SHUTDOWN_WATCH_INSTALLED.lock().unwrap_or_else(PoisonError::into_inner);
+    let mut installed = SHUTDOWN_WATCH_INSTALLED
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
     if *installed {
         return;
     }
@@ -859,7 +957,10 @@ fn report_thread_death(name: &str, e: &PyErr) {
         s if s.is_empty() => e.exc.name().to_string(),
         s => format!("{}: {s}", e.exc.name()),
     };
-    let _ = writeln!(std::io::stderr(), "Exception in thread {name}:\nTraceback (most recent call last):\n{last}");
+    let _ = writeln!(
+        std::io::stderr(),
+        "Exception in thread {name}:\nTraceback (most recent call last):\n{last}"
+    );
 }
 
 impl Default for Timer {
@@ -873,7 +974,11 @@ impl Timer {
         let n = THREAD_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
         Timer {
             shared: Arc::new(TimerShared {
-                state: Mutex::new(TimerState { queue: Vec::new(), seq: 0, stop: false }),
+                state: Mutex::new(TimerState {
+                    queue: Vec::new(),
+                    seq: 0,
+                    stop: false,
+                }),
                 cv: Condvar::new(),
             }),
             thread: Mutex::new(None),
@@ -883,7 +988,11 @@ impl Timer {
 
     /// `schedule(interval, cb, repeat=True, run_now=True)`.
     pub fn schedule(&self, interval: f64, cb: impl Fn() -> PyResult<()> + Send + Sync + 'static) {
-        let ev = Arc::new(TimerEvent { interval, cb: Box::new(cb), repeat: true });
+        let ev = Arc::new(TimerEvent {
+            interval,
+            cb: Box::new(cb),
+            repeat: true,
+        });
         Self::add(&self.shared, ev, true);
     }
 
@@ -919,7 +1028,11 @@ impl Timer {
 
     /// `stop()`: wakes the thread and waits for it, if it is still alive.
     pub fn stop(&self) {
-        let handle = self.thread.lock().unwrap_or_else(PoisonError::into_inner).take();
+        let handle = self
+            .thread
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
         let Some(handle) = handle else {
             return;
         };
@@ -927,7 +1040,11 @@ impl Timer {
             let _ = handle.join();
             return;
         }
-        self.shared.state.lock().unwrap_or_else(PoisonError::into_inner).stop = true;
+        self.shared
+            .state
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .stop = true;
         self.shared.cv.notify_all();
         let _ = handle.join();
     }
@@ -955,7 +1072,13 @@ impl Timer {
                     if ts > now {
                         // `self._wait_event.wait(self._min_timestamp - now)`.
                         if ts - now > PY_WAIT_MAX_S {
-                            report_thread_death(name, &PyErr::other("OverflowError", "timestamp out of range for platform time_t"));
+                            report_thread_death(
+                                name,
+                                &PyErr::other(
+                                    "OverflowError",
+                                    "timestamp out of range for platform time_t",
+                                ),
+                            );
                             return;
                         }
                         st = shared
@@ -1014,7 +1137,6 @@ pub enum NatPart {
     Num(u128),
 }
 
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -1033,7 +1155,10 @@ pub(crate) mod tests {
     pub(crate) fn platform(root: &Root, name: &str) -> Option<String> {
         // Says the skip the callers' comparison makes under `$PLATFORM`.
         crate::testing::platform_from_env();
-        root.write(device_info::MACHINE_CONF_PATH, &format!("onie_platform={name}\n"));
+        root.write(
+            device_info::MACHINE_CONF_PATH,
+            &format!("onie_platform={name}\n"),
+        );
         device_info::get_platform().unwrap()
     }
 
@@ -1051,7 +1176,11 @@ pub(crate) mod tests {
         let redis = FakeRedis::get();
         redis.install(root);
         redis.set(CONFIG_DB, "CONFIG_DB_INITIALIZED", "1");
-        redis.hset(CONFIG_DB, "DEVICE_METADATA|localhost", &[("hwsku", "SKU-E")]);
+        redis.hset(
+            CONFIG_DB,
+            "DEVICE_METADATA|localhost",
+            &[("hwsku", "SKU-E")],
+        );
         device_info::get_hwsku().unwrap()
     }
 
@@ -1083,9 +1212,24 @@ pub(crate) mod tests {
 
     #[test]
     fn natural_order_compares_numbers_as_numbers() {
-        let mut ports = vec!["Ethernet8", "Ethernet16", "Ethernet0", "Ethernet2", "Ethernet100"];
+        let mut ports = vec![
+            "Ethernet8",
+            "Ethernet16",
+            "Ethernet0",
+            "Ethernet2",
+            "Ethernet100",
+        ];
         ports.sort_by_key(|p| natsort_key(p));
-        assert_eq!(ports, vec!["Ethernet0", "Ethernet2", "Ethernet8", "Ethernet16", "Ethernet100"]);
+        assert_eq!(
+            ports,
+            vec![
+                "Ethernet0",
+                "Ethernet2",
+                "Ethernet8",
+                "Ethernet16",
+                "Ethernet100"
+            ]
+        );
         assert!(natsort_key("10a") > natsort_key("9b"));
     }
 
@@ -1128,7 +1272,10 @@ pub(crate) mod tests {
         assert_eq!(py_splitlines("a\nb\r\nc"), vec!["a", "b", "c"]);
         assert_eq!(py_splitlines("a\n"), vec!["a"]);
         let kv = key_value("PN: X\nSN : Y:Z\n", ":").unwrap();
-        assert_eq!(kv, vec![("PN".into(), "X".into()), ("SN".into(), "Y:Z".into())]);
+        assert_eq!(
+            kv,
+            vec![("PN".into(), "X".into()), ("SN".into(), "Y:Z".into())]
+        );
         assert!(key_value("PN X", ":").is_err());
     }
 
@@ -1136,10 +1283,19 @@ pub(crate) mod tests {
     fn reads_answer_the_default_or_raise_as_python_does() {
         let root = Root::new();
         // A file that is not there: the default, or the IOError.
-        assert_eq!(read_str("/x/missing", "default return", Log::Error), "default return");
-        assert_eq!(err(read_str_raise("/x/missing", Log::Error)).0, "FileNotFoundError");
+        assert_eq!(
+            read_str("/x/missing", "default return", Log::Error),
+            "default return"
+        );
+        assert_eq!(
+            err(read_str_raise("/x/missing", Log::Error)).0,
+            "FileNotFoundError"
+        );
         assert_eq!(read_int("/x/missing", 100, Log::Error), 100);
-        assert_eq!(err(read_int_raise("/x/missing", Log::Off)).0, "FileNotFoundError");
+        assert_eq!(
+            err(read_int_raise("/x/missing", Log::Off)).0,
+            "FileNotFoundError"
+        );
         assert_eq!(read_float("/x/missing", 2.5, Log::Error), 2.5);
         assert_eq!(read_float_opt("/x/missing", Log::Off), None);
         // Values are stripped and converted.
@@ -1156,7 +1312,10 @@ pub(crate) mod tests {
         assert_eq!(read_int("/x/s", 7, Log::Warning), 7);
         assert_eq!(
             err(read_int_raise("/x/s", Log::Notice)),
-            ("ValueError".into(), "invalid literal for int() with base 10: 'hello'".into())
+            (
+                "ValueError".into(),
+                "invalid literal for int() with base 10: 'hello'".into()
+            )
         );
         // Bytes the locale's codec cannot decode: UnicodeDecodeError, a
         // ValueError, so the default -- when the codec is ASCII.
@@ -1165,7 +1324,13 @@ pub(crate) mod tests {
             assert_eq!(read_str("/x/bin", "d", Log::Info), "d");
         }
         // Any other exception escapes, whatever raise_exception says.
-        let r = read_from_file("/x/s", |_| Err::<(), _>(PyErr::type_error("t")), (), false, Log::Debug);
+        let r = read_from_file(
+            "/x/s",
+            |_| Err::<(), _>(PyErr::type_error("t")),
+            (),
+            false,
+            Log::Debug,
+        );
         assert_eq!(err(r).0, "TypeError");
     }
 
@@ -1178,7 +1343,10 @@ pub(crate) mod tests {
         assert_eq!(read_str("/x/w", "", Log::Error), "hello");
         assert!(write_file("/x/w", &123, true, Log::Error).unwrap());
         assert_eq!(read_int("/x/w", 0, Log::Error), 123);
-        assert_eq!(err(write_file("/not/exist/file", &"123", true, Log::Off)).0, "FileNotFoundError");
+        assert_eq!(
+            err(write_file("/not/exist/file", &"123", true, Log::Off)).0,
+            "FileNotFoundError"
+        );
     }
 
     #[test]
@@ -1187,21 +1355,37 @@ pub(crate) mod tests {
         root.write("/x/kv", "a:b\nc : d:e\na:z\n");
         assert_eq!(
             read_key_value("/x/kv", Log::Error, ":"),
-            vec![("a".to_string(), "z".to_string()), ("c".to_string(), "d:e".to_string())]
+            vec![
+                ("a".to_string(), "z".to_string()),
+                ("c".to_string(), "d:e".to_string())
+            ]
         );
         root.write("/x/eq", "a=b");
-        assert_eq!(read_key_value("/x/eq", Log::Error, "="), vec![("a".to_string(), "b".to_string())]);
+        assert_eq!(
+            read_key_value("/x/eq", Log::Error, "="),
+            vec![("a".to_string(), "b".to_string())]
+        );
         // A line without the delimiter is a ValueError: the default, {}.
         root.write("/x/bad", "a:b\nnodelim\n");
         assert!(read_key_value("/x/bad", Log::Error, ":").is_empty());
         assert!(read_key_value("/x/missing", Log::Error, ":").is_empty());
-        assert_eq!(py_splitlines("a\x0bb\x0cc\x1cd\x1de\x1ef\rg"), vec!["a", "b", "c", "d", "e", "f", "g"]);
+        assert_eq!(
+            py_splitlines("a\x0bb\x0cc\x1cd\x1de\x1ef\rg"),
+            vec!["a", "b", "c", "d", "e", "f", "g"]
+        );
         assert!(py_splitlines("").is_empty());
     }
 
     #[test]
     fn every_log_level_and_truthiness() {
-        for l in [Log::Error, Log::Warning, Log::Notice, Log::Info, Log::Debug, Log::Off] {
+        for l in [
+            Log::Error,
+            Log::Warning,
+            Log::Notice,
+            Log::Info,
+            Log::Debug,
+            Log::Off,
+        ] {
             l.emit("utils test");
         }
         log_error("e");
@@ -1243,7 +1427,10 @@ pub(crate) mod tests {
     fn default_return_and_run_command() {
         assert_eq!(default_return(100, Ok(1), "f"), 1);
         assert_eq!(default_return(100, Err(PyErr::runtime_error("")), "f"), 100);
-        assert_eq!(run_command(&["sh", "-c", "echo ' hi '"]).as_deref(), Some("hi"));
+        assert_eq!(
+            run_command(&["sh", "-c", "echo ' hi '"]).as_deref(),
+            Some("hi")
+        );
         assert_eq!(run_command(&["not_a_command"]), None);
         assert_eq!(run_command(&[]), None);
         // Output the locale's codec cannot decode: None.
@@ -1278,7 +1465,11 @@ pub(crate) mod tests {
             0.01
         ));
         assert!(wait_until_conditions(vec![Box::new(|| true)], 1.0, 0.01));
-        assert!(!wait_until_conditions(vec![Box::new(|| true), Box::new(|| false)], 0.05, 0.01));
+        assert!(!wait_until_conditions(
+            vec![Box::new(|| true), Box::new(|| false)],
+            0.05,
+            0.01
+        ));
         assert!(!wait_until_conditions(vec![], 0.0, 0.01));
         let mut m = 0;
         assert!(wait_until_conditions(
@@ -1291,7 +1482,11 @@ pub(crate) mod tests {
         ));
         assert!(try_wait_until_conditions(vec![Box::new(|| Ok(true))], 1.0, 0.01).unwrap());
         assert!(!try_wait_until_conditions(vec![Box::new(|| Ok(false))], 0.05, 0.01).unwrap());
-        let r = try_wait_until_conditions(vec![Box::new(|| Err(PyErr::runtime_error("boom")))], 1.0, 0.01);
+        let r = try_wait_until_conditions(
+            vec![Box::new(|| Err(PyErr::runtime_error("boom")))],
+            1.0,
+            0.01,
+        );
         assert_eq!(err(r), ("RuntimeError".into(), "boom".into()));
     }
 
@@ -1361,13 +1556,27 @@ pub(crate) mod tests {
     #[test]
     fn glob_matches_in_the_last_component_in_directory_order() {
         let root = Root::new();
-        for f in ["fan1_status", "fan2_status", ".fan3_status", "fan1_speed_get"] {
+        for f in [
+            "fan1_status",
+            "fan2_status",
+            ".fan3_status",
+            "fan1_speed_get",
+        ] {
             root.write(&format!("/run/hw-management/thermal/{f}"), "1");
         }
         let mut got = glob("/run/hw-management/thermal/fan*_status");
         got.sort();
-        assert_eq!(got, ["/run/hw-management/thermal/fan1_status", "/run/hw-management/thermal/fan2_status"]);
-        assert_eq!(glob("/run/hw-management/thermal/.fan*"), ["/run/hw-management/thermal/.fan3_status"]);
+        assert_eq!(
+            got,
+            [
+                "/run/hw-management/thermal/fan1_status",
+                "/run/hw-management/thermal/fan2_status"
+            ]
+        );
+        assert_eq!(
+            glob("/run/hw-management/thermal/.fan*"),
+            ["/run/hw-management/thermal/.fan3_status"]
+        );
         assert!(glob("/nowhere/*").is_empty());
         root.write("/top_file", "");
         assert_eq!(glob("/top_f?le"), ["/top_file"]);
@@ -1381,15 +1590,26 @@ pub(crate) mod tests {
         assert!(fnmatch("b", "[!a]") && !fnmatch("a", "[!a]"));
     }
 
-
     #[test]
     fn python_reprs_and_return_codes() {
-        assert_eq!(py_list_repr(&["i2cset", "-f", "a'b"]), r#"['i2cset', '-f', "a'b"]"#);
+        assert_eq!(
+            py_list_repr(&["i2cset", "-f", "a'b"]),
+            r#"['i2cset', '-f', "a'b"]"#
+        );
         let st = Command::new("sh").args(["-c", "exit 3"]).status().unwrap();
         assert_eq!(py_returncode(&st), 3);
-        let st = Command::new("sh").args(["-c", "kill -9 $$"]).status().unwrap();
+        let st = Command::new("sh")
+            .args(["-c", "kill -9 $$"])
+            .status()
+            .unwrap();
         assert_eq!(py_returncode(&st), -9);
-        assert_eq!(err(floor_div(1, 0)), ("ZeroDivisionError".into(), "integer division or modulo by zero".into()));
+        assert_eq!(
+            err(floor_div(1, 0)),
+            (
+                "ZeroDivisionError".into(),
+                "integer division or modulo by zero".into()
+            )
+        );
         assert_eq!(floor_div(7, -2).unwrap(), -4);
         assert_eq!(floor_div(6, 3).unwrap(), 2);
         assert_eq!(round_half_even(3.5), 4);
@@ -1407,11 +1627,20 @@ pub(crate) mod tests {
         let sku = hwsku(&root);
         let base = format!("{dir}/{sku}");
         assert_eq!(get_path_to_hwsku_directory(None).unwrap(), base);
-        assert_eq!(get_path_to_hwsku_directory(Some(1)).unwrap(), format!("{base}/1"));
-        assert_eq!(get_path_list_to_asic_hwsku_dir(1).unwrap(), [format!("{base}/hwsku.json")]);
+        assert_eq!(
+            get_path_to_hwsku_directory(Some(1)).unwrap(),
+            format!("{base}/1")
+        );
+        assert_eq!(
+            get_path_list_to_asic_hwsku_dir(1).unwrap(),
+            [format!("{base}/hwsku.json")]
+        );
         assert_eq!(
             get_path_list_to_asic_hwsku_dir(2).unwrap(),
-            [format!("{base}/0/hwsku.json"), format!("{base}/1/hwsku.json")]
+            [
+                format!("{base}/0/hwsku.json"),
+                format!("{base}/1/hwsku.json")
+            ]
         );
         assert!(get_path_list_to_asic_hwsku_dir(0).unwrap().is_empty());
     }
@@ -1429,17 +1658,26 @@ pub(crate) mod tests {
         // Neither file.
         assert_eq!(extract_cpo_ports_index(1).unwrap(), None);
         // hwsku.json only.
-        root.write(&hj, r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#);
+        root.write(
+            &hj,
+            r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#,
+        );
         assert_eq!(extract_cpo_ports_index(1).unwrap(), None);
         // platform.json without an index.
         root.write(&pj, r#"{"interfaces": {"Ethernet0": {"lanes": "0"}}}"#);
         assert_eq!(extract_cpo_ports_index(1).unwrap(), None);
         // platform.json only.
         std::fs::remove_file(root.real(&hj)).unwrap();
-        root.write(&pj, r#"{"interfaces": {"Ethernet0": {"index": "1", "lanes": "0"}}}"#);
+        root.write(
+            &pj,
+            r#"{"interfaces": {"Ethernet0": {"index": "1", "lanes": "0"}}}"#,
+        );
         assert_eq!(extract_cpo_ports_index(1).unwrap(), None);
         // No port of the type.
-        root.write(&hj, r#"{"interfaces": {"Ethernet0": {"port_type": "SFP"}}}"#);
+        root.write(
+            &hj,
+            r#"{"interfaces": {"Ethernet0": {"port_type": "SFP"}}}"#,
+        );
         assert_eq!(extract_cpo_ports_index(1).unwrap(), None);
         root.write(&hj, r#"{"interfaces": {"Ethernet0": {"default_brkout_mode": "1x1000[100,10]", "port_type": "RJ45"}}}"#);
         assert_eq!(extract_rj45_ports_index(1).unwrap(), Some(vec![0]));
@@ -1457,18 +1695,39 @@ pub(crate) mod tests {
         );
         assert_eq!(extract_cpo_ports_index(1).unwrap(), Some(vec![0, 4, 8]));
         // Two ASICs: both hwsku.json files, merged.
-        root.write(&format!("{dir}/{sku}/0/hwsku.json"), r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#);
-        root.write(&format!("{dir}/{sku}/1/hwsku.json"), r#"{"interfaces": {"Ethernet8": {"port_type": "CPO"}}}"#);
+        root.write(
+            &format!("{dir}/{sku}/0/hwsku.json"),
+            r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#,
+        );
+        root.write(
+            &format!("{dir}/{sku}/1/hwsku.json"),
+            r#"{"interfaces": {"Ethernet8": {"port_type": "CPO"}}}"#,
+        );
         assert_eq!(extract_cpo_ports_index(2).unwrap(), Some(vec![0, 8]));
         // What Python's subscripts and methods raise on the wrong shapes.
         root.write(&pj, r#"{"interfaces": []}"#);
-        assert_eq!(err(extract_cpo_ports_index(1)), ("AttributeError".into(), "'list' object has no attribute 'items'".into()));
+        assert_eq!(
+            err(extract_cpo_ports_index(1)),
+            (
+                "AttributeError".into(),
+                "'list' object has no attribute 'items'".into()
+            )
+        );
         root.write(&pj, r#"{"interfaces": {"Ethernet0": {"index": 1}}}"#);
-        assert_eq!(err(extract_cpo_ports_index(1)), ("AttributeError".into(), "'int' object has no attribute 'split'".into()));
+        assert_eq!(
+            err(extract_cpo_ports_index(1)),
+            (
+                "AttributeError".into(),
+                "'int' object has no attribute 'split'".into()
+            )
+        );
         root.write(&pj, r#"{"chassis": {}}"#);
         assert_eq!(err(extract_cpo_ports_index(1)).0, "KeyError");
         root.write(&pj, r#"{"interfaces": {"Ethernet0": {"index": "x"}}}"#);
-        root.write(&hj, r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#);
+        root.write(
+            &hj,
+            r#"{"interfaces": {"Ethernet0": {"port_type": "CPO"}}}"#,
+        );
         assert_eq!(err(extract_cpo_ports_index(1)).0, "ValueError");
     }
 
@@ -1478,16 +1737,31 @@ pub(crate) mod tests {
         platform(&root, "x86_64-nvidia_sn5600-r0");
         let dir = platform_dir(&root);
         let sku = hwsku(&root);
-        root.write(&format!("{dir}/{sku}/0/hwsku.json"), r#"{"interfaces": {"Ethernet0": {}, "Ethernet4": {}}}"#);
-        root.write(&format!("{dir}/{sku}/1/hwsku.json"), r#"{"interfaces": {"Ethernet8": {}, "Ethernet4": {}}}"#);
+        root.write(
+            &format!("{dir}/{sku}/0/hwsku.json"),
+            r#"{"interfaces": {"Ethernet0": {}, "Ethernet4": {}}}"#,
+        );
+        root.write(
+            &format!("{dir}/{sku}/1/hwsku.json"),
+            r#"{"interfaces": {"Ethernet8": {}, "Ethernet4": {}}}"#,
+        );
         root.write(
             &format!("{dir}/platform.json"),
             r#"{"interfaces": {"Ethernet0": {"index": "1,1"}, "Ethernet4": {"index": "2"}, "Ethernet8": {"index": "3"},
                 "Ethernet9": {"lanes": "1"}, "Ethernet0": {"index": "1"}}}"#,
         );
-        assert_eq!(extract_asic_id_map(2).unwrap(), vec![(0, 0), (1, 1), (2, 1)]);
-        root.write(&format!("{dir}/platform.json"), r#"{"interfaces": {"Ethernet12": {"index": "4"}}}"#);
-        assert_eq!(err(extract_asic_id_map(2)), ("KeyError".into(), "'Ethernet12'".into()));
+        assert_eq!(
+            extract_asic_id_map(2).unwrap(),
+            vec![(0, 0), (1, 1), (2, 1)]
+        );
+        root.write(
+            &format!("{dir}/platform.json"),
+            r#"{"interfaces": {"Ethernet12": {"index": "4"}}}"#,
+        );
+        assert_eq!(
+            err(extract_asic_id_map(2)),
+            ("KeyError".into(), "'Ethernet12'".into())
+        );
         root.write(&format!("{dir}/{sku}/hwsku.json"), r#"{"interfaces": []}"#);
         assert_eq!(err(extract_asic_id_map(1)).0, "AttributeError");
     }
@@ -1511,7 +1785,9 @@ pub(crate) mod tests {
         let waits = vec![
             std::thread::spawn(|| wait_until(|| false, 300.0, 60.0)),
             std::thread::spawn(|| wait_until_conditions(vec![Box::new(|| false)], 300.0, 60.0)),
-            std::thread::spawn(|| try_wait_until_conditions(vec![Box::new(|| Ok(false))], 300.0, 60.0).unwrap()),
+            std::thread::spawn(|| {
+                try_wait_until_conditions(vec![Box::new(|| Ok(false))], 300.0, 60.0).unwrap()
+            }),
         ];
         sleep(Duration::from_millis(200));
         notify_shutdown();
@@ -1523,7 +1799,11 @@ pub(crate) mod tests {
         assert!(wait_until(|| true, 300.0, 60.0));
         assert!(wait_until_conditions(vec![Box::new(|| true)], 300.0, 60.0));
         assert!(!wait_until(|| false, 300.0, 60.0));
-        assert!(started.elapsed() < Duration::from_secs(10), "{:?}", started.elapsed());
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "{:?}",
+            started.elapsed()
+        );
     }
 
     #[test]
@@ -1565,7 +1845,10 @@ pub(crate) mod tests {
 
     #[test]
     fn splitlines_breaks_where_python_s_str_splitlines_does() {
-        assert_eq!(py_splitlines("a\u{85}b\u{2028}c\u{2029}d\x0be\r\nf\n"), ["a", "b", "c", "d", "e", "f"]);
+        assert_eq!(
+            py_splitlines("a\u{85}b\u{2028}c\u{2029}d\x0be\r\nf\n"),
+            ["a", "b", "c", "d", "e", "f"]
+        );
     }
 
     #[test]

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/db_table_helper.py`: STATE_DB and APPL_DB tables, one set
 //! per thread.
 //!
@@ -93,9 +92,19 @@ mod tests {
         let redis = FakeRedis::get();
         redis.install(&root);
         redis.flush();
-        assert_eq!(table_hget(TRANSCEIVER_INFO_TABLE, "Ethernet0", "type").unwrap(), (false, None));
-        redis.hset(STATE_DB, "TRANSCEIVER_INFO|Ethernet0", &[("type", "QSFP56")]);
-        assert_eq!(table_hget(TRANSCEIVER_INFO_TABLE, "Ethernet0", "type").unwrap(), (true, Some("QSFP56".into())));
+        assert_eq!(
+            table_hget(TRANSCEIVER_INFO_TABLE, "Ethernet0", "type").unwrap(),
+            (false, None)
+        );
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_INFO|Ethernet0",
+            &[("type", "QSFP56")],
+        );
+        assert_eq!(
+            table_hget(TRANSCEIVER_INFO_TABLE, "Ethernet0", "type").unwrap(),
+            (true, Some("QSFP56".into()))
+        );
         assert!(!appl_db_exists("", "PORT_TABLE:Ethernet0").unwrap());
         redis.hset(APPL_DB, "PORT_TABLE:Ethernet0", &[("admin_status", "up")]);
         assert!(appl_db_exists("", "PORT_TABLE:Ethernet0").unwrap());

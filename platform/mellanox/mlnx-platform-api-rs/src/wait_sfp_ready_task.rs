@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! `sonic_platform/wait_sfp_ready_task.py`: a thread that holds modules for
 //! the 3 seconds their firmware takes to load after a reset, and hands them
 //! back as a set.
@@ -64,8 +62,14 @@ pub fn get() -> Arc<WaitSfpReadyTask> {
     TASK.get_or_init(|| {
         crate::imports::wait_sfp_ready_task();
         Arc::new(WaitSfpReadyTask {
-            inner: Mutex::new(Inner { wait: Vec::new(), ready: IntSet::new() }),
-            event: Event { flag: Mutex::new(false), cv: Condvar::new() },
+            inner: Mutex::new(Inner {
+                wait: Vec::new(),
+                ready: IntSet::new(),
+            }),
+            event: Event {
+                flag: Mutex::new(false),
+                cv: Condvar::new(),
+            },
             started_once: Mutex::new(false),
             alive: Mutex::new(false),
         })
@@ -151,7 +155,11 @@ impl WaitSfpReadyTask {
                 // `event.wait(); event.clear()`
                 let mut f = utils::lock(&self.event.flag);
                 while !*f {
-                    f = self.event.cv.wait(f).unwrap_or_else(std::sync::PoisonError::into_inner);
+                    f = self
+                        .event
+                        .cv
+                        .wait(f)
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
                 }
                 *f = false;
             }
@@ -160,7 +168,9 @@ impl WaitSfpReadyTask {
                 let mut g = utils::lock(&self.inner);
                 // `pending_remove_set` is a set too, so what is due joins
                 // the ready set in that set's order.
-                let due = IntSet::from_iter_ordered(g.wait.iter().filter(|(_, t)| now >= *t).map(|(i, _)| *i));
+                let due = IntSet::from_iter_ordered(
+                    g.wait.iter().filter(|(_, t)| now >= *t).map(|(i, _)| *i),
+                );
                 for i in due.iter() {
                     g.wait.retain(|(k, _)| *k != i);
                     g.ready.add(i);
@@ -177,8 +187,14 @@ impl WaitSfpReadyTask {
     /// A task of its own, apart from the process's.
     pub(crate) fn new_for_test() -> Arc<WaitSfpReadyTask> {
         Arc::new(WaitSfpReadyTask {
-            inner: Mutex::new(Inner { wait: Vec::new(), ready: IntSet::new() }),
-            event: Event { flag: Mutex::new(false), cv: Condvar::new() },
+            inner: Mutex::new(Inner {
+                wait: Vec::new(),
+                ready: IntSet::new(),
+            }),
+            event: Event {
+                flag: Mutex::new(false),
+                cv: Condvar::new(),
+            },
             started_once: Mutex::new(false),
             alive: Mutex::new(false),
         })
@@ -186,7 +202,10 @@ impl WaitSfpReadyTask {
 
     /// `_wait_dict`'s ports.
     pub(crate) fn waiting(&self) -> Vec<u64> {
-        self.inner.lock().map(|g| g.wait.iter().map(|(i, _)| *i).collect()).unwrap_or_default()
+        self.inner
+            .lock()
+            .map(|g| g.wait.iter().map(|(i, _)| *i).collect())
+            .unwrap_or_default()
     }
 
     /// `_ready_set.add(index)`, as the thread does when a wait is over.

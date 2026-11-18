@@ -108,3 +108,24 @@ platform-base's `tests/data/README.md`).
   `MODE=daemon` runs whole daemons the same way.
 - **Hardware:** a SmartSwitch (A/B of all six daemons in both orders) and a
   liquid-cooled switch with a BMC (read-only API subset).
+
+
+The reviewed Python source baseline is recorded in `python_port_manifest.json`
+(upstream commit `6bbb706304e74f2599ce760b31358aa871767808`). The build checks AST fingerprints before native
+tests, and the cache key includes the Python source files. After a Python change,
+review its Rust counterpart and its tests before refreshing that entry. The
+build also checks the PyO3 requirement against `platform-pyo3`.
+
+The NVMe PCI-class matcher and SPC1 mlxsw-ready-file wait follow the current
+Python implementation. Component firmware operations honor the per-HwSKU BMC OS,
+and SimX does not wait for a hardware reboot flag that may never appear.
+
+The SFP presence/readiness path uses the raw single-attempt EEPROM read. The
+public transceiver EEPROM transport/retry API is not a native pmon capability;
+unported declared APIs explicitly return `NotSupported`. Components, watchdog,
+BMC and SFP event objects remain to support the declared platform surface and
+its tests, and are covered by the source drift gate.
+
+BMC NOS-account provisioning intentionally omits the vendor client's stdout
+and exception text from syslog. The login result is still checked; this avoids
+copying credential-bearing client output into the daemon log.

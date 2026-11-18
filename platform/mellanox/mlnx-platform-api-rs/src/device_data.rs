@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/device_data.py`: the per-platform table and
 //! `DeviceDataManager`.
 //!
@@ -51,7 +50,11 @@ pub struct PlatformData {
 pub fn device_data(platform: &str) -> Option<PlatformData> {
     const NO_COMEX: &[(&str, bool)] = &[("comex_amb", false)];
     const NO_CPU_PACK_COMEX: &[(&str, bool)] = &[("cpu_pack", false), ("comex_amb", false)];
-    const LD: &[(&str, bool)] = &[("port_amb", false), ("fan_amb", false), ("comex_amb", false)];
+    const LD: &[(&str, bool)] = &[
+        ("port_amb", false),
+        ("fan_amb", false),
+        ("comex_amb", false),
+    ];
     let thermal = |cap: &'static [(&'static str, bool)]| PlatformData {
         thermal_capability: Some(cap),
         has_thermal: true,
@@ -69,9 +72,14 @@ pub fn device_data(platform: &str) -> Option<PlatformData> {
         },
         "x86_64-mlnx_msn2410-r0" => thermal(NO_COMEX),
         "x86_64-mlnx_msn4700_simx-r0" => thermal(&[("cpu_pack", false)]),
-        "x86_64-mlnx_msn3700-r0" | "x86_64-mlnx_msn3700c-r0" | "x86_64-mlnx_msn3800-r0"
-        | "x86_64-mlnx_msn4700-r0" | "x86_64-mlnx_msn4410-r0" | "x86_64-mlnx_msn3420-r0"
-        | "x86_64-mlnx_msn4600c-r0" | "x86_64-mlnx_msn4600-r0" => PlatformData::default(),
+        "x86_64-mlnx_msn3700-r0"
+        | "x86_64-mlnx_msn3700c-r0"
+        | "x86_64-mlnx_msn3800-r0"
+        | "x86_64-mlnx_msn4700-r0"
+        | "x86_64-mlnx_msn4410-r0"
+        | "x86_64-mlnx_msn3420-r0"
+        | "x86_64-mlnx_msn4600c-r0"
+        | "x86_64-mlnx_msn4600-r0" => PlatformData::default(),
         "x86_64-nvidia_sn4280-r0" => thermal(NO_COMEX),
         "x86_64-nvidia_sn4800-r0" => PlatformData {
             max_port_per_line_card: Some(16),
@@ -95,8 +103,11 @@ pub fn device_data(platform: &str) -> Option<PlatformData> {
             has_sfp: true,
             ..thermal(NO_COMEX)
         },
-        "x86_64-nvidia_sn5640_simx-r0" | "x86_64-nvidia_sn4280_simx-r0" => thermal(NO_CPU_PACK_COMEX),
-        "x86_64-nvidia_sn6600_ld-r0" | "x86_64-nvidia_sn6810_ld-r0"
+        "x86_64-nvidia_sn5640_simx-r0" | "x86_64-nvidia_sn4280_simx-r0" => {
+            thermal(NO_CPU_PACK_COMEX)
+        }
+        "x86_64-nvidia_sn6600_ld-r0"
+        | "x86_64-nvidia_sn6810_ld-r0"
         | "x86_64-nvidia_sn6810_ld_simx-r0" => thermal(LD),
         _ => return None,
     })
@@ -180,8 +191,8 @@ pub fn get_sfp_count() -> PyResult<i128> {
     static C: ReadOnlyCache<i128> = ReadOnlyCache::new();
     C.try_get(|| {
         let dir = device_info::get_path_to_platform_dir()?;
-        let data = utils::load_json_file(&io::join(&dir, "platform.json"), Log::Error)
-            .unwrap_or_default();
+        let data =
+            utils::load_json_file(&io::join(&dir, "platform.json"), Log::Error).unwrap_or_default();
         let sfps = json::index(json::index(&data, "chassis")?, "sfps")?;
         Ok(platform_base::py::ops::len(sfps)? as i128)
     })
@@ -189,7 +200,11 @@ pub fn get_sfp_count() -> PyResult<i128> {
 
 /// `get_linecard_sfp_count(lc_index)`.
 pub fn get_linecard_sfp_count(lc_index: i128) -> i128 {
-    utils::read_int(&format!("{HW}/lc{lc_index}/config/module_counter"), 0, Log::Off)
+    utils::read_int(
+        &format!("{HW}/lc{lc_index}/config/module_counter"),
+        0,
+        Log::Off,
+    )
 }
 
 /// `get_gearbox_count(sysfs_folder)`.
@@ -238,7 +253,8 @@ pub fn get_platform_dpus_data() -> PyResult<Option<PyVal>> {
         let dir = device_info::get_path_to_platform_dir()?;
         // `json_data.get('DPUS', None)`: a file that will not load is None,
         // and neither it nor a top level other than an object has `get`.
-        let data = utils::load_json_file(&io::join(&dir, "platform.json"), Log::Error).unwrap_or(PyVal::None);
+        let data = utils::load_json_file(&io::join(&dir, "platform.json"), Log::Error)
+            .unwrap_or(PyVal::None);
         match &data {
             PyVal::Dict(_) => Ok(json::get(&data, "DPUS").cloned()),
             other => Err(platform_base::PyErr::missing(&other.type_name(), "get")),
@@ -261,17 +277,26 @@ pub fn get_dpu_count() -> PyResult<usize> {
 pub fn is_module_host_management_mode() -> PyResult<bool> {
     static C: ReadOnlyCache<bool> = ReadOnlyCache::new();
     C.try_get(|| {
-        let asic_id = if is_multi_asic_platform()? { Some(0) } else { None };
+        let asic_id = if is_multi_asic_platform()? {
+            Some(0)
+        } else {
+            None
+        };
         let dir = utils::get_path_to_hwsku_directory(asic_id)?;
         let data = utils::read_key_value(&io::join(&dir, "sai.profile"), Log::Error, "=");
-        Ok(data.iter().any(|(k, v)| k == "SAI_INDEPENDENT_MODULE_MODE" && v == "1"))
+        Ok(data
+            .iter()
+            .any(|(k, v)| k == "SAI_INDEPENDENT_MODULE_MODE" && v == "1"))
     })
 }
 
 /// `is_platform_with_bmc()`.
 pub fn is_platform_with_bmc() -> PyResult<bool> {
     static C: ReadOnlyCache<bool> = ReadOnlyCache::new();
-    C.try_get(|| Ok(device_info::is_switch_host()? && device_info::get_bmc_data().is_some_and(|d| d.truthy())))
+    C.try_get(|| {
+        Ok(device_info::is_switch_host()?
+            && device_info::get_bmc_data().is_some_and(|d| d.truthy()))
+    })
 }
 
 /// `get_watchdog_max_period()`.
@@ -356,15 +381,63 @@ mod tests {
     /// period, SFP line card ports and FW-controlled ports.
     #[test]
     fn the_table_is_pythons() {
-        type Row = (&'static str, Option<&'static [(&'static str, bool)]>, Option<i128>, Option<i128>, Option<&'static [i128]>);
+        type Row = (
+            &'static str,
+            Option<&'static [(&'static str, bool)]>,
+            Option<i128>,
+            Option<i128>,
+            Option<&'static [i128]>,
+        );
         let rows: &[Row] = &[
-            ("x86_64-mlnx_msn2700-r0", Some(&[("comex_amb", false)]), None, None, None),
-            ("x86_64-mlnx_msn2700a1-r0", Some(&[("comex_amb", true)]), None, None, None),
-            ("x86_64-mlnx_msn2740-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-mlnx_msn2100-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), Some(32), None, None),
-            ("x86_64-mlnx_msn2410-r0", Some(&[("comex_amb", false)]), None, None, None),
-            ("x86_64-mlnx_msn2010-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), Some(32), None, None),
-            ("x86_64-mlnx_msn4700_simx-r0", Some(&[("cpu_pack", false)]), None, None, None),
+            (
+                "x86_64-mlnx_msn2700-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn2700a1-r0",
+                Some(&[("comex_amb", true)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn2740-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn2100-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                Some(32),
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn2410-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn2010-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                Some(32),
+                None,
+                None,
+            ),
+            (
+                "x86_64-mlnx_msn4700_simx-r0",
+                Some(&[("cpu_pack", false)]),
+                None,
+                None,
+                None,
+            ),
             ("x86_64-mlnx_msn3700-r0", None, None, None, None),
             ("x86_64-mlnx_msn3700c-r0", None, None, None, None),
             ("x86_64-mlnx_msn3800-r0", None, None, None, None),
@@ -373,19 +446,109 @@ mod tests {
             ("x86_64-mlnx_msn3420-r0", None, None, None, None),
             ("x86_64-mlnx_msn4600c-r0", None, None, None, None),
             ("x86_64-mlnx_msn4600-r0", None, None, None, None),
-            ("x86_64-nvidia_sn4280-r0", Some(&[("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn4800-r0", Some(&[("comex_amb", false)]), None, Some(16), None),
-            ("x86_64-nvidia_sn2201-r0", Some(&[("comex_amb", false), ("cpu_amb", true)]), None, None, None),
-            ("x86_64-nvidia_sn5400-r0", Some(&[("comex_amb", false), ("pch_temp", true)]), None, None, Some(&[64, 65])),
-            ("x86_64-nvidia_sn5600-r0", Some(&[("comex_amb", false), ("pch_temp", true)]), None, None, Some(&[64])),
-            ("x86_64-nvidia_sn5600_simx-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn5610n-r0", Some(&[("comex_amb", false)]), None, None, Some(&[64, 65])),
-            ("x86_64-nvidia_sn5640-r0", Some(&[("comex_amb", false)]), None, None, Some(&[64, 65])),
-            ("x86_64-nvidia_sn5640_simx-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn6600_ld-r0", Some(&[("port_amb", false), ("fan_amb", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn4280_simx-r0", Some(&[("cpu_pack", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn6810_ld-r0", Some(&[("port_amb", false), ("fan_amb", false), ("comex_amb", false)]), None, None, None),
-            ("x86_64-nvidia_sn6810_ld_simx-r0", Some(&[("port_amb", false), ("fan_amb", false), ("comex_amb", false)]), None, None, None),
+            (
+                "x86_64-nvidia_sn4280-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn4800-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                Some(16),
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn2201-r0",
+                Some(&[("comex_amb", false), ("cpu_amb", true)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn5400-r0",
+                Some(&[("comex_amb", false), ("pch_temp", true)]),
+                None,
+                None,
+                Some(&[64, 65]),
+            ),
+            (
+                "x86_64-nvidia_sn5600-r0",
+                Some(&[("comex_amb", false), ("pch_temp", true)]),
+                None,
+                None,
+                Some(&[64]),
+            ),
+            (
+                "x86_64-nvidia_sn5600_simx-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn5610n-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                None,
+                Some(&[64, 65]),
+            ),
+            (
+                "x86_64-nvidia_sn5640-r0",
+                Some(&[("comex_amb", false)]),
+                None,
+                None,
+                Some(&[64, 65]),
+            ),
+            (
+                "x86_64-nvidia_sn5640_simx-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn6600_ld-r0",
+                Some(&[
+                    ("port_amb", false),
+                    ("fan_amb", false),
+                    ("comex_amb", false),
+                ]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn4280_simx-r0",
+                Some(&[("cpu_pack", false), ("comex_amb", false)]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn6810_ld-r0",
+                Some(&[
+                    ("port_amb", false),
+                    ("fan_amb", false),
+                    ("comex_amb", false),
+                ]),
+                None,
+                None,
+                None,
+            ),
+            (
+                "x86_64-nvidia_sn6810_ld_simx-r0",
+                Some(&[
+                    ("port_amb", false),
+                    ("fan_amb", false),
+                    ("comex_amb", false),
+                ]),
+                None,
+                None,
+                None,
+            ),
         ];
         for (p, cap, wd, lc, fw) in rows {
             let d = device_data(p).unwrap();
@@ -412,10 +575,16 @@ mod tests {
     #[test]
     fn answers_from_the_platform_name() {
         on("x86_64-mlnx_msn2700-r0", || {
-            assert_eq!(get_platform_name().unwrap().as_deref(), Some("x86_64-mlnx_msn2700-r0"));
+            assert_eq!(
+                get_platform_name().unwrap().as_deref(),
+                Some("x86_64-mlnx_msn2700-r0")
+            );
             assert!(!is_simx_platform().unwrap());
             assert!(is_spc1().unwrap());
-            assert_eq!(get_thermal_capability().unwrap(), Some(&[("comex_amb", false)][..]));
+            assert_eq!(
+                get_thermal_capability().unwrap(),
+                Some(&[("comex_amb", false)][..])
+            );
             assert_eq!(get_watchdog_max_period().unwrap(), Some(DEFAULT_WD_PERIOD));
             assert_eq!(get_always_fw_control_ports().unwrap(), None);
             assert_eq!(get_linecard_max_port_count().unwrap(), 0);
@@ -425,7 +594,9 @@ mod tests {
             assert!(!is_spc1().unwrap());
         });
         on("x86_64-mlnx_msn2700a1-r0", || assert!(is_spc1().unwrap()));
-        on("x86_64-nvidia_sn5600-r0", || assert_eq!(get_always_fw_control_ports().unwrap(), Some(&[64][..])));
+        on("x86_64-nvidia_sn5600-r0", || {
+            assert_eq!(get_always_fw_control_ports().unwrap(), Some(&[64][..]))
+        });
         on("x86_64-nvidia_sn4800-r0", || {
             assert_eq!(get_linecard_max_port_count().unwrap(), 16);
             assert_eq!(get_always_fw_control_ports().unwrap(), None);
@@ -435,7 +606,9 @@ mod tests {
             assert_eq!(get_linecard_max_port_count().unwrap(), 0);
             assert_eq!(get_watchdog_max_period().unwrap(), Some(DEFAULT_WD_PERIOD));
         });
-        on("x86_64-nvidia_sn5640_simx-r0", || assert!(is_simx_platform().unwrap()));
+        on("x86_64-nvidia_sn5640_simx-r0", || {
+            assert!(is_simx_platform().unwrap())
+        });
         on("x86_64-nvidia_unknown-r0", || {
             assert_eq!(get_thermal_capability().unwrap(), None);
             assert_eq!(get_watchdog_max_period().unwrap(), Some(DEFAULT_WD_PERIOD));
@@ -513,17 +686,31 @@ mod tests {
         // No platform at all: `os.path.join(..., None)`.
         if device_info::get_platform().unwrap().is_none() {
             assert_eq!(get_sfp_count().unwrap_err().exc.name(), "TypeError");
-            assert_eq!(get_platform_dpus_data().unwrap_err().exc.name(), "TypeError");
+            assert_eq!(
+                get_platform_dpus_data().unwrap_err().exc.name(),
+                "TypeError"
+            );
             assert_eq!(get_dpu_count().unwrap_err().exc.name(), "TypeError");
         }
-        let Some(_) = platform(&root, "x86_64-nvidia_sn4280-r0") else { return };
+        let Some(_) = platform(&root, "x86_64-nvidia_sn4280-r0") else {
+            return;
+        };
         let dir = platform_dir(&root);
         // No platform.json: load_json_file's None, subscripted or `.get`.
         forget_caches();
         assert_eq!(get_sfp_count().unwrap_err().exc.name(), "TypeError");
         let e = get_platform_dpus_data().unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("AttributeError", "'NoneType' object has no attribute 'get'".to_string()));
-        root.write(&format!("{dir}/platform.json"), r#"{"chassis": {"name": "x"}}"#);
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "AttributeError",
+                "'NoneType' object has no attribute 'get'".to_string()
+            )
+        );
+        root.write(
+            &format!("{dir}/platform.json"),
+            r#"{"chassis": {"name": "x"}}"#,
+        );
         forget_caches();
         assert_eq!(get_sfp_count().unwrap_err().str(), "'sfps'");
         assert_eq!(get_platform_dpus_data().unwrap(), None);
@@ -542,28 +729,57 @@ mod tests {
         assert_eq!(get_sfp_count().unwrap(), 3);
         assert_eq!(get_dpu_count().unwrap(), 3);
         // What `len()` and `.get` make of values that are not what is meant.
-        root.write(&format!("{dir}/platform.json"), r#"{"chassis": {"sfps": null}, "DPUS": 2}"#);
+        root.write(
+            &format!("{dir}/platform.json"),
+            r#"{"chassis": {"sfps": null}, "DPUS": 2}"#,
+        );
         forget_caches();
         let err = |e: platform_base::PyErr| (e.exc.name().to_string(), e.str());
-        assert_eq!(err(get_sfp_count().unwrap_err()), ("TypeError".into(), "object of type 'NoneType' has no len()".into()));
-        assert_eq!(err(get_dpu_count().unwrap_err()), ("TypeError".into(), "object of type 'int' has no len()".into()));
+        assert_eq!(
+            err(get_sfp_count().unwrap_err()),
+            (
+                "TypeError".into(),
+                "object of type 'NoneType' has no len()".into()
+            )
+        );
+        assert_eq!(
+            err(get_dpu_count().unwrap_err()),
+            (
+                "TypeError".into(),
+                "object of type 'int' has no len()".into()
+            )
+        );
         root.write(&format!("{dir}/platform.json"), "[1]");
         forget_caches();
-        assert_eq!(err(get_platform_dpus_data().unwrap_err()), ("AttributeError".into(), "'list' object has no attribute 'get'".into()));
+        assert_eq!(
+            err(get_platform_dpus_data().unwrap_err()),
+            (
+                "AttributeError".into(),
+                "'list' object has no attribute 'get'".into()
+            )
+        );
     }
 
     #[test]
     fn module_host_management_mode_is_in_sai_profile() {
         let root = Root::new();
-        let Some(_) = platform(&root, "x86_64-nvidia_sn5600-r0") else { return };
+        let Some(_) = platform(&root, "x86_64-nvidia_sn5600-r0") else {
+            return;
+        };
         let dir = platform_dir(&root);
         let sku = hwsku(&root);
         assert_eq!(get_asic_count().unwrap(), 1);
         assert!(!is_multi_asic_platform().unwrap());
         assert!(!is_module_host_management_mode().unwrap());
-        root.write(&format!("{dir}/{sku}/sai.profile"), "SAI_INDEPENDENT_MODULE_MODE=0\n");
+        root.write(
+            &format!("{dir}/{sku}/sai.profile"),
+            "SAI_INDEPENDENT_MODULE_MODE=0\n",
+        );
         assert!(!is_module_host_management_mode().unwrap());
-        root.write(&format!("{dir}/{sku}/sai.profile"), "SAI_KEY=1\nSAI_INDEPENDENT_MODULE_MODE=1\n");
+        root.write(
+            &format!("{dir}/{sku}/sai.profile"),
+            "SAI_KEY=1\nSAI_INDEPENDENT_MODULE_MODE=1\n",
+        );
         assert!(is_module_host_management_mode().unwrap());
         // A multi-ASIC platform reads ASIC 0's.
         root.write(&format!("{dir}/asic.conf"), "NUM_ASIC=2\n");
@@ -571,22 +787,37 @@ mod tests {
         assert_eq!(get_asic_count().unwrap(), 2);
         assert!(is_multi_asic_platform().unwrap());
         assert!(!is_module_host_management_mode().unwrap());
-        root.write(&format!("{dir}/{sku}/0/sai.profile"), "SAI_INDEPENDENT_MODULE_MODE=1\n");
+        root.write(
+            &format!("{dir}/{sku}/0/sai.profile"),
+            "SAI_INDEPENDENT_MODULE_MODE=1\n",
+        );
         assert!(is_module_host_management_mode().unwrap());
         // asic.conf without num_asic: Python's UnboundLocalError.
         root.write(&format!("{dir}/asic.conf"), "OTHER=1\n");
         forget_caches();
-        assert_eq!(get_asic_count().unwrap_err().exc.name(), "UnboundLocalError");
-        assert_eq!(is_module_host_management_mode().unwrap_err().exc.name(), "UnboundLocalError");
+        assert_eq!(
+            get_asic_count().unwrap_err().exc.name(),
+            "UnboundLocalError"
+        );
+        assert_eq!(
+            is_module_host_management_mode().unwrap_err().exc.name(),
+            "UnboundLocalError"
+        );
     }
 
     #[test]
     fn a_bmc_platform_is_a_switch_host_with_bmc_data() {
         let root = Root::new();
         assert!(!is_platform_with_bmc().unwrap());
-        root.write("/usr/share/sonic/platform/platform_env.conf", "switch_host=1\n");
+        root.write(
+            "/usr/share/sonic/platform/platform_env.conf",
+            "switch_host=1\n",
+        );
         assert!(!is_platform_with_bmc().unwrap());
-        root.write(device_info::GLOBAL_BMC_DATA_FILE, r#"{"bmc_addr": "169.254.0.1"}"#);
+        root.write(
+            device_info::GLOBAL_BMC_DATA_FILE,
+            r#"{"bmc_addr": "169.254.0.1"}"#,
+        );
         assert!(is_platform_with_bmc().unwrap());
     }
 
@@ -598,18 +829,37 @@ mod tests {
         let env = "/usr/share/sonic/platform/platform_env.conf";
         root.write(env, "");
         std::fs::write(root.real(env), b"switch_host=1\xff\n").unwrap();
-        root.write(device_info::GLOBAL_BMC_DATA_FILE, r#"{"bmc_addr": "169.254.0.1"}"#);
-        assert_eq!(is_platform_with_bmc().unwrap_err().exc.name(), "UnicodeDecodeError");
+        root.write(
+            device_info::GLOBAL_BMC_DATA_FILE,
+            r#"{"bmc_addr": "169.254.0.1"}"#,
+        );
+        assert_eq!(
+            is_platform_with_bmc().unwrap_err().exc.name(),
+            "UnicodeDecodeError"
+        );
         root.write(env, "switch_host=1\n");
         assert!(is_platform_with_bmc().unwrap());
         let simx = "x86_64-nvidia_sn5640_simx-r0";
         if platform(&root, simx).as_deref() != Some(simx) {
             return;
         }
-        std::fs::write(root.real(device_info::MACHINE_CONF_PATH), b"onie_platform=\xff\n").unwrap();
-        assert_eq!(get_platform_name().unwrap_err().exc.name(), "UnicodeDecodeError");
-        assert_eq!(is_simx_platform().unwrap_err().exc.name(), "UnicodeDecodeError");
-        root.write(device_info::MACHINE_CONF_PATH, &format!("onie_platform={simx}\n"));
+        std::fs::write(
+            root.real(device_info::MACHINE_CONF_PATH),
+            b"onie_platform=\xff\n",
+        )
+        .unwrap();
+        assert_eq!(
+            get_platform_name().unwrap_err().exc.name(),
+            "UnicodeDecodeError"
+        );
+        assert_eq!(
+            is_simx_platform().unwrap_err().exc.name(),
+            "UnicodeDecodeError"
+        );
+        root.write(
+            device_info::MACHINE_CONF_PATH,
+            &format!("onie_platform={simx}\n"),
+        );
         assert!(is_simx_platform().unwrap());
     }
 
@@ -625,7 +875,9 @@ mod tests {
         // not available unprivileged): a broken link is not there at all.
         std::os::unix::fs::symlink("/nowhere", root.real("/x/broken")).unwrap();
         assert!(!check_sysfs_access("/x/broken"));
-        let Some(_) = platform(&root, "x86_64-nvidia_sn5600-r0") else { return };
+        let Some(_) = platform(&root, "x86_64-nvidia_sn5600-r0") else {
+            return;
+        };
         let dir = platform_dir(&root);
         let sku = hwsku(&root);
         for m in 0..2 {
@@ -636,7 +888,10 @@ mod tests {
         assert!(wait_sysfs_ready(2).unwrap());
         assert!(wait_sysfs_ready(0).unwrap());
         // Host management also waits for control and power_on.
-        root.write(&format!("{dir}/{sku}/sai.profile"), "SAI_INDEPENDENT_MODULE_MODE=1\n");
+        root.write(
+            &format!("{dir}/{sku}/sai.profile"),
+            "SAI_INDEPENDENT_MODULE_MODE=1\n",
+        );
         forget_caches();
         for m in 0..2 {
             for n in ["control", "power_on"] {

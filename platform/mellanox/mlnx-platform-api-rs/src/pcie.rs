@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/pcie.py`: pcie.yaml checked by device id rather than by
 //! bus, since a BIOS update can renumber buses; and a SmartSwitch's DPUs
 //! checked against what chassisd has detached.
@@ -23,16 +22,18 @@
 use std::sync::{Arc, Mutex};
 
 use platform_base::db::Db;
-use platform_base::logger::Logger;
-use platform_base::redfish_client::is_exception;
 use platform_base::io;
+use platform_base::logger::Logger;
 use platform_base::pcie::{self, PcieApi, PcieUtil};
 use platform_base::py::{PyErr, PyResult, PyVal};
+use platform_base::redfish_client::is_exception;
 use regex::Regex;
 
 use crate::device_data;
 
 const SYSFS_PCI_DEVICE_PATH: &str = "/sys/bus/pci/devices/";
+type NvmeSlot = (String, String, String);
+
 const PCIE_DETACH_INFO_TABLE: &str = "PCIE_DETACH_INFO";
 const PCIE_OPERATION_DETACHING: &str = "detaching";
 
@@ -42,6 +43,8 @@ pub struct Pcie {
     /// `_device_id_to_bus_map`: `"<id>:<dev>"` to bus, from sysfs.
     device_id_to_bus: Vec<(String, String)>,
     dpu_pcie_devices: Vec<String>,
+    nvme_devices: Vec<NvmeSlot>,
+    nvme_names: Vec<(NvmeSlot, String)>,
     state_db: Mutex<Option<Arc<Db>>>,
     /// `self.logger = logger.Logger()`, made last in `__init__`.
     logger: Logger,
@@ -57,13 +60,27 @@ impl Pcie {
         crate::imports::device_data();
         let base = PcieUtil::new(platform_path);
         let device_id_to_bus = create_device_id_to_bus_map(&base)?;
+        let (nvme_devices, nvme_names) = create_nvme_device_list()?;
         let dpu_pcie_devices = get_dpu_pcie_devices()?;
-        Ok(Pcie { base, device_id_to_bus, dpu_pcie_devices, state_db: Mutex::new(None), logger: Logger::new(None) })
+        Ok(Pcie {
+            base,
+            device_id_to_bus,
+            dpu_pcie_devices,
+            nvme_devices,
+            nvme_names,
+            state_db: Mutex::new(None),
+            logger: Logger::new(None),
+        })
     }
 
     /// `pcie_check_dpu(bus, dev, fn)`: None for a device being detached --
     /// or for one whose check raised, which is logged and left out.
-    fn pcie_check_dpu(&self, bus: &PyVal, dev: &PyVal, func: &PyVal) -> PyResult<Option<&'static str>> {
+    fn pcie_check_dpu(
+        &self,
+        bus: &PyVal,
+        dev: &PyVal,
+        func: &PyVal,
+    ) -> PyResult<Option<&'static str>> {
         let r = (|| -> PyResult<Option<&'static str>> {
             let db = {
                 let mut slot = crate::utils::lock(&self.state_db);
@@ -76,12 +93,26 @@ impl Pcie {
                     }
                 }
             };
-            let key = format!("{PCIE_DETACH_INFO_TABLE}|0000:{}:{}.{}", bus.py_str(), dev.py_str(), func.py_str());
+            let key = format!(
+                "{PCIE_DETACH_INFO_TABLE}|0000:{}:{}.{}",
+                bus.py_str(),
+                dev.py_str(),
+                func.py_str()
+            );
             let info = db.hgetall(&key)?;
-            if !info.is_empty() && info.iter().any(|(k, v)| k == "dpu_state" && v == PCIE_OPERATION_DETACHING) {
+            if !info.is_empty()
+                && info
+                    .iter()
+                    .any(|(k, v)| k == "dpu_state" && v == PCIE_OPERATION_DETACHING)
+            {
                 return Ok(None);
             }
-            if self.base.check_pcie_sysfs(0, pcie::int_hex(bus)?, pcie::int_hex(dev)?, pcie::int_hex(func)?) {
+            if self.base.check_pcie_sysfs(
+                0,
+                pcie::int_hex(bus)?,
+                pcie::int_hex(dev)?,
+                pcie::int_hex(func)?,
+            ) {
                 return Ok(Some("Passed"));
             }
             Ok(Some("Failed"))
@@ -104,7 +135,9 @@ fn create_device_id_to_bus_map(base: &PcieUtil) -> PyResult<Vec<(String, String)
     let re = Regex::new(r"....:(..):(..)\..").map_err(|e| PyErr::runtime_error(e.to_string()))?;
     let mut map: Vec<(String, String)> = Vec::new();
     for folder in io::listdir(SYSFS_PCI_DEVICE_PATH)? {
-        let Some(c) = re.captures(&folder) else { continue };
+        let Some(c) = re.captures(&folder) else {
+            continue;
+        };
         let (bus, dev) = (c[1].to_string(), c[2].to_string());
         let path = io::join(&io::join("/sys/bus/pci/devices", &folder), "device");
         let id = platform_base::py::strip(&io::read_text(&path)?).replace("0x", "");
@@ -115,6 +148,61 @@ fn create_device_id_to_bus_map(base: &PcieUtil) -> PyResult<Vec<(String, String)
         }
     }
     Ok(map)
+}
+
+type NvmeInventory = (Vec<NvmeSlot>, Vec<(NvmeSlot, String)>);
+
+/// Match replacement NVMe SSDs by PCI class, preserving the fitted device name.
+fn create_nvme_device_list() -> PyResult<NvmeInventory> {
+    let re = Regex::new(r"....:(..):(..)\.(.)")
+        .map_err(|error| PyErr::runtime_error(error.to_string()))?;
+    let mut folders = Vec::new();
+    for folder in io::listdir(SYSFS_PCI_DEVICE_PATH)? {
+        let Some(captures) = re.captures(&folder) else {
+            continue;
+        };
+        let class = io::read_text(&io::join(
+            &io::join(SYSFS_PCI_DEVICE_PATH, &folder),
+            "class",
+        ))?;
+        if class.trim().starts_with("0x0108") {
+            let slot = (
+                captures[1].to_string(),
+                captures[2].to_string(),
+                captures[3].to_string(),
+            );
+            folders.push((slot, folder));
+        }
+    }
+    folders.sort();
+    let mut devices = Vec::new();
+    let mut names = Vec::new();
+    for (slot, folder) in folders {
+        devices.push(slot.clone());
+        if let Some(output) = crate::utils::run_command(&["lspci", "-s", &folder]) {
+            if let Some((_, name)) = output.lines().next().and_then(|line| line.split_once(' ')) {
+                names.push((slot, name.to_string()));
+            }
+        }
+    }
+    Ok((devices, names))
+}
+
+/// Consume a fitted drive once, so two expected entries require two drives.
+fn take_nvme_device(
+    devices: &mut Vec<NvmeSlot>,
+    dev: &PyVal,
+    function: &PyVal,
+) -> PyResult<Option<NvmeSlot>> {
+    for index in 0..devices.len() {
+        let (_, fitted_dev, fitted_function) = &devices[index];
+        if pcie::int_hex(&PyVal::str(fitted_dev))? == pcie::int_hex(dev)?
+            && pcie::int_hex(&PyVal::str(fitted_function))? == pcie::int_hex(function)?
+        {
+            return Ok(Some(devices.remove(index)));
+        }
+    }
+    Ok(None)
 }
 
 /// `get_dpu_pcie_devices()`: both PCI functions of every DPU that names them.
@@ -142,6 +230,7 @@ impl PcieApi for Pcie {
     fn get_pcie_check(&self) -> PyResult<PyVal> {
         let conf = self.base.load_config_file()?;
         let mut out = Vec::new();
+        let mut nvme_devices = self.nvme_devices.clone();
         for mut item_conf in pcie::iterate(&conf)? {
             let id = pcie::item(&item_conf, "id")?;
             let dev = pcie::item(&item_conf, "dev")?;
@@ -155,8 +244,27 @@ impl PcieApi for Pcie {
                 }
                 continue;
             }
-            let key = format!("{}:{}", id.py_str(), dev.py_str());
-            let mapped = self.device_id_to_bus.iter().find(|(k, _)| *k == key).map(|(_, b)| b.clone());
+            let is_nvme = pcie::item(&item_conf, "name")
+                .ok()
+                .is_some_and(|name| name.py_str().starts_with("Non-Volatile memory controller"));
+            let mapped = if is_nvme {
+                let fitted = take_nvme_device(&mut nvme_devices, &dev, &func)?;
+                if let Some(name) = fitted.as_ref().and_then(|slot| {
+                    self.nvme_names
+                        .iter()
+                        .find(|(key, _)| key == slot)
+                        .map(|(_, name)| name)
+                }) {
+                    pcie::set_item(&mut item_conf, "name", PyVal::str(name))?;
+                }
+                fitted.map(|slot| slot.0)
+            } else {
+                let key = format!("{}:{}", id.py_str(), dev.py_str());
+                self.device_id_to_bus
+                    .iter()
+                    .find(|(key_, _)| *key_ == key)
+                    .map(|(_, bus)| bus.clone())
+            };
             let passed = match mapped.filter(|b| !b.is_empty()) {
                 Some(b) => self.base.check_pcie_sysfs(
                     0,
@@ -166,7 +274,11 @@ impl PcieApi for Pcie {
                 ),
                 None => false,
             };
-            pcie::set_item(&mut item_conf, "result", PyVal::str(if passed { "Passed" } else { "Failed" }))?;
+            pcie::set_item(
+                &mut item_conf,
+                "result",
+                PyVal::str(if passed { "Passed" } else { "Failed" }),
+            )?;
             out.push(item_conf);
         }
         Ok(PyVal::List(out))
@@ -187,18 +299,30 @@ mod tests {
     const PLATFORM: &str = "/usr/share/sonic/platform";
 
     fn r(v: PyResult<PyVal>) -> String {
-        v.map_or_else(|e| format!("raise {}: {}", e.exc.name(), e.str()), |v| v.py_repr())
+        v.map_or_else(
+            |e| format!("raise {}: {}", e.exc.name(), e.str()),
+            |v| v.py_repr(),
+        )
     }
 
     /// A PCI function in sysfs, with its `device` id.
     fn function(root: &Root, slot: &str, id: &str) {
-        root.write(&format!("/sys/bus/pci/devices/{slot}/device"), &format!("{id}\n"));
+        root.write(
+            &format!("/sys/bus/pci/devices/{slot}/device"),
+            &format!("{id}\n"),
+        );
+        root.write(&format!("/sys/bus/pci/devices/{slot}/class"), "0x020000\n");
     }
 
     /// The `result` of each entry `get_pcie_check` answers.
     fn results(p: &Pcie) -> Vec<String> {
-        let PyVal::List(items) = p.get_pcie_check().unwrap() else { panic!() };
-        items.iter().map(|i| pcie::item(i, "result").unwrap().py_str()).collect()
+        let PyVal::List(items) = p.get_pcie_check().unwrap() else {
+            panic!()
+        };
+        items
+            .iter()
+            .map(|i| pcie::item(i, "result").unwrap().py_str())
+            .collect()
     }
 
     fn switch_with_pcie(yaml: &str) -> Root {
@@ -225,7 +349,14 @@ mod tests {
         let p = Pcie::new(PLATFORM).unwrap();
         let mut map = p.device_id_to_bus.clone();
         map.sort();
-        assert_eq!(map, [("1533:00".to_string(), "07".to_string()), ("1f0b:00".into(), "05".into()), ("1f0b:11".into(), "06".into())]);
+        assert_eq!(
+            map,
+            [
+                ("1533:00".to_string(), "07".to_string()),
+                ("1f0b:00".into(), "05".into()),
+                ("1f0b:11".into(), "06".into())
+            ]
+        );
         // The fourth: its bus is found, but no function 1 there.
         assert_eq!(results(&p), ["Passed", "Passed", "Failed", "Failed"]);
         function(&root, "0000:07:00.1", "0x1533");
@@ -238,7 +369,10 @@ mod tests {
         };
         function(&root2, "0000:01:22.0", "0x23");
         let p = Pcie::new(PLATFORM).unwrap();
-        assert_eq!(p.device_id_to_bus, [("23:22".to_string(), "01".to_string())]);
+        assert_eq!(
+            p.device_id_to_bus,
+            [("23:22".to_string(), "01".to_string())]
+        );
         assert_eq!(r(p.get_pcie_check()), "[]");
     }
 
@@ -251,12 +385,24 @@ mod tests {
         // nothing converts it.
         assert_eq!(results(&p), ["Failed"]);
         // An unquoted fn on a device that is found: int(0, 16) refuses it.
-        root.write(&format!("{PLATFORM}/pcie.yaml"), "- bus: '00'\n  id: 1f0b\n  dev: '00'\n  fn: 0\n");
-        assert_eq!(r(p.get_pcie_check()), "raise TypeError: int() can't convert non-string with explicit base");
-        root.write(&format!("{PLATFORM}/pcie.yaml"), "- bus: '00'\n  dev: '00'\n  fn: '0'\n");
+        root.write(
+            &format!("{PLATFORM}/pcie.yaml"),
+            "- bus: '00'\n  id: 1f0b\n  dev: '00'\n  fn: 0\n",
+        );
+        assert_eq!(
+            r(p.get_pcie_check()),
+            "raise TypeError: int() can't convert non-string with explicit base"
+        );
+        root.write(
+            &format!("{PLATFORM}/pcie.yaml"),
+            "- bus: '00'\n  dev: '00'\n  fn: '0'\n",
+        );
         assert_eq!(r(p.get_pcie_check()), "raise KeyError: 'id'");
         root.write(&format!("{PLATFORM}/pcie.yaml"), "# nothing\n");
-        assert_eq!(r(p.get_pcie_check()), "raise TypeError: 'NoneType' object is not iterable");
+        assert_eq!(
+            r(p.get_pcie_check()),
+            "raise TypeError: 'NoneType' object is not iterable"
+        );
         // A function without its device file stops the construction.
         std::fs::create_dir_all(root.real("/sys/bus/pci/devices/0000:09:00.0")).unwrap();
         let e = Pcie::new(PLATFORM).err().unwrap();
@@ -290,18 +436,43 @@ mod tests {
         let p = Pcie::new(PLATFORM).unwrap();
         // dpu1 names no rshim function, so none of its functions are a DPU's.
         assert_eq!(p.dpu_pcie_devices, ["0000:08:00.0", "0000:08:00.1"]);
-        redis.hset(STATE_DB, "PCIE_DETACH_INFO|0000:08:00.0", &[("dpu_state", "detaching")]);
-        redis.hset(STATE_DB, "PCIE_DETACH_INFO|0000:08:00.1", &[("dpu_state", "attached")]);
-        let PyVal::List(items) = p.get_pcie_check().unwrap() else { panic!() };
+        redis.hset(
+            STATE_DB,
+            "PCIE_DETACH_INFO|0000:08:00.0",
+            &[("dpu_state", "detaching")],
+        );
+        redis.hset(
+            STATE_DB,
+            "PCIE_DETACH_INFO|0000:08:00.1",
+            &[("dpu_state", "attached")],
+        );
+        let PyVal::List(items) = p.get_pcie_check().unwrap() else {
+            panic!()
+        };
         let got: Vec<(String, String)> = items
             .iter()
-            .map(|i| (pcie::item(i, "fn").unwrap().py_str(), pcie::item(i, "result").unwrap().py_str()))
+            .map(|i| {
+                (
+                    pcie::item(i, "fn").unwrap().py_str(),
+                    pcie::item(i, "result").unwrap().py_str(),
+                )
+            })
             .collect();
         // 08:00.0 is detaching; 08:00.1 is not, and is not in sysfs; 09's
         // bus is found by id.
-        assert_eq!(got, [("1".to_string(), "Failed".to_string()), ("0".into(), "Passed".into())]);
+        assert_eq!(
+            got,
+            [
+                ("1".to_string(), "Failed".to_string()),
+                ("0".into(), "Passed".into())
+            ]
+        );
         function(&root, "0000:08:00.1", "0xa2dc");
-        redis.hset(STATE_DB, "PCIE_DETACH_INFO|0000:08:00.0", &[("dpu_state", "attached")]);
+        redis.hset(
+            STATE_DB,
+            "PCIE_DETACH_INFO|0000:08:00.0",
+            &[("dpu_state", "attached")],
+        );
         let p = Pcie::new(PLATFORM).unwrap();
         assert_eq!(results(&p), ["Passed", "Passed", "Passed"]);
         redis.flush();
@@ -332,11 +503,35 @@ mod tests {
     fn aer_stats_are_platform_base_s() {
         let root = switch_with_pcie("[]\n");
         function(&root, "0000:05:00.0", "0x1f0b");
-        root.write("/sys/bus/pci/devices/0000:05:00.0/aer_dev_correctable", "RxErr 2\nBadTLP 0\n");
+        root.write(
+            "/sys/bus/pci/devices/0000:05:00.0/aer_dev_correctable",
+            "RxErr 2\nBadTLP 0\n",
+        );
         let p = Pcie::new(PLATFORM).unwrap();
         assert_eq!(
             r(p.get_pcie_aer_stats(0, 5, 0, 0)),
             "{'correctable': {'RxErr': '2', 'BadTLP': '0'}, 'fatal': {}, 'non_fatal': {}}"
         );
+    }
+
+    #[test]
+    fn replacement_nvme_models_are_matched_by_class_and_consumed_once() {
+        let root = switch_with_pcie("- name: 'Non-Volatile memory controller: expected'\n  bus: '01'\n  id: '5765'\n  dev: '00'\n  fn: '0'\n- name: 'Non-Volatile memory controller: second'\n  bus: '02'\n  id: '5765'\n  dev: '00'\n  fn: '0'\n");
+        function(&root, "0000:01:00.0", "0x5029");
+        root.write("/sys/bus/pci/devices/0000:01:00.0/class", "0x010802\n");
+        let device = Pcie::new(PLATFORM).unwrap();
+        assert_eq!(results(&device), ["Passed", "Failed"]);
+        assert_eq!(
+            results(&device),
+            ["Passed", "Failed"],
+            "each pass gets a fresh inventory copy"
+        );
+    }
+
+    #[test]
+    fn a_matching_nvme_id_with_a_non_nvme_class_does_not_pass() {
+        let root = switch_with_pcie("- name: 'Non-Volatile memory controller: expected'\n  bus: '01'\n  id: '5765'\n  dev: '00'\n  fn: '0'\n");
+        function(&root, "0000:01:00.0", "0x5765");
+        assert_eq!(results(&Pcie::new(PLATFORM).unwrap()), ["Failed"]);
     }
 }

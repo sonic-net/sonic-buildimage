@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/led.py`.
 //!
 //! One difference from Python that Python itself does not keep constant: the
@@ -140,7 +139,10 @@ impl Led {
         self.get_capability();
         if self.colors().is_empty() {
             if !device_data::is_simx_platform()? {
-                utils::log_error(&format!("Failed to get LED capability for {} LED", self.led_id));
+                utils::log_error(&format!(
+                    "Failed to get LED capability for {} LED",
+                    self.led_id
+                ));
             }
             return Ok(false);
         }
@@ -193,7 +195,10 @@ impl Led {
         self.get_capability();
         if self.colors().is_empty() {
             if !device_data::is_simx_platform()? {
-                utils::log_error(&format!("Failed to get LED capability for {} LED", self.led_id));
+                utils::log_error(&format!(
+                    "Failed to get LED capability for {} LED",
+                    self.led_id
+                ));
             }
             return Ok(STATUS_LED_COLOR_OFF.into());
         }
@@ -280,7 +285,10 @@ pub struct SharedLed {
 
 impl SharedLed {
     pub fn new(led: Arc<Led>) -> Arc<SharedLed> {
-        Arc::new(SharedLed { led, virtual_leds: Mutex::new(Vec::new()) })
+        Arc::new(SharedLed {
+            led,
+            virtual_leds: Mutex::new(Vec::new()),
+        })
     }
 
     #[cfg(test)]
@@ -367,7 +375,10 @@ mod tests {
     fn files(root: &Root, led: &Led, cap: &str) {
         root.write(&led.led_cap_path(), cap);
         for c in ["green", "red", "orange", "blue", "amber"] {
-            root.write(&led.led_path(c), if c == "green" { LED_ON } else { LED_OFF });
+            root.write(
+                &led.led_path(c),
+                if c == "green" { LED_ON } else { LED_OFF },
+            );
             root.write(&led.led_delay_on_path(c), LED_OFF);
             root.write(&led.led_delay_off_path(c), LED_OFF);
         }
@@ -380,12 +391,30 @@ mod tests {
     #[test]
     fn each_kind_of_led_has_its_own_files() {
         let paths = |l: &Led| (l.led_path("green"), l.led_trigger("red"), l.led_cap_path());
-        assert_eq!(paths(&Led::fan(Some(1))).0, "/var/run/hw-management/led/led_fan1_green");
-        assert_eq!(paths(&Led::fan(None)).1, "/var/run/hw-management/led/led_fan_red_trigger");
-        assert_eq!(paths(&Led::psu(Some(2))).2, "/var/run/hw-management/led/led_psu2_capability");
-        assert_eq!(paths(&Led::psu(None)).0, "/var/run/hw-management/led/led_psu_green");
-        assert_eq!(paths(&Led::system()).0, "/var/run/hw-management/led/led_status_green");
-        assert_eq!(paths(&Led::system_uid()).0, "/var/run/hw-management/led/led_uid_green");
+        assert_eq!(
+            paths(&Led::fan(Some(1))).0,
+            "/var/run/hw-management/led/led_fan1_green"
+        );
+        assert_eq!(
+            paths(&Led::fan(None)).1,
+            "/var/run/hw-management/led/led_fan_red_trigger"
+        );
+        assert_eq!(
+            paths(&Led::psu(Some(2))).2,
+            "/var/run/hw-management/led/led_psu2_capability"
+        );
+        assert_eq!(
+            paths(&Led::psu(None)).0,
+            "/var/run/hw-management/led/led_psu_green"
+        );
+        assert_eq!(
+            paths(&Led::system()).0,
+            "/var/run/hw-management/led/led_status_green"
+        );
+        assert_eq!(
+            paths(&Led::system_uid()).0,
+            "/var/run/hw-management/led/led_uid_green"
+        );
     }
 
     /// Python's `_verify_non_shared_led`, over files.
@@ -404,12 +433,19 @@ mod tests {
         assert_eq!(led.get_status().unwrap(), STATUS_LED_COLOR_GREEN);
         set(&root, &led.led_path("green"), LED_OFF);
         assert!(led.set_status("orange").unwrap());
-        assert_eq!(led.get_status().unwrap(), STATUS_LED_COLOR_RED, "orange reads as its primary");
+        assert_eq!(
+            led.get_status().unwrap(),
+            STATUS_LED_COLOR_RED,
+            "orange reads as its primary"
+        );
         set(&root, &led.led_path("orange"), LED_OFF);
 
         assert!(led.set_status("red_blink").unwrap());
         assert_eq!(root.read(&led.led_trigger("red")).as_deref(), Some("timer"));
-        assert_eq!(root.read(&led.led_delay_on_path("red")).as_deref(), Some(LED_BLINK));
+        assert_eq!(
+            root.read(&led.led_delay_on_path("red")).as_deref(),
+            Some(LED_BLINK)
+        );
         assert_eq!(led.get_status().unwrap(), "red_blink");
         set(&root, &led.led_delay_off_path("red"), LED_OFF);
         set(&root, &led.led_delay_on_path("red"), LED_OFF);
@@ -501,7 +537,10 @@ mod tests {
         let led = Led::system();
         root.write(&led.led_cap_path(), "green green_blink");
         root.write(&led.led_path("green"), LED_OFF);
-        let (on, off) = (root.real(&led.led_delay_on_path("green")), root.real(&led.led_delay_off_path("green")));
+        let (on, off) = (
+            root.real(&led.led_delay_on_path("green")),
+            root.real(&led.led_delay_off_path("green")),
+        );
         let t = std::thread::spawn(move || {
             sleep(Duration::from_millis(50));
             std::fs::write(on, LED_OFF).unwrap();
@@ -519,7 +558,10 @@ mod tests {
         let root = Root::new();
         let shared = SharedLed::new(Led::psu(None));
         files(&root, shared.led(), "green red");
-        let (a, b) = (ComponentFaultyIndicator::new(shared.clone()), ComponentFaultyIndicator::new(shared.clone()));
+        let (a, b) = (
+            ComponentFaultyIndicator::new(shared.clone()),
+            ComponentFaultyIndicator::new(shared.clone()),
+        );
         let path = |c: &str| shared.led().led_path(c);
         assert!(a.set_status(STATUS_LED_COLOR_GREEN).unwrap());
         assert_eq!(b.get_status().unwrap(), STATUS_LED_COLOR_GREEN);

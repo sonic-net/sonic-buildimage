@@ -26,6 +26,9 @@ MLNX_PLATFORM_API_RS_FILES := $(shell git ls-files -- $(SPATH)) \
 DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/mlnx-platform-api-rs.mk $(PLATFORM_PATH)/mlnx-platform-api-rs.dep
 DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES += $(MLNX_PLATFORM_API_RS_FILES)
+# A Python vendor change must invalidate the native test receipt as well.
+MLNX_PLATFORM_API_RS_PYTHON_FILES := $(shell git ls-files -- $(PLATFORM_PATH)/mlnx-platform-api/sonic_platform)
+DEP_FILES += $(MLNX_PLATFORM_API_RS_PYTHON_FILES)
 
 # The sonic-platform-common crates the tests compile against through those
 # links, and their declarations, generator/templates and Python base classes:

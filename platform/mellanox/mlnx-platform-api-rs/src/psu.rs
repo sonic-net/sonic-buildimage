@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/psu.py`: `FixedPsu`, `Psu` and `InvalidPsuVolWA`.
 
 use std::process::Command;
@@ -106,7 +105,8 @@ impl Psu {
     /// `Psu.get_shared_led()`.
     pub fn get_shared_led() -> Arc<SharedLed> {
         let mut slot = utils::lock(&SHARED_LED);
-        slot.get_or_insert_with(|| SharedLed::new(Led::psu(None))).clone()
+        slot.get_or_insert_with(|| SharedLed::new(Led::psu(None)))
+            .clone()
     }
 
     /// `Psu.shared_led = None`: a test's PSUs vote on a LED of their own.
@@ -157,17 +157,25 @@ impl Psu {
             let mut psu = Psu::blank(index, false);
             // `from .fan import PsuFan`, inside `__init__`.
             crate::imports::fan();
-            psu.fans.push(PyVal::Obj(PsuFan::new(psu_index, 1, me.clone())));
+            psu.fans
+                .push(PyVal::Obj(PsuFan::new(psu_index, 1, me.clone())));
             psu.vpd = Some(VpdParser::new(&hw(&format!("eeprom/psu{index}_vpd"))));
             // `from .thermal import initialize_psu_thermal`.
             crate::imports::thermal();
             // `self.get_power_available_status`, bound now: it reads only the
             // PSU's own files, so it answers during construction too.
-            let (fixed, presence_path, oper_status) = (psu.fixed, psu.presence_path.clone(), psu.oper_status.clone());
+            let (fixed, presence_path, oper_status) = (
+                psu.fixed,
+                psu.presence_path.clone(),
+                psu.oper_status.clone(),
+            );
             let presence: thermal::PresenceCb =
                 Arc::new(move || power_available(fixed, &presence_path, &oper_status));
             psu.thermals = thermal::initialize_psu_thermal(psu_index, presence);
-            let model = psu.vpd.as_ref().map_or_else(|| "N/A".into(), VpdParser::get_model);
+            let model = psu
+                .vpd
+                .as_ref()
+                .map_or_else(|| "N/A".into(), VpdParser::get_model);
             psu.model = Mutex::new(model);
             psu
         })
@@ -237,7 +245,9 @@ impl Psu {
     /// `get_voltage_high_threshold()` / `_low_`: `@default_return(None)`.
     fn voltage_threshold(&self, which: &str) -> PyVal {
         let r = (|| -> PyResult<PyVal> {
-            let Some(v) = self.psu_voltage() else { return Ok(PyVal::None) };
+            let Some(v) = self.psu_voltage() else {
+                return Ok(PyVal::None);
+            };
             let cap = format!("{v}_capability");
             let lim = format!("{v}_{which}");
             if io::exists(&cap) && io::exists(&lim) && self.powergood() {
@@ -252,7 +262,11 @@ impl Psu {
             }
             Ok(PyVal::None)
         })();
-        let name = if which == "max" { "get_voltage_high_threshold" } else { "get_voltage_low_threshold" };
+        let name = if which == "max" {
+            "get_voltage_high_threshold"
+        } else {
+            "get_voltage_low_threshold"
+        };
         utils::default_return(PyVal::None, r, name)
     }
 
@@ -289,10 +303,16 @@ impl PyObject for Psu {
         if self.fixed {
             return Ok(PyVal::str("N/A"));
         }
-        let current = self.vpd().map_or_else(|| "N/A".into(), VpdParser::get_model);
+        let current = self
+            .vpd()
+            .map_or_else(|| "N/A".into(), VpdParser::get_model);
         let stored = utils::lock(&self.model).clone();
         if current != stored && io::exists(PSU_SENSORS_CONF_UPDATER) {
-            let src = if io::is_file(PLATFORM_SENSORS_CONF) { PLATFORM_SENSORS_CONF } else { ETC_SENSORS_CONF };
+            let src = if io::is_file(PLATFORM_SENSORS_CONF) {
+                PLATFORM_SENSORS_CONF
+            } else {
+                ETC_SENSORS_CONF
+            };
             if !io::is_file(src) {
                 *utils::lock(&self.model) = current.clone();
                 return Ok(PyVal::Str(current));
@@ -300,7 +320,10 @@ impl PyObject for Psu {
             let script = format!(
                 "source \"{PSU_SENSORS_CONF_UPDATER}\" && update_psu_sensors_configuration \"{src}\" \"{ETC_SENSORS_CONF}\""
             );
-            let cmds: [Vec<&str>; 2] = [vec!["bash", "-c", &script], vec!["service", "sensord", "restart"]];
+            let cmds: [Vec<&str>; 2] = [
+                vec!["bash", "-c", &script],
+                vec!["service", "sensord", "restart"],
+            ];
             for argv in &cmds {
                 match Command::new(argv[0]).args(&argv[1..]).status() {
                     Ok(s) if s.success() => {}
@@ -326,10 +349,18 @@ impl PyObject for Psu {
         Ok(PyVal::Str(current))
     }
     fn get_serial(&self) -> PyResult<PyVal> {
-        Ok(PyVal::Str(if self.fixed { "N/A".into() } else { self.vpd().map_or("N/A".into(), VpdParser::get_serial) }))
+        Ok(PyVal::Str(if self.fixed {
+            "N/A".into()
+        } else {
+            self.vpd().map_or("N/A".into(), VpdParser::get_serial)
+        }))
     }
     fn get_revision(&self) -> PyResult<PyVal> {
-        Ok(PyVal::Str(if self.fixed { "N/A".into() } else { self.vpd().map_or("N/A".into(), VpdParser::get_revision) }))
+        Ok(PyVal::Str(if self.fixed {
+            "N/A".into()
+        } else {
+            self.vpd().map_or("N/A".into(), VpdParser::get_revision)
+        }))
     }
     fn get_powergood_status(&self) -> PyResult<PyVal> {
         Ok(PyVal::Bool(self.powergood()))
@@ -343,16 +374,26 @@ impl PyObject for Psu {
         }
         if self.powergood() {
             if let Some(v) = self.psu_voltage() {
-                return Ok(PyVal::Float(utils::read_int(&v, 0, Log::Info) as f64 / 1000.0));
+                return Ok(PyVal::Float(
+                    utils::read_int(&v, 0, Log::Info) as f64 / 1000.0,
+                ));
             }
         }
         Ok(PyVal::None)
     }
     fn get_current(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.current, 1000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.current, 1000.0)
+        })
     }
     fn get_power(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.power, 1_000_000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.power, 1_000_000.0)
+        })
     }
     fn set_status_led(&self, color: &str) -> PyResult<PyVal> {
         Ok(PyVal::Bool(match self.led() {
@@ -377,16 +418,32 @@ impl PyObject for Psu {
         Ok(PyVal::Bool(!self.fixed))
     }
     fn get_temperature(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.temp, 1000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.temp, 1000.0)
+        })
     }
     fn get_temperature_high_threshold(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.temp_threshold, 1000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.temp_threshold, 1000.0)
+        })
     }
     fn get_input_voltage(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.voltage_in, 1000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.voltage_in, 1000.0)
+        })
     }
     fn get_input_current(&self) -> PyResult<PyVal> {
-        Ok(if self.fixed { PyVal::None } else { self.scaled_when_good(&self.current_in, 1000.0) })
+        Ok(if self.fixed {
+            PyVal::None
+        } else {
+            self.scaled_when_good(&self.current_in, 1000.0)
+        })
     }
     fn get_voltage_high_threshold(&self) -> PyResult<PyVal> {
         if self.fixed {
@@ -415,9 +472,16 @@ impl PyObject for Psu {
             let warn = utils::read_int(AMBIENT_TEMP_WARNING_THRESHOLD, 0, Log::Error);
             let amb = self.ambient();
             let slope = utils::read_int(&self.power_slope, 0, Log::Error) * 1000;
-            let mut th = if amb < warn { cap - slope * 1000 } else { cap - (1000 + amb - warn) * slope };
+            let mut th = if amb < warn {
+                cap - slope * 1000
+            } else {
+                cap - (1000 + amb - warn) * slope
+            };
             if th <= 0 {
-                utils::log_warning(&format!("Got negative PSU power threshold {th} for PSU {}", self.index));
+                utils::log_warning(&format!(
+                    "Got negative PSU power threshold {th} for PSU {}",
+                    self.index
+                ));
                 th = 0;
             }
             return Ok(PyVal::Float(th as f64 / 1_000_000.0));
@@ -439,7 +503,10 @@ impl PyObject for Psu {
                 cap - (amb - crit) * slope
             };
             if th <= 0 {
-                utils::log_warning(&format!("Got negative PSU power threshold {th} for PSU {}", self.index));
+                utils::log_warning(&format!(
+                    "Got negative PSU power threshold {th} for PSU {}",
+                    self.index
+                ));
                 th = 0;
             }
             return Ok(PyVal::Float(th as f64 / 1_000_000.0));
@@ -473,7 +540,10 @@ impl InvalidPsuVolWA {
             return Ok(Some(value));
         }
         let platform = device_data::get_platform_name()?;
-        if !platform.as_deref().is_some_and(|p| Self::PLATFORMS.contains(&p)) {
+        if !platform
+            .as_deref()
+            .is_some_and(|p| Self::PLATFORMS.contains(&p))
+        {
             utils::log_warning(&format!(
                 "PSU {} threshold file {file} value {value}, but platform is {}",
                 psu.index,
@@ -485,7 +555,10 @@ impl InvalidPsuVolWA {
         let vpd = psu.vpd().ok_or_else(|| {
             PyErr::new(
                 platform_base::py::Exc::AttributeError,
-                vec![PyVal::Str(format!("'{}' object has no attribute 'vpd_parser'", psu.py_class()))],
+                vec![PyVal::Str(format!(
+                    "'{}' object has no attribute 'vpd_parser'",
+                    psu.py_class()
+                ))],
             )
         })?;
         let vendor = vpd.get_entry_value(MFR_VPD_FIELD);
@@ -535,8 +608,14 @@ mod tests {
         static TICK: AtomicU64 = AtomicU64::new(1_000_000);
         let path = format!("{HW}/eeprom/psu{index}_vpd");
         root.write(&path, content);
-        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(TICK.fetch_add(1, Ordering::Relaxed));
-        std::fs::File::options().write(true).open(root.real(&path)).unwrap().set_modified(t).unwrap();
+        let t = std::time::UNIX_EPOCH
+            + std::time::Duration::from_secs(TICK.fetch_add(1, Ordering::Relaxed));
+        std::fs::File::options()
+            .write(true)
+            .open(root.real(&path))
+            .unwrap()
+            .set_modified(t)
+            .unwrap();
     }
 
     fn r(v: PyResult<PyVal>) -> String {
@@ -577,7 +656,10 @@ mod tests {
         for v in [psu.get_model(), psu.get_serial(), psu.get_revision()] {
             assert_eq!(r(v), "'N/A'");
         }
-        assert_eq!(psu.power_available_status(), (false, "absence of power".to_string()));
+        assert_eq!(
+            psu.power_available_status(),
+            (false, "absence of power".to_string())
+        );
         hw(&root, &[("thermal/psu1_pwr_status", "1")]);
         assert_eq!(r(psu.get_powergood_status()), "True");
         assert_eq!(psu.power_available_status(), (true, String::new()));
@@ -607,17 +689,27 @@ mod tests {
         }
         assert_eq!(r(psu.get_position_in_parent()), "1");
         assert_eq!(r(psu.is_replaceable()), "False");
-        assert_eq!((psu.py_class(), psu.py_mro()), ("FixedPsu", vec!["FixedPsu"]));
+        assert_eq!(
+            (psu.py_class(), psu.py_mro()),
+            ("FixedPsu", vec!["FixedPsu"])
+        );
         assert_eq!(psu.index(), 1);
         assert_eq!(r(psu.get_all_fans()), "[]");
         // Its own LED, psu1.
         assert_eq!(r(psu.get_status_led()), "'off'");
         assert_eq!(r(psu.set_status_led("red")), "False");
-        root.write("/var/run/hw-management/led/led_psu1_capability", "none green red orange\n");
+        root.write(
+            "/var/run/hw-management/led/led_psu1_capability",
+            "none green red orange\n",
+        );
         root.write("/var/run/hw-management/led/led_psu1_green", "0");
         root.write("/var/run/hw-management/led/led_psu1_red", "0");
         assert_eq!(r(psu.set_status_led("red")), "True");
-        assert_eq!(root.read("/var/run/hw-management/led/led_psu1_red").as_deref(), Some("255"));
+        assert_eq!(
+            root.read("/var/run/hw-management/led/led_psu1_red")
+                .as_deref(),
+            Some("255")
+        );
         assert_eq!(r(psu.get_status_led()), "'red'");
     }
 
@@ -626,8 +718,13 @@ mod tests {
         let root = switch("x86_64-nvidia_sn5600-r0");
         psu1(&root);
         let psu = Psu::new(0);
-        assert_eq!((psu.py_class(), psu.py_mro()), ("Psu", vec!["Psu", "FixedPsu"]));
-        let PyVal::List(fans) = psu.get_all_fans().unwrap() else { panic!() };
+        assert_eq!(
+            (psu.py_class(), psu.py_mro()),
+            ("Psu", vec!["Psu", "FixedPsu"])
+        );
+        let PyVal::List(fans) = psu.get_all_fans().unwrap() else {
+            panic!()
+        };
         assert_eq!(fans.len(), 1);
         let PyVal::Obj(fan) = &fans[0] else { panic!() };
         assert_eq!(r(fan.get_name()), "'psu1_fan1'");
@@ -635,7 +732,10 @@ mod tests {
         assert_eq!(r(psu.get_maximum_supplied_power()), "1.234567");
         hw(&root, &[("thermal/psu1_status", "0")]);
         assert_eq!(r(psu.get_presence()), "False");
-        assert_eq!(psu.power_available_status(), (false, "absence of PSU".to_string()));
+        assert_eq!(
+            psu.power_available_status(),
+            (false, "absence of PSU".to_string())
+        );
         assert_eq!(r(psu.get_powergood_status()), "True");
         hw(&root, &[("thermal/psu1_pwr_status", "0")]);
         assert_eq!(r(psu.get_powergood_status()), "False");
@@ -654,7 +754,13 @@ mod tests {
         ] {
             assert_eq!(r(v), "None");
         }
-        hw(&root, &[("thermal/psu1_status", "1"), ("thermal/psu1_pwr_status", "1")]);
+        hw(
+            &root,
+            &[
+                ("thermal/psu1_status", "1"),
+                ("thermal/psu1_pwr_status", "1"),
+            ],
+        );
         assert_eq!(psu.power_available_status(), (true, String::new()));
         assert_eq!(r(psu.get_voltage()), "10.234");
         assert_eq!(r(psu.get_voltage_high_threshold()), "12.0");
@@ -671,9 +777,16 @@ mod tests {
         hw(&root, &[("power/psu1_curr", "N/A")]);
         assert_eq!(r(psu.get_current()), "0.0");
         // The PSU's thermal reads the same file, through /run.
-        let PyVal::List(thermals) = psu.get_all_thermals().unwrap() else { panic!() };
-        let PyVal::Obj(t) = &thermals[0] else { panic!() };
-        assert_eq!((t.py_class(), r(t.get_name()), r(t.get_temperature())), ("RemovableThermal", "'PSU-1 Temp'".into(), "40.567".into()));
+        let PyVal::List(thermals) = psu.get_all_thermals().unwrap() else {
+            panic!()
+        };
+        let PyVal::Obj(t) = &thermals[0] else {
+            panic!()
+        };
+        assert_eq!(
+            (t.py_class(), r(t.get_name()), r(t.get_temperature())),
+            ("RemovableThermal", "'PSU-1 Temp'".into(), "40.567".into())
+        );
         hw(&root, &[("thermal/psu1_pwr_status", "0")]);
         assert_eq!(r(t.get_temperature()), "None");
         drop(psu);
@@ -687,14 +800,27 @@ mod tests {
         psu1(&root);
         let psu = Psu::new(0);
         hw(&root, &[("power/psu1_volt_capability", "max")]);
-        assert_eq!((r(psu.get_voltage_high_threshold()), r(psu.get_voltage_low_threshold())), ("12.0".into(), "None".into()));
+        assert_eq!(
+            (
+                r(psu.get_voltage_high_threshold()),
+                r(psu.get_voltage_low_threshold())
+            ),
+            ("12.0".into(), "None".into())
+        );
         hw(&root, &[("power/psu1_volt_max", "0")]);
         assert_eq!(r(psu.get_voltage_high_threshold()), "None");
         std::fs::remove_file(root.real(&format!("{HW}/power/psu1_volt_capability"))).unwrap();
         assert_eq!(r(psu.get_voltage_high_threshold()), "None");
         // volt_out2, when there is one, is the output voltage; once found
         // it is kept.
-        hw(&root, &[("thermal/psu2_status", "1"), ("thermal/psu2_pwr_status", "1"), ("power/psu2_volt", "12000")]);
+        hw(
+            &root,
+            &[
+                ("thermal/psu2_status", "1"),
+                ("thermal/psu2_pwr_status", "1"),
+                ("power/psu2_volt", "12000"),
+            ],
+        );
         let psu2 = Psu::new(1);
         assert_eq!(r(psu2.get_voltage()), "12.0");
         hw(&root, &[("power/psu2_volt_out2", "12100")]);
@@ -702,12 +828,27 @@ mod tests {
         let psu2 = Psu::new(1);
         assert_eq!(r(psu2.get_voltage()), "12.1");
         // No voltage file at all.
-        hw(&root, &[("thermal/psu3_status", "1"), ("thermal/psu3_pwr_status", "1")]);
+        hw(
+            &root,
+            &[
+                ("thermal/psu3_status", "1"),
+                ("thermal/psu3_pwr_status", "1"),
+            ],
+        );
         let psu3 = Psu::new(2);
-        assert_eq!((r(psu3.get_voltage()), r(psu3.get_voltage_high_threshold())), ("None".into(), "None".into()));
+        assert_eq!(
+            (r(psu3.get_voltage()), r(psu3.get_voltage_high_threshold())),
+            ("None".into(), "None".into())
+        );
         // An invalid limit on a platform the workaround is not for stays.
         if is("x86_64-nvidia_sn5600-r0") {
-            hw(&root, &[("power/psu1_volt_capability", "min max"), ("power/psu1_volt_max", "127998")]);
+            hw(
+                &root,
+                &[
+                    ("power/psu1_volt_capability", "min max"),
+                    ("power/psu1_volt_max", "127998"),
+                ],
+            );
             assert_eq!(r(psu.get_voltage_high_threshold()), "127.998");
         }
     }
@@ -717,9 +858,27 @@ mod tests {
         let root = switch("x86_64-nvidia_sn5600-r0");
         psu1(&root);
         let psu = Psu::new(0);
-        assert_eq!((r(psu.get_model()), r(psu.get_serial()), r(psu.get_revision())), ("'MTEF-PSF-AC-C'".into(), "'MT1946X07684'".into(), "'A3'".into()));
+        assert_eq!(
+            (
+                r(psu.get_model()),
+                r(psu.get_serial()),
+                r(psu.get_revision())
+            ),
+            (
+                "'MTEF-PSF-AC-C'".into(),
+                "'MT1946X07684'".into(),
+                "'A3'".into()
+            )
+        );
         std::fs::remove_file(root.real(&format!("{HW}/eeprom/psu1_vpd"))).unwrap();
-        assert_eq!((r(psu.get_model()), r(psu.get_serial()), r(psu.get_revision())), ("'N/A'".into(), "'N/A'".into(), "'N/A'".into()));
+        assert_eq!(
+            (
+                r(psu.get_model()),
+                r(psu.get_serial()),
+                r(psu.get_revision())
+            ),
+            ("'N/A'".into(), "'N/A'".into(), "'N/A'".into())
+        );
         vpd(&root, 1, VPD);
         assert_eq!(r(psu.get_model()), "'MTEF-PSF-AC-C'");
         assert_eq!(psu.vpd().unwrap().get_entry_value("MFR_NAME"), "DELTA");
@@ -735,7 +894,10 @@ mod tests {
         // Another PSU in the slot, an updater, and no sensors.conf at all:
         // the model is taken as it is.
         vpd(&root, 1, "PN_VPD_FIELD: MTEF-PSF-AC-E\n");
-        root.write(PSU_SENSORS_CONF_UPDATER, "update_psu_sensors_configuration() { :; }\n");
+        root.write(
+            PSU_SENSORS_CONF_UPDATER,
+            "update_psu_sensors_configuration() { :; }\n",
+        );
         assert_eq!(r(psu.get_model()), "'MTEF-PSF-AC-E'");
         assert_eq!(stored(), "MTEF-PSF-AC-E");
         // With a sensors.conf, the updater runs (from the real filesystem,
@@ -785,7 +947,13 @@ mod tests {
         // A FixedPsu has no vpd_parser to ask.
         let fixed = Psu::new_fixed(0);
         let e = InvalidPsuVolWA::run(&fixed, 127998, &file).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("AttributeError", "'FixedPsu' object has no attribute 'vpd_parser'".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "AttributeError",
+                "'FixedPsu' object has no attribute 'vpd_parser'".to_string()
+            )
+        );
     }
 
     #[test]
@@ -794,7 +962,13 @@ mod tests {
         psu1(&root);
         let psu = Psu::new(0);
         // test_psu_not_support_power_threshold: no capacity file.
-        assert_eq!((r(psu.get_psu_power_warning_suppress_threshold()), r(psu.get_psu_power_critical_threshold())), ("None".into(), "None".into()));
+        assert_eq!(
+            (
+                r(psu.get_psu_power_warning_suppress_threshold()),
+                r(psu.get_psu_power_critical_threshold())
+            ),
+            ("None".into(), "None".into())
+        );
         hw(
             &root,
             &[
@@ -805,12 +979,25 @@ mod tests {
             ],
         );
         // test_psu_power_threshold: normal, warning and critical ambients.
-        for (port, fan, warning, critical) in
-            [("55000", "50000", "98.0", "100.0"), ("65000", "60000", "88.0", "100.0"), ("70000", "75000", "68.0", "90.0")]
-        {
-            hw(&root, &[("thermal/port_amb", port), ("thermal/fan_amb", fan)]);
-            assert_eq!(r(psu.get_psu_power_warning_suppress_threshold()), warning, "{port} {fan}");
-            assert_eq!(r(psu.get_psu_power_critical_threshold()), critical, "{port} {fan}");
+        for (port, fan, warning, critical) in [
+            ("55000", "50000", "98.0", "100.0"),
+            ("65000", "60000", "88.0", "100.0"),
+            ("70000", "75000", "68.0", "90.0"),
+        ] {
+            hw(
+                &root,
+                &[("thermal/port_amb", port), ("thermal/fan_amb", fan)],
+            );
+            assert_eq!(
+                r(psu.get_psu_power_warning_suppress_threshold()),
+                warning,
+                "{port} {fan}"
+            );
+            assert_eq!(
+                r(psu.get_psu_power_critical_threshold()),
+                critical,
+                "{port} {fan}"
+            );
         }
         // A threshold at or below zero is 0.
         hw(&root, &[("config/psu1_power_slope", "100000")]);
@@ -823,22 +1010,39 @@ mod tests {
         let root = switch("x86_64-nvidia_sn5600-r0");
         Psu::forget_shared_led();
         let led = |c: &str| format!("/var/run/hw-management/led/led_psu_{c}");
-        root.write("/var/run/hw-management/led/led_psu_capability", "none green red orange green_blink\n");
+        root.write(
+            "/var/run/hw-management/led/led_psu_capability",
+            "none green red orange green_blink\n",
+        );
         // What the LED driver does: one colour lit at a time.
         let dark = || {
             for c in ["green", "red", "orange"] {
                 root.write(&led(c), "0");
             }
         };
-        let lit = || ["green", "red", "orange"].into_iter().filter(|c| root.read(&led(c)).as_deref() == Some("255")).collect::<Vec<_>>();
+        let lit = || {
+            ["green", "red", "orange"]
+                .into_iter()
+                .filter(|c| root.read(&led(c)).as_deref() == Some("255"))
+                .collect::<Vec<_>>()
+        };
         dark();
-        hw(&root, &[("thermal/psu1_status", "1"), ("thermal/psu2_status", "1")]);
+        hw(
+            &root,
+            &[("thermal/psu1_status", "1"), ("thermal/psu2_status", "1")],
+        );
         let (p1, p2) = (Psu::new(0), Psu::new(1));
         assert_eq!(r(p1.set_status_led("green")), "True");
-        assert_eq!((lit(), r(p1.get_status_led())), (vec!["green"], "'green'".to_string()));
+        assert_eq!(
+            (lit(), r(p1.get_status_led())),
+            (vec!["green"], "'green'".to_string())
+        );
         dark();
         assert_eq!(r(p2.set_status_led("red")), "True");
-        assert_eq!((lit(), r(p1.get_status_led())), (vec!["red"], "'red'".to_string()));
+        assert_eq!(
+            (lit(), r(p1.get_status_led())),
+            (vec!["red"], "'red'".to_string())
+        );
         // Green from one PSU does not clear the other's red.
         dark();
         assert_eq!(r(p1.set_status_led("green")), "True");

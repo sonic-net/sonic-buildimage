@@ -98,7 +98,7 @@ fn intern(name: &str) -> &'static str {
 /// import of `thermal_updater.py`.  A missing module raises the
 /// `ModuleNotFoundError` Python's import does.
 pub fn import_independent_mode_update() -> PyResult<()> {
-    Python::with_gil(|py| independent_mode_update(py).map(|_| ()))
+    Python::attach(|py| independent_mode_update(py).map(|_| ()))
 }
 
 fn independent_mode_update(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
@@ -114,7 +114,7 @@ fn independent_mode_update(py: Python<'_>) -> PyResult<Bound<'_, PyModule>> {
         .into_owned();
     let module = (|| -> pyo3::PyResult<Bound<'_, PyModule>> {
         let sys_path = py.import("sys")?.getattr("path")?;
-        let entries = sys_path.downcast::<PyList>()?;
+        let entries = sys_path.cast::<PyList>()?;
         if !entries.contains(&path)? {
             entries.append(&path)?;
         }
@@ -156,7 +156,7 @@ impl Val {
 /// `hw_management_independent_mode_update.<function>(*args)`.  What it
 /// answers is ignored, as Python ignores it; what it raises is raised.
 fn call(function: &str, args: &[Val]) -> PyResult<()> {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let module = independent_mode_update(py)?;
         (|| -> pyo3::PyResult<()> {
             let args = args
@@ -211,7 +211,7 @@ pub fn vendor_data_set_module(
     module_index: i128,
     vendor: &[(&str, String)],
 ) -> PyResult<()> {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let module = independent_mode_update(py)?;
         (|| -> pyo3::PyResult<()> {
             let info = PyDict::new(py);
@@ -307,7 +307,7 @@ fn redfish_args() -> (&'static str, &'static str, String) {
 
 /// `_get_hw_mgmt_redfish_client().BMCAccessor().get_login_password()`.
 pub fn redfish_login_password() -> PyResult<PyVal> {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         (|| -> pyo3::PyResult<PyVal> {
             let pw = redfish(py)?
                 .getattr("login_password")?
@@ -335,7 +335,7 @@ type LoginAnswer<'py> = (
 /// `BMCAccessor().login()` with its stdout and stderr captured, as
 /// `_configure_nos_account()` calls it.
 pub fn redfish_login() -> RedfishLogin {
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let r = (|| -> pyo3::PyResult<RedfishLogin> {
             let out = redfish(py)?.getattr("login")?.call1(redfish_args())?;
             let (ret, err, _printed): LoginAnswer<'_> = out.extract()?;
@@ -357,7 +357,7 @@ pub fn redfish_login() -> RedfishLogin {
 #[cfg(test)]
 pub fn forget_imports() {
     let old = utils::lock(&INDEPENDENT_MODE_UPDATE).take();
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let sys = py.import("sys").expect("sys");
         let modules = sys.getattr("modules").expect("sys.modules");
         for name in [INDEPENDENT_MODE_UPDATE_NAME, REDFISH_CLIENT_NAME] {
@@ -400,7 +400,7 @@ pub mod testing {
     /// The helper's recorded calls since the last `take_calls`, each as the
     /// `repr()` of `(function, *args)`.
     pub fn take_calls() -> Vec<String> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let module = independent_mode_update(py).expect("hw-management's helper");
             let calls = module.getattr("calls").expect("calls");
             let out: Vec<String> = calls
@@ -415,7 +415,7 @@ pub mod testing {
 
     /// Make the helper's `function` raise `RuntimeError(message)`.
     pub fn fail(function: &str, message: &str) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let module = independent_mode_update(py).expect("hw-management's helper");
             module
                 .getattr("fail")
@@ -427,7 +427,7 @@ pub mod testing {
 
     /// Set an attribute of the Redfish client's `BMCAccessor` stand-in.
     pub fn redfish_set(attr: &str, value: &str) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let (name, path, real) = redfish_args();
             let module = redfish(py)
                 .and_then(|r| r.getattr("load")?.call1((name, path, real)))

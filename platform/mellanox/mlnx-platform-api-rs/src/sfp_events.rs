@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! What `sonic_platform/sfp.py` and `state_machine.py` give the chassis's
 //! change events: the module's SDK attributes, its status and error code,
 //! and -- in module host management mode -- the per-module state machine
@@ -97,7 +96,10 @@ const ACTION_FCP_ON_START: &str = "On Start(Firmware Control)";
 
 /// One state of `SFP.get_state_machine()`: its entry action and its
 /// transitions as `(event, next state, event action)`.
-type StateDef = (Option<&'static str>, &'static [(&'static str, &'static str, Option<&'static str>)]);
+type StateDef = (
+    Option<&'static str>,
+    &'static [(&'static str, &'static str, Option<&'static str>)],
+);
 
 /// The state machine `get_state_machine()` builds, state by state.
 fn state_def(state: &str) -> Option<StateDef> {
@@ -116,7 +118,11 @@ fn state_def(state: &str) -> Option<StateDef> {
             Some(ACTION_ON_RESET),
             &[
                 (EVENT_RESET_DONE, STATE_POWERED_ON, None),
-                (EVENT_NOT_PRESENT, STATE_NOT_PRESENT, Some(ACTION_ON_CANCEL_WAIT)),
+                (
+                    EVENT_NOT_PRESENT,
+                    STATE_NOT_PRESENT,
+                    Some(ACTION_ON_CANCEL_WAIT),
+                ),
             ],
         ),
         STATE_POWERED_ON => (
@@ -135,20 +141,32 @@ fn state_def(state: &str) -> Option<StateDef> {
                 (EVENT_POWER_BAD, STATE_POWER_BAD, None),
             ],
         ),
-        STATE_FW_CONTROL => (Some(ACTION_ON_FW_CONTROL), &[(EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None)]),
+        STATE_FW_CONTROL => (
+            Some(ACTION_ON_FW_CONTROL),
+            &[(EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None)],
+        ),
         STATE_POWER_BAD => (
             None,
-            &[(EVENT_POWER_GOOD, STATE_POWERED_ON, None), (EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None)],
+            &[
+                (EVENT_POWER_GOOD, STATE_POWERED_ON, None),
+                (EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None),
+            ],
         ),
         STATE_NOT_PRESENT => (None, &[(EVENT_PRESENT, STATE_INIT, None)]),
         STATE_POWER_LIMIT_ERROR => (
             Some(ACTION_ON_POWER_LIMIT_ERROR),
-            &[(EVENT_POWER_GOOD, STATE_POWERED_ON, None), (EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None)],
+            &[
+                (EVENT_POWER_GOOD, STATE_POWERED_ON, None),
+                (EVENT_NOT_PRESENT, STATE_NOT_PRESENT, None),
+            ],
         ),
         STATE_FCP_DOWN => (None, &[(EVENT_START, STATE_FCP_INIT, None)]),
         STATE_FCP_INIT => (
             Some(ACTION_FCP_ON_START),
-            &[(EVENT_NOT_PRESENT, STATE_FCP_NOT_PRESENT, None), (EVENT_PRESENT, STATE_FCP_PRESENT, None)],
+            &[
+                (EVENT_NOT_PRESENT, STATE_FCP_NOT_PRESENT, None),
+                (EVENT_PRESENT, STATE_FCP_PRESENT, None),
+            ],
         ),
         STATE_FCP_NOT_PRESENT => (None, &[(EVENT_PRESENT, STATE_FCP_PRESENT, None)]),
         STATE_FCP_PRESENT => (None, &[(EVENT_NOT_PRESENT, STATE_FCP_NOT_PRESENT, None)]),
@@ -174,7 +192,9 @@ impl Sfp {
         match SysFile::open(&path) {
             Ok(f) => Ok(Some(f)),
             Err(e) if e.exc.name() == "FileNotFoundError" => {
-                utils::log_warning(&format!("Trying to access {path} file which does not exist"));
+                utils::log_warning(&format!(
+                    "Trying to access {path} file which does not exist"
+                ));
                 Ok(None)
             }
             Err(e) => Err(e),
@@ -215,8 +235,14 @@ impl Sfp {
             0x8 => SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED,
             0xc => SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED,
             _ => {
-                utils::log_error(&format!("Unrecognized error {error_type} detected on SFP {}", self.sdk_index));
-                return (SFP_STATUS_ERROR.to_string(), Some(format!("Unknown error ({error_type})")));
+                utils::log_error(&format!(
+                    "Unrecognized error {error_type} detected on SFP {}",
+                    self.sdk_index
+                ));
+                return (
+                    SFP_STATUS_ERROR.to_string(),
+                    Some(format!("Unknown error ({error_type})")),
+                );
             }
         };
         let mut bits = bits;
@@ -300,7 +326,10 @@ impl Sfp {
             ACTION_ON_START => self.action_on_start(),
             ACTION_FCP_ON_START => self.action_fcp_on_start(),
             ACTION_ON_RESET => {
-                utils::log_info(&format!("SFP {} is scheduled to wait for resetting done", self.sdk_index));
+                utils::log_info(&format!(
+                    "SFP {} is scheduled to wait for resetting done",
+                    self.sdk_index
+                ));
                 wait_sfp_ready_task::get().schedule_wait(self.sdk_index as u64);
                 Ok(())
             }
@@ -308,7 +337,10 @@ impl Sfp {
             ACTION_ON_SW_CONTROL => self.action_on_sw_control(),
             ACTION_ON_FW_CONTROL => {
                 if self.read_attr("control") != SFP_FW_CONTROL {
-                    utils::log_info(&format!("SFP {} is set to firmware control", self.sdk_index));
+                    utils::log_info(&format!(
+                        "SFP {} is set to firmware control",
+                        self.sdk_index
+                    ));
                     self.write_attr("control", SFP_FW_CONTROL)?;
                 }
                 Ok(())
@@ -318,7 +350,10 @@ impl Sfp {
                 Ok(())
             }
             ACTION_ON_POWER_LIMIT_ERROR => {
-                utils::log_info(&format!("SFP {} is powered off due to exceeding power limit", self.sdk_index));
+                utils::log_info(&format!(
+                    "SFP {} is powered off due to exceeding power limit",
+                    self.sdk_index
+                ));
                 self.write_attr("power_on", 0)?;
                 self.write_attr("hw_reset", 0)
             }
@@ -331,7 +366,9 @@ impl Sfp {
     fn action_on_start(&self) -> PyResult<()> {
         let n = self.sdk_index;
         if self.read_attr("control") == SFP_FW_CONTROL {
-            utils::log_info(&format!("SFP {n} is already FW control, probably in warm reboot"));
+            utils::log_info(&format!(
+                "SFP {n} is already FW control, probably in warm reboot"
+            ));
             return self.on_event(EVENT_FW_CONTROL);
         }
         if self.read_attr("hw_present") != 1 {
@@ -353,7 +390,9 @@ impl Sfp {
             return self.on_event(EVENT_POWER_ON);
         }
         self.processing_insert_event.store(false, Ordering::Relaxed);
-        utils::log_info(&format!("SFP {n} is processing insert event and needs to wait module ready"));
+        utils::log_info(&format!(
+            "SFP {n} is processing insert event and needs to wait module ready"
+        ));
         self.on_event(EVENT_RESET)
     }
 
@@ -370,7 +409,10 @@ impl Sfp {
     /// EEPROM decides -- which is sonic_xcvr's.
     fn action_on_powered(&self) -> PyResult<()> {
         if self.read_attr("power_good") != 1 {
-            utils::log_error(&format!("SFP {} is not in power good state", self.sdk_index));
+            utils::log_error(&format!(
+                "SFP {} is not in power good state",
+                self.sdk_index
+            ));
             return self.on_event(EVENT_POWER_BAD);
         }
         let control_type = self.determine_control_type()?;
@@ -428,11 +470,16 @@ impl Sfp {
     pub fn fill_change_event(&self, port_dict: &mut PortDict) -> PyResult<()> {
         let key = self.sdk_index + 1;
         match self.get_state()? {
-            STATE_NOT_PRESENT | STATE_FCP_NOT_PRESENT => port_dict.set(key, SFP_STATUS_REMOVED.to_string()),
-            STATE_SW_CONTROL | STATE_FW_CONTROL | STATE_FCP_PRESENT => port_dict.set(key, SFP_STATUS_INSERTED.to_string()),
-            STATE_POWER_BAD | STATE_POWER_LIMIT_ERROR => {
-                port_dict.set(key, (SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SFP_STATUS_BIT_INSERTED).to_string())
+            STATE_NOT_PRESENT | STATE_FCP_NOT_PRESENT => {
+                port_dict.set(key, SFP_STATUS_REMOVED.to_string())
             }
+            STATE_SW_CONTROL | STATE_FW_CONTROL | STATE_FCP_PRESENT => {
+                port_dict.set(key, SFP_STATUS_INSERTED.to_string())
+            }
+            STATE_POWER_BAD | STATE_POWER_LIMIT_ERROR => port_dict.set(
+                key,
+                (SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SFP_STATUS_BIT_INSERTED).to_string(),
+            ),
             _ => {}
         }
         Ok(())
@@ -440,7 +487,11 @@ impl Sfp {
 
     /// `refresh_poll_obj(poll_obj, all_registered_fds)`: poll what the new
     /// state polls; drop -- and close -- what it no longer does.
-    pub fn refresh_poll_obj(&self, poll: &mut PollSet, registered: &mut Registered) -> PyResult<()> {
+    pub fn refresh_poll_obj(
+        &self,
+        poll: &mut PollSet,
+        registered: &mut Registered,
+    ) -> PyResult<()> {
         self.sfp_only("refresh_poll_obj")?;
         let mut current: Vec<(&'static str, i32)> = registered
             .iter()
@@ -457,7 +508,14 @@ impl Sfp {
                         ));
                     };
                     poll.register(fd.fileno(), POLLERR_PRI);
-                    registered.insert(fd.fileno(), Reg { sdk_index: self.sdk_index, fd, fd_type: t });
+                    registered.insert(
+                        fd.fileno(),
+                        Reg {
+                            sdk_index: self.sdk_index,
+                            fd,
+                            fd_type: t,
+                        },
+                    );
                 }
                 Some(i) => {
                     current.remove(i);
@@ -479,16 +537,26 @@ impl Sfp {
             "hw_present" | "present" => match fd_value {
                 1 => matches!(
                     state,
-                    STATE_SW_CONTROL | STATE_FW_CONTROL | STATE_POWER_BAD | STATE_POWER_LIMIT_ERROR | STATE_FCP_PRESENT
+                    STATE_SW_CONTROL
+                        | STATE_FW_CONTROL
+                        | STATE_POWER_BAD
+                        | STATE_POWER_LIMIT_ERROR
+                        | STATE_FCP_PRESENT
                 ),
                 0 => matches!(state, STATE_NOT_PRESENT | STATE_FCP_NOT_PRESENT),
                 _ => false,
             },
             "power_good" => {
                 if fd_value == 1 {
-                    matches!(state, STATE_SW_CONTROL | STATE_NOT_PRESENT | STATE_RESETTING)
+                    matches!(
+                        state,
+                        STATE_SW_CONTROL | STATE_NOT_PRESENT | STATE_RESETTING
+                    )
                 } else {
-                    matches!(state, STATE_POWER_BAD | STATE_POWER_LIMIT_ERROR | STATE_NOT_PRESENT)
+                    matches!(
+                        state,
+                        STATE_POWER_BAD | STATE_POWER_LIMIT_ERROR | STATE_NOT_PRESENT
+                    )
                 }
             }
             _ => false,
@@ -553,9 +621,13 @@ pub fn initialize_sfp_modules(sfps: &[Arc<Sfp>]) -> PyResult<()> {
     for (index, s) in sfps.iter().enumerate() {
         let state = s.get_state()?;
         if !s.in_stable_state()? {
-            utils::log_error(&format!("SFP {index} is not in stable state after initializing, state={state}"));
+            utils::log_error(&format!(
+                "SFP {index} is not in stable state after initializing, state={state}"
+            ));
         }
-        utils::log_notice(&format!("SFP {index} is in state {state} after module initialization"));
+        utils::log_notice(&format!(
+            "SFP {index} is in state {state} after module initialization"
+        ));
     }
     wait_sfp_eeprom_ready(sfps, 2.0)
 }
@@ -583,7 +655,10 @@ impl Registered {
         Some(self.0.remove(i).1)
     }
     pub fn get_mut(&mut self, fileno: i32) -> Option<&mut Reg> {
-        self.0.iter_mut().find(|(f, _)| *f == fileno).map(|(_, r)| r)
+        self.0
+            .iter_mut()
+            .find(|(f, _)| *f == fileno)
+            .map(|(_, r)| r)
     }
     pub fn iter(&self) -> impl Iterator<Item = &(i32, Reg)> {
         self.0.iter()
@@ -701,7 +776,16 @@ mod tests {
         assert_eq!(s.get_state().unwrap(), STATE_NOT_PRESENT);
         assert!(s.in_stable_state().unwrap());
         // Coming back is a new start.
-        module(&root, 0, &[("hw_present", "1"), ("power_on", "1"), ("hw_reset", "1"), ("power_good", "0")]);
+        module(
+            &root,
+            0,
+            &[
+                ("hw_present", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "1"),
+                ("power_good", "0"),
+            ],
+        );
         s.on_event(EVENT_PRESENT).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_POWER_BAD);
     }
@@ -710,12 +794,24 @@ mod tests {
     fn a_module_powered_off_is_powered_reset_and_waited_for() {
         let root = Root::new();
         let task = task();
-        module(&root, 0, &[("control", "1"), ("hw_present", "1"), ("power_on", "0"), ("hw_reset", "0")]);
+        module(
+            &root,
+            0,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "0"),
+                ("hw_reset", "0"),
+            ],
+        );
         let s = port(0);
         s.on_event(EVENT_START).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_RESETTING);
         assert!(!s.in_stable_state().unwrap());
-        assert_eq!((attr(&root, 0, "power_on"), attr(&root, 0, "hw_reset")), ("1".into(), "1".into()));
+        assert_eq!(
+            (attr(&root, 0, "power_on"), attr(&root, 0, "hw_reset")),
+            ("1".into(), "1".into())
+        );
         assert_eq!(task.waiting(), [0]);
         task.reset();
     }
@@ -724,7 +820,16 @@ mod tests {
     fn a_module_in_reset_is_released_and_a_removal_cancels_its_wait() {
         let root = Root::new();
         let task = task();
-        module(&root, 0, &[("control", "1"), ("hw_present", "1"), ("power_on", "1"), ("hw_reset", "0")]);
+        module(
+            &root,
+            0,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "0"),
+            ],
+        );
         let s = port(0);
         s.on_event(EVENT_START).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_RESETTING);
@@ -739,7 +844,16 @@ mod tests {
     fn a_module_inserted_while_ready_still_waits_for_its_firmware() {
         let root = Root::new();
         let task = task();
-        module(&root, 2, &[("control", "1"), ("hw_present", "1"), ("power_on", "1"), ("hw_reset", "1")]);
+        module(
+            &root,
+            2,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "1"),
+            ],
+        );
         let s = port(2);
         s.processing_insert_event.store(true, Ordering::Relaxed);
         s.on_event(EVENT_START).unwrap();
@@ -752,7 +866,17 @@ mod tests {
     #[test]
     fn a_powered_module_is_power_bad_or_needs_sonic_xcvr() {
         let root = Root::new();
-        module(&root, 0, &[("control", "1"), ("hw_present", "1"), ("power_on", "1"), ("hw_reset", "1"), ("power_good", "0")]);
+        module(
+            &root,
+            0,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "1"),
+                ("power_good", "0"),
+            ],
+        );
         let s = port(0);
         s.on_event(EVENT_START).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_POWER_BAD);
@@ -769,7 +893,10 @@ mod tests {
         not_ported(s.on_event(EVENT_RESET_DONE).unwrap_err(), "get_xcvr_api");
         // And software control's power, frequency and TX checks.
         set_state(&s, STATE_POWERED_ON);
-        not_ported(s.on_event(EVENT_SW_CONTROL).unwrap_err(), "get_module_max_power");
+        not_ported(
+            s.on_event(EVENT_SW_CONTROL).unwrap_err(),
+            "get_module_max_power",
+        );
         assert_eq!(s.get_state().unwrap(), STATE_SW_CONTROL);
     }
 
@@ -797,7 +924,10 @@ mod tests {
         set_state(&s, STATE_SW_CONTROL);
         s.on_event(EVENT_POWER_LIMIT_EXCEED).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_POWER_LIMIT_ERROR);
-        assert_eq!((attr(&root, 0, "power_on"), attr(&root, 0, "hw_reset")), ("0".into(), "0".into()));
+        assert_eq!(
+            (attr(&root, 0, "power_on"), attr(&root, 0, "hw_reset")),
+            ("0".into(), "0".into())
+        );
         s.on_event(EVENT_NOT_PRESENT).unwrap();
         assert_eq!(s.get_state().unwrap(), STATE_NOT_PRESENT);
     }
@@ -808,7 +938,10 @@ mod tests {
             return;
         }
         let root = Root::new();
-        root.write("/host/machine.conf", "onie_platform=x86_64-nvidia_sn5600-r0\n");
+        root.write(
+            "/host/machine.conf",
+            "onie_platform=x86_64-nvidia_sn5600-r0\n",
+        );
         module(&root, 64, &[("present", "1")]);
         let s = port(64);
         assert_eq!(s.get_state().unwrap(), STATE_FCP_DOWN);
@@ -836,19 +969,32 @@ mod tests {
         assert_eq!(s.get_state().unwrap(), STATE_DOWN);
         set_state(&s, "Bogus");
         let e = s.on_event(EVENT_START).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("RuntimeError", "Unknown state Bogus".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("RuntimeError", "Unknown state Bogus".to_string())
+        );
         assert!(state_def("Bogus").is_none());
-        assert_eq!(s.on_action("No Such Action").unwrap_err().exc.name(), "KeyError");
+        assert_eq!(
+            s.on_action("No Such Action").unwrap_err().exc.name(),
+            "KeyError"
+        );
     }
 
     #[test]
     fn an_rj45_port_has_no_state_machine() {
         let _root = Root::new();
         let p = Sfp::new(Kind::Rj45, 1, "asic0").unwrap();
-        for e in [p.get_state().unwrap_err(), p.on_event(EVENT_START).unwrap_err(), p.get_fds_for_poling().err().unwrap()] {
+        for e in [
+            p.get_state().unwrap_err(),
+            p.on_event(EVENT_START).unwrap_err(),
+            p.get_fds_for_poling().err().unwrap(),
+        ] {
             assert_eq!(e.exc.name(), "AttributeError");
         }
-        assert_eq!(p.get_state().unwrap_err().str(), "'RJ45Port' object has no attribute 'state'");
+        assert_eq!(
+            p.get_state().unwrap_err().str(),
+            "'RJ45Port' object has no attribute 'state'"
+        );
         let mut poll = PollSet::default();
         let mut reg = Registered::default();
         assert_eq!(
@@ -864,7 +1010,13 @@ mod tests {
         let root = Root::new();
         let s = port(0);
         let r = Sfp::new(Kind::Rj45, 0, "asic0").unwrap();
-        for (sdk, sonic, rj45) in [("1", "1", "1"), ("2", "0", "0"), ("3", "2", "2"), ("4", "0", "0"), ("5", "-1", "0")] {
+        for (sdk, sonic, rj45) in [
+            ("1", "1", "1"),
+            ("2", "0", "0"),
+            ("3", "2", "2"),
+            ("4", "0", "0"),
+            ("5", "-1", "0"),
+        ] {
             module(&root, 0, &[("status", sdk)]);
             assert_eq!(s.get_module_status().unwrap(), sonic, "{sdk}");
             assert_eq!(r.get_module_status().unwrap(), rj45, "{sdk}");
@@ -882,7 +1034,11 @@ mod tests {
         let s = port(0);
         let cases: [(&str, &str, Option<&str>); 11] = [
             ("0", "5", None),
-            ("1", "65537", Some("Long range for non-Mellanox cable or module")),
+            (
+                "1",
+                "65537",
+                Some("Long range for non-Mellanox cable or module"),
+            ),
             ("2", "11", None),
             ("3", "19", None),
             ("4", "131073", Some("Enforce part number list")),
@@ -895,10 +1051,17 @@ mod tests {
         ];
         for (code, bits, desc) in cases {
             module(&root, 0, &[("statuserror", code)]);
-            assert_eq!(s.get_error_info_from_sdk_error_type(), (bits.to_string(), desc.map(str::to_string)), "{code}");
+            assert_eq!(
+                s.get_error_info_from_sdk_error_type(),
+                (bits.to_string(), desc.map(str::to_string)),
+                "{code}"
+            );
         }
         std::fs::remove_file(root.real(&module_path(0, "statuserror"))).unwrap();
-        assert_eq!(s.get_error_info_from_sdk_error_type(), ("2".to_string(), Some("Unknown error (-1)".to_string())));
+        assert_eq!(
+            s.get_error_info_from_sdk_error_type(),
+            ("2".to_string(), Some("Unknown error (-1)".to_string()))
+        );
     }
 
     #[test]
@@ -911,7 +1074,10 @@ mod tests {
         assert_eq!(fd.name, module_path(5, "present"));
         // Anything but a missing file raises.
         root.write("/sys/module/sx_core/asic0/module6", "not a directory");
-        assert_eq!(port(6).get_fd("present").err().unwrap().exc.name(), "NotADirectoryError");
+        assert_eq!(
+            port(6).get_fd("present").err().unwrap().exc.name(),
+            "NotADirectoryError"
+        );
     }
 
     // -- polling ---------------------------------------------------------------
@@ -919,9 +1085,19 @@ mod tests {
     #[test]
     fn each_state_polls_and_reports_what_python_s_does() {
         let root = Root::new();
-        module(&root, 0, &[("present", "1"), ("hw_present", "1"), ("power_good", "1")]);
+        module(
+            &root,
+            0,
+            &[("present", "1"), ("hw_present", "1"), ("power_good", "1")],
+        );
         let s = port(0);
-        let types = |s: &Sfp| s.get_fds_for_poling().unwrap().into_iter().map(|(t, fd)| (t, fd.is_some())).collect::<Vec<_>>();
+        let types = |s: &Sfp| {
+            s.get_fds_for_poling()
+                .unwrap()
+                .into_iter()
+                .map(|(t, fd)| (t, fd.is_some()))
+                .collect::<Vec<_>>()
+        };
         assert_eq!(types(&s), [("hw_present", true), ("power_good", true)]);
         for st in [STATE_FW_CONTROL, STATE_FCP_NOT_PRESENT, STATE_FCP_PRESENT] {
             set_state(&s, st);
@@ -945,7 +1121,14 @@ mod tests {
             set_state(&s, st);
             s.in_stable_state().unwrap()
         };
-        for st in [STATE_DOWN, STATE_INIT, STATE_RESETTING, STATE_POWERED_ON, STATE_FCP_DOWN, STATE_FCP_INIT] {
+        for st in [
+            STATE_DOWN,
+            STATE_INIT,
+            STATE_RESETTING,
+            STATE_POWERED_ON,
+            STATE_FCP_DOWN,
+            STATE_FCP_INIT,
+        ] {
             assert!(!stable(st), "{st}");
         }
     }
@@ -958,11 +1141,22 @@ mod tests {
             set_state(&s, st);
             s.is_dummy_event(ty, v).unwrap()
         };
-        for st in [STATE_SW_CONTROL, STATE_FW_CONTROL, STATE_POWER_BAD, STATE_POWER_LIMIT_ERROR, STATE_FCP_PRESENT] {
-            assert!(dummy(st, "hw_present", 1) && dummy(st, "present", 1), "{st}");
+        for st in [
+            STATE_SW_CONTROL,
+            STATE_FW_CONTROL,
+            STATE_POWER_BAD,
+            STATE_POWER_LIMIT_ERROR,
+            STATE_FCP_PRESENT,
+        ] {
+            assert!(
+                dummy(st, "hw_present", 1) && dummy(st, "present", 1),
+                "{st}"
+            );
         }
         assert!(!dummy(STATE_NOT_PRESENT, "hw_present", 1));
-        assert!(dummy(STATE_NOT_PRESENT, "hw_present", 0) && dummy(STATE_FCP_NOT_PRESENT, "present", 0));
+        assert!(
+            dummy(STATE_NOT_PRESENT, "hw_present", 0) && dummy(STATE_FCP_NOT_PRESENT, "present", 0)
+        );
         assert!(!dummy(STATE_SW_CONTROL, "hw_present", 0));
         assert!(!dummy(STATE_SW_CONTROL, "hw_present", 2));
         for st in [STATE_SW_CONTROL, STATE_NOT_PRESENT, STATE_RESETTING] {
@@ -979,7 +1173,11 @@ mod tests {
     #[test]
     fn refreshing_polls_what_the_new_state_polls_and_drops_the_rest() {
         let root = Root::new();
-        module(&root, 0, &[("present", "1"), ("hw_present", "1"), ("power_good", "1")]);
+        module(
+            &root,
+            0,
+            &[("present", "1"), ("hw_present", "1"), ("power_good", "1")],
+        );
         module(&root, 1, &[("present", "1")]);
         let (s, other) = (port(0), port(1));
         let mut poll = PollSet::default();
@@ -989,8 +1187,15 @@ mod tests {
         set_state(&other, STATE_FW_CONTROL);
         other.refresh_poll_obj(&mut poll, &mut reg).unwrap();
         s.refresh_poll_obj(&mut poll, &mut reg).unwrap();
-        let types = |reg: &Registered| reg.iter().map(|(_, r)| (r.sdk_index, r.fd_type)).collect::<Vec<_>>();
-        assert_eq!(types(&reg), [(1, "present"), (0, "hw_present"), (0, "power_good")]);
+        let types = |reg: &Registered| {
+            reg.iter()
+                .map(|(_, r)| (r.sdk_index, r.fd_type))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            types(&reg),
+            [(1, "present"), (0, "hw_present"), (0, "power_good")]
+        );
         // Again in the same state: nothing changes.
         s.refresh_poll_obj(&mut poll, &mut reg).unwrap();
         assert_eq!(types(&reg).len(), 3);
@@ -1002,7 +1207,13 @@ mod tests {
         set_state(&s, STATE_NOT_PRESENT);
         std::fs::remove_file(root.real(&module_path(0, "power_good"))).unwrap();
         let e = s.refresh_poll_obj(&mut poll, &mut reg).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("TypeError", "argument must be an int, or have a fileno() method.".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "TypeError",
+                "argument must be an int, or have a fileno() method.".to_string()
+            )
+        );
         // The registered fds, as Python prints them.
         let enc = match platform_base::py::codec::locale() {
             platform_base::py::codec::Codec::Ascii => "ANSI_X3.4-1968",
@@ -1017,11 +1228,28 @@ mod tests {
         let mut legacy = Registered::default();
         let fd = SysFile::open(&module_path(1, "present")).unwrap();
         let fileno = fd.fileno();
-        legacy.insert(fileno, Reg { sdk_index: 1, fd, fd_type: "" });
+        legacy.insert(
+            fileno,
+            Reg {
+                sdk_index: 1,
+                fd,
+                fd_type: "",
+            },
+        );
         // The same file number again replaces the entry, in its place.
         let again = SysFile::open(&module_path(1, "present")).unwrap();
-        legacy.insert(fileno, Reg { sdk_index: 7, fd: again, fd_type: "" });
-        assert_eq!(legacy.iter().map(|(_, r)| r.sdk_index).collect::<Vec<_>>(), [7]);
+        legacy.insert(
+            fileno,
+            Reg {
+                sdk_index: 7,
+                fd: again,
+                fd_type: "",
+            },
+        );
+        assert_eq!(
+            legacy.iter().map(|(_, r)| r.sdk_index).collect::<Vec<_>>(),
+            [7]
+        );
         assert!(legacy.repr().ends_with(&format!("encoding='{enc}'>)}}")));
         assert!(legacy.get_mut(fileno).is_some());
         legacy.retain(|_| false);
@@ -1070,7 +1298,16 @@ mod tests {
         module(&root, 0, &[("control", "0")]);
         eeprom(&root, 0);
         module(&root, 1, &[("control", "1"), ("hw_present", "0")]);
-        module(&root, 2, &[("control", "1"), ("hw_present", "1"), ("power_on", "0"), ("power_good", "0")]);
+        module(
+            &root,
+            2,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "0"),
+                ("power_good", "0"),
+            ],
+        );
         let sfps = [port(0), port(1), port(2)];
         // Ready already, as if its 3 seconds were over: the task thread's
         // one-second steps could otherwise miss the 3.5 the loop allows.
@@ -1079,7 +1316,10 @@ mod tests {
         initialize_sfp_modules(&sfps).unwrap();
         assert!(begin.elapsed() >= Duration::from_secs_f64(3.5));
         let states: Vec<&str> = sfps.iter().map(|s| s.get_state().unwrap()).collect();
-        assert_eq!(states, [STATE_FW_CONTROL, STATE_NOT_PRESENT, STATE_POWER_BAD]);
+        assert_eq!(
+            states,
+            [STATE_FW_CONTROL, STATE_NOT_PRESENT, STATE_POWER_BAD]
+        );
         task.reset();
         // Without a reset there is nothing to wait for; a module START does
         // not move is reported unstable.
@@ -1093,7 +1333,16 @@ mod tests {
         // A ready port past the list's end: Python's IndexError.
         let sfps = [port(1)];
         task.mark_ready(4);
-        module(&root, 3, &[("control", "1"), ("hw_present", "1"), ("power_on", "1"), ("hw_reset", "0")]);
+        module(
+            &root,
+            3,
+            &[
+                ("control", "1"),
+                ("hw_present", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "0"),
+            ],
+        );
         let resetting = port(3);
         resetting.on_event(EVENT_START).unwrap();
         let e = initialize_sfp_modules(&sfps).unwrap_err();

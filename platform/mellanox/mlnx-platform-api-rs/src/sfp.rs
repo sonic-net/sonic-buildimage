@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/sfp.py`, as far as the platform API reaches without
 //! `sonic_xcvr`: the port objects the chassis builds, their presence and
 //! EEPROM reads, and the values xcvrd leaves in STATE_DB that the thermal
@@ -29,7 +28,10 @@ use platform_base::db::Db;
 use platform_base::py::{py_float, py_int, PyErr, PyResult};
 use platform_base::{io, multi_asic};
 
-use crate::db_table_helper::{self as dbt, TRANSCEIVER_DOM_TEMPERATURE_TABLE, TRANSCEIVER_DOM_THRESHOLD_TABLE, TRANSCEIVER_INFO_TABLE};
+use crate::db_table_helper::{
+    self as dbt, TRANSCEIVER_DOM_TEMPERATURE_TABLE, TRANSCEIVER_DOM_THRESHOLD_TABLE,
+    TRANSCEIVER_INFO_TABLE,
+};
 use crate::device_data;
 use crate::module_host_mgmt_initializer::get_asic_ready_file_path;
 use crate::utils::{self, Log};
@@ -139,7 +141,12 @@ impl Sfp {
 
     /// `SFP(sfp_index, slot_id=..., linecard_port_count=..., lc_name=...)`:
     /// a line card's port, numbered across the chassis.
-    pub fn new_linecard(sfp_index: i128, slot_id: i128, linecard_port_count: i128, lc_name: &str) -> PyResult<Arc<Sfp>> {
+    pub fn new_linecard(
+        sfp_index: i128,
+        slot_id: i128,
+        linecard_port_count: i128,
+        lc_name: &str,
+    ) -> PyResult<Arc<Sfp>> {
         let base = Sfp::new(Kind::Sfp, sfp_index, "asic0")?;
         let max_linecard_count = device_data::get_linecard_count();
         let max_linecard_port_count = device_data::get_linecard_max_port_count()?;
@@ -149,11 +156,13 @@ impl Sfp {
         if linecard_port_count == 0 {
             return Err(PyErr::other("ZeroDivisionError", "division by zero"));
         }
-        let index = (slot_id.rem_euclid(max_linecard_count) - 1) as f64 * max_linecard_port_count as f64
+        let index = (slot_id.rem_euclid(max_linecard_count) - 1) as f64
+            * max_linecard_port_count as f64
             + sfp_index as f64 * (max_linecard_port_count as f64 / linecard_port_count as f64)
             + 1.0;
         crate::thermal::initialize_linecard_sfp_thermal(lc_name, slot_id, sfp_index);
-        let mut s = Arc::try_unwrap(base).map_err(|_| PyErr::runtime_error("SFP shared while built"))?;
+        let mut s =
+            Arc::try_unwrap(base).map_err(|_| PyErr::runtime_error("SFP shared while built"))?;
         s.lc_index = Some(index);
         Ok(Arc::new(s))
     }
@@ -205,7 +214,11 @@ impl Sfp {
         match self.presence() {
             Ok(p) => p,
             Err(e) => {
-                utils::log_warning(&format!("Failed to check presence of SFP {}: {}", self.sdk_index, e.str()));
+                utils::log_warning(&format!(
+                    "Failed to check presence of SFP {}: {}",
+                    self.sdk_index,
+                    e.str()
+                ));
                 false
             }
         }
@@ -213,10 +226,17 @@ impl Sfp {
 
     fn presence(&self) -> PyResult<bool> {
         let n = py_int(&self.asic_id.replace("asic", ""))? + 1;
-        if utils::read_int(&format!("/var/run/hw-management/config/asic{n}_ready"), 0, Log::Off) != 1 {
+        if utils::read_int(
+            &format!("/var/run/hw-management/config/asic{n}_ready"),
+            0,
+            Log::Off,
+        ) != 1
+        {
             return Ok(false);
         }
-        if device_data::is_module_host_management_mode()? && !io::exists(&get_asic_ready_file_path(&self.asic_id)) {
+        if device_data::is_module_host_management_mode()?
+            && !io::exists(&get_asic_ready_file_path(&self.asic_id))
+        {
             return Ok(false);
         }
         if self.is_sw_control()? {
@@ -235,13 +255,22 @@ impl Sfp {
         }
         utils::read_int_raise(&self.sysfs("control"), Log::Off)
             .map(|v| v == 1)
-            .map_err(|_| PyErr::other("Exception", format!("control sysfs for SFP {} does not exist", self.sdk_index)))
+            .map_err(|_| {
+                PyErr::other(
+                    "Exception",
+                    format!("control sysfs for SFP {} does not exist", self.sdk_index),
+                )
+            })
     }
 
     /// `check_eeprom_ready_if_present()`.
     pub fn check_eeprom_ready_if_present(&self) -> PyResult<bool> {
         self.sfp_only("check_eeprom_ready_if_present")?;
-        let node = if self.is_sw_control()? { "hw_present" } else { "present" };
+        let node = if self.is_sw_control()? {
+            "hw_present"
+        } else {
+            "present"
+        };
         if utils::read_int(&self.sysfs(node), 0, Log::Off) == 0 {
             return Ok(true);
         }
@@ -256,16 +285,25 @@ impl Sfp {
     fn page_and_offset(&self, overall_offset: i128) -> PyResult<Option<(String, i128)>> {
         let eeprom_path = self.eeprom_path();
         if !io::exists(&eeprom_path) {
-            utils::log_error(&format!("EEPROM file path for sfp {} does not exist", self.sdk_index));
+            utils::log_error(&format!(
+                "EEPROM file path for sfp {} does not exist",
+                self.sdk_index
+            ));
             return Ok(None);
         }
         if overall_offset < SFP_PAGE_SIZE {
-            return Ok(Some((io::join(&eeprom_path, SFP_PAGE0_PATH), overall_offset)));
+            return Ok(Some((
+                io::join(&eeprom_path, SFP_PAGE0_PATH),
+                overall_offset,
+            )));
         }
         let page1h_start = if self.sfp_type_str(&eeprom_path)? == Some(SfpType::Sff8472) {
             let start = SFP_PAGE_SIZE * 2;
             if overall_offset < start {
-                return Ok(Some((io::join(&eeprom_path, SFP_A2H_PAGE0_PATH), overall_offset - SFP_PAGE_SIZE)));
+                return Ok(Some((
+                    io::join(&eeprom_path, SFP_A2H_PAGE0_PATH),
+                    overall_offset - SFP_PAGE_SIZE,
+                )));
             }
             start
         } else {
@@ -273,7 +311,10 @@ impl Sfp {
         };
         let rel = overall_offset - page1h_start;
         let page_num = rel.div_euclid(SFP_UPPER_PAGE_OFFSET) + 1;
-        Ok(Some((io::join(&eeprom_path, &format!("{page_num}/data")), rel.rem_euclid(SFP_UPPER_PAGE_OFFSET))))
+        Ok(Some((
+            io::join(&eeprom_path, &format!("{page_num}/data")),
+            rel.rem_euclid(SFP_UPPER_PAGE_OFFSET),
+        )))
     }
 
     /// `_get_sfp_type_str(eeprom_path)`: cached once known.
@@ -298,7 +339,11 @@ impl Sfp {
             Err(e) => {
                 let e = PyErr::from_io(&e, Some(&page));
                 if !e.str().contains(SFP_EEPROM_NOT_AVAILABLE) {
-                    utils::log_error(&format!("Failed to get SFP type, index={}, error={}", self.sdk_index, e.str()));
+                    utils::log_error(&format!(
+                        "Failed to get SFP type, index={}, error={}",
+                        self.sdk_index,
+                        e.str()
+                    ));
                 }
                 return Ok(None);
             }
@@ -308,8 +353,15 @@ impl Sfp {
     }
 
     /// `_read_eeprom(offset, num_bytes, log_on_error)`: what it reads, or
-    /// None; it raises only what finding the page raises.
-    pub fn read_eeprom(&self, offset: i128, num_bytes: i128, log_on_error: bool) -> PyResult<Option<Vec<u8>>> {
+    /// None; it raises only what finding the page raises. Presence/readiness
+    /// deliberately use this single-attempt path. The public SFP EEPROM
+    /// transport/retry API is not a declared native pmon capability.
+    pub fn read_eeprom(
+        &self,
+        offset: i128,
+        num_bytes: i128,
+        log_on_error: bool,
+    ) -> PyResult<Option<Vec<u8>>> {
         let mut offset = offset;
         let mut num_bytes = num_bytes;
         let mut result: Vec<u8> = Vec::new();
@@ -342,7 +394,10 @@ impl Sfp {
             match r {
                 Ok(Some(_)) => {}
                 Ok(None) => {
-                    utils::log_error(&format!("SFP {}: EEPROM page {page} is empty, no data retrieved", self.sdk_index));
+                    utils::log_error(&format!(
+                        "SFP {}: EEPROM page {page} is empty, no data retrieved",
+                        self.sdk_index
+                    ));
                     return Ok(None);
                 }
                 Err(e) => {
@@ -392,7 +447,8 @@ impl Sfp {
     /// `get_temperature_from_db()`: 0 when absent, -1 when xcvrd wrote None.
     pub fn get_temperature_from_db(&self) -> PyResult<f64> {
         self.sfp_only("get_temperature_from_db")?;
-        let (present, value) = self.data_from_db(TRANSCEIVER_DOM_TEMPERATURE_TABLE, "temperature")?;
+        let (present, value) =
+            self.data_from_db(TRANSCEIVER_DOM_TEMPERATURE_TABLE, "temperature")?;
         if !present {
             return Ok(0.0);
         }
@@ -453,7 +509,10 @@ fn read_at(path: &str, offset: u64, n: usize) -> std::io::Result<Vec<u8>> {
 }
 
 fn mapped(index: i128) -> Option<String> {
-    utils::lock(&PORT_MAPPING).as_ref().and_then(|m| m.get(&index).cloned()).filter(|p| !p.is_empty())
+    utils::lock(&PORT_MAPPING)
+        .as_ref()
+        .and_then(|m| m.get(&index).cloned())
+        .filter(|p| !p.is_empty())
 }
 
 /// `build_port_mapping(namespace)`: CONFIG_DB's PORT table, in natural
@@ -476,7 +535,10 @@ fn build_port_mapping(namespace: &str) -> PyResult<()> {
                 ))
             }
         };
-        utils::lock(&PORT_MAPPING).get_or_insert_with(HashMap::new).entry(index).or_insert(logical_port);
+        utils::lock(&PORT_MAPPING)
+            .get_or_insert_with(HashMap::new)
+            .entry(index)
+            .or_insert(logical_port);
     }
     Ok(())
 }
@@ -510,17 +572,34 @@ mod tests {
         page0[0] = 0x18;
         page0[255] = 0xaa;
         std::fs::create_dir_all(io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50"))).unwrap();
-        std::fs::write(io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50/data")), &page0).unwrap();
+        std::fs::write(
+            io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50/data")),
+            &page0,
+        )
+        .unwrap();
         r.write(&format!("{M0}/eeprom/pages/1/data"), "\u{1}\u{2}");
         let sfp = Sfp::new(Kind::Sfp, 0, "asic0").unwrap();
         assert_eq!(sfp.read_eeprom(0, 1, true).unwrap(), Some(vec![0x18]));
         // CMIS: page 1 starts at 256, 128 bytes per upper page.
         assert_eq!(sfp.page_and_offset(256).unwrap().unwrap().1, 0);
-        assert!(sfp.page_and_offset(256).unwrap().unwrap().0.ends_with("/eeprom/pages/1/data"));
-        assert!(sfp.page_and_offset(384 + 5).unwrap().unwrap().0.ends_with("/eeprom/pages/2/data"));
+        assert!(sfp
+            .page_and_offset(256)
+            .unwrap()
+            .unwrap()
+            .0
+            .ends_with("/eeprom/pages/1/data"));
+        assert!(sfp
+            .page_and_offset(384 + 5)
+            .unwrap()
+            .unwrap()
+            .0
+            .ends_with("/eeprom/pages/2/data"));
         assert_eq!(sfp.page_and_offset(384 + 5).unwrap().unwrap().1, 5);
         // Reading past the end of page 0 continues on page 1.
-        assert_eq!(sfp.read_eeprom(255, 3, true).unwrap(), Some(vec![0xaa, 1, 2]));
+        assert_eq!(
+            sfp.read_eeprom(255, 3, true).unwrap(),
+            Some(vec![0xaa, 1, 2])
+        );
     }
 
     #[test]
@@ -536,7 +615,10 @@ mod tests {
     fn an_rj45_port_lacks_what_only_sfp_defines() {
         let _r = Root::new();
         let port = Sfp::new(Kind::Rj45, 3, "asic0").unwrap();
-        assert_eq!(port.get_asic_index().unwrap_err().str(), "'RJ45Port' object has no attribute 'get_asic_index'");
+        assert_eq!(
+            port.get_asic_index().unwrap_err().str(),
+            "'RJ45Port' object has no attribute 'get_asic_index'"
+        );
         assert_eq!(
             port.get_temperature_from_db().unwrap_err().str(),
             "'RJ45Port' object has no attribute 'get_temperature_from_db'"
@@ -547,7 +629,10 @@ mod tests {
     fn a_port_on_no_known_asic_fails_presence_with_pythons_message() {
         let _r = Root::new();
         let sfp = Sfp::new(Kind::Sfp, 7, "asicNone").unwrap();
-        assert_eq!(sfp.presence().unwrap_err().str(), "invalid literal for int() with base 10: 'None'");
+        assert_eq!(
+            sfp.presence().unwrap_err().str(),
+            "invalid literal for int() with base 10: 'None'"
+        );
         assert!(!sfp.get_presence());
     }
 
@@ -557,7 +642,10 @@ mod tests {
         let e = import().unwrap_err();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("ModuleNotFoundError", "No module named 'hw_management_independent_mode_update'".to_string())
+            (
+                "ModuleNotFoundError",
+                "No module named 'hw_management_independent_mode_update'".to_string()
+            )
         );
         crate::hw_mgmt::testing::install_independent_mode_update(&root);
         import().unwrap();
@@ -566,12 +654,25 @@ mod tests {
     #[test]
     fn each_kind_of_port_is_its_python_class() {
         let _root = Root::new();
-        for (kind, class) in [(Kind::Sfp, "SFP"), (Kind::Cpo, "CpoPort"), (Kind::Rj45, "RJ45Port")] {
+        for (kind, class) in [
+            (Kind::Sfp, "SFP"),
+            (Kind::Cpo, "CpoPort"),
+            (Kind::Rj45, "RJ45Port"),
+        ] {
             let p = Sfp::new(kind, 4, "asic0").unwrap();
-            assert_eq!((p.kind(), p.class_name(), p.index, p.sdk_index), (kind, class, 5, 4));
+            assert_eq!(
+                (p.kind(), p.class_name(), p.index, p.sdk_index),
+                (kind, class, 5, 4)
+            );
             assert_eq!(p.mapping_key(), Some(5));
         }
-        assert_eq!(Sfp::new(Kind::Sfp, 4, "asic0").unwrap().get_asic_index().unwrap(), 0);
+        assert_eq!(
+            Sfp::new(Kind::Sfp, 4, "asic0")
+                .unwrap()
+                .get_asic_index()
+                .unwrap(),
+            0
+        );
     }
 
     #[test]
@@ -580,17 +681,29 @@ mod tests {
             return;
         }
         let root = Root::new();
-        root.write("/host/machine.conf", "onie_platform=x86_64-nvidia_sn4800-r0\n");
+        root.write(
+            "/host/machine.conf",
+            "onie_platform=x86_64-nvidia_sn4800-r0\n",
+        );
         // No line cards: Python's modulo by zero.
         let e = Sfp::new_linecard(0, 1, 16, "LC1").err().unwrap();
-        assert_eq!((e.exc.name(), e.str()), ("ZeroDivisionError", "integer modulo by zero".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("ZeroDivisionError", "integer modulo by zero".to_string())
+        );
         root.write("/run/hw-management/config/hotplug_linecards", "8\n");
         crate::utils::forget_caches();
         let e = Sfp::new_linecard(0, 1, 0, "LC1").err().unwrap();
-        assert_eq!((e.exc.name(), e.str()), ("ZeroDivisionError", "division by zero".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("ZeroDivisionError", "division by zero".to_string())
+        );
         // (slot % 8 - 1) * 16 + index * (16 / count) + 1, a float.
         let p = Sfp::new_linecard(2, 2, 16, "LC2").unwrap();
-        assert_eq!((p.lc_index, p.mapping_key(), p.sdk_index), (Some(19.0), Some(19), 2));
+        assert_eq!(
+            (p.lc_index, p.mapping_key(), p.sdk_index),
+            (Some(19.0), Some(19), 2)
+        );
         let p = Sfp::new_linecard(1, 1, 32, "LC1").unwrap();
         assert_eq!((p.lc_index, p.mapping_key()), (Some(1.5), None));
     }
@@ -616,7 +729,10 @@ mod tests {
         let r = Sfp::new(Kind::Rj45, 1, "asic0").unwrap();
         module(&root, 1, &[("present", "1")]);
         assert!(r.get_presence());
-        assert_eq!(r.check_eeprom_ready_if_present().unwrap_err().exc.name(), "AttributeError");
+        assert_eq!(
+            r.check_eeprom_ready_if_present().unwrap_err().exc.name(),
+            "AttributeError"
+        );
         drop(root);
 
         // Module host management: the ASIC's ready file, then the control.
@@ -629,7 +745,10 @@ mod tests {
         root.write(&get_asic_ready_file_path("asic0"), "asic0\n");
         // No `control`: the exception, logged, is absence.
         assert!(!s.get_presence());
-        assert_eq!(s.is_sw_control().unwrap_err().str(), "control sysfs for SFP 0 does not exist");
+        assert_eq!(
+            s.is_sw_control().unwrap_err().str(),
+            "control sysfs for SFP 0 does not exist"
+        );
         module(&root, 0, &[("control", "1")]);
         assert!(s.get_presence());
         assert!(!s.check_eeprom_ready_if_present().unwrap());
@@ -667,13 +786,23 @@ mod tests {
             page0[0] = id;
             write("0/i2c-0x50/data", &page0);
             let sfp = Sfp::new(Kind::Sfp, 0, "asic0").unwrap();
-            assert!(sfp.page_and_offset(256).unwrap().unwrap().0.ends_with("/pages/1/data"));
+            assert!(sfp
+                .page_and_offset(256)
+                .unwrap()
+                .unwrap()
+                .0
+                .ends_with("/pages/1/data"));
         }
         // The type cannot be read: neither cached nor logged as I/O error.
         std::fs::remove_file(io::real(&format!("{pages}/0/i2c-0x50/data"))).unwrap();
         std::fs::create_dir_all(io::real(&format!("{pages}/0/i2c-0x50/data"))).unwrap();
         let sfp = Sfp::new(Kind::Sfp, 0, "asic0").unwrap();
-        assert!(sfp.page_and_offset(300).unwrap().unwrap().0.ends_with("/pages/1/data"));
+        assert!(sfp
+            .page_and_offset(300)
+            .unwrap()
+            .unwrap()
+            .0
+            .ends_with("/pages/1/data"));
         assert!(sfp.sfp_type_str.lock().unwrap().is_none());
         // A page that cannot be read: None, logged or not.
         assert_eq!(sfp.read_eeprom(0, 1, true).unwrap(), None);
@@ -684,8 +813,14 @@ mod tests {
         write("0/i2c-0x50/data", &[]);
         let sfp = Sfp::new(Kind::Sfp, 0, "asic0").unwrap();
         let e = sfp.page_and_offset(300).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("IndexError", "bytearray index out of range".to_string()));
-        assert_eq!(sfp.read_eeprom(300, 1, true).unwrap_err().exc.name(), "IndexError");
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("IndexError", "bytearray index out of range".to_string())
+        );
+        assert_eq!(
+            sfp.read_eeprom(300, 1, true).unwrap_err().exc.name(),
+            "IndexError"
+        );
         assert!(sfp.page_and_offset(0).unwrap().is_some());
         drop(r);
     }
@@ -696,7 +831,11 @@ mod tests {
         let mut page0 = vec![0u8; 256];
         page0[0] = 0x18;
         std::fs::create_dir_all(io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50"))).unwrap();
-        std::fs::write(io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50/data")), &page0).unwrap();
+        std::fs::write(
+            io::real(&format!("{M0}/eeprom/pages/0/i2c-0x50/data")),
+            &page0,
+        )
+        .unwrap();
         r.write(&format!("{M0}/eeprom/pages/1/data"), "\u{1}\u{2}");
         let sfp = Sfp::new(Kind::Sfp, 0, "asic0").unwrap();
         assert_eq!(sfp.read_eeprom(256, 2, true).unwrap(), Some(vec![1, 2]));
@@ -726,18 +865,41 @@ mod tests {
         redis.hset(CONFIG_DB, "PORT|Ethernet10", &[("index", "2")]);
         redis.hset(CONFIG_DB, "PORT|Ethernet9", &[("index", "2")]);
         assert_eq!(s.get_temperature_from_db().unwrap(), 0.0);
-        redis.hset(STATE_DB, "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8", &[("temperature", "45.5")]);
-        redis.hset(STATE_DB, "TRANSCEIVER_DOM_THRESHOLD|Ethernet8", &[("temphighwarning", "N/A"), ("temphighalarm", "75")]);
-        redis.hset(STATE_DB, "TRANSCEIVER_INFO|Ethernet8", &[("manufacturer", " Mellanox "), ("model", "MCP1600")]);
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8",
+            &[("temperature", "45.5")],
+        );
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_DOM_THRESHOLD|Ethernet8",
+            &[("temphighwarning", "N/A"), ("temphighalarm", "75")],
+        );
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_INFO|Ethernet8",
+            &[("manufacturer", " Mellanox "), ("model", "MCP1600")],
+        );
         assert_eq!(s.get_temperature_from_db().unwrap(), 45.5);
         assert_eq!(s.get_warning_threshold_from_db().unwrap(), 0.0);
         assert_eq!(s.get_critical_threshold_from_db().unwrap(), 75.0);
         assert_eq!(s.get_vendor_name_from_db().unwrap(), "Mellanox");
         assert_eq!(s.get_part_number_from_db().unwrap(), "MCP1600");
-        redis.hset(STATE_DB, "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8", &[("temperature", "None")]);
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8",
+            &[("temperature", "None")],
+        );
         assert_eq!(s.get_temperature_from_db().unwrap(), -1.0);
-        redis.hset(STATE_DB, "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8", &[("temperature", "hot")]);
-        assert_eq!(s.get_temperature_from_db().unwrap_err().exc.name(), "ValueError");
+        redis.hset(
+            STATE_DB,
+            "TRANSCEIVER_DOM_TEMPERATURE|Ethernet8",
+            &[("temperature", "hot")],
+        );
+        assert_eq!(
+            s.get_temperature_from_db().unwrap_err().exc.name(),
+            "ValueError"
+        );
         let p2 = Sfp::new(Kind::Sfp, 1, "asic0").unwrap();
         assert_eq!(p2.get_logical_port().unwrap().as_deref(), Some("Ethernet9"));
         // A port without an index: int(None).
@@ -754,10 +916,16 @@ mod tests {
         let r = Root::new();
         r.write("/usr/share/sonic/platform/asic.conf", "NUM_ASIC=2\n");
         let s = Sfp::new(Kind::Sfp, 3, "asic1").unwrap();
-        assert_eq!((s.get_asic_index().unwrap(), s.namespace.as_str()), (1, "asic1"));
+        assert_eq!(
+            (s.get_asic_index().unwrap(), s.namespace.as_str()),
+            (1, "asic1")
+        );
         // Its databases are not the default namespace's: Python's KeyError.
         forget_port_mapping();
-        assert_eq!(s.get_temperature_from_db().unwrap_err().exc.name(), "KeyError");
+        assert_eq!(
+            s.get_temperature_from_db().unwrap_err().exc.name(),
+            "KeyError"
+        );
     }
 
     #[test]

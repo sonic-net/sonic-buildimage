@@ -152,6 +152,8 @@ fn tpm_password() -> PyResult<PyVal> {
 }
 
 impl MlnxBmc {
+    /// Native provisioning intentionally omits client stdout and exception
+    /// text from syslog; see README.md for this credential-related difference.
     /// `_configure_nos_account()`: hw-management's `BMCAccessor().login()`
     /// provisions the account.  What it prints is kept from the CLI's output
     /// and logged a line at a time -- after the error, if it raised, as the
@@ -319,6 +321,7 @@ mod tests {
             },
             curl_path,
         )
+        .with_test_bmc_os("openbmc")
     }
 
     fn get(path: &str) -> String {

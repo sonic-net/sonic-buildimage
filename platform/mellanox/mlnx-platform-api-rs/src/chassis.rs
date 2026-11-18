@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/chassis.py` and `platform.py`.
 //!
 //! Everything is built on first use, as in Python, and each `open()` builds
@@ -35,17 +34,17 @@ use crate::eeprom::Eeprom;
 use crate::fan::Fan;
 use crate::fan_drawer::FanDrawer;
 use crate::led::Led;
-use crate::liquid_cooling::LiquidCooling;
 use crate::linecard::LinecardModule;
+use crate::liquid_cooling::LiquidCooling;
 use crate::module::DpuModule;
 use crate::module_host_mgmt_initializer::ModuleHostMgmtInitializer;
 use crate::pdb::Pdb;
+use crate::poll::{PollSet, POLLERR_PRI};
 use crate::psu::Psu;
 use crate::sfp::{self, Kind, Sfp};
+use crate::sfp_events::{self as sfpe, PortDict, Reg, Registered};
 use crate::thermal_manager::ThermalManager;
 use crate::utils::{self, Log};
-use crate::sfp_events::{self as sfpe, PortDict, Reg, Registered};
-use crate::poll::{PollSet, POLLERR_PRI};
 use crate::watchdog::{self, Watchdog};
 
 const VPD_DATA_FILE: &str = "/var/run/hw-management/eeprom/vpd_data";
@@ -78,7 +77,9 @@ static SYSTEM_LED: OnceLock<(Arc<Led>, Arc<Led>)> = OnceLock::new();
 /// `Chassis.chassis_instance`, for the thermal manager: without one, the
 /// AttributeError names `attr`, the method Python asks of it first.
 pub fn instance(attr: &str) -> PyResult<Arc<Chassis>> {
-    utils::lock(&INSTANCE).clone().ok_or_else(|| PyErr::missing("NoneType", attr))
+    utils::lock(&INSTANCE)
+        .clone()
+        .ok_or_else(|| PyErr::missing("NoneType", attr))
 }
 
 /// Which `Chassis` class `Platform()` picked.
@@ -213,7 +214,11 @@ impl Chassis {
             if count != 0 {
                 let hot_swapable = device_data::is_psu_hotswapable();
                 for index in 0..count.max(0) {
-                    let psu = if hot_swapable { Psu::new(index) } else { Psu::new_fixed(index) };
+                    let psu = if hot_swapable {
+                        Psu::new(index)
+                    } else {
+                        Psu::new_fixed(index)
+                    };
                     list.push(PyVal::Obj(psu));
                 }
             }
@@ -296,7 +301,11 @@ impl Chassis {
     // -- SFPs ----------------------------------------------------------------
 
     /// The `RJ45_port_list` and `cpo_port_list` properties: read once.
-    fn port_list(&self, slot: &Mutex<Option<Option<Vec<i128>>>>, rj45: bool) -> PyResult<Option<Vec<i128>>> {
+    fn port_list(
+        &self,
+        slot: &Mutex<Option<Option<Vec<i128>>>>,
+        rj45: bool,
+    ) -> PyResult<Option<Vec<i128>>> {
         let mut s = utils::lock(slot);
         if let Some(l) = s.as_ref() {
             return Ok(l.clone());
@@ -324,7 +333,9 @@ impl Chassis {
         if self.kind == ChassisKind::Modular {
             let cards = self.initialize_linecards()?;
             if cards.is_empty() {
-                return Err(PyErr::type_error("reduce() of empty iterable with no initial value"));
+                return Err(PyErr::type_error(
+                    "reduce() of empty iterable with no initial value",
+                ));
             }
             let mut n = 0;
             for card in cards {
@@ -352,10 +363,15 @@ impl Chassis {
         if map.as_ref().is_none_or(|m| m.is_empty()) {
             *map = Some(utils::extract_asic_id_map(device_data::get_asic_count()?)?);
         }
-        Ok(match map.as_ref().and_then(|m| m.iter().find(|(i, _)| *i == index)) {
-            Some((_, asic)) => format!("asic{asic}"),
-            None => "asicNone".to_string(),
-        })
+        Ok(
+            match map
+                .as_ref()
+                .and_then(|m| m.iter().find(|(i, _)| *i == index))
+            {
+                Some((_, asic)) => format!("asic{asic}"),
+                None => "asicNone".to_string(),
+            },
+        )
     }
 
     /// The class `initialize_sfp` picks for a port.
@@ -403,7 +419,12 @@ impl Chassis {
     }
 
     fn sfp_list(&self) -> Vec<Arc<Sfp>> {
-        utils::lock(&self.sfp).list.iter().flatten().cloned().collect()
+        utils::lock(&self.sfp)
+            .list
+            .iter()
+            .flatten()
+            .cloned()
+            .collect()
     }
 
     /// `wait_sfp_eeprom_ready()`.
@@ -416,7 +437,9 @@ impl Chassis {
         let mut checks: Vec<Box<dyn FnMut() -> PyResult<bool>>> = Vec::new();
         for s in self.sfp_list() {
             let idx = s.sdk_index;
-            if rj45.as_ref().is_some_and(|l| l.contains(&idx)) || cpo.as_ref().is_some_and(|l| l.contains(&idx)) {
+            if rj45.as_ref().is_some_and(|l| l.contains(&idx))
+                || cpo.as_ref().is_some_and(|l| l.contains(&idx))
+            {
                 continue;
             }
             checks.push(Box::new(move || s.check_eeprom_ready_if_present()));
@@ -426,7 +449,11 @@ impl Chassis {
 
     /// `wait_sfp_ready_for_use()`.
     fn wait_sfp_ready_for_use(&self) -> PyResult<bool> {
-        let ready_file = if utils::is_host() { "/tmp/nv-syncd-shared/sfp_ready" } else { "/tmp/sfp_ready" };
+        let ready_file = if utils::is_host() {
+            "/tmp/nv-syncd-shared/sfp_ready"
+        } else {
+            "/tmp/sfp_ready"
+        };
         if io::exists(ready_file) {
             return Ok(true);
         }
@@ -461,7 +488,9 @@ impl Chassis {
         if self.kind == ChassisKind::Modular {
             let cards = self.initialize_linecards()?;
             if cards.is_empty() {
-                return Err(PyErr::type_error("reduce() of empty iterable with no initial value"));
+                return Err(PyErr::type_error(
+                    "reduce() of empty iterable with no initial value",
+                ));
             }
             let mut all = Vec::new();
             for card in cards {
@@ -486,12 +515,17 @@ impl Chassis {
                 Ok(true) => return Vec::new(),
                 Ok(false) => {}
                 Err(e) => {
-                    utils::log_error(&format!("Fail to decode vpd_data {filename} due to {}", e.repr()));
+                    utils::log_error(&format!(
+                        "Fail to decode vpd_data {filename} due to {}",
+                        e.repr()
+                    ));
                     return Vec::new();
                 }
             }
             if !utils::wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT) {
-                utils::log_error(&format!("VPD data file {filename} not available after timeout"));
+                utils::log_error(&format!(
+                    "VPD data file {filename} not available after timeout"
+                ));
                 return Vec::new();
             }
         }
@@ -503,7 +537,9 @@ impl Chassis {
         if vpd.is_empty() {
             *vpd = self.parse_vpd_data(VPD_DATA_FILE);
         }
-        vpd.iter().find(|(k, _)| k == key).map_or_else(|| "N/A".to_string(), |(_, v)| v.clone())
+        vpd.iter()
+            .find(|(k, _)| k == key)
+            .map_or_else(|| "N/A".to_string(), |(_, v)| v.clone())
     }
 
     /// `_read_model_from_vpd()`: SKUs from Spectrum-4 on keep their model in
@@ -525,7 +561,11 @@ impl Chassis {
             (r".*SONIC_BOOT_TYPE=(fast|fast-reboot).*", "fast-reboot"),
         ] {
             let re = Regex::new(pattern).map_err(|e| PyErr::runtime_error(e.to_string()))?;
-            if re.captures(line).and_then(|c| c.get(1)).is_some_and(|g| !g.as_str().is_empty()) {
+            if re
+                .captures(line)
+                .and_then(|c| c.get(1))
+                .is_some_and(|g| !g.as_str().is_empty())
+            {
                 return Ok(Some(cause));
             }
         }
@@ -550,7 +590,9 @@ impl Chassis {
         if from_vpd {
             let model = self.vpd_get(SYS_DISPLAY);
             if model == "N/A" && device_data::is_simx_platform()? {
-                utils::log_notice("VPD SYS_DISPLAY unavailable on simx; falling back to EEPROM part number");
+                utils::log_notice(
+                    "VPD SYS_DISPLAY unavailable on simx; falling back to EEPROM part number",
+                );
                 return Ok(self.initialize_eeprom()?.get_part_number());
             }
             return Ok(PyVal::Str(model));
@@ -566,7 +608,9 @@ impl Chassis {
 /// `_read_model_from_vpd()` for a given SKU.
 fn model_in_vpd(sku: Option<&str>) -> PyResult<bool> {
     let Some(sku) = sku else {
-        return Err(PyErr::type_error("expected string or bytes-like object, got 'NoneType'"));
+        return Err(PyErr::type_error(
+            "expected string or bytes-like object, got 'NoneType'",
+        ));
     };
     let re = Regex::new("[0-9]{4}").map_err(|e| PyErr::runtime_error(e.to_string()))?;
     let Some(m) = re.find(sku) else {
@@ -645,7 +689,12 @@ impl PyObject for Chassis {
         if utils::is_host() && self.parse_warmfast_reboot_from_proc_cmdline()?.is_some() {
             return Ok(reboot_cause(REBOOT_CAUSE_NON_HARDWARE, ""));
         }
-        if !self.wait_reboot_cause_ready() {
+        if device_data::is_simx_platform()? {
+            if utils::read_int(REBOOT_CAUSE_READY_FILE, 0, Log::Off) != 1 {
+                utils::log_notice("Hardware reboot cause is not available on SimX, skipping the hardware reboot cause check");
+                return Ok(reboot_cause(REBOOT_CAUSE_NON_HARDWARE, ""));
+            }
+        } else if !self.wait_reboot_cause_ready() {
             utils::log_error("Hardware reboot cause is not ready");
             return Ok(reboot_cause(REBOOT_CAUSE_NON_HARDWARE, ""));
         }
@@ -693,7 +742,9 @@ impl PyObject for Chassis {
             }
         }
         if self.verify_reboot_cause("reset_sw_reset") {
-            utils::log_info("Hardware reboot cause: the system was rebooted due to software requesting");
+            utils::log_info(
+                "Hardware reboot cause: the system was rebooted due to software requesting",
+            );
         } else {
             utils::log_info("Hardware reboot cause: no hardware reboot cause found");
         }
@@ -751,7 +802,11 @@ impl PyObject for Chassis {
             ChassisKind::Modular => {
                 let tail: String = module_name.chars().skip("LINE-CARD".len() - 1).collect();
                 let index = platform_base::py::py_int(&tail);
-                Ok(PyVal::Int(utils::default_return(-1, index, "get_module_index")))
+                Ok(PyVal::Int(utils::default_return(
+                    -1,
+                    index,
+                    "get_module_index",
+                )))
             }
             // `self.module_name_index_map[module_name.upper()]`, the map
             // `initialize_single_module()` fills from each DPU's `get_name()`.
@@ -937,7 +992,12 @@ impl Chassis {
     /// objects, iterated in the order of their addresses' hashes; here it
     /// is the order the ports were built in.
     pub(crate) fn asic_modules(&self, asic_id: &str) -> Vec<Arc<Sfp>> {
-        utils::lock(&self.sfp).asic_modules.iter().find(|(a, _)| a == asic_id).map(|(_, v)| v.clone()).unwrap_or_default()
+        utils::lock(&self.sfp)
+            .asic_modules
+            .iter()
+            .find(|(a, _)| a == asic_id)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
     }
 
     /// `sfp_wait_ready_and_initialize()`.
@@ -961,7 +1021,12 @@ impl Chassis {
         } else {
             self.change_event_legacy(&mut ev, timeout)?
         };
-        let empty_sfp = || PyVal::Tuple(vec![PyVal::Bool(true), PyVal::Dict(vec![(PyVal::str("sfp"), PyVal::Dict(vec![]))])]);
+        let empty_sfp = || {
+            PyVal::Tuple(vec![
+                PyVal::Bool(true),
+                PyVal::Dict(vec![(PyVal::str("sfp"), PyVal::Dict(vec![]))]),
+            ])
+        };
         let dict = match answer {
             ModeAnswer::Tuple => {
                 if !asic_events.is_empty() {
@@ -1011,14 +1076,23 @@ impl Chassis {
         let mut changes = PortDict::default();
         let asic_count = device_data::get_asic_count()?;
         // Python's is a set of names, iterated in string-hash order.
-        let names: Vec<String> = (1..=asic_count.max(0)).map(|i| format!("asic{i}_ready")).collect();
+        let names: Vec<String> = (1..=asic_count.max(0))
+            .map(|i| format!("asic{i}_ready"))
+            .collect();
         let mut watcher = crate::inotify_helper::InotifyEventHelper::new(ASIC_READY_DIR, &names)?;
         let mut changed_paths = watcher.wait_for_events(timeout_ms)?;
         let after = Self::capture_asic_states(&names)?;
         if !ev.last_asic_ready.is_empty() {
             for name in &names {
-                let before = ev.last_asic_ready.iter().find(|(n, _)| n == name).map(|(_, v)| v.clone());
-                let now = after.iter().find(|(n, _)| n == name).map(|(_, v)| v.clone());
+                let before = ev
+                    .last_asic_ready
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone());
+                let now = after
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone());
                 let Some(before) = before else {
                     return Err(PyErr::key_error(PyVal::str(name.as_str())));
                 };
@@ -1028,12 +1102,13 @@ impl Chassis {
             }
         }
         ev.last_asic_ready = after;
-        let wait_ready_task = if !changed_paths.is_empty() && device_data::is_module_host_management_mode()? {
-            crate::imports::sfp();
-            Some(crate::wait_sfp_ready_task::get())
-        } else {
-            None
-        };
+        let wait_ready_task =
+            if !changed_paths.is_empty() && device_data::is_module_host_management_mode()? {
+                crate::imports::sfp();
+                Some(crate::wait_sfp_ready_task::get())
+            } else {
+                None
+            };
         for path in changed_paths {
             let name = path.rsplit('/').next().unwrap_or("").to_string();
             let num = name
@@ -1043,7 +1118,8 @@ impl Chassis {
             let asic_index = platform_base::py::py_int(num)? - 1;
             let asic_id = format!("asic{asic_index}");
             let sfp_set = self.asic_modules(&asic_id);
-            let ready = platform_base::io::exists(&path) && utils::read_int(&path, 0, Log::Error) != 0;
+            let ready =
+                platform_base::io::exists(&path) && utils::read_int(&path, 0, Log::Error) != 0;
             let value = if ready {
                 self.enable_polling_for_asic(ev, &sfp_set)?;
                 "1"
@@ -1056,7 +1132,8 @@ impl Chassis {
                 self.disable_polling_for_asic(ev, &sfp_set);
                 "0"
             };
-            self.module_host_mgmt_initializer.set_asic_ready_value(asic_index, ready)?;
+            self.module_host_mgmt_initializer
+                .set_asic_ready_value(asic_index, ready)?;
             for s in &sfp_set {
                 changes.set_val(PyVal::Str((s.sdk_index + 1).to_string()), PyVal::str(value));
             }
@@ -1073,7 +1150,12 @@ impl Chassis {
             return;
         }
         let indices: Vec<i128> = sfp_set.iter().map(|s| s.sdk_index).collect();
-        let doomed: Vec<i32> = ev.registered.iter().filter(|(_, r)| indices.contains(&r.sdk_index)).map(|(f, _)| *f).collect();
+        let doomed: Vec<i32> = ev
+            .registered
+            .iter()
+            .filter(|(_, r)| indices.contains(&r.sdk_index))
+            .map(|(f, _)| *f)
+            .collect();
         for fileno in doomed {
             let _ = poll.unregister(fileno);
             ev.registered.remove(fileno);
@@ -1089,7 +1171,10 @@ impl Chassis {
         let host_mgmt = device_data::is_module_host_management_mode()?;
         for s in sfp_set {
             let r = (|| -> PyResult<()> {
-                let poll = ev.poll.as_mut().ok_or_else(|| PyErr::runtime_error("no poll object"))?;
+                let poll = ev
+                    .poll
+                    .as_mut()
+                    .ok_or_else(|| PyErr::runtime_error("no poll object"))?;
                 if host_mgmt {
                     s.refresh_poll_obj(poll, &mut ev.registered)
                 } else {
@@ -1098,9 +1183,20 @@ impl Chassis {
                     };
                     let fileno = fd.fileno();
                     poll.register(fileno, POLLERR_PRI);
-                    ev.registered.insert(fileno, Reg { sdk_index: s.sdk_index, fd, fd_type: "" });
+                    ev.registered.insert(
+                        fileno,
+                        Reg {
+                            sdk_index: s.sdk_index,
+                            fd,
+                            fd_type: "",
+                        },
+                    );
                     let status = s.get_module_status()?;
-                    match ev.before_first_poll.iter_mut().find(|(i, _)| *i == s.sdk_index) {
+                    match ev
+                        .before_first_poll
+                        .iter_mut()
+                        .find(|(i, _)| *i == s.sdk_index)
+                    {
                         Some(e) => e.1 = status,
                         None => ev.before_first_poll.push((s.sdk_index, status)),
                     }
@@ -1108,7 +1204,11 @@ impl Chassis {
                 }
             })();
             if let Err(e) = r {
-                utils::log_warning(&format!("Failed to enable polling for SFP {}: {}", s.sdk_index, e.str()));
+                utils::log_warning(&format!(
+                    "Failed to enable polling for SFP {}: {}",
+                    s.sdk_index,
+                    e.str()
+                ));
             }
         }
         Ok(())
@@ -1117,15 +1217,29 @@ impl Chassis {
     /// The poll timeout both modes use: at most a second, so a shutdown is
     /// noticed -- and 0, "wait forever", polls without blocking at all.
     fn poll_timeout(timeout: i128) -> (bool, f64) {
-        (timeout == 0, if timeout >= 1000 { 1000.0 } else { timeout as f64 })
+        (
+            timeout == 0,
+            if timeout >= 1000 {
+                1000.0
+            } else {
+                timeout as f64
+            },
+        )
     }
 
     /// The end of a poll round with nothing to report: back off after read
     /// errors, give up once the (capped) timeout has passed.
-    fn round_ends(has_read_error: bool, iteration_begin: std::time::Instant, begin: std::time::Instant, wait_forever: bool, timeout: f64) -> bool {
+    fn round_ends(
+        has_read_error: bool,
+        iteration_begin: std::time::Instant,
+        begin: std::time::Instant,
+        wait_forever: bool,
+        timeout: f64,
+    ) -> bool {
         let now = std::time::Instant::now();
         if has_read_error {
-            let sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - now.duration_since(iteration_begin).as_secs_f64();
+            let sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS
+                - now.duration_since(iteration_begin).as_secs_f64();
             if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS {
                 std::thread::sleep(Duration::from_secs_f64(sleep_time));
             }
@@ -1158,7 +1272,14 @@ impl Chassis {
                 if let Some(p) = ev.poll.as_mut() {
                     p.register(fileno, POLLERR_PRI);
                 }
-                ev.registered.insert(fileno, Reg { sdk_index: s.sdk_index, fd, fd_type: "" });
+                ev.registered.insert(
+                    fileno,
+                    Reg {
+                        sdk_index: s.sdk_index,
+                        fd,
+                        fd_type: "",
+                    },
+                );
                 let status = s.get_module_status()?;
                 ev.before_first_poll.push((s.sdk_index, status));
             }
@@ -1171,37 +1292,58 @@ impl Chassis {
         loop {
             let iteration_begin = std::time::Instant::now();
             let mut has_read_error = false;
-            let events = ev.poll.as_ref().map(|p| p.poll(timeout)).transpose()?.unwrap_or_default();
+            let events = ev
+                .poll
+                .as_ref()
+                .map(|p| p.poll(timeout))
+                .transpose()?
+                .unwrap_or_default();
             for (fileno, _) in events {
                 let Some(reg) = ev.registered.get_mut(fileno) else {
                     let repr = ev.registered.repr();
-                    utils::log_error(&format!("Unknown file no {fileno} from poll event, registered files are {repr}"));
+                    utils::log_error(&format!(
+                        "Unknown file no {fileno} from poll event, registered files are {repr}"
+                    ));
                     continue;
                 };
                 let sfp_index = reg.sdk_index;
                 if let Err(e) = reg.fd.seek0() {
-                    utils::log_warning(&format!("Failed to seek module sysfs fd for SFP {sfp_index}: {}", e.str()));
+                    utils::log_warning(&format!(
+                        "Failed to seek module sysfs fd for SFP {sfp_index}: {}",
+                        e.str()
+                    ));
                     has_read_error = true;
                     continue;
                 }
                 match reg.fd.read() {
                     Ok(_) => {}
                     Err(e) if e.exc.is_os_error() => {
-                        utils::log_warning(&format!("Failed to read module sysfs fd for SFP {sfp_index}: {}", e.str()));
+                        utils::log_warning(&format!(
+                            "Failed to read module sysfs fd for SFP {sfp_index}: {}",
+                            e.str()
+                        ));
                         has_read_error = true;
                         continue;
                     }
                     Err(e) => return Err(e),
                 }
-                let s = self.sfp_at(sfp_index)?.ok_or_else(|| none_attr("get_module_status"))?;
+                let s = self
+                    .sfp_at(sfp_index)?
+                    .ok_or_else(|| none_attr("get_module_status"))?;
                 let mut sfp_status = s.get_module_status()?.to_string();
-                if let Some(pos) = ev.before_first_poll.iter().position(|(i, _)| *i == sfp_index) {
+                if let Some(pos) = ev
+                    .before_first_poll
+                    .iter()
+                    .position(|(i, _)| *i == sfp_index)
+                {
                     let (_, before) = ev.before_first_poll.remove(pos);
                     if before == sfp_status {
                         continue;
                     }
                 }
-                utils::log_notice(&format!("Got SFP event: index={sfp_index}, value={sfp_status}"));
+                utils::log_notice(&format!(
+                    "Got SFP event: index={sfp_index}, value={sfp_status}"
+                ));
                 if sfp_status == sfpe::SFP_STATUS_UNKNOWN {
                     utils::log_notice("unknown module state, maybe the port suffers two adjacent insertion/removal");
                     continue;
@@ -1218,17 +1360,33 @@ impl Chassis {
             if !port_dict.is_empty() {
                 return Ok(self.send_change_event(port_dict, error_dict));
             }
-            if Self::round_ends(has_read_error, iteration_begin, begin, wait_forever, timeout) {
-                return Ok(ModeAnswer::Dict(vec![(PyVal::str("sfp"), PortDict::default())]));
+            if Self::round_ends(
+                has_read_error,
+                iteration_begin,
+                begin,
+                wait_forever,
+                timeout,
+            ) {
+                return Ok(ModeAnswer::Dict(vec![(
+                    PyVal::str("sfp"),
+                    PortDict::default(),
+                )]));
             }
         }
     }
 
     /// The common tail: log, re-initialise removed ports, answer.
     fn send_change_event(&self, port_dict: PortDict, error_dict: PortDict) -> ModeAnswer {
-        utils::log_notice(&format!("Sending SFP change event: {}, error event: {}", port_dict.repr(), error_dict.repr()));
+        utils::log_notice(&format!(
+            "Sending SFP change event: {}, error event: {}",
+            port_dict.repr(),
+            error_dict.repr()
+        ));
         self.reinit_sfps(&port_dict);
-        ModeAnswer::Dict(vec![(PyVal::str("sfp"), port_dict), (PyVal::str("sfp_error"), error_dict)])
+        ModeAnswer::Dict(vec![
+            (PyVal::str("sfp"), port_dict),
+            (PyVal::str("sfp_error"), error_dict),
+        ])
     }
 
     /// `reinit_sfps(port_dict)`: every port reported removed forgets its
@@ -1248,7 +1406,11 @@ impl Chassis {
                 Ok(())
             })();
             if let Err(e) = r {
-                utils::log_error(&format!("Fail to re-initialize SFP {} - {}", index.py_str(), e.repr()));
+                utils::log_error(&format!(
+                    "Fail to re-initialize SFP {} - {}",
+                    index.py_str(),
+                    e.repr()
+                ));
             }
         }
     }
@@ -1265,9 +1427,17 @@ impl Chassis {
             if !ev.last_asic_ready.is_empty() {
                 for i in 0..device_data::get_asic_count()?.max(0) {
                     let name = format!("asic{}_ready", i + 1);
-                    let state = ev.last_asic_ready.iter().find(|(n, _)| *n == name).and_then(|(_, v)| v.clone());
+                    let state = ev
+                        .last_asic_ready
+                        .iter()
+                        .find(|(n, _)| *n == name)
+                        .and_then(|(_, v)| v.clone());
                     if state.as_deref().is_none_or(|v| v == "0") {
-                        not_ready.extend(self.asic_modules(&format!("asic{i}")).iter().map(|s| s.sdk_index));
+                        not_ready.extend(
+                            self.asic_modules(&format!("asic{i}"))
+                                .iter()
+                                .map(|s| s.sdk_index),
+                        );
                     }
                 }
             }
@@ -1281,14 +1451,23 @@ impl Chassis {
                     let Some(fd) = fd else {
                         ev.poll = None;
                         ev.registered = Registered::default();
-                        utils::log_warning("SFPs are not initialized, too early to get change event");
+                        utils::log_warning(
+                            "SFPs are not initialized, too early to get change event",
+                        );
                         return Ok(ModeAnswer::Tuple);
                     };
                     let fileno = fd.fileno();
                     if let Some(p) = ev.poll.as_mut() {
                         p.register(fileno, POLLERR_PRI);
                     }
-                    ev.registered.insert(fileno, Reg { sdk_index: s.sdk_index, fd, fd_type });
+                    ev.registered.insert(
+                        fileno,
+                        Reg {
+                            sdk_index: s.sdk_index,
+                            fd,
+                            fd_type,
+                        },
+                    );
                 }
             }
         }
@@ -1301,25 +1480,45 @@ impl Chassis {
         loop {
             let iteration_begin = std::time::Instant::now();
             let mut has_read_error = false;
-            let events = ev.poll.as_ref().map(|p| p.poll(timeout)).transpose()?.unwrap_or_default();
+            let events = ev
+                .poll
+                .as_ref()
+                .map(|p| p.poll(timeout))
+                .transpose()?
+                .unwrap_or_default();
             for (fileno, _) in events {
                 let Some(reg) = ev.registered.get_mut(fileno) else {
                     let repr = ev.registered.repr();
-                    utils::log_error(&format!("Unknown file no {fileno} from poll event, registered files are {repr}"));
+                    utils::log_error(&format!(
+                        "Unknown file no {fileno} from poll event, registered files are {repr}"
+                    ));
                     continue;
                 };
                 let (sfp_index, fd_type) = (reg.sdk_index, reg.fd_type);
                 let s = self.sfp_at(sfp_index)?;
                 if let Err(e) = reg.fd.seek0() {
-                    utils::log_warning(&format!("Failed to seek file {fd_type} for SFP {sfp_index}: {}", e.str()));
+                    utils::log_warning(&format!(
+                        "Failed to seek file {fd_type} for SFP {sfp_index}: {}",
+                        e.str()
+                    ));
                     has_read_error = true;
                     continue;
                 }
-                let value = reg.fd.read().and_then(|t| platform_base::py::py_int(platform_base::py::strip(&t)));
+                let value = reg
+                    .fd
+                    .read()
+                    .and_then(|t| platform_base::py::py_int(platform_base::py::strip(&t)));
                 let fd_value = match value {
                     Ok(v) => v,
-                    Err(e) if e.exc.is_os_error() || e.exc.name() == "ValueError" || e.exc.name() == "UnicodeDecodeError" => {
-                        utils::log_warning(&format!("Failed to read value from file {fd_type} for SFP {sfp_index}: {}", e.str()));
+                    Err(e)
+                        if e.exc.is_os_error()
+                            || e.exc.name() == "ValueError"
+                            || e.exc.name() == "UnicodeDecodeError" =>
+                    {
+                        utils::log_warning(&format!(
+                            "Failed to read value from file {fd_type} for SFP {sfp_index}: {}",
+                            e.str()
+                        ));
                         has_read_error = true;
                         continue;
                     }
@@ -1329,11 +1528,18 @@ impl Chassis {
                 if s.is_dummy_event(fd_type, fd_value)? {
                     continue;
                 }
-                utils::log_notice(&format!("Got SFP event: index={sfp_index}, type={fd_type}, value={fd_value}"));
+                utils::log_notice(&format!(
+                    "Got SFP event: index={sfp_index}, type={fd_type}, value={fd_value}"
+                ));
                 if fd_type == "hw_present" {
-                    let event = if fd_value == 0 { sfpe::EVENT_NOT_PRESENT } else { sfpe::EVENT_PRESENT };
+                    let event = if fd_value == 0 {
+                        sfpe::EVENT_NOT_PRESENT
+                    } else {
+                        sfpe::EVENT_PRESENT
+                    };
                     if fd_value == 1 {
-                        s.processing_insert_event.store(true, std::sync::atomic::Ordering::Relaxed);
+                        s.processing_insert_event
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                     s.on_event(event)?;
                 } else if fd_type == "present" {
@@ -1350,32 +1556,55 @@ impl Chassis {
                     }
                     s.on_event(sfpe::EVENT_NOT_PRESENT)?;
                 } else {
-                    let event = if fd_value == 0 { sfpe::EVENT_POWER_BAD } else { sfpe::EVENT_POWER_GOOD };
+                    let event = if fd_value == 0 {
+                        sfpe::EVENT_POWER_BAD
+                    } else {
+                        sfpe::EVENT_POWER_GOOD
+                    };
                     s.on_event(event)?;
                 }
                 self.settle(&s, &mut port_dict, ev)?;
             }
             for sfp_index in wait_ready_task.get_ready_set() {
                 let sfp_index = sfp_index as i128;
-                let s = self.sfp_at(sfp_index)?.ok_or_else(|| none_attr("asic_id"))?;
+                let s = self
+                    .sfp_at(sfp_index)?
+                    .ok_or_else(|| none_attr("asic_id"))?;
                 let asic_index = platform_base::py::py_int(&s.asic_id.replace("asic", ""))?;
-                let ready_path = format!("/var/run/hw-management/config/asic{}_ready", asic_index + 1);
-                if !platform_base::io::exists(&ready_path) || utils::read_int(&ready_path, 0, Log::Error) == 0 {
-                    utils::log_info(&format!("SFP {sfp_index} ready event ignored: ASIC {asic_index} became not ready"));
+                let ready_path =
+                    format!("/var/run/hw-management/config/asic{}_ready", asic_index + 1);
+                if !platform_base::io::exists(&ready_path)
+                    || utils::read_int(&ready_path, 0, Log::Error) == 0
+                {
+                    utils::log_info(&format!(
+                        "SFP {sfp_index} ready event ignored: ASIC {asic_index} became not ready"
+                    ));
                     continue;
                 }
                 s.on_event(sfpe::EVENT_RESET_DONE)?;
                 if s.in_stable_state()? {
                     self.settle(&s, &mut port_dict, ev)?;
                 } else {
-                    utils::log_error(&format!("SFP {sfp_index} failed to reach stable state, state={}", s.get_state()?));
+                    utils::log_error(&format!(
+                        "SFP {sfp_index} failed to reach stable state, state={}",
+                        s.get_state()?
+                    ));
                 }
             }
             if !port_dict.is_empty() {
                 return Ok(self.send_change_event(port_dict, error_dict));
             }
-            if Self::round_ends(has_read_error, iteration_begin, begin, wait_forever, timeout) {
-                return Ok(ModeAnswer::Dict(vec![(PyVal::str("sfp"), PortDict::default())]));
+            if Self::round_ends(
+                has_read_error,
+                iteration_begin,
+                begin,
+                wait_forever,
+                timeout,
+            ) {
+                return Ok(ModeAnswer::Dict(vec![(
+                    PyVal::str("sfp"),
+                    PortDict::default(),
+                )]));
             }
         }
     }
@@ -1425,7 +1654,10 @@ mod tests {
         redis.set(CONFIG_DB, "CONFIG_DB_INITIALIZED", "1");
         redis.hset(CONFIG_DB, "DEVICE_METADATA|localhost", &[("hwsku", wanted)]);
         let sku = device_info::get_hwsku().expect("hwsku");
-        root.write(&format!("{PLATFORM_DIR}/{sku}/sai.profile"), "SAI_VS_SWITCH_TYPE=SAI_VS_SWITCH_TYPE_MLNX\n");
+        root.write(
+            &format!("{PLATFORM_DIR}/{sku}/sai.profile"),
+            "SAI_VS_SWITCH_TYPE=SAI_VS_SWITCH_TYPE_MLNX\n",
+        );
         sku
     }
 
@@ -1459,7 +1691,13 @@ mod tests {
             // get_dpu_count reads platform.json: `json_data.get` on None.
             let root = switch(SN5600, "{}");
             std::fs::remove_file(root.real(&format!("{PLATFORM_DIR}/platform.json"))).unwrap();
-            assert_eq!(err(platform()), ("AttributeError".into(), "'NoneType' object has no attribute 'get'".into()));
+            assert_eq!(
+                err(platform()),
+                (
+                    "AttributeError".into(),
+                    "'NoneType' object has no attribute 'get'".into()
+                )
+            );
         }
         {
             let _root = switch(SN5600, "{}");
@@ -1469,7 +1707,10 @@ mod tests {
             assert_eq!(c.is_modular_chassis().unwrap(), PyVal::Bool(false));
             assert_eq!(c.is_smartswitch().unwrap(), PyVal::Bool(false));
             assert_eq!(c.get_all_modules().unwrap(), PyVal::List(vec![]));
-            assert_eq!(c.init_midplane_switch().unwrap(), PyVal::NotImplementedClass);
+            assert_eq!(
+                c.init_midplane_switch().unwrap(),
+                PyVal::NotImplementedClass
+            );
             assert_eq!(err(c.get_dpu_id()).0, "NotImplementedError");
             assert_eq!(err(c.get_module_index("DPU0")).0, "NotImplementedError");
             assert_eq!(c.get_position_in_parent().unwrap(), PyVal::Int(-1));
@@ -1478,7 +1719,10 @@ mod tests {
         {
             // A DPU in platform.json makes it a SmartSwitch, its DPUs built
             // with it, once.
-            let _root = switch("x86_64-nvidia_sn4280-r0", r#"{"DPUS": {"dpu0": {}, "dpu1": {}}}"#);
+            let _root = switch(
+                "x86_64-nvidia_sn4280-r0",
+                r#"{"DPUS": {"dpu0": {}, "dpu1": {}}}"#,
+            );
             let c = platform().unwrap();
             assert_eq!(c.py_class(), "SmartSwitchChassis");
             assert_eq!(c.is_smartswitch().unwrap(), PyVal::Bool(true));
@@ -1497,7 +1741,10 @@ mod tests {
             // `module_name_index_map[module_name.upper()]`.
             assert_eq!(c.get_module_index("DPU1").unwrap(), PyVal::Int(1));
             assert_eq!(c.get_module_index("dpu0").unwrap(), PyVal::Int(0));
-            assert_eq!(err(c.get_module_index("DPU2")), ("KeyError".into(), "'DPU2'".into()));
+            assert_eq!(
+                err(c.get_module_index("DPU2")),
+                ("KeyError".into(), "'DPU2'".into())
+            );
         }
         {
             // Line cards make it modular: one Module per slot, and the SFPs
@@ -1545,7 +1792,10 @@ mod tests {
                 root.write(&format!("{HW_CONFIG}/psu{i}_i2c_addr"), "0x59");
             }
             let c = fixed();
-            assert_eq!(classes(&c.get_all_psus().unwrap()), ["FixedPsu", "FixedPsu", "FixedPsu"]);
+            assert_eq!(
+                classes(&c.get_all_psus().unwrap()),
+                ["FixedPsu", "FixedPsu", "FixedPsu"]
+            );
             assert!(classes(&c.get_all_pdbs().unwrap()).is_empty());
         }
         {
@@ -1573,7 +1823,9 @@ mod tests {
             let c = fixed();
             let drawers = c.get_all_fan_drawers().unwrap();
             assert_eq!(classes(&drawers), ["RealDrawer"; 4]);
-            let PyVal::List(list) = &drawers else { unreachable!() };
+            let PyVal::List(list) = &drawers else {
+                unreachable!()
+            };
             assert_eq!(list.iter().map(fans_of).collect::<Vec<_>>(), [2, 2, 2, 2]);
             assert!(c.get_all_fan_drawers().unwrap().py_eq(&drawers));
         }
@@ -1586,7 +1838,9 @@ mod tests {
             }
             let drawers = fixed().get_all_fan_drawers().unwrap();
             assert_eq!(classes(&drawers), ["VirtualDrawer"]);
-            let PyVal::List(list) = &drawers else { unreachable!() };
+            let PyVal::List(list) = &drawers else {
+                unreachable!()
+            };
             assert_eq!(fans_of(&list[0]), 4);
         }
         {
@@ -1614,13 +1868,26 @@ mod tests {
         let redis = FakeRedis::get();
         redis.install(&root);
         redis.hset(STATE_DB, "EEPROM_INFO|State", &[("Initialized", "1")]);
-        for (code, value) in [("0x21", "MSN5600"), ("0x22", "MSN5600-VS2FC"), ("0x23", "MT2245X01234"), ("0x24", "1C:34:DA:00:00:01")] {
-            redis.hset(STATE_DB, &format!("EEPROM_INFO|{code}"), &[("Value", value)]);
+        for (code, value) in [
+            ("0x21", "MSN5600"),
+            ("0x22", "MSN5600-VS2FC"),
+            ("0x23", "MT2245X01234"),
+            ("0x24", "1C:34:DA:00:00:01"),
+        ] {
+            redis.hset(
+                STATE_DB,
+                &format!("EEPROM_INFO|{code}"),
+                &[("Value", value)],
+            );
         }
         let c = fixed();
-        let PyVal::Obj(e) = c.get_eeprom().unwrap() else { panic!() };
+        let PyVal::Obj(e) = c.get_eeprom().unwrap() else {
+            panic!()
+        };
         assert_eq!(e.py_class(), "Eeprom");
-        let PyVal::Obj(again) = c.get_eeprom().unwrap() else { panic!() };
+        let PyVal::Obj(again) = c.get_eeprom().unwrap() else {
+            panic!()
+        };
         assert!(Arc::ptr_eq(&e, &again));
         assert_eq!(c.get_name().unwrap(), PyVal::str("MSN5600"));
         assert_eq!(c.get_serial().unwrap(), PyVal::str("MT2245X01234"));
@@ -1635,7 +1902,10 @@ mod tests {
         // match, and then both raise alike.
         let sku = sku(&root, "ACS-SN5600");
         let want = model_in_vpd(Some(&sku)).and_then(|in_vpd| c.model(in_vpd));
-        assert_eq!(c.get_model().map_err(|e| e.repr()), want.map_err(|e| e.repr()));
+        assert_eq!(
+            c.get_model().map_err(|e| e.repr()),
+            want.map_err(|e| e.repr())
+        );
     }
 
     #[test]
@@ -1643,10 +1913,19 @@ mod tests {
         assert!(model_in_vpd(Some("ACS-SN5600")).unwrap());
         assert!(!model_in_vpd(Some("Mellanox-SN4700-O8C48")).unwrap());
         assert!(!model_in_vpd(Some("ACS-MSN2700")).unwrap());
-        assert_eq!(err(model_in_vpd(Some("ACS-SN"))), ("AttributeError".into(), "'NoneType' object has no attribute 'group'".into()));
+        assert_eq!(
+            err(model_in_vpd(Some("ACS-SN"))),
+            (
+                "AttributeError".into(),
+                "'NoneType' object has no attribute 'group'".into()
+            )
+        );
         assert_eq!(
             err(model_in_vpd(None)),
-            ("TypeError".into(), "expected string or bytes-like object, got 'NoneType'".into())
+            (
+                "TypeError".into(),
+                "expected string or bytes-like object, got 'NoneType'".into()
+            )
         );
     }
 
@@ -1735,7 +2014,10 @@ mod tests {
         assert_eq!(cause(&c), "('Non-Hardware', '')");
         // A BMC's power-down request, on a chassis built on a BMC platform
         // (Python settles the cause at a chassis's first reboot-cause call).
-        root.write(&format!("{PLATFORM_DIR}/platform_env.conf"), "switch_host=1\n");
+        root.write(
+            &format!("{PLATFORM_DIR}/platform_env.conf"),
+            "switch_host=1\n",
+        );
         root.write("/etc/sonic/bmc.json", r#"{"bmc_addr": "169.254.0.1"}"#);
         root.write(&format!("{REBOOT_CAUSE_ROOT}reset_sw_pwr_off"), "1");
         // `c` settled it before the BMC appeared.
@@ -1753,7 +2035,10 @@ mod tests {
         assert_eq!(c.parse_warmfast_reboot_from_proc_cmdline().unwrap(), None);
         assert_eq!(cause(&c), "('Power Loss', '')");
         for (cmdline, want) in [
-            ("BOOT_IMAGE=/image/boot/vmlinuz SONIC_BOOT_TYPE=warm quiet\n", Some("warm-reboot")),
+            (
+                "BOOT_IMAGE=/image/boot/vmlinuz SONIC_BOOT_TYPE=warm quiet\n",
+                Some("warm-reboot"),
+            ),
             ("SONIC_BOOT_TYPE=fastfast\n", Some("warm-reboot")),
             ("SONIC_BOOT_TYPE=fast\n", Some("fast-reboot")),
             ("SONIC_BOOT_TYPE=fast-reboot", Some("fast-reboot")),
@@ -1762,7 +2047,11 @@ mod tests {
             ("quiet\nSONIC_BOOT_TYPE=warm\n", None),
         ] {
             root.write(REBOOT_TYPE_KEXEC_FILE, cmdline);
-            assert_eq!(c.parse_warmfast_reboot_from_proc_cmdline().unwrap(), want, "{cmdline:?}");
+            assert_eq!(
+                c.parse_warmfast_reboot_from_proc_cmdline().unwrap(),
+                want,
+                "{cmdline:?}"
+            );
         }
         root.write(REBOOT_TYPE_KEXEC_FILE, "SONIC_BOOT_TYPE=warm\n");
         assert_eq!(cause(&c), "('Non-Hardware', '')");
@@ -1772,24 +2061,36 @@ mod tests {
     fn the_system_led_and_the_rest_of_the_chassis() {
         let root = switch(SN5600, "{}");
         let led = "/var/run/hw-management/led";
-        root.write(&format!("{led}/led_status_capability"), "none green red green_blink");
+        root.write(
+            &format!("{led}/led_status_capability"),
+            "none green red green_blink",
+        );
         for color in ["green", "red"] {
             root.write(&format!("{led}/led_status_{color}"), "0");
         }
         let c = fixed();
         assert_eq!(c.initizalize_system_led().unwrap(), PyVal::None);
         assert_eq!(c.set_status_led("red").unwrap(), PyVal::Bool(true));
-        assert_eq!(root.read(&format!("{led}/led_status_red")).as_deref(), Some("255"));
+        assert_eq!(
+            root.read(&format!("{led}/led_status_red")).as_deref(),
+            Some("255")
+        );
         assert_eq!(c.get_status_led().unwrap(), PyVal::str("red"));
         // The thermal manager's class, once hw-management's helper is there.
         assert_eq!(err(c.get_thermal_manager()).0, "ModuleNotFoundError");
         crate::hw_mgmt::testing::install_independent_mode_update(&root);
         assert!(c.get_thermal_manager().is_ok());
-        let PyVal::Obj(lc) = c.get_liquid_cooling().unwrap() else { panic!() };
+        let PyVal::Obj(lc) = c.get_liquid_cooling().unwrap() else {
+            panic!()
+        };
         assert_eq!(lc.py_class(), "LiquidCooling");
-        let PyVal::Obj(lc2) = c.get_liquid_cooling().unwrap() else { panic!() };
+        let PyVal::Obj(lc2) = c.get_liquid_cooling().unwrap() else {
+            panic!()
+        };
         assert!(Arc::ptr_eq(&lc, &lc2));
-        let PyVal::Obj(sed) = c.get_sed_mgmt().unwrap() else { panic!() };
+        let PyVal::Obj(sed) = c.get_sed_mgmt().unwrap() else {
+            panic!()
+        };
         assert_eq!(sed.py_class(), "SedMgmt");
     }
 
@@ -1804,9 +2105,13 @@ mod tests {
         assert_eq!(c.get_watchdog().unwrap(), PyVal::None);
         root.write("/dev/watchdog0", "");
         root.write("/sys/class/watchdog/watchdog0/identity", "mlx-wdt-main\n");
-        let PyVal::Obj(w) = c.get_watchdog().unwrap() else { panic!() };
+        let PyVal::Obj(w) = c.get_watchdog().unwrap() else {
+            panic!()
+        };
         assert_eq!(w.py_class(), "WatchdogType1");
-        let PyVal::Obj(again) = c.get_watchdog().unwrap() else { panic!() };
+        let PyVal::Obj(again) = c.get_watchdog().unwrap() else {
+            panic!()
+        };
         assert!(Arc::ptr_eq(&w, &again));
     }
 
@@ -1826,7 +2131,10 @@ mod tests {
             std::fs::remove_file(root.real("/.dockerenv")).unwrap();
             let c = fixed();
             let components = c.get_all_components().unwrap();
-            assert_eq!(classes(&components), ["ComponentONIE", "ComponentSSD", "ComponentBIOS"]);
+            assert_eq!(
+                classes(&components),
+                ["ComponentONIE", "ComponentSSD", "ComponentBIOS"]
+            );
             assert!(c.get_all_components().unwrap().py_eq(&components));
             // The BMC is whatever bmc.py's instance is: none here.
             let bmc = crate::bmc::get_instance().unwrap().is_some();
@@ -1837,8 +2145,23 @@ mod tests {
 
     /// platform.json: `sfps` ports, and an interface per port.
     fn sfp_platform(sfps: usize, interfaces: usize) -> String {
-        let ports: Vec<String> = (0..interfaces).map(|i| format!(r#""Ethernet{}": {{"index": "{},{},{},{}"}}"#, i * 8, i + 1, i + 1, i + 1, i + 1)).collect();
-        format!(r#"{{"chassis": {{"sfps": [{}]}}, "interfaces": {{{}}}}}"#, vec!["{}"; sfps].join(", "), ports.join(", "))
+        let ports: Vec<String> = (0..interfaces)
+            .map(|i| {
+                format!(
+                    r#""Ethernet{}": {{"index": "{},{},{},{}"}}"#,
+                    i * 8,
+                    i + 1,
+                    i + 1,
+                    i + 1,
+                    i + 1
+                )
+            })
+            .collect();
+        format!(
+            r#"{{"chassis": {{"sfps": [{}]}}, "interfaces": {{{}}}}}"#,
+            vec!["{}"; sfps].join(", "),
+            ports.join(", ")
+        )
     }
 
     #[test]
@@ -1865,7 +2188,10 @@ mod tests {
         let sku = sku(&root, "ACS-SN5600");
         // Ethernet0 is an RJ45 port as well: one more port, whose EEPROM is
         // not waited for.
-        root.write(&format!("{PLATFORM_DIR}/{sku}/hwsku.json"), r#"{"interfaces": {"Ethernet0": {"port_type": "RJ45"}}}"#);
+        root.write(
+            &format!("{PLATFORM_DIR}/{sku}/hwsku.json"),
+            r#"{"interfaces": {"Ethernet0": {"port_type": "RJ45"}}}"#,
+        );
         let c = fixed();
         // sfp.py imports hw-management's helper, and fails without it.
         assert_eq!(err(c.get_all_sfps()).0, "ModuleNotFoundError");
@@ -1877,8 +2203,14 @@ mod tests {
             }
         }
         let sfps = c.get_all_sfps().unwrap();
-        assert_eq!(sfps.iter().map(|s| s.sdk_index).collect::<Vec<_>>(), [0, 1, 2, 3]);
-        assert_eq!(sfps.iter().map(|s| s.class_name()).collect::<Vec<_>>(), ["RJ45Port", "SFP", "SFP", "SFP"]);
+        assert_eq!(
+            sfps.iter().map(|s| s.sdk_index).collect::<Vec<_>>(),
+            [0, 1, 2, 3]
+        );
+        assert_eq!(
+            sfps.iter().map(|s| s.class_name()).collect::<Vec<_>>(),
+            ["RJ45Port", "SFP", "SFP", "SFP"]
+        );
         assert!(root.exists("/tmp/sfp_ready"));
         let again = c.get_all_sfps().unwrap();
         assert!(sfps.iter().zip(&again).all(|(a, b)| Arc::ptr_eq(a, b)));
@@ -1907,8 +2239,14 @@ mod tests {
         let root = switch(SN5600, &sfp_platform(4, 3));
         root.write(&format!("{PLATFORM_DIR}/asic.conf"), "NUM_ASIC=2\n");
         let sku = sku(&root, "ACS-SN5600");
-        for (asic, ports) in [(0, r#""Ethernet0": {}"#), (1, r#""Ethernet8": {}, "Ethernet16": {}"#)] {
-            root.write(&format!("{PLATFORM_DIR}/{sku}/{asic}/hwsku.json"), &format!(r#"{{"interfaces": {{{ports}}}}}"#));
+        for (asic, ports) in [
+            (0, r#""Ethernet0": {}"#),
+            (1, r#""Ethernet8": {}, "Ethernet16": {}"#),
+        ] {
+            root.write(
+                &format!("{PLATFORM_DIR}/{sku}/{asic}/hwsku.json"),
+                &format!(r#"{{"interfaces": {{{ports}}}}}"#),
+            );
             root.write(&format!("{PLATFORM_DIR}/{sku}/{asic}/sai.profile"), "");
         }
         crate::hw_mgmt::testing::install_independent_mode_update(&root);
@@ -1920,7 +2258,10 @@ mod tests {
         assert_eq!(c.asic_id_by_sfp_index(3).unwrap(), "asicNone");
         assert_eq!(
             err(c.get_all_sfps()),
-            ("ValueError".into(), "invalid literal for int() with base 10: 'None'".into())
+            (
+                "ValueError".into(),
+                "invalid literal for int() with base 10: 'None'".into()
+            )
         );
     }
 

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/fan_drawer.py`.
 
 use std::sync::{Arc, Mutex};
@@ -137,7 +136,10 @@ mod tests {
     fn a_real_drawer_is_there_when_its_status_says_so() {
         let root = Root::new();
         let d = FanDrawer::new(0, false);
-        assert_eq!((d.py_class(), d.base_class(), d.index()), ("RealDrawer", BaseClass::FanDrawerBase, 1));
+        assert_eq!(
+            (d.py_class(), d.base_class(), d.index()),
+            ("RealDrawer", BaseClass::FanDrawerBase, 1)
+        );
         assert!(!d.is_virtual());
         assert_eq!(d.get_name().unwrap().py_str(), "drawer1");
         assert_eq!(d.get_position_in_parent().unwrap(), PyVal::Int(1));
@@ -148,7 +150,13 @@ mod tests {
         assert!(!d.presence());
         root.write(&format!("{FAN_PATH}fan1_status"), "1");
         assert!(d.presence());
-        for (v, dir) in [("0", "exhaust"), ("1", "intake"), ("2", "N/A"), ("7", "N/A"), ("x", "N/A")] {
+        for (v, dir) in [
+            ("0", "exhaust"),
+            ("1", "intake"),
+            ("2", "N/A"),
+            ("7", "N/A"),
+            ("x", "N/A"),
+        ] {
             root.write(&format!("{FAN_PATH}fan1_dir"), v);
             assert_eq!(d.direction(), dir, "{v}");
         }
@@ -158,7 +166,10 @@ mod tests {
         assert_eq!(d.get_status_led().unwrap().py_str(), "green");
         assert_eq!(d.get_all_fans().unwrap(), PyVal::List(vec![]));
         d.add_fan(PyVal::str("fan1"));
-        assert_eq!(d.get_all_fans().unwrap(), PyVal::List(vec![PyVal::str("fan1")]));
+        assert_eq!(
+            d.get_all_fans().unwrap(),
+            PyVal::List(vec![PyVal::str("fan1")])
+        );
     }
 
     #[test]

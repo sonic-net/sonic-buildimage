@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! The scratch root tests put beneath every path: platform-base's, so a
 //! test here and platform-base's own test doubles (FakeRedis, FakeCurl) hold
 //! the same lock -- `io::set_root` is process-wide.  A new root is a new
@@ -36,7 +35,10 @@ pub fn platform_from_env() -> bool {
     match std::env::var("PLATFORM") {
         Ok(p) if !p.is_empty() => {
             let test = std::thread::current();
-            let line = format!("skipped {}: $PLATFORM={p} overrides machine.conf\n", test.name().unwrap_or("?"));
+            let line = format!(
+                "skipped {}: $PLATFORM={p} overrides machine.conf\n",
+                test.name().unwrap_or("?")
+            );
             let _ = std::io::stderr().write_all(line.as_bytes());
             true
         }

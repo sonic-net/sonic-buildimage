@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! A platform under the scratch root, for the SFP and change-event tests:
 //! machine.conf, the platform directory with its platform.json, CONFIG_DB on
 //! the fake redis with a hwsku, the hwsku's sai.profile, and hw-management's
@@ -35,10 +34,15 @@ pub fn module_path(index: usize, attr: &str) -> String {
 pub fn platform(platform: &str, sfps: usize, host_mgmt: bool, container: bool) -> Root {
     let root = Root::new();
     root.write("/host/machine.conf", &format!("onie_platform={platform}\n"));
-    let ports: Vec<String> = (1..=sfps).map(|i| format!("{{\"name\": \"sfp{i}\"}}")).collect();
+    let ports: Vec<String> = (1..=sfps)
+        .map(|i| format!("{{\"name\": \"sfp{i}\"}}"))
+        .collect();
     root.write(
         "/usr/share/sonic/platform/platform.json",
-        &format!("{{\"chassis\": {{\"sfps\": [{}]}}, \"interfaces\": {{}}}}", ports.join(", ")),
+        &format!(
+            "{{\"chassis\": {{\"sfps\": [{}]}}, \"interfaces\": {{}}}}",
+            ports.join(", ")
+        ),
     );
     if container {
         root.write("/.dockerenv", "");
@@ -47,10 +51,21 @@ pub fn platform(platform: &str, sfps: usize, host_mgmt: bool, container: bool) -
     redis.flush();
     redis.install(&root);
     redis.set(CONFIG_DB, "CONFIG_DB_INITIALIZED", "1");
-    redis.hset(CONFIG_DB, "DEVICE_METADATA|localhost", &[("hwsku", "HWSKU-C"), ("platform", platform)]);
+    redis.hset(
+        CONFIG_DB,
+        "DEVICE_METADATA|localhost",
+        &[("hwsku", "HWSKU-C"), ("platform", platform)],
+    );
     // Wherever the hwsku a process caches first says.
     let dir = crate::utils::get_path_to_hwsku_directory(None).expect("hwsku directory");
-    root.write(&format!("{dir}/sai.profile"), if host_mgmt { "SAI_INDEPENDENT_MODULE_MODE=1\n" } else { "SAI_INDEPENDENT_MODULE_MODE=0\n" });
+    root.write(
+        &format!("{dir}/sai.profile"),
+        if host_mgmt {
+            "SAI_INDEPENDENT_MODULE_MODE=1\n"
+        } else {
+            "SAI_INDEPENDENT_MODULE_MODE=0\n"
+        },
+    );
     crate::hw_mgmt::testing::install_independent_mode_update(&root);
     root
 }
@@ -80,5 +95,9 @@ pub fn fifo(root: &Root, path: &str) -> std::fs::File {
     let c = std::ffi::CString::new(real.to_string_lossy().into_owned()).expect("path");
     // SAFETY: a NUL-terminated path.
     assert_eq!(unsafe { libc::mkfifo(c.as_ptr(), 0o600) }, 0);
-    std::fs::OpenOptions::new().read(true).write(true).open(real).expect("fifo writer")
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(real)
+        .expect("fifo writer")
 }

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/pdb.py`: the power distribution board of a DC platform.
 
 use std::sync::Arc;
@@ -67,7 +66,9 @@ impl Pdb {
                 None,
             ));
         } else {
-            utils::log_error(&format!("PDB {index} temperature file {temp} does not exist"));
+            utils::log_error(&format!(
+                "PDB {index} temperature file {temp} does not exist"
+            ));
         }
         let env = |f: String| p("environment", f);
         Arc::new(Pdb {
@@ -153,20 +154,28 @@ impl PyObject for Pdb {
         }
     }
     fn get_input_current(&self) -> PyResult<PyVal> {
-        Ok(self.scaled(&self.in_current, &self.in_current_scale, CURRENT_SCALE_DIVISOR))
+        Ok(self.scaled(
+            &self.in_current,
+            &self.in_current_scale,
+            CURRENT_SCALE_DIVISOR,
+        ))
     }
     fn get_input_power(&self) -> PyResult<PyVal> {
         Ok(self.scaled(&self.in_power, &self.in_power_scale, POWER_SCALE_DIVISOR))
     }
     fn get_input_voltage(&self) -> PyResult<PyVal> {
         if io::exists(&self.in_voltage) {
-            return Ok(PyVal::Float(utils::read_int(&self.in_voltage, 0, Log::Info) as f64 / 1000.0));
+            return Ok(PyVal::Float(
+                utils::read_int(&self.in_voltage, 0, Log::Info) as f64 / 1000.0,
+            ));
         }
         Ok(PyVal::None)
     }
     fn get_maximum_supplied_power(&self) -> PyResult<PyVal> {
         if io::exists(&self.power_max) {
-            return Ok(PyVal::Float(utils::read_int(&self.power_max, 0, Log::Info) as f64 / 1_000_000.0));
+            return Ok(PyVal::Float(
+                utils::read_int(&self.power_max, 0, Log::Info) as f64 / 1_000_000.0,
+            ));
         }
         Ok(PyVal::None)
     }
@@ -228,38 +237,85 @@ mod tests {
         for v in [pdb.get_model(), pdb.get_serial(), pdb.get_revision()] {
             assert_eq!(r(v), "'N/A'");
         }
-        assert_eq!((r(pdb.get_presence()), r(pdb.is_replaceable())), ("True".into(), "False".into()));
-        assert_eq!((pdb.py_class(), pdb.base_class()), ("Pdb", BaseClass::PdbBase));
+        assert_eq!(
+            (r(pdb.get_presence()), r(pdb.is_replaceable())),
+            ("True".into(), "False".into())
+        );
+        assert_eq!(
+            (pdb.py_class(), pdb.base_class()),
+            ("Pdb", BaseClass::PdbBase)
+        );
         // Entity-MIB's index comes from the position: each PDB its own.
-        assert_eq!([Pdb::new(0), Pdb::new(1)].map(|p| r(p.get_position_in_parent())), ["1", "2"]);
+        assert_eq!(
+            [Pdb::new(0), Pdb::new(1)].map(|p| r(p.get_position_in_parent())),
+            ["1", "2"]
+        );
         // No temperature file: no thermal, no temperature.
-        assert_eq!((r(pdb.get_all_thermals()), r(pdb.get_temperature())), ("[]".into(), "None".into()));
+        assert_eq!(
+            (r(pdb.get_all_thermals()), r(pdb.get_temperature())),
+            ("[]".into(), "None".into())
+        );
         // No readings at all.
-        for v in [pdb.get_input_voltage(), pdb.get_input_current(), pdb.get_input_power(), pdb.get_maximum_supplied_power()] {
+        for v in [
+            pdb.get_input_voltage(),
+            pdb.get_input_current(),
+            pdb.get_input_power(),
+            pdb.get_maximum_supplied_power(),
+        ] {
             assert_eq!(r(v), "None");
         }
-        assert_eq!((r(pdb.get_status()), r(pdb.get_status_led())), ("False".into(), "'N/A'".into()));
+        assert_eq!(
+            (r(pdb.get_status()), r(pdb.get_status_led())),
+            ("False".into(), "'N/A'".into())
+        );
     }
 
     #[test]
     fn pdb_readings_are_scaled_as_python_scales_them() {
         let root = sn6600_ld();
         let pdb = Pdb::new(0);
-        assert_eq!((r(pdb.get_status()), r(pdb.get_powergood_status())), ("True".into(), "True".into()));
-        assert_eq!((r(pdb.get_input_voltage()), r(pdb.get_voltage())), ("54.123".into(), "54.123".into()));
-        assert_eq!((r(pdb.get_input_current()), r(pdb.get_current())), ("76.25".into(), "76.25".into()));
-        assert_eq!((r(pdb.get_input_power()), r(pdb.get_power())), ("1.65".into(), "1.65".into()));
+        assert_eq!(
+            (r(pdb.get_status()), r(pdb.get_powergood_status())),
+            ("True".into(), "True".into())
+        );
+        assert_eq!(
+            (r(pdb.get_input_voltage()), r(pdb.get_voltage())),
+            ("54.123".into(), "54.123".into())
+        );
+        assert_eq!(
+            (r(pdb.get_input_current()), r(pdb.get_current())),
+            ("76.25".into(), "76.25".into())
+        );
+        assert_eq!(
+            (r(pdb.get_input_power()), r(pdb.get_power())),
+            ("1.65".into(), "1.65".into())
+        );
         assert_eq!(r(pdb.get_maximum_supplied_power()), "3000.0");
         assert_eq!(r(pdb.get_temperature()), "41.0");
-        let PyVal::List(ts) = pdb.get_all_thermals().unwrap() else { panic!() };
+        let PyVal::List(ts) = pdb.get_all_thermals().unwrap() else {
+            panic!()
+        };
         let PyVal::Obj(t) = &ts[0] else { panic!() };
-        assert_eq!((r(t.get_name()), r(t.get_high_threshold()), r(t.get_high_critical_threshold())), ("'PDB-1 Temp'".into(), "85.0".into(), "None".into()));
+        assert_eq!(
+            (
+                r(t.get_name()),
+                r(t.get_high_threshold()),
+                r(t.get_high_critical_threshold())
+            ),
+            ("'PDB-1 Temp'".into(), "85.0".into(), "None".into())
+        );
         // A current with no scale file is read unscaled.
-        std::fs::remove_file(root.real("/var/run/hw-management/environment/pdb_hotswap1_curr1_scale")).unwrap();
+        std::fs::remove_file(
+            root.real("/var/run/hw-management/environment/pdb_hotswap1_curr1_scale"),
+        )
+        .unwrap();
         assert_eq!(r(pdb.get_input_current()), "30.5");
         // PDB 2: off; what does not parse reads as 0, a bad scale as 1.
         let pdb2 = Pdb::new(1);
-        assert_eq!((r(pdb2.get_status()), r(pdb2.get_temperature())), ("False".into(), "None".into()));
+        assert_eq!(
+            (r(pdb2.get_status()), r(pdb2.get_temperature())),
+            ("False".into(), "None".into())
+        );
         assert_eq!(r(pdb2.get_input_voltage()), "0.0");
         assert_eq!(r(pdb2.get_input_current()), "12.0");
         assert_eq!(r(pdb2.get_input_power()), "None");
@@ -270,7 +326,13 @@ mod tests {
     fn the_power_led_is_what_hw_management_says_or_n_a() {
         let root = sn6600_ld();
         let pdb = Pdb::new(0);
-        for (content, want) in [("green", "'green'"), (" none \n", "'N/A'"), ("", "'N/A'"), ("red\n", "'red'"), ("None", "'N/A'")] {
+        for (content, want) in [
+            ("green", "'green'"),
+            (" none \n", "'N/A'"),
+            ("", "'N/A'"),
+            ("red\n", "'red'"),
+            ("None", "'N/A'"),
+        ] {
             root.write("/var/run/hw-management/led/led_power", content);
             assert_eq!(r(pdb.get_status_led()), want, "{content:?}");
         }

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/fan.py`: drawer fans and PSU fans.
 
 use std::process::Command;
@@ -53,7 +52,10 @@ pub fn get_fan_direction(dir_path: &str) -> String {
             FAN_DIRECTION_NOT_APPLICABLE.into()
         }
         Err(e) => {
-            utils::log_error(&format!("Failed to read fan direction from {dir_path} - {}", e.str()));
+            utils::log_error(&format!(
+                "Failed to read fan direction from {dir_path} - {}",
+                e.str()
+            ));
             FAN_DIRECTION_NOT_APPLICABLE.into()
         }
     }
@@ -137,7 +139,9 @@ impl PyObject for Fan {
         }))
     }
     fn get_status(&self) -> PyResult<PyVal> {
-        Ok(PyVal::Bool(utils::read_int(&self.status, 1, Log::Error) == 0))
+        Ok(PyVal::Bool(
+            utils::read_int(&self.status, 1, Log::Error) == 0,
+        ))
     }
     fn get_presence(&self) -> PyResult<PyVal> {
         Ok(PyVal::Bool(self.drawer.presence()))
@@ -151,13 +155,17 @@ impl PyObject for Fan {
             ));
             pwm = pwm.clamp(0, PWM_MAX);
         }
-        Ok(PyVal::Int(round_half_even(pwm as f64 * 100.0 / PWM_MAX as f64)))
+        Ok(PyVal::Int(round_half_even(
+            pwm as f64 * 100.0 / PWM_MAX as f64,
+        )))
     }
     fn set_speed(&self, speed: i128) -> PyResult<PyVal> {
         // `int(PWM_MAX*speed/100.0)`: the product is an exact int, rounded to
         // a float once.  Nothing checks the range: a speed of 150 is a PWM
         // of 382.
-        let product = PWM_MAX.checked_mul(speed).map_or(PWM_MAX as f64 * speed as f64, |p| p as f64);
+        let product = PWM_MAX
+            .checked_mul(speed)
+            .map_or(PWM_MAX as f64 * speed as f64, |p| p as f64);
         let pwm = (product / 100.0).trunc() as i128;
         Ok(PyVal::Bool(
             utils::write_file(&self.speed_set, &pwm, true, Log::Error).is_ok(),
@@ -401,8 +409,14 @@ mod tests {
     fn a_fan_direction_is_read_as_hw_management_writes_it() {
         let root = Root::new();
         assert_eq!(get_fan_direction("/x/dir"), FAN_DIRECTION_NOT_APPLICABLE);
-        for (v, d) in [("0", FAN_DIRECTION_EXHAUST), ("1", FAN_DIRECTION_INTAKE), ("2", FAN_DIRECTION_NOT_APPLICABLE),
-                       ("3", FAN_DIRECTION_NOT_APPLICABLE), ("-1", FAN_DIRECTION_NOT_APPLICABLE), ("x", FAN_DIRECTION_NOT_APPLICABLE)] {
+        for (v, d) in [
+            ("0", FAN_DIRECTION_EXHAUST),
+            ("1", FAN_DIRECTION_INTAKE),
+            ("2", FAN_DIRECTION_NOT_APPLICABLE),
+            ("3", FAN_DIRECTION_NOT_APPLICABLE),
+            ("-1", FAN_DIRECTION_NOT_APPLICABLE),
+            ("x", FAN_DIRECTION_NOT_APPLICABLE),
+        ] {
             root.write("/x/dir", v);
             assert_eq!(get_fan_direction("/x/dir"), d, "{v}");
         }
@@ -415,7 +429,10 @@ mod tests {
         let root = Root::new();
         let drawer = FanDrawer::new(0, false);
         let fan = Fan::new(2, drawer.clone(), 1);
-        assert_eq!((fan.py_class(), fan.base_class()), ("Fan", BaseClass::FanBase));
+        assert_eq!(
+            (fan.py_class(), fan.base_class()),
+            ("Fan", BaseClass::FanBase)
+        );
         assert_eq!(s(fan.get_name()), "fan3");
         assert_eq!(i(fan.get_position_in_parent()), "1");
         assert!(!b(fan.is_replaceable()));
@@ -456,7 +473,10 @@ mod tests {
         assert_eq!(s(fixed.get_direction()), FAN_DIRECTION_EXHAUST);
         assert!(b(fixed.get_presence()));
         // Its LED is the drawer's.
-        root.write("/var/run/hw-management/led/led_fan1_capability", "green red");
+        root.write(
+            "/var/run/hw-management/led/led_fan1_capability",
+            "green red",
+        );
         root.write("/var/run/hw-management/led/led_fan1_green", "0");
         assert!(b(fan.set_status_led("red")));
         assert_eq!(s(fan.get_status_led()), "red");
@@ -485,7 +505,10 @@ mod tests {
         let root = Root::new();
         let psu = Psu::new(0);
         let fan = PsuFan::new(0, 1, Arc::downgrade(&psu));
-        assert_eq!((fan.py_class(), fan.py_mro()), ("PsuFan", vec!["PsuFan", "MlnxFan"]));
+        assert_eq!(
+            (fan.py_class(), fan.py_mro()),
+            ("PsuFan", vec!["PsuFan", "MlnxFan"])
+        );
         assert_eq!(fan.base_class(), BaseClass::FanBase);
         assert_eq!(s(fan.get_name()), "psu1_fan1");
         assert_eq!(i(fan.get_speed_tolerance()), "30");
@@ -500,7 +523,11 @@ mod tests {
         assert!(!b(fan.get_presence()));
         root.write(&format!("{T}/psu1_fan1_speed_get"), "100");
         assert!(b(fan.get_presence()));
-        assert_eq!(s(fan.get_direction()), FAN_DIRECTION_NOT_APPLICABLE, "no direction file");
+        assert_eq!(
+            s(fan.get_direction()),
+            FAN_DIRECTION_NOT_APPLICABLE,
+            "no direction file"
+        );
         root.write(&format!("{T}/psu1_fan_dir"), "1");
         assert_eq!(s(fan.get_direction()), FAN_DIRECTION_INTAKE);
         root.write(&format!("{T}/psu1_fan_dir"), "0");
@@ -508,7 +535,11 @@ mod tests {
         root.write(&format!("{T}/psu1_fan_dir"), "-1");
         assert_eq!(s(fan.get_direction()), FAN_DIRECTION_NOT_APPLICABLE);
         root.write(&format!("{T}/psu1_pwr_status"), "0");
-        assert_eq!(s(fan.get_direction()), FAN_DIRECTION_NOT_APPLICABLE, "not present");
+        assert_eq!(
+            s(fan.get_direction()),
+            FAN_DIRECTION_NOT_APPLICABLE,
+            "not present"
+        );
         // A PSU that is gone takes its fan with it.
         let orphan = PsuFan::new(1, 1, Weak::new());
         assert!(!b(orphan.get_presence()));

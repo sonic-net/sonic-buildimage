@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! `sonic_platform/sed_mgmt.py`: the SED password limits and the default
 //! password, which the platform script reads from the TPM.  The changes
 //! themselves are SedMgmtBase's.
@@ -59,7 +57,13 @@ impl PyObject for SedMgmt {
     fn get_default_sed_password(&self) -> PyResult<PyVal> {
         let script = crate::component::program_path(READ_DEFAULT_SED_PW_SCRIPT);
         let pw = subprocess::run_capture(&[&script.to_string_lossy()], Duration::from_secs(10))
-            .and_then(|r| Ok((r.returncode, subprocess::text(&r.stdout)?, subprocess::text(&r.stderr)?)));
+            .and_then(|r| {
+                Ok((
+                    r.returncode,
+                    subprocess::text(&r.stdout)?,
+                    subprocess::text(&r.stderr)?,
+                ))
+            });
         Ok(match pw {
             Ok((0, out, _)) if !out.is_empty() => PyVal::str(platform_base::py::strip(&out)),
             _ => PyVal::None,
@@ -85,7 +89,11 @@ mod tests {
             .stdin(Stdio::piped())
             .spawn()
             .unwrap();
-        std::io::Write::write_all(&mut child.stdin.take().unwrap(), format!("#!/bin/sh\n{body}\n").as_bytes()).unwrap();
+        std::io::Write::write_all(
+            &mut child.stdin.take().unwrap(),
+            format!("#!/bin/sh\n{body}\n").as_bytes(),
+        )
+        .unwrap();
         assert!(child.wait().unwrap().success());
     }
 
@@ -94,12 +102,24 @@ mod tests {
         let root = Root::new();
         let sed = SedMgmt::get_instance();
         assert!(Arc::ptr_eq(&sed, &SedMgmt::get_instance()));
-        assert_eq!((sed.py_class(), sed.base_class()), ("SedMgmt", BaseClass::SedMgmtBase));
-        assert_eq!((sed.get_min_sed_password_len().unwrap(), sed.get_max_sed_password_len().unwrap()), (PyVal::Int(8), PyVal::Int(124)));
+        assert_eq!(
+            (sed.py_class(), sed.base_class()),
+            ("SedMgmt", BaseClass::SedMgmtBase)
+        );
+        assert_eq!(
+            (
+                sed.get_min_sed_password_len().unwrap(),
+                sed.get_max_sed_password_len().unwrap()
+            ),
+            (PyVal::Int(8), PyVal::Int(124))
+        );
         // No script.
         assert_eq!(sed.get_default_sed_password().unwrap(), PyVal::None);
         script(&root, "echo '  Pa55word  '");
-        assert_eq!(sed.get_default_sed_password().unwrap(), PyVal::str("Pa55word"));
+        assert_eq!(
+            sed.get_default_sed_password().unwrap(),
+            PyVal::str("Pa55word")
+        );
         // Blank but not empty: the empty string.
         script(&root, "echo '   '");
         assert_eq!(sed.get_default_sed_password().unwrap(), PyVal::str(""));

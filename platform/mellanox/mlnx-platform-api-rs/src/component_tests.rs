@@ -82,7 +82,10 @@ pub(super) fn run_steps(steps: &PyVal, env: &[(&str, String)]) -> Vec<String> {
                 let names = PyVal::List(
                     v.iter()
                         .map(|o| match o {
-                            PyVal::Obj(o) => PyVal::Tuple(vec![PyVal::str(o.py_class()), o.get_name().unwrap_or_default()]),
+                            PyVal::Obj(o) => PyVal::Tuple(vec![
+                                PyVal::str(o.py_class()),
+                                o.get_name().unwrap_or_default(),
+                            ]),
                             other => other.clone(),
                         })
                         .collect(),
@@ -94,7 +97,11 @@ pub(super) fn run_steps(steps: &PyVal, env: &[(&str, String)]) -> Vec<String> {
             }
             "call" => {
                 let id = arg(st, 1).py_str();
-                let o = objs.iter().rev().find(|(n, _)| *n == id).map(|(_, o)| o.clone());
+                let o = objs
+                    .iter()
+                    .rev()
+                    .find(|(n, _)| *n == id)
+                    .map(|(_, o)| o.clone());
                 let a = arg(st, 3);
                 let s = |k| arg(&a, k).py_str();
                 match (o, arg(st, 2).py_str().as_str()) {
@@ -102,8 +109,12 @@ pub(super) fn run_steps(steps: &PyVal, env: &[(&str, String)]) -> Vec<String> {
                     (Some(o), "get_name") => o.get_name(),
                     (Some(o), "get_description") => o.get_description(),
                     (Some(o), "get_firmware_version") => o.get_firmware_version(),
-                    (Some(o), "get_available_firmware_version") => o.get_available_firmware_version(&s(0)),
-                    (Some(o), "get_firmware_update_notification") => o.get_firmware_update_notification(&s(0)),
+                    (Some(o), "get_available_firmware_version") => {
+                        o.get_available_firmware_version(&s(0))
+                    }
+                    (Some(o), "get_firmware_update_notification") => {
+                        o.get_firmware_update_notification(&s(0))
+                    }
                     (Some(o), "install_firmware") => o.install_firmware(&s(0)),
                     (Some(o), "update_firmware") => o.update_firmware(&s(0)),
                     (Some(o), "auto_update_firmware") => o.auto_update_firmware(&s(0), &s(1)),
@@ -132,7 +143,10 @@ pub(super) fn run_steps(steps: &PyVal, env: &[(&str, String)]) -> Vec<String> {
                                     Ok(v) => v,
                                     Err(e) => raise(&e),
                                 };
-                                PyVal::Tuple(vec![PyVal::Bool(ini.has_option(&sec, &opt)), PyVal::Str(got)])
+                                PyVal::Tuple(vec![
+                                    PyVal::Bool(ini.has_option(&sec, &opt)),
+                                    PyVal::Str(got),
+                                ])
                             })
                             .collect(),
                     ))
@@ -152,15 +166,25 @@ pub(super) fn run_steps(steps: &PyVal, env: &[(&str, String)]) -> Vec<String> {
 /// What differs between two runs: the MPFAs' random directory names, and
 /// the temporary directory itself if `$TMPDIR` moved it.
 fn normalize(s: &str, tmp: &str) -> String {
-    let s = if tmp == "/tmp" { s.to_string() } else { s.replace(&format!("{tmp}/"), "/tmp/") };
-    Regex::new("mpfa-[a-z0-9_]{8}").map(|re| re.replace_all(&s, "mpfa-XXXXXXXX").into_owned()).unwrap_or(s)
+    let s = if tmp == "/tmp" {
+        s.to_string()
+    } else {
+        s.replace(&format!("{tmp}/"), "/tmp/")
+    };
+    Regex::new("mpfa-[a-z0-9_]{8}")
+        .map(|re| re.replace_all(&s, "mpfa-XXXXXXXX").into_owned())
+        .unwrap_or(s)
 }
 
 /// A `.rec` file's entries, `STEP i => ...` up to the next.
 fn entries(rec: &str) -> Vec<&str> {
     let re = Regex::new(r"(?m)^STEP \d+ => ").unwrap();
     let starts: Vec<usize> = re.find_iter(rec).map(|m| m.start()).collect();
-    starts.iter().enumerate().map(|(k, &a)| &rec[a..starts.get(k + 1).copied().unwrap_or(rec.len())]).collect()
+    starts
+        .iter()
+        .enumerate()
+        .map(|(k, &a)| &rec[a..starts.get(k + 1).copied().unwrap_or(rec.len())])
+        .collect()
 }
 
 /// One group: a fresh root set up for `platform`, its steps, and Python's
@@ -273,13 +297,36 @@ fn bmc_updater(root: &Root, rc: i32) {
 #[test]
 fn the_bmc_component_installs_through_hw_management_s_updater() {
     let root = Root::new();
+    let redis = platform_base::testing::FakeRedis::get();
+    redis.install(&root);
+    redis.set(
+        platform_base::testing::CONFIG_DB,
+        "CONFIG_DB_INITIALIZED",
+        "1",
+    );
+    redis.hset(
+        platform_base::testing::CONFIG_DB,
+        "DEVICE_METADATA|localhost",
+        &[("hwsku", "BMC-TEST")],
+    );
+    root.write("/host/machine.conf", "onie_platform=bmc-test\n");
+    let sku = platform_base::device_info::get_hwsku().unwrap();
+    let os_file = format!("/usr/share/sonic/platform/{sku}/bmc_os.json");
+    root.write(&os_file, r#"{"os":"openbmc"}"#);
+    assert_eq!(platform_base::device_info::get_bmc_os(), "openbmc");
     crate::bmc::forget_instance();
-    // Not a BMC platform: no BMC behind the component.
+    // OpenBMC configuration: the standalone updater path remains supported.
     let list = bmc_component_list().unwrap();
     let PyVal::Obj(c) = &list[0] else { panic!() };
-    assert_eq!((c.py_class(), c.base_class()), ("ComponentBMC", BaseClass::ComponentBase));
+    assert_eq!(
+        (c.py_class(), c.base_class()),
+        ("ComponentBMC", BaseClass::ComponentBase)
+    );
     assert_eq!(c.get_name().unwrap(), PyVal::str("BMC"));
-    assert_eq!(c.get_description().unwrap(), PyVal::str("BMC - Baseboard Management Controller"));
+    assert_eq!(
+        c.get_description().unwrap(),
+        PyVal::str("BMC - Baseboard Management Controller")
+    );
     assert_eq!(c.get_firmware_version().unwrap(), PyVal::str("N/A"));
     assert_eq!(
         c.get_available_firmware_version("x").unwrap_err().str(),
@@ -293,26 +340,74 @@ fn the_bmc_component_installs_through_hw_management_s_updater() {
     // and failure, and no updater at all.
     root.write("/tmp/fw/bmc.fwpkg", "pkg");
     root.write("/tmp/fw/bmc.bin", "bin");
-    assert_eq!(c.install_firmware("/tmp/fw/bmc.bin").unwrap(), PyVal::Bool(false));
-    assert_eq!(c.install_firmware("/tmp/fw/none.fwpkg").unwrap(), PyVal::Bool(false));
-    assert_eq!(c.auto_update_firmware("/tmp/fw/none.fwpkg", "cold").unwrap(), PyVal::Int(FW_AUTO_ERR_IMAGE));
-    assert_eq!(c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "warm").unwrap(), PyVal::Int(FW_AUTO_ERR_BOOT_TYPE));
-    assert_eq!(c.install_firmware("/tmp/fw/bmc.fwpkg").unwrap(), PyVal::Bool(false));
+    assert_eq!(
+        c.install_firmware("/tmp/fw/bmc.bin").unwrap(),
+        PyVal::Bool(false)
+    );
+    assert_eq!(
+        c.install_firmware("/tmp/fw/none.fwpkg").unwrap(),
+        PyVal::Bool(false)
+    );
+    assert_eq!(
+        c.auto_update_firmware("/tmp/fw/none.fwpkg", "cold")
+            .unwrap(),
+        PyVal::Int(FW_AUTO_ERR_IMAGE)
+    );
+    assert_eq!(
+        c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "warm").unwrap(),
+        PyVal::Int(FW_AUTO_ERR_BOOT_TYPE)
+    );
+    assert_eq!(
+        c.install_firmware("/tmp/fw/bmc.fwpkg").unwrap(),
+        PyVal::Bool(false)
+    );
     bmc_updater(&root, 0);
-    assert_eq!(c.install_firmware("/tmp/fw/bmc.fwpkg").unwrap(), PyVal::Bool(true));
-    assert_eq!(c.update_firmware("/tmp/fw/bmc.fwpkg").unwrap(), PyVal::Bool(true));
-    assert_eq!(c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "cold").unwrap(), PyVal::Int(FW_AUTO_INSTALLED));
+    assert_eq!(
+        c.install_firmware("/tmp/fw/bmc.fwpkg").unwrap(),
+        PyVal::Bool(true)
+    );
+    // Older RC Python bases have no BMC OS feature. Keep their OpenBMC
+    // behavior; a base that declares SONiC BMC support applies the OS guard.
+    root.write(&os_file, r#"{"os":"sonic"}"#);
+    let sonic_os_guard = platform_base::bmc::is_sonic_bmc_os();
+    assert_eq!(
+        c.install_firmware("/tmp/fw/bmc.fwpkg").unwrap(),
+        PyVal::Bool(!sonic_os_guard)
+    );
+    root.write(&os_file, r#"{"os":"openbmc"}"#);
+
+    assert_eq!(
+        c.update_firmware("/tmp/fw/bmc.fwpkg").unwrap(),
+        PyVal::Bool(true)
+    );
+    assert_eq!(
+        c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "cold").unwrap(),
+        PyVal::Int(FW_AUTO_INSTALLED)
+    );
     bmc_updater(&root, 3);
-    assert_eq!(c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "cold").unwrap(), PyVal::Int(FW_AUTO_ERR_UNKNOWN));
+    assert_eq!(
+        c.auto_update_firmware("/tmp/fw/bmc.fwpkg", "cold").unwrap(),
+        PyVal::Int(FW_AUTO_ERR_UNKNOWN)
+    );
     assert_eq!(
         root.read("/tmp/bmc_calls").unwrap(),
-        "/tmp/fw/bmc.fwpkg session=new\n".repeat(4)
+        "/tmp/fw/bmc.fwpkg session=new\n".repeat(4 + usize::from(!sonic_os_guard))
     );
     // With a BMC: its version.
     let curl = platform_base::testing::FakeCurl::new();
-    curl.reply("GET", "/redfish/v1/UpdateService/FirmwareInventory/FW_BMC_0", 200, r#"{"Version": "89.0001.0100"}"#);
-    let c = ComponentBmc { bmc: Some(Arc::new(crate::bmc::test_bmc(&curl.path()))) };
-    assert_eq!(c.get_firmware_version().unwrap(), PyVal::str("89.0001.0100"));
+    curl.reply(
+        "GET",
+        "/redfish/v1/UpdateService/FirmwareInventory/FW_BMC_0",
+        200,
+        r#"{"Version": "89.0001.0100"}"#,
+    );
+    let c = ComponentBmc {
+        bmc: Some(Arc::new(crate::bmc::test_bmc(&curl.path()))),
+    };
+    assert_eq!(
+        c.get_firmware_version().unwrap(),
+        PyVal::str("89.0001.0100")
+    );
 }
 
 /// ONIE's version parse, and the host's component list built whole.
@@ -322,10 +417,17 @@ fn onie_versions_parse_as_python_s_patterns_do() {
         OnieUpdater::parse_onie_version("2025.05-5.3.0021-115200-dev", false).unwrap(),
         ("5".into(), "3".into(), "0021".into())
     );
-    assert_eq!(OnieUpdater::parse_onie_version("5.2.0016", true).unwrap(), ("5".into(), "2".into(), "0016".into()));
     assert_eq!(
-        OnieUpdater::parse_onie_version("garbage", false).unwrap_err().str(),
-        format!("Failed to parse ONIE version: pattern={ONIE_VERSION_PARSE_PATTERN}, version=garbage")
+        OnieUpdater::parse_onie_version("5.2.0016", true).unwrap(),
+        ("5".into(), "2".into(), "0016".into())
+    );
+    assert_eq!(
+        OnieUpdater::parse_onie_version("garbage", false)
+            .unwrap_err()
+            .str(),
+        format!(
+            "Failed to parse ONIE version: pattern={ONIE_VERSION_PARSE_PATTERN}, version=garbage"
+        )
     );
     if crate::testing::platform_from_env() {
         return;

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! Fixtures for the DPU, line card and thermal updater tests: a platform
 //! under a test root, and the lines a `SysLogger` sends to its `/dev/log`.
 
@@ -57,7 +56,8 @@ impl Syslog {
         std::fs::create_dir_all(path.parent().expect("dev")).expect("dev");
         let _ = std::fs::remove_file(&path);
         let sock = UnixDatagram::bind(&path).expect("syslog socket");
-        sock.set_read_timeout(Some(Duration::from_millis(5))).expect("timeout");
+        sock.set_read_timeout(Some(Duration::from_millis(5)))
+            .expect("timeout");
         let lines: Arc<Mutex<Vec<String>>> = Arc::default();
         let idle: Arc<AtomicU64> = Arc::default();
         let stop: Arc<AtomicBool> = Arc::default();
@@ -77,7 +77,12 @@ impl Syslog {
                 }
             }
         });
-        Syslog { lines, idle, stop, reader: Some(reader) }
+        Syslog {
+            lines,
+            idle,
+            stop,
+            reader: Some(reader),
+        }
     }
 
     /// The lines sent so far, each `LEVEL message`, once the reader has
@@ -102,7 +107,9 @@ impl Drop for Syslog {
 
 /// `<pri>name[pid]: message` as `LEVEL message`.
 fn parse(datagram: &[u8]) -> Option<String> {
-    let line = String::from_utf8_lossy(datagram).trim_end_matches('\0').to_string();
+    let line = String::from_utf8_lossy(datagram)
+        .trim_end_matches('\0')
+        .to_string();
     let (pri, rest) = line.strip_prefix('<').and_then(|l| l.split_once('>'))?;
     let level = match pri.parse::<i32>().unwrap_or(0) % 8 {
         3 => "ERROR",

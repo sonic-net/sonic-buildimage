@@ -1,18 +1,22 @@
-[PATCH] From 786087468520db44c55e3566f77438b41f52763f Mon Sep 17
-
+From aac8d8fb43772dee544fb8b34debf8058070334f Mon Sep 17 00:00:00 2001
 From: Pavel Shirshov <pavelsh@microsoft.com>
 Date: Mon, 16 Nov 2020 18:35:01 -0800
- 00:00:00 2001 Subject: [PATCH 5/8] nexthops compare vrf only if ip type
+Subject: [PATCH] lib: compare nexthop VRF only for IP types
+
+Preserve SONiC nexthop equality for non-IP types while covering the IPv4 and IPv6 variants that carry an interface index in current FRR.
+
+Original-SONiC-Patch: 0003-SONiC-ONLY-nexthops-compare-vrf-only-if-ip-type.patch
+Original-Commit: 786087468520db44c55e3566f77438b41f52763f
 ---
- lib/nexthop.c |   12 ++++++------
- lib/zclient.c |   12 ++++++------
- 2 files changed, 12 insertions(+), 12 deletions(-)
+ lib/nexthop.c | 18 ++++++++++++------
+ lib/zclient.c | 18 ++++++++++++------
+ 2 files changed, 24 insertions(+), 12 deletions(-)
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index e8f5ecf17..9381b3a89 100644
+index e46ed340ec..ca2b102e59 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
-@@ -149,12 +149,6 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+@@ -158,12 +158,6 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
  {
  	int ret = 0;
  
@@ -22,10 +26,10 @@ index e8f5ecf17..9381b3a89 100644
 -	if (next1->vrf_id > next2->vrf_id)
 -		return 1;
 -
- 	if (next1->type < next2->type)
- 		return -1;
- 
-@@ -172,6 +166,12 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+ 	/*
+ 	 * When not using ifindex, ignore the type difference
+ 	 * between resolved and unresolved nexthops.
+@@ -205,12 +199,24 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
  	switch (next1->type) {
  	case NEXTHOP_TYPE_IPV4:
  	case NEXTHOP_TYPE_IPV6:
@@ -38,11 +42,23 @@ index e8f5ecf17..9381b3a89 100644
  		ret = _nexthop_gateway_cmp(next1, next2);
  		if (ret != 0)
  			return ret;
+ 		break;
+ 	case NEXTHOP_TYPE_IPV4_IFINDEX:
+ 	case NEXTHOP_TYPE_IPV6_IFINDEX:
++		if (next1->vrf_id < next2->vrf_id)
++			return -1;
++
++		if (next1->vrf_id > next2->vrf_id)
++			return 1;
++
+ 		ret = _nexthop_gateway_cmp(next1, next2);
+ 		if (ret != 0)
+ 			return ret;
 diff --git a/lib/zclient.c b/lib/zclient.c
-index 558626fa3..3ab7bc040 100644
+index c7e14e1ee2..957b98c9ce 100644
 --- a/lib/zclient.c
 +++ b/lib/zclient.c
-@@ -982,12 +982,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -1024,12 +1024,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  {
  	int ret = 0;
  
@@ -55,10 +71,23 @@ index 558626fa3..3ab7bc040 100644
  	if (next1->type < next2->type)
  		return -1;
  
-@@ -1003,6 +997,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -1045,6 +1039,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  	switch (next1->type) {
  	case NEXTHOP_TYPE_IPV4:
  	case NEXTHOP_TYPE_IPV6:
++		if (next1->vrf_id < next2->vrf_id)
++			return -1;
++
++		if (next1->vrf_id > next2->vrf_id)
++			return 1;
++
+ 		ret = nexthop_g_addr_cmp(next1->type, &next1->gate,
+ 					 &next2->gate);
+ 		if (ret != 0)
+@@ -1052,6 +1052,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+ 		break;
+ 	case NEXTHOP_TYPE_IPV4_IFINDEX:
+ 	case NEXTHOP_TYPE_IPV6_IFINDEX:
 +		if (next1->vrf_id < next2->vrf_id)
 +			return -1;
 +

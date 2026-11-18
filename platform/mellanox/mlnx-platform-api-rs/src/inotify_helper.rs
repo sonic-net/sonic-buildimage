@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/inotify_helper.py`: wait for hw-management to write a
 //! value to a file.
 
@@ -52,7 +51,10 @@ impl InotifyHelper {
             logger().log_error(&format!("{path} does not exist"));
             return Err(PyErr::os_error(libc::ENOENT, Some(path)));
         }
-        Ok(InotifyHelper { path: path.to_string(), notifier: RefCell::new(notifier) })
+        Ok(InotifyHelper {
+            path: path.to_string(),
+            notifier: RefCell::new(notifier),
+        })
     }
 
     /// `wait_watch(timeout, expected_value)`: the value once a write leaves
@@ -127,7 +129,11 @@ fn names_repr(names: &[&str]) -> String {
 /// `inotify.adapters`' debug lines: seen only once the root logger has a
 /// handler (the liquid_cooling import's `basicConfig`).
 fn debug(msg: &str) {
-    platform_base::logger::py_log("inotify.adapters", platform_base::logger::PyLevel::Debug, msg);
+    platform_base::logger::py_log(
+        "inotify.adapters",
+        platform_base::logger::PyLevel::Debug,
+        msg,
+    );
 }
 
 /// `InotifyError`: the libc errno is part of the message.
@@ -171,7 +177,11 @@ impl Inotify {
         // SAFETY: a fresh descriptor this struct now owns.
         let fd = unsafe { OwnedFd::from_raw_fd(raw) };
         debug(&format!("Inotify handle is ({raw})."));
-        Ok(Inotify { fd, watches: Vec::new(), buffer: Vec::new() })
+        Ok(Inotify {
+            fd,
+            watches: Vec::new(),
+            buffer: Vec::new(),
+        })
     }
 
     /// `add_watch(path, mask)`: a path already watched is warned about and
@@ -212,7 +222,11 @@ impl Inotify {
         // `time.time()`, as Python measures it.
         let mut last_hit = SystemTime::now();
         loop {
-            let mut pfd = libc::pollfd { fd: self.fd.as_raw_fd(), events: libc::POLLIN, revents: 0 };
+            let mut pfd = libc::pollfd {
+                fd: self.fd.as_raw_fd(),
+                events: libc::POLLIN,
+                revents: 0,
+            };
             // SAFETY: one valid pollfd.
             let n = unsafe { libc::poll(&mut pfd, 1, 1000) };
             match n.cmp(&0) {
@@ -223,7 +237,10 @@ impl Inotify {
                     }
                 }
                 std::cmp::Ordering::Greater => {
-                    debug(&format!("Events received from epoll: {}", names_repr(&event_names(pfd.revents as u32))));
+                    debug(&format!(
+                        "Events received from epoll: {}",
+                        names_repr(&event_names(pfd.revents as u32))
+                    ));
                     for event in self.handle_events()? {
                         last_hit = SystemTime::now();
                         for name in &event.type_names {
@@ -265,10 +282,20 @@ impl Inotify {
                 debug("Not enough bytes for a header.");
                 return Ok(out);
             }
-            let word = |i: usize| u32::from_ne_bytes([self.buffer[i], self.buffer[i + 1], self.buffer[i + 2], self.buffer[i + 3]]);
+            let word = |i: usize| {
+                u32::from_ne_bytes([
+                    self.buffer[i],
+                    self.buffer[i + 1],
+                    self.buffer[i + 2],
+                    self.buffer[i + 3],
+                ])
+            };
             let (wd, mask, len) = (word(0) as i32, word(4), word(12) as usize);
             let type_names = event_names(mask);
-            debug(&format!("Events received in stream: {}", names_repr(&type_names)));
+            debug(&format!(
+                "Events received in stream: {}",
+                names_repr(&type_names)
+            ));
             if self.buffer.len() < 16 + len {
                 return Ok(out);
             }
@@ -277,8 +304,15 @@ impl Inotify {
             self.buffer = rest;
             if let Some((path, _)) = self.watches.iter().find(|(_, w)| *w == wd) {
                 let end = raw.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
-                let filename = platform_base::py::codec::decode(platform_base::py::codec::Codec::Utf8, &raw[..end])?;
-                out.push(Event { type_names, path: path.clone(), filename });
+                let filename = platform_base::py::codec::decode(
+                    platform_base::py::codec::Codec::Utf8,
+                    &raw[..end],
+                )?;
+                out.push(Event {
+                    type_names,
+                    path: path.clone(),
+                    filename,
+                });
             }
             if self.buffer.len() < 16 {
                 return Ok(out);
@@ -305,9 +339,18 @@ pub struct InotifyEventHelper {
 impl InotifyEventHelper {
     pub fn new(dir_path: &str, file_names: &[String]) -> PyResult<InotifyEventHelper> {
         let mut notifier = Inotify::new()?;
-        let mask = libc::IN_CREATE | libc::IN_DELETE | libc::IN_MODIFY | libc::IN_MOVED_TO | libc::IN_MOVED_FROM | libc::IN_CLOSE_WRITE;
+        let mask = libc::IN_CREATE
+            | libc::IN_DELETE
+            | libc::IN_MODIFY
+            | libc::IN_MOVED_TO
+            | libc::IN_MOVED_FROM
+            | libc::IN_CLOSE_WRITE;
         notifier.add_watch(dir_path, mask)?;
-        Ok(InotifyEventHelper { notifier, dir_path: dir_path.to_string(), file_names: file_names.to_vec() })
+        Ok(InotifyEventHelper {
+            notifier,
+            dir_path: dir_path.to_string(),
+            file_names: file_names.to_vec(),
+        })
     }
 
     /// `wait_for_events(timeout_ms)`: `event_gen` blocks a second at a time
@@ -337,7 +380,11 @@ mod tests {
     use std::time::Duration;
 
     /// Writes `value` to the real `path` after `delay_ms`, from another thread.
-    fn write_later(path: std::path::PathBuf, value: &'static str, delay_ms: u64) -> std::thread::JoinHandle<()> {
+    fn write_later(
+        path: std::path::PathBuf,
+        value: &'static str,
+        delay_ms: u64,
+    ) -> std::thread::JoinHandle<()> {
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(delay_ms));
             std::fs::write(path, value).unwrap();
@@ -347,10 +394,16 @@ mod tests {
     #[test]
     fn a_watched_file_must_exist() {
         let _root = Root::new();
-        let e = InotifyHelper::new("/run/hw-management/system/dpu1_ready").err().unwrap();
+        let e = InotifyHelper::new("/run/hw-management/system/dpu1_ready")
+            .err()
+            .unwrap();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("FileNotFoundError", "[Errno 2] No such file or directory: '/run/hw-management/system/dpu1_ready'".to_string())
+            (
+                "FileNotFoundError",
+                "[Errno 2] No such file or directory: '/run/hw-management/system/dpu1_ready'"
+                    .to_string()
+            )
         );
     }
 
@@ -375,7 +428,10 @@ mod tests {
         assert_eq!(helper.wait_watch(0.1, 1).unwrap(), Some(1));
         // Gone by then: its read raises.
         std::fs::remove_file(root.real(path)).unwrap();
-        assert_eq!(helper.wait_watch(0.1, 1).unwrap_err().exc.name(), "FileNotFoundError");
+        assert_eq!(
+            helper.wait_watch(0.1, 1).unwrap_err().exc.name(),
+            "FileNotFoundError"
+        );
     }
 
     #[test]
@@ -384,17 +440,29 @@ mod tests {
         assert_eq!(event_names(0x4000_0100), ["IN_CREATE", "IN_ISDIR"]);
         assert_eq!(event_names(0o4000), ["IN_MOVE_SELF"]);
         assert!(event_names(0).is_empty());
-        assert_eq!(names_repr(&event_names(0x2 | 0x8)), "['IN_MODIFY', 'IN_CLOSE_WRITE']");
+        assert_eq!(
+            names_repr(&event_names(0x2 | 0x8)),
+            "['IN_MODIFY', 'IN_CLOSE_WRITE']"
+        );
         assert!(elapsed_repr(Instant::now()).parse::<f64>().is_ok());
     }
 
     #[test]
     fn a_missing_directory_is_an_inotify_error() {
         let _root = Root::new();
-        let e = InotifyEventHelper::new("/var/run/hw-management/config", &["asic1_ready".to_string()]).err().unwrap();
+        let e = InotifyEventHelper::new(
+            "/var/run/hw-management/config",
+            &["asic1_ready".to_string()],
+        )
+        .err()
+        .unwrap();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("InotifyError", "Call failed (should not be -1): (-1) ERRNO=(2) [No such file or directory]".to_string())
+            (
+                "InotifyError",
+                "Call failed (should not be -1): (-1) ERRNO=(2) [No such file or directory]"
+                    .to_string()
+            )
         );
     }
 
@@ -417,7 +485,10 @@ mod tests {
             std::fs::write(real.join("asic2_ready"), "0\n").unwrap();
             std::fs::write(real.join("asic2_ready"), "1\n").unwrap();
         });
-        assert_eq!(helper.wait_for_events(100.0).unwrap(), [format!("{dir}/asic2_ready")]);
+        assert_eq!(
+            helper.wait_for_events(100.0).unwrap(),
+            [format!("{dir}/asic2_ready")]
+        );
         writer.join().unwrap();
         drop(helper);
     }

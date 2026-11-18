@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/dpuctlplat.py`: one DPU's power, reset and PCI control
 //! through hw-management's sysfs, and the handshakes that go with them.
 //!
@@ -162,7 +161,11 @@ impl BootProg {
     pub fn printing(dpu_name: &str) -> PyResult<BootProg> {
         import();
         let n = py_int(dpu_name.get(3..).unwrap_or(""))?;
-        Ok(BootProg::new(dpu_name, &format!("{}{}", dpu_name.get(..3).unwrap_or(""), n + 1), LogSink::Print))
+        Ok(BootProg::new(
+            dpu_name,
+            &format!("{}{}", dpu_name.get(..3).unwrap_or(""), n + 1),
+            LogSink::Print,
+        ))
     }
 
     fn emit(&self, level: Log, msg: &str) {
@@ -222,7 +225,10 @@ impl BootProg {
         let msg = format!("Failed to read from file {} - {}", self.path, e.repr());
         let enxio = msg.contains(&format!("({},", libc::ENXIO));
         if enxio && attempt < 2 {
-            self.log_warning(&format!("ENXIO - read unavailable for boot_progress, attempt {} of 3", attempt + 1));
+            self.log_warning(&format!(
+                "ENXIO - read unavailable for boot_progress, attempt {} of 3",
+                attempt + 1
+            ));
             return;
         }
         self.log_error(&msg);
@@ -253,7 +259,10 @@ pub struct DpuCtlPlat {
 impl DpuCtlPlat {
     pub fn new(dpu_name: &str) -> DpuCtlPlat {
         import();
-        let n = dpu_name.get(3..).and_then(|s| s.parse::<i128>().ok()).unwrap_or(0);
+        let n = dpu_name
+            .get(3..)
+            .and_then(|s| s.parse::<i128>().ok())
+            .unwrap_or(0);
         let hw_name = format!("{}{}", dpu_name.get(..3).unwrap_or(""), n + 1);
         DpuCtlPlat {
             dpu_name: dpu_name.to_string(),
@@ -303,7 +312,10 @@ impl DpuCtlPlat {
                 if log_on_error {
                     self.log_error(&format!("Failed to write {content} to file {file}"));
                 }
-                Err(PyErr::new(e.exc.clone(), vec![PyVal::Str(format!("{}:{}", self.dpu_name, e.str()))]))
+                Err(PyErr::new(
+                    e.exc.clone(),
+                    vec![PyVal::Str(format!("{}:{}", self.dpu_name, e.str()))],
+                ))
             }
         }
     }
@@ -312,7 +324,10 @@ impl DpuCtlPlat {
     fn timed<T>(&self, msg: &str, f: impl FnOnce() -> PyResult<T>) -> PyResult<T> {
         let start = Instant::now();
         let r = f()?;
-        self.log_info(&format!("Total time taken = {} for {msg}", elapsed_repr(start)));
+        self.log_info(&format!(
+            "Total time taken = {} for {msg}",
+            elapsed_repr(start)
+        ));
         Ok(r)
     }
 
@@ -337,7 +352,9 @@ impl DpuCtlPlat {
         let boot = self.boot.clone();
         let (st, bye) = (stop.clone(), say_bye.clone());
         let process = PROCESS_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
-        let watcher = match std::thread::Builder::new().spawn(move || watch_boot_prog(&boot, process, &st, &bye)) {
+        let watcher = match std::thread::Builder::new()
+            .spawn(move || watch_boot_prog(&boot, process, &st, &bye))
+        {
             Ok(w) => w,
             Err(_) => {
                 self.log_error("Exception occured during creating boot_prog_context manager!");
@@ -364,7 +381,8 @@ impl DpuCtlPlat {
 
     fn wait_for(&self, path: &str, timeout: f64, what: &str) -> PyResult<bool> {
         let helper = InotifyHelper::new(path)?;
-        self.timed(what, || helper.wait_watch(timeout, 1)).map(|v| v.is_some())
+        self.timed(what, || helper.wait_watch(timeout, 1))
+            .map(|v| v.is_some())
     }
 
     /// `dpu_go_down()`: the `try` covers making the helper and waiting on
@@ -374,12 +392,17 @@ impl DpuCtlPlat {
         self.write_file(&self.rst_path, CLR, true)?;
         let r = (|| -> PyResult<bool> {
             let h = InotifyHelper::new(&self.shtdn_ready_path)?;
-            Ok(self.timed("going down", || h.wait_watch(WAIT_FOR_SHTDN, 1))?.is_some())
+            Ok(self
+                .timed("going down", || h.wait_watch(WAIT_FOR_SHTDN, 1))?
+                .is_some())
         })();
         let ready = match r {
             Ok(ready) => ready,
             Err(e) if matches!(e.exc.name(), "FileNotFoundError" | "PermissionError") => {
-                return Err(PyErr::new(e.exc.clone(), vec![PyVal::Str(format!("{}:{}", self.dpu_name, e.str()))]))
+                return Err(PyErr::new(
+                    e.exc.clone(),
+                    vec![PyVal::Str(format!("{}:{}", self.dpu_name, e.str()))],
+                ))
             }
             Err(e) => return Err(e),
         };
@@ -472,7 +495,9 @@ impl DpuCtlPlat {
             let (pci, rshim) = self.pci_dev_paths()?;
             let bdf = pci.rsplit('/').next().unwrap_or("").to_string();
             if io::exists(&io::join(&pci, "driver")) && io::exists(MLX5_CORE_UNBIND_PATH) {
-                self.timed(&format!("pci unbind {pci}"), || self.write_file(MLX5_CORE_UNBIND_PATH, &bdf, true))?;
+                self.timed(&format!("pci unbind {pci}"), || {
+                    self.write_file(MLX5_CORE_UNBIND_PATH, &bdf, true)
+                })?;
             } else {
                 self.log_info(&format!(
                     "Skipping unbind for {pci}: driver not bound or mlx5_core unbind path missing"
@@ -500,7 +525,9 @@ impl DpuCtlPlat {
             // raises first, which is caught as not ready yet.
             let ready = io::read_text(&resource).ok().is_some_and(|t| {
                 for l in t.lines() {
-                    let Some(w) = platform_base::py::split_ws(l).first().copied() else { return false };
+                    let Some(w) = platform_base::py::split_ws(l).first().copied() else {
+                        return false;
+                    };
                     match platform_base::py::py_int_base(w, 16) {
                         Ok(0) => {}
                         Ok(_) => return true,
@@ -526,17 +553,21 @@ impl DpuCtlPlat {
             self.log_info(&format!("Driver already bound for {pci}, skip bind"));
             return Ok(());
         }
-        self.timed(&format!("pci bind {pci}"), || match self.write_file(MLX5_CORE_BIND_PATH, bdf, false) {
-            Ok(()) => Ok(()),
-            Err(e) if e.exc.is_os_error() => {
-                if io::exists(&driver) && io::realpath(&driver) == io::realpath(MLX5_CORE_DRIVER_PATH) {
-                    self.log_info(&format!("Driver bound concurrently for {pci}, skip bind"));
-                    return Ok(());
+        self.timed(&format!("pci bind {pci}"), || {
+            match self.write_file(MLX5_CORE_BIND_PATH, bdf, false) {
+                Ok(()) => Ok(()),
+                Err(e) if e.exc.is_os_error() => {
+                    if io::exists(&driver)
+                        && io::realpath(&driver) == io::realpath(MLX5_CORE_DRIVER_PATH)
+                    {
+                        self.log_info(&format!("Driver bound concurrently for {pci}, skip bind"));
+                        return Ok(());
+                    }
+                    self.log_error(&format!("Failed to bind mlx5_core for {pci}"));
+                    Err(e)
                 }
-                self.log_error(&format!("Failed to bind mlx5_core for {pci}"));
-                Err(e)
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
         })
     }
 
@@ -574,7 +605,10 @@ impl DpuCtlPlat {
     /// `dpu_power_on(forced, skip_pre_post)`.
     pub fn dpu_power_on(&self, forced: bool, skip_pre_post: bool) -> PyResult<bool> {
         self.with_boot_prog_watch(|| {
-            self.log_info(&format!("Power on with force = {}", if forced { "True" } else { "False" }));
+            self.log_info(&format!(
+                "Power on with force = {}",
+                if forced { "True" } else { "False" }
+            ));
             let rv = if self.read_boot_prog()? == crate::dpuctlplat::BOOT_PROG_OS_RUN {
                 self.log_info("Skipping DPU power on as DPU is already powered on");
                 true
@@ -599,7 +633,10 @@ impl DpuCtlPlat {
             if !skip_pre_post {
                 self.dpu_pci_remove();
             }
-            self.log_info(&format!("Power off with force = {}", if forced { "True" } else { "False" }));
+            self.log_info(&format!(
+                "Power off with force = {}",
+                if forced { "True" } else { "False" }
+            ));
             if self.read_boot_prog()? == BOOT_PROG_RST {
                 self.log_info("Skipping DPU power off as DPU is already powered off");
                 return Ok(true);
@@ -640,8 +677,15 @@ impl DpuCtlPlat {
             if !skip_pre_post {
                 self.dpu_pci_remove();
             }
-            self.log_info(&format!("Reboot with force = {}", if forced { "True" } else { "False" }));
-            let rv = if forced { self.reboot_force(no_wait)? } else { self.reboot(no_wait)? };
+            self.log_info(&format!(
+                "Reboot with force = {}",
+                if forced { "True" } else { "False" }
+            ));
+            let rv = if forced {
+                self.reboot_force(no_wait)?
+            } else {
+                self.reboot(no_wait)?
+            };
             if !no_wait && !skip_pre_post {
                 self.dpu_pci_scan();
             }
@@ -657,7 +701,12 @@ impl DpuCtlPlat {
 /// `dpu_data.get(dpu, {}).get(interface)`, which raises AttributeError when
 /// the DPUS table or the DPU's entry in it is not a dict.
 pub fn dpu_interface(dpu: &str, key: &str) -> PyResult<Option<PyVal>> {
-    const DPU_INTERFACE_VALUES: [&str; 4] = ["midplane_interface", "rshim_info", "bus_info", "rshim_bus_info"];
+    const DPU_INTERFACE_VALUES: [&str; 4] = [
+        "midplane_interface",
+        "rshim_info",
+        "bus_info",
+        "rshim_bus_info",
+    ];
     let data = device_data::get_platform_dpus_data()?;
     let Some(d) = data.filter(PyVal::truthy) else {
         return Ok(None);
@@ -685,10 +734,14 @@ fn update_boot_prog_once(boot: &BootProg, state: &mut Option<i128>) -> PyResult<
     let v = if v != 0 {
         v
     } else {
-        boot.read().inspect_err(|_| boot.log_error("Could not update boot_progress of DPU"))?
+        boot.read()
+            .inspect_err(|_| boot.log_error("Could not update boot_progress of DPU"))?
     };
     *state = Some(v);
-    boot.log_info(&format!("The boot_progress status is changed to = {v} - {}", boot_prog_name(v)));
+    boot.log_info(&format!(
+        "The boot_progress status is changed to = {v} - {}",
+        boot_prog_name(v)
+    ));
     Ok(())
 }
 
@@ -715,7 +768,11 @@ fn watch_boot_prog(boot: &BootProg, process: usize, stop: &AtomicBool, say_bye: 
     };
     let mut state: Option<i128> = None;
     while !stop.load(Ordering::Relaxed) {
-        let mut pfd = libc::pollfd { fd: file.as_raw_fd(), events: libc::POLLPRI, revents: 0 };
+        let mut pfd = libc::pollfd {
+            fd: file.as_raw_fd(),
+            events: libc::POLLPRI,
+            revents: 0,
+        };
         // SAFETY: one valid pollfd.
         let n = unsafe { libc::poll(&mut pfd, 1, 100) };
         if n <= 0 {
@@ -774,7 +831,11 @@ mod tests {
             .into_iter()
             .filter(|l| l.contains("dpu0:"))
             .map(|l| match l.find("Total time taken = ") {
-                Some(i) => format!("{}Total time taken for{}", &l[..i], l[i..].split_once(" for").map_or("", |(_, r)| r)),
+                Some(i) => format!(
+                    "{}Total time taken for{}",
+                    &l[..i],
+                    l[i..].split_once(" for").map_or("", |(_, r)| r)
+                ),
                 None => l,
             })
             .collect()
@@ -784,11 +845,17 @@ mod tests {
     fn hw_management_numbers_the_dpu_from_one() {
         let d = DpuCtlPlat::new("dpu3");
         assert_eq!(d.hw_name, "dpu4");
-        assert_eq!(d.boot.path, "/var/run/hw-management/dpu4/system/boot_progress");
+        assert_eq!(
+            d.boot.path,
+            "/var/run/hw-management/dpu4/system/boot_progress"
+        );
         assert_eq!(d.rst_path, "/var/run/hw-management/system/dpu4_rst");
         assert_eq!(d.pwr_f_path, "/var/run/hw-management/system/dpu4_pwr_force");
         assert_eq!(d.dpu_rdy_path, "/var/run/hw-management/events/dpu4_ready");
-        assert_eq!(d.shtdn_ready_path, "/var/run/hw-management/events/dpu4_shtdn_ready");
+        assert_eq!(
+            d.shtdn_ready_path,
+            "/var/run/hw-management/events/dpu4_shtdn_ready"
+        );
         // `boot_prog_map`, and N/A for what it lacks.
         let names: Vec<&str> = (0..=16).map(boot_prog_name).collect();
         assert_eq!(
@@ -823,13 +890,25 @@ mod tests {
         assert_eq!(d.read_boot_prog().unwrap(), 5);
         root.write(BOOT, "x");
         let e = d.read_boot_prog().unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("ValueError", "invalid literal for int() with base 10: 'x'".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "ValueError",
+                "invalid literal for int() with base 10: 'x'".to_string()
+            )
+        );
         std::fs::remove_file(root.real(BOOT)).unwrap();
-        assert_eq!(d.read_boot_prog().unwrap_err().exc.name(), "FileNotFoundError");
+        assert_eq!(
+            d.read_boot_prog().unwrap_err().exc.name(),
+            "FileNotFoundError"
+        );
         // A socket answers open() with ENXIO.
         let _sock = std::os::unix::net::UnixListener::bind(root.real(BOOT)).unwrap();
         let e = d.read_boot_prog().unwrap_err();
-        assert_eq!(e.str(), format!("[Errno 6] No such device or address: '{BOOT}'"));
+        assert_eq!(
+            e.str(),
+            format!("[Errno 6] No such device or address: '{BOOT}'")
+        );
         assert_eq!(
             lines(&log),
             [
@@ -848,7 +927,10 @@ mod tests {
         let log = Syslog::listen(&root);
         let d = dpu(&root, "0", "1", "1", "0");
         assert!(d.dpu_power_on(false, true).unwrap());
-        assert_eq!((root.read(PWR), root.read(RST)), (Some("1".into()), Some("1".into())));
+        assert_eq!(
+            (root.read(PWR), root.read(RST)),
+            (Some("1".into()), Some("1".into()))
+        );
         assert_eq!(
             lines(&log),
             [
@@ -868,7 +950,10 @@ mod tests {
         let log = Syslog::listen(&root);
         let d = dpu(&root, "0", "1", "0", "0");
         assert!(!d.dpu_power_on(false, true).unwrap());
-        let got: Vec<String> = lines(&log).into_iter().filter(|l| !l.contains("Writing") && !l.contains("Total time")).collect();
+        let got: Vec<String> = lines(&log)
+            .into_iter()
+            .filter(|l| !l.contains("Writing") && !l.contains("Total time"))
+            .collect();
         assert_eq!(
             got,
             [
@@ -884,7 +969,10 @@ mod tests {
                 "NOTICE dpu0: Received termination signal, shutting down...",
             ]
         );
-        assert_eq!((root.read(PWR_F), root.read(RST)), (Some("1".into()), Some("1".into())));
+        assert_eq!(
+            (root.read(PWR_F), root.read(RST)),
+            (Some("1".into()), Some("1".into()))
+        );
     }
 
     #[test]
@@ -894,17 +982,25 @@ mod tests {
         let d = dpu(&root, "0", "1", "1", "0");
         assert!(d.dpu_power_on(true, true).unwrap());
         assert!(lines(&log).contains(&"NOTICE dpu0: Force Power on Successful!".to_string()));
-        assert_eq!((root.read(PWR_F), root.read(PWR)), (Some("1".into()), Some("0".into())));
+        assert_eq!(
+            (root.read(PWR_F), root.read(PWR)),
+            (Some("1".into()), Some("0".into()))
+        );
         root.write(PWR_F, "0");
         assert!(d.dpu_power_on(false, true).unwrap());
         let l = lines(&log);
-        assert!(l.contains(&"NOTICE dpu0: Power on with Force=True since power off force sysfs is cleared".to_string()));
+        assert!(l.contains(
+            &"NOTICE dpu0: Power on with Force=True since power off force sysfs is cleared"
+                .to_string()
+        ));
         assert!(l.contains(&"NOTICE dpu0: Force Power on Successful!".to_string()));
         // Already running: nothing written.
         root.write(BOOT, "5");
         root.write(PWR_F, "0");
         assert!(d.dpu_power_on(false, true).unwrap());
-        assert!(lines(&log).contains(&"NOTICE dpu0: Skipping DPU power on as DPU is already powered on".to_string()));
+        assert!(lines(&log).contains(
+            &"NOTICE dpu0: Skipping DPU power on as DPU is already powered on".to_string()
+        ));
         assert_eq!(root.read(PWR_F).as_deref(), Some("0"));
     }
 
@@ -915,7 +1011,10 @@ mod tests {
         let d = dpu(&root, "5", "1", "0", "1");
         root.write(PWR, "1");
         assert!(d.dpu_power_off(false, true).unwrap());
-        assert_eq!((root.read(RST), root.read(PWR), root.read(PWR_F)), (Some("0".into()), Some("0".into()), Some("1".into())));
+        assert_eq!(
+            (root.read(RST), root.read(PWR), root.read(PWR_F)),
+            (Some("0".into()), Some("0".into()), Some("1".into()))
+        );
         let l = lines(&log);
         assert!(l.contains(&"NOTICE dpu0: Total time taken for going down".to_string()));
         assert!(l.contains(&"NOTICE dpu0: Power Off complete".to_string()));
@@ -923,7 +1022,10 @@ mod tests {
         root.write(SHTDN, "0");
         root.write(PWR, "1");
         assert!(d.dpu_power_off(false, true).unwrap());
-        assert_eq!((root.read(PWR), root.read(PWR_F)), (Some("1".into()), Some("0".into())));
+        assert_eq!(
+            (root.read(PWR), root.read(PWR_F)),
+            (Some("1".into()), Some("0".into()))
+        );
         let l = lines(&log);
         assert!(l.contains(&"WARNING dpu0: Going Down Unsuccessful".to_string()));
         assert!(l.contains(&"NOTICE dpu0: Force Power Off complete".to_string()));
@@ -934,7 +1036,9 @@ mod tests {
         // Already off.
         root.write(BOOT, "0");
         assert!(d.dpu_power_off(false, true).unwrap());
-        assert!(lines(&log).contains(&"NOTICE dpu0: Skipping DPU power off as DPU is already powered off".to_string()));
+        assert!(lines(&log).contains(
+            &"NOTICE dpu0: Skipping DPU power off as DPU is already powered off".to_string()
+        ));
     }
 
     #[test]
@@ -945,7 +1049,10 @@ mod tests {
         let e = d.dpu_go_down().unwrap_err();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("FileNotFoundError", format!("dpu0:[Errno 2] No such file or directory: '{SHTDN}'"))
+            (
+                "FileNotFoundError",
+                format!("dpu0:[Errno 2] No such file or directory: '{SHTDN}'")
+            )
         );
         // The file gone while it is waited on: renamed the same.
         root.write(SHTDN, "0");
@@ -958,12 +1065,21 @@ mod tests {
         gone.join().unwrap();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("FileNotFoundError", format!("dpu0:[Errno 2] No such file or directory: '{SHTDN}'"))
+            (
+                "FileNotFoundError",
+                format!("dpu0:[Errno 2] No such file or directory: '{SHTDN}'")
+            )
         );
         // Another class keeps its own words.
         std::fs::create_dir_all(root.real(SHTDN)).unwrap();
         let e = d.dpu_go_down().unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("IsADirectoryError", format!("[Errno 21] Is a directory: '{SHTDN}'")));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "IsADirectoryError",
+                format!("[Errno 21] Is a directory: '{SHTDN}'")
+            )
+        );
     }
 
     /// Whatever an operation raises lands in the watcher's context manager,
@@ -975,10 +1091,18 @@ mod tests {
         let d = dpu(&root, "5", "1", "0", "0");
         std::fs::remove_dir_all(root.real("/var/run/hw-management/system")).unwrap();
         let e = d.dpu_power_off(true, true).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("RuntimeError", "generator didn't stop after throw()".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "RuntimeError",
+                "generator didn't stop after throw()".to_string()
+            )
+        );
         let l = lines(&log);
         assert!(l.contains(&format!("ERROR dpu0: Failed to write 0 to file {RST}")));
-        assert!(l.contains(&"ERROR dpu0: Exception occured during creating boot_prog_context manager!".to_string()));
+        assert!(l.contains(
+            &"ERROR dpu0: Exception occured during creating boot_prog_context manager!".to_string()
+        ));
         // The same from going down without its event file.
         drop((log, root));
         let root = Root::new();
@@ -997,9 +1121,16 @@ mod tests {
         let d = dpu(&root, "5", "1", "0", "1");
         std::fs::remove_file(root.real(BOOT)).unwrap();
         // Off by force: boot progress is read first, and raises.
-        assert_eq!(d.dpu_power_off(true, true).unwrap_err().str(), "generator didn't stop after throw()");
+        assert_eq!(
+            d.dpu_power_off(true, true).unwrap_err().str(),
+            "generator didn't stop after throw()"
+        );
         let l = lines(&log);
-        assert!(!l.iter().any(|l| l.contains("watch_boot_progress") || l.contains("Received termination")), "{l:?}");
+        assert!(
+            !l.iter()
+                .any(|l| l.contains("watch_boot_progress") || l.contains("Received termination")),
+            "{l:?}"
+        );
         assert!(l.contains(&format!("ERROR dpu0: Failed to read from file {BOOT} - FileNotFoundError(2, 'No such file or directory')")));
     }
 
@@ -1045,10 +1176,15 @@ mod tests {
         assert!(d.dpu_reboot(false, true, true).unwrap());
         let l = lines(&log);
         assert!(l.contains(&"NOTICE dpu0: Force Power Off complete".to_string()));
-        assert!(l.contains(&"NOTICE dpu0: Exiting without checking result of reboot command".to_string()));
+        assert!(l.contains(
+            &"NOTICE dpu0: Exiting without checking result of reboot command".to_string()
+        ));
         // Forced, without waiting.
         assert!(d.dpu_reboot(true, true, true).unwrap());
-        assert_eq!((root.read(PWR_F), root.read(RST)), (Some("1".into()), Some("1".into())));
+        assert_eq!(
+            (root.read(PWR_F), root.read(RST)),
+            (Some("1".into()), Some("1".into()))
+        );
         // Forced, waiting: ready.
         assert!(d.dpu_reboot(true, false, true).unwrap());
         // Never ready: forced power on, four times, then no.
@@ -1070,15 +1206,25 @@ mod tests {
         root.write(MLX5_CORE_UNBIND_PATH, "");
         root.write(&format!("{RSHIM}/x"), "");
         assert!(d.dpu_reboot(false, false, false).unwrap());
-        assert_eq!(root.read(MLX5_CORE_UNBIND_PATH).as_deref(), Some("0000:08:00.0"));
+        assert_eq!(
+            root.read(MLX5_CORE_UNBIND_PATH).as_deref(),
+            Some("0000:08:00.0")
+        );
         let l = lines(&log);
-        assert!(l.contains(&format!("NOTICE dpu0: Skip pci removal for SOC PCIE dev {RSHIM}")));
-        assert!(l.contains(&format!("NOTICE dpu0: Driver already bound for {PCI}, skip bind")));
+        assert!(l.contains(&format!(
+            "NOTICE dpu0: Skip pci removal for SOC PCIE dev {RSHIM}"
+        )));
+        assert!(l.contains(&format!(
+            "NOTICE dpu0: Driver already bound for {PCI}, skip bind"
+        )));
         // Off: removed first.  On: scanned after.
         assert!(d.dpu_power_off(true, false).unwrap());
         root.write(BOOT, "0");
         assert!(d.dpu_power_on(true, false).unwrap());
-        assert_eq!(d.pci_dev_paths().unwrap(), (PCI.to_string(), RSHIM.to_string()));
+        assert_eq!(
+            d.pci_dev_paths().unwrap(),
+            (PCI.to_string(), RSHIM.to_string())
+        );
     }
 
     #[test]
@@ -1093,25 +1239,39 @@ mod tests {
             "NOTICE dpu0: Skipping unbind for {PCI}: driver not bound or mlx5_core unbind path missing"
         )));
         assert!(d.dpu_pci_scan());
-        assert_eq!(root.read(MLX5_CORE_BIND_PATH).as_deref(), Some("0000:08:00.0"));
+        assert_eq!(
+            root.read(MLX5_CORE_BIND_PATH).as_deref(),
+            Some("0000:08:00.0")
+        );
         let l = lines(&log);
         assert!(l.contains(&format!("NOTICE dpu0: Total time taken for pci bind {PCI}")));
         assert!(l.contains(&format!("WARNING dpu0: PCI device {RSHIM} not found")));
         // No BARs: given up on.
         root.write(MLX5_CORE_BIND_PATH, "");
-        root.write(&format!("{PCI}/resource"), "0x0000000000000000 0x0000000000000000 0x0\n");
+        root.write(
+            &format!("{PCI}/resource"),
+            "0x0000000000000000 0x0000000000000000 0x0\n",
+        );
         assert!(d.dpu_pci_scan());
         assert_eq!(root.read(MLX5_CORE_BIND_PATH).as_deref(), Some(""));
-        assert!(lines(&log).contains(&format!("WARNING dpu0: PCI device {PCI} did not become bindable within 0s")));
+        assert!(lines(&log).contains(&format!(
+            "WARNING dpu0: PCI device {PCI} did not become bindable within 0s"
+        )));
         // A line that does not parse raises before a later non-zero one is
         // read: still not bindable.
-        root.write(&format!("{PCI}/resource"), "\n0x00000000fa000000 0x00000000fbffffff 0x40200\n");
+        root.write(
+            &format!("{PCI}/resource"),
+            "\n0x00000000fa000000 0x00000000fbffffff 0x40200\n",
+        );
         assert!(d.dpu_pci_scan());
         assert_eq!(root.read(MLX5_CORE_BIND_PATH).as_deref(), Some(""));
         // The bind failing.
         std::fs::remove_file(root.real(MLX5_CORE_BIND_PATH)).unwrap();
         std::fs::create_dir_all(root.real(MLX5_CORE_BIND_PATH)).unwrap();
-        root.write(&format!("{PCI}/resource"), "0x00000000fa000000 0x00000000fbffffff 0x40200\n");
+        root.write(
+            &format!("{PCI}/resource"),
+            "0x00000000fa000000 0x00000000fbffffff 0x40200\n",
+        );
         assert!(!d.dpu_pci_scan());
         let l = lines(&log);
         assert!(l.contains(&format!("ERROR dpu0: Failed to bind mlx5_core for {PCI}")));
@@ -1121,7 +1281,9 @@ mod tests {
         // Bound by the kernel while the BARs were awaited.
         root.write(&format!("{PCI}/driver/x"), "");
         d.dpu_pci_bind(PCI, "0000:08:00.0").unwrap();
-        assert!(lines(&log).contains(&format!("NOTICE dpu0: Driver already bound for {PCI}, skip bind")));
+        assert!(lines(&log).contains(&format!(
+            "NOTICE dpu0: Driver already bound for {PCI}, skip bind"
+        )));
         std::fs::remove_dir_all(root.real(&format!("{PCI}/driver"))).unwrap();
         // No bind path; no device.
         std::fs::remove_dir(root.real(MLX5_CORE_BIND_PATH)).unwrap();
@@ -1138,17 +1300,32 @@ mod tests {
     fn without_pci_ids_in_platform_json_pci_steps_fail() {
         let root = Root::new();
         let log = Syslog::listen(&root);
-        platform(&root, "x86_64-nvidia_sn4280-r0", r#"{"DPUS": {"dpu0": {"bus_info": "0000:08:00.0"}}}"#);
+        platform(
+            &root,
+            "x86_64-nvidia_sn4280-r0",
+            r#"{"DPUS": {"dpu0": {"bus_info": "0000:08:00.0"}}}"#,
+        );
         let d = DpuCtlPlat::new("dpu0");
         let e = d.pci_dev_paths().unwrap_err();
-        assert_eq!(e.str(), "Unable to obtain PCI device ID (rshim_bus_info) for dpu0 from platform.json");
+        assert_eq!(
+            e.str(),
+            "Unable to obtain PCI device ID (rshim_bus_info) for dpu0 from platform.json"
+        );
         assert!(!d.dpu_pci_remove());
         assert!(!d.dpu_pci_scan());
         let l = lines(&log);
         assert!(l.contains(&"ERROR dpu0: Failed PCI Removal with error Unable to obtain PCI device ID (rshim_bus_info) for dpu0 from platform.json".to_string()));
         assert!(l.contains(&"ERROR dpu0: Failed to rescan with error Unable to obtain PCI device ID (rshim_bus_info) for dpu0 from platform.json".to_string()));
-        assert_eq!(dpu_interface("dpu0", "bus_info").unwrap().map(|v| v.py_str()).as_deref(), Some("0000:08:00.0"));
-        assert!(dpu_interface("dpu0", "midplane_interface").unwrap().is_none());
+        assert_eq!(
+            dpu_interface("dpu0", "bus_info")
+                .unwrap()
+                .map(|v| v.py_str())
+                .as_deref(),
+            Some("0000:08:00.0")
+        );
+        assert!(dpu_interface("dpu0", "midplane_interface")
+            .unwrap()
+            .is_none());
         assert!(dpu_interface("dpu7", "bus_info").unwrap().is_none());
         // Not one of `DpuInterfaceEnum`'s values.
         assert!(dpu_interface("dpu0", "bogus").unwrap().is_none());
@@ -1156,13 +1333,25 @@ mod tests {
         crate::utils::forget_caches();
         assert!(dpu_interface("dpu0", "bus_info").unwrap().is_none());
         let e = DpuCtlPlat::new("dpu0").pci_dev_paths().unwrap_err();
-        assert_eq!(e.str(), "Unable to obtain PCI device ID (bus_info) for dpu0 from platform.json");
+        assert_eq!(
+            e.str(),
+            "Unable to obtain PCI device ID (bus_info) for dpu0 from platform.json"
+        );
         // `.get` on what is not a dict.
-        for (json, what) in [(r#"{"DPUS": {"dpu0": null}}"#, "NoneType"), (r#"{"DPUS": ["dpu0"]}"#, "list")] {
+        for (json, what) in [
+            (r#"{"DPUS": {"dpu0": null}}"#, "NoneType"),
+            (r#"{"DPUS": ["dpu0"]}"#, "list"),
+        ] {
             platform(&root, "x86_64-nvidia_sn4280-r0", json);
             crate::utils::forget_caches();
             let e = dpu_interface("dpu0", "bus_info").unwrap_err();
-            assert_eq!((e.exc.name(), e.str()), ("AttributeError", format!("'{what}' object has no attribute 'get'")));
+            assert_eq!(
+                (e.exc.name(), e.str()),
+                (
+                    "AttributeError",
+                    format!("'{what}' object has no attribute 'get'")
+                )
+            );
         }
     }
 }

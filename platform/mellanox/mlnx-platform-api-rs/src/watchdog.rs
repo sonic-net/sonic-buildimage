@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! `sonic_platform/watchdog.py`: the main hardware watchdog, found by its
 //! sysfs identity and driven with the watchdog ioctls.
 //!
@@ -78,7 +76,10 @@ pub struct Watchdog {
 
 /// `time.monotonic()`.
 fn monotonic() -> f64 {
-    let mut ts = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+    let mut ts = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
     // SAFETY: a valid timespec to fill.
     unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut ts) };
     ts.tv_sec as f64 + ts.tv_nsec as f64 * 1e-9
@@ -143,8 +144,9 @@ impl Watchdog {
         if seconds < 0 {
             return Ok(WD_COMMON_ERROR);
         }
-        let max = device_data::get_watchdog_max_period()?
-            .ok_or_else(|| PyErr::type_error("'>' not supported between instances of 'int' and 'NoneType'"))?;
+        let max = device_data::get_watchdog_max_period()?.ok_or_else(|| {
+            PyErr::type_error("'>' not supported between instances of 'int' and 'NoneType'")
+        })?;
         if seconds > max {
             return Ok(WD_COMMON_ERROR);
         }
@@ -187,7 +189,8 @@ impl PyObject for Watchdog {
     fn arm(&self, seconds: i128) -> PyResult<PyVal> {
         let ret = self.arm_impl(seconds)?;
         if self.kind == Type::Type1 {
-            std::fs::create_dir_all(io::real(TIMESTAMP_DIR)).map_err(|e| PyErr::from_io(&e, Some(TIMESTAMP_DIR)))?;
+            std::fs::create_dir_all(io::real(TIMESTAMP_DIR))
+                .map_err(|e| PyErr::from_io(&e, Some(TIMESTAMP_DIR)))?;
             utils::write_file(TIMESTAMP_FILE, &float_repr(monotonic()), false, Log::Error)?;
         }
         Ok(PyVal::Int(ret))
@@ -246,7 +249,11 @@ pub fn get_watchdog() -> PyResult<Option<Watchdog>> {
     let Some(name) = main else {
         return Ok(None);
     };
-    let kind = if io::exists(&format!("{WD_SYSFS_PATH}/{name}/timeleft")) { Type::Type2 } else { Type::Type1 };
+    let kind = if io::exists(&format!("{WD_SYSFS_PATH}/{name}/timeleft")) {
+        Type::Type2
+    } else {
+        Type::Type1
+    };
     Ok(Some(Watchdog::new(kind, format!("/dev/{name}"))))
 }
 
@@ -280,7 +287,10 @@ mod tests {
                 None => name.to_string(),
             });
             if let Some(errno) = self.errno {
-                return Err(PyErr::from_io(&std::io::Error::from_raw_os_error(errno), None));
+                return Err(PyErr::from_io(
+                    &std::io::Error::from_raw_os_error(errno),
+                    None,
+                ));
             }
             if let (WDIOC_SETTIMEOUT, Some(t), Some(a)) = (request, self.timeout, arg) {
                 *a = t;
@@ -291,11 +301,20 @@ mod tests {
 
     /// The driver in place, with nothing logged yet.
     fn driver(errno: Option<i32>, timeout: Option<i32>) {
-        *FAKE_DRIVER.lock().unwrap() = Some(FakeDriver { log: Vec::new(), errno, timeout });
+        *FAKE_DRIVER.lock().unwrap() = Some(FakeDriver {
+            log: Vec::new(),
+            errno,
+            timeout,
+        });
     }
 
     fn log() -> Vec<String> {
-        FAKE_DRIVER.lock().unwrap().as_mut().map(|d| std::mem::take(&mut d.log)).unwrap_or_default()
+        FAKE_DRIVER
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|d| std::mem::take(&mut d.log))
+            .unwrap_or_default()
     }
 
     fn no_driver() {
@@ -320,7 +339,10 @@ mod tests {
         assert!(get_watchdog().unwrap().is_none());
         root.write("/sys/class/watchdog/watchdog1/identity", "mlx-wdt-main\n");
         let wd = get_watchdog().unwrap().unwrap();
-        assert_eq!((wd.py_class(), wd.watchdog_path.as_str(), wd.kind), ("WatchdogType1", "/dev/watchdog1", Type::Type1));
+        assert_eq!(
+            (wd.py_class(), wd.watchdog_path.as_str(), wd.kind),
+            ("WatchdogType1", "/dev/watchdog1", Type::Type1)
+        );
         assert_eq!(wd.base_class(), BaseClass::WatchdogBase);
         root.write("/sys/class/watchdog/watchdog1/timeleft", "7\n");
         let wd = get_watchdog().unwrap().unwrap();
@@ -328,8 +350,15 @@ mod tests {
         // An identity that does not decode is the decoder's error, whatever
         // order the devices are listed in.
         root.write("/sys/class/watchdog/watchdog1/identity", "other\n");
-        std::fs::write(root.real("/sys/class/watchdog/watchdog0/identity"), b"\xff\n").unwrap();
-        assert_eq!(get_watchdog().err().map(|e| e.exc.name()), Some("UnicodeDecodeError"));
+        std::fs::write(
+            root.real("/sys/class/watchdog/watchdog0/identity"),
+            b"\xff\n",
+        )
+        .unwrap();
+        assert_eq!(
+            get_watchdog().err().map(|e| e.exc.name()),
+            Some("UnicodeDecodeError")
+        );
     }
 
     #[test]
@@ -362,7 +391,10 @@ mod tests {
     #[test]
     fn a_platform_s_max_period_bounds_the_timeout() {
         let root = bench("inactive", "0");
-        root.write(platform_base::device_info::MACHINE_CONF_PATH, "onie_platform=x86_64-mlnx_msn2100-r0\n");
+        root.write(
+            platform_base::device_info::MACHINE_CONF_PATH,
+            "onie_platform=x86_64-mlnx_msn2100-r0\n",
+        );
         let wd = Watchdog::new(Type::Type2, "/dev/watchdog1".into());
         driver(None, None);
         if !crate::testing::platform_from_env() {

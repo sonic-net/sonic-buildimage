@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/vpd_parser.py`: `key: value` VPD files, re-read when their
 //! modification time changes.
 
@@ -45,7 +44,13 @@ pub struct VpdParser {
 impl VpdParser {
     pub fn new(file: &str) -> VpdParser {
         crate::imports::vpd_parser();
-        VpdParser { file: file.to_string(), state: Mutex::new(State { data: Vec::new(), mtime: None }) }
+        VpdParser {
+            file: file.to_string(),
+            state: Mutex::new(State {
+                data: Vec::new(),
+                mtime: None,
+            }),
+        }
     }
 
     /// `_get_data()`: False, and no data, when the file is not there.
@@ -72,12 +77,18 @@ impl VpdParser {
 
     fn get(&self, key: &str) -> Option<String> {
         let st = utils::lock(&self.state);
-        st.data.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone())
+        st.data
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.clone())
     }
 
     fn field(&self, key: &str, what: &str, log: Log) -> String {
         if self.get_data() && self.get(key).is_none() {
-            log.emit(&format!("Fail to read {what}: No key {key} in VPD {}", self.file));
+            log.emit(&format!(
+                "Fail to read {what}: No key {key} in VPD {}",
+                self.file
+            ));
             return "N/A".into();
         }
         self.get(key).unwrap_or_else(|| "N/A".into())
@@ -127,7 +138,10 @@ mod tests {
         // A file that loses its keys.
         let w = VpdParser::new("/x/other");
         root.write("/x/other", "OTHER: 1\n");
-        assert_eq!((w.get_model(), w.get_serial(), w.get_revision()), ("N/A".into(), "N/A".into(), "N/A".into()));
+        assert_eq!(
+            (w.get_model(), w.get_serial(), w.get_revision()),
+            ("N/A".into(), "N/A".into(), "N/A".into())
+        );
         // Re-read only when the modification time changes; gone, forgotten.
         std::fs::remove_file(root.real("/x/psu1_vpd")).unwrap();
         assert_eq!(v.get_serial(), "N/A");
@@ -139,10 +153,16 @@ mod tests {
         root.write("/x/file", "SN_VPD_FIELD: 1\n");
         let v = VpdParser::new("/x/file");
         assert_eq!(v.get_serial(), "1");
-        let mtime = std::fs::metadata(root.real("/x/file")).unwrap().modified().unwrap();
+        let mtime = std::fs::metadata(root.real("/x/file"))
+            .unwrap()
+            .modified()
+            .unwrap();
         // Same mtime: the old data, even though the content changed.
         root.write("/x/file", "SN_VPD_FIELD: 2\n");
-        let f = std::fs::File::options().write(true).open(root.real("/x/file")).unwrap();
+        let f = std::fs::File::options()
+            .write(true)
+            .open(root.real("/x/file"))
+            .unwrap();
         f.set_modified(mtime).unwrap();
         assert_eq!(v.get_serial(), "1");
     }

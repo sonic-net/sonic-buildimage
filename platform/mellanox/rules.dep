@@ -19,3 +19,6 @@ include $(PLATFORM_PATH)/mlnx-onie-fw-update.dep
 include $(PLATFORM_PATH)/mlnx-ssd-fw-update.dep
 include $(PLATFORM_PATH)/install-pending-fw.dep
 include $(PLATFORM_PATH)/rshim.dep
+
+# Keep this direct input for the PR cache-key audit of rules.mk.
+$(SYNCD)_DEP_FLAGS += $(ENABLE_SYNCD_RPC)

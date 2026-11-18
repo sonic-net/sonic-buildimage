@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/thermal_manager.py`: no policies of its own; it starts the
 //! thermal updater, unless the platform is liquid cooled.  Python starts the
 //! SmartSwitch updater on a SmartSwitch, which also feeds the DPUs'
@@ -109,13 +108,33 @@ mod tests {
     fn the_class_needs_hw_management_s_helper_module() {
         let root = Root::new();
         let e = ThermalManager::import().unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("ModuleNotFoundError", "No module named 'hw_management_independent_mode_update'".to_string()));
-        root.write(crate::hw_mgmt::INDEPENDENT_MODE_UPDATE_PATH, "import nonexistent_dependency\n");
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "ModuleNotFoundError",
+                "No module named 'hw_management_independent_mode_update'".to_string()
+            )
+        );
+        root.write(
+            crate::hw_mgmt::INDEPENDENT_MODE_UPDATE_PATH,
+            "import nonexistent_dependency\n",
+        );
         let e = ThermalManager::import().unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("ModuleNotFoundError", "No module named 'nonexistent_dependency'".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            (
+                "ModuleNotFoundError",
+                "No module named 'nonexistent_dependency'".to_string()
+            )
+        );
         crate::hw_mgmt::testing::install_independent_mode_update(&root);
-        let PyVal::Obj(tm) = ThermalManager::import().unwrap() else { panic!("no class") };
-        assert_eq!((tm.py_class(), tm.base_class()), ("ThermalManager", BaseClass::ThermalManagerBase));
+        let PyVal::Obj(tm) = ThermalManager::import().unwrap() else {
+            panic!("no class")
+        };
+        assert_eq!(
+            (tm.py_class(), tm.base_class()),
+            ("ThermalManager", BaseClass::ThermalManagerBase)
+        );
         assert!(tm.run_policy(PyVal::None).unwrap().is_none());
     }
 
@@ -139,28 +158,58 @@ mod tests {
         let root = Root::new();
         root.write("/run/hw-management/config/suspend", "1");
         let redis = crate::test_support_d::redis_with_chassis_db(&root);
-        redis.set(platform_base::testing::CONFIG_DB, "CONFIG_DB_INITIALIZED", "1");
-        redis.hset(platform_base::testing::CONFIG_DB, "DEVICE_METADATA|localhost", &[("hwsku", "SKU-D")]);
+        redis.set(
+            platform_base::testing::CONFIG_DB,
+            "CONFIG_DB_INITIALIZED",
+            "1",
+        );
+        redis.hset(
+            platform_base::testing::CONFIG_DB,
+            "DEVICE_METADATA|localhost",
+            &[("hwsku", "SKU-D")],
+        );
         let sku = platform_base::device_info::get_hwsku().unwrap();
-        root.write(&format!("/usr/share/sonic/platform/{sku}/hwsku.json"), r#"{"interfaces": {}}"#);
+        root.write(
+            &format!("/usr/share/sonic/platform/{sku}/hwsku.json"),
+            r#"{"interfaces": {}}"#,
+        );
         // A fixed switch.
-        platform(&root, "x86_64-nvidia_sn5600-r0", r#"{"chassis": {"sfps": []}, "interfaces": {}}"#);
+        platform(
+            &root,
+            "x86_64-nvidia_sn5600-r0",
+            r#"{"chassis": {"sfps": []}, "interfaces": {}}"#,
+        );
         chassis::platform().unwrap();
         ThermalManager.initialize().unwrap();
         assert!(task().is_some());
-        assert_eq!(root.read("/run/hw-management/config/suspend").as_deref(), Some("0"));
+        assert_eq!(
+            root.read("/run/hw-management/config/suspend").as_deref(),
+            Some("0")
+        );
         ThermalManager.deinitialize().unwrap();
-        assert_eq!(root.read("/run/hw-management/config/suspend").as_deref(), Some("1"));
+        assert_eq!(
+            root.read("/run/hw-management/config/suspend").as_deref(),
+            Some("1")
+        );
         // A SmartSwitch: its DPUs too.
-        platform(&root, "x86_64-nvidia_sn4280-r0", r#"{"chassis": {"sfps": []}, "interfaces": {}, "DPUS": {"dpu0": {}, "dpu1": {}}}"#);
+        platform(
+            &root,
+            "x86_64-nvidia_sn4280-r0",
+            r#"{"chassis": {"sfps": []}, "interfaces": {}, "DPUS": {"dpu0": {}, "dpu1": {}}}"#,
+        );
         crate::utils::forget_caches();
         chassis::platform().unwrap();
         ThermalManager.initialize().unwrap();
         assert!(task().is_some());
         ThermalManager.deinitialize().unwrap();
         use pyo3::prelude::*;
-        let dpu_helper_imported = Python::with_gil(|py| {
-            py.import("sys").unwrap().getattr("modules").unwrap().contains("hw_management_dpu_thermal_update").unwrap()
+        let dpu_helper_imported = Python::attach(|py| {
+            py.import("sys")
+                .unwrap()
+                .getattr("modules")
+                .unwrap()
+                .contains("hw_management_dpu_thermal_update")
+                .unwrap()
         });
         assert!(!dpu_helper_imported);
         assert!(!root.exists("/var/run/hw-management/dpu1/thermal"));

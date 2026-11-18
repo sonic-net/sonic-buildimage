@@ -23,7 +23,7 @@
 name = "platform-native"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.82"
+rust-version = "1.83"
 license = "Apache-2.0"
 description = "The NVIDIA (Mellanox) platform API, natively in Rust"
 
@@ -42,7 +42,7 @@ platform-base = { path = "../platform-base" }
 # hw-management's Python modules, run in an embedded interpreter (src/hw_mgmt.rs).
 # The version platform-pyo3 has, so that a daemon has one pyo3 and one
 # interpreter; the interpreter starts on first use.
-pyo3 = { version = "0.25", features = ["auto-initialize"] }
+pyo3 = { version = "0.30", features = ["auto-initialize"] }
 # Python's `re`, for the handful of patterns the vendor code matches with it.
 regex = "1"
 

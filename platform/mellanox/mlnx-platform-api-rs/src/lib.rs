@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! The NVIDIA (Mellanox) platform API, natively in Rust.
 //!
 //! The same platform the vendor's Python `sonic_platform` package describes,
@@ -55,11 +54,11 @@ mod sed_mgmt;
 mod sfp;
 mod sfp_events;
 #[cfg(test)]
-mod testing;
-#[cfg(test)]
 mod test_support_d;
 #[cfg(test)]
 mod test_support_f;
+#[cfg(test)]
+mod testing;
 mod thermal;
 mod thermal_manager;
 mod thermal_updater;

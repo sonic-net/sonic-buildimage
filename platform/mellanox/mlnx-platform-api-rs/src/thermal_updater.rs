@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/thermal_updater.py`: feeds the ASIC and module
 //! temperatures in STATE_DB -- the ASIC's in TEMPERATURE_INFO, which
 //! thermalctld publishes, the modules' in the TRANSCEIVER tables xcvrd
@@ -61,7 +60,11 @@ fn clean_thermal_data(sfp_list: &[Arc<Sfp>]) -> PyResult<()> {
     hw_mgmt::module_data_set_module_counter(sfp_list.len() as i128)?;
     for sfp in sfp_list {
         if let Err(e) = hw_mgmt::thermal_data_clean_module(0, sfp.sdk_index + 1) {
-            utils::log_warning(&format!("Cleanup skipped for module {}: {}", sfp.sdk_index + 1, e.str()));
+            utils::log_warning(&format!(
+                "Cleanup skipped for module {}: {}",
+                sfp.sdk_index + 1,
+                e.str()
+            ));
         }
     }
     Ok(())
@@ -103,7 +106,9 @@ impl ThermalUpdater {
         let mut sfp_poll_interval: i128 = 10;
         let data = utils::load_json_file(TC_CONFIG_FILE, Log::Off).unwrap_or(PyVal::None);
         if !data.truthy() {
-            utils::log_error(&format!("{TC_CONFIG_FILE} does not exist, use default polling interval"));
+            utils::log_error(&format!(
+                "{TC_CONFIG_FILE} does not exist, use default polling interval"
+            ));
         } else {
             let dev_parameters = dict_get(&data, "dev_parameters")?;
             if !dev_parameters.truthy() {
@@ -135,7 +140,8 @@ impl ThermalUpdater {
                         "ASIC parameter not found (pattern: asic\\d*), using default interval: {asic_poll_interval}"
                     )),
                 }
-                let (module_key, module_parameter) = find_matching_key(&dev_parameters, r"module\\d+")?;
+                let (module_key, module_parameter) =
+                    find_matching_key(&dev_parameters, r"module\\d+")?;
                 let module_key = module_key.unwrap_or_default();
                 match module_parameter.filter(|p| !p.is_none()) {
                     Some(p) => {
@@ -160,10 +166,12 @@ impl ThermalUpdater {
         }
         utils::log_notice(&format!("ASIC polling interval: {asic_poll_interval}"));
         let me = self.clone();
-        self.timer.schedule(asic_poll_interval as f64, move || me.update_asic());
+        self.timer
+            .schedule(asic_poll_interval as f64, move || me.update_asic());
         utils::log_notice(&format!("Module polling interval: {sfp_poll_interval}"));
         let me = self.clone();
-        self.timer.schedule(sfp_poll_interval as f64, move || me.update_module());
+        self.timer
+            .schedule(sfp_poll_interval as f64, move || me.update_module());
         Ok(())
     }
 
@@ -186,7 +194,8 @@ impl ThermalUpdater {
     fn get_asic_temp(&self, asic_name: &str) -> Option<i128> {
         let mut temperature = PyVal::None;
         let r = (|| -> PyResult<i128> {
-            let (present, value) = dbt::table_hget(TEMPERATURE_INFO_TABLE, asic_name, "temperature")?;
+            let (present, value) =
+                dbt::table_hget(TEMPERATURE_INFO_TABLE, asic_name, "temperature")?;
             let value = value.unwrap_or_default();
             temperature = PyVal::Str(value.clone());
             if !present || value == "N/A" {
@@ -260,7 +269,10 @@ impl ThermalUpdater {
                 hw_mgmt::vendor_data_set_module(
                     sfp.get_asic_index()?,
                     sfp.sdk_index + 1,
-                    &[("manufacturer", String::new()), ("part_number", String::new())],
+                    &[
+                        ("manufacturer", String::new()),
+                        ("part_number", String::new()),
+                    ],
                 )?;
             }
             if pre_presence != Some(presence) {
@@ -269,7 +281,11 @@ impl ThermalUpdater {
             Ok(())
         })();
         if let Err(e) = r {
-            utils::log_error(&format!("Failed to update module {} thermal data - {}", sfp.sdk_index, e.str()));
+            utils::log_error(&format!(
+                "Failed to update module {} thermal data - {}",
+                sfp.sdk_index,
+                e.str()
+            ));
             // An RJ45 port has no get_asic_index, and the helper may raise:
             // either raises out of the handler, and out of the timer thread.
             hw_mgmt::thermal_data_set_module(
@@ -343,22 +359,16 @@ impl ThermalUpdater {
         if !device_data::is_spc1()? {
             return Ok(());
         }
-        let mut conditions: Vec<Box<dyn FnMut() -> bool>> =
-            vec![Box::new(|| io::is_link("/run/hw-management/thermal/asic"))];
-        for sfp_index in 0..device_data::get_sfp_count()? {
-            let idx = sfp_index + 1;
-            for suffix in ["temp_input", "temp_fault", "temp_crit", "temp_emergency"] {
-                let path = format!("/run/hw-management/thermal/module{idx}_{suffix}");
-                conditions.push(Box::new(move || io::is_link(&path)));
-            }
-        }
         utils::log_notice("Waiting for ASIC and modules thermal files to be created");
-        if !utils::wait_until_conditions(conditions, 300.0, 1.0) {
+        if !utils::ensure_sysfs_mlxsw_ready() {
             utils::log_error("Failed to wait for thermal files to be created");
             return Ok(());
         }
         utils::log_notice("All ASIC and modules thermal files are created");
-        for pattern in ["/run/hw-management/thermal/asic*", "/run/hw-management/thermal/module*_temp_*"] {
+        for pattern in [
+            "/run/hw-management/thermal/asic*",
+            "/run/hw-management/thermal/module*_temp_*",
+        ] {
             for f in utils::glob(pattern) {
                 if io::is_link(&f) {
                     std::fs::remove_file(io::real(&f)).map_err(|e| PyErr::from_io(&e, Some(&f)))?;
@@ -376,16 +386,25 @@ fn control_tc(suspend: bool) {
         "Set hw-management-tc to {}",
         if suspend { "suspend" } else { "resume" }
     ));
-    let _ = utils::write_file("/run/hw-management/config/suspend", &i32::from(suspend), false, Log::Error);
+    let _ = utils::write_file(
+        "/run/hw-management/config/suspend",
+        &i32::from(suspend),
+        false,
+        Log::Error,
+    );
 }
 
 /// `_find_matching_key(dev_parameters, pattern)`: the first key `re.match`
 /// accepts, and its value.
-fn find_matching_key(dev_parameters: &PyVal, pattern: &str) -> PyResult<(Option<String>, Option<PyVal>)> {
+fn find_matching_key(
+    dev_parameters: &PyVal,
+    pattern: &str,
+) -> PyResult<(Option<String>, Option<PyVal>)> {
     let PyVal::Dict(items) = dev_parameters else {
         return Err(PyErr::missing(&dev_parameters.type_name(), "keys"));
     };
-    let re = Regex::new(&format!("^(?:{pattern})")).map_err(|e| PyErr::runtime_error(e.to_string()))?;
+    let re =
+        Regex::new(&format!("^(?:{pattern})")).map_err(|e| PyErr::runtime_error(e.to_string()))?;
     for (k, v) in items {
         let key = k.py_str();
         if re.is_match(&key) {
@@ -435,7 +454,12 @@ mod tests {
     use super::*;
 
     fn dict(items: &[(&str, PyVal)]) -> PyVal {
-        PyVal::Dict(items.iter().map(|(k, v)| (PyVal::str(*k), v.clone())).collect())
+        PyVal::Dict(
+            items
+                .iter()
+                .map(|(k, v)| (PyVal::str(*k), v.clone()))
+                .collect(),
+        )
     }
 
     /// test_thermal_updater.py::test_find_matching_key: the patterns match a
@@ -443,7 +467,11 @@ mod tests {
     #[test]
     fn matching_keys_take_the_backslash_literally() {
         let poll = |n: i128| dict(&[("poll_time", PyVal::Int(n))]);
-        let params = dict(&[("asic\\d*", poll(3)), ("module\\d+", poll(20)), ("sensor_amb", poll(30))]);
+        let params = dict(&[
+            ("asic\\d*", poll(3)),
+            ("module\\d+", poll(20)),
+            ("sensor_amb", poll(30)),
+        ]);
         let (k, v) = find_matching_key(&params, r"asic\\d*").unwrap();
         assert_eq!(k.as_deref(), Some("asic\\d*"));
         assert!(v.unwrap().py_eq(&poll(3)));
@@ -484,27 +512,52 @@ mod updater_tests {
     /// Port `SDK` present and in STATE_DB: an SKU without independent
     /// module mode, ASIC 1 ready, the module's page 0, and xcvrd's tables.
     fn present_port(root: &Root) -> (&'static FakeRedis, Arc<Sfp>) {
-        platform(root, "x86_64-nvidia_sn5600-r0", r#"{"chassis": {"sfps": []}}"#);
+        platform(
+            root,
+            "x86_64-nvidia_sn5600-r0",
+            r#"{"chassis": {"sfps": []}}"#,
+        );
         let redis = redis_with_chassis_db(root);
         redis.set(CONFIG_DB, "CONFIG_DB_INITIALIZED", "1");
-        redis.hset(CONFIG_DB, "DEVICE_METADATA|localhost", &[("hwsku", "SKU-D")]);
+        redis.hset(
+            CONFIG_DB,
+            "DEVICE_METADATA|localhost",
+            &[("hwsku", "SKU-D")],
+        );
         let sku = platform_base::device_info::get_hwsku().unwrap();
-        root.write(&format!("/usr/share/sonic/platform/{sku}/sai.profile"), "SAI_INIT_CONFIG_FILE=/x\n");
+        root.write(
+            &format!("/usr/share/sonic/platform/{sku}/sai.profile"),
+            "SAI_INIT_CONFIG_FILE=/x\n",
+        );
         root.write(&format!("{CFG}/asic1_ready"), "1");
         let m = format!("/sys/module/sx_core/asic0/module{SDK}");
         root.write(&format!("{m}/present"), "1");
         root.write(&format!("{m}/eeprom/pages/0/i2c-0x50/data"), "\x18");
         redis.set(0, "PORT_TABLE:PortConfigDone", "1");
         redis.hset(CONFIG_DB, &format!("PORT|{PORT}"), &[("index", "201")]);
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"), &[("temperature", "40.5")]);
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_DOM_THRESHOLD|{PORT}"), &[("temphighwarning", "70"), ("temphighalarm", "80")]);
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_INFO|{PORT}"), &[("manufacturer", " Mellanox "), ("model", "MCP1600")]);
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"),
+            &[("temperature", "40.5")],
+        );
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_THRESHOLD|{PORT}"),
+            &[("temphighwarning", "70"), ("temphighalarm", "80")],
+        );
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_INFO|{PORT}"),
+            &[("manufacturer", " Mellanox "), ("model", "MCP1600")],
+        );
         (redis, Sfp::new(Kind::Sfp, SDK, "asic0").unwrap())
     }
 
     /// `thermal_data_set_module` for module 201 on ASIC 0.
     fn module(temperature: i128, warning: i128, critical: i128, fault: i128) -> String {
-        format!("('thermal_data_set_module', 0, 201, {temperature}, {warning}, {critical}, {fault})")
+        format!(
+            "('thermal_data_set_module', 0, 201, {temperature}, {warning}, {critical}, {fault})"
+        )
     }
 
     #[test]
@@ -524,29 +577,49 @@ mod updater_tests {
             ]
         );
         // A warning above the critical threshold is a fault.
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_DOM_THRESHOLD|{PORT}"), &[("temphighwarning", "90")]);
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_THRESHOLD|{PORT}"),
+            &[("temphighwarning", "90")],
+        );
         u.update_single_module(&sfp).unwrap();
         assert_eq!(take_calls()[0], module(40500, 80000, 90000, 254000));
         // xcvrd could not read it: zeros, and a fault.
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"), &[("temperature", "None")]);
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"),
+            &[("temperature", "None")],
+        );
         u.update_single_module(&sfp).unwrap();
         assert_eq!(take_calls()[0], module(0, 0, 0, 254000));
         // Not there yet: zeros, no fault.
-        redis.hdel(STATE_DB, &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"), "temperature");
+        redis.hdel(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"),
+            "temperature",
+        );
         u.update_single_module(&sfp).unwrap();
         assert_eq!(take_calls()[0], module(0, 0, 0, 0));
         // Unreadable: the error is logged, and only the fault written.
-        redis.hset(STATE_DB, &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"), &[("temperature", "hot")]);
+        redis.hset(
+            STATE_DB,
+            &format!("TRANSCEIVER_DOM_TEMPERATURE|{PORT}"),
+            &[("temperature", "hot")],
+        );
         u.update_single_module(&sfp).unwrap();
         assert_eq!(take_calls(), [module(0, 0, 0, 254000)]);
         // Gone: zeros and an empty vendor once, then left alone.
-        root.write(&format!("/sys/module/sx_core/asic0/module{SDK}/present"), "0");
+        root.write(
+            &format!("/sys/module/sx_core/asic0/module{SDK}/present"),
+            "0",
+        );
         u.update_module().unwrap();
         assert_eq!(
             take_calls(),
             [
                 module(0, 0, 0, 0),
-                "('vendor_data_set_module', 0, 201, {'manufacturer': '', 'part_number': ''})".to_string()
+                "('vendor_data_set_module', 0, 201, {'manufacturer': '', 'part_number': ''})"
+                    .to_string()
             ]
         );
         u.update_module().unwrap();
@@ -571,7 +644,10 @@ mod updater_tests {
         );
         fail("thermal_data_set_module", "thermal directory is gone");
         let e = u.update_single_module(&sfp).unwrap_err();
-        assert_eq!((e.exc.name(), e.str()), ("RuntimeError", "thermal directory is gone".to_string()));
+        assert_eq!(
+            (e.exc.name(), e.str()),
+            ("RuntimeError", "thermal directory is gone".to_string())
+        );
         fail("thermal_data_set_asic", "no ASIC");
         assert_eq!(u.update_asic().unwrap_err().str(), "no ASIC");
     }
@@ -584,7 +660,10 @@ mod updater_tests {
         let rj45 = Sfp::new(Kind::Rj45, 201, "asic0").unwrap();
         let u = ThermalUpdater::new(vec![rj45.clone()]).unwrap();
         let e = u.update_module().unwrap_err();
-        assert_eq!(e.str(), "'RJ45Port' object has no attribute 'get_asic_index'");
+        assert_eq!(
+            e.str(),
+            "'RJ45Port' object has no attribute 'get_asic_index'"
+        );
     }
 
     #[test]
@@ -593,23 +672,40 @@ mod updater_tests {
         let (redis, _) = present_port(&root);
         let u = ThermalUpdater::new(Vec::new()).unwrap();
         take_calls();
-        redis.hset(STATE_DB, "TEMPERATURE_INFO|ASIC", &[("temperature", "45.5")]);
+        redis.hset(
+            STATE_DB,
+            "TEMPERATURE_INFO|ASIC",
+            &[("temperature", "45.5")],
+        );
         u.update_asic().unwrap();
         // The thresholds go positionally too: the critical first.
-        assert_eq!(take_calls(), ["('thermal_data_set_asic', 0, 45500, 120000, 105000, 0)"]);
+        assert_eq!(
+            take_calls(),
+            ["('thermal_data_set_asic', 0, 45500, 120000, 105000, 0)"]
+        );
         assert_eq!(u.get_asic_temp("ASIC"), Some(45500));
         // Not in STATE_DB yet, or N/A: an empty string, which
         // hw-management-tc skips.
         redis.hset(STATE_DB, "TEMPERATURE_INFO|ASIC", &[("temperature", "N/A")]);
         u.update_asic().unwrap();
-        assert_eq!(take_calls(), ["('thermal_data_set_asic', 0, '', 120000, 105000, 0)"]);
+        assert_eq!(
+            take_calls(),
+            ["('thermal_data_set_asic', 0, '', 120000, 105000, 0)"]
+        );
         redis.hdel(STATE_DB, "TEMPERATURE_INFO|ASIC", "temperature");
         assert_eq!(u.get_asic_temp("ASIC"), Some(0));
         // Unreadable: the warning threshold, and a fault.
-        redis.hset(STATE_DB, "TEMPERATURE_INFO|ASIC", &[("temperature", "warm")]);
+        redis.hset(
+            STATE_DB,
+            "TEMPERATURE_INFO|ASIC",
+            &[("temperature", "warm")],
+        );
         assert_eq!(u.get_asic_temp("ASIC"), None);
         u.update_asic().unwrap();
-        assert_eq!(take_calls(), ["('thermal_data_set_asic', 0, 105000, 120000, 105000, 254000)"]);
+        assert_eq!(
+            take_calls(),
+            ["('thermal_data_set_asic', 0, 105000, 120000, 105000, 254000)"]
+        );
         // A second ASIC the updater was not built for: the first is fed,
         // then the second's slot gets the fault.
         root.write("/usr/share/sonic/platform/asic.conf", "NUM_ASIC=2\n");
@@ -655,23 +751,48 @@ mod updater_tests {
         assert_eq!(load(Some("{}")), "Ok");
         assert_eq!(load(Some(r#"{"dev_parameters": {}}"#)), "Ok");
         assert_eq!(
-            load(Some(r#"{"dev_parameters": {"asic\\d*": {"poll_time": 3}, "module\\d+": {"poll_time": "20"}, "dpu\\d+_module": {"poll_time": 6}}}"#)),
+            load(Some(
+                r#"{"dev_parameters": {"asic\\d*": {"poll_time": 3}, "module\\d+": {"poll_time": "20"}, "dpu\\d+_module": {"poll_time": 6}}}"#
+            )),
             "Ok"
         );
-        assert_eq!(load(Some(r#"{"dev_parameters": {"asic\\d*": {}, "module\\d+": {"poll_time": 0}}}"#)), "Ok");
-        assert_eq!(load(Some(r#"{"dev_parameters": {"sensor_amb": {"poll_time": 30}}}"#)), "Ok");
-        // A matching key whose value is null: not found, the defaults kept.
-        assert_eq!(load(Some(r#"{"dev_parameters": {"asic\\d*": null, "module\\d+": null}}"#)), "Ok");
         assert_eq!(
-            load(Some(r#"{"dev_parameters": {"asic\\d*": {"poll_time": "fast"}}}"#)),
+            load(Some(
+                r#"{"dev_parameters": {"asic\\d*": {}, "module\\d+": {"poll_time": 0}}}"#
+            )),
+            "Ok"
+        );
+        assert_eq!(
+            load(Some(
+                r#"{"dev_parameters": {"sensor_amb": {"poll_time": 30}}}"#
+            )),
+            "Ok"
+        );
+        // A matching key whose value is null: not found, the defaults kept.
+        assert_eq!(
+            load(Some(
+                r#"{"dev_parameters": {"asic\\d*": null, "module\\d+": null}}"#
+            )),
+            "Ok"
+        );
+        assert_eq!(
+            load(Some(
+                r#"{"dev_parameters": {"asic\\d*": {"poll_time": "fast"}}}"#
+            )),
             "ValueError: invalid literal for int() with base 10: 'fast'"
         );
         assert_eq!(
             load(Some(r#"{"dev_parameters": {"module\\d+": 5}}"#)),
             "AttributeError: 'int' object has no attribute 'get'"
         );
-        assert_eq!(load(Some(r#"{"dev_parameters": [1]}"#)), "AttributeError: 'list' object has no attribute 'keys'");
-        assert_eq!(load(Some(r#"{"dev_parameters": 5}"#)), "AttributeError: 'int' object has no attribute 'keys'");
+        assert_eq!(
+            load(Some(r#"{"dev_parameters": [1]}"#)),
+            "AttributeError: 'list' object has no attribute 'keys'"
+        );
+        assert_eq!(
+            load(Some(r#"{"dev_parameters": 5}"#)),
+            "AttributeError: 'int' object has no attribute 'keys'"
+        );
         assert_eq!(int_of(&PyVal::Float(2.9)).unwrap(), 2);
         assert_eq!(int_of(&PyVal::Bool(true)).unwrap(), 1);
         assert_eq!(
@@ -687,10 +808,19 @@ mod updater_tests {
         root.write("/run/hw-management/config/suspend", "1");
         let u = ThermalUpdater::new(Vec::new()).unwrap();
         u.start().unwrap();
-        assert_eq!(root.read("/run/hw-management/config/suspend").as_deref(), Some("0"));
-        assert_eq!(u.start().unwrap_err().str(), "threads can only be started once");
+        assert_eq!(
+            root.read("/run/hw-management/config/suspend").as_deref(),
+            Some("0")
+        );
+        assert_eq!(
+            u.start().unwrap_err().str(),
+            "threads can only be started once"
+        );
         u.stop();
-        assert_eq!(root.read("/run/hw-management/config/suspend").as_deref(), Some("1"));
+        assert_eq!(
+            root.read("/run/hw-management/config/suspend").as_deref(),
+            Some("1")
+        );
     }
 
     #[test]
@@ -699,31 +829,52 @@ mod updater_tests {
             return;
         }
         let root = Root::new();
-        platform(&root, "x86_64-mlnx_msn2700-r0", r#"{"chassis": {"sfps": [{"name": "sfp1"}]}}"#);
+        platform(
+            &root,
+            "x86_64-mlnx_msn2700-r0",
+            r#"{"chassis": {"sfps": [{"name": "sfp1"}]}}"#,
+        );
         let th = "/run/hw-management/thermal";
+        root.write(utils::SYSFS_MLXSW_READY_FILE, "1");
         root.write(&format!("{th}/asic1"), "45000");
-        for f in ["asic", "module1_temp_input", "module1_temp_fault", "module1_temp_crit", "module1_temp_emergency"] {
+        for f in [
+            "asic",
+            "module1_temp_input",
+            "module1_temp_fault",
+            "module1_temp_crit",
+            "module1_temp_emergency",
+        ] {
             std::os::unix::fs::symlink("/sys/x", root.real(&format!("{th}/{f}"))).unwrap();
         }
+        root.write(&format!("{th}/module2_temp_input"), "40000");
         let u = ThermalUpdater::new(Vec::new()).unwrap();
         u.unlink_hw_mgmt_thermal_files().unwrap();
         let mut left = utils::glob(&format!("{th}/*"));
         left.sort();
-        assert_eq!(left, [format!("{th}/asic1")]);
+        assert_eq!(
+            left,
+            [format!("{th}/asic1"), format!("{th}/module2_temp_input")]
+        );
     }
 
-    /// On SPC1 `start()` waits up to 300 s for hw-management to link the
-    /// thermal files.  A shutdown ends that wait at once, logged as Python
+    /// On SPC1 `start()` waits up to 300 s for hw-management to publish
+    /// the mlxsw readiness file.  A shutdown ends that wait at once, logged as Python
     /// logs one that timed out, and nothing is unlinked.
     #[test]
     fn a_shutdown_ends_spc1_s_wait_for_the_thermal_links() {
         if !platform_settable()
-            || !crate::testing::in_own_process("thermal_updater::updater_tests::a_shutdown_ends_spc1_s_wait_for_the_thermal_links")
+            || !crate::testing::in_own_process(
+                "thermal_updater::updater_tests::a_shutdown_ends_spc1_s_wait_for_the_thermal_links",
+            )
         {
             return;
         }
         let root = Root::new();
-        platform(&root, "x86_64-mlnx_msn2700-r0", r#"{"chassis": {"sfps": [{"name": "sfp1"}]}}"#);
+        platform(
+            &root,
+            "x86_64-mlnx_msn2700-r0",
+            r#"{"chassis": {"sfps": [{"name": "sfp1"}]}}"#,
+        );
         let th = "/run/hw-management/thermal";
         root.write(&format!("{th}/asic1"), "45000");
         // The ASIC's link is there; the module's never come.
@@ -739,10 +890,18 @@ mod updater_tests {
         utils::tests::LOGGED.with(|l| l.borrow_mut().clear());
         let started = std::time::Instant::now();
         u.unlink_hw_mgmt_thermal_files().unwrap();
-        assert!(started.elapsed() < std::time::Duration::from_secs(10), "{:?}", started.elapsed());
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(10),
+            "{:?}",
+            started.elapsed()
+        );
         assert_eq!(
             utils::tests::LOGGED.with(|l| l.borrow().clone()),
-            ["Waiting for ASIC and modules thermal files to be created", "Failed to wait for thermal files to be created"]
+            [
+                "Waiting for ASIC and modules thermal files to be created",
+                "Parent directory /var/run/hw-management not available after timeout",
+                "Failed to wait for thermal files to be created"
+            ]
         );
         assert!(io::is_link(&format!("{th}/asic")));
     }
@@ -758,14 +917,21 @@ mod updater_tests {
         clean_thermal_data(std::slice::from_ref(&sfp)).unwrap();
         assert_eq!(
             take_calls(),
-            ["('thermal_data_clean_asic', 0)", "('module_data_set_module_counter', 1)", "('thermal_data_clean_module', 0, 1)"]
+            [
+                "('thermal_data_clean_asic', 0)",
+                "('module_data_set_module_counter', 1)",
+                "('thermal_data_clean_module', 0, 1)"
+            ]
         );
         // A module's cleanup that raises is skipped, with a warning; an
         // ASIC's ends the cleanup.
         fail("thermal_data_clean_module", "not there");
         utils::tests::LOGGED.with(|l| l.borrow_mut().clear());
         clean_thermal_data(std::slice::from_ref(&sfp)).unwrap();
-        assert_eq!(utils::tests::LOGGED.with(|l| l.borrow().clone()), ["Cleanup skipped for module 1: not there"]);
+        assert_eq!(
+            utils::tests::LOGGED.with(|l| l.borrow().clone()),
+            ["Cleanup skipped for module 1: not there"]
+        );
         fail("thermal_data_clean_asic", "busy");
         assert_eq!(clean_thermal_data(&[sfp]).unwrap_err().str(), "busy");
         atexit_failed(&PyErr::runtime_error("x"));

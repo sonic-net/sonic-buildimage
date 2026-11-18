@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `Chassis.get_change_event`: legacy polling and module host management,
 //! the ASIC ready files, and module initialization on the way in.  A regular
 //! file never raises POLLPRI, so `crate::poll::inject` stands in for the SDK.
@@ -41,7 +40,9 @@ fn event(index: usize, attr: &str) {
 fn dict(a: ModeAnswer) -> String {
     match a {
         ModeAnswer::Tuple => "tuple".to_string(),
-        ModeAnswer::Dict(d) => PyVal::Dict(d.into_iter().map(|(k, v)| (k, v.to_pyval())).collect()).py_repr(),
+        ModeAnswer::Dict(d) => {
+            PyVal::Dict(d.into_iter().map(|(k, v)| (k, v.to_pyval())).collect()).py_repr()
+        }
     }
 }
 
@@ -54,7 +55,10 @@ fn state(c: &Chassis, index: i128) -> &'static str {
 }
 
 fn types(ev: &EventState) -> Vec<(i128, &'static str)> {
-    ev.registered.iter().map(|(_, r)| (r.sdk_index, r.fd_type)).collect()
+    ev.registered
+        .iter()
+        .map(|(_, r)| (r.sdk_index, r.fd_type))
+        .collect()
 }
 
 // -- legacy ------------------------------------------------------------------
@@ -70,15 +74,24 @@ fn legacy_events_are_each_port_s_status_once_it_changes() {
     let mut ev = EventState::default();
     // The first call registers every port's `present`, notes its status,
     // and times out.
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     assert_eq!(types(&ev), [(0, ""), (1, ""), (2, "")]);
     // A port's first event with the status it had is the SDK's dummy.
     event(1, "present");
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     // Removed, then an error with its vendor description.
     module(&root, 1, &[("status", "2")]);
     event(1, "present");
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {2: '0'}, 'sfp_error': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {2: '0'}, 'sfp_error': {}}"
+    );
     module(&root, 0, &[("status", "3"), ("statuserror", "1")]);
     event(0, "present");
     assert_eq!(
@@ -88,13 +101,19 @@ fn legacy_events_are_each_port_s_status_once_it_changes() {
     // Unknown: two changes too close together; nothing to report.
     module(&root, 2, &[("status", "5")]);
     event(2, "present");
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     // Two at once come in registration order.
     module(&root, 1, &[("status", "1")]);
     module(&root, 2, &[("status", "1")]);
     event(2, "present");
     event(1, "present");
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {2: '1', 3: '1'}, 'sfp_error': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {2: '1', 3: '1'}, 'sfp_error': {}}"
+    );
     // A status the SDK table does not have: Python's KeyError.
     module(&root, 1, &[("status", "9")]);
     event(1, "present");
@@ -115,7 +134,10 @@ fn a_legacy_attribute_that_cannot_be_read_is_skipped_after_a_pause() {
     event(0, "present");
     event(1, "present");
     let begin = Instant::now();
-    assert_eq!(dict(c.change_event_legacy(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_legacy(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     // MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS, less the round's own time.
     assert!(begin.elapsed() >= Duration::from_millis(500));
 }
@@ -142,24 +164,37 @@ fn a_port_without_present_is_too_early_to_poll() {
 fn get_change_event_waits_for_the_ports_and_reports_an_asic_s_ports() {
     let root = platform("x86_64-nvidia_sn5600-r0", 2, false, false);
     for i in 0..2 {
-        module(&root, i, &[("present", "1"), ("status", "1"), ("statuserror", "0")]);
+        module(
+            &root,
+            i,
+            &[("present", "1"), ("status", "1"), ("statuserror", "0")],
+        );
         eeprom(&root, i);
     }
     root.write(ASIC1_READY, "1\n");
     let c = Chassis::new(ChassisKind::Fixed).unwrap();
     // The ports are built, found ready, and marked so; the ASIC's state
     // is noted.
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {}})");
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {}})"
+    );
     assert!(root.exists("/tmp/nv-syncd-shared/sfp_ready"));
     // The ASIC goes: its ports are removed, by their index as a string,
     // and no longer polled.
     root.write(ASIC1_READY, "0\n");
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {'1': '0', '2': '0'}})");
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {'1': '0', '2': '0'}})"
+    );
     assert!(c.events.lock().unwrap().registered.is_empty());
     assert_eq!(c.module_host_mgmt_initializer.initialized(), [false]);
     // And comes back: inserted, and polled again.
     root.write(ASIC1_READY, "1\n");
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {'1': '1', '2': '1'}})");
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {'1': '1', '2': '1'}})"
+    );
     assert_eq!(types(&c.events.lock().unwrap()), [(0, ""), (1, "")]);
     assert_eq!(c.module_host_mgmt_initializer.initialized(), [true]);
 }
@@ -167,15 +202,25 @@ fn get_change_event_waits_for_the_ports_and_reports_an_asic_s_ports() {
 #[test]
 fn too_early_with_asic_events_is_python_s_attribute_error() {
     let root = platform("x86_64-nvidia_sn5600-r0", 2, false, false);
-    module(&root, 0, &[("present", "1"), ("status", "1"), ("statuserror", "0")]);
+    module(
+        &root,
+        0,
+        &[("present", "1"), ("status", "1"), ("statuserror", "0")],
+    );
     module(&root, 1, &[("status", "1"), ("statuserror", "0")]);
     root.write("/tmp/nv-syncd-shared/sfp_ready", "");
     root.write(ASIC1_READY, "1\n");
     let c = Chassis::new(ChassisKind::Fixed).unwrap();
     // The mode's `return True, {'sfp': {}}` becomes the dict.
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, (True, {'sfp': {}}))");
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, (True, {'sfp': {}}))"
+    );
     root.write(ASIC1_READY, "0\n");
-    assert_eq!(c.get_change_event(10).unwrap_err().str(), "'tuple' object has no attribute 'setdefault'");
+    assert_eq!(
+        c.get_change_event(10).unwrap_err().str(),
+        "'tuple' object has no attribute 'setdefault'"
+    );
 }
 
 #[test]
@@ -185,7 +230,13 @@ fn the_asic_ready_files_are_watched_and_compared() {
     let c = chassis();
     let mut ev = EventState::default();
     // No hw-management config directory: nothing to watch.
-    assert_eq!(c.get_asic_change_event(&mut ev, 100.0).unwrap_err().exc.name(), "InotifyError");
+    assert_eq!(
+        c.get_asic_change_event(&mut ev, 100.0)
+            .unwrap_err()
+            .exc
+            .name(),
+        "InotifyError"
+    );
     // A write while watching is seen there; the port is reported, by its
     // index as a string.
     root.write(ASIC1_READY, "1\n");
@@ -194,22 +245,40 @@ fn the_asic_ready_files_are_watched_and_compared() {
         std::thread::sleep(Duration::from_millis(100));
         std::fs::write(real, "0\n").unwrap();
     });
-    assert_eq!(c.get_asic_change_event(&mut ev, 100.0).unwrap().repr(), "{'1': '0'}");
+    assert_eq!(
+        c.get_asic_change_event(&mut ev, 100.0).unwrap().repr(),
+        "{'1': '0'}"
+    );
     writer.join().unwrap();
-    assert_eq!(ev.last_asic_ready, [("asic1_ready".to_string(), Some("0".to_string()))]);
+    assert_eq!(
+        ev.last_asic_ready,
+        [("asic1_ready".to_string(), Some("0".to_string()))]
+    );
     // A file gone is a state too: None.
     std::fs::remove_file(root.real(ASIC1_READY)).unwrap();
-    assert_eq!(c.get_asic_change_event(&mut ev, 100.0).unwrap().repr(), "{'1': '0'}");
+    assert_eq!(
+        c.get_asic_change_event(&mut ev, 100.0).unwrap().repr(),
+        "{'1': '0'}"
+    );
     assert_eq!(ev.last_asic_ready, [("asic1_ready".to_string(), None)]);
     // One it cannot read raises.
     std::fs::create_dir_all(root.real(ASIC1_READY)).unwrap();
-    assert_eq!(c.get_asic_change_event(&mut ev, 100.0).unwrap_err().exc.name(), "IsADirectoryError");
+    assert_eq!(
+        c.get_asic_change_event(&mut ev, 100.0)
+            .unwrap_err()
+            .exc
+            .name(),
+        "IsADirectoryError"
+    );
     std::fs::remove_dir(root.real(ASIC1_READY)).unwrap();
     // An ASIC that was not there before: Python's KeyError on its name.
     root.write("/usr/share/sonic/platform/asic.conf", "NUM_ASIC=2\n");
     crate::utils::forget_caches();
     let e = c.get_asic_change_event(&mut ev, 100.0).unwrap_err();
-    assert_eq!((e.exc.name(), e.str()), ("KeyError", "'asic2_ready'".to_string()));
+    assert_eq!(
+        (e.exc.name(), e.str()),
+        ("KeyError", "'asic2_ready'".to_string())
+    );
 }
 
 // -- module host management --------------------------------------------------
@@ -220,7 +289,18 @@ fn host_managed_modules_move_through_their_state_machine() {
     let root = platform("x86_64-nvidia_sn5600-r0", 4, true, false);
     root.write(ASIC1_READY, "1\n");
     for i in 0..4 {
-        module(&root, i, &[("present", "1"), ("hw_present", "1"), ("power_good", "1"), ("control", "1"), ("power_on", "1"), ("hw_reset", "1")]);
+        module(
+            &root,
+            i,
+            &[
+                ("present", "1"),
+                ("hw_present", "1"),
+                ("power_good", "1"),
+                ("control", "1"),
+                ("power_on", "1"),
+                ("hw_reset", "1"),
+            ],
+        );
     }
     let c = chassis();
     let task = crate::wait_sfp_ready_task::get();
@@ -230,10 +310,21 @@ fn host_managed_modules_move_through_their_state_machine() {
     set_state(&c, 2, sfpe::STATE_NOT_PRESENT);
     set_state(&c, 3, sfpe::STATE_SW_CONTROL);
     let mut ev = EventState::default();
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     assert_eq!(
         types(&ev),
-        [(0, "hw_present"), (0, "power_good"), (1, "present"), (2, "hw_present"), (2, "power_good"), (3, "hw_present"), (3, "power_good")]
+        [
+            (0, "hw_present"),
+            (0, "power_good"),
+            (1, "present"),
+            (2, "hw_present"),
+            (2, "power_good"),
+            (3, "hw_present"),
+            (3, "power_good")
+        ]
     );
     let call = |ev: &mut EventState| dict(c.change_event_host_mgmt(ev, 10).unwrap());
     // Present again while in software control: the dummy event.
@@ -247,7 +338,10 @@ fn host_managed_modules_move_through_their_state_machine() {
     // Firmware control: `present` says error, inserted, then removed.
     module(&root, 1, &[("present", "2"), ("statuserror", "4")]);
     event(1, "present");
-    assert_eq!(call(&mut ev), "{'sfp': {2: '131073'}, 'sfp_error': {2: 'Enforce part number list'}}");
+    assert_eq!(
+        call(&mut ev),
+        "{'sfp': {2: '131073'}, 'sfp_error': {2: 'Enforce part number list'}}"
+    );
     // Present under firmware control is the dummy event, as Python checks
     // for dummies first.
     module(&root, 1, &[("present", "1")]);
@@ -284,7 +378,12 @@ fn host_managed_modules_move_through_their_state_machine() {
     // Power back: the control type is sonic_xcvr's to decide.
     module(&root, 3, &[("power_good", "1")]);
     event(3, "power_good");
-    assert!(c.change_event_host_mgmt(&mut ev, 10).err().unwrap().str().starts_with("not ported to the native platform API: SFP.get_xcvr_api"));
+    assert!(c
+        .change_event_host_mgmt(&mut ev, 10)
+        .err()
+        .unwrap()
+        .str()
+        .starts_with("not ported to the native platform API: SFP.get_xcvr_api"));
     // A value that is no number: skipped after a pause.
     module(&root, 0, &[("hw_present", "x")]);
     event(0, "hw_present");
@@ -298,32 +397,59 @@ fn get_change_event_in_host_management_cancels_and_restores_an_asic_s_ports() {
     let root = platform("x86_64-nvidia_sn5600-r0", 2, true, false);
     root.write(ASIC1_READY, "1\n");
     for i in 0..2 {
-        module(&root, i, &[("hw_present", "1"), ("power_good", "1"), ("present", "1")]);
+        module(
+            &root,
+            i,
+            &[("hw_present", "1"), ("power_good", "1"), ("present", "1")],
+        );
     }
     let c = Chassis::new(ChassisKind::Fixed).unwrap();
     let task = crate::wait_sfp_ready_task::get();
     task.reset();
     // On the host the ports are only built; both are polled as software
     // control polls them.
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {}})");
-    assert_eq!(types(&c.events.lock().unwrap()), [(0, "hw_present"), (0, "power_good"), (1, "hw_present"), (1, "power_good")]);
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {}})"
+    );
+    assert_eq!(
+        types(&c.events.lock().unwrap()),
+        [
+            (0, "hw_present"),
+            (0, "power_good"),
+            (1, "hw_present"),
+            (1, "power_good")
+        ]
+    );
     // The ASIC goes: port 0's pending reset is cancelled, nothing polled.
     task.schedule_wait(0);
     root.write(ASIC1_READY, "0\n");
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {'1': '0', '2': '0'}})");
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {'1': '0', '2': '0'}})"
+    );
     assert!(task.waiting().is_empty());
     assert!(c.events.lock().unwrap().registered.is_empty());
     // Back: polled again, by each port's state -- port 1 under firmware
     // control now.
     set_state(&c, 1, sfpe::STATE_FW_CONTROL);
     root.write(ASIC1_READY, "1\n");
-    assert_eq!(c.get_change_event(10).unwrap().py_repr(), "(True, {'sfp': {'1': '1', '2': '1'}})");
-    assert_eq!(types(&c.events.lock().unwrap()), [(0, "hw_present"), (0, "power_good"), (1, "present")]);
+    assert_eq!(
+        c.get_change_event(10).unwrap().py_repr(),
+        "(True, {'sfp': {'1': '1', '2': '1'}})"
+    );
+    assert_eq!(
+        types(&c.events.lock().unwrap()),
+        [(0, "hw_present"), (0, "power_good"), (1, "present")]
+    );
     // A ready port that the reset-done event leaves unstable: logged.
     set_state(&c, 0, sfpe::STATE_DOWN);
     task.mark_ready(0);
     let mut ev = EventState::default();
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     assert_eq!(state(&c, 0), sfpe::STATE_DOWN);
     task.reset();
 }
@@ -337,13 +463,22 @@ fn host_managed_polling_skips_a_not_ready_asic_and_waits_for_attributes() {
     let c = chassis();
     crate::wait_sfp_ready_task::get().reset();
     // The ASIC's last state was not ready: its ports are not polled.
-    let mut ev = EventState { last_asic_ready: vec![("asic1_ready".to_string(), Some("0".to_string()))], ..Default::default() };
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    let mut ev = EventState {
+        last_asic_ready: vec![("asic1_ready".to_string(), Some("0".to_string()))],
+        ..Default::default()
+    };
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     assert!(ev.registered.is_empty());
     // A port under firmware control without `present`: too early.
     set_state(&c, 1, sfpe::STATE_FW_CONTROL);
     let mut ev = EventState::default();
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "tuple");
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "tuple"
+    );
     assert!(ev.poll.is_none());
     // One that cannot seek: skipped after a pause.
     set_state(&c, 1, sfpe::STATE_SW_CONTROL);
@@ -352,7 +487,10 @@ fn host_managed_polling_skips_a_not_ready_asic_and_waits_for_attributes() {
     c.change_event_host_mgmt(&mut ev, 10).unwrap();
     event(1, "power_good");
     let begin = Instant::now();
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "{'sfp': {}}");
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "{'sfp': {}}"
+    );
     assert!(begin.elapsed() >= Duration::from_millis(500));
     // A firmware-controlled cable recovering from an error: inserted, with
     // no state change.
@@ -361,7 +499,10 @@ fn host_managed_polling_skips_a_not_ready_asic_and_waits_for_attributes() {
     let mut ev = EventState::default();
     c.change_event_host_mgmt(&mut ev, 10).unwrap();
     event(0, "present");
-    assert_eq!(dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()), "{'sfp': {1: '1'}, 'sfp_error': {}}");
+    assert_eq!(
+        dict(c.change_event_host_mgmt(&mut ev, 10).unwrap()),
+        "{'sfp': {1: '1'}, 'sfp_error': {}}"
+    );
     assert_eq!(state(&c, 0), sfpe::STATE_FCP_NOT_PRESENT);
 }
 
@@ -372,20 +513,48 @@ fn xcvrd_initializes_the_modules_of_a_ready_asic_once() {
     let root = platform("x86_64-nvidia_sn5600-r0", 3, true, true);
     root.write(ASIC1_READY, "1\n");
     for i in 0..3 {
-        module(&root, i, &[("present", "0"), ("status", "1"), ("statuserror", "0"), ("power_on", "1")]);
+        module(
+            &root,
+            i,
+            &[
+                ("present", "0"),
+                ("status", "1"),
+                ("statuserror", "0"),
+                ("power_on", "1"),
+            ],
+        );
     }
     module(&root, 0, &[("control", "0")]);
     eeprom(&root, 0);
     module(&root, 1, &[("control", "1"), ("hw_present", "0")]);
-    module(&root, 2, &[("control", "1"), ("hw_present", "1"), ("hw_reset", "1"), ("power_good", "0")]);
+    module(
+        &root,
+        2,
+        &[
+            ("control", "1"),
+            ("hw_present", "1"),
+            ("hw_reset", "1"),
+            ("power_good", "0"),
+        ],
+    );
     crate::wait_sfp_ready_task::get().reset();
     let before = platform_base::logger::argv0();
     platform_base::logger::set_argv0("/usr/local/bin/xcvrd");
     let c = Chassis::new(ChassisKind::Fixed).unwrap();
     let ready_file = crate::module_host_mgmt_initializer::get_asic_ready_file_path("asic0");
-    assert_eq!(ready_file, "/tmp/asic_ready/module_host_mgmt_asic_ready_asic0");
+    assert_eq!(
+        ready_file,
+        "/tmp/asic_ready/module_host_mgmt_asic_ready_asic0"
+    );
     c.sfp_wait_ready_and_initialize().unwrap();
-    assert_eq!((0..3).map(|i| state(&c, i)).collect::<Vec<_>>(), [sfpe::STATE_FW_CONTROL, sfpe::STATE_NOT_PRESENT, sfpe::STATE_POWER_BAD]);
+    assert_eq!(
+        (0..3).map(|i| state(&c, i)).collect::<Vec<_>>(),
+        [
+            sfpe::STATE_FW_CONTROL,
+            sfpe::STATE_NOT_PRESENT,
+            sfpe::STATE_POWER_BAD
+        ]
+    );
     assert_eq!(root.read(&ready_file).as_deref(), Some("asic0\n"));
     assert_eq!(c.module_host_mgmt_initializer.initialized(), [true]);
     // Done: a second call changes nothing.

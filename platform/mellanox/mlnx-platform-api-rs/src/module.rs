@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/module.py`: `DpuModule`, one per DPU of a SmartSwitch.
 //!
 //! Its names and VPD fields, the operational status from boot progress, and
@@ -91,7 +90,10 @@ impl DpuModule {
 
     /// `DpuVpdParser.get_dpu_data(key)`: `<DPU<N+1>>_<key>`.
     fn dpu_data(&self, key: &str) -> PyVal {
-        PyVal::Str(self.vpd.get_entry_value(&format!("{}_{key}", self.vpd_prefix)))
+        PyVal::Str(
+            self.vpd
+                .get_entry_value(&format!("{}_{key}", self.vpd_prefix)),
+        )
     }
 }
 
@@ -137,7 +139,11 @@ impl PyObject for DpuModule {
         let rv = match reboot_type {
             "DPU" => self.dpuctl.dpu_reboot(false, false, true)?,
             "SMARTSWITCH" => self.dpuctl.dpu_reboot(false, true, true)?,
-            other => return Err(PyErr::runtime_error(format!("Reboot called with unsupported reboot_type = {other}"))),
+            other => {
+                return Err(PyErr::runtime_error(format!(
+                    "Reboot called with unsupported reboot_type = {other}"
+                )))
+            }
         };
         logger().log_notice(&format!(
             "Rebooted {} with type {reboot_type} and return value {}",
@@ -152,17 +158,26 @@ impl PyObject for DpuModule {
     /// and logged that way: chassisd's 1 or 0, the base class's True or False.
     fn set_admin_state(&self, up: PyVal) -> PyResult<PyVal> {
         let up_s = up.py_str();
-        logger().log_notice(&format!("Setting the admin state for {} to {up_s}", self.name));
+        logger().log_notice(&format!(
+            "Setting the admin state for {} to {up_s}",
+            self.name
+        ));
         if up.truthy() {
             if self.dpuctl.dpu_power_on(false, true)? {
-                logger().log_notice(&format!("Completed the admin state change for {} to {up_s}", self.name));
+                logger().log_notice(&format!(
+                    "Completed the admin state change for {} to {up_s}",
+                    self.name
+                ));
                 return Ok(PyVal::Bool(true));
             }
             logger().log_error(&format!("Failed to set the admin state for {}", self.name));
             return Ok(PyVal::Bool(false));
         }
         let rv = self.dpuctl.dpu_power_off(false, true)?;
-        logger().log_notice(&format!("Completed the admin state change for {} to {up_s}", self.name));
+        logger().log_notice(&format!(
+            "Completed the admin state change for {} to {up_s}",
+            self.name
+        ));
         Ok(PyVal::Bool(rv))
     }
 
@@ -178,7 +193,16 @@ impl PyObject for DpuModule {
         };
         let pcie_path = platform_base::io::join(crate::dpuctlplat::PCI_DEV_BASE, &dev);
         if platform_base::io::exists(&pcie_path) {
-            let argv = ["mlxreg", "-d", dev.as_str(), "--reg_name", "MRSI", "-g", "-indexes", "device=1"];
+            let argv = [
+                "mlxreg",
+                "-d",
+                dev.as_str(),
+                "--reg_name",
+                "MRSI",
+                "-g",
+                "-indexes",
+                "device=1",
+            ];
             let out = command(argv[0])
                 .args(&argv[1..])
                 .stdin(std::process::Stdio::inherit())
@@ -192,14 +216,22 @@ impl PyObject for DpuModule {
                     &argv,
                     platform_base::subprocess::returncode(out.status),
                 );
-                logger().log_error(&format!("Failed to check watchdog reason for {}! {}", self.name, e.str()));
+                logger().log_error(&format!(
+                    "Failed to check watchdog reason for {}! {}",
+                    self.name,
+                    e.str()
+                ));
                 Vec::new()
             };
-            let text = platform_base::py::codec::decode(platform_base::py::codec::Codec::Utf8, &op)?;
+            let text =
+                platform_base::py::codec::decode(platform_base::py::codec::Codec::Utf8, &op)?;
             let mut reason: Option<String> = None;
             for line in text.split('\n') {
                 if line.contains("reset_reason") {
-                    let field = line.split('|').nth(1).ok_or_else(|| PyErr::index_error("list index out of range"))?;
+                    let field = line
+                        .split('|')
+                        .nth(1)
+                        .ok_or_else(|| PyErr::index_error("list index out of range"))?;
                     reason = Some(platform_base::py::strip(field).to_string());
                     break;
                 }
@@ -233,7 +265,12 @@ impl PyObject for DpuModule {
     /// answered within a second.
     fn is_midplane_reachable(&self) -> PyResult<PyVal> {
         let iface = self.midplane_interface()?;
-        if crate::utils::read_int(&format!("/sys/class/net/{iface}/carrier"), 0, crate::utils::Log::Off) != 1 {
+        if crate::utils::read_int(
+            &format!("/sys/class/net/{iface}/carrier"),
+            0,
+            crate::utils::Log::Off,
+        ) != 1
+        {
             return Ok(PyVal::Bool(false));
         }
         let ip = format!("169.254.200.{}", self.dpu_id + 1);
@@ -246,7 +283,11 @@ impl PyObject for DpuModule {
             Ok(st) => Ok(PyVal::Bool(st.code() == Some(0))),
             Err(e) => {
                 let e = PyErr::from_io(&e, Some("ping"));
-                logger().log_error(&format!("Failed to check midplane reachability for {}! {}", self.name, e.str()));
+                logger().log_error(&format!(
+                    "Failed to check midplane reachability for {}! {}",
+                    self.name,
+                    e.str()
+                ));
                 Ok(PyVal::Bool(false))
             }
         }
@@ -300,15 +341,35 @@ impl DpuModule {
     fn reset_file_cause(&self, reboot: bool) -> Option<(&'static str, &'static str)> {
         let base = format!("/var/run/hw-management/{}/system/", self.dpuctl.hw_name);
         let map: [(&str, &str, &str); 5] = [
-            ("reset_aux_pwr_or_reload", "Power Loss", "power auxiliary outage or reload"),
-            ("reset_comex_pwr_fail", "Power Loss", "Power failed to comex module"),
-            ("reset_from_main_board", "Non-Hardware", "Reset from Main board"),
-            ("reset_dpu_thermal", "Thermal Overload: Other", "Thermal shutdown of the DPU"),
+            (
+                "reset_aux_pwr_or_reload",
+                "Power Loss",
+                "power auxiliary outage or reload",
+            ),
+            (
+                "reset_comex_pwr_fail",
+                "Power Loss",
+                "Power failed to comex module",
+            ),
+            (
+                "reset_from_main_board",
+                "Non-Hardware",
+                "Reset from Main board",
+            ),
+            (
+                "reset_dpu_thermal",
+                "Thermal Overload: Other",
+                "Thermal shutdown of the DPU",
+            ),
             ("reset_pwr_off", "Non-Hardware", "Reset due to Power off"),
         ];
         for (file, c, d) in map {
             if crate::utils::read_int(&format!("{base}{file}"), 0, crate::utils::Log::Error) == 1 {
-                let what = if reboot { "Reset reason" } else { "Midplane down reason" };
+                let what = if reboot {
+                    "Reset reason"
+                } else {
+                    "Midplane down reason"
+                };
                 logger().log_notice(&format!("{what} for {} is {c}", self.name));
                 return Some((c, d));
             }
@@ -384,7 +445,10 @@ mod tests {
     }
 
     fn module_lines(log: &Syslog) -> Vec<String> {
-        log.take().into_iter().filter(|l| l.contains("DPU0")).collect()
+        log.take()
+            .into_iter()
+            .filter(|l| l.contains("DPU0"))
+            .collect()
     }
 
     fn s(v: PyResult<PyVal>) -> String {
@@ -403,12 +467,36 @@ mod tests {
             "DPU1_BASE_MAC: 00:11:22:33:44:55\nDPU1_PN: 900-9D3B4\nDPU1_SN: MT2401X00042\nDPU2_REV: B1\n",
         );
         assert_eq!(
-            [m.get_base_mac(), m.get_model(), m.get_serial(), m.get_revision()].map(s),
-            ["'00:11:22:33:44:55'", "'900-9D3B4'", "'MT2401X00042'", "'N/A'"]
+            [
+                m.get_base_mac(),
+                m.get_model(),
+                m.get_serial(),
+                m.get_revision()
+            ]
+            .map(s),
+            [
+                "'00:11:22:33:44:55'",
+                "'900-9D3B4'",
+                "'MT2401X00042'",
+                "'N/A'"
+            ]
         );
         assert_eq!(
-            [m.get_type(), m.get_name(), m.get_description(), m.get_dpu_id(), m.get_midplane_ip()].map(s),
-            ["'DPU'", "'DPU0'", "'NVIDIA BlueField-3 DPU'", "0", "'169.254.200.1'"]
+            [
+                m.get_type(),
+                m.get_name(),
+                m.get_description(),
+                m.get_dpu_id(),
+                m.get_midplane_ip()
+            ]
+            .map(s),
+            [
+                "'DPU'",
+                "'DPU0'",
+                "'NVIDIA BlueField-3 DPU'",
+                "0",
+                "'169.254.200.1'"
+            ]
         );
         assert_eq!(m.py_class(), "DpuModule");
         assert_eq!(m.base_class(), BaseClass::ModuleBase);
@@ -416,7 +504,10 @@ mod tests {
         root.write(&format!("{RESET}/boot_progress"), "3");
         assert_eq!(s(m.get_oper_status()), "'Offline'");
         assert_eq!(s(m.get_pci_bus_info()), "['0000:08:00.0', '0000:08:00.1']");
-        assert_eq!((s(m.pci_detach()), s(m.pci_reattach())), ("True".into(), "True".into()));
+        assert_eq!(
+            (s(m.pci_detach()), s(m.pci_reattach())),
+            ("True".into(), "True".into())
+        );
     }
 
     #[test]
@@ -426,7 +517,10 @@ mod tests {
         let m = dpu0(&root, "5", "1");
         assert_eq!(s(m.reboot("DPU")), "True");
         assert_eq!(s(m.reboot("SMARTSWITCH")), "True");
-        assert_eq!(s(m.reboot("CPU")), "RuntimeError: Reboot called with unsupported reboot_type = CPU");
+        assert_eq!(
+            s(m.reboot("CPU")),
+            "RuntimeError: Reboot called with unsupported reboot_type = CPU"
+        );
         let l = module_lines(&log);
         for want in [
             "NOTICE Rebooting DPU0 with type DPU",
@@ -442,15 +536,19 @@ mod tests {
         let l = module_lines(&log);
         assert!(l.contains(&"NOTICE Setting the admin state for DPU0 to True".to_string()));
         assert!(l.contains(&"NOTICE Completed the admin state change for DPU0 to True".to_string()));
-        assert!(l.contains(&"NOTICE Completed the admin state change for DPU0 to False".to_string()));
+        assert!(
+            l.contains(&"NOTICE Completed the admin state change for DPU0 to False".to_string())
+        );
         // chassisd hands it 1 and 0, and that is what the log says.
         assert_eq!(s(m.set_admin_state(PyVal::Int(1))), "True");
-        assert!(module_lines(&log).contains(&"NOTICE Setting the admin state for DPU0 to 1".to_string()));
+        assert!(module_lines(&log)
+            .contains(&"NOTICE Setting the admin state for DPU0 to 1".to_string()));
         // Up, and it never comes: False.
         root.write(&format!("{RESET}/boot_progress"), "0");
         root.write("/var/run/hw-management/events/dpu1_ready", "0");
         assert_eq!(s(m.set_admin_state(PyVal::Bool(true))), "False");
-        assert!(module_lines(&log).contains(&"ERROR Failed to set the admin state for DPU0".to_string()));
+        assert!(module_lines(&log)
+            .contains(&"ERROR Failed to set the admin state for DPU0".to_string()));
     }
 
     #[test]
@@ -464,40 +562,81 @@ mod tests {
         assert_eq!(s(m.get_midplane_down_reason()), "('Non-Hardware', '')");
         root.write(&format!("{RESET}/reset_pwr_off"), "1");
         root.write(&format!("{RESET}/reset_dpu_thermal"), "1");
-        assert_eq!(s(m.get_reboot_cause()), "('Thermal Overload: Other', 'Thermal shutdown of the DPU')");
-        assert_eq!(s(m.get_midplane_down_reason()), "('Thermal Overload: Other', 'Thermal shutdown of the DPU')");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "('Thermal Overload: Other', 'Thermal shutdown of the DPU')"
+        );
+        assert_eq!(
+            s(m.get_midplane_down_reason()),
+            "('Thermal Overload: Other', 'Thermal shutdown of the DPU')"
+        );
         root.write(&format!("{RESET}/reset_aux_pwr_or_reload"), "1");
-        assert_eq!(s(m.get_reboot_cause()), "('Power Loss', 'power auxiliary outage or reload')");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "('Power Loss', 'power auxiliary outage or reload')"
+        );
         let l = module_lines(&log);
         assert!(l.contains(&"NOTICE Reset reason for DPU0 is Thermal Overload: Other".to_string()));
-        assert!(l.contains(&"NOTICE Midplane down reason for DPU0 is Thermal Overload: Other".to_string()));
+        assert!(l.contains(
+            &"NOTICE Midplane down reason for DPU0 is Thermal Overload: Other".to_string()
+        ));
         // The PCI device there: the DPU's MRSI register first.
         root.write("/sys/bus/pci/devices/0000:08:00.0/x", "");
-        tools.tool("mlxreg", "echo 'Field Name   | Data'\necho 'reset_reason | 0x00000002'\n");
+        tools.tool(
+            "mlxreg",
+            "echo 'Field Name   | Data'\necho 'reset_reason | 0x00000002'\n",
+        );
         assert_eq!(s(m.get_reboot_cause()), "('Watchdog', 'Watchdog reboot')");
-        assert!(module_lines(&log).contains(&"NOTICE Reset reason for DPU0 is Watchdog".to_string()));
+        assert!(
+            module_lines(&log).contains(&"NOTICE Reset reason for DPU0 is Watchdog".to_string())
+        );
         tools.tool("mlxreg", "echo 'reset_reason | 0x1'\n");
-        assert_eq!(s(m.get_reboot_cause()), "('Power Loss', 'power auxiliary outage or reload')");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "('Power Loss', 'power auxiliary outage or reload')"
+        );
         tools.tool("mlxreg", "echo 'reset_reason |   '\n");
-        assert_eq!(s(m.get_reboot_cause()), "('Power Loss', 'power auxiliary outage or reload')");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "('Power Loss', 'power auxiliary outage or reload')"
+        );
         tools.tool("mlxreg", "echo 'reset_reason 2'\n");
-        assert_eq!(s(m.get_reboot_cause()), "IndexError: list index out of range");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "IndexError: list index out of range"
+        );
         tools.tool("mlxreg", "echo 'reset_reason | zz'\n");
-        assert_eq!(s(m.get_reboot_cause()), "ValueError: invalid literal for int() with base 16: 'zz'");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "ValueError: invalid literal for int() with base 16: 'zz'"
+        );
         tools.tool("mlxreg", "exit 3\n");
-        assert_eq!(s(m.get_reboot_cause()), "('Power Loss', 'power auxiliary outage or reload')");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "('Power Loss', 'power auxiliary outage or reload')"
+        );
         assert!(module_lines(&log).contains(&"ERROR Failed to check watchdog reason for DPU0! Command '['mlxreg', '-d', '0000:08:00.0', '--reg_name', 'MRSI', '-g', '-indexes', 'device=1']' returned non-zero exit status 3.".to_string()));
         // No mlxreg at all: what subprocess raises.
         tools.remove("mlxreg");
-        assert_eq!(s(m.get_reboot_cause()), "FileNotFoundError: [Errno 2] No such file or directory: 'mlxreg'");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "FileNotFoundError: [Errno 2] No such file or directory: 'mlxreg'"
+        );
     }
 
     #[test]
     fn without_a_pci_id_the_reboot_cause_cannot_join_its_path() {
         let root = Root::new();
-        platform(&root, "x86_64-nvidia_sn4280-r0", r#"{"DPUS": {"dpu0": {}}}"#);
+        platform(
+            &root,
+            "x86_64-nvidia_sn4280-r0",
+            r#"{"DPUS": {"dpu0": {}}}"#,
+        );
         let m = DpuModule::new(0);
-        assert_eq!(s(m.get_reboot_cause()), "TypeError: expected str, bytes or os.PathLike object, not NoneType");
+        assert_eq!(
+            s(m.get_reboot_cause()),
+            "TypeError: expected str, bytes or os.PathLike object, not NoneType"
+        );
         assert_eq!(
             s(m.is_midplane_reachable()),
             "RuntimeError: Unable to obtain midplane interface information from platform.json for DPU0"
@@ -522,7 +661,11 @@ mod tests {
             &"ERROR Failed to check midplane reachability for DPU0! [Errno 2] No such file or directory: 'ping'".to_string()
         ));
         // The interface is read once.
-        platform(&root, "x86_64-nvidia_sn4280-r0", r#"{"DPUS": {"dpu0": {}}}"#);
+        platform(
+            &root,
+            "x86_64-nvidia_sn4280-r0",
+            r#"{"DPUS": {"dpu0": {}}}"#,
+        );
         crate::utils::forget_caches();
         assert_eq!(s(m.is_midplane_reachable()), "False");
     }

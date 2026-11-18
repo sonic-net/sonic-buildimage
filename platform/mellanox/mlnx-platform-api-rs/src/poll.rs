@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! The pieces of Python's `select.poll` and `open()` the SFP change events
 //! are made of.
 //!
@@ -46,7 +44,10 @@ impl SysFile {
     /// `open(path)`, with the exception Python raises.
     pub fn open(path: &str) -> PyResult<SysFile> {
         let file = File::open(io::real(path)).map_err(|e| PyErr::from_io(&e, Some(path)))?;
-        Ok(SysFile { name: path.to_string(), file })
+        Ok(SysFile {
+            name: path.to_string(),
+            file,
+        })
     }
 
     pub fn fileno(&self) -> RawFd {
@@ -55,13 +56,18 @@ impl SysFile {
 
     /// `f.seek(0)`.
     pub fn seek0(&mut self) -> PyResult<()> {
-        self.file.seek(SeekFrom::Start(0)).map(|_| ()).map_err(|e| PyErr::from_io(&e, None))
+        self.file
+            .seek(SeekFrom::Start(0))
+            .map(|_| ())
+            .map_err(|e| PyErr::from_io(&e, None))
     }
 
     /// `f.read()`: the rest of the file, decoded by the locale's codec.
     pub fn read(&mut self) -> PyResult<String> {
         let mut b = Vec::new();
-        self.file.read_to_end(&mut b).map_err(|e| PyErr::from_io(&e, None))?;
+        self.file
+            .read_to_end(&mut b)
+            .map_err(|e| PyErr::from_io(&e, None))?;
         codec::decode_text(&b)
     }
 }
@@ -89,16 +95,29 @@ impl PollSet {
                 self.fds.remove(i);
                 Ok(())
             }
-            None => Err(PyErr::key_error(platform_base::py::PyVal::Int(i128::from(fd)))),
+            None => Err(PyErr::key_error(platform_base::py::PyVal::Int(i128::from(
+                fd,
+            )))),
         }
     }
 
     /// `p.poll(timeout_ms)`: `(fd, revents)` for each fd with events, in
     /// registration order.  The timeout is rounded up to a millisecond.
     pub fn poll(&self, timeout_ms: f64) -> PyResult<Vec<(RawFd, i16)>> {
-        let mut pfds: Vec<libc::pollfd> =
-            self.fds.iter().map(|&(fd, events)| libc::pollfd { fd, events, revents: 0 }).collect();
-        let ms = if timeout_ms < 0.0 { -1 } else { timeout_ms.ceil().min(i32::MAX as f64) as i32 };
+        let mut pfds: Vec<libc::pollfd> = self
+            .fds
+            .iter()
+            .map(|&(fd, events)| libc::pollfd {
+                fd,
+                events,
+                revents: 0,
+            })
+            .collect();
+        let ms = if timeout_ms < 0.0 {
+            -1
+        } else {
+            timeout_ms.ceil().min(i32::MAX as f64) as i32
+        };
         // A test's events, which a plain file never raises, without waiting.
         #[cfg(test)]
         let injected = inject::take(&self.fds);
@@ -123,7 +142,11 @@ impl PollSet {
                 p.revents |= revents;
             }
         }
-        Ok(pfds.iter().filter(|p| p.revents != 0).map(|p| (p.fd, p.revents)).collect())
+        Ok(pfds
+            .iter()
+            .filter(|p| p.revents != 0)
+            .map(|p| (p.fd, p.revents))
+            .collect())
     }
 }
 
@@ -188,10 +211,16 @@ mod tests {
     #[test]
     fn a_sysfs_file_opens_seeks_and_reads_as_python_s_open_does() {
         let root = Root::new();
-        let e = SysFile::open("/sys/module/sx_core/asic0/module0/present").err().unwrap();
+        let e = SysFile::open("/sys/module/sx_core/asic0/module0/present")
+            .err()
+            .unwrap();
         assert_eq!(
             (e.exc.name(), e.str()),
-            ("FileNotFoundError", "[Errno 2] No such file or directory: '/sys/module/sx_core/asic0/module0/present'".to_string())
+            (
+                "FileNotFoundError",
+                "[Errno 2] No such file or directory: '/sys/module/sx_core/asic0/module0/present'"
+                    .to_string()
+            )
         );
         root.write("/sys/module/sx_core/asic0/module0/present", "1\n");
         let mut f = SysFile::open("/sys/module/sx_core/asic0/module0/present").unwrap();
@@ -207,10 +236,15 @@ mod tests {
         assert_eq!(d.read().unwrap_err().exc.name(), "IsADirectoryError");
         // A pipe cannot seek: ESPIPE.
         std::fs::create_dir_all(root.real("/tmp")).unwrap();
-        let fifo = std::ffi::CString::new(root.real("/tmp/fifo").to_string_lossy().into_owned()).unwrap();
+        let fifo =
+            std::ffi::CString::new(root.real("/tmp/fifo").to_string_lossy().into_owned()).unwrap();
         // SAFETY: a NUL-terminated path.
         assert_eq!(unsafe { libc::mkfifo(fifo.as_ptr(), 0o600) }, 0);
-        let _writer = std::fs::OpenOptions::new().read(true).write(true).open(root.real("/tmp/fifo")).unwrap();
+        let _writer = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(root.real("/tmp/fifo"))
+            .unwrap();
         let mut p = SysFile::open("/tmp/fifo").unwrap();
         assert_eq!(p.seek0().unwrap_err().str(), "[Errno 29] Illegal seek");
     }
@@ -225,14 +259,20 @@ mod tests {
         p.register(r1, libc::POLLIN);
         // Registering again keeps the place, with the new mask.
         p.register(r2, libc::POLLIN | libc::POLLPRI);
-        assert_eq!(p.fds, [(r2, libc::POLLIN | libc::POLLPRI), (r1, libc::POLLIN)]);
+        assert_eq!(
+            p.fds,
+            [(r2, libc::POLLIN | libc::POLLPRI), (r1, libc::POLLIN)]
+        );
         assert!(p.poll(0.0).unwrap().is_empty());
         // SAFETY: a byte into each pipe's write end.
         unsafe {
             libc::write(w1.as_raw_fd(), b"x".as_ptr().cast(), 1);
             libc::write(w2.as_raw_fd(), b"x".as_ptr().cast(), 1);
         }
-        assert_eq!(p.poll(-1.0).unwrap(), [(r2, libc::POLLIN), (r1, libc::POLLIN)]);
+        assert_eq!(
+            p.poll(-1.0).unwrap(),
+            [(r2, libc::POLLIN), (r1, libc::POLLIN)]
+        );
         assert_eq!(p.poll(0.4).unwrap().len(), 2);
         p.unregister(r2).unwrap();
         assert_eq!(p.poll(0.0).unwrap(), [(r1, libc::POLLIN)]);

@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! `sonic_platform/module_host_mgmt_initializer.py`.
 //!
 //! In module host management mode only xcvrd initialises the modules -- runs
@@ -52,7 +51,10 @@ pub fn get_asic_ready_file_path(asic_id: &str) -> String {
     } else {
         format!("asic{asic_id}")
     };
-    io::join(&asic_ready_dir(), &format!("{ASIC_READY_FILE_PREFIX}_{suffix}"))
+    io::join(
+        &asic_ready_dir(),
+        &format!("{ASIC_READY_FILE_PREFIX}_{suffix}"),
+    )
 }
 
 /// `ModuleHostMgmtInitializer`.
@@ -70,9 +72,13 @@ impl ModuleHostMgmtInitializer {
         let dir = asic_ready_dir();
         std::fs::create_dir_all(io::real(&dir)).map_err(|e| PyErr::from_io(&e, Some(&dir)))?;
         // SAFETY: getuid has no preconditions.
-        if dir.starts_with(NV_SYNCD_SHARED_DIR) && !nv_dir_existed && unsafe { libc::getuid() } == 0 {
-            std::fs::set_permissions(io::real(NV_SYNCD_SHARED_DIR), std::fs::Permissions::from_mode(0o777))
-                .map_err(|e| PyErr::from_io(&e, Some(NV_SYNCD_SHARED_DIR)))?;
+        if dir.starts_with(NV_SYNCD_SHARED_DIR) && !nv_dir_existed && unsafe { libc::getuid() } == 0
+        {
+            std::fs::set_permissions(
+                io::real(NV_SYNCD_SHARED_DIR),
+                std::fs::Permissions::from_mode(0o777),
+            )
+            .map_err(|e| PyErr::from_io(&e, Some(NV_SYNCD_SHARED_DIR)))?;
         }
         Ok(ModuleHostMgmtInitializer {
             initialized_list: Mutex::new(vec![false; usize::try_from(asic_count).unwrap_or(0)]),
@@ -89,8 +95,12 @@ impl ModuleHostMgmtInitializer {
         if utils::is_host() || !is_initialization_owner() {
             return chassis.initialize_sfp();
         }
-        let not_initialized: Vec<usize> =
-            utils::lock(&self.initialized_list).iter().enumerate().filter(|(_, done)| !**done).map(|(i, _)| i).collect();
+        let not_initialized: Vec<usize> = utils::lock(&self.initialized_list)
+            .iter()
+            .enumerate()
+            .filter(|(_, done)| !**done)
+            .map(|(i, _)| i)
+            .collect();
         let _guard = utils::lock(&self.lock);
         utils::log_notice("Waiting for modules to be ready...");
         let sfp_count = chassis.get_num_sfps()?;
@@ -109,7 +119,12 @@ impl ModuleHostMgmtInitializer {
         let mut asic_ready_list = Vec::new();
         let mut sfp_list = Vec::new();
         for asic_id in not_initialized {
-            if utils::read_int(&format!("/var/run/hw-management/config/asic{}_ready", asic_id + 1), 0, Log::Error) == 1 {
+            if utils::read_int(
+                &format!("/var/run/hw-management/config/asic{}_ready", asic_id + 1),
+                0,
+                Log::Error,
+            ) == 1
+            {
                 asic_ready_list.push(asic_id);
                 sfp_list.extend(chassis.asic_modules(&format!("asic{asic_id}")));
             }
@@ -153,7 +168,10 @@ impl ModuleHostMgmtInitializer {
 impl ModuleHostMgmtInitializer {
     /// `initialized_list`.
     pub(crate) fn initialized(&self) -> Vec<bool> {
-        self.initialized_list.lock().map(|l| l.clone()).unwrap_or_default()
+        self.initialized_list
+            .lock()
+            .map(|l| l.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -175,7 +193,10 @@ fn add_asics_to_ready_file(asic_ids: &[usize]) -> PyResult<()> {
     let dir = asic_ready_dir();
     std::fs::create_dir_all(io::real(&dir)).map_err(|e| PyErr::from_io(&e, Some(&dir)))?;
     for id in asic_ids {
-        io::write_text(&get_asic_ready_file_path(&id.to_string()), &format!("asic{id}\n"))?;
+        io::write_text(
+            &get_asic_ready_file_path(&id.to_string()),
+            &format!("asic{id}\n"),
+        )?;
     }
     Ok(())
 }
@@ -196,12 +217,21 @@ mod tests {
     fn the_ready_files_live_by_where_the_code_runs() {
         let root = Root::new();
         // No /.dockerenv: the host, under the directory syncd shares.
-        assert_eq!(get_asic_ready_file_path("0"), "/tmp/nv-syncd-shared/asic_ready/module_host_mgmt_asic_ready_asic0");
-        assert_eq!(get_asic_ready_file_path("asic3"), "/tmp/nv-syncd-shared/asic_ready/module_host_mgmt_asic_ready_asic3");
+        assert_eq!(
+            get_asic_ready_file_path("0"),
+            "/tmp/nv-syncd-shared/asic_ready/module_host_mgmt_asic_ready_asic0"
+        );
+        assert_eq!(
+            get_asic_ready_file_path("asic3"),
+            "/tmp/nv-syncd-shared/asic_ready/module_host_mgmt_asic_ready_asic3"
+        );
         drop(root);
         let root = Root::new();
         root.write("/.dockerenv", "");
-        assert_eq!(get_asic_ready_file_path("asic1"), "/tmp/asic_ready/module_host_mgmt_asic_ready_asic1");
+        assert_eq!(
+            get_asic_ready_file_path("asic1"),
+            "/tmp/asic_ready/module_host_mgmt_asic_ready_asic1"
+        );
     }
 
     #[test]
@@ -225,11 +255,20 @@ mod tests {
         // A list index, as Python's: -1 is the last, 1 is out of range.
         init.set_asic_ready_value(-1, true).unwrap();
         assert_eq!(*init.initialized_list.lock().unwrap(), [true]);
-        assert_eq!(init.set_asic_ready_value(1, true).unwrap_err().str(), "list assignment index out of range");
-        assert_eq!(init.set_asic_ready_value(-2, true).unwrap_err().exc.name(), "IndexError");
+        assert_eq!(
+            init.set_asic_ready_value(1, true).unwrap_err().str(),
+            "list assignment index out of range"
+        );
+        assert_eq!(
+            init.set_asic_ready_value(-2, true).unwrap_err().exc.name(),
+            "IndexError"
+        );
         // A ready "file" that is a directory cannot be removed: os.remove raises.
         std::fs::create_dir_all(root.real(&file)).unwrap();
-        assert_eq!(init.set_asic_ready_value(0, false).unwrap_err().exc.name(), "IsADirectoryError");
+        assert_eq!(
+            init.set_asic_ready_value(0, false).unwrap_err().exc.name(),
+            "IsADirectoryError"
+        );
     }
 
     #[test]

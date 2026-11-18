@@ -15,7 +15,6 @@
 // limitations under the License.
 //
 
-
 //! A switch under a scratch root, for the PSU, thermal, PDB and PCIe tests:
 //! `/var/run` is `/run`, as on a switch, and machine.conf names the
 //! platform.

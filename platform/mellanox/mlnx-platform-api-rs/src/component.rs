@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 
-
-
 //! `sonic_platform/component.py`: the firmware components.
 //!
 //! In a container the chassis builds none of the host's components (ONIE,
@@ -81,7 +79,9 @@ fn list_str(items: &[&str]) -> String {
 /// `Component._check_file_validity(image_path)`.
 fn check_file_validity(image_path: &str, name: &str, image_ext_name: Option<&[&str]>) -> bool {
     if !io::is_file(image_path) {
-        print(&format!("ERROR: File {image_path} doesn't exist or is not a file"));
+        print(&format!(
+            "ERROR: File {image_path} doesn't exist or is not a file"
+        ));
         return false;
     }
     if let Some(exts) = image_ext_name {
@@ -109,13 +109,24 @@ const BMC_FW_UPDATE: &str = "/usr/bin/bmc_fw_update.py";
 impl ComponentBmc {
     /// `ComponentBMC()`: holds the BMC singleton, or None.
     pub fn new() -> PyResult<ComponentBmc> {
-        Ok(ComponentBmc { bmc: bmc::get_instance()? })
+        Ok(ComponentBmc {
+            bmc: bmc::get_instance()?,
+        })
     }
 
     /// `install_firmware(image_path)`: hw-management's updater, in its own
     /// session, talking to the terminal directly.
     fn install(&self, image_path: &str) -> bool {
-        if !check_file_validity(image_path, BMC_COMPONENT_NAME, Some(&BMC_FIRMWARE_EXTENSION)) {
+        if platform_base::bmc::is_sonic_bmc_os() {
+            print("BMC firmware install not supported when BMC OS is sonic");
+            return false;
+        }
+
+        if !check_file_validity(
+            image_path,
+            BMC_COMPONENT_NAME,
+            Some(&BMC_FIRMWARE_EXTENSION),
+        ) {
             print(&format!("Invalid firmware image path: {image_path}"));
             return false;
         }
@@ -130,8 +141,14 @@ impl ComponentBmc {
                 false
             }
             Err(e) => {
-                utils::log_error(&format!("Exception occurred during BMC firmware update: {}", e.str()));
-                print(&format!("Exception occurred during BMC firmware update: {}", e.str()));
+                utils::log_error(&format!(
+                    "Exception occurred during BMC firmware update: {}",
+                    e.str()
+                ));
+                print(&format!(
+                    "Exception occurred during BMC firmware update: {}",
+                    e.str()
+                ));
                 false
             }
         }
@@ -152,16 +169,24 @@ impl PyObject for ComponentBmc {
         Ok(PyVal::str(BMC_COMPONENT_DESCRIPTION))
     }
     fn get_firmware_version(&self) -> PyResult<PyVal> {
+        if platform_base::bmc::is_sonic_bmc_os() {
+            return Ok(PyVal::str("N/A"));
+        }
+
         match &self.bmc {
             None => Ok(PyVal::str("N/A")),
             Some(b) => b.get_version(),
         }
     }
     fn get_available_firmware_version(&self, _image_path: &str) -> PyResult<PyVal> {
-        Err(PyErr::not_implemented_msg("BMC component doesn't support available firmware version query"))
+        Err(PyErr::not_implemented_msg(
+            "BMC component doesn't support available firmware version query",
+        ))
     }
     fn get_firmware_update_notification(&self, _image_path: &str) -> PyResult<PyVal> {
-        Ok(PyVal::str("BMC will be automatically restarted to complete BMC firmware update"))
+        Ok(PyVal::str(
+            "BMC will be automatically restarted to complete BMC firmware update",
+        ))
     }
     /// The switch's boot type is beside the point -- the BMC restarts --
     /// but anything but a cold boot is still skipped.
@@ -222,7 +247,11 @@ pub(crate) fn program_path(argv0: &str) -> std::path::PathBuf {
     #[cfg(test)]
     {
         if io::real("/") != std::path::Path::new("/") {
-            return if argv0.starts_with('/') { io::real(argv0) } else { io::real(&format!("/usr/bin/{argv0}")) };
+            return if argv0.starts_with('/') {
+                io::real(argv0)
+            } else {
+                io::real(&format!("/usr/bin/{argv0}"))
+            };
         }
     }
     argv0.into()
@@ -247,7 +276,9 @@ fn check_call(argv: &[&str], new_session: bool) -> PyResult<()> {
             });
         }
     }
-    let st = cmd.status().map_err(|e| PyErr::from_io(&e, Some(argv[0])))?;
+    let st = cmd
+        .status()
+        .map_err(|e| PyErr::from_io(&e, Some(argv[0])))?;
     match subprocess::returncode(st) {
         0 => Ok(()),
         rc => Err(subprocess::called_process_error(argv, rc)),
@@ -268,7 +299,9 @@ fn check_output_merged(argv: &[&str]) -> PyResult<String> {
     let mut child = {
         let w2 = w.try_clone().map_err(|e| PyErr::from_io(&e, None))?;
         let mut cmd = program(argv[0]);
-        cmd.args(&argv[1..]).stdout(Stdio::from(w)).stderr(Stdio::from(w2));
+        cmd.args(&argv[1..])
+            .stdout(Stdio::from(w))
+            .stderr(Stdio::from(w2));
         cmd.spawn().map_err(|e| PyErr::from_io(&e, Some(argv[0])))?
         // The Command, and the write ends with it, go here.
     };
@@ -327,9 +360,20 @@ fn run_stdout(argv: &[&str], timeout: Duration) -> PyResult<Vec<u8>> {
             }
             continue;
         };
-        let mut pfd = libc::pollfd { fd: std::os::fd::AsRawFd::as_raw_fd(p), events: libc::POLLIN, revents: 0 };
+        let mut pfd = libc::pollfd {
+            fd: std::os::fd::AsRawFd::as_raw_fd(p),
+            events: libc::POLLIN,
+            revents: 0,
+        };
         // SAFETY: one valid pollfd.
-        if unsafe { libc::poll(&mut pfd, 1, left.as_millis().clamp(1, i32::MAX as u128) as i32) } > 0 {
+        if unsafe {
+            libc::poll(
+                &mut pfd,
+                1,
+                left.as_millis().clamp(1, i32::MAX as u128) as i32,
+            )
+        } > 0
+        {
             let mut buf = [0u8; 4096];
             match p.read(&mut buf) {
                 Ok(0) | Err(_) => pipe = None,
@@ -344,7 +388,11 @@ fn run_stdout(argv: &[&str], timeout: Duration) -> PyResult<Vec<u8>> {
     let _ = child.wait();
     Err(PyErr::other(
         "TimeoutExpired",
-        format!("Command '{}' timed out after {} seconds", list_str(argv), timeout.as_secs()),
+        format!(
+            "Command '{}' timed out after {} seconds",
+            list_str(argv),
+            timeout.as_secs()
+        ),
     ))
 }
 
@@ -392,7 +440,10 @@ fn lexists(path: &str) -> bool {
 
 fn mkdir(path: &str, mode: u32) -> PyResult<()> {
     use std::os::unix::fs::DirBuilderExt;
-    std::fs::DirBuilder::new().mode(mode).create(io::real(path)).map_err(|e| PyErr::from_io(&e, Some(path)))
+    std::fs::DirBuilder::new()
+        .mode(mode)
+        .create(io::real(path))
+        .map_err(|e| PyErr::from_io(&e, Some(path)))
 }
 
 /// `os.path.ismount(path)`: on another device than its parent, or its own
@@ -421,7 +472,10 @@ fn basename(path: &str) -> &str {
 
 /// `shutil.copyfile(src, dst)`.
 fn copyfile(src: &str, dst: &str) -> PyResult<()> {
-    if let (Ok(a), Ok(b)) = (std::fs::metadata(io::real(src)), std::fs::metadata(io::real(dst))) {
+    if let (Ok(a), Ok(b)) = (
+        std::fs::metadata(io::real(src)),
+        std::fs::metadata(io::real(dst)),
+    ) {
         if a.dev() == b.dev() && a.ino() == b.ino() {
             return Err(PyErr::other(
                 "SameFileError",
@@ -431,7 +485,10 @@ fn copyfile(src: &str, dst: &str) -> PyResult<()> {
     }
     for f in [src, dst] {
         if std::fs::metadata(io::real(f)).is_ok_and(|m| m.file_type().is_fifo()) {
-            return Err(PyErr::other("SpecialFileError", format!("`{f}` is a named pipe")));
+            return Err(PyErr::other(
+                "SpecialFileError",
+                format!("`{f}` is a named pipe"),
+            ));
         }
     }
     let mut fsrc = std::fs::File::open(io::real(src)).map_err(|e| PyErr::from_io(&e, Some(src)))?;
@@ -464,7 +521,9 @@ fn random_name() -> String {
             .map_or(0, |d| d.as_nanos() as u64);
         buf = (t ^ u64::from(std::process::id())).to_le_bytes();
     }
-    buf.iter().map(|b| CHARS[usize::from(*b) % CHARS.len()] as char).collect()
+    buf.iter()
+        .map(|b| CHARS[usize::from(*b) % CHARS.len()] as char)
+        .collect()
 }
 
 /// `posixpath.normpath` of an absolute path.
@@ -487,7 +546,9 @@ fn abspath(path: &str) -> String {
     if path.starts_with('/') {
         normpath(path)
     } else {
-        let cwd = std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+        let cwd = std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default();
         normpath(&format!("{cwd}/{path}"))
     }
 }
@@ -508,12 +569,25 @@ fn gettempdir() -> PyResult<String> {
         }
     }
     dirlist.extend(["/tmp", "/var/tmp", "/usr/tmp"].map(String::from));
-    dirlist.push(std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_else(|_| ".".into()));
+    dirlist.push(
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| ".".into()),
+    );
     for dir in &dirlist {
-        let dir = if dir == "." { dir.clone() } else { abspath(dir) };
+        let dir = if dir == "." {
+            dir.clone()
+        } else {
+            abspath(dir)
+        };
         for _ in 0..100 {
             let filename = io::join(&dir, &random_name());
-            match std::fs::OpenOptions::new().read(true).write(true).create_new(true).open(io::real(&filename)) {
+            match std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(io::real(&filename))
+            {
                 Ok(mut f) => {
                     let _ = f.write_all(b"blat");
                     drop(f);
@@ -553,7 +627,10 @@ fn mkdtemp(prefix: &str) -> PyResult<String> {
     }
     Err(PyErr::new(
         Exc::OSError("FileExistsError"),
-        vec![PyVal::Int(i128::from(libc::EEXIST)), PyVal::str("No usable temporary directory name found")],
+        vec![
+            PyVal::Int(i128::from(libc::EEXIST)),
+            PyVal::str("No usable temporary directory name found"),
+        ],
     ))
 }
 
@@ -592,7 +669,10 @@ fn read_generic_file(filename: &str, len: usize, ignore_errors: bool) -> PyResul
             if ignore_errors {
                 Ok(None)
             } else {
-                Err(PyErr::runtime_error(format!("Failed to read file {filename} due to {}", e.repr())))
+                Err(PyErr::runtime_error(format!(
+                    "Failed to read file {filename} due to {}",
+                    e.repr()
+                )))
             }
         }
         Err(e) => Err(e),
@@ -625,7 +705,10 @@ fn is_space(c: char) -> bool {
 impl Ini {
     /// `cp.read(path)`: a file that cannot be opened is skipped.
     fn read(path: &str) -> PyResult<Ini> {
-        let mut ini = Ini { defaults: Vec::new(), sections: Vec::new() };
+        let mut ini = Ini {
+            defaults: Vec::new(),
+            sections: Vec::new(),
+        };
         let text = match io::read_text(path) {
             Ok(t) => t,
             Err(e) if e.exc.is_os_error() => return Ok(ini),
@@ -671,13 +754,20 @@ impl Ini {
         for (i, line) in lines.iter().enumerate() {
             let lineno = i + 1;
             let stripped = line.trim_matches(is_space);
-            let clean = if stripped.starts_with('#') || stripped.starts_with(';') { "" } else { stripped };
+            let clean = if stripped.starts_with('#') || stripped.starts_with(';') {
+                ""
+            } else {
+                stripped
+            };
             if clean.is_empty() {
                 // A blank line belongs to the value being read; a comment
                 // line does not.
                 let has_comments = stripped != clean;
-                if let (false, Some(o)) = (has_comments, optname.as_ref().filter(|o| !o.is_empty())) {
-                    if let Some(v) = opts(&cur, &mut raw_defaults, &mut raw_sections).and_then(|m| m.iter_mut().find(|(k, _)| k == o)) {
+                if let (false, Some(o)) = (has_comments, optname.as_ref().filter(|o| !o.is_empty()))
+                {
+                    if let Some(v) = opts(&cur, &mut raw_defaults, &mut raw_sections)
+                        .and_then(|m| m.iter_mut().find(|(k, _)| k == o))
+                    {
                         v.1.push(String::new());
                     }
                 }
@@ -685,9 +775,14 @@ impl Ini {
             }
             let cur_indent = line.chars().position(|c| !is_space(c)).unwrap_or(0);
             // A continuation line?
-            if !matches!(cur, Cur::None) && optname.as_ref().is_some_and(|o| !o.is_empty()) && cur_indent > indent_level {
+            if !matches!(cur, Cur::None)
+                && optname.as_ref().is_some_and(|o| !o.is_empty())
+                && cur_indent > indent_level
+            {
                 let o = optname.clone().unwrap_or_default();
-                if let Some(v) = opts(&cur, &mut raw_defaults, &mut raw_sections).and_then(|m| m.iter_mut().find(|(k, _)| *k == o)) {
+                if let Some(v) = opts(&cur, &mut raw_defaults, &mut raw_sections)
+                    .and_then(|m| m.iter_mut().find(|(k, _)| *k == o))
+                {
                     v.1.push(clean.to_string());
                 }
                 continue;
@@ -767,10 +862,15 @@ impl Ini {
             optname = Some(o);
         }
         let join = |v: RawOptions| -> Vec<(String, String)> {
-            v.into_iter().map(|(k, l)| (k, l.join("\n").trim_end_matches(is_space).to_string())).collect()
+            v.into_iter()
+                .map(|(k, l)| (k, l.join("\n").trim_end_matches(is_space).to_string()))
+                .collect()
         };
         self.defaults = join(raw_defaults);
-        self.sections = raw_sections.into_iter().map(|(n, o)| (n, join(o))).collect();
+        self.sections = raw_sections
+            .into_iter()
+            .map(|(n, o)| (n, join(o)))
+            .collect();
         if let Some((first, rest)) = errors.split_first() {
             let mut msg = format!("Source contains parsing errors: {}", str_repr(fpname));
             for (lineno, line) in std::iter::once(first).chain(rest) {
@@ -782,7 +882,10 @@ impl Ini {
     }
 
     fn section(&self, name: &str) -> Option<&Vec<(String, String)>> {
-        self.sections.iter().find(|(n, _)| n == name).map(|(_, o)| o)
+        self.sections
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, o)| o)
     }
 
     /// `has_option(section, option)`.
@@ -810,13 +913,20 @@ impl Ini {
     /// `get(section, option)`, interpolated.
     fn get(&self, section: &str, option: &str) -> PyResult<String> {
         if self.section(section).is_none() && section != DEFAULTSECT {
-            return Err(ini_err("NoSectionError", format!("No section: {}", str_repr(section))));
+            return Err(ini_err(
+                "NoSectionError",
+                format!("No section: {}", str_repr(section)),
+            ));
         }
         let o = option.to_lowercase();
         let Some(value) = self.lookup(section, &o) else {
             return Err(ini_err(
                 "NoOptionError",
-                format!("No option {} in section: {}", str_repr(&o), str_repr(section)),
+                format!(
+                    "No option {} in section: {}",
+                    str_repr(&o),
+                    str_repr(section)
+                ),
             ));
         };
         let mut accum = String::new();
@@ -825,8 +935,17 @@ impl Ini {
     }
 
     /// `BasicInterpolation._interpolate_some`.
-    fn interpolate(&self, option: &str, accum: &mut String, rest: &str, section: &str, depth: usize) -> PyResult<()> {
-        let rawval = self.lookup(section, option).unwrap_or_else(|| rest.to_string());
+    fn interpolate(
+        &self,
+        option: &str,
+        accum: &mut String,
+        rest: &str,
+        section: &str,
+        depth: usize,
+    ) -> PyResult<()> {
+        let rawval = self
+            .lookup(section, option)
+            .unwrap_or_else(|| rest.to_string());
         if depth > 10 {
             return Err(ini_err(
                 "InterpolationDepthError",
@@ -838,7 +957,8 @@ impl Ini {
                 ),
             ));
         }
-        let keycre = Regex::new(r"^%\(([^)]+)\)s").map_err(|e| PyErr::runtime_error(e.to_string()))?;
+        let keycre =
+            Regex::new(r"^%\(([^)]+)\)s").map_err(|e| PyErr::runtime_error(e.to_string()))?;
         let mut rest = rest.to_string();
         while !rest.is_empty() {
             let Some(p) = rest.find('%') else {
@@ -883,7 +1003,10 @@ impl Ini {
             } else {
                 return Err(ini_err(
                     "InterpolationSyntaxError",
-                    format!("'%' must be followed by '%' or '(', found: {}", str_repr(&rest)),
+                    format!(
+                        "'%' must be followed by '%' or '(', found: {}",
+                        str_repr(&rest)
+                    ),
                 ));
             }
         }
@@ -906,16 +1029,22 @@ struct Mpfa {
 /// not run -- and removed on the way out, whose failure is the one raised.
 fn with_mpfa<T>(mpfa_path: &str, body: impl FnOnce(&Mpfa) -> PyResult<T>) -> PyResult<T> {
     if !io::is_file(mpfa_path) {
-        return Err(PyErr::runtime_error(format!("MPFA doesn't exist: path={mpfa_path}")));
+        return Err(PyErr::runtime_error(format!(
+            "MPFA doesn't exist: path={mpfa_path}"
+        )));
     }
     if splitext_ext(mpfa_path) != MPFA_EXTENSION {
-        return Err(PyErr::runtime_error(format!("MPFA doesn't have valid extension: path={mpfa_path}")));
+        return Err(PyErr::runtime_error(format!(
+            "MPFA doesn't have valid extension: path={mpfa_path}"
+        )));
     }
     let contents = mkdtemp("mpfa-")?;
     check_call(&["tar", "xzf", mpfa_path, "-C", &contents], false)?;
     let metadata_path = io::join(&contents, "metadata.ini");
     if !io::is_file(&metadata_path) {
-        return Err(PyErr::runtime_error(format!("MPFA metadata doesn't exist: path={metadata_path}")));
+        return Err(PyErr::runtime_error(format!(
+            "MPFA metadata doesn't exist: path={metadata_path}"
+        )));
     }
     let metadata = Ini::read(&metadata_path)?;
     let mpfa = Mpfa { contents, metadata };
@@ -947,7 +1076,9 @@ struct OnieUpdater {
 
 impl OnieUpdater {
     fn new() -> PyResult<OnieUpdater> {
-        Ok(OnieUpdater { platform: device_info::get_platform()? })
+        Ok(OnieUpdater {
+            platform: device_info::get_platform()?,
+        })
     }
 
     /// `__add_prefix(image_path)`: a copy under /tmp whose name orders it
@@ -970,24 +1101,34 @@ impl OnieUpdater {
         if lexists(ONIE_PATH) || io::exists(FS_MOUNTPOINT) {
             Self::umount_onie_fs()?;
         }
-        let fs_path = check_output_pipe(&[&["fdisk", "-l"], &["grep", "ONIE boot"], &["awk", "{print $1}"]])?;
+        let fs_path = check_output_pipe(&[
+            &["fdisk", "-l"],
+            &["grep", "ONIE boot"],
+            &["awk", "{print $1}"],
+        ])?;
         let fs_path = fs_path.trim_end_matches('\n');
         mkdir(FS_MOUNTPOINT, 0o777)?;
-        check_call(&["mount", "-n", "-r", "-t", "ext4", fs_path, FS_MOUNTPOINT], false)?;
+        check_call(
+            &["mount", "-n", "-r", "-t", "ext4", fs_path, FS_MOUNTPOINT],
+            false,
+        )?;
         let fs_onie_path = io::join(FS_MOUNTPOINT, "onie/tools/lib/onie");
-        std::os::unix::fs::symlink(&fs_onie_path, io::real(ONIE_PATH)).map_err(|e| os_error2(&e, &fs_onie_path, ONIE_PATH))?;
+        std::os::unix::fs::symlink(&fs_onie_path, io::real(ONIE_PATH))
+            .map_err(|e| os_error2(&e, &fs_onie_path, ONIE_PATH))?;
         Ok(FS_MOUNTPOINT)
     }
 
     fn umount_onie_fs() -> PyResult<()> {
         if io::is_link(ONIE_PATH) {
-            std::fs::remove_file(io::real(ONIE_PATH)).map_err(|e| PyErr::from_io(&e, Some(ONIE_PATH)))?;
+            std::fs::remove_file(io::real(ONIE_PATH))
+                .map_err(|e| PyErr::from_io(&e, Some(ONIE_PATH)))?;
         }
         if ismount(FS_MOUNTPOINT) {
             check_call(&["umount", "-rf", FS_MOUNTPOINT], false)?;
         }
         if io::exists(FS_MOUNTPOINT) {
-            std::fs::remove_dir(io::real(FS_MOUNTPOINT)).map_err(|e| PyErr::from_io(&e, Some(FS_MOUNTPOINT)))?;
+            std::fs::remove_dir(io::real(FS_MOUNTPOINT))
+                .map_err(|e| PyErr::from_io(&e, Some(FS_MOUNTPOINT)))?;
         }
         Ok(())
     }
@@ -1015,8 +1156,11 @@ impl OnieUpdater {
     }
 
     fn trigger_update(allow_reboot: bool) -> PyResult<()> {
-        let cmd: &[&str] =
-            if allow_reboot { &[ONIE_FW_UPDATE, "update"] } else { &[ONIE_FW_UPDATE, "update", "--no-reboot"] };
+        let cmd: &[&str] = if allow_reboot {
+            &[ONIE_FW_UPDATE, "update"]
+        } else {
+            &[ONIE_FW_UPDATE, "update", "--no-reboot"]
+        };
         check_call(cmd, false).map_err(|e| {
             if is_called_process_error(&e) {
                 PyErr::runtime_error(format!("Failed to trigger firmware update: {}", e.str()))
@@ -1029,9 +1173,10 @@ impl OnieUpdater {
     fn show_pending() -> PyResult<String> {
         match check_output_merged(&[ONIE_FW_UPDATE, "show-pending"]) {
             Ok(o) => Ok(o.trim_end_matches('\n').to_string()),
-            Err(e) if is_called_process_error(&e) => {
-                Err(PyErr::runtime_error(format!("Failed to get pending firmware updates: {}", e.str())))
-            }
+            Err(e) if is_called_process_error(&e) => Err(PyErr::runtime_error(format!(
+                "Failed to get pending firmware updates: {}",
+                e.str()
+            ))),
             Err(e) => Err(e),
         }
     }
@@ -1046,7 +1191,11 @@ impl OnieUpdater {
     /// `parse_onie_version(version, is_base)`: major, minor and release --
     /// all the callers take.
     fn parse_onie_version(version: &str, is_base: bool) -> PyResult<(String, String, String)> {
-        let pattern = if is_base { ONIE_VERSION_BASE_PARSE_PATTERN } else { ONIE_VERSION_PARSE_PATTERN };
+        let pattern = if is_base {
+            ONIE_VERSION_BASE_PARSE_PATTERN
+        } else {
+            ONIE_VERSION_PARSE_PATTERN
+        };
         let re = Regex::new(pattern).map_err(|e| PyErr::runtime_error(e.to_string()))?;
         let Some(m) = re.captures(version) else {
             return Err(PyErr::runtime_error(format!(
@@ -1054,7 +1203,11 @@ impl OnieUpdater {
             )));
         };
         let g = |i: usize| m.get(i).map_or(String::new(), |x| x.as_str().to_string());
-        Ok(if is_base { (g(1), g(2), g(3)) } else { (g(3), g(4), g(5)) })
+        Ok(if is_base {
+            (g(1), g(2), g(3))
+        } else {
+            (g(3), g(4), g(5))
+        })
     }
 
     /// `get_onie_version()`: grub-machine.cfg's `onie_version=`, with ONIE's
@@ -1069,7 +1222,9 @@ impl OnieUpdater {
                 if line.starts_with(ONIE_VERSION_ATTR) {
                     let items: Vec<&str> = line.trim_end_matches('\n').split('=').collect();
                     if items.len() != 2 {
-                        return Err(PyErr::runtime_error(format!("Failed to parse ONIE info: line={line}")));
+                        return Err(PyErr::runtime_error(format!(
+                            "Failed to parse ONIE info: line={line}"
+                        )));
                     }
                     version = Some(items[1].to_string());
                     break;
@@ -1089,7 +1244,10 @@ impl OnieUpdater {
             let output = match check_output_merged(&["/bin/bash", image_path, "-q", "-i"]) {
                 Ok(o) => o.trim_end_matches('\n').to_string(),
                 Err(e) if is_called_process_error(&e) => {
-                    return Err(PyErr::runtime_error(format!("Failed to get ONIE firmware info: {}", e.str())))
+                    return Err(PyErr::runtime_error(format!(
+                        "Failed to get ONIE firmware info: {}",
+                        e.str()
+                    )))
                 }
                 Err(e) => return Err(e),
             };
@@ -1097,7 +1255,9 @@ impl OnieUpdater {
             for line in splitlines(&output) {
                 let items: Vec<&str> = line.split('=').collect();
                 if items.len() != 2 {
-                    return Err(PyErr::runtime_error(format!("Failed to parse ONIE firmware info: line={line}")));
+                    return Err(PyErr::runtime_error(format!(
+                        "Failed to parse ONIE firmware info: line={line}"
+                    )));
                 }
                 match info.iter_mut().find(|(k, _)| k == items[0]) {
                     Some(e) => e.1 = items[1].to_string(),
@@ -1152,13 +1312,19 @@ impl OnieUpdater {
                 Ok(()) => removed.push(name.as_str()),
                 Err(e) if is_called_process_error(&e) => {
                     failed.push(name.as_str());
-                    utils::log_warning(&format!("Failed to clear pending firmware update '{name}': {}", e.str()));
+                    utils::log_warning(&format!(
+                        "Failed to clear pending firmware update '{name}': {}",
+                        e.str()
+                    ));
                 }
                 Err(e) => return Err(e),
             }
         }
         if !removed.is_empty() {
-            notice_print(&format!("Removed stale pending firmware update(s): {}", removed.join(", ")));
+            notice_print(&format!(
+                "Removed stale pending firmware update(s): {}",
+                removed.join(", ")
+            ));
         }
         if !failed.is_empty() {
             return Err(PyErr::runtime_error(format!(
@@ -1193,7 +1359,11 @@ impl OnieUpdater {
     /// firmware other than its own -- always so on the platforms in
     /// `PLATFORM_ALWAYS_SUPPORT_UPGRADE`.
     fn is_non_onie_firmware_update_supported(&self) -> PyResult<bool> {
-        if self.platform.as_deref().is_some_and(|p| PLATFORM_ALWAYS_SUPPORT_UPGRADE.contains(&p)) {
+        if self
+            .platform
+            .as_deref()
+            .is_some_and(|p| PLATFORM_ALWAYS_SUPPORT_UPGRADE.contains(&p))
+        {
             return Ok(true);
         }
         let current = Self::get_onie_version()?;
@@ -1222,7 +1392,10 @@ enum Kind {
 
 impl Kind {
     fn is_cpld(self) -> bool {
-        matches!(self, Kind::Cpld | Kind::CpldSn2201 | Kind::CpldSn4280 | Kind::FpgaDpu)
+        matches!(
+            self,
+            Kind::Cpld | Kind::CpldSn2201 | Kind::CpldSn4280 | Kind::FpgaDpu
+        )
     }
 }
 
@@ -1252,8 +1425,16 @@ impl HostComponent {
             Kind::FpgaDpu => format!("DPU{idx}_FPGA"),
             _ => format!("CPLD{idx}"),
         };
-        let onie_updater = matches!(kind, Kind::Onie | Kind::Bios).then(OnieUpdater::new).transpose()?;
-        Ok(HostComponent { kind, idx, name, onie_updater, dpus_to_monitor: Mutex::new(None) })
+        let onie_updater = matches!(kind, Kind::Onie | Kind::Bios)
+            .then(OnieUpdater::new)
+            .transpose()?;
+        Ok(HostComponent {
+            kind,
+            idx,
+            name,
+            onie_updater,
+            dpus_to_monitor: Mutex::new(None),
+        })
     }
 
     fn description(&self) -> &'static str {
@@ -1291,11 +1472,18 @@ impl HostComponent {
         if !self.check_file_validity(image_path) {
             return Ok(false);
         }
-        print(&format!("INFO: Staging {} firmware update with ONIE updater", self.name));
+        print(&format!(
+            "INFO: Staging {} firmware update with ONIE updater",
+            self.name
+        ));
         match OnieUpdater::update_firmware(image_path, allow_reboot) {
             Ok(()) => Ok(true),
             Err(e) if is_exception(&e) => {
-                print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                print(&format!(
+                    "ERROR: Failed to update {} firmware: {}",
+                    self.name,
+                    e.str()
+                ));
                 Ok(false)
             }
             Err(e) => Err(e),
@@ -1309,13 +1497,24 @@ impl HostComponent {
             return Ok(false);
         }
         let update = [SSD_FW_UPDATE, "-y", "-u", "-i", image_path];
-        let install = [SSD_FW_UPDATE, "--no-power-cycle", "-y", "-u", "-i", image_path];
+        let install = [
+            SSD_FW_UPDATE,
+            "--no-power-cycle",
+            "-y",
+            "-u",
+            "-i",
+            image_path,
+        ];
         let cmd: &[&str] = if allow_reboot { &update } else { &install };
         print(&format!("INFO: Installing {} firmware update", self.name));
         match check_call(cmd, false) {
             Ok(()) => Ok(true),
             Err(e) if is_called_process_error(&e) => {
-                print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                print(&format!(
+                    "ERROR: Failed to update {} firmware: {}",
+                    self.name,
+                    e.str()
+                ));
                 Ok(false)
             }
             Err(e) => Err(e),
@@ -1326,9 +1525,11 @@ impl HostComponent {
     fn ssd_firmware_info(&self, image_path: &str) -> PyResult<String> {
         match check_output_merged(&[SSD_FW_UPDATE, "-q", "-i", image_path]) {
             Ok(o) => Ok(o.trim_end_matches('\n').to_string()),
-            Err(e) if is_called_process_error(&e) => {
-                Err(PyErr::runtime_error(format!("Failed to get {} firmware info: {}", self.name, e.str())))
-            }
+            Err(e) if is_called_process_error(&e) => Err(PyErr::runtime_error(format!(
+                "Failed to get {} firmware info: {}",
+                self.name,
+                e.str()
+            ))),
             Err(e) => Err(e),
         }
     }
@@ -1345,14 +1546,26 @@ impl HostComponent {
                 upgrade_required = Some(field(line)?);
             }
         }
-        if !upgrade_required.as_deref().is_some_and(|u| u == "yes" || u == "no") {
-            return Err(PyErr::runtime_error(format!("Failed to parse {} firmware upgrade status", self.name)));
+        if !upgrade_required
+            .as_deref()
+            .is_some_and(|u| u == "yes" || u == "no")
+        {
+            return Err(PyErr::runtime_error(format!(
+                "Failed to parse {} firmware upgrade status",
+                self.name
+            )));
         }
         if upgrade_required.as_deref() == Some("no") {
             return Ok(PyVal::None);
         }
-        if !power_cycle_required.as_deref().is_some_and(|u| u == "yes" || u == "no") {
-            return Err(PyErr::runtime_error(format!("Failed to parse {} firmware power policy", self.name)));
+        if !power_cycle_required
+            .as_deref()
+            .is_some_and(|u| u == "yes" || u == "no")
+        {
+            return Err(PyErr::runtime_error(format!(
+                "Failed to parse {} firmware power policy",
+                self.name
+            )));
         }
         if power_cycle_required.as_deref() == Some("yes") {
             return Ok(PyVal::Str(format!(
@@ -1367,18 +1580,31 @@ impl HostComponent {
 
     fn bios_install(&self, image_path: &str, allow_reboot: bool) -> PyResult<bool> {
         if !self.onie().is_non_onie_firmware_update_supported()? {
-            print(&format!("ERROR: ONIE {ONIE_VERSION_REQUIRED} or later is required"));
+            print(&format!(
+                "ERROR: ONIE {ONIE_VERSION_REQUIRED} or later is required"
+            ));
             return Ok(false);
         }
         if !self.check_file_validity(image_path) {
             return Ok(false);
         }
-        print(&format!("INFO: Staging {} firmware update with ONIE updater", self.name));
+        print(&format!(
+            "INFO: Staging {} firmware update with ONIE updater",
+            self.name
+        ));
         match OnieUpdater::update_firmware(image_path, allow_reboot) {
             Ok(()) => Ok(true),
             Err(e) if is_exception(&e) => {
-                utils::log_warning(&format!("Failed to update {} firmware: {}", self.name, e.str()));
-                print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                utils::log_warning(&format!(
+                    "Failed to update {} firmware: {}",
+                    self.name,
+                    e.str()
+                ));
+                print(&format!(
+                    "ERROR: Failed to update {} firmware: {}",
+                    self.name,
+                    e.str()
+                ));
                 Ok(false)
             }
             Err(e) => Err(e),
@@ -1389,9 +1615,11 @@ impl HostComponent {
     fn dmidecode(&self, argv: &[&str]) -> PyResult<String> {
         match check_output_merged(argv) {
             Ok(o) => Ok(o.trim_end_matches('\n').to_string()),
-            Err(e) if is_called_process_error(&e) => {
-                Err(PyErr::runtime_error(format!("Failed to get {} version: {}", self.name, e.str())))
-            }
+            Err(e) if is_called_process_error(&e) => Err(PyErr::runtime_error(format!(
+                "Failed to get {} version: {}",
+                self.name,
+                e.str()
+            ))),
             Err(e) => Err(e),
         }
     }
@@ -1425,14 +1653,21 @@ impl HostComponent {
         let out = match check_output_bytes(&[ASIC_DETECT_SCRIPT, "-m"]) {
             Ok(o) => o,
             Err(e) if is_called_process_error(&e) => {
-                return Err(PyErr::runtime_error(format!("Failed to get {} mst device: {}", self.name, e.str())))
+                return Err(PyErr::runtime_error(format!(
+                    "Failed to get {} mst device: {}",
+                    self.name,
+                    e.str()
+                )))
             }
             Err(e) => return Err(e),
         };
         let out = codec::decode(codec::Codec::Utf8, &out)?;
         let out = strip(&out);
         if out.is_empty() {
-            return Err(PyErr::runtime_error(format!("Failed to get {} mst device: empty device node", self.name)));
+            return Err(PyErr::runtime_error(format!(
+                "Failed to get {} mst device: empty device node",
+                self.name
+            )));
         }
         Ok(out.to_string())
     }
@@ -1452,11 +1687,18 @@ impl HostComponent {
 
     /// A cpldupdate run, `_install_firmware`'s common ending.
     fn cpldupdate(&self, cmd: &[&str], image_path: &str) -> PyResult<bool> {
-        print(&format!("INFO: Installing {} firmware update: path={image_path}", self.name));
+        print(&format!(
+            "INFO: Installing {} firmware update: path={image_path}",
+            self.name
+        ));
         match check_call(cmd, false) {
             Ok(()) => Ok(true),
             Err(e) if is_called_process_error(&e) => {
-                print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                print(&format!(
+                    "ERROR: Failed to update {} firmware: {}",
+                    self.name,
+                    e.str()
+                ));
                 Ok(false)
             }
             Err(e) => Err(e),
@@ -1468,17 +1710,41 @@ impl HostComponent {
     /// through the mst device.
     fn cpld_install(&self, image_path: &str) -> PyResult<bool> {
         match self.kind {
-            Kind::CpldSn2201 => {
-                self.cpldupdate(&["cpldupdate", "--gpio", image_path, "--uncustomized", "--print-progress"], image_path)
-            }
-            Kind::CpldSn4280 => self.cpldupdate(&["cpldupdate", "--gpio", "--print-progress", image_path], image_path),
+            Kind::CpldSn2201 => self.cpldupdate(
+                &[
+                    "cpldupdate",
+                    "--gpio",
+                    image_path,
+                    "--uncustomized",
+                    "--print-progress",
+                ],
+                image_path,
+            ),
+            Kind::CpldSn4280 => self.cpldupdate(
+                &["cpldupdate", "--gpio", "--print-progress", image_path],
+                image_path,
+            ),
             Kind::FpgaDpu => {
-                print(&format!("INFO: Installing {} firmware update: path={image_path}", self.name));
-                let cmd = ["cpldupdate", "--cpld_chain", "2", "--gpio", "--print-progress", image_path];
+                print(&format!(
+                    "INFO: Installing {} firmware update: path={image_path}",
+                    self.name
+                ));
+                let cmd = [
+                    "cpldupdate",
+                    "--cpld_chain",
+                    "2",
+                    "--gpio",
+                    "--print-progress",
+                    image_path,
+                ];
                 match self.with_mst(|| check_call(&cmd, false)) {
                     Ok(()) => Ok(true),
                     Err(e) if is_called_process_error(&e) => {
-                        print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                        print(&format!(
+                            "ERROR: Failed to update {} firmware: {}",
+                            self.name,
+                            e.str()
+                        ));
                         Ok(false)
                     }
                     Err(e) => Err(e),
@@ -1492,9 +1758,22 @@ impl HostComponent {
                     let r = self.with_mst(|| {
                         let mst_dev = self.get_mst_device()?;
                         notice_print(&format!("{}: mst device = {mst_dev}", self.name));
-                        let cmd = ["cpldupdate", "--dev", mst_dev.as_str(), "--print-progress", image_path];
-                        print(&format!("INFO: Installing {} firmware update: path={image_path}", self.name));
-                        notice_print(&format!("{}: cpldupdate begin: {}", self.name, cmd.join(" ")));
+                        let cmd = [
+                            "cpldupdate",
+                            "--dev",
+                            mst_dev.as_str(),
+                            "--print-progress",
+                            image_path,
+                        ];
+                        print(&format!(
+                            "INFO: Installing {} firmware update: path={image_path}",
+                            self.name
+                        ));
+                        notice_print(&format!(
+                            "{}: cpldupdate begin: {}",
+                            self.name,
+                            cmd.join(" ")
+                        ));
                         check_call(&cmd, false)?;
                         notice_print(&format!("{}: cpldupdate done", self.name));
                         Ok(())
@@ -1506,13 +1785,20 @@ impl HostComponent {
                             Ok(false)
                         }
                         Err(e) if is_called_process_error(&e) => {
-                            print(&format!("ERROR: Failed to update {} firmware: {}", self.name, e.str()));
+                            print(&format!(
+                                "ERROR: Failed to update {} firmware: {}",
+                                self.name,
+                                e.str()
+                            ));
                             Ok(false)
                         }
                         Err(e) => Err(e),
                     };
                 }
-                self.cpldupdate(&["cpldupdate", "--gpio", "--print-progress", image_path], image_path)
+                self.cpldupdate(
+                    &["cpldupdate", "--gpio", "--print-progress", image_path],
+                    image_path,
+                )
             }
         }
     }
@@ -1524,10 +1810,16 @@ impl HostComponent {
         }
         with_mpfa(image_path, |mpfa| {
             if !mpfa.metadata.has_option("firmware", "burn") {
-                return Err(PyErr::runtime_error(format!("Failed to get {} burn firmware", self.name)));
+                return Err(PyErr::runtime_error(format!(
+                    "Failed to get {} burn firmware",
+                    self.name
+                )));
             }
             let burn = mpfa.metadata.get("firmware", "burn")?;
-            print(&format!("INFO: Processing {} burn file: firmware install", self.name));
+            print(&format!(
+                "INFO: Processing {} burn file: firmware install",
+                self.name
+            ));
             self.cpld_install(&io::join(&mpfa.contents, &burn))
         })
     }
@@ -1539,10 +1831,16 @@ impl HostComponent {
         self.pre_update_hook()?;
         let refreshed = with_mpfa(image_path, |mpfa| -> PyResult<bool> {
             if !mpfa.metadata.has_option("firmware", "burn") {
-                return Err(PyErr::runtime_error(format!("Failed to get {} burn firmware", self.name)));
+                return Err(PyErr::runtime_error(format!(
+                    "Failed to get {} burn firmware",
+                    self.name
+                )));
             }
             let burn = mpfa.metadata.get("firmware", "burn")?;
-            print(&format!("INFO: Processing {} burn file: firmware install", self.name));
+            print(&format!(
+                "INFO: Processing {} burn file: firmware install",
+                self.name
+            ));
             if !self.cpld_install(&io::join(&mpfa.contents, &burn))? {
                 return Ok(false);
             }
@@ -1555,10 +1853,16 @@ impl HostComponent {
                 return Ok(false);
             }
             if !mpfa.metadata.has_option("firmware", "refresh") {
-                return Err(PyErr::runtime_error(format!("Failed to get {} refresh firmware", self.name)));
+                return Err(PyErr::runtime_error(format!(
+                    "Failed to get {} refresh firmware",
+                    self.name
+                )));
             }
             let refresh = mpfa.metadata.get("firmware", "refresh")?;
-            print(&format!("INFO: Processing {} refresh file: firmware update", self.name));
+            print(&format!(
+                "INFO: Processing {} refresh file: firmware update",
+                self.name
+            ));
             self.cpld_install(&io::join(&mpfa.contents, &refresh))
         })?;
         if refreshed {
@@ -1594,8 +1898,12 @@ impl HostComponent {
             return Ok(());
         }
         // `getattr(self, '_dpus_to_monitor', {})`.
-        let ctls: Vec<(String, BootProg)> =
-            self.dpus_to_monitor.lock().ok().and_then(|g| g.clone()).unwrap_or_default();
+        let ctls: Vec<(String, BootProg)> = self
+            .dpus_to_monitor
+            .lock()
+            .ok()
+            .and_then(|g| g.clone())
+            .unwrap_or_default();
         if !ctls.is_empty() {
             let mut names: Vec<&str> = ctls.iter().map(|(n, _)| n.as_str()).collect();
             names.sort();
@@ -1609,8 +1917,11 @@ impl HostComponent {
                 WAIT_FOR_DPU_OS_RUN_TIMEOUT as f64,
                 DPU_BOOT_PROGRESS_POLL_INTERVAL as f64,
             );
-            let mut not_running: Vec<&str> =
-                ctls.iter().filter(|(_, c)| !c.in_os_run()).map(|(n, _)| n.as_str()).collect();
+            let mut not_running: Vec<&str> = ctls
+                .iter()
+                .filter(|(_, c)| !c.in_os_run())
+                .map(|(n, _)| n.as_str())
+                .collect();
             not_running.sort();
             if !not_running.is_empty() {
                 warning_print(&format!(
@@ -1635,8 +1946,14 @@ impl HostComponent {
         let (pn, ver, min, fmt) = if self.kind == Kind::FpgaDpu {
             (
                 format!("/var/run/hw-management/dpu{}/system/fpga1_pn", self.idx),
-                format!("/var/run/hw-management/dpu{}/system/fpga1_version", self.idx),
-                format!("/var/run/hw-management/dpu{}/system/fpga1_version_min", self.idx),
+                format!(
+                    "/var/run/hw-management/dpu{}/system/fpga1_version",
+                    self.idx
+                ),
+                format!(
+                    "/var/run/hw-management/dpu{}/system/fpga1_version_min",
+                    self.idx
+                ),
                 "FPGA",
             )
         } else {
@@ -1722,7 +2039,11 @@ impl PyObject for HostComponent {
                 let output = match check_output_merged(&[SSD_FW_UPDATE, "-q"]) {
                     Ok(o) => o.trim_end_matches('\n').to_string(),
                     Err(e) if is_called_process_error(&e) => {
-                        return Err(PyErr::runtime_error(format!("Failed to get {} info: {}", self.name, e.str())))
+                        return Err(PyErr::runtime_error(format!(
+                            "Failed to get {} info: {}",
+                            self.name,
+                            e.str()
+                        )))
                     }
                     Err(e) => return Err(e),
                 };
@@ -1731,16 +2052,24 @@ impl PyObject for HostComponent {
                         return field(line).map(PyVal::Str);
                     }
                 }
-                Err(PyErr::runtime_error(format!("Failed to parse {} version", self.name)))
+                Err(PyErr::runtime_error(format!(
+                    "Failed to parse {} version",
+                    self.name
+                )))
             }
-            Kind::Bios => self.dmidecode(&["dmidecode", "--oem-string", "1"]).map(PyVal::Str),
+            Kind::Bios => self
+                .dmidecode(&["dmidecode", "--oem-string", "1"])
+                .map(PyVal::Str),
             Kind::BiosSn2201 => {
                 let output = self.dmidecode(&["dmidecode", "-t0"])?;
-                let re = Regex::new("Version: (.*)").map_err(|e| PyErr::runtime_error(e.to_string()))?;
-                Ok(PyVal::Str(match re.captures(&output).and_then(|c| c.get(1)) {
-                    Some(m) => m.as_str().to_string(),
-                    None => "Unknown version".to_string(),
-                }))
+                let re =
+                    Regex::new("Version: (.*)").map_err(|e| PyErr::runtime_error(e.to_string()))?;
+                Ok(PyVal::Str(
+                    match re.captures(&output).and_then(|c| c.get(1)) {
+                        Some(m) => m.as_str().to_string(),
+                        None => "Unknown version".to_string(),
+                    },
+                ))
             }
             _ => self.cpld_firmware_version(),
         }
@@ -1751,7 +2080,10 @@ impl PyObject for HostComponent {
                 let info = OnieUpdater::get_onie_firmware_info(image_path)?;
                 match info.into_iter().find(|(k, _)| k == "image_version") {
                     Some((_, v)) => Ok(PyVal::Str(v)),
-                    None => Err(PyErr::runtime_error(format!("Failed to get {} available firmware version", self.name))),
+                    None => Err(PyErr::runtime_error(format!(
+                        "Failed to get {} available firmware version",
+                        self.name
+                    ))),
                 }
             }
             Kind::Ssd => {
@@ -1770,16 +2102,28 @@ impl PyObject for HostComponent {
                         upgrade_required = Some(field(line)?);
                     }
                 }
-                if !upgrade_required.as_deref().is_some_and(|u| u == "yes" || u == "no") {
-                    return Err(PyErr::runtime_error(format!("Failed to parse {} firmware upgrade status", self.name)));
+                if !upgrade_required
+                    .as_deref()
+                    .is_some_and(|u| u == "yes" || u == "no")
+                {
+                    return Err(PyErr::runtime_error(format!(
+                        "Failed to parse {} firmware upgrade status",
+                        self.name
+                    )));
                 }
                 if upgrade_required.as_deref() == Some("no") {
                     return current.map(PyVal::Str).ok_or_else(|| {
-                        PyErr::runtime_error(format!("Failed to parse {} current firmware version", self.name))
+                        PyErr::runtime_error(format!(
+                            "Failed to parse {} current firmware version",
+                            self.name
+                        ))
                     });
                 }
                 available.map(PyVal::Str).ok_or_else(|| {
-                    PyErr::runtime_error(format!("Failed to parse {} available firmware version", self.name))
+                    PyErr::runtime_error(format!(
+                        "Failed to parse {} available firmware version",
+                        self.name
+                    ))
                 })
             }
             Kind::Bios => Err(PyErr::not_implemented_msg(format!(
@@ -1789,7 +2133,10 @@ impl PyObject for HostComponent {
             Kind::BiosSn2201 => Err(PyErr::not_implemented()),
             _ => with_mpfa(image_path, |mpfa| {
                 if !mpfa.metadata.has_option("version", &self.name) {
-                    return Err(PyErr::runtime_error(format!("Failed to get {} available firmware version", self.name)));
+                    return Err(PyErr::runtime_error(format!(
+                        "Failed to get {} available firmware version",
+                        self.name
+                    )));
                 }
                 mpfa.metadata.get("version", &self.name).map(PyVal::Str)
             }),
@@ -1803,14 +2150,19 @@ impl PyObject for HostComponent {
             ))),
             Kind::Ssd => self.ssd_update_notification(image_path),
             Kind::BiosSn2201 => Ok(PyVal::None),
-            _ => Ok(PyVal::Str(if splitext_ext(basename(image_path)) == ".vme" {
-                format!(
+            _ => Ok(PyVal::Str(
+                if splitext_ext(basename(image_path)) == ".vme" {
+                    format!(
                     "Power cycle (with 30 sec delay) or refresh image is required to complete {} firmware update",
                     self.name
                 )
-            } else {
-                format!("Immediate power cycle is required to complete {} firmware update", self.name)
-            })),
+                } else {
+                    format!(
+                        "Immediate power cycle is required to complete {} firmware update",
+                        self.name
+                    )
+                },
+            )),
         }
     }
     fn install_firmware(&self, image_path: &str) -> PyResult<PyVal> {
@@ -1889,7 +2241,9 @@ fn cpld_component_list(kind: Kind) -> PyResult<Vec<PyVal>> {
     };
     let n = read_generic_file(file, 1, false)?.unwrap_or_default();
     let count = py_int(n.trim_end_matches('\n'))?;
-    (1..=count).map(|i| Ok(PyVal::Obj(Arc::new(HostComponent::new(kind, i)?)))).collect()
+    (1..=count)
+        .map(|i| Ok(PyVal::Obj(Arc::new(HostComponent::new(kind, i)?))))
+        .collect()
 }
 
 /// `DeviceDataManager.get_bios_component()`.
@@ -1949,12 +2303,18 @@ mod tests {
         assert_eq!(zfill("5", 2), "05");
         assert_eq!(zfill("-5", 3), "-05");
         assert_eq!(zfill("123", 2), "123");
-        let mut ini = Ini { defaults: Vec::new(), sections: Vec::new() };
+        let mut ini = Ini {
+            defaults: Vec::new(),
+            sections: Vec::new(),
+        };
         ini.parse("[version]\nCPLD1 = CPLD000085_REV0700\n[firmware]\nburn=b.vme\n  more\nrefresh: %(burn)s.r\n", "m.ini").unwrap();
         assert!(ini.has_option("version", "cpld1"));
         assert_eq!(ini.get("firmware", "burn").unwrap(), "b.vme\nmore");
         assert_eq!(ini.get("firmware", "refresh").unwrap(), "b.vme\nmore.r");
-        let mut bad = Ini { defaults: Vec::new(), sections: Vec::new() };
+        let mut bad = Ini {
+            defaults: Vec::new(),
+            sections: Vec::new(),
+        };
         assert_eq!(
             bad.parse("x=1\n", "m.ini").unwrap_err().str(),
             "File contains no section headers.\nfile: 'm.ini', line: 1\n'x=1\\n'"
@@ -1965,7 +2325,8 @@ mod tests {
     /// harness (driver.py), step for step.
     #[test]
     fn component_differential() {
-        let (Ok(script), Ok(out)) = (std::env::var("COMP_SCRIPT"), std::env::var("COMP_OUT")) else {
+        let (Ok(script), Ok(out)) = (std::env::var("COMP_SCRIPT"), std::env::var("COMP_OUT"))
+        else {
             return;
         };
         let steps = platform_base::json::load(&script).unwrap();
