@@ -3,6 +3,8 @@ module(
     version = "1.0.1",
 )
 
+# Keep the transitive APT link and archive rules aligned with the image.
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.22", repo_name = None)
 bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
 bazel_dep(
     name = "sonic-build-infra",
