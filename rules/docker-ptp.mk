@@ -16,7 +16,7 @@ $(DOCKER_PTP)_CONTAINER_NAME = ptp
 
 $(DOCKER_PTP)_SERVICE_REQUIRES = config-setup
 $(DOCKER_PTP)_SERVICE_AFTER = database syncd
-$(DOCKER_PTP)_CONTAINER_PRIVILEGED = true
+$(DOCKER_PTP)_CONTAINER_PRIVILEGED = false
 $(DOCKER_PTP)_CONTAINER_VOLUMES += /etc/sonic:/etc/sonic:ro
 
 $(DOCKER_PTP)_CLI_CONFIG_PLUGIN = /cli/config/plugins/ptp.py
@@ -42,4 +42,6 @@ SONIC_PACKAGES_LOCAL += $(DOCKER_PTP)
 endif
 endif
 
-$(DOCKER_PTP)_RUN_OPT += --privileged -v /etc/sonic:/etc/sonic:ro
+# $(DOCKER_PTP)_RUN_OPT unused for SONIC_PACKAGES_LOCAL (see sonic-package-manager manifest path)
+# $(DOCKER_PTP)_RUN_OPT += -t --cap-add=SYS_TIME --cap-add=NET_ADMIN
+# $(DOCKER_PTP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
