@@ -207,6 +207,17 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
                 self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
                                      for arg in call["arguments"]))
 
+    def test_native_vs_keeps_the_shared_server_when_ci_scratch_is_available(self):
+        scratch = self.root / "registered-ci-job"
+        scratch.mkdir()
+        self.installer(SONIC_BAZEL_JOB_TEMP=str(scratch))
+        self.assert_pairs()
+        self.assertEqual(list(scratch.iterdir()), [])
+        for call in self.recorded_calls():
+            self.assertFalse(any(arg.startswith(("--output_base=", "--output_user_root="))
+                                 for arg in call["arguments"]))
+            self.assertNotIn("shutdown", call["arguments"])
+
     def test_missing_debug_outputs_are_recreated_without_changing_runtime(self):
         self.installer()
         before = {name: (self.target / name).stat().st_mtime_ns for name in self.archives[::2]}

@@ -3,6 +3,7 @@
 
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 import stat
 import subprocess
@@ -28,8 +29,10 @@ class SwssImageRebuildTest(unittest.TestCase):
         self.owner = self.output_base / "external/sonic-swss+"
         (self.owner / "fpmsyncd").mkdir(parents=True)
         (self.execution_root / "external/sonic-swss+").symlink_to(self.owner, target_is_directory=True)
+        self.registry_owner = self.owner
         self.source = self.owner / probe.SOURCE_PATH
         self.original = probe.SHEBANG + b"\nprint('fixture')\n"
+        self.expected_producer_bytes = self.original
         self.source.write_bytes(self.original)
         self.source.chmod(0o640)
         self.output = self.root / "artifacts"
@@ -44,17 +47,37 @@ class SwssImageRebuildTest(unittest.TestCase):
         self.calls, self.phase_sources = [], {}
         self.fault = {}
         self.phase = None
+        self.private_bases = []
 
     def command(self, argv, **kwargs):
-        self.calls.append(list(argv))
         self.assertEqual(argv[0], self.bazel)
+        self.assertTrue(argv[1].startswith("--output_base="))
+        base = Path(argv[1].split("=", 1)[1])
+        self.assertNotEqual(base, self.output_base)
+        argv = [argv[0], *argv[2:]]
+        self.calls.append(list(argv))
         self.assertTrue(kwargs["check"])
-        self.assertEqual(argv[2:2 + len(self.flags)], self.flags)
         command = argv[1]
+        if command == "shutdown":
+            if self.fault.get("shutdown"):
+                raise subprocess.CalledProcessError(1, argv)
+            return subprocess.CompletedProcess(argv, 0)
+        options = self.flags + ["--repo_contents_cache=", "--symlink_prefix=/"]
+        self.assertEqual(argv[2:2 + len(options)], options)
         if command == "info":
             self.assertEqual(argv[-1], "output_base")
-            value = self.fault.get("info", str(self.output_base) + "\n")
+            self.private_bases.append(base)
+            value = self.fault.get("info", str(base) + "\n")
             return subprocess.CompletedProcess(argv, 0, stdout=value)
+        self.assertEqual(base, self.private_bases[-1])
+        if command == "build" and argv[-1] == probe.SOURCE_LABEL:
+            self.private_exec = base / "execroot/_main"
+            (self.private_exec / "external").mkdir(parents=True)
+            owner = base / "external/sonic-swss+"
+            shutil.copytree(self.registry_owner, owner, symlinks=True)
+            (self.private_exec / "external/sonic-swss+").symlink_to(owner, target_is_directory=True)
+            self.private_source = owner / probe.SOURCE_PATH
+            return subprocess.CompletedProcess(argv, 0)
         if command == "cquery":
             target = argv[-2]
             self.assertEqual(argv[-1], "--output=files")
@@ -72,18 +95,19 @@ class SwssImageRebuildTest(unittest.TestCase):
         self.assertIn("--jobs=2", argv)
         event = next(arg.split("=", 1)[1] for arg in argv if arg.startswith("--build_event_json_file="))
         self.phase = Path(event).name.removesuffix("-events.json")
-        self.phase_sources[self.phase] = self.source.read_bytes()
+        self.phase_sources[self.phase] = self.private_source.read_bytes()
+        self.assertEqual(self.source.read_bytes(), self.expected_producer_bytes)
         self.assertEqual(argv[-len(self.targets):], self.targets)
         if self.fault.get("fail_phase") == self.phase:
             raise subprocess.CalledProcessError(1, argv)
         for target, relative in self.paths.items():
-            data = self.source.read_bytes() if target in self.runtime else b"unchanged " + target.encode()
+            data = self.private_source.read_bytes() if target in self.runtime else b"unchanged " + target.encode()
             if self.phase == "source-edit" and self.fault.get("inert_edit"):
                 data = self.original if target in self.runtime else data
             if ((self.phase == "source-edit" and self.fault.get("changed_stable") == target) or
                     (self.phase == self.fault.get("changed_phase") and target == self.runtime[0])):
                 data += b"unexpected change"
-            path = self.execution_root / relative
+            path = self.private_exec / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         return subprocess.CompletedProcess(argv, 0)
@@ -111,7 +135,7 @@ class SwssImageRebuildTest(unittest.TestCase):
     def test_four_phases_resolve_actual_owner_and_preserve_all_options_and_outputs(self):
         self.invoke()
         self.assertEqual(self.calls[0][1], "info")
-        self.assertEqual(self.calls[1][-2], probe.SOURCE_LABEL)
+        self.assertEqual(self.calls[2][-2], probe.SOURCE_LABEL)
         self.assertEqual(list(self.phase_sources), ["baseline", "no-op", "source-edit", "restored"])
         for phase, data in self.phase_sources.items():
             expected = probe.SHEBANG + probe.PROBE + self.original[len(probe.SHEBANG):] if phase == "source-edit" else self.original
@@ -119,7 +143,7 @@ class SwssImageRebuildTest(unittest.TestCase):
         receipt = self.assert_restored()
         self.assertEqual(receipt["status"], "passed")
         self.assertEqual([row["phase"] for row in receipt["builds"]], list(self.phase_sources))
-        self.assertEqual(len(self.calls), 2 + 4 * (1 + len(self.targets)))
+        self.assertEqual(len(self.calls), 4 + 4 * (1 + len(self.targets)))
 
     def test_each_failed_build_restores_exact_owner_bytes_and_mode(self):
         for phase in ("baseline", "no-op", "source-edit", "restored"):
@@ -127,6 +151,34 @@ class SwssImageRebuildTest(unittest.TestCase):
                 self.fault = {"fail_phase": phase}
                 with self.assertRaises(subprocess.CalledProcessError): self.invoke()
                 self.assertEqual(self.assert_restored()["status"], "failed")
+
+    def test_interrupted_probe_base_and_producer_are_never_reused(self):
+        # The old producer extraction is marked. Every new base must fetch the archive again.
+        self.registry_owner = self.root / "registry-source"
+        shutil.copytree(self.owner, self.registry_owner)
+        self.expected_producer_bytes = probe.SHEBANG + probe.PROBE + self.original[len(probe.SHEBANG):]
+        self.source.write_bytes(self.expected_producer_bytes)
+        self.fault = {"fail_phase": "source-edit"}
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.invoke()
+        self.fault = {}
+        self.invoke()
+        self.assertEqual(len(set(self.private_bases)), 2)
+        self.assertFalse(any(base.exists() for base in self.private_bases))
+        self.assertEqual(self.source.read_bytes(), self.expected_producer_bytes)
+        self.assertEqual(self.phase_sources["restored"], self.original)
+        self.assertEqual(json.loads((self.output / "rebuild.json").read_text())["status"], "passed")
+
+    def test_failed_shutdown_preserves_private_base_for_post_job_cleanup(self):
+        self.fault = {"shutdown": True}
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.invoke()
+        base = self.private_bases[-1]
+        try:
+            self.assertTrue(base.is_dir())
+            self.assertEqual(self.assert_restored()["status"], "passed")
+        finally:
+            shutil.rmtree(base, ignore_errors=True)
 
     def test_output_and_invalidation_failures_restore_source(self):
         faults = [{"inert_edit": True}, {"changed_phase": "no-op"}, {"changed_phase": "restored"}]
@@ -145,7 +197,7 @@ class SwssImageRebuildTest(unittest.TestCase):
             with self.subTest(value=value):
                 self.calls.clear(); self.fault = {"info": value}
                 with self.assertRaises(ValueError): self.invoke()
-                self.assertFalse(any(call[1] == "build" for call in self.calls))
+                self.assertFalse(any(call[1] == "build" and call[-1] != probe.SOURCE_LABEL for call in self.calls))
                 self.assertEqual(self.source.read_bytes(), self.original)
 
     def test_source_query_rejects_missing_multiple_local_and_escaping_paths(self):
@@ -155,7 +207,7 @@ class SwssImageRebuildTest(unittest.TestCase):
             with self.subTest(value=value):
                 self.calls.clear(); self.fault = {"source": value}
                 with self.assertRaises(ValueError): self.invoke()
-                self.assertFalse(any(call[1] == "build" for call in self.calls))
+                self.assertFalse(any(call[1] == "build" and call[-1] != probe.SOURCE_LABEL for call in self.calls))
                 self.assertEqual(self.source.read_bytes(), self.original)
 
     def test_source_file_symlink_and_unexpected_content_are_rejected_before_build(self):
@@ -168,7 +220,7 @@ class SwssImageRebuildTest(unittest.TestCase):
             self.source.write_bytes(data); self.calls.clear()
             with self.assertRaises(ValueError): self.invoke()
             self.assertEqual(self.source.read_bytes(), data)
-            self.assertFalse(any(call[1] == "build" for call in self.calls))
+            self.assertFalse(any(call[1] == "build" and call[-1] != probe.SOURCE_LABEL for call in self.calls))
 
     def test_source_parent_symlink_cannot_redirect_the_edit_outside_owner(self):
         outside = self.root / "unrelated-owner/fpmsyncd"; outside.mkdir(parents=True)
@@ -177,7 +229,7 @@ class SwssImageRebuildTest(unittest.TestCase):
         (self.owner / "fpmsyncd").symlink_to(outside, target_is_directory=True)
         with self.assertRaises(ValueError): self.invoke()
         self.assertEqual(outside_source.read_bytes(), self.original)
-        self.assertFalse(any(call[1] == "build" for call in self.calls))
+        self.assertFalse(any(call[1] == "build" and call[-1] != probe.SOURCE_LABEL for call in self.calls))
 
 
 if __name__ == "__main__":

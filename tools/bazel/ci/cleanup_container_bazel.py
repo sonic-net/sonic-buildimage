@@ -290,6 +290,9 @@ def cleanup(home, workspace, runner_temp, directory, bazel="bazel", host=False):
             remove_selected(cache, LOCAL_CACHES)
         else:
             print("No container-local Bazel caches to remove")
+    if os.environ["GITHUB_JOB"] == "archive":
+        # Source probes may be interrupted before an artifact upload is eligible.
+        remove_selected(directory, ("archive-bazel",))
     cleanup_artifacts(workspace, runner_temp, directory, host=host)
 
 
