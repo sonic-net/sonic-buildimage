@@ -653,7 +653,7 @@ libzopfli1==1.0.3-3
 libzstd-dev==1.5.7+dfsg-1
 libzvbi-common==0.2.44-1
 libzvbi0t64==0.2.44-1
-linux-libc-dev==6.12.115-2
+linux-libc-dev==6.12.116-1
 linux-sysctl-defaults==4.12.1
 llvm==1:19.0-63
 llvm-19==1:19.1.7-3+b1
@@ -828,9 +828,9 @@ unicode-data==15.1.0-1
 unzip==6.0-29+deb13u1
 va-driver-all==2.22.0-3
 vdpau-driver-all==1.5-3+b1
-vim==2:9.1.1230-2+deb13u1
-vim-common==2:9.1.1230-2+deb13u1
-vim-runtime==2:9.1.1230-2+deb13u1
+vim==2:9.1.1230-2+deb13u2
+vim-common==2:9.1.1230-2+deb13u2
+vim-runtime==2:9.1.1230-2+deb13u2
 wget==1.25.0-2
 wireshark==4.4.19-0+deb13u1
 wireshark-common==4.4.19-0+deb13u1
@@ -839,7 +839,7 @@ xauth==1:1.1.2-1.1
 xdg-user-dirs==0.18-2
 xkb-data==2.42-1
 xml-core==0.19
-xxd==2:9.1.1230-2+deb13u1
+xxd==2:9.1.1230-2+deb13u2
 xz-utils==5.8.1-1+deb13u2
 zlib1g==1:1.3.dfsg+really1.3.1-1+deb13u1
 zlib1g-dev==1:1.3.dfsg+really1.3.1-1+deb13u1
