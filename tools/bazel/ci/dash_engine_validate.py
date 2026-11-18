@@ -122,6 +122,23 @@ def debug_alternatives(payload):
     return expected
 
 
+def verify_source_payloads(archives, layer, excludes, includes):
+    """Preserve every retained owner payload under the layer's declared filters."""
+    source = check.payload(layer)
+    original = {}
+    for archive in archives:
+        for path, item in check.payload(archive).items():
+            if item["kind"] == "directory":
+                continue
+            normalized = "usr/" + path if path.startswith(("lib/", "bin/", "sbin/")) else path
+            check.require(normalized not in original or original[normalized] == item, "source owners collide: " + normalized)
+            original[normalized] = item
+    expected = image_validation.oci_filtered(original, excludes, includes)
+    check.require(expected == {path: item for path, item in source.items() if item["kind"] != "directory"},
+                  "flattened source packages changed payloads")
+    return source
+
+
 def validate(directory):
     clean_source(directory)
     identity = source_identity()
@@ -142,17 +159,9 @@ def validate(directory):
     start = files_only["usr/bin/start.sh"]
     check.require(start["sha256"] == check.sha(ROOT / "platform/vs/docker-dash-engine/start.sh") and
                   (start["kind"], start["mode"], start["uid"], start["gid"]) == ("file", 0o755, 0, 0), "original startup script changed")
-    source = check.payload(directory / "engine.source.tar")
-    original = {}
-    for name in ("pi.source.tar", "bmv2.source.tar", "nnpy.source.tar"):
-        for path, item in check.payload(directory / name).items():
-            if item["kind"] == "directory":
-                continue
-            normalized = "usr/" + path if path.startswith(("lib/", "bin/", "sbin/")) else path
-            check.require(normalized not in original or original[normalized] == item, "source owners collide: " + normalized)
-            original[normalized] = item
-    check.require(original == {path: item for path, item in source.items() if item["kind"] != "directory"},
-                  "flattened source packages changed payloads")
+    source = verify_source_payloads(
+        [directory / name for name in ("pi.source.tar", "bmv2.source.tar", "nnpy.source.tar")],
+        directory / "engine.source.tar", directory / "source-excludes.txt", directory / "source-includes.txt")
     nnpy = check.payload(directory / "nnpy.source.tar")
     check.require("usr/lib/python3/dist-packages/_nnpy.so" in nnpy and
                   "usr/lib/python3/dist-packages/nnpy-1.4.2.egg-info/PKG-INFO" in nnpy, "nnpy extension/distribution metadata absent")

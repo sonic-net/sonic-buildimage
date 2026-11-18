@@ -35,6 +35,8 @@ TARGETS = {
     "engine.debug.tar": OWNER + "all_debug_symbols",
     "engine.debug-tools.tar": OWNER + "debug_tools",
     "engine.source.tar": OWNER + "source_runtime",
+    "source-excludes.txt": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source-includes.txt": "//tools/bazel/dpkg:oci_includes",
     "engine.files.tar": OWNER + "files",
     "engine.packages.json": OWNER + "runtime_package_metadata",
     "engine.status": OWNER + "installed_packages",
