@@ -189,6 +189,29 @@ function finalize_boot()
     fi
 }
 
+# Gets the last cpufreq.default_governor= before SONIC_BOOT_TYPE= in the given command line.
+function get_boot_loader_cpufreq_governor() {
+    local -a args
+    local arg governor=""
+    read -r -a args <<< "${1%%SONIC_BOOT_TYPE=*}"
+    for arg in "${args[@]}"; do
+        if [[ "$arg" == cpufreq.default_governor=* ]]; then
+            governor="${arg#cpufreq.default_governor=}"
+        fi
+    done
+    echo "$governor"
+}
+
+# Restore the governor a cold boot selects: boot-loader cmdline, else kernel-config default.
+function restore_cpufreq_governor() {
+    local governor
+    governor=$(get_boot_loader_cpufreq_governor "$(cat /proc/cmdline)")
+    if [[ -z "$governor" ]]; then
+        governor=$(cat "/boot/config-$(uname -r)" | grep -E 'CONFIG_CPU_FREQ_DEFAULT_GOV_.*=y' | sed -E 's/CONFIG_CPU_FREQ_DEFAULT_GOV_(.*)=y/\1/')
+    fi
+    set_cpufreq_governor "$governor"
+}
+
 # Finalize warm/fast boot in global namespace.
 function finalize_global() {
     local -r asic_type=${ASIC_TYPE:-`sonic-cfggen -y /etc/sonic/sonic_version.yml -v asic_type`}
@@ -196,9 +219,7 @@ function finalize_global() {
     finalize_boot
 
     if [[ "$asic_type" == "mellanox" ]]; then
-        # Read default governor from kernel config
-        local -r default_governor=$(cat "/boot/config-$(uname -r)" | grep -E 'CONFIG_CPU_FREQ_DEFAULT_GOV_.*=y' | sed -E 's/CONFIG_CPU_FREQ_DEFAULT_GOV_(.*)=y/\1/')
-        set_cpufreq_governor "$default_governor"
+        restore_cpufreq_governor
     fi
 }
 
