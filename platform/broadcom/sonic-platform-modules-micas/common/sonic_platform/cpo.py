@@ -47,13 +47,21 @@ EEPROM_LOCK_RETRY = 0.001
 EEPROM_ACCESS_DELAY = 0.01
 
 
-class _BaillyEepromAccessMixin:
-    """Serialize joint OE/ELS MCU access and retain its settling interval."""
+class _EepromAccessDelayMixin:
+    """Delay EEPROM accesses until the device MCU is ready for the next one.
+
+    Override the Optoe read/write hooks so endpoint API callbacks use the same
+    exclusive file lock across cooperating objects and processes. Keep the lock
+    during the 10 ms MCU settling interval after each access, with a two-second
+    timeout when acquiring it. Page-0 selector recovery stays inside that lock.
+
+    Subclasses provide get_eeprom_path() and get_name().
+    """
 
     @contextmanager
     def _locked_eeprom(self, mode):
-        # Lock the EEPROM node itself so all endpoints/processes sharing the
-        # MCU coordinate, including callers of the legacy CPO implementation.
+        # Lock the EEPROM node so cooperating endpoints and processes use
+        # the same lock even when they access it through different API objects.
         with open(self.get_eeprom_path(), mode=mode, buffering=0) as fd:
             deadline = time.monotonic() + EEPROM_LOCK_TIMEOUT
             while True:
@@ -113,7 +121,7 @@ class _BaillyEepromAccessMixin:
             return False
 
 
-class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
+class Oe(_EepromAccessDelayMixin, OptoeOeBase):
     def __init__(self, oe_id, oe_config, hardware_info, bank=0):
         self.oe_id = int(oe_id)
         cmis_path = oe_config.get("i2c_path")
@@ -139,15 +147,15 @@ class Oe(_BaillyEepromAccessMixin, OptoeOeBase):
         return False
 
 
-class Elsfp(_BaillyEepromAccessMixin, OptoeElsfpBase):
-    """Bailly ELS endpoint sharing its OE MCU lock and access pacing."""
+class Elsfp(_EepromAccessDelayMixin, OptoeElsfpBase):
+    """ELS endpoint sharing its OE MCU lock and access pacing."""
 
     def __init__(self, els_id, els_config, eeprom_path, hardware_info, bank=0):
         self.els_id = int(els_id)
         self._presence_config = dict(els_config.get("els_presence") or {})
         self._eeprom_path = eeprom_path or ""
-        # Bailly RLM page displacement from cpo.json devices.ELSx.base_page.
-        # The ELS API factory passes it to BaillyElsfpMemMap.
+        # ELS/RLM page displacement from cpo.json devices.ELSx.base_page.
+        # The ELS API factory passes it to the endpoint memory map.
         self.base_page = int(els_config.get("base_page", 0))
         super().__init__(hardware_info, bank=bank)
 
