@@ -5,8 +5,8 @@ DASH profile. Component owners retain all compilation/install definitions.
 """
 
 SOURCE_PACKAGES = {
-    "p4lang-pi": "@p4lang_pi//:runtime",
-    "p4lang-bmv2": "@p4lang_bmv2//:runtime",
+    "p4lang-pi": "@p4lang_pi//:p4lang-pi.runtime",
+    "p4lang-bmv2": "@p4lang_bmv2//:p4lang-bmv2.runtime",
     "p4lang-p4c": "@p4c//:p4c_pkg",
     "libsai": "@sonic_dash//:runtime",
     "libswsscommon": "@sonic_swss_common//dist:libswsscommon_pkg",
@@ -24,8 +24,8 @@ OWNER_METADATA = [
     "@sonic_sairedis//:runtime_packages.json",
     "@sonic_fips//:runtime_packages.json",
     "@libnl3//:runtime_packages.json",
-    "@p4lang_pi//:runtime_packages.json",
-    "@p4lang_bmv2//:runtime_packages.json",
+    "@p4lang_pi//:p4lang-pi.runtime_metadata",
+    "@p4lang_bmv2//:p4lang-bmv2.runtime_metadata",
     "@p4c//:runtime_packages.json",
     "@sonic_dash//:runtime_packages.json",
 ]

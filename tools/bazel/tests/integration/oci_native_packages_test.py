@@ -124,11 +124,16 @@ class ValidateNativePackagesTest(unittest.TestCase):
                                        policy=self.policy, required_packages=required, required_sonames=sonames,
                                        gap_packages=gaps | {"openssh-client"}, fixture=True, **kwargs)
 
-    def forwarding_fixture(self, *, corrupt_stub=False, wrong_provider=False, no_provider_dwarf=False, missing_needed=False):
+    def forwarding_fixture(self, *, corrupt_stub=False, wrong_provider=False, no_provider_dwarf=False, missing_needed=False, with_local_code=False):
         """Link an empty executable whose actual main lives in a shared library."""
         original, provider, provider_symbols, provider_id = self.compile(0, "forward_main", function="main")
         launcher = self.root / "launcher"
-        subprocess.run(["cc", "-Wl,--build-id=sha1", "-Wl,--no-as-needed", str(original), "-o", str(launcher)],
+        local = []
+        if with_local_code:
+            helper = self.root / "launcher_helper.c"
+            helper.write_text("int launcher_helper(void) { return 7; }\n")
+            local = ["-g", str(helper)]
+        subprocess.run(["cc", *local, "-Wl,--build-id=sha1", "-Wl,--no-as-needed", str(original), "-o", str(launcher)],
                        check=True, capture_output=True)
         launcher_id = re.search(r"Build ID: ([0-9a-f]+)", subprocess.check_output(
             ["readelf", "-n", str(launcher)], text=True))[1]
@@ -164,6 +169,14 @@ class ValidateNativePackagesTest(unittest.TestCase):
         self.assertEqual(launcher["debug_forwarding"]["symbol"], "main")
         self.assertEqual(launcher["debug_forwarding"]["provider"], self.soname_path)
         self.assertEqual(len(pairs), 2)
+
+    def test_launcher_with_local_code_keeps_forwarded_main_contract(self):
+        self.forwarding_fixture(with_local_code=True)
+        pairs = self.validate()["paired_symbols"]
+        launcher = next(item for item in pairs if item["path"] == "usr/bin/launcher")
+        self.assertFalse(launcher["has_dwarf"])
+        self.assertEqual(launcher["debug_forwarding"]["symbol"], "main")
+        self.assertEqual(launcher["debug_forwarding"]["provider"], self.soname_path)
 
     def test_source_free_launcher_requires_the_explicit_contract(self):
         self.forwarding_fixture()

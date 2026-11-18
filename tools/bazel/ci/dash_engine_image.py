@@ -35,6 +35,8 @@ TARGETS = {
     "engine.debug.tar": OWNER + "all_debug_symbols",
     "engine.debug-tools.tar": OWNER + "debug_tools",
     "engine.source.tar": OWNER + "source_runtime",
+    "source-excludes.txt": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source-includes.txt": "//tools/bazel/dpkg:oci_includes",
     "engine.files.tar": OWNER + "files",
     "engine.packages.json": OWNER + "runtime_package_metadata",
     "engine.status": OWNER + "installed_packages",
@@ -43,8 +45,8 @@ TARGETS = {
     "base.packages.json": "//dockers/docker-base-trixie:runtime_package_metadata",
     "base.source.tar": "//dockers/docker-base-trixie:source_runtime",
     "openssh.source.tar": OWNER + "debug_client",
-    "pi.source.tar": "@p4lang_pi//:runtime",
-    "bmv2.source.tar": "@p4lang_bmv2//:runtime",
+    "pi.source.tar": "@p4lang_pi//:p4lang-pi.runtime",
+    "bmv2.source.tar": "@p4lang_bmv2//:p4lang-bmv2.runtime",
     "nnpy.source.tar": "@nnpy//:runtime",
 }
 

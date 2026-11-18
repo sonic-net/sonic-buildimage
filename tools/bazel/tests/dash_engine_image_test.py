@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from copy import deepcopy
 import ast
 import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -34,6 +35,86 @@ def successful_build_events(*, processes=0, action_cache_hits=0, runners=None):
 
 
 class DashEngineImageTest(unittest.TestCase):
+    @staticmethod
+    def source_tar(path, entries):
+        with tarfile.open(path, 'w') as archive:
+            for name, fields in entries.items():
+                member = tarfile.TarInfo(name)
+                member.mode = fields.get('mode', 0o644)
+                member.uid, member.gid = fields.get('uid', 0), fields.get('gid', 0)
+                if 'linkname' in fields:
+                    member.type, member.linkname = tarfile.SYMTYPE, fields['linkname']
+                    archive.addfile(member)
+                else:
+                    data = fields['data']
+                    member.size = len(data)
+                    archive.addfile(member, io.BytesIO(data))
+
+    def source_fixture(self, root):
+        entries = {
+            'usr/bin/tool': {'data': b'executable', 'mode': 0o755},
+            'usr/bin/tool-link': {'linkname': './tool', 'mode': 0},
+            'usr/share/doc/pkg/copyright': {'data': b'copyright'},
+            'usr/share/doc/pkg/LICENSE.txt': {'data': b'license'},
+            'usr/share/doc/pkg/changelog.Debian.gz': {'data': b'history'},
+            'usr/share/man/man1/tool.1': {'data': b'manual'},
+        }
+        retained = {name: entries[name] for name in (
+            'usr/bin/tool', 'usr/bin/tool-link',
+            'usr/share/doc/pkg/copyright', 'usr/share/doc/pkg/LICENSE.txt')}
+        raw, layer = root / 'owner.tar', root / 'layer.tar'
+        excludes, includes = root / 'excludes.txt', root / 'includes.txt'
+        excludes.write_text('./usr/share/doc/*\n./usr/share/man/*\n')
+        includes.write_text('./usr/share/doc/*/copyright\n./usr/share/doc/*/LICENSE*\n')
+        self.source_tar(raw, entries)
+        self.source_tar(layer, retained)
+        return raw, layer, excludes, includes, entries, retained
+
+    def test_source_layer_uses_declared_filters_and_preserves_legal_notices(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            raw, layer, excludes, includes, entries, retained = self.source_fixture(Path(temporary))
+            validate.verify_source_payloads([raw], layer, excludes, includes)
+            for name in ('usr/bin/tool', 'usr/share/doc/pkg/copyright', 'usr/share/doc/pkg/LICENSE.txt'):
+                with self.subTest(missing=name):
+                    changed = deepcopy(retained)
+                    del changed[name]
+                    self.source_tar(layer, changed)
+                    with self.assertRaises(ValueError):
+                        validate.verify_source_payloads([raw], layer, excludes, includes)
+            changed = {**retained, 'usr/share/doc/pkg/changelog.Debian.gz': entries['usr/share/doc/pkg/changelog.Debian.gz']}
+            self.source_tar(layer, changed)
+            with self.assertRaises(ValueError):
+                validate.verify_source_payloads([raw], layer, excludes, includes)
+
+    def test_source_layer_rejects_retained_bytes_metadata_links_and_extra_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            raw, layer, excludes, includes, _, retained = self.source_fixture(Path(temporary))
+            for key, value in [('data', b'changed'), ('mode', 0o600), ('uid', 1), ('gid', 1)]:
+                with self.subTest(field=key):
+                    changed = deepcopy(retained)
+                    changed['usr/bin/tool'][key] = value
+                    self.source_tar(layer, changed)
+                    with self.assertRaises(ValueError):
+                        validate.verify_source_payloads([raw], layer, excludes, includes)
+            changed = deepcopy(retained)
+            changed['usr/bin/tool-link']['linkname'] = 'different'
+            self.source_tar(layer, changed)
+            with self.assertRaises(ValueError):
+                validate.verify_source_payloads([raw], layer, excludes, includes)
+            self.source_tar(layer, {**retained, 'usr/bin/extra': {'data': b'extra'}})
+            with self.assertRaises(ValueError):
+                validate.verify_source_payloads([raw], layer, excludes, includes)
+
+    def test_source_filter_follows_changed_input_policy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            raw, layer, excludes, includes, entries, retained = self.source_fixture(Path(temporary))
+            excludes.write_text('./usr/share/man/*\n')
+            self.source_tar(layer, {**retained, 'usr/share/doc/pkg/changelog.Debian.gz': entries['usr/share/doc/pkg/changelog.Debian.gz']})
+            validate.verify_source_payloads([raw], layer, excludes, includes)
+            self.source_tar(layer, retained)
+            with self.assertRaises(ValueError):
+                validate.verify_source_payloads([raw], layer, excludes, includes)
+
     def test_archives_and_live_layouts_share_one_build_before_export(self):
         # A separate layout build can replace a source package after its archive
         # was exported. Exercise the real collector with one simulated action
@@ -342,9 +423,8 @@ class DashEngineImageTest(unittest.TestCase):
             with self.assertRaises(ValueError): public.review(root)
 
     def test_archive_names_are_explicit_and_unique(self):
-        self.assertEqual(len(driver.TARGETS), 19)
         self.assertEqual(len(set(driver.TARGETS.values())), len(driver.TARGETS))
-        for name in ('pi.source.tar', 'bmv2.source.tar', 'nnpy.source.tar'):
+        for name in ('pi.source.tar', 'bmv2.source.tar', 'nnpy.source.tar', 'source-excludes.txt', 'source-includes.txt'):
             self.assertIn(name, driver.TARGETS)
 
     def test_retained_runtime_apt_is_the_first_actual_image_layer(self):

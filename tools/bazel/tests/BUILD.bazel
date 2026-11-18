@@ -1168,6 +1168,8 @@ _SYNCD_P4_IMAGE_INPUTS = {
     "source_contract_path": _SYNCD_OWNER + ":source_contract",
     "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
     "dpkg_filter_path": "//dockers/docker-base-trixie:dpkg_01_drop",
+    "source_layer_excludes": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source_layer_includes": "//tools/bazel/dpkg:oci_includes",
     "base_path": _SYNCD_OWNER + ":config_engine_base_layout",
     "apt_layer": _SYNCD_OWNER + ":apt_deps",
     "debug_tools_layer": _SYNCD_OWNER + ":debug_tools",

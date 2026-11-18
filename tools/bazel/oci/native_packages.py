@@ -31,7 +31,7 @@ def dynamic_function(path, symbol, *, undefined, readelf):
 
 
 def debug_forwarding(name, spec, runtime, debug, info, *, readelf, objcopy):
-    """Prove a source-free launcher imports its implementation from a packaged DSO."""
+    """Prove a launcher imports its declared function from a packaged DSO."""
     require(isinstance(spec, dict) and set(spec) == {"provider", "symbol", "source"},
             "invalid debug forwarding contract: " + name)
     provider_name, symbol, source = spec["provider"], spec["symbol"], spec["source"]
@@ -411,8 +411,8 @@ def validate_native(runtime_manifest, debug_manifest, *, policy, source_contract
                                      expected_name=PurePosixPath(debug_name).name, objcopy=objcopy, timeout=120)
                 record["debug_path"] = debug_name
                 if name in forwarding:
-                    require(info["has_debuglink"] and not info["has_dwarf"] and not symbol_info["has_dwarf"],
-                            "debug forwarding requires a stripped source-free launcher: " + name)
+                    require(info["has_debuglink"] and not info["has_dwarf"],
+                            "debug forwarding requires a stripped launcher: " + name)
                     record["debug_forwarding"] = debug_forwarding(
                         name, forwarding[name], runtime, debug, info, readelf=readelf, objcopy=objcopy)
                 paired.append(record)

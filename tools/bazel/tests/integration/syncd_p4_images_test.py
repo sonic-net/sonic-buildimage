@@ -20,6 +20,7 @@ IMAGE_INPUTS = (
     "runtime_apt_selection", "debug_apt_selection",
     "runtime_archive", "debug_archive", "source_runtime_tar", "source_debug_tar",
     "source_receipt",
+    "source_layer_excludes", "source_layer_includes",
 )
 NATIVE_INPUTS = (
     "source_contract_path", "source_runtime_tar", "source_debug_tar", "source_receipt",

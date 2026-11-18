@@ -2,7 +2,7 @@
 """Check legal notices and runtime bytes after both real OCI filter passes."""
 
 import io
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import sys
 import tarfile
 
@@ -36,6 +36,16 @@ def contents(name):
 
 def write_fixture(path):
     with tarfile.open(path, "w", format=tarfile.GNU_FORMAT) as archive:
+        # Different source producers spell the same image directory differently.
+        # Docker requires a unique path, with TAR extraction's final entry winning.
+        for name, mode in (("./usr", 0o700), ("usr", 0o755)):
+            member = tarfile.TarInfo(name)
+            member.type, member.mode = tarfile.DIRTYPE, mode
+            member.uid, member.gid = 17, 23
+            archive.addfile(member)
+        stale = tarfile.TarInfo("./usr/bin/example")
+        stale.size, stale.mode = 3, 0o600
+        archive.addfile(stale, io.BytesIO(b"old"))
         for name in NOTICES + RUNTIME + EXCLUDED:
             member = tarfile.TarInfo(name)
             member.size = len(contents(name))
@@ -49,12 +59,16 @@ def check(path):
         name.removeprefix("./"): (contents(name), 0o755 if name in RUNTIME else 0o644, 17, 23)
         for name in NOTICES + RUNTIME
     }
-    actual = {}
+    actual, seen = {}, set()
     with tarfile.open(path) as archive:
         for member in archive:
+            name = str(PurePosixPath(member.name))
+            assert name not in seen, (path, name, "duplicate OCI path")
+            seen.add(name)
+            if member.isdir():
+                assert (name, member.mode, member.uid, member.gid) == ("usr", 0o755, 17, 23)
+                continue
             assert member.isfile(), (path, member.name, "unexpected non-file")
-            name = member.name.removeprefix("./")
-            assert name not in actual, (path, name, "duplicate file")
             actual[name] = (archive.extractfile(member).read(), member.mode, member.uid, member.gid)
     assert actual == expected, {
         "archive": str(path),
