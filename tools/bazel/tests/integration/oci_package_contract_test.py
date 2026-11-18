@@ -269,6 +269,20 @@ class SharedLibraryPolicyTest(SourcePackageFixture, unittest.TestCase):
                     self.build()
                 self.assertEqual(self.runtime_tar.read_bytes(), before)
 
+    def test_equivalent_owner_directory_names_share_one_installed_header(self):
+        for owner, spelling in (("libswsscommon", "./usr/bin"), ("libsairedis", "usr/bin")):
+            archive(self.packages[owner], self.entries[owner] + [(spelling, b"", 0o755, "directory", 0)])
+        self.build()
+        with tarfile.open(self.runtime_tar) as payload:
+            directories = [item for item in payload if str(Path(item.name)) == "usr/bin"]
+        self.assertEqual([(item.isdir(), item.mode, item.uid, item.gid) for item in directories],
+                         [(True, 0o755, 0, 0)])
+
+        archive(self.packages["libsairedis"],
+                self.entries["libsairedis"] + [("usr/bin", b"", 0o700, "directory", 0)])
+        with self.assertRaisesRegex(ValueError, "shared source packages overlap: usr/bin"):
+            self.build()
+
     def test_source_packages_cannot_overlap_or_cross_an_unexpected_base_link(self):
         """Package ownership stays unambiguous and source payloads preserve base directory links."""
         entries = self.entries["libsairedis"] + [("usr/bin/swssloglevel", elf(), 0o755, "file", 0)]

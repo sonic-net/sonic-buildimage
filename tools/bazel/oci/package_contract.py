@@ -255,13 +255,19 @@ def _inventory(path):
 def combine_tars(contract, paths, output_path, base_files):
     """Normalize declared owner tars, preserving per-package inventories and bytes."""
     require(set(paths) == package_names(contract), "missing or unexpected shared-library tar inputs")
+    inputs = {record["package"]: paths[record["package"]] for record in contract["packages"]}
+    required = {record["package"]: record["required_paths"] for record in contract["packages"]}
+    return combine_source_payloads(inputs, output_path, contract["architecture"], base_files, required)
+
+
+def combine_source_payloads(paths, output_path, architecture, base_files, required_paths):
+    """Assemble owner TARs with one canonical header per installed path."""
     files, records = {}, {}
     with tarfile.open(output_path, "w", format=tarfile.PAX_FORMAT) as output:
-        for record in contract["packages"]:
-            name = record["package"]
-            before = sha(paths[name])
+        for name, source_path in paths.items():
+            before = sha(source_path)
             package_files = {}
-            with tarfile.open(paths[name], "r:*") as source:
+            with tarfile.open(source_path, "r:*") as source:
                 for member in source:
                     normalized = normalized_source_member(member)
                     if normalized is None:
@@ -273,7 +279,7 @@ def combine_tars(contract, paths, output_path, base_files):
                     require(path not in package_files or
                             (item["kind"] == "directory" and package_files[path] == item),
                             "duplicate source package path: " + name + ":" + path)
-                    require("elf_machine" not in item or item["elf_machine"] == elf_machine(contract["architecture"]),
+                    require("elf_machine" not in item or item["elf_machine"] == elf_machine(architecture),
                             "source package has a foreign ELF architecture: " + name + ":" + path)
                     package_files[path] = item
                     if path in files:
@@ -282,11 +288,11 @@ def combine_tars(contract, paths, output_path, base_files):
                         continue
                     files[path] = item
                     output.addfile(normalized, source.extractfile(member) if member.isfile() else None)
-            require(sha(paths[name]) == before, "source package tar changed during assembly: " + name)
-            for path, kind in record["required_paths"].items():
+            require(sha(source_path) == before, "source package tar changed during assembly: " + name)
+            for path, kind in required_paths.get(name, {}).items():
                 item = package_files.get(path, {})
                 require(item.get("kind") == ("file" if kind == "elf" else kind) and
-                        (kind != "elf" or item.get("elf_machine") == elf_machine(contract["architecture"])),
+                        (kind != "elf" or item.get("elf_machine") == elf_machine(architecture)),
                         "source package lacks a required installed path: " + name + ":" + path)
             records[name] = {"input_tar_sha256": before, "files": package_files}
     assert_overlay_paths(files, base_files)

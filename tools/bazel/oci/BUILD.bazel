@@ -30,6 +30,12 @@ py_library(
 )
 
 py_binary(
+    name = "combine_source_tars",
+    srcs = ["combine_source_tars.py"],
+    deps = [":package_contract_lib"],
+)
+
+py_binary(
     name = "package_contract",
     srcs = ["package_contract.py"],
     main = "package_contract.py",

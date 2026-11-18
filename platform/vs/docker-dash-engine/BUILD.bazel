@@ -1,12 +1,13 @@
 """DASH engine consumes the existing PI, BMv2 and nnpy source packages."""
 
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@dash_engine_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
 load("@tar.bzl", "tar")
-load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/dpkg:defs.bzl", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
@@ -79,11 +80,30 @@ sonic_layer(
     tars = [":debian_runtime"],
 )
 
+_OWNER_TARS = dict(
+    _PACKAGES,
+    nnpy = "@nnpy//:runtime",
+)
+
 # nnpy retains upstream Python distribution metadata. It is deliberately not
 # assigned a fabricated Debian package record alongside the two Debian owners.
-sonic_layer(
+run_binary(
+    name = "combine_source_payloads",
+    srcs = _OWNER_TARS.values(),
+    outs = ["source_payloads.tar"],
+    args = [
+        "--architecture",
+        "amd64",
+        "--output",
+        "$(location source_payloads.tar)",
+    ] + [name + "=$(location " + target + ")" for name, target in _OWNER_TARS.items()],
+    tool = "//tools/bazel/oci:combine_source_tars",
+)
+
+dpkg_filter(
     name = "source_runtime",
-    tars = _PACKAGES.values() + ["@nnpy//:runtime"],
+    src = ":combine_source_payloads",
+    tars = _OWNER_TARS.values(),
 )
 
 installed_packages(

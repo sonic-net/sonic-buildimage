@@ -484,6 +484,17 @@ class ValidateImageTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "filter removes a required source path or ELF"):
             self.validate_direct_images(inputs)
 
+    def test_oci_filter_matches_directory_headers_with_trailing_slashes(self):
+        excludes = self.root / "excludes.txt"
+        includes = self.root / "includes.txt"
+        excludes.write_text("./usr/share/doc/*\n")
+        includes.write_text("usr/share/doc/*/copyright\n")
+        files = {"usr/share/doc": {"kind": "directory"}, "usr/share/doc-link": {"kind": "file"},
+                 "usr/share/doc/package/changelog": {"kind": "file"},
+                 "usr/share/doc/package/copyright": {"kind": "file"}}
+        self.assertEqual(set(subject.oci_filtered(files, excludes, includes)),
+                         {"usr/share/doc-link", "usr/share/doc/package/copyright"})
+
     def test_receipted_layers_reject_missing_legal_notice_or_library(self):
         """Filtering must not turn absent retained files into an accepted source subset."""
         notice = "usr/share/doc/example/NOTICE"

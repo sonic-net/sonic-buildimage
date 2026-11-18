@@ -7,7 +7,7 @@ load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
 load("@syncd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@tar.bzl", "tar")
 load("//dockers/docker-config-engine-trixie:validation.bzl", "service_images_policy")
-load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/dpkg:defs.bzl", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 load("//tools/bazel/oci:source_contract.bzl", "source_contract")
@@ -230,10 +230,11 @@ sonic_layer(
     tars = [":runtime_layer"],
 )
 
-# Consume producer TARs directly, retaining their installed modes and owners.
-# The same graph supplies companion debug symbols.
-sonic_layer(
+# The checked payload merges equivalent owner directory headers such as
+# ./usr/bin and usr/bin before Make's dpkg exclusions are applied.
+dpkg_filter(
     name = "rdeps",
+    src = ":source_runtime_payloads",
     tars = SOURCE_PACKAGES.values(),
 )
 

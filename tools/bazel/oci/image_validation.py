@@ -185,12 +185,15 @@ def oci_filtered(files, excludes_path, includes_path):
     require(excludes and includes and all(pattern for pattern in excludes + includes),
             "OCI layer filtering requires nonempty exclude and include policies")
 
-    def matches(name, patterns):
-        return any(fnmatch.fnmatchcase(candidate, pattern)
-                   for candidate in (name, "./" + name) for pattern in patterns)
+    def matches(name, item, patterns):
+        names = (name, "./" + name)
+        if item["kind"] == "directory":
+            # bsdtar also applies patterns to directory headers with a trailing slash.
+            names += (name + "/", "./" + name + "/")
+        return any(fnmatch.fnmatchcase(candidate, pattern) for candidate in names for pattern in patterns)
 
     return {name: item for name, item in files.items()
-            if not matches(name, excludes) or matches(name, includes)}
+            if not matches(name, item, excludes) or matches(name, item, includes)}
 
 
 def expected_state(path):
