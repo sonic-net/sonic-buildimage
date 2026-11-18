@@ -20,6 +20,10 @@ bgp as-path access-list {{key}} permit {{path}}
 {% endif %}
 {# ------------------------------------------------------------------------------------ #}
 {% include "bgpd.conf.db.comm_list.j2" %}
+{# Only load the TSA template when TSA is on: it needs sonic-cfggen's address filters. #}
+{% if BGP_DEVICE_GLOBAL is defined and BGP_DEVICE_GLOBAL.get('STATE', {}).get('tsa_enabled') == 'true' %}
+{% include "bgpd.conf.db.tsa.j2" %}
+{% endif %}
 {# ------------------------------------------------------------------------------------ #}
 {% if BGP_GLOBALS is defined and BGP_GLOBALS|length > 0 %}
 {% for vrf, bgp_sess in BGP_GLOBALS.items() %}
