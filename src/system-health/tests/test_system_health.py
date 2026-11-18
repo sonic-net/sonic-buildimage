@@ -1024,6 +1024,134 @@ def test_hardware_checker():
     assert 'missing' in checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_MSG].lower()
 
 
+def test_hardware_checker_liquid_cooling_leak_reported_every_cycle():
+    """A sensor that keeps leaking is Not OK in every check, while the events are sent once per change."""
+    leak_info = {
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {'leak_status': 'Yes', 'leak_sensor_name': 'liquid_cooling_1'},
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {'leak_status': 'No', 'leak_sensor_name': 'liquid_cooling_2'},
+    }
+    MockConnector.data.clear()
+    MockConnector.data.update(copy.deepcopy(leak_info))
+
+    checker = HardwareChecker()
+    config = Config()
+    config.include_devices = ['liquid_cooling']
+
+    def published(mock_publish):
+        return [c for c in mock_publish.call_args_list if c[0][0]]
+
+    with patch.object(HardwareChecker, 'publish_events') as mock_publish:
+        # The leak is held for several cycles: Not OK every time, leak event only in the first one
+        for _ in range(3):
+            checker.check(config)
+            assert 'liquid_cooling_1' in checker._info
+            assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+            assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'Leakage sensor liquid_cooling_1 is leaking'
+            assert checker._info['liquid_cooling_2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+        assert published(mock_publish) == [call(['liquid_cooling_1'], 'sensor report leaking event')]
+
+        # The leak clears: OK again, recovered event sent exactly once
+        mock_publish.reset_mock()
+        MockConnector.data['LIQUID_COOLING_INFO|liquid_cooling_1']['leak_status'] = 'No'
+        for _ in range(2):
+            checker.check(config)
+            assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+        assert published(mock_publish) == [call(['liquid_cooling_1'], 'leaking sensor report recovered')]
+
+        # The sensor leaks again: Not OK and a new leak event
+        mock_publish.reset_mock()
+        MockConnector.data['LIQUID_COOLING_INFO|liquid_cooling_1']['leak_status'] = 'Yes'
+        for _ in range(2):
+            checker.check(config)
+            assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+        assert published(mock_publish) == [call(['liquid_cooling_1'], 'sensor report leaking event')]
+
+
+def test_hardware_checker_liquid_cooling_leak_through_faulty_sensor():
+    """A leak that passes through N/A sends no second leak event, and the later No sends the recovered event."""
+    MockConnector.data.clear()
+    MockConnector.data.update({'LIQUID_COOLING_INFO|liquid_cooling_1': {'leak_status': 'Yes'}})
+    sensor = MockConnector.data['LIQUID_COOLING_INFO|liquid_cooling_1']
+
+    checker = HardwareChecker()
+    config = Config()
+    config.include_devices = ['liquid_cooling']
+
+    with patch.object(HardwareChecker, 'publish_events') as mock_publish:
+        for leak_status in ['Yes', 'N/A', 'Yes', 'N/A', 'No']:
+            sensor['leak_status'] = leak_status
+            checker.check(config)
+            expected = HealthChecker.STATUS_OK if leak_status == 'No' else HealthChecker.STATUS_NOT_OK
+            assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == expected
+        assert [c for c in mock_publish.call_args_list if c[0][0]] == [
+            call(['liquid_cooling_1'], 'sensor report leaking event'),
+            call(['liquid_cooling_1'], 'leaking sensor report recovered'),
+        ]
+
+
+def test_hardware_checker_liquid_cooling_two_sensors_leaking():
+    """Two sensors leaking together are both Not OK in every check, and each change sends one event."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {'leak_status': 'Yes'},
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {'leak_status': 'Yes'},
+    })
+
+    checker = HardwareChecker()
+    config = Config()
+    config.include_devices = ['liquid_cooling']
+
+    with patch.object(HardwareChecker, 'publish_events') as mock_publish:
+        for _ in range(3):
+            checker.check(config)
+            for name in ['liquid_cooling_1', 'liquid_cooling_2']:
+                assert checker._info[name][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+        assert [c for c in mock_publish.call_args_list if c[0][0]] == [
+            call(['liquid_cooling_1', 'liquid_cooling_2'], 'sensor report leaking event'),
+        ]
+
+        mock_publish.reset_mock()
+        MockConnector.data['LIQUID_COOLING_INFO|liquid_cooling_1']['leak_status'] = 'No'
+        checker.check(config)
+        assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+        assert checker._info['liquid_cooling_2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+        assert [c for c in mock_publish.call_args_list if c[0][0]] == [
+            call(['liquid_cooling_1'], 'leaking sensor report recovered'),
+        ]
+
+
+def test_hardware_checker_liquid_cooling_unexpected_status():
+    """A leak status other than Yes, No or N/A is reported Not OK instead of being skipped."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {'leak_status': 'Unknown'},
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {'leak_status': ''},
+    })
+
+    checker = HardwareChecker()
+    config = Config()
+    config.include_devices = ['liquid_cooling']
+    checker.check(config)
+    for name in ['liquid_cooling_1', 'liquid_cooling_2']:
+        assert checker._info[name][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+
+def test_hardware_checker_liquid_cooling_reads_leaking_field():
+    """The checker reads 'leaking' and falls back to the 'leak_status' alias."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {'leaking': 'Yes'},
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {'leak_status': 'Yes'},
+    })
+
+    checker = HardwareChecker()
+    config = Config()
+    config.include_devices = ['liquid_cooling']
+    checker.check(config)
+    for name in ['liquid_cooling_1', 'liquid_cooling_2']:
+        assert checker._info[name][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'Leakage sensor {} is leaking'.format(name)
+
+
 def test_hardware_checker_pdb_ignore():
     """PSU_INFO rows are skipped when the key name is listed in ignore_devices."""
     MockConnector.data.clear()

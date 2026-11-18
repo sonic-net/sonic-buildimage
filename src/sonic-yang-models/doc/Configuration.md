@@ -36,6 +36,7 @@
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
   * [EVPN](#evpn)
+  * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
@@ -1431,6 +1432,23 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
             "startup_delay": "1800",
             "mac_holdtime": "1000",
             "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
+### FDB_SYNC
+
+The **FDB_SYNC** table selects how MAC (FDB) state is synchronized between SONiC and FRR. It has a single `global` entry with one field, `mac_sync_mode`:
+
+- `kernel` (default): fdbsyncd synchronizes MACs through the Linux kernel bridge FDB.
+- `fpm`: fpmsyncd exchanges MACs with zebra over the FPM channel.
+
+```json
+{
+    "FDB_SYNC": {
+        "global": {
+            "mac_sync_mode": "fpm"
         }
     }
 }
@@ -3094,6 +3112,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
+- INSTALL_ON_KERNEL: Flag to also program the route into the kernel routing table (optional). It should be a boolean value, e.g. "true".
 
 ```
 {
@@ -3102,7 +3121,8 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
-        "consistent_hashing_buckets": "10"
+        "consistent_hashing_buckets": "10",
+        "install_on_kernel": "true"
     },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",

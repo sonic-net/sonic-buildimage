@@ -1,4 +1,4 @@
-apt-utils==3.0.3
+apt-utils==3.0.4
 libboost-serialization1.83.0==1.83.0-4.2
 libhiredis1.1.0==1.2.0-6+b3
 libnl-3-200==3.7.0-0.2+b1sonic1

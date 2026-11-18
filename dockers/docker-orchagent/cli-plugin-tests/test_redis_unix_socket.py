@@ -188,8 +188,8 @@ LOCAL_CLI_CALLS = {
     REPO_ROOT / "files/scripts/arp_update": [
         "APPL_DB",
         "ASIC_DB",
-        "APPL_DB",
         "CONFIG_DB",
+        "APPL_DB",
         "APPL_DB",
         "CONFIG_DB",
     ],
