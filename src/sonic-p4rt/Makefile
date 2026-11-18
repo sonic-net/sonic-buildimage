@@ -14,8 +14,11 @@ BAZEL_BUILD_OPTS += --experimental_downloader_config=$(CURDIR)/source_mirrors.cf
 # GNU dwp 2.44 cannot package GCC 14's default DWARF 5 debug information.
 BAZEL_BUILD_OPTS += --fission=opt --copt=-g --copt=-gdwarf-4
 
-# Override sonic_swss_common to use the version specific to this buildimage.
-BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common
+# Common builds with Bazel 8.5.1; P4RT imports its library and headers with 6.4.0.
+COMMON_SOURCE ?= $(abspath $(CURDIR)/../sonic-swss-common)
+COMMON_SDK := $(CURDIR)/.common-sdk
+COMMON_SDK_BUILDER ?= $(abspath $(CURDIR)/../../tools/bazel/p4rt_common_sdk.py)
+BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=$(COMMON_SDK)
 
 # Newer version of gcc has spurious warnings in boringssl package.
 BAZEL_BUILD_OPTS += --copt=-Wno-array-bounds
@@ -35,6 +38,9 @@ BAZEL_BUILD_OPTS += -c opt
 #   DOCKER_BUILDER_USER_MOUNT=/tmp/bazel_cache:/bazel:rw make target/...
 #
 BAZEL_CACHE ?= /bazel
+ifneq ($(wildcard $(BAZEL_CACHE)/.),)
+COMMON_CACHE_OPTS = --bazel-arg=--repository_cache=$(abspath $(BAZEL_CACHE))/repository_cache --bazel-arg=--disk_cache=$(abspath $(BAZEL_CACHE))/disk_cache
+endif
 
 MAIN_TARGET = $(SONIC_P4RT)
 DERIVED_TARGETS = $(SONIC_P4RT_DBG)
@@ -50,14 +56,9 @@ endif
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	$(vs_start_timing)
-	# TODO: Remove this Makefile workaround
-	# once Bazel natively supports generating cfg_schema.h.
-	if [[ ! -f /sonic/src/sonic-swss-common/common/cfg_schema.h && -f /usr/include/swss/cfg_schema.h ]]; then \
-		if [ ! -d /sonic/src/sonic-swss-common/common ]; then \
-			mkdir -p /sonic/src/sonic-swss-common/common; \
-		fi; \
-		cp /usr/include/swss/cfg_schema.h /sonic/src/sonic-swss-common/common/cfg_schema.h; \
-	fi
+	# Recheck Common's source graph on every P4RT build, including cfg_schema.h.
+	python3 "$(COMMON_SDK_BUILDER)" --common-source "$(COMMON_SOURCE)" \
+		--output-dir "$(COMMON_SDK)" $(COMMON_CACHE_OPTS)
 
 	cd ./sonic-pins
 	source "$(CURDIR)/../../tools/bazel/private_server.sh"
@@ -71,6 +72,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		build_options+=("--remote_cache=$$SONIC_BAZEL_REMOTE_CACHE" "--remote_upload_local_results=$(if $(filter y,$(SONIC_BAZEL_REMOTE_UPLOAD)),true,false)")
 	fi
 	# The nested sonic-pins workspace selects its pinned Bazel version via PATH.
+	export USE_BAZEL_VERSION=6.4.0
 	BAZEL=bazel start_private_bazel sonic-p4rt "$${startup_options[@]}"
 	private_bazel_shutdown_prefix=($(call vs_time_phase,shutdown))
 	$(call vs_time_phase,build) "$${private_bazel[@]}" build "$${build_options[@]}" $(BAZEL_BUILD_TARGETS)

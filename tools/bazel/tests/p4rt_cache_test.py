@@ -17,7 +17,7 @@ class P4rtCacheTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         for name in ('Makefile.cache', 'rules/functions', 'rules/p4rt.mk', 'rules/p4rt.dep',
-                     'tools/bazel/private_server.sh'):
+                     'tools/bazel/private_server.sh', 'tools/bazel/p4rt_common_sdk.py'):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -33,7 +33,9 @@ class P4rtCacheTest(unittest.TestCase):
         pins = source / 'sonic-pins'
         pins.mkdir()
         (pins / 'runtime.cc').write_text('// P4RT source\n')
-        for directory, files in ((self.root, ['tools/bazel/private_server.sh', 'src/sonic-p4rt/Makefile',
+        for directory, files in ((self.root, ['tools/bazel/private_server.sh',
+                                            'tools/bazel/p4rt_common_sdk.py',
+                                            'src/sonic-p4rt/Makefile',
                                             'src/sonic-p4rt/README.bazel.md',
                                             'src/sonic-p4rt/source_mirrors.cfg']),
                                  (pins, ['runtime.cc'])):
@@ -73,6 +75,7 @@ include Makefile.cache
         self.assertIn('src/sonic-p4rt/Makefile', files)
         self.assertIn('tools/bazel/private_server.sh', files)
         self.assertIn('src/sonic-p4rt/source_mirrors.cfg', files)
+        self.assertIn('tools/bazel/p4rt_common_sdk.py', files)
         self.assertNotIn('README.bazel.md', files)
         self.assertNotIn('Makefile', files)
         self.assertNotIn('src/sonic-p4rt/sonic-pins', files)
@@ -90,6 +93,14 @@ include Makefile.cache
 
     def test_tar_cache_tracks_the_source_directory(self):
         self.cache_inputs('tar.bz2', 'files')
+
+    def test_sdk_helper_changes_invalidate_both_cache_formats(self):
+        helper = self.root / 'tools/bazel/p4rt_common_sdk.py'
+        for extension, category in (('deb', 'debs'), ('tar.bz2', 'files')):
+            with self.subTest(extension=extension):
+                before = self.cache_inputs(extension, category)
+                helper.write_text(helper.read_text() + '\n# Changed SDK helper\n')
+                self.assertNotEqual(before, self.cache_inputs(extension, category))
 
 
 if __name__ == '__main__':

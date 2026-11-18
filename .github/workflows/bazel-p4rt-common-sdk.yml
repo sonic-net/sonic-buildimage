@@ -1,0 +1,163 @@
+name: P4RT with the Common SDK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - .github/workflows/bazel-p4rt-common-sdk.yml
+      - .gitmodules
+      - rules/p4rt.*
+      - src/sonic-p4rt/**
+      - src/sonic-swss-common
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/p4rt_common_sdk.py
+      - tools/bazel/ci/p4rt_common_sdk.py
+      - tools/bazel/tests/p4rt_common_sdk_test.py
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/bazel-p4rt-common-sdk.yml
+      - .gitmodules
+      - rules/p4rt.*
+      - src/sonic-p4rt/**
+      - src/sonic-swss-common
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/p4rt_common_sdk.py
+      - tools/bazel/ci/p4rt_common_sdk.py
+      - tools/bazel/tests/p4rt_common_sdk_test.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p4rt-common-sdk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: P4RT SDK (${{ matrix.arch }})
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: debian:trixie-20260918
+      options: --init
+    defaults:
+      run:
+        shell: bash
+    env:
+      USER: root
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install the native P4RT host dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            binutils binutils-gold build-essential ca-certificates git python3 \
+            bison flex libfl-dev libgmp-dev patch unzip zip pkg-config \
+            libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-nf-3-dev \
+            libnl-route-3-dev libzmq3-dev libboost-serialization-dev \
+            nlohmann-json3-dev uuid-dev
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out the pinned Common and P4RT sources
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git submodule update --init --depth=1 src/sonic-swss-common src/sonic-p4rt/sonic-pins
+          mkdir -p artifacts/p4rt
+          git rev-parse HEAD > artifacts/p4rt/buildimage-commit.txt
+          git -C src/sonic-swss-common rev-parse HEAD > artifacts/p4rt/common-commit.txt
+          git -C src/sonic-p4rt/sonic-pins rev-parse HEAD > artifacts/p4rt/p4rt-commit.txt
+          test "$(cat src/sonic-p4rt/sonic-pins/.bazelversion)" = 6.4.0
+          test "$(dpkg --print-architecture)" = '${{ matrix.arch }}'
+
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: p4rt-common-sdk-${{ matrix.arch }}
+          cache-version: "8.5.1-6.4.0"
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+
+      - name: Test SDK refresh and failure handling
+        run: python3 -B -m unittest discover -s tools/bazel/tests -p p4rt_common_sdk_test.py -v
+
+      - name: Build Common's SDK with Bazel 8.5.1
+        run: |
+          python3 -B tools/bazel/p4rt_common_sdk.py \
+            --common-source src/sonic-swss-common \
+            --output-dir "$RUNNER_TEMP/common-sdk" \
+            --output-base "$RUNNER_TEMP/common-bazel-8" \
+            --arch '${{ matrix.arch }}' --bazel-arg=--jobs=2 \
+            --bazel-arg=--downloader_config="$RUNNER_TEMP/sonic-source-mirrors.cfg"
+
+      - name: Install Common's external runtime dependencies
+        working-directory: src/sonic-swss-common
+        env:
+          USE_BAZEL_VERSION: 8.5.1
+        run: |
+          python3 -B tools/bazel/runtime/prepare.py \
+            --image-reference debian:trixie-20260918 \
+            --output "$GITHUB_WORKSPACE/artifacts/p4rt/test-runtime.json"
+          native_args=(
+            --downloader_config="$RUNNER_TEMP/sonic-source-mirrors.cfg"
+            --host_platform=@sonic_build_infra//platforms:x86_64_trixie
+          )
+          if [ '${{ matrix.arch }}' = arm64 ]; then
+            native_args+=(
+              --config=aarch64
+              --host_platform=@sonic_build_infra//platforms:aarch64_trixie
+            )
+          fi
+          runtime_targets=(
+            @libyang//:libyang_pkg
+            @libnl3//:libnl-3_pkg
+            @libnl3//:libnl-route-3_pkg
+            @libnl3//:libnl-nf-3_pkg
+          )
+          bazel --output_base="$RUNNER_TEMP/common-bazel-8" build \
+            "${native_args[@]}" --jobs=2 --//tools/bazel:yang_modules=True "${runtime_targets[@]}"
+          for target in "${runtime_targets[@]}"; do
+            archive="$(bazel --output_base="$RUNNER_TEMP/common-bazel-8" cquery \
+              "${native_args[@]}" --//tools/bazel:yang_modules=True --output=files "$target")"
+            test -f "$archive"
+            tar -xf "$archive" -C /
+          done
+          ldconfig
+          bazel --output_base="$RUNNER_TEMP/common-bazel-8" shutdown
+
+      - name: Build and test P4RT with Bazel 6.4.0
+        run: |
+          python3 -B tools/bazel/ci/p4rt_common_sdk.py \
+            --source src/sonic-p4rt/sonic-pins --sdk "$RUNNER_TEMP/common-sdk" \
+            --output-base "$RUNNER_TEMP/p4rt-bazel-6" \
+            --output artifacts/p4rt --arch '${{ matrix.arch }}' --jobs 4
+
+      - name: Upload SDK handoff validation
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: p4rt-common-sdk-${{ matrix.arch }}
+          # Publish only explicit summaries. Raw action/event data stays private.
+          path: |
+            artifacts/p4rt/*.txt
+            artifacts/p4rt/*.json
+          if-no-files-found: error

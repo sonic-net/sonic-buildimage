@@ -60,7 +60,10 @@ if command == 'info':
     print(out)
 """)
             bazel.chmod(0o755)
+            sdk_builder = root / "sdk_builder.py"
+            sdk_builder.write_text("")
             command = ["make", "--no-print-directory", f"DEST={dest}", f"BAZEL_CACHE={root}",
+                       f"COMMON_SDK_BUILDER={sdk_builder}",
                        "SONIC_P4RT=p4rt.deb", "SONIC_P4RT_DBG=p4rt-dbg.deb", str(dest / "p4rt.deb")]
             record = root / "calls.jsonl"
             env = dict(os.environ, SONIC_VS_IMAGE_TIMINGS="1", BAZEL="root-workspace-only-wrapper",
@@ -111,8 +114,9 @@ if command == 'info':
             ], cwd=SOURCE, text=True)
         lines = result.splitlines()
         options, = [line for line in lines if line.startswith("build_options=(")]
-        self.assertIn("--experimental_downloader_config=" + str(POLICY),
-                      shlex.split(options.removeprefix("build_options=(").removesuffix(")")))
+        parsed_options = shlex.split(options.removeprefix("build_options=(").removesuffix(")"))
+        self.assertIn("--experimental_downloader_config=" + str(POLICY), parsed_options)
+        self.assertIn("--override_repository=sonic_swss_common=" + str(SOURCE / ".common-sdk"), parsed_options)
         build, test = [shlex.split(line) for line in lines if line.startswith('"${private_bazel[@]}"')]
         self.assertEqual(build[1:3], ["build", "${build_options[@]}"])
         self.assertEqual(build[-2:], ["//p4rt_app:p4rt_deb", "//p4rt_app:p4rt_dbg_deb"])

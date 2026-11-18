@@ -1,0 +1,35 @@
+# Template for tools/bazel/p4rt_common_sdk.py. This repository contains binaries
+# and headers built by Common's Bazel 8.5.1 build, never Common source files.
+package(default_visibility = ["//visibility:public"])
+
+cc_import(
+    name = "swsscommon_library",
+    shared_library = "lib/libswsscommon.so.0",
+)
+
+# P4RT still uses the native headers and libraries installed in sonic-slave.
+# These are the same external dependencies as Common's former WORKSPACE build.
+cc_library(
+    name = "common",
+    hdrs = glob(["include/swss/**/*.h", "include/swss/**/*.hpp"]),
+    includes = ["include", "include/swss"],
+    linkopts = [
+        "-lpthread",
+        "-lhiredis",
+        "-lnl-genl-3",
+        "-lnl-nf-3",
+        "-lnl-route-3",
+        "-lnl-3",
+        "-lzmq",
+        "-lboost_serialization",
+        "-luuid",
+        "-lyang",
+    ],
+    deps = [":swsscommon_library"],
+)
+
+# Preserve both entry points used by the pinned sonic-pins checkout.
+alias(
+    name = "libswsscommon",
+    actual = ":common",
+)
