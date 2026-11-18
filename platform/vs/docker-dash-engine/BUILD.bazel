@@ -36,7 +36,7 @@ _POLICY = {
 }
 
 _PACKAGES = {
-    "p4lang-pi": "@p4lang_pi//:runtime",
+    "p4lang-pi": "@p4lang_pi//:p4lang-pi.runtime",
     "p4lang-bmv2": "@p4lang_bmv2//:p4lang-bmv2.runtime",
 }
 
@@ -93,7 +93,7 @@ installed_packages(
     base = _BASE,
     controls = [label + ":control" for label in APT_INPUTS["dash_engine_debian"]["amd64"].values()],
     owner_metadata = [
-        "@p4lang_pi//:runtime_packages.json",
+        "@p4lang_pi//:p4lang-pi.runtime_metadata",
         "@p4lang_bmv2//:p4lang-bmv2.runtime_metadata",
     ],
     source_modules = {

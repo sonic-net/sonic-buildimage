@@ -43,7 +43,7 @@ TARGETS = {
     "base.packages.json": "//dockers/docker-base-trixie:runtime_package_metadata",
     "base.source.tar": "//dockers/docker-base-trixie:source_runtime",
     "openssh.source.tar": OWNER + "debug_client",
-    "pi.source.tar": "@p4lang_pi//:runtime",
+    "pi.source.tar": "@p4lang_pi//:p4lang-pi.runtime",
     "bmv2.source.tar": "@p4lang_bmv2//:p4lang-bmv2.runtime",
     "nnpy.source.tar": "@nnpy//:runtime",
 }
