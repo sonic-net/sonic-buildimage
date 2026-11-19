@@ -1465,7 +1465,7 @@
         },
         "GNMI_CLIENT": {
             "certs": {
-                "ca_crt": "/etc/sonic/site-pki/root.cer",
+                "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
                 "client_crt": "/etc/sonic/bmc-client/identity.cer",
                 "client_key": "/etc/sonic/bmc-client/private.key"
             }
