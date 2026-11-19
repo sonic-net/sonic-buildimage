@@ -9,7 +9,9 @@ import os
 import sys
 import syslog
 
-from nexthop import feature_flags_lib, gen_lib, pcie_lib
+from typing import Any
+
+from nexthop import feature_flags_lib, gen_lib, nexthop_device_info, pcie_lib
 from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
@@ -37,8 +39,18 @@ def check_file_exists_if_not_default(filepath: str, default_filepath: str, param
         raise click.BadParameter(f"{filepath} does not exist.", param_hint=param_name)
 
 def generate_file_from_jinja2_template(
-    template_filepath: str, variables: dict[str, str], output_filepath: str
+    template_filepath: str, variables: dict[str, Any], output_filepath: str
 ):
+    try:
+        device_version = nexthop_device_info.get_device_version()
+    except Exception as e:  # noqa: BLE001
+        device_version = nexthop_device_info.UNPROGRAMMED_DEVICE_VERSION
+        syslog.syslog(
+            syslog.LOG_WARNING,
+            f"Couldn't determine device_version ({type(e).__name__}: {e}), using default value: {device_version} "
+            f"for generation of {output_filepath}",
+        )
+    variables = {**variables, "device_version": device_version}
     gen_lib.write_atomically(
         gen_lib.render(template_filepath, variables), output_filepath
     )
