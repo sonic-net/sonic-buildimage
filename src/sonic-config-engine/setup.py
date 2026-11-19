@@ -1,5 +1,6 @@
 from __future__ import print_function
 import glob
+import os
 import sys
 
 from setuptools import setup
@@ -33,8 +34,7 @@ if sys.version_info.major == 3:
 else:
     # Python 2-only dependencies
     dependencies += [
-        # Jinja2 v3.0.0+ dropped support for Python 2.7 and causes setuptools to
-        # malfunction on stretch slave docker.
+        # Jinja2 v3.0.0+ dropped support for Python 2.7.
         'future',
         'Jinja2<3.0.0',
         'pyangbind==0.6.0',
@@ -46,11 +46,15 @@ else:
 py_modules = [
     'config_samples',
     'minigraph',
+    'minigraph_ext',
     'openconfig_acl',
     'portconfig',
     'smartswitch_config',
     'asic_sensors_config'
 ]
+if os.path.isfile(os.path.join(os.path.dirname(__file__), 'minigraph_custom.py')):
+    py_modules.append('minigraph_custom')
+
 if sys.version_info.major == 3:
     # Python 3-only modules
     py_modules += [

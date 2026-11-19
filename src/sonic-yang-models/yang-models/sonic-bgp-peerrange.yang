@@ -28,9 +28,23 @@ module sonic-bgp-peerrange {
     description
         "SONIC BGP Peer Range YANG";
 
+    revision 2026-09-18 {
+        description
+            "Reject line breaks in dynamic peer-range names and qualified keys.";
+    }
+
     revision 2022-02-24 {
         description
             "Initial revision.";
+    }
+
+    typedef peer-range-name {
+        type string {
+            pattern '[^\n\r]*' {
+                error-message "BGP peer-range name must not contain line breaks";
+            }
+        }
+        description "A single-line dynamic BGP peer-range identifier.";
     }
 
     container sonic-bgp-peerrange {
@@ -48,16 +62,19 @@ module sonic-bgp-peerrange {
                             path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                         }
                     }
+                    must "re-match(current(), '[^\\n\\r]*')" {
+                        error-message "BGP peer-range VRF or VNET name must not contain line breaks";
+                    }
                     description "VRF or VNET name for this peer range.";
                 }
 
                 leaf peer_range_name {
-                    type string;
+                    type peer-range-name;
                     description "Peer range name";
                 }
 
                 leaf name {
-                    type string;
+                    type peer-range-name;
                     must "(current() = current()/../peer_range_name)" {
                         error-message "Invalid name, name must match peer_range_name";
                     }
@@ -88,12 +105,12 @@ module sonic-bgp-peerrange {
                 key "peer_range_name";
 
                 leaf peer_range_name {
-                    type string;
+                    type peer-range-name;
                     description "Peer range name";
                 }
 
                 leaf name {
-                    type string;
+                    type peer-range-name;
                     must "(current() = current()/../peer_range_name)" {
                         error-message "Invalid name, name must match peer_range_name";
                     }

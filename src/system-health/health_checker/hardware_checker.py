@@ -338,14 +338,21 @@ class HardwareChecker(HealthChecker):
                 continue
 
             data_dict = self._db.get_all(self._db.STATE_DB, key)
-            leak_status = data_dict.get('leak_status', None)
+            # thermalctld writes the state as 'leaking' and keeps 'leak_status' as a backward-compatibility alias
+            leak_status = data_dict.get('leaking', data_dict.get('leak_status'))
             if leak_status is None or leak_status == 'N/A':
                 self.set_object_not_ok('Liquid Cooling', name, 'Failed to get leakage sensor status for {}'.format(name))
                 continue
 
-            if leak_status.lower() == 'yes' and name not in self.leaking_sensors:
-                self.leaking_sensors.append(name)
-                new_leaking_sensors.append(name)
+            if leak_status.lower() not in ('yes', 'no'):
+                self.set_object_not_ok('Liquid Cooling', name, 'Unexpected leakage sensor status {} for {}'.format(leak_status, name))
+                continue
+
+            if leak_status.lower() == 'yes':
+                # Not OK on every check; the leak event is sent only when the leak starts
+                if name not in self.leaking_sensors:
+                    self.leaking_sensors.append(name)
+                    new_leaking_sensors.append(name)
                 self.set_object_not_ok('Liquid Cooling', name, 'Leakage sensor {} is leaking'.format(name))
                 continue
 

@@ -25,6 +25,7 @@ RUN sed -ri '/^DAEMON_ARGS=""/c DAEMON_ARGS="-c /var/log/hsflowd.crash"' /etc/in
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["port_index_mapper.py", "/usr/bin"]
+COPY ["enable_mod_vpp.sh", "/usr/bin"]
 
 FROM $BASE
 

@@ -5,6 +5,7 @@ include $(PLATFORM_PATH)/docker-saiserver-mrvl-prestera.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/one-image.mk
 include $(PLATFORM_PATH)/platform-marvell.mk
+include $(PLATFORM_PATH)/platform-alliedtelesis.mk
 ifeq ($(CONFIGURED_ARCH),$(filter $(CONFIGURED_ARCH),arm64 armhf))
 include $(PLATFORM_PATH)/mrvl-prestera.mk
 include $(PLATFORM_PATH)/platform-nokia.mk

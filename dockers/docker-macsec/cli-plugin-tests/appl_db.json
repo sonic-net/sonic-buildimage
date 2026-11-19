@@ -1,4 +1,10 @@
 {
+  "MACSEC_PORT_TABLE_KEY_SET": {
+    "pending": "Ethernet8"
+  },
+  "MACSEC_PORT_TABLE_DEL_SET": {
+    "pending": "Ethernet32"
+  },
   "MACSEC_EGRESS_SA_TABLE:Ethernet1:5254008f4f1c0001:1": {
     "type": "hash",
     "value": {

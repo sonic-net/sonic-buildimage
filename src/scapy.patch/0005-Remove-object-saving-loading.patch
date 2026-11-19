@@ -1,0 +1,158 @@
+From d1115ca69ee80ca6f719f731590d4f11576e9d99 Mon Sep 17 00:00:00 2001
+From: Guillaume Valadon <guillaume.valadon@gitguardian.com>
+Date: Wed, 1 Oct 2025 21:13:34 +0200
+Subject: [PATCH] Object saving/loading removed
+
+---
+ doc/scapy/usage.rst | 35 -----------------------------------
+ scapy/utils.py      | 39 ++++++++++++++-----------------------
+ test/regression.uts | 17 -----------------
+ 3 files changed, 4 insertions(+), 87 deletions(-)
+
+diff --git a/doc/scapy/usage.rst b/doc/scapy/usage.rst
+index 1202d9cc..ed3184f9 100644
+--- a/doc/scapy/usage.rst
++++ b/doc/scapy/usage.rst
+@@ -991,41 +991,6 @@ We can reimport the produced binary string by selecting the appropriate first la
+     \x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e
+     \x1f !"#$%&\'()*+,-./01234567' |>>>>
+ 
+-Base64
+-^^^^^^
+-
+-Using the ``export_object()`` function, Scapy can export a base64 encoded Python data structure representing a packet::
+-
+-    >>> pkt
+-    <Ether  dst=00:50:56:fc:ce:50 src=00:0c:29:2b:53:19 type=0x800 |<IP  version=4L 
+-    ihl=5L tos=0x0 len=84 id=0 flags=DF frag=0L ttl=64 proto=icmp chksum=0x5a7c 
+-    src=192.168.25.130 dst=4.2.2.1 options='' |<ICMP  type=echo-request code=0 
+-    chksum=0x9c90 id=0x5a61 seq=0x1 |<Raw  load='\xe6\xdapI\xb6\xe5\x08\x00\x08\t\n
+-    \x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f 
+-    !"#$%&\'()*+,-./01234567' |>>>>
+-    >>> export_object(pkt)
+-    eNplVwd4FNcRPt2dTqdTQ0JUUYwN+CgS0gkJONFEs5WxFDB+CdiI8+pupVl0d7uzRUiYtcEGG4ST
+-    OD1OnB6nN6c4cXrvwQmk2U5xA9tgO70XMm+1rA78qdzbfTP/lDfzz7tD4WwmU1C0YiaT2Gqjaiao
+-    bMlhCrsUSYrYoKbmcxZFXSpPiohlZikm6ltb063ZdGpNOjWQ7mhPt62hChHJWTbFvb0O/u1MD2bT
+-    WZXXVCmi9pihUqI3FHdEQslriiVfWFTVT9VYpog6Q7fsjG0qRWtQNwsW1fRTrUg4xZxq5pUx1aS6
+-    ...
+-
+-The output above can be reimported back into Scapy using ``import_object()``::
+-
+-    >>> new_pkt = import_object()
+-    eNplVwd4FNcRPt2dTqdTQ0JUUYwN+CgS0gkJONFEs5WxFDB+CdiI8+pupVl0d7uzRUiYtcEGG4ST
+-    OD1OnB6nN6c4cXrvwQmk2U5xA9tgO70XMm+1rA78qdzbfTP/lDfzz7tD4WwmU1C0YiaT2Gqjaiao
+-    bMlhCrsUSYrYoKbmcxZFXSpPiohlZikm6ltb063ZdGpNOjWQ7mhPt62hChHJWTbFvb0O/u1MD2bT
+-    WZXXVCmi9pihUqI3FHdEQslriiVfWFTVT9VYpog6Q7fsjG0qRWtQNwsW1fRTrUg4xZxq5pUx1aS6
+-    ...
+-    >>> new_pkt
+-    <Ether  dst=00:50:56:fc:ce:50 src=00:0c:29:2b:53:19 type=0x800 |<IP  version=4L 
+-    ihl=5L tos=0x0 len=84 id=0 flags=DF frag=0L ttl=64 proto=icmp chksum=0x5a7c 
+-    src=192.168.25.130 dst=4.2.2.1 options='' |<ICMP  type=echo-request code=0 
+-    chksum=0x9c90 id=0x5a61 seq=0x1 |<Raw  load='\xe6\xdapI\xb6\xe5\x08\x00\x08\t\n
+-    \x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f 
+-    !"#$%&\'()*+,-./01234567' |>>>>
+-
+ Sessions
+ ^^^^^^^^
+ 
+diff --git a/scapy/utils.py b/scapy/utils.py
+index e6a432e8..9b7ad905 100644
+--- a/scapy/utils.py
++++ b/scapy/utils.py
+@@ -15,7 +15,7 @@
+ 
+ import argparse
+ import array
+-import base64
++import base64  # noqa: F401  # re-exported via scapy.all; used by pinned tests
+ import collections
+ import decimal
+ import difflib
+@@ -25,7 +25,6 @@ import inspect
+ import locale
+ import math
+ import os
+-import pickle
+ import random
+ import re
+ import shutil
+@@ -1221,39 +1220,9 @@ class Enum_metaclass(type):
+         return "<%s>" % self.__dict__.get("name", self.__name__)
+ 
+ 
+-###################
+-#  Object saving  #
+-###################
+-
+-
+-def export_object(obj):
+-    # type: (Any) -> None
+-    import zlib
+-    print(base64.b64encode(zlib.compress(pickle.dumps(obj, 2), 9)).decode())
+-
+-
+-def import_object(obj=None):
+-    # type: (Optional[str]) -> Any
+-    import zlib
+-    if obj is None:
+-        obj = sys.stdin.read()
+-    return pickle.loads(zlib.decompress(base64.b64decode(obj.strip())))
+-
+-
+-def save_object(fname, obj):
+-    # type: (str, Any) -> None
+-    """Pickle a Python object"""
+-
+-    fd = gzip.open(fname, "wb")
+-    pickle.dump(obj, fd)
+-    fd.close()
+-
+-
+-def load_object(fname):
+-    # type: (str) -> Any
+-    """unpickle a Python object"""
+-    return pickle.load(gzip.open(fname, "rb"))
+-
++##################
++#  Corrupt data  #
++##################
+ 
+ @conf.commands.register
+ def corrupt_bytes(data, p=0.01, n=None):
+diff --git a/test/regression.uts b/test/regression.uts
+index 97bba309..cccb6b6b 100644
+--- a/test/regression.uts
++++ b/test/regression.uts
+@@ -993,17 +993,6 @@ zerofree_randstring(4) in [b"\xd2\x12\xe4\x5b", b'\xd3\x8b\x13\x12']
+ = Test strand function
+ assert strand(b"AC", b"BC") == b'@C'
+ 
+-= Test export_object and import_object functions
+-from unittest import mock
+-def test_export_import_object():
+-    with ContextManagerCaptureOutput() as cmco:
+-        export_object(2807)
+-        result_export_object = cmco.get_output(eval_bytes=True)
+-    assert result_export_object.startswith("eNprYPL9zqUHAAdrAf8=")
+-    assert import_object(result_export_object) == 2807
+-
+-test_export_import_object()
+-
+ = Test tex_escape function
+ tex_escape("$#_") == "\\$\\#\\_"
+ 
+@@ -1024,12 +1013,6 @@ assert sane(corrupt_bytes("ABCDE", n=3)) in ["A.8D4", ".2.DE"]
+ assert corrupt_bits("ABCDE") in [b"EBCDE", b"ABCDG"]
+ assert sane(corrupt_bits("ABCDE", n=3)) in ["AF.EE", "QB.TE"]
+ 
+-= Test save_object and load_object functions
+-import tempfile
+-fd, fname = tempfile.mkstemp()
+-save_object(fname, 2807)
+-assert load_object(fname) == 2807
+-
+ = Test whois function
+ ~ netaccess
+ 
+-- 
+2.34.1

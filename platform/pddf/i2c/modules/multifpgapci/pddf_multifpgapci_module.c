@@ -182,6 +182,14 @@ int __init pddf_multifpgapci_module_init(void)
 void __exit pddf_multifpgapci_module_exit(void)
 {
 	pddf_dbg(MULTIFPGA, KERN_INFO "%s ..\n", __FUNCTION__);
+	/*
+	 * pddf_multifpgapci_driver holds its own reference on multifpgapci_kobj
+	 * and parents each FPGA's kobject to it, so the kobject can outlive this
+	 * module. Remove the attributes this module owns first: left in place,
+	 * they point at freed module memory and the next write to them faults.
+	 */
+	if (multifpgapci_kobj)
+		sysfs_remove_group(multifpgapci_kobj, &attr_group_multifpgapci);
 	KOBJ_FREE(multifpgapci_kobj)
 	return;
 }

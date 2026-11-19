@@ -12,6 +12,8 @@
 
 #include "mock_helper.h"
 
+#define TRACE_ID_ATTR_NAME      "traceid"
+
 // define BASH_PLUGIN_UT_DEBUG to output UT debug message.
 #if defined (BASH_PLUGIN_UT_DEBUG)
 #define debug_printf printf
@@ -23,6 +25,17 @@
 
 /* Mock syslog buffer */
 char mock_syslog_message_buffer[1024];
+
+/* Mock TraceId TACACS+ attribute state */
+char mock_tac_trace_id_attr_value[256];
+char mock_tac_trace_id_attr_separator;
+int mock_tac_trace_id_attr_count;
+
+/* Mock tac_add_attrib_pair state */
+int mock_attrib_pair_count;
+char mock_attrib_pair_name[128];
+char mock_attrib_pair_separator;
+char mock_attrib_pair_value[128];
 
 /* define test scenarios for mock functions return different value by scenario. */
 int test_scenario;
@@ -101,6 +114,23 @@ int get_memory_allocate_count()
   return memory_allocate_count;
 }
 
+/* Reset mocked TACACS+ attribute state */
+void reset_mock_tac_attrs()
+{
+	memset(mock_tac_trace_id_attr_value, 0, sizeof(mock_tac_trace_id_attr_value));
+	mock_tac_trace_id_attr_separator = '\0';
+	mock_tac_trace_id_attr_count = 0;
+}
+
+/* Reset the captured tac_add_attrib_pair state. */
+void reset_mock_attrib_pair()
+{
+	mock_attrib_pair_count = 0;
+	mock_attrib_pair_name[0] = '\0';
+	mock_attrib_pair_separator = '\0';
+	mock_attrib_pair_value[0] = '\0';
+}
+
 /* Mock xcalloc method */
 void *xcalloc(size_t count, size_t size)
 {
@@ -113,6 +143,22 @@ void *xcalloc(size_t count, size_t size)
 void tac_add_attrib(struct tac_attrib **attr, char *attrname, char *attrvalue)
 {
 	debug_printf("MOCK: tac_add_attrib add attribute: %s, value: %s\n", attrname, attrvalue);
+}
+
+/* Mock tac_add_attrib_pair method */
+void tac_add_attrib_pair(struct tac_attrib **attr, char *attrname, char separator, char *attrvalue)
+{
+	if (strcmp(attrname, TRACE_ID_ATTR_NAME) == 0)
+	{
+		mock_tac_trace_id_attr_count++;
+		mock_tac_trace_id_attr_separator = separator;
+		snprintf(mock_tac_trace_id_attr_value, sizeof(mock_tac_trace_id_attr_value), "%s", attrvalue);
+	}
+	mock_attrib_pair_count++;
+	snprintf(mock_attrib_pair_name, sizeof(mock_attrib_pair_name), "%s", attrname);
+	mock_attrib_pair_separator = separator;
+	snprintf(mock_attrib_pair_value, sizeof(mock_attrib_pair_value), "%s", attrvalue);
+	debug_printf("MOCK: tac_add_attrib_pair add attribute: %s%c%s\n", attrname, separator, attrvalue);
 }
 
 /* Mock tac_free_attrib method */

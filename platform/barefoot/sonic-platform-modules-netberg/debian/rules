@@ -38,7 +38,7 @@ override_dh_auto_install:
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
 			debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
-                python3 setup.py install --root=$(MOD_SRC_DIR)/debian/platform-modules-$${mod} --install-layout=deb; \
+                python3 setup.py install --root=$(MOD_SRC_DIR)/debian/platform-modules-$${mod} --prefix=/usr --install-lib=/usr/lib/python3/dist-packages; \
 		cd $(MOD_SRC_DIR); \
 	done)
 

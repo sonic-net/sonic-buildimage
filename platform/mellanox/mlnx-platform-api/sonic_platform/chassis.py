@@ -1363,6 +1363,8 @@ class Chassis(ChassisBase):
         return bool(utils.read_int_from_file(os.path.join(REBOOT_CAUSE_ROOT, filename), log_func=None))
 
     def initialize_reboot_cause(self):
+        sw_pwr_off_cause = self.REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC \
+            if DeviceDataManager.is_platform_with_bmc() else self.REBOOT_CAUSE_POWER_LOSS
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
@@ -1372,7 +1374,7 @@ class Chassis(ChassisBase):
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
-            'reset_sw_pwr_off'          :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_sw_pwr_off'          :   sw_pwr_off_cause,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
             'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
@@ -1406,10 +1408,13 @@ class Chassis(ChassisBase):
                 return 'fast-reboot'
         return None
 
+    def _is_reboot_cause_ready(self):
+        return utils.read_int_from_file(REBOOT_CAUSE_READY_FILE, log_func=None) == 1
+
     def _wait_reboot_cause_ready(self):
         max_wait_time = REBOOT_CAUSE_MAX_WAIT_TIME
         while max_wait_time > 0:
-            if utils.read_int_from_file(REBOOT_CAUSE_READY_FILE, log_func=None) == 1:
+            if self._is_reboot_cause_ready():
                 return True
             time.sleep(REBOOT_CAUSE_CHECK_INTERVAL)
             max_wait_time -= REBOOT_CAUSE_CHECK_INTERVAL
@@ -1436,7 +1441,13 @@ class Chassis(ChassisBase):
             if reboot_cause:
                 return self.REBOOT_CAUSE_NON_HARDWARE, ''
 
-        if not self._wait_reboot_cause_ready():
+        if DeviceDataManager.is_simx_platform():
+            # The ready flag may never be set on SimX, so check once without waiting
+            if not self._is_reboot_cause_ready():
+                logger.log_notice("Hardware reboot cause is not available on SimX, "
+                                  "skipping the hardware reboot cause check")
+                return self.REBOOT_CAUSE_NON_HARDWARE, ''
+        elif not self._wait_reboot_cause_ready():
             logger.log_error("Hardware reboot cause is not ready")
             return self.REBOOT_CAUSE_NON_HARDWARE, ''
 

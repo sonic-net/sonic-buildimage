@@ -356,12 +356,26 @@ SONiC-BMC installation complete.
 Target device   : ${target_device:-unknown}
 Image directory : ${image_dir:-unknown}
 U-Boot env      : programmed
+Console speed   : baudrate=${_programmed_baud:-unknown} (this session: ${_session_baud:-unknown})
 Auto reboot     : ${INSTALL_REBOOT_REASON}
 Result          : ${_result}
 ==========================================================
 
 EOF
 }
+
+# A mismatch means the next boot is unreadable on the operator's current terminal,
+# so hold the box instead of rebooting into it. For a repeated tty, the kernel
+# uses the first console= token, so compare against that same rate.
+_session_baud=$(grep -Eo 'console=ttyS[0-9]+,[0-9]+' /proc/cmdline | head -1 | cut -d ',' -f2)
+_programmed_baud=$(fw_printenv -n baudrate 2>/dev/null || true)
+if [ "$INSTALL_REBOOT" = y ] && [ -n "$_programmed_baud" ] && [ -n "$_session_baud" ] \
+    && [ "$_programmed_baud" != "$_session_baud" ]; then
+    echo "WARNING: programmed console speed ($_programmed_baud) differs from this session's ($_session_baud)."
+    echo "WARNING: auto-reboot disabled; set your terminal to $_programmed_baud, then reboot manually."
+    INSTALL_REBOOT=n
+    INSTALL_REBOOT_REASON="disabled: console speed changes to $_programmed_baud on next boot"
+fi
 
 print_install_success_banner
 

@@ -7,13 +7,22 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform.watchdog import Watchdog
+    from sonic_platform_base.bmc_watchdog import BMCWatchdog
     from sonic_platform.eeprom import Eeprom
+    from sonic_platform.sysfs import read_sysfs_file
     from sonic_platform.switch_host_module import SwitchHostModule
+    from sonic_platform.component import Component
     from sonic_py_common import logger
     from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
+
+SYSFPGA_DIR = "/sys/bus/i2c/devices/14-0060/"
+BMC_RESET_CAUSE_SYSFS = SYSFPGA_DIR + "bmc_reset_cause"
+SCU1_RESET_LOG4_ADDR = "0x14C02080"
+
+sonic_logger = logger.Logger('chassis')
+sonic_logger.set_min_log_priority_info()
 
 class Chassis(ChassisBase):
     """
@@ -32,14 +41,19 @@ class Chassis(ChassisBase):
     # Thermal sensors are controoled by host CPU
     NUM_THERMAL_SENSORS = 0 
 
+    SOCKET_PATH = "/run/hw-watchdog-mgrd/hw-watchdog-mgrd.sock"
+
+    # Components
+    MAX_COMPONENTS = 1
+
     def __init__(self):
         """
         Initialize Nokia H6-128 BMC with hardware-specific configuration
         """
         super().__init__()
 
-        # Initialize watchdog (same as base class)
-        self._watchdog = Watchdog()
+        # Initialize watchdog (common BMCWatchdog)
+        self._watchdog = BMCWatchdog(socket_path=self.SOCKET_PATH)
 
         # Initialize eeprom
         self._eeprom = Eeprom()
@@ -53,6 +67,11 @@ class Chassis(ChassisBase):
         self._fan_list = []
         self._fan_drawer_list = []
         self._thermal_list = []
+
+        # Components init
+        for i in range(self.MAX_COMPONENTS):
+            component = Component(self.get_model(), i)
+            self._component_list.append(component)
 
         # Nokia-specific initialization
         self.card_revision = self._detect_card_revision()
@@ -77,20 +96,105 @@ class Chassis(ChassisBase):
         except (IOError, OSError, ValueError):
             return 0
 
+    def _parse_hex(self, value, source):
+        """
+        Parse a hex string from sysfs or devmem.
+
+        Returns:
+            int or None: Parsed value, or None if missing/invalid.
+        """
+        if not value or value == "ERR":
+            sonic_logger.log_warning("Invalid {} value: {!r}".format(source, value))
+            return None
+        try:
+            return int(value, 16)
+        except (TypeError, ValueError):
+            sonic_logger.log_warning("Failed to parse {} value: {!r}".format(source, value))
+            return None
+
+    def _soc_read_reg(self, addr):
+        """
+        Read a 32-bit SoC MMIO register via busybox devmem.
+
+        Args:
+            addr: Register address as a hex string (e.g. '0x14C02080').
+
+        Returns:
+            int or None: Register value, or None on command/parse failure.
+        """
+        try:
+            status, output = getstatusoutput_noshell(
+                ["busybox", "devmem", addr, "32"]
+            )
+        except OSError as exc:
+            sonic_logger.log_error("SOC register read failed at {}: {}".format(addr, exc))
+            return None
+
+        # getstatusoutput_noshell: 0 is success, non-zero is failure.
+        if status != 0:
+            sonic_logger.log_error("SOC register read failed at {} (status={}): {}".format(
+                addr, status, output))
+            return None
+        return self._parse_hex(output, "SOC register {}".format(addr))
+
+    def _soc_write_reg(self, addr, value):
+        """
+        Write a 32-bit SoC MMIO register via busybox devmem.
+
+        Args:
+            addr: Register address as a hex string (e.g. '0x14C02080').
+            value: Integer value to write.
+        """
+        hex_val = "0x{:08x}".format(value)
+        try:
+            status, output = getstatusoutput_noshell(
+                ["busybox", "devmem", addr, "32", hex_val]
+            )
+        except OSError as exc:
+            sonic_logger.log_error("SOC register write failed at {}: {}".format(addr, exc))
+            return
+
+        if status != 0:
+            sonic_logger.log_error("SOC register write failed at {} (status={}): {}".format(
+                addr, status, output))
+
     def get_reboot_cause(self):
         """
-        Retrieves the cause of the previous reboot
+        Retrieves the cause of the previous reboot.
 
-        Not implemented yet.
+        Cold/Warm reset is read from FPGA/CPLD.
+        Watchdog reset is read from from SCU1 reset event log 4.
+
         Returns:
             A tuple (string, string) where the first element is a string
             containing the cause of the previous reboot. This string must be
             one of the predefined strings in ChassisBase. If the first string
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
-            
         """
-        return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+        sysfpga_reboot_reason = self._parse_hex(
+            read_sysfs_file(BMC_RESET_CAUSE_SYSFS), "bmc_reset_cause") or 0
+        soc_reboot_reason = self._soc_read_reg(SCU1_RESET_LOG4_ADDR)
+        if soc_reboot_reason is not None:
+            self._soc_write_reg(SCU1_RESET_LOG4_ADDR, soc_reboot_reason)
+        else:
+            soc_reboot_reason = 0
+
+        if sysfpga_reboot_reason & 0x1:
+            reboot_cause = (ChassisBase.REBOOT_CAUSE_POWER_LOSS, "Cold Reset")
+        elif sysfpga_reboot_reason & 0x2:
+            reboot_cause = (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
+        elif soc_reboot_reason ==  0x4:
+            reboot_cause = (ChassisBase.REBOOT_CAUSE_WATCHDOG, "WDOG0")
+        elif soc_reboot_reason == 0x40:
+            reboot_cause = (ChassisBase.REBOOT_CAUSE_WATCHDOG, "WDOG1")
+        else:
+            reboot_cause = (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, "")
+
+        sonic_logger.log_notice(
+            "Reboot-cause reported by platform - {} sysfpga:0x{:x} soc:0x{:x}".format(
+                reboot_cause, sysfpga_reboot_reason, soc_reboot_reason))
+        return reboot_cause
 
     def get_all_modules(self):
         """
@@ -324,3 +428,40 @@ class Chassis(ChassisBase):
             None: No liquid cooling object on this chassis.
         """
         return None
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Not available on this platform
+        """
+        return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Not available on this platform
+        """
+        return self.STATUS_LED_COLOR_OFF

@@ -25,11 +25,11 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Callable
 
-from sonic_platform.device_data import DeviceDataManager
 from tabulate import tabulate
 
 COMPONENT_VERSIONS_FILE = "/etc/mlnx/component-versions"
 HEADERS = ["COMPONENT", "COMPILATION", "ACTUAL"]
+BMC_ASIC_TYPE = "aspeed"
 
 
 def parse_fw_version(output: str, platform: str) -> list[str]:
@@ -57,6 +57,10 @@ def parse_fw_version_dpu(output: str) -> list[str]:
     return parse_fw_version(output, "BlueField")
 
 
+def get_oe_fw_version(_output: str) -> list[str]:
+    return get_vmod().get_running_versions() or ["N/A"]
+
+
 @dataclass
 class ComponentRule:
     deb_package: str | None = None
@@ -69,12 +73,18 @@ class ComponentRule:
 COMPONENT_RULES_SW = {
     "MFT": ComponentRule(deb_package="mft"),
     "HW_MANAGEMENT": ComponentRule(deb_package="hw-management", regex=r".*1\.mlnx\.([0-9.]*)"),
-    "SDK": ComponentRule(deb_package="sys-sdk-main", regex=r".*1\.mlnx\.([0-9.]*)", is_from_syncd=True),
+    "SDK": ComponentRule(deb_package="sys-sdk-main", regex=r".*1\.mlnx\.([A-Za-z0-9.]*)", is_from_syncd=True),
     "SAI": ComponentRule(deb_package="mlnx-sai", regex=r".*1\.mlnx\.([A-Za-z0-9.]*)", is_from_syncd=True),
     "SAI_API_HEADERS": ComponentRule(cmd="dpkg -s mlnx-sai", regex="X-Sai-Headers-Version: ([0-9.]+)", is_from_syncd=True),
     "FW": ComponentRule(cmd="mlxfwmanager --query --query-format xml", regex=r"[0-9]{2}[\._]([0-9._-]*)", fn=parse_fw_version_sw),
     "KERNEL": ComponentRule(cmd="uname -r", regex=r"(.*)-[a-z0-9]+$"),
     "RSHIM": ComponentRule(deb_package="rshim"),
+}
+
+
+# Added to COMPONENT_RULES_SW on CPO platforms only.
+COMPONENT_RULES_CPO = {
+    "OE_FW": ComponentRule(fn=get_oe_fw_version),
 }
 
 
@@ -89,12 +99,33 @@ COMPONENT_RULES_DPU = {
 }
 
 
+# hw-management is built bmc-only there, hence the -bmc package name.
+COMPONENT_RULES_BMC = {
+    "HW_MANAGEMENT": ComponentRule(deb_package="hw-management-bmc", regex=r".*1\.mlnx\.([0-9.]*)"),
+    "KERNEL": ComponentRule(cmd="uname -r", regex=r"(.*)-[a-z0-9]+$"),
+}
+
+
 UNAVAILABLE_PLATFORM_VERSIONS = {
     "ONIE": "N/A",
     "SSD": "N/A",
     "BIOS": "N/A",
     "CPLD": "N/A"
 }
+
+
+@functools.cache
+def get_device_data_manager():
+    """Imported lazily: the BMC's sonic_platform ships no device_data."""
+    from sonic_platform.device_data import DeviceDataManager
+    return DeviceDataManager
+
+
+@functools.cache
+def get_vmod():
+    """Imported lazily: the BMC has no mellanox_fw_manager."""
+    from mellanox_fw_manager import vmod
+    return vmod
 
 
 @functools.cache
@@ -105,11 +136,18 @@ def get_asic_type():
 
 @functools.cache
 def get_component_rules():
-    return COMPONENT_RULES_SW if get_asic_type() == "mellanox" else COMPONENT_RULES_DPU
+    asic_type = get_asic_type()
+    if asic_type == "mellanox":
+        if get_vmod().is_cpo_platform():
+            return {**COMPONENT_RULES_SW, **COMPONENT_RULES_CPO}
+        return COMPONENT_RULES_SW
+    if asic_type == BMC_ASIC_TYPE:
+        return COMPONENT_RULES_BMC
+    return COMPONENT_RULES_DPU
 
 
 def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
-    asic_count = DeviceDataManager.get_asic_count() if get_asic_type() == "mellanox" else 1
+    asic_count = get_device_data_manager().get_asic_count() if get_asic_type() == "mellanox" else 1
 
     cmd = rule.cmd
     if rule.deb_package:
@@ -117,14 +155,17 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
 
     versions = []
     cmd_args = shlex.split(cmd)
-    if asic_count > 1 and rule.is_from_syncd:
+    if not cmd_args:
+        # No command: the rule's fn reads the versions itself.
+        versions = [""]
+    elif asic_count > 1 and rule.is_from_syncd:
         for asic in range(asic_count):
-            asic_cmd = ["docker", "exec", "-it", f"syncd{asic}"] + cmd_args
+            asic_cmd = ["docker", "exec", f"syncd{asic}"] + cmd_args
             version = subprocess.run(asic_cmd, shell=False, stdout=subprocess.PIPE, text=True).stdout
             versions.append(version)
     else:
         if rule.is_from_syncd:
-            run_cmd = ["docker", "exec", "-it", "syncd"] + cmd_args
+            run_cmd = ["docker", "exec", "syncd"] + cmd_args
         else:
             run_cmd = cmd_args
         version = subprocess.run(run_cmd, shell=False, stdout=subprocess.PIPE, text=True).stdout
@@ -139,6 +180,8 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
     if rule.regex:
         versions[:] = [re.search(rule.regex, version).group(1) for version in versions]
 
+    if not versions:
+        return True, "N/A"
     if len(set(versions)) == 1:
         return True, versions[0]
     return False, versions
@@ -147,6 +190,13 @@ def process_rule(rule: ComponentRule) -> tuple[bool, str | list[str]]:
 def parse_compiled_components_file():
     rules = get_component_rules()
     compiled_versions = {comp: "N/A" for comp in list(rules.keys()) + ["SIMX"]}
+
+    # The OE firmware ships inside the image's MFA, not in the versions file.
+    if "OE_FW" in compiled_versions:
+        try:
+            compiled_versions["OE_FW"] = get_vmod().get_image_version() or "N/A"
+        except Exception:
+            pass
 
     if not os.path.exists(COMPONENT_VERSIONS_FILE):
         return compiled_versions
@@ -195,7 +245,8 @@ def format_output_table(table):
 
 def main():
 
-    if os.getuid() != 0:
+    # The BMC rules only read a deb version and uname -r, so they need no root.
+    if get_asic_type() != BMC_ASIC_TYPE and os.getuid() != 0:
         print("Error: Root privileges are required")
         return
 
@@ -212,13 +263,18 @@ def main():
             for idx, v in enumerate(versions):
                 output_table.append([f"{comp} ASIC{idx}", compiled_versions[comp], v])
 
-    # Handle if SIMX
-    if hasattr(DeviceDataManager, "is_simx_platform") and DeviceDataManager.is_simx_platform():
-        simx_actual_ver = DeviceDataManager.get_simx_version()
-        output_table.append(["SIMX", simx_compiled_ver, simx_actual_ver])
-        platform_versions = UNAVAILABLE_PLATFORM_VERSIONS
+    if get_asic_type() == BMC_ASIC_TYPE:
+        # The BMC is never SIMX and has no chassis firmware for fwutil to report.
+        platform_versions = {}
     else:
-        platform_versions = get_platform_component_versions()
+        device_data_manager = get_device_data_manager()
+        # Handle if SIMX
+        if hasattr(device_data_manager, "is_simx_platform") and device_data_manager.is_simx_platform():
+            simx_actual_ver = device_data_manager.get_simx_version()
+            output_table.append(["SIMX", simx_compiled_ver, simx_actual_ver])
+            platform_versions = UNAVAILABLE_PLATFORM_VERSIONS
+        else:
+            platform_versions = get_platform_component_versions()
 
     # Add actual versions to table
     for comp in platform_versions.keys():

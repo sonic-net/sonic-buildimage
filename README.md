@@ -220,7 +220,6 @@ The supported ASIC vendors are:
 * PLATFORM=marvell-teralynx
 * PLATFORM=mellanox
 * PLATFORM=centec
-* PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
 * PLATFORM=vs
 
@@ -246,18 +245,18 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 make target/sonic-marvell-prestera-armhf.bin
 ```
 
-To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian buster
+To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian bookworm
 using cross-compilation, run the following commands:
 
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 \
+CROSS_BLDENV=1 \
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
+CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
@@ -306,8 +305,6 @@ ONIE image is used for all other Broadcom ASIC based devices.
 
 ```shell
 make configure PLATFORM=broadcom
-# build debian stretch required targets
-BLDENV=stretch make stretch
 # build ONIE image
 make target/sonic-broadcom.bin
 # build EOS image
@@ -371,6 +368,16 @@ reproducibility notes, and known limitations.
 * If you are running make for the first time, a sonic-slave-${USER} docker image
   will be built automatically.
   This may take a while, but it is a one-time action, so please be patient.
+* If the slave base image tag changes (e.g. edits under `sonic-slave-*`) but you
+  want to keep using a base image you already built, run
+  `BLDENV=<release> make showtag` (per release and per arch, as in real builds) to
+  record `sonic-slave-<release>:<tag>`, then pass the matching **per-release**
+  pair, e.g. `SONIC_SLAVE_REUSE_BOOKWORM_IMAGE` / `SONIC_SLAVE_REUSE_BOOKWORM_TAG`
+  for `BLDENV=bookworm` and
+  `SONIC_SLAVE_REUSE_TRIXIE_IMAGE` / `SONIC_SLAVE_REUSE_TRIXIE_TAG` for
+  `BLDENV=trixie`, on later make invocations to skip rebuilding the slave. You
+  can export several pairs in your environment when switching between releases.
+  See `Makefile.work` for details.
 * The root user account is disabled. However, the created user can `sudo`.
 * The target directory is `./target`, containing the NOS installer image
   and docker images.
@@ -390,8 +397,6 @@ reproducibility notes, and known limitations.
     and Cavium switch ASIC (gzip tar archive)
   * docker-syncd-mlnx.gz: docker image for the daemon to sync database
     and Mellanox switch ASIC (gzip tar archive)
-  * docker-syncd-nephos.gz: docker image for the daemon to sync database
-    and Nephos switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
     and Marvell-Teralynx switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-prestera.gz: docker image for the daemon to sync database

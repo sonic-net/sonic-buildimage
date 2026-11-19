@@ -1,0 +1,104 @@
+# Shared steps for one cache-equivalence matrix leg. Consumed by each per-pool
+# job in azure-pipelines-cache-equivalence.yml. All per-platform values arrive as
+# runtime matrix variables:
+#   platform    -> make PLATFORM= (the source platform name, e.g. marvell-prestera)
+#   arch        -> make PLATFORM_ARCH= (amd64 / arm64 / armhf)
+#   cacheNs     -> dpkg cache namespace under /nfs/dpkg_cache/ (official GROUP_NAME,
+#                  e.g. marvell-prestera-arm64) and the unique artifact suffix
+#   buildTarget -> installer make target compared (e.g. target/sonic-broadcom.bin)
+steps:
+- checkout: buildimage
+  submodules: recursive
+
+# --- Tree A: fresh, from scratch (NO cache) ---
+- script: |
+    set -e
+    make init
+    make configure PLATFORM=$(platform) PLATFORM_ARCH=$(arch)
+    make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+         $(buildTarget)
+    mkdir -p "$(Build.ArtifactStagingDirectory)/treeA"
+    cp -r target "$(Build.ArtifactStagingDirectory)/treeA/"
+  displayName: 'Build A (from scratch, no cache)'
+
+# --- Tree B: a SECOND fresh, from-scratch build (NO cache) ---
+# Used to compute the non-determinism baseline for THIS run (A vs B).
+- script: |
+    set -e
+    make clean
+    make configure PLATFORM=$(platform) PLATFORM_ARCH=$(arch)
+    make SONIC_DPKG_CACHE_METHOD=none SONIC_BUILD_JOBS=$(nproc) \
+         $(buildTarget)
+    mkdir -p "$(Build.ArtifactStagingDirectory)/treeB"
+    cp -r target "$(Build.ArtifactStagingDirectory)/treeB/"
+  displayName: 'Build B (from scratch, no cache — baseline pair)'
+
+# --- Tree C: same targets, WITH cache (rcache) ---
+- script: |
+    set -e
+    make clean
+    make configure PLATFORM=$(platform) PLATFORM_ARCH=$(arch)
+    make SONIC_DPKG_CACHE_METHOD=rcache \
+         SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(cacheNs) \
+         SONIC_BUILD_JOBS=$(nproc) $(buildTarget)
+    mkdir -p "$(Build.ArtifactStagingDirectory)/treeC"
+    cp -r target "$(Build.ArtifactStagingDirectory)/treeC/"
+  displayName: 'Build C (rcache)'
+
+# --- Compute the non-determinism baseline for THIS run: fresh A vs fresh B ---
+# Any SEMANTIC diff between two from-scratch builds is inherent build
+# non-determinism (timestamps, ar/tar ordering, gzip metadata, ...), NOT a
+# cache bug. Regenerated every run, so it never goes stale.
+- script: |
+    set -e
+    chmod +x scripts/verify_cache_equivalence.sh
+    ./scripts/verify_cache_equivalence.sh \
+      --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+      --dir-b "$(Build.ArtifactStagingDirectory)/treeB/target" \
+      --level 1,2,3,5 \
+      --generate-baseline \
+      --json --output-dir "$(Build.ArtifactStagingDirectory)/baseline"
+  displayName: 'Generate non-determinism baseline (fresh A vs fresh B)'
+
+# --- Compare A vs C (fails on SEMANTIC diff not explained by baseline) ---
+- script: |
+    set -e
+    ./scripts/verify_cache_equivalence.sh \
+      --dir-a "$(Build.ArtifactStagingDirectory)/treeA/target" \
+      --dir-b "$(Build.ArtifactStagingDirectory)/treeC/target" \
+      --level 1,2,3,5 \
+      --baseline "$(Build.ArtifactStagingDirectory)/baseline/equivalence-report.json" \
+      --json --output-dir "$(Build.ArtifactStagingDirectory)/report"
+  displayName: 'Verify cache equivalence (A vs C, this-run baseline)'
+
+- publish: $(Build.ArtifactStagingDirectory)/baseline
+  artifact: cache-equivalence-baseline-$(cacheNs)
+  displayName: 'Publish this-run non-determinism baseline'
+  condition: always()
+
+- publish: $(Build.ArtifactStagingDirectory)/report
+  artifact: cache-equivalence-report-$(cacheNs)
+  displayName: 'Publish comparison report'
+  condition: always()
+
+# --- Weekly static audit: surface NEW cache-key completeness gaps ---
+# Complements the equivalence proof above: the equivalence run shows whether
+# today's cache is honest, while this static audit tracks the completeness
+# backlog (P1/P2/P3) week over week so owners can spot newly introduced gaps
+# that the per-PR Tier 1 gate did not (e.g. gaps merged before it was armed).
+# Whole-tree mode exits 0 by design; this step is a report, not a gate.
+- script: |
+    set -eo pipefail
+    chmod +x scripts/audit_dep_completeness.sh
+    mkdir -p "$(Build.ArtifactStagingDirectory)/audit"
+    ./scripts/audit_dep_completeness.sh --json \
+      > "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.json"
+    ./scripts/audit_dep_completeness.sh --verbose 2>&1 \
+      | tee "$(Build.ArtifactStagingDirectory)/audit/audit_dep_completeness.txt"
+  displayName: 'Audit dep completeness (whole-tree gap report)'
+  condition: always()
+
+- publish: $(Build.ArtifactStagingDirectory)/audit
+  artifact: cache-key-audit-report-$(cacheNs)
+  displayName: 'Publish cache-key audit report'
+  condition: always()

@@ -1,0 +1,39 @@
+From e4f1227b99c18d158549ec28450d0c4c83bd3976 Mon Sep 17 00:00:00 2001
+From: Petr Vaganov <p.vaganov@ideco.com>
+Date: Mon, 24 Aug 2026 19:49:14 +0700
+Subject: [PATCH] bgpd: guard missing aggregate on unset
+
+FRR 10.7.1 already contains eight of the nine upstream fixes carried by
+the original SONiC aggregate route counter patch. Retain only the remaining
+null-dereference protection from upstream commit 8f0438b410a0.
+
+Original SONiC patch:
+https://github.com/sonic-net/sonic-buildimage/pull/29056
+
+Signed-off-by: Petr Vaganov <petrvaganoff@gmail.com>
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+---
+ bgpd/bgp_route.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 4c305378ff..d08655c1ab 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -10476,6 +10476,12 @@ static int bgp_aggregate_unset(struct vty *vty, const char *prefix_str,
+ 	}
+ 
+ 	aggregate = bgp_dest_get_bgp_aggregate_info(dest);
++	if (!aggregate) {
++		vty_out(vty, "%% There is no aggregate-address configuration.\n");
++		bgp_dest_unlock_node(dest);
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
+ 	bgp_aggregate_delete(bgp, &p, afi, safi, aggregate);
+ 
+ 	/*
+-- 
+2.34.1
+
