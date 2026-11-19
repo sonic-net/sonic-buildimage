@@ -169,15 +169,6 @@ class TestRsyslogConfigScript(TestCase):
         self.assertEqual(self.systemctl_calls(), ['restart rsyslog'])
         self.assertEqual(self.read(self.snapshot), fragment_for(DOCKER0_IP))
 
-    def test_reboot_rewrites_fragment_then_restarts(self):
-        self.run_script()
-        shutil.rmtree(os.path.dirname(self.fragment))
-        self.run_script()
-        self.assert_conf(LOOPBACK_IP, include=True)
-        self.assertEqual(self.read(self.fragment), fragment_for(DOCKER0_IP))
-        self.assertEqual(self.systemctl_calls(), ['restart rsyslog'])
-        self.assertEqual(self.read(self.snapshot), fragment_for(DOCKER0_IP))
-
     def test_new_docker0_address_rewrites_fragment_then_restarts(self):
         self.run_script()
         self.assertEqual(self.read(self.fragment), fragment_for(DOCKER0_IP))

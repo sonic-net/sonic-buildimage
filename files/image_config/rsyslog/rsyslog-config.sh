@@ -75,9 +75,8 @@ if [ -n "$docker0_ip" ] && [ "$docker0_ip" != "$udp_server_ip" ]; then
         "$docker0_ip" "$docker0_ip")
     if [ "$(cat "$DOCKER0_INPUTS" 2>/dev/null)" != "$docker0_inputs" ]; then
         if ! { mkdir -p "$DOCKER0_INPUTS_DIR" && \
-               printf '%s\n' "$docker0_inputs" > "$DOCKER0_INPUTS.tmp" && \
-               mv -f "$DOCKER0_INPUTS.tmp" "$DOCKER0_INPUTS"; }; then
-            rm -f "$DOCKER0_INPUTS.tmp"
+               printf '%s\n' "$docker0_inputs" > "$DOCKER0_INPUTS"; }; then
+            rm -f "$DOCKER0_INPUTS"
             echo "Failed to update $DOCKER0_INPUTS; docker0 inputs not configured" >&2
             docker0_inputs_failed=true
         fi
