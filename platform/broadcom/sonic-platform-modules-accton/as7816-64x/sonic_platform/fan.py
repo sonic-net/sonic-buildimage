@@ -19,32 +19,5 @@ class Fan(PddfFan):
     # Provide the functions/variables below for which implementation is to be overwritten
     # Since psu_fan airflow direction cant be read from sysfs, it is fixed as 'F2B' or 'exhaust'
     def get_direction(self):
-        """
-        Retrieves the direction of fan
-
-        Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
-            depending on fan direction
-        """
-        if self.is_psu_fan:
-            direction = self.FAN_DIRECTION_EXHAUST
-
-        else:
-            idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
-            attr = "fan" + str(idx) + "_direction"
-            output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
-            if not output:
-                return False
-
-            mode = output['mode']
-            val = output['status']
-
-            val = val.rstrip()
-            vmap = self.plugin_data['FAN']['direction'][mode]['valmap']
-            if val in vmap:
-                direction = vmap[val]
-            else:
-                direction = val
-
-        return direction
-
+        """Use the registered chassis/PSU airflow readings and standard labels."""
+        return PddfFan.get_direction(self)

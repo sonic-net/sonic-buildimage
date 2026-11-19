@@ -11,7 +11,6 @@ except ImportError as e:
 class Psu(PddfPsu):
     """PDDF Platform-Specific PSU class"""
     
-    PLATFORM_PSU_CAPACITY = 1200
 
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
         PddfPsu.__init__(self, index, pddf_data, pddf_plugin_data)
@@ -24,7 +23,7 @@ class Psu(PddfPsu):
             A float number, the maximum power output in Watts.
             e.g. 1200.1
         """
-        return float(self.PLATFORM_PSU_CAPACITY)
+        return PddfPsu.get_maximum_supplied_power(self)
 
     def get_type(self):
         """
@@ -33,3 +32,15 @@ class Psu(PddfPsu):
         A string, the type of PSU (AC/DC)
         """
         return "AC"
+
+    def get_input_voltage(self):
+        """Input telemetry is unavailable on the inspected YM-2851F supply."""
+        raise NotImplementedError
+
+    def get_input_current(self):
+        """Input telemetry is unavailable on the inspected YM-2851F supply."""
+        raise NotImplementedError
+
+    def get_input_power(self):
+        """Input telemetry is unavailable on the inspected YM-2851F supply."""
+        raise NotImplementedError

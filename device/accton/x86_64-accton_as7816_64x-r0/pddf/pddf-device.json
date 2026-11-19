@@ -6,6 +6,7 @@
         "num_fans_pertray":2,
         "num_ports":64,
         "num_temps": 6,
+        "num_components": 1,
         "pddf_dev_types":
         {
             "description":"AS7816-64X - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -173,6 +174,10 @@
                 { "attr_name":"psu_power_good", "attr_devaddr":"0x60", "attr_devtype":"cpld", "attr_offset":"0x3", "attr_mask":"0x4", "attr_cmpval":"0x4", "attr_len":"1"},
                 { "attr_name":"psu_mfr_id", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0X99", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"10"},
                 { "attr_name":"psu_fan_dir", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xc3", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"5"},
+                { "attr_name":"psu_v_out_min", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_max", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x51", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_p_out_max", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_v_out", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x5b", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
@@ -222,6 +227,10 @@
                 { "attr_name":"psu_power_good", "attr_devaddr":"0x60", "attr_devtype":"cpld", "attr_offset":"0x3", "attr_mask":"0x8", "attr_cmpval":"0x8", "attr_len":"1"},
                 { "attr_name":"psu_mfr_id", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0X99", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"10"},
                 { "attr_name":"psu_fan_dir", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xc3", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"5"},
+                { "attr_name":"psu_v_out_min", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa4", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_v_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa5", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_temp1_high_threshold", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x51", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
+                { "attr_name":"psu_p_out_max", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xa7", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_v_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
@@ -3201,5 +3210,9 @@
 				]
 			}
 
-	}
+	},
+    "COMPONENT1": {
+        "comp_attr": {"name": "BIOS", "description": "Basic Input/Output System", "type": "bios"},
+        "attr_list": [{"attr_name": "version", "cmd": "cat /sys/class/dmi/id/bios_version"}]
+    }
 }

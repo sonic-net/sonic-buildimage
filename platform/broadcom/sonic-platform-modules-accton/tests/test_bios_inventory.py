@@ -1,4 +1,4 @@
-"""Read-only PDDF BIOS inventory on AS7326 and AS7726."""
+"""Read-only PDDF BIOS inventory on AS7326, AS7726 and AS7816."""
 
 import json
 import sys
@@ -38,3 +38,7 @@ class BiosInventory(unittest.TestCase):
 
 class As7726BiosInventory(BiosInventory):
     model = "as7726_32x"
+
+
+class As7816BiosInventory(BiosInventory):
+    model = "as7816_64x"
