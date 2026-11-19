@@ -67,13 +67,18 @@ def main():
     source, sdk = args.source.resolve(), args.sdk.resolve()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    private = args.output_base.resolve().parent / "p4rt-private-evidence"
+    # Sibling output bases can run concurrently. Keep their raw action/test
+    # records separate, while aliases of one output base share its identity.
+    output_base = args.output_base.resolve()
+    identity = hashlib.sha256(os.fsencode(output_base)).hexdigest()
+    private = output_base.parent / "p4rt-private-evidence" / identity
     private.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, USE_BAZEL_VERSION="6.4.0")
     bazel = ["bazel", "--output_base=" + str(args.output_base.resolve())]
     override = "--override_repository=sonic_swss_common=" + str(sdk)
-    mirrors = "--experimental_downloader_config=" + str(source.parent / "source_mirrors.cfg")
-    options = [override, mirrors, "-c", "opt", "--fission=opt", "--copt=-g",
+    mirror_cfg = source.parent / "source_mirrors.cfg"
+    mirrors = ["--experimental_downloader_config=" + str(mirror_cfg)] if mirror_cfg.is_file() else []
+    options = [override, *mirrors, "-c", "opt", "--fission=opt", "--copt=-g",
                "--copt=-gdwarf-4", "--copt=-Wno-array-bounds",
                "--copt=-Wno-stringop-overflow", *(["--jobs=" + str(args.jobs)] if args.jobs is not None else [])]
 

@@ -22,7 +22,7 @@ JOBS = [("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
         ("bazel-oci.yml", "checks"), ("bazel-supervisor-rust.yml", "native"),
         ("bazel-yang-models.yml", "package")]
 PRIVATE_CACHE_JOBS = {
-    ("bazel-oci.yml", "otel_archive"),
+    ("bazel-oci.yml", "otel_archive"), ("bazel-oci.yml", "p4rt_native"),
     ("bazel-oci.yml", "radv_native"),
     ("bazel-oci.yml", "gearbox_archive"), ("bazel-oci.yml", "dash_engine_archive"),
     ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
@@ -72,9 +72,9 @@ class SetupBazelCacheTest(unittest.TestCase):
                     if (path.name == "bazel-sysmgr.yml" or
                             (path.name == "bazel-oci.yml" and name in {
                                 "otel_archive", "radv_native", "gearbox_archive", "dash_engine_archive",
-                                "gnmi_native", "mgmt_framework_native"})):
+                                "gnmi_native", "mgmt_framework_native", "p4rt_native"})):
                         labels = ["self-hosted", "linux", "bazel-x64"]
-                        if name in {"gearbox_archive", "dash_engine_archive"}:
+                        if name in {"gearbox_archive", "dash_engine_archive", "p4rt_native"}:
                             labels.append("vs")
                         self.assertEqual(job["runs-on"], labels)
                         continue

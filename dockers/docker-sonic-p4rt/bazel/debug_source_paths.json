@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "packages": {
+    "openssh-client": {
+      "required_paths": [
+        "usr/bin/ssh",
+        "usr/bin/ssh-agent"
+      ]
+    },
+    "libsairedis": {
+      "required_paths": [
+        "usr/lib/x86_64-linux-gnu/libsairedis.so.0",
+        "usr/lib/x86_64-linux-gnu/libsairedis.so.0.0.0"
+      ]
+    },
+    "libsaimetadata": {
+      "required_paths": [
+        "usr/lib/x86_64-linux-gnu/libsaimeta.so.0",
+        "usr/lib/x86_64-linux-gnu/libsaimeta.so.0.0.0",
+        "usr/lib/x86_64-linux-gnu/libsaimetadata.so.0",
+        "usr/lib/x86_64-linux-gnu/libsaimetadata.so.0.0.0"
+      ]
+    }
+  }
+}

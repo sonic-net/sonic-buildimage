@@ -685,3 +685,19 @@ source_modules(
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
     },
 )
+
+# P4RT retains its source-owned Bazel 6 build. The explicit preparation step
+# verifies and stages its runtime/debug TARs and source contracts here.
+local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+
+local_repository(
+    name = "p4rt_owner_payload",
+    path = ".bazel-inputs/p4rt-owner",
+)
+
+use_repo(apt, "p4rt_debian", "p4rt_debug_debian", "p4rt_test_debian")
+
+apt_inputs(
+    name = "p4rt_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)

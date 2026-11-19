@@ -90,8 +90,8 @@ elif command == "info":
         build = (self.output / "BUILD.bazel").read_text()
         self.assertIn('name = "common"', build)
         self.assertIn('name = "libswsscommon"', build)
-        self.assertIn('shared_library = "lib/libswsscommon.so.0"', build)
-        self.assertNotIn("srcs =", build)
+        self.assertIn('srcs = ["lib/libswsscommon.so.0"]', build)
+        self.assertNotIn(".cpp", build)
 
     def test_wrong_architecture_does_not_replace_existing_sdk(self):
         self.prepare()

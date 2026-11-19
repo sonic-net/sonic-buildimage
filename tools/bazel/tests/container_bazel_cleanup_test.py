@@ -449,7 +449,8 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                     if any(step.get("uses") == action and
                            step.get("with", {}).get("migrated-job") != "true"
                            for step in job["steps"])}
-        self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "radv_native"})
+        self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "radv_native",
+                                    "p4rt_native"})
         self.assertLessEqual(selected, subject.CONTAINER_JOBS)
         self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
                          {"amd64", "arm64"})
@@ -473,11 +474,13 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                         self.assertTrue(identifier.startswith(subject.UPLOAD_PREFIX))
                         self.assertIn("steps." + identifier.removeprefix(subject.UPLOAD_PREFIX) +
                                       ".outcome == 'success'", step["if"])
-        dash_steps = jobs["dash_engine_archive"]["steps"]
-        scratch = next(step for step in dash_steps if step.get("id") == "dash_scratch")
-        self.assertIn('mktemp -d "$SONIC_BAZEL_JOB_TEMP/dash-engine.', scratch["run"])
-        self.assertLess(next(i for i, step in enumerate(dash_steps) if step.get("uses") == action),
-                        dash_steps.index(scratch))
+        for name, identifier, prefix in (("dash_engine_archive", "dash_scratch", "dash-engine."),
+                                         ("p4rt_native", "p4rt_storage", "p4rt.")):
+            steps = jobs[name]["steps"]
+            scratch = next(step for step in steps if step.get("id") == identifier)
+            self.assertIn('mktemp -d "$SONIC_BAZEL_JOB_TEMP/' + prefix, scratch["run"])
+            self.assertLess(next(i for i, step in enumerate(steps) if step.get("uses") == action),
+                            steps.index(scratch))
         value = yaml.safe_load((ACTION / "action.yml").read_text())["runs"]
         self.assertEqual(value["using"], "node24")
         self.assertEqual(value["post-if"], "always()")

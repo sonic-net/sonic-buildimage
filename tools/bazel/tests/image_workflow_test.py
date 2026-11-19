@@ -339,6 +339,72 @@ class VerificationWorkflowTest(unittest.TestCase):
                         self.run_sysmgr_public_evidence(directory)
                     self.assertFalse((root / "build-summary.json").exists())
 
+    def test_p4rt_build_and_installed_jobs_use_same_run_archives(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        archive, installed = jobs["p4rt_native"], jobs["p4rt_runtime"]
+        self.assertEqual(archive["runs-on"], jobs["gearbox_archive"]["runs-on"])
+        self.assertEqual(archive["container"], jobs["gearbox_archive"]["container"])
+        self.assertEqual(archive["if"], jobs["archive"]["if"])
+        self.assertEqual(installed["runs-on"], "ubuntu-24.04")
+        self.assertEqual(installed["needs"], "p4rt_native")
+        self.assertIn("p4rt_runtime", jobs["eventd_runtime"]["needs"])
+        download = next(step["with"] for step in installed["steps"] if "download-artifact@" in step.get("uses", ""))
+        upload = next(step["with"] for step in archive["steps"] if "upload-artifact@" in step.get("uses", ""))
+        self.assertEqual(set(download), {"name", "path"})
+        self.assertEqual(upload["name"], download["name"])
+        self.assertIn("github.sha", download["name"])
+        for job in (archive, installed):
+            self.assertTrue(any("checkout_identity.py" in step.get("run", "") for step in job["steps"]))
+        build = "\n".join(step.get("run", "") for step in archive["steps"])
+        for phase in ("prepare-owner", "build", "validate", "incremental", "prepare-owner-runtime", "owner-tests"):
+            self.assertIn(phase, build)
+        probe = "\n".join(step.get("run", "") for step in installed["steps"])
+        self.assertIn("p4rt_loaded.py", probe)
+        self.assertIn("p4rt_acceptance.py", probe)
+
+    def test_p4rt_launchers_bound_each_bazel_to_its_own_job_workspace(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        step = next(step for step in jobs["p4rt_native"]["steps"] if "PYLAUNCH" in step.get("run", ""))
+        launcher = step["run"].split("<<'PYLAUNCH'\n", 1)[1].split("\nPYLAUNCH", 1)[0]
+        trust = jobs["p4rt_native"]["env"]["P4RT_TRUSTED_CACHE"]
+        self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", trust)
+        for trusted in ("true", "false"):
+            with self.subTest(trusted=trusted), tempfile.TemporaryDirectory(prefix="P4RT launch ") as name:
+                directory = Path(name)
+                (directory / "bazel").write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+                (directory / "bazel").chmod(0o755)
+                (directory / ".bazelrc").write_text(
+                    "common --repository_cache=/repo # private comment\nbuild --disk_cache=/disk\n"
+                    "build --remote_upload_local_results=true\ncommon --remote_header=X=private\n")
+                mirror = directory / "sonic-source-mirrors.cfg"
+                mirror.touch()
+                environment = dict(os.environ, PATH=name + os.pathsep + os.environ["PATH"],
+                                   HOME=name, PYTHONPATH=str(ROOT), RUNNER_TEMP=name, P4RT_SCRATCH=name,
+                                   P4RT_TRUSTED_CACHE=trusted, GITHUB_ENV=str(directory / "env"),
+                                   GITHUB_PATH=str(directory / "path"))
+                subprocess.run([sys.executable, "-c", launcher], env=environment, check=True)
+                wrappers = Path((directory / "path").read_text().strip())
+                root = subprocess.check_output([wrappers / "bazel", "query", "//..."], text=True).splitlines()
+                self.assertEqual(root, ["--output_base=" + str(directory / "root-output-base"),
+                                        "--host_jvm_args=-Xmx3g", "query", "//..."])
+                owner = Path((directory / "env").read_text().strip().split("=", 1)[1])
+                owner_base = "--output_base=" + str(directory / "owner-output-base")
+                rc = directory / "p4rt-owner.bazelrc"
+                self.assertEqual(subprocess.check_output([owner, owner_base, "test", "//..."], text=True).splitlines(),
+                                 ["--nosystem_rc", "--nohome_rc", "--bazelrc=" + str(rc), "--host_jvm_args=-Xmx2g",
+                                  owner_base, "test", "//..."])
+                settings = [shlex.split(line) for line in rc.read_text().splitlines()]
+                expected = [["common", "--repository_cache=/repo"], ["build", "--disk_cache=/disk"],
+                            ["common", "--experimental_downloader_config=" + str(mirror)],
+                            ["build", "--remote_upload_local_results=false"]]
+                if trusted == "true":
+                    expected.extend([["common", "--remote_cache=grpc://172.16.0.4:9092"],
+                                     ["common", "--experimental_remote_downloader=grpc://172.16.0.4:9092"],
+                                     ["common", "--experimental_remote_downloader_local_fallback"]])
+                self.assertCountEqual(settings, expected)
+                self.assertNotIn("private", rc.read_text())
+                self.assertEqual(subprocess.check_output([wrappers / "bazel", "--version"], text=True), "--version\n")
+
     def test_required_amd64_archive_check_runs_installed_eventd(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
         archive = jobs["archive"]
@@ -347,7 +413,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(gate["needs"], [
             "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
             "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
-            "otel_runtime", "dash_engine_runtime",
+            "otel_runtime", "dash_engine_runtime", "p4rt_native", "p4rt_runtime",
         ])
         self.assertEqual(jobs["otel_runtime"]["needs"], "otel_archive")
         dash = jobs["dash_engine_archive"]

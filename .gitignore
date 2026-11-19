@@ -152,3 +152,6 @@ apt-retries-count
 
 /artifacts/dash-ha/
 /artifacts/otel/
+
+# Verified P4RT owner TAR handoff.
+/.bazel-inputs/p4rt-owner/
