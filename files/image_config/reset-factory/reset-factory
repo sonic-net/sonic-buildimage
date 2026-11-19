@@ -167,6 +167,10 @@ if [ "$FACTORY_TYPE" != "keep-basic" ] && [ "$FACTORY_TYPE" != "keep-all-config"
     fi
 
     echo "Removing hostname (will be set on boot)"
+    OLD_HOSTNAME=$(hostname)
+    if [ -n "$OLD_HOSTNAME" ] && [ "$OLD_HOSTNAME" != "localhost" ]; then
+        sed -i "/[[:space:]]${OLD_HOSTNAME//./\\.}\$/d" /etc/hosts
+    fi
     rm -f /etc/hostname
 fi
 
