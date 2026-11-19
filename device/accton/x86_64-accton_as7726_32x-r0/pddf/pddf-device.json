@@ -6,6 +6,7 @@
 		"num_fans_pertray":2,
 		"num_ports":34,
 		"num_temps":5,
+		"num_components":1,
 		"pddf_dev_types":
 		{
 			"description":"AS7726 - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -1919,6 +1920,18 @@
 				]
 			}
 
-	}
-	
+	},
+    "COMPONENT1": {
+        "comp_attr": {
+            "name": "BIOS",
+            "description": "Basic Input/Output System",
+            "type": "bios"
+        },
+        "attr_list": [
+            {
+                "attr_name": "version",
+                "cmd": "cat /sys/class/dmi/id/bios_version"
+            }
+        ]
+    }
 }
