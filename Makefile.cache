@@ -79,10 +79,10 @@
 #   Bump it when a slave.mk change genuinely affects package build output
 #   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
 #
-SONIC_CACHE_RECIPE_VER := 2
+SONIC_CACHE_RECIPE_VER := 3
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 68ba0f84106c29fa3d6077924c3eb78e60763f65
+SONIC_CACHE_RECIPE_VER_BASELINE := cf0e59d99e31e6ac3e88cda7186cf6c8e14aa2ef
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
