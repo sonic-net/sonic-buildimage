@@ -25,3 +25,27 @@ $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_BMP_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
+
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_BMP_WATCHDOG) $(DOCKER_BMP_WATCHDOG_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_BMP_WATCHDOG)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_BMP_WATCHDOG_DBG)
+$(DOCKER_BMP_WATCHDOG)_BAZEL_TARGET = //dockers/docker-bmp-watchdog:$(DOCKER_BMP_WATCHDOG)
+$(DOCKER_BMP_WATCHDOG_DBG)_PATH = $($(DOCKER_BMP_WATCHDOG)_PATH)
+$(DOCKER_BMP_WATCHDOG_DBG)_BAZEL_TARGET = //dockers/docker-bmp-watchdog:$(DOCKER_BMP_WATCHDOG_DBG)
+SONIC_BAZEL_MANIFESTS += docker-bmp-watchdog docker-bmp-watchdog-dbg
+docker-bmp-watchdog_MANIFEST_IMAGE = $(DOCKER_BMP_WATCHDOG)
+docker-bmp-watchdog-dbg_MANIFEST_IMAGE = $(DOCKER_BMP_WATCHDOG)
+docker-bmp-watchdog-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_BMP_WATCHDOG)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-bmp-watchdog/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-bmp-watchdog/image.env
+$(DOCKER_BMP_WATCHDOG_DBG)_BAZEL_DEPENDS = $($(DOCKER_BMP_WATCHDOG)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-bmp-watchdog-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-bmp-watchdog
+endif
+endif
+endif

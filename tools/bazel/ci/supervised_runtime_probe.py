@@ -33,8 +33,8 @@ def main(image):
         assert os.access("/usr/bin/systemd_stub.py", os.X_OK)
         assert Path("/etc/supervisor/critical_processes").is_file()
         assert "restapi-sidecar#%syslogtag%" in Path("/etc/rsyslog.conf").read_text()
-    elif image == "docker-gnmi-watchdog":
-        name, port = "gnmi_watchdog", 51000
+    elif image in ("docker-gnmi-watchdog", "docker-bmp-watchdog"):
+        name, port = ("gnmi_watchdog", 51000) if image == "docker-gnmi-watchdog" else ("bmp_watchdog", 50060)
         executable = "/usr/bin/" + name
         with subprocess.Popen([executable], stdout=sys.stderr, stderr=sys.stderr) as server:
             try:
@@ -53,6 +53,11 @@ def main(image):
                         conn.close()
                 if name == "gnmi_watchdog":
                     assert response.status == 200 and result == {"gnmi_status": "OK"}, result
+                else:
+                    # This container has neither a Docker socket nor a BMP listener.
+                    assert response.status == 500, result
+                    assert set(result) == {"check_bmp_db", "check_bmp_port"}, result
+                    assert all(value.startswith("ERROR") for value in result.values()), result
             finally:
                 server.terminate()
     else:

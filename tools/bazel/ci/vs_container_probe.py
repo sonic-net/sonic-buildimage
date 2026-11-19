@@ -24,7 +24,8 @@ from tools.bazel.oci.oci_inventory import resolve_path
 DEBUG_ONLY_PAYLOADS = {
     **dict.fromkeys(("docker-database", "docker-eventd", "docker-lldp", "docker-mux", "docker-router-advertiser",
                      "docker-sonic-gnmi", "docker-sonic-mgmt-framework"), ("all-debug.tar",)),
-    **dict.fromkeys(("docker-gnmi-sidecar", "docker-restapi-sidecar", "docker-gnmi-watchdog"), ("all-debug.tar",)),
+    **dict.fromkeys(("docker-gnmi-sidecar", "docker-restapi-sidecar",
+                     "docker-gnmi-watchdog", "docker-bmp-watchdog"), ("all-debug.tar",)),
     "docker-orchagent": ("openssh.source.tar",),
     "docker-sonic-p4rt": ("p4rt.debug.tar", "sairedis.source.tar", "saimetadata.source.tar"),
 }

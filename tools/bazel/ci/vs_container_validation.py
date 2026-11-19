@@ -13,6 +13,7 @@ from tools.bazel.ci.artifact_validation import require, sha
 from tools.bazel.ci.vs_archive_reuse import verify_execution_settings
 from tools.bazel.oci.image_validation import docker_archive
 
+
 # These are the installed service entrypoints from the final Make Dockerfile stages.
 # Probes override --entrypoint to inspect the image and cannot check its normal startup this way.
 SUPERVISORD = "/usr/local/bin/supervisord"
@@ -31,7 +32,7 @@ ENTRYPOINTS = {
     "docker-syncd-vs": SUPERVISORD, "docker-sysmgr": SUPERVISORD,
     "docker-teamd": "/usr/bin/docker-teamd-init.sh",
     "docker-gnmi-sidecar": SUPERVISORD, "docker-restapi-sidecar": SUPERVISORD,
-    "docker-gnmi-watchdog": SUPERVISORD,
+    "docker-gnmi-watchdog": SUPERVISORD, "docker-bmp-watchdog": SUPERVISORD,
 }
 
 # These services check their inherited empty ExposedPorts on master. SNMP's
@@ -40,6 +41,7 @@ INHERITED_PORTS = {
     "docker-dash-ha", "docker-fpm-frr", "docker-macsec", "docker-sflow", "docker-snmp",
     "docker-sonic-otel", "docker-sysmgr", "docker-teamd",
 }
+
 
 def verify_startup(image, settings):
     """Check the configured default independently of the commands used by smoke tests."""
@@ -52,6 +54,7 @@ def verify_startup(image, settings):
         verify_execution_settings(settings, [entrypoint], allow_empty_cmd=True)
     if image in INHERITED_PORTS:
         require(not settings.get("ExposedPorts"), "Unexpected exposed ports in " + image)
+
 
 def parent_with_make_settings(directory, variant, parent_config, fixtures):
     """Overlay the Make-declared key/value inputs before checking other inherited OCI settings."""
@@ -68,10 +71,12 @@ def parent_with_make_settings(directory, variant, parent_config, fixtures):
             config[key] = [name + "=" + value for name, value in (inherited | declared).items()]
     return config
 
+
 def read_oci(directory, variant):
     """Read the file inventory and config taken from the producer's OCI layout."""
     with gzip.open(directory / (variant + ".oci.json.gz"), "rt", encoding="utf-8") as stream:
         return json.load(stream)
+
 
 def bundle_file(directory, name):
     """Resolve a regular file published at the root of this family's artifact."""
@@ -80,6 +85,7 @@ def bundle_file(directory, name):
     path = directory / name
     require(path.is_file() and not path.is_symlink(), "Missing VS artifact file: " + name)
     return path
+
 
 def validate_artifacts(directory, image, revision, debug_enabled, build_version):
     """Bind every selected archive and probe input to the checkout and producer's layout."""
@@ -133,6 +139,7 @@ def validate_artifacts(directory, image, revision, debug_enabled, build_version)
                 and debug["rootfs"]["diff_ids"][:count] == runtime["rootfs"]["diff_ids"],
                 "The debug image does not extend the selected VS runtime")
     return bundle
+
 
 @contextmanager
 def loaded_image(directory, spec, bundle):

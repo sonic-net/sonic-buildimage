@@ -16,7 +16,14 @@ watchdog_crates.from_cargo(
     platform_triples = ["x86_64-unknown-linux-gnu"],
     use_legacy_rules_rust_platforms = True,
 )
-use_repo(watchdog_crates, "gnmi_watchdog_crates")
+watchdog_crates.from_cargo(
+    name = "bmp_watchdog_crates",
+    cargo_lock = "//dockers/docker-bmp-watchdog/watchdog:Cargo.lock",
+    cargo_toml = "//dockers/docker-bmp-watchdog/watchdog:Cargo.toml",
+    platform_triples = ["x86_64-unknown-linux-gnu"],
+    use_legacy_rules_rust_platforms = True,
+)
+use_repo(watchdog_crates, "bmp_watchdog_crates", "gnmi_watchdog_crates")
 include("//src/sonic-frr:deps.MODULE.bazel")
 
 # Cache Go module ZIPs by reviewed archive digests.

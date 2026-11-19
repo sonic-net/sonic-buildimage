@@ -1,0 +1,27 @@
+load("@rules_rs//rs:rust_binary.bzl", "rust_binary")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+
+exports_files(["Cargo.lock", "Cargo.toml"])
+
+rust_binary(
+    name = "bmp_watchdog",
+    srcs = ["src/main.rs"],
+    crate_root = "src/main.rs",
+    edition = "2021",
+    experimental_use_cc_common_link = 0,
+    rustc_flags = ["-Copt-level=3", "-Cdebuginfo=2", "-Cstrip=none"],
+    version = "0.1.0",
+    deps = [
+        "@bmp_watchdog_crates//:chrono",
+        "@bmp_watchdog_crates//:daemonize",
+        "@bmp_watchdog_crates//:serde",
+        "@bmp_watchdog_crates//:serde_json",
+    ],
+)
+
+sonic_deploy_tar(
+    name = "runtime",
+    binaries = {"usr/bin/bmp_watchdog uid=0 gid=0 mode=0755 type=file": ":bmp_watchdog"},
+    force_debug_build = False,
+    visibility = ["//dockers/docker-bmp-watchdog:__pkg__"],
+)
