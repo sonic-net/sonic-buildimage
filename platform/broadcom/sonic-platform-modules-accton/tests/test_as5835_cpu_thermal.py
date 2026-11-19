@@ -48,9 +48,10 @@ class As5835CpuThermals(cpu_tests.CpuThermals):
         )["Chassis"]
         chassis = object.__new__(chassis_class)
         chassis._thermal_list = []
+        chassis.pddf_obj = chassis.plugin_data = {}
         boards = [object() for _ in range(4)]
         with patch.object(
-            self.module, "Thermal", side_effect=lambda i: boards[i]
+            self.module, "Thermal", side_effect=lambda i, *args: boards[i]
         ), patch.object(self.cpu, "HWMON_ROOT", self.root), patch.dict(
             "sys.modules", {"sonic_platform.thermal": self.module}
         ):
@@ -59,8 +60,9 @@ class As5835CpuThermals(cpu_tests.CpuThermals):
         self.assertEqual(len(chassis._thermal_list), 9)
         self.assertEqual(chassis._thermal_list[4].get_name(), "CPU_Package_temp")
         chassis._thermal_list = []
+        chassis.pddf_obj = chassis.plugin_data = {}
         with patch.object(
-            self.module, "Thermal", side_effect=lambda i: boards[i]
+            self.module, "Thermal", side_effect=lambda i, *args: boards[i]
         ), patch.object(self.cpu, "HWMON_ROOT", self.root / "absent"), patch.dict(
             "sys.modules", {"sonic_platform.thermal": self.module}
         ):

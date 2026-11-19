@@ -1,4 +1,4 @@
-"""Native AS5835 PSU sensors using the observed YM-1401A sysfs layout."""
+"""PDDF AS5835 PSU sensors using the observed YM-1401A sysfs layout."""
 
 import importlib.util
 import json
@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 
 from platform_test_utils import DEVICE, SOURCE, definitions
 from sonic_platform_base.sensor_base import CurrentSensorBase, VoltageSensorBase
+from test_as5835_pddf import load_classes, mapped_api
 
 PLATFORM = DEVICE + "as5835_54x-r0/"
 spec = importlib.util.spec_from_file_location(
@@ -20,13 +21,14 @@ class NativePsuSensors(unittest.TestCase):
     def setUp(self):
         # Exercise the real PSU paths and presence/power-good methods, without
         # constructing fans or accessing hardware.
-        cls = definitions(PLATFORM + "sonic_platform/psu.py", PsuBase=object)["Psu"]
+        cls = load_classes()["Psu"]
         self.values = {}
         self.psus = []
         for index, (hwmon, cpld) in enumerate((
                 ("11-0058", "11-0050"), ("12-005b", "12-0053"))):
             psu = object.__new__(cls)
-            psu.index = index
+            psu.psu_index = index + 1
+            psu.pddf_obj, psu.plugin_data = mapped_api(self.values)
             psu.hwmon_path = "/sys/bus/i2c/devices/" + hwmon + "/"
             psu.cpld_path = "/sys/bus/i2c/devices/" + cpld + "/"
             psu._api_helper = Mock()
@@ -82,9 +84,9 @@ class NativePsuSensors(unittest.TestCase):
                     self.assertIsNone(sensor.get_value())
             self.values[self.psu.hwmon_path + attribute] = "0"
             self.assertEqual(sensor.get_value(), 0)
-        self.psu._api_helper.read_txt_file.side_effect = OSError
+        self.psu.pddf_obj.get_attr_name_output.side_effect = OSError
         self.assertIsNone(self.voltage.get_value())
-        self.psu._api_helper.read_txt_file.side_effect = self.values.get
+        self.psu.pddf_obj, self.psu.plugin_data = mapped_api(self.values)
         self.values[self.psu.hwmon_path + "psu_v_out"] = "11777"
         self.assertEqual(self.voltage.get_value(), 11777)
 
@@ -123,6 +125,7 @@ class NativePsuSensors(unittest.TestCase):
                           ChassisBase=object)["Chassis"]
         chassis = object.__new__(cls)
         existing = object()
+        chassis.pddf_obj = chassis.plugin_data = {}
         chassis._psu_list = []
         chassis._voltage_sensor_list = [existing]
         chassis._current_sensor_list = [existing]

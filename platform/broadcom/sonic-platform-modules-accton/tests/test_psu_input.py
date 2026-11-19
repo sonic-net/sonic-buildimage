@@ -28,9 +28,10 @@ class PsuInput(unittest.TestCase):
                               PsuInputTelemetry=sensors.PsuInputTelemetry)["Psu"]
             self.assertTrue(issubclass(cls, sensors.PsuInputTelemetry))
         cls = definitions(platform_directory("as5835_54x") + "psu.py",
-                          PsuBase=object)["Psu"]
+                          PddfPsu=object)["Psu"]
         for method in ("get_input_voltage", "get_input_current", "get_input_power"):
-            self.assertNotIn(method, cls.__dict__)
+            with self.assertRaises(NotImplementedError):
+                getattr(object.__new__(cls), method)()
 
     def test_both_platforms_register_verified_addresses_and_commands(self):
         for model, expected in (

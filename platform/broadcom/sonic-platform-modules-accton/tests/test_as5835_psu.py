@@ -23,17 +23,15 @@ class As5835Psu(unittest.TestCase):
             config["devices_to_ignore"],
             ["asic", "psu.temperature", "PSU-1 FAN-1.speed", "PSU-2 FAN-1.speed"],
         )
-        fan = definitions(
-            DEVICE + "as5835_54x-r0/sonic_platform/fan.py", FanBase=object
-        )["Fan"]
-        instance = object.__new__(fan)
-        instance.get_speed = Mock(return_value=40)
-        instance.is_psu_fan = False
+        from test_as5835_pddf import load_classes, mapped_api
+        classes = load_classes()
+        api, plugin = mapped_api({})
+        instance = classes['Fan'](0, 0, api, plugin)
+        instance.pddf_obj.get_attr_name_output = Mock(return_value={'mode': 'i2c', 'status': '40'})
         self.assertEqual(instance.get_target_speed(), 40)
         instance.is_psu_fan = True
         with self.assertRaises(NotImplementedError):
             instance.get_target_speed()
-        self.assertEqual(instance.get_speed(), 40)
 
     def test_voltage_callbacks_use_model_specific_format(self):
         compiler = shutil.which("cc")
