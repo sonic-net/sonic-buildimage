@@ -20,6 +20,25 @@ module sonic-extension {
         argument "value";
     }
 
+    extension create-only {
+        description
+            "During an apply-patch operation, indicates that a node can only be created
+             or re-created (i.e., deleted and re-added) but cannot be updated in-place.
+             Any update to a node carrying this extension is realized as a deletion and
+             recreation of the corresponding object.
+
+             This extension can be defined under:
+             - leaf or leaf-list: The immutability restriction applies specifically to this field.
+             - container or list: The restriction applies to the entire container/list, meaning
+               a change to any field within it triggers a deletion and recreation of the entire entry
+               (e.g., [table, '*', '*']).
+             - refine on a uses site: The restriction applies only to the refined node at that
+               uses expansion (preferred for shared groupings so sibling consumers are not widened).
+             - grouping: The restriction applies to the target leaf/leaf-list at every 'uses' site
+               where the grouping is expanded — including consumers that should not be create-only —
+               so prefer refine at the intended uses site instead.";
+    }
+
     {% if yang_model_type == "cvl" %}
     extension custom-validation-cvl {
         description "Extension for registering cvl based custom validation handler.";
