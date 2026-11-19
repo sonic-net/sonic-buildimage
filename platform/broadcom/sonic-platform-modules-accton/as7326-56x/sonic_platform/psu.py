@@ -4,11 +4,12 @@
 
 try:
     from sonic_platform_pddf_base.pddf_psu import PddfPsu
+    from sonic_platform_pddf_base.pddf_psu_sensor import PsuInputTelemetry
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 
-class Psu(PddfPsu):
+class Psu(PsuInputTelemetry, PddfPsu):
     """PDDF Platform-Specific PSU class"""
     
     PLATFORM_PSU_CAPACITY = 1200

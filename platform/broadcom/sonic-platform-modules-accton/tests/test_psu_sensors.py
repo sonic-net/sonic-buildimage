@@ -127,14 +127,16 @@ class PsuSensors(unittest.TestCase):
                                   PddfChassis=PddfChassis,
                                   CpuThermal=Mock(discover=Mock(return_value=[])),
                                   PsuVoltageSensor=sensors.PsuVoltageSensor,
-                                  PsuCurrentSensor=sensors.PsuCurrentSensor)["Chassis"]
+                                  PsuCurrentSensor=sensors.PsuCurrentSensor,
+                                  PsuInputVoltageSensor=sensors.PsuInputVoltageSensor,
+                                  PsuInputCurrentSensor=sensors.PsuInputCurrentSensor)["Chassis"]
                 chassis = cls(None, None)
                 self.assertEqual(chassis._thermal_list, [existing])
                 for inventory in (chassis._voltage_sensor_list, chassis._current_sensor_list):
                     self.assertIs(inventory[0], existing)
-                    self.assertEqual(len(inventory), 3)
-                    self.assertEqual([s.get_position_in_parent() for s in inventory[1:]], [1, 2])
-                    for sensor, psu in zip(inventory[1:], psus):
+                    self.assertEqual(len(inventory), 5)
+                    self.assertEqual([s.get_position_in_parent() for s in inventory[1:]], [1, 2, 1, 2])
+                    for sensor, psu in zip(inventory[1:], psus + psus):
                         self.assertIs(sensor._psu, psu)
                 config = json.loads((SOURCE / (DEVICE + model + "-r0/pmon_daemon_control.json")).read_text())
                 self.assertIs(config["include_sensormond"], True)

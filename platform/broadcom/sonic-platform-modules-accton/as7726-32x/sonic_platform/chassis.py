@@ -10,7 +10,9 @@ try:
     import sys
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
-    from sonic_platform_pddf_base.pddf_psu_sensor import PsuVoltageSensor, PsuCurrentSensor
+    from sonic_platform_pddf_base.pddf_psu_sensor import (
+        PsuVoltageSensor, PsuCurrentSensor,
+        PsuInputVoltageSensor, PsuInputCurrentSensor)
     from sonic_platform.thermal import CpuThermal
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -27,6 +29,10 @@ class Chassis(PddfChassis):
         for position, psu in enumerate(self._psu_list, 1):
             self._voltage_sensor_list.append(PsuVoltageSensor(psu, position))
             self._current_sensor_list.append(PsuCurrentSensor(psu, position))
+        # Append inputs after existing outputs to preserve output sensor indices.
+        for position, psu in enumerate(self._psu_list, 1):
+            self._voltage_sensor_list.append(PsuInputVoltageSensor(psu, position))
+            self._current_sensor_list.append(PsuInputCurrentSensor(psu, position))
 
     # Provide the functions/variables below for which implementation is to be overwritten
     sfp_change_event_data = {'valid': 0, 'last': 0, 'present': 0}

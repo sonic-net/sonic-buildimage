@@ -176,6 +176,8 @@ class CpuThermals(unittest.TestCase):
         sensors = ModuleType("sonic_platform_pddf_base.pddf_psu_sensor")
         sensors.PsuVoltageSensor = object
         sensors.PsuCurrentSensor = object
+        sensors.PsuInputVoltageSensor = object
+        sensors.PsuInputCurrentSensor = object
         module = load_module(
             "as7726_test_chassis",
             PLATFORM / "chassis.py",
