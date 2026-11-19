@@ -165,15 +165,22 @@ class CpuThermals(unittest.TestCase):
         class PddfChassis:
             def __init__(self, data, plugin):
                 self._thermal_list = list(boards)
+                self._psu_list = []
+                self._voltage_sensor_list = []
+                self._current_sensor_list = []
                 self.data = data
                 self.plugin = plugin
 
         pddf = ModuleType("sonic_platform_pddf_base.pddf_chassis")
         pddf.PddfChassis = PddfChassis
+        sensors = ModuleType("sonic_platform_pddf_base.pddf_psu_sensor")
+        sensors.PsuVoltageSensor = object
+        sensors.PsuCurrentSensor = object
         module = load_module(
             "as7726_test_chassis",
             PLATFORM / "chassis.py",
-            {pddf.__name__: pddf, "sonic_platform.thermal": self.module},
+            {pddf.__name__: pddf, "sonic_platform.thermal": self.module,
+             sensors.__name__: sensors},
         )
         with patch.object(self.cpu, "HWMON_ROOT", self.root):
             chassis = module.Chassis("pddf", "plugin")
