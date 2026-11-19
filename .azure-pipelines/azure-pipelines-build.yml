@@ -147,7 +147,7 @@ jobs:
           fi
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
           if [ $(secure_boot_enabled) == yes ]; then
-            ls -l $(pwd)/db.crt $(pwd)/db.key
+            openssl req -new -x509 -newkey rsa:4096 -subj "/CN=SONiC db certificate/dnQualifier=$(GROUP_NAME)/" -keyout db.key -out db.crt -days 1 -noenc -sha512
             BUILD_OPTIONS="$BUILD_OPTIONS SECURE_UPGRADE_MODE=dev SECURE_UPGRADE_DEV_SIGNING_KEY=$(pwd)/db.key SECURE_UPGRADE_SIGNING_CERT=$(pwd)/db.crt"
           fi
           if [ $(GROUP_NAME) == pensando ]; then
