@@ -26,6 +26,7 @@ After=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
 {% endif %}
 
 [Service]
+ExecCondition=/usr/bin/test ! -e /run/sonic/shutdown-in-progress
 User=root
 Environment=sonic_asic_platform={{ sonic_asic_platform }}
 ExecStartPre=/usr/local/bin/syncd.sh start{% if multi_instance == 'true' %} %i{% endif %}
