@@ -138,6 +138,27 @@ class DerivedExportAuditTest(unittest.TestCase):
         result = self.classify({"rules/config": "override PLATFORM_PATH = $(UNKEYED)\n"})
         self.assertEqual(result["PLATFORM_PATH"][0], "gap")
 
+    def test_dep_selector_reassignments_invalidate_derivation(self):
+        assignments = (
+            "PLATFORM_PATH = $(UNKEYED)\n",
+            "override PLATFORM_PATH := $(UNKEYED)\n",
+            "ifeq ($(EXTRA),y)\nPLATFORM_PATH = $(UNKEYED)\nendif\n",
+            "all: PLATFORM_PATH = $(UNKEYED)\n",
+            "$(eval PLATFORM_PATH = $(UNKEYED))\n",
+        )
+        for path in ("rules/selector.dep", "platform/vendor/selector.dep"):
+            for assignment in assignments:
+                with self.subTest(path=path, assignment=assignment):
+                    result = self.classify({path: assignment})
+                    self.assertEqual(result["PLATFORM_PATH"][0], "gap")
+
+    def test_unrelated_dep_assignments_preserve_derivation(self):
+        result = self.classify({
+            "rules/selector.dep": "UNRELATED = $(UNKEYED)\n",
+            "platform/vendor/selector.dep": "override OTHER := fixed\n",
+        })
+        self.assertEqual(result["PLATFORM_PATH"][0], "derived")
+
     def test_forwarded_selector_override_is_not_derived(self):
         result = self.classify({
             "Makefile.work": "COMMAND := $(MAKE) -f slave.mk PLATFORM_PATH=$(UNKEYED)\n",
@@ -247,6 +268,36 @@ class ForwardedFlagAuditTest(unittest.TestCase):
     def test_reassigned_forwarded_input_is_not_evidence(self):
         self.assertFalse(self.covered({
             "slave.mk": "ifeq ($(RPC_SELECTOR),y)\nENABLE_FEATURE = y\nendif\nRPC_SELECTOR = fixed\n",
+        }))
+
+    def test_dep_selector_reassignments_invalidate_forwarding(self):
+        assignments = (
+            "{selector} = $(UNKEYED)\n",
+            "override {selector} := $(UNKEYED)\n",
+            "ifeq ($(EXTRA),y)\n{selector} = $(UNKEYED)\nendif\n",
+            "all: {selector} = $(UNKEYED)\n",
+            "$(eval {selector} = $(UNKEYED))\n",
+        )
+        for path in ("rules/selector.dep", "platform/vendor/selector.dep"):
+            for selector in ("ENABLE_FEATURE", "RPC_SELECTOR"):
+                for assignment in assignments:
+                    with self.subTest(path=path, selector=selector, assignment=assignment):
+                        self.assertFalse(self.covered({
+                            path: assignment.format(selector=selector),
+                        }))
+
+    def test_unrelated_dep_assignments_preserve_forwarding(self):
+        self.assertTrue(self.covered({
+            "rules/selector.dep": "UNRELATED = $(UNKEYED)\n",
+            "platform/vendor/selector.dep": "override OTHER := fixed\n",
+        }))
+
+    def test_other_platform_dep_reassignments_do_not_affect_forwarding(self):
+        self.assertTrue(self.covered({
+            "platform/other/selector.dep": (
+                "override ENABLE_FEATURE = $(UNKEYED)\n"
+                "override RPC_SELECTOR = fixed\n"
+            ),
         }))
 
     def test_conflicting_forwarding_commands_are_not_evidence(self):

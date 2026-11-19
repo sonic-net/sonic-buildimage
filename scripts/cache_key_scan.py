@@ -380,6 +380,7 @@ def slave_arguments():
 def derived_build_exports():
     """Recognize only single, unconditional slave selectors with a keyed input."""
     files = ["rules/config"] + [path for path in producer_files() if path.endswith(".mk")]
+    files += [path for path in git_files(recurse=False) if path.endswith(".dep")]
     assignments = collections.defaultdict(list)
     for path, depth, assignment in build_assignments(files):
         assignments[assignment[1]].append((path, depth, assignment))
@@ -425,6 +426,8 @@ def forwarded_selector(flag, rule):
     files = ["slave.mk", "rules/config"] + [
         path for path in producer_files()
         if path != "slave.mk" and os.path.dirname(path) in ("rules", rule_dir)]
+    files += [path for path in git_files(recurse=False)
+              if path.endswith(".dep") and os.path.dirname(path) in ("rules", rule_dir)]
     definitions = [item for item in build_assignments(files) if item[2][1] in (flag, forwarded)]
     if len(matches) != 1 or len(definitions) != 1:
         return None
