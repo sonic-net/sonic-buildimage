@@ -21,5 +21,17 @@
     "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE2": {
         "desc": "Invalid dummy table2.",
         "eStrKey": "InvalidJSON"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_BUFFER_POOL": {
+        "desc": "A BUFFER_POOL group names a buffer pool that does not exist.",
+        "eStrKey": "Must"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_PORT_GROUP_NAMES_BUFFER_POOL": {
+        "desc": "A PORT group names a buffer pool, which the BUFFER_POOL leafref alone would accept.",
+        "eStrKey": "Must"
+    },
+    "HIGH_FREQUENCY_TELEMETRY_QUEUE_GROUP_NAMES_PORT": {
+        "desc": "A QUEUE group names a bare port, which the PORT leafref alone would accept.",
+        "eStrKey": "Must"
     }
 }
