@@ -10,7 +10,7 @@ import tarfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci.artifact_validation import path_name, require
-from tools.bazel.ci.vs_archive_reuse import CONFIG_NAME, MAX_JSON
+from tools.bazel.ci.vs_archive_reuse import CONFIG_NAME, ENTRYPOINTS, MAX_JSON, installer_selection
 
 
 def batch_archives(timings):
@@ -49,13 +49,25 @@ def archive_tag(path):
     return labels.get("Tag")
 
 
-def verify(target, version_receipt, timings):
+def verify(target, version_receipt, timings, *, runtime_only=False, receipt=None):
     version = json.loads(version_receipt.read_bytes())["build_version"]
     require(isinstance(version, str) and version, "Missing installer build_version")
     names = batch_archives(timings)
+    selection = None
+    if runtime_only or receipt is not None:
+        selection = installer_selection(target.parent)
+    if runtime_only:
+        require(all(not name.endswith("-dbg.gz") for name in names), "VS batch requested a debug archive")
+        require(all(name + ".gz" in names for name in ENTRYPOINTS), "Missing required VS runtime archives")
+        require(not any(target.glob("docker-*-dbg.gz")), "VS runtime-only build exported a debug archive")
     for name in names:
         value = archive_tag(target / name)
         require(value == version, f"{name}: expected Tag={version!r}, found {value!r}")
+    if receipt is not None:
+        receipt.write_text(json.dumps({
+            "build_version": version, "runtime_only": runtime_only, "archives": names,
+            "installer_selection": selection,
+        }, indent=2) + "\n")
     return len(names), version
 
 
@@ -64,9 +76,12 @@ def main():
     parser.add_argument("--target", type=Path, required=True)
     parser.add_argument("--version", type=Path, required=True, help="Validated installer version JSON")
     parser.add_argument("--timings", type=Path, required=True)
+    parser.add_argument("--runtime-only", action="store_true")
+    parser.add_argument("--receipt", type=Path, help="Record batch archives and the selected installer images")
     args = parser.parse_args()
     try:
-        count, version = verify(args.target, args.version, args.timings)
+        count, version = verify(args.target, args.version, args.timings,
+                                runtime_only=args.runtime_only, receipt=args.receipt)
     except (OSError, KeyError, ValueError, tarfile.TarError, EOFError) as error:
         parser.exit(1, f"VS container Tag check failed: {error}\n")
     print(f"Verified Tag={version} in all {count} exported VS container archives.")

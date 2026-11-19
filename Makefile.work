@@ -721,6 +721,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_ENABLE_PFCWD_ON_START=$(ENABLE_PFCWD_ON_START) \
                            SONIC_ENABLE_SYNCD_RPC=$(ENABLE_SYNCD_RPC) \
                            SONIC_INSTALL_DEBUG_TOOLS=$(INSTALL_DEBUG_TOOLS) \
+                           SONIC_ENABLE_DEBUG_LAYER=$(SONIC_ENABLE_DEBUG_LAYER) \
                            SONIC_SAITHRIFT_V2=$(SAITHRIFT_V2) \
                            MDEBUG=$(MDEBUG) \
                            USERNAME=$(USERNAME) \

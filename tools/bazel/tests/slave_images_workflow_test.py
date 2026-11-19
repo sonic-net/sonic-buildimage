@@ -340,7 +340,17 @@ elif name == "stat":
             (current.st_mode, current.st_uid, current.st_gid, current.st_mtime_ns),
             (original.st_mode, original.st_uid, original.st_gid, original.st_mtime_ns))
 
-    def test_vs_build_forwards_configured_make_jobs_to_slave(self):
+    def test_vs_debug_layer_is_enabled_unless_disabled_on_manual_dispatch(self):
+        workflow = yaml.safe_load(CONSUME.read_text())
+        triggers = workflow.get("on", workflow.get(True))
+        option = triggers["workflow_dispatch"]["inputs"]["enable_debug_layer"]
+        self.assertEqual(option["type"], "boolean")
+        self.assertIs(option["default"], True)
+        self.assertEqual(
+            self.consumer["env"]["SONIC_ENABLE_DEBUG_LAYER"],
+            "${{ (github.event_name != 'workflow_dispatch' || inputs.enable_debug_layer) && 'y' || 'n' }}")
+
+    def test_vs_build_forwards_configured_make_jobs_and_runtime_only_mode_to_slave(self):
         jobs = self.consumer["env"]["SONIC_BUILD_JOBS"]
         self.assertNotIn("SONIC_BUILD_JOBS", self.publisher["env"])
         source = (ROOT / "Makefile.work").read_text()
@@ -350,13 +360,14 @@ elif name == "stat":
             ["/usr/bin/make", "--no-print-directory", "-f", "-", "check",
              "MAKE=" + str(self.commands / "make")],
             input=fragment, cwd=self.directory,
-            env=dict(self.environment, SONIC_BUILD_JOBS=jobs),
+            env=dict(self.environment, SONIC_BUILD_JOBS=jobs, SONIC_ENABLE_DEBUG_LAYER="n"),
             text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = self.recorded()
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][:3], ["make", "-f", "slave.mk"])
         self.assertIn(f"SONIC_BUILD_JOBS={jobs}", calls[0])
+        self.assertIn("SONIC_ENABLE_DEBUG_LAYER=n", calls[0])
         self.assertIn("target/sonic-vs.bin", calls[0])
 
     def test_private_docker_configuration_is_exported_before_docker_operations(self):

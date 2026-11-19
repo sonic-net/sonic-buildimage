@@ -103,11 +103,11 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
                      "BAZEL_CONTAINER_ARGS", "BAZEL_SWSS_ARGS", "BAZEL_CONTAINER_CACHE_DIR", "BAZEL_SWSS_CACHE_DIR"):
             self.environment.pop(name, None)
 
-    def run_verifier(self, *, settings=None, **environment):
+    def run_verifier(self, *, settings=None, runtime_only=False, **environment):
         arguments = [str(self.make), "--no-print-directory", "-j8", "-f", "slave.mk"]
         arguments += [key + "=" + value for key, value in (settings or {}).items()]
         return subprocess.run(
-            ["bash", "tools/bazel/ci/verify_vs_oci.sh", *arguments],
+            ["bash", "tools/bazel/ci/verify_vs_oci.sh", *(["--runtime-only"] if runtime_only else []), *arguments],
             cwd=self.directory, env=dict(self.environment, **environment),
             text=True, capture_output=True, check=False)
 
@@ -184,6 +184,16 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         debug = json.loads((self.directory / "debug-arguments.json").read_text())
         self.assertEqual(debug[:4], ["--runtime-deb", DEB_PATHS[0], "--debug-deb", DEB_PATHS[1]])
         self.assertIn("debug verification output", (self.directory / "artifacts/vs/p4rt-debug-verification.log").read_text())
+
+    def test_runtime_only_verifier_binds_runtime_policies_without_debug_producers(self):
+        result = self.run_verifier(runtime_only=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.make_calls()), 1)
+        self.assertFalse((self.directory / "producers.log").exists())
+        self.assertFalse((self.directory / "debug-arguments.json").exists())
+        for family in ("swss", "syncd"):
+            path = self.directory / "artifacts/vs" / (family + "-installed-images-policy.json")
+            self.assertEqual(path.read_text(), "//tools/bazel/tests:" + family + "_runtime_installed_images_policy")
 
     def test_image_test_failure_retains_evidence_and_stops_debug_verification(self):
         result = self.run_verifier(IMAGE_STATUS="7")

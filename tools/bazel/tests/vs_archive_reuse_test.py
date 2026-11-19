@@ -105,6 +105,38 @@ class ArchiveReuseTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             verify_vs_image_tags.verify(self.target, version, timings)
 
+    def test_runtime_only_receipt_rejects_debug_in_build_export_or_installer(self):
+        self.write_archive(image="docker-syncd-vs")
+        version = self.workspace / "sonic-version.json"
+        version.write_bytes(encoded({"build_version": "same-build"}))
+        receipt = self.workspace / "container-build.json"
+        timings = self.workspace / "image-timings"
+        batch = timings / "vs-container-images" / "recipe-1"
+        batch.mkdir(parents=True)
+        (batch / "build.timing.json").write_bytes(encoded({"start_epoch_seconds": 1, "exit_code": 0}))
+        names = [image + ".gz" for image in reuse.ENTRYPOINTS]
+        plan = batch / "batch-targets.json"
+        plan.write_bytes(encoded(dict.fromkeys(names)))
+        selected = self.target / "sonic-vs.bin.dockers"
+        selected.write_text("".join("target/" + name + "\n" for name in names))
+        verify = lambda: verify_vs_image_tags.verify(self.target, version, timings,
+                                                     runtime_only=True, receipt=receipt)
+        with self.assertRaisesRegex(ValueError, "exported a debug archive"):
+            verify()
+        (self.target / "docker-orchagent-dbg.gz").unlink()
+        plan.write_bytes(encoded(dict.fromkeys([*names, "docker-orchagent-dbg.gz"])))
+        with self.assertRaisesRegex(ValueError, "requested a debug archive"):
+            verify()
+        plan.write_bytes(encoded(dict.fromkeys(names)))
+        self.assertEqual(verify(), (2, "same-build"))
+        result = json.loads(receipt.read_bytes())
+        self.assertEqual(result["archives"], sorted(names))
+        self.assertEqual(result["installer_selection"]["sha256"], hashlib.sha256(selected.read_bytes()).hexdigest())
+        with selected.open("a") as stream:
+            stream.write("target/docker-example-dbg.gz\n")
+        with self.assertRaisesRegex(ValueError, "normal VS installer selects a debug image"):
+            verify()
+
     def test_capture_and_verify_complete_contents_without_publishing_settings(self):
         receipt = reuse.capture(self.workspace)
         result = reuse.verify(self.workspace, receipt)

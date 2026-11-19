@@ -70,6 +70,14 @@ vs_required_images := $(sort $(call vs_required_bazel_images,$(vs_requested_imag
 # variant goes into the installer. Singleton producers export just their archive.
 vs_required_runtimes := $(filter $(SONIC_BAZEL_DOCKER_IMAGES),$(vs_required_images:%-$(DBG_IMAGE_MARK).gz=%.gz))
 vs_paired_debug := $(filter $(SONIC_BAZEL_DBG_DOCKER_IMAGES),$(vs_required_runtimes:%.gz=%-$(DBG_IMAGE_MARK).gz))
+ifeq ($(SONIC_ENABLE_DEBUG_LAYER):$(sort $(notdir $(vs_installer_goals))),n:sonic-vs.bin)
+ifeq ($(INSTALL_DEBUG_TOOLS),y)
+$(error SONIC_ENABLE_DEBUG_LAYER=n requires INSTALL_DEBUG_TOOLS to be disabled for sonic-vs.bin)
+endif
+# A runtime installer needs no companion debug archives. Keep any debug
+# archive explicitly required by another goal or by a legacy image dependency.
+vs_paired_debug := $(filter $(vs_required_images),$(vs_paired_debug))
+endif
 vs_pairs := $(vs_paired_debug:%-$(DBG_IMAGE_MARK).gz=%.gz)
 
 # A private flag may change how a dependency is built. Keep that owner's

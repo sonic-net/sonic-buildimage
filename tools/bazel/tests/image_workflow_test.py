@@ -883,7 +883,7 @@ class VerificationWorkflowTest(unittest.TestCase):
     def test_static_checks_match_make_configs_and_stop_publication_on_failure(self):
         verifier = (ROOT / "tools/bazel/ci/verify_vs_oci.sh").read_text()
         # This excerpt starts after the real verifier has queried slave.mk.
-        make_config = "declare -A config=([SONIC_IMAGE_VERSION]=release-from-make)\n"
+        make_config = "declare -A config=([SONIC_IMAGE_VERSION]=release-from-make)\nruntime_only=false\n"
         script = "set -euo pipefail\n" + make_config + verifier[verifier.index("# Match the archive recipes"):].split(
             "\npython3 -B tools/bazel/ci/verify_p4rt_debug.py", 1)[0]
         with tempfile.TemporaryDirectory(prefix="image configs ") as temporary:

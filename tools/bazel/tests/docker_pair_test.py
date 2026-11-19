@@ -124,6 +124,39 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         self.assert_batch()
         self.assertFalse((self.root / "artifacts/vs/image-timings").exists())
 
+    def test_onie_build_with_debug_layer_enabled_builds_paired_archives(self):
+        result = self.run_make(goals=["target/sonic-vs.bin"],
+                               environment={"SONIC_ENABLE_DEBUG_LAYER": "y"})
+        self.assert_success(result)
+        self.assert_batch()
+
+    def test_runtime_only_onie_build_skips_debug_archives_and_prerequisites(self):
+        for name in self.archives[1::2]:
+            (self.root / "inputs" / (name + ".source")).unlink()
+            (self.target / name).unlink()
+        result = self.run_make(goals=["target/sonic-vs.bin"], parallel=True,
+                               environment={"SONIC_ENABLE_DEBUG_LAYER": "n"})
+        self.assert_success(result)
+        self.assert_batch(self.archives[::2])
+        self.assertEqual((self.root / "installed-containers").read_text().split(), list(self.archives[::2]))
+        for name in self.archives[1::2]:
+            self.assertFalse((self.target / name).exists())
+
+    def test_runtime_only_onie_build_honors_an_explicit_debug_goal(self):
+        extra = self.archives[3]
+        result = self.run_make(goals=["target/sonic-vs.bin", "target/" + extra], parallel=True,
+                               environment={"SONIC_ENABLE_DEBUG_LAYER": "n"})
+        self.assert_success(result)
+        self.assert_batch((*self.archives[::2], extra))
+        self.assertEqual((self.root / "installed-containers").read_text().split(), list(self.archives[::2]))
+
+    def test_runtime_only_onie_build_rejects_installing_debug_images(self):
+        result = self.run_make(goals=["target/sonic-vs.bin"],
+                               environment={"SONIC_ENABLE_DEBUG_LAYER": "n", "INSTALL_DEBUG_TOOLS": "y"})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("SONIC_ENABLE_DEBUG_LAYER=n requires INSTALL_DEBUG_TOOLS", result.stderr)
+        self.assertFalse(self.recorded_calls())
+
     def build_with_failures(self, failures, retry="1"):
         (self.root / "fixture-failures.json").write_text(json.dumps(failures))
         return self.run_make(goals=["target/sonic-vs.bin"], environment={

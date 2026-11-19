@@ -2,8 +2,10 @@
 # Validate the retained native VS container pairs and P4 debug artifacts.
 set -euo pipefail
 
+runtime_only=false
+if [[ ${1:-} == --runtime-only ]]; then runtime_only=true; shift; fi
 if (( $# )); then
-    echo 'Usage: validate_vs.sh' >&2
+    echo 'Usage: validate_vs.sh [--runtime-only]' >&2
     exit 2
 fi
 if [[ ${NOTRIXIE:-0} != 0 ]]; then
@@ -35,6 +37,12 @@ current_revision=$(git rev-parse HEAD)
 if [[ "$current_revision" != "$revision" ]]; then
     echo 'Source revision changed since the VS build started' >&2
     exit 1
+fi
+if "$runtime_only"; then
+    # Only the runtime OCI layouts and archives enter the installed-image checks.
+    ./scripts/run_with_retry make -f Makefile.work BLDENV=trixie sonic-slave-run "${options[@]}" \
+        'SONIC_RUN_CMDS=bash tools/bazel/ci/verify_vs_oci.sh --runtime-only $(SONIC_BUILD_INSTRUCTION)'
+    exit
 fi
 clock() { python3 -c 'import time; print(time.monotonic())'; }
 capture_start=$(clock)

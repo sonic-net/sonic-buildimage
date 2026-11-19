@@ -2,8 +2,10 @@
 # Validate both OCI image families and P4 debug packages in one Trixie builder.
 set -euo pipefail
 
+runtime_only=false
+if [[ ${1:-} == --runtime-only ]]; then runtime_only=true; shift; fi
 if (( $# == 0 )); then
-    echo 'Usage: verify_vs_oci.sh MAKE [MAKE_ARGUMENT ...]' >&2
+    echo 'Usage: verify_vs_oci.sh [--runtime-only] MAKE [MAKE_ARGUMENT ...]' >&2
     exit 2
 fi
 make_command=("$@")
@@ -67,20 +69,22 @@ if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" ${config[DOCKER_CONFIG_ENGI
     echo 'Shared image validation requires the Bazel config-engine archive producer' >&2
     exit 1
 fi
-runtime_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT]}
-debug_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT_DBG]}
-base_archive=${config[TARGET_PATH]}/${config[DOCKER_CONFIG_ENGINE_TRIXIE]}
-# Preserve the owner's dependency installation, freshness and cache rules.
-# Finish the legacy P4 workspace before testing the image workspace.
-# A standalone verifier may need to materialize the base for the Docker checks.
-prerequisites=("$runtime_deb" "$debug_deb")
-# The native installer already published config-engine. Its phony Make recipe
-# would regenerate the retained image and its Make manifests in this container.
-if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then prerequisites+=("$base_archive"); fi
-"${make_command[@]}" --no-print-directory -j1 "${prerequisites[@]}"
-for package in "$runtime_deb" "$debug_deb" "$base_archive"; do
-    [[ -s $package ]] || { echo "Missing or empty P4RT prerequisite: $package" >&2; exit 1; }
-done
+if ! "$runtime_only"; then
+    runtime_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT]}
+    debug_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT_DBG]}
+    base_archive=${config[TARGET_PATH]}/${config[DOCKER_CONFIG_ENGINE_TRIXIE]}
+    # Preserve the owner's dependency installation, freshness and cache rules.
+    # Finish the legacy P4 workspace before testing the image workspace.
+    # A standalone verifier may need to materialize the base for the Docker checks.
+    prerequisites=("$runtime_deb" "$debug_deb")
+    # The native installer already published config-engine. Its phony Make recipe
+    # would regenerate the retained image and its Make manifests in this container.
+    if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then prerequisites+=("$base_archive"); fi
+    "${make_command[@]}" --no-print-directory -j1 "${prerequisites[@]}"
+    for package in "$runtime_deb" "$debug_deb" "$base_archive"; do
+        [[ -s $package ]] || { echo "Missing or empty P4RT prerequisite: $package" >&2; exit 1; }
+    done
+fi
 
 # Match the archive recipes, including the caller's cache and distdir settings.
 # Keep one output base and server; only Syncd selects its DASH configuration.
@@ -99,6 +103,22 @@ bazel_options+=(--//tools/bazel/image/vs/metadata:use_make_metadata=true
     "--//tools/bazel/oci:image_version=$image_version"
     --platforms=@sonic_build_infra//platforms:x86_64_trixie
     --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+
+# cquery alone does not materialize cached policy outputs.
+write_installed_policy() {
+    local family=$1 variant=$2 policy label
+    shift 2
+    label="//tools/bazel/tests:${family}_${variant}installed_images_policy"
+    "${BAZEL:-bazel}" build "${bazel_options[@]}" "$@" "$label"
+    policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" "$@" --output=files "$label")
+    cp --remove-destination -- "$policy" "artifacts/vs/$family-installed-images-policy.json"
+}
+
+if "$runtime_only"; then
+    write_installed_policy swss runtime_
+    write_installed_policy syncd runtime_ --config=syncd-dash
+    exit
+fi
 
 collect_test_results() {
     local test_name="$1" output="artifacts/vs/$2" file path
@@ -123,13 +143,8 @@ collect_test_results swss_images_test swss-images
 collect_test_results syncd_p4_images_test syncd-p4-images
 if test "$test_status" -ne 0; then exit "$test_status"; fi
 
-# cquery alone does not materialize cached policy outputs.
-"${BAZEL:-bazel}" build "${bazel_options[@]}" //tools/bazel/tests:swss_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --output=files //tools/bazel/tests:swss_installed_images_policy)
-cp --remove-destination -- "$policy" artifacts/vs/swss-installed-images-policy.json
-"${BAZEL:-bazel}" build "${bazel_options[@]}" --config=syncd-dash //tools/bazel/tests:syncd_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --config=syncd-dash --output=files //tools/bazel/tests:syncd_installed_images_policy)
-cp --remove-destination -- "$policy" artifacts/vs/syncd-installed-images-policy.json
+write_installed_policy swss ''
+write_installed_policy syncd '' --config=syncd-dash
 
 python3 -B tools/bazel/ci/verify_p4rt_debug.py \
     --runtime-deb "$runtime_deb" --debug-deb "$debug_deb" \

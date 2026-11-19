@@ -1363,33 +1363,24 @@ _INSTALLED_BASE = "//dockers/docker-config-engine-trixie"
 
 [
     run_binary(
-        name = family + "_installed_images_policy",
+        name = family + variant + "_installed_images_policy",
         srcs = [
             _INSTALLED_BASE + ":installed_checks",
             owner + ":installed_checks",
-            _INSTALLED_BASE + ":docker-config-engine-trixie",
-            _INSTALLED_BASE + ":docker-config-engine-trixie.gz",
-            owner + ":" + image,
-            owner + ":" + image + ".gz",
-            owner + ":" + image + "-dbg",
-            owner + ":" + image + "-dbg.gz",
+        ] + [
+            image_owner + ":" + name + suffix
+            for name, image_owner in members
+            for suffix in ["", ".gz"]
         ],
-        outs = [family + "-installed-images-policy.json"],
+        outs = [family + variant + "-installed-images-policy.json"],
         args = [
             "--architecture",
             "amd64",
             "--out",
-            "$(location " + family + "-installed-images-policy.json)",
+            "$(location " + family + variant + "-installed-images-policy.json)",
             "--policy=$(location " + _INSTALLED_BASE + ":installed_checks)",
             "--policy=$(location " + owner + ":installed_checks)",
-        ] + [arg for name, image_owner in [
-            ("docker-config-engine-trixie", _INSTALLED_BASE),
-            (image, owner),
-            (
-                image + "-dbg",
-                owner,
-            ),
-        ] for arg in [
+        ] + (["--runtime-only"] if variant else []) + [arg for name, image_owner in members for arg in [
             "--layout",
             name,
             "$(location " + image_owner + ":" + name + ")",
@@ -1404,6 +1395,10 @@ _INSTALLED_BASE = "//dockers/docker-config-engine-trixie"
         tool = "//tools/bazel/oci:installed_images_policy",
     )
     for family, (owner, image) in _INSTALLED_IMAGE_FAMILIES.items()
+    for variant, members in [
+        ("", [("docker-config-engine-trixie", _INSTALLED_BASE), (image, owner), (image + "-dbg", owner)]),
+        ("_runtime", [("docker-config-engine-trixie", _INSTALLED_BASE), (image, owner)]),
+    ]
 ]
 
 py_test(

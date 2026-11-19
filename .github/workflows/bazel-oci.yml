@@ -24,6 +24,10 @@ on:
         description: Optional successful source-download run in this repository
         type: string
         default: ''
+      enable_debug_layer:
+        description: Build companion debug archives for the VS installer
+        type: boolean
+        default: true
       skip_vs:
         description: Skip the full VS image build
         type: boolean
@@ -4012,6 +4016,7 @@ jobs:
       SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
       SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
       SONIC_BUILD_JOBS: "1"
+      SONIC_ENABLE_DEBUG_LAYER: ${{ (github.event_name != 'workflow_dispatch' || inputs.enable_debug_layer) && 'y' || 'n' }}
       ENABLE_DOCKER_BASE_PULL: "y"
       REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
       ACR_REGISTRY_NAME: sonicdev
@@ -4183,18 +4188,36 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Validate the installer and retained container pairs
+      - name: Validate the installer release and selected container archives
         run: |
           set -euo pipefail
           python3 -B scripts/validate_sonic_version.py target/sonic-vs.bin \
             --installer --secure-upgrade-mode no_sign \
             --expected-commit-id "$(git rev-parse --short HEAD)" \
             --json-output artifacts/vs/sonic-version.json
+          selection=()
+          archives=(target/docker-orchagent.gz target/docker-syncd-vs.gz)
+          if [[ $SONIC_ENABLE_DEBUG_LAYER == n ]]; then
+            selection+=(--runtime-only)
+          else
+            archives+=(target/docker-orchagent-dbg.gz target/docker-syncd-vs-dbg.gz)
+          fi
           python3 -B tools/bazel/ci/verify_vs_image_tags.py \
-            --target target --version artifacts/vs/sonic-version.json --timings artifacts/vs/image-timings
+            --target target --version artifacts/vs/sonic-version.json --timings artifacts/vs/image-timings \
+            --receipt artifacts/vs/container-build.json "${selection[@]}"
+          sha256sum target/sonic-vs.bin "${archives[@]}" > artifacts/vs/outputs.sha256
+
+      - name: Validate the installer and retained container pairs
+        if: env.SONIC_ENABLE_DEBUG_LAYER == 'y'
+        run: |
+          set -euo pipefail
           bash tools/bazel/ci/validate_vs.sh 2>&1 | tee artifacts/vs/validation.log
-          sha256sum target/sonic-vs.bin target/docker-orchagent{,-dbg}.gz \
-            target/docker-syncd-vs{,-dbg}.gz > artifacts/vs/outputs.sha256
+
+      - name: Prepare runtime-only installed image checks
+        if: env.SONIC_ENABLE_DEBUG_LAYER == 'n'
+        run: |
+          set -euo pipefail
+          bash tools/bazel/ci/validate_vs.sh --runtime-only 2>&1 | tee artifacts/vs/validation.log
 
       - name: Verify installed base, SWSS and Syncd images
         timeout-minutes: 20

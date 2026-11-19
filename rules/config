@@ -173,6 +173,10 @@ export PREFER_DEBIAN_REPO
 # When disabled, containers and kernel packages use their normal Make build.
 BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
 
+# Build companion debug archives for the Bazel sonic-vs.bin build by default.
+# Set to n to build only archives required by the installer and explicit goals.
+SONIC_ENABLE_DEBUG_LAYER ?= y
+
 # Persist Bazel caches across slave containers for all Bazel builds, regardless
 # of BUILD_WITH_BAZEL_WHEN_AVAILABLE. The system slave.bazelrc uses:
 #   - $(SONIC_BAZEL_CACHE_SOURCE)/repository_cache for dependency downloads

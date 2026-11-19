@@ -127,6 +127,17 @@ else:
         self.assertEqual(self.calls()[0]["build_revision"], "a" * 40)
         self.assertEqual([path.name for path in (self.root / "artifacts/vs").iterdir()], ["build-revision.txt"])
 
+    def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
+        result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls()[0]["args"], ["target/sonic-vs.bin", *self.profile_options(),
+                                                  "SONIC_ENABLE_DEBUG_LAYER=n"])
+        result = self.run_script("validate_vs.sh", "--runtime-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([call["goal"] for call in self.calls()], ["target/sonic-vs.bin", "sonic-slave-run"])
+        self.assertIn("SONIC_RUN_CMDS=bash tools/bazel/ci/verify_vs_oci.sh --runtime-only $(SONIC_BUILD_INSTRUCTION)",
+                      self.calls()[1]["args"])
+
     def test_build_failure_propagates_without_a_followup(self):
         result = self.run_script("build_vs.sh", FAIL_ACTION="make", FORBID_VALIDATION="1")
         self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
