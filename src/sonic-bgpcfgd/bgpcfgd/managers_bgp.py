@@ -198,6 +198,9 @@ class BGPPeerMgrBase(Manager):
 
         self.peers = self.load_peers()
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
+        if self.peer_type == 'general':
+            # Handle the scenario if evpn neighbor arrives before evpn enabled vnet.
+            self.directory.subscribe([("CONFIG_DB", "VNET", "")], self.on_deps_change)
         return
 
     def _has_invalid_dynamic_peer_name(self, data):
@@ -320,6 +323,14 @@ class BGPPeerMgrBase(Manager):
                 log_warn(loopback + " ipv4 address is not presented yet and bgp_router_id not configured")
                 return False
 
+        if data.get("address_family") == "evpn":
+            if self.get_lo_ipv4("Loopback0|") is None:
+                log_info("EVPN peer '%s' will wait for the Loopback0 ipv4 address" % nbr)
+                return False
+            if not self.is_evpn_vnet_present():
+                log_info("EVPN peer '%s' will wait for a VNET with evpn_enabled set to true" % nbr)
+                return False
+
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
@@ -358,6 +369,7 @@ class BGPPeerMgrBase(Manager):
             'neighbor_addr': nbr,
             'is_interface_neighbor': interface_neighbor,
             'bgp_session': data,
+            'CONFIG_DB__VNET': self.directory.get_slot("CONFIG_DB", "VNET"),
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
@@ -687,6 +699,14 @@ class BGPPeerMgrBase(Manager):
                     break
 
         return loopback0_ipv4
+
+    def is_evpn_vnet_present(self):
+        """
+        Check if any VNET has EVPN enabled
+        :return: True if at least one VNET has evpn_enabled set to true, False otherwise
+        """
+        vnets = self.directory.get_slot("CONFIG_DB", "VNET")
+        return any(vnet.get("evpn_enabled") == "true" for vnet in vnets.values())
 
     def get_local_interface(self, local_addr, vrf=None):
         """

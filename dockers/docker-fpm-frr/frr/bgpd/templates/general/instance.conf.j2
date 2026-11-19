@@ -1,6 +1,9 @@
 !
 ! template: bgpd/templates/general/instance.conf.j2
 !
+{% if bgp_session.get('address_family') == 'evpn' %}
+{% include 'bgpd/templates/general/evpn.instance.conf.j2' %}
+{% else %}
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
 {# set the bgp neighbor timers if they have not default values #}
@@ -88,6 +91,7 @@
     neighbor {{ neighbor_addr }} activate
     advertise-all-vni
   exit-address-family
+{% endif %}
 {% endif %}
 !
 ! end of template: bgpd/templates/general/instance.conf.j2
