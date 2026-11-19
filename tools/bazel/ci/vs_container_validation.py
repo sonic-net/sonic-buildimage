@@ -30,7 +30,7 @@ ENTRYPOINTS = {
     "docker-sonic-p4rt": SUPERVISORD, "docker-swss-layer-trixie": SUPERVISORD,
     "docker-syncd-vs": SUPERVISORD, "docker-sysmgr": SUPERVISORD,
     "docker-teamd": "/usr/bin/docker-teamd-init.sh",
-    "docker-gnmi-sidecar": SUPERVISORD,
+    "docker-gnmi-sidecar": SUPERVISORD, "docker-restapi-sidecar": SUPERVISORD,
 
 }
 

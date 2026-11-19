@@ -42,7 +42,7 @@ PARENT_IMAGES = {
     "docker-router-advertiser": CONFIG, "docker-snmp": CONFIG, "docker-sonic-gnmi": CONFIG,
     "docker-sonic-mgmt-framework": CONFIG, "docker-sonic-otel": CONFIG, P4RT: CONFIG,
     "docker-syncd-vs": CONFIG, "docker-sysmgr": CONFIG,
-    "docker-gnmi-sidecar": CONFIG,
+    "docker-gnmi-sidecar": CONFIG, "docker-restapi-sidecar": CONFIG,
 
     "docker-dash-ha": SWSS, "docker-fpm-frr": SWSS, "docker-macsec": SWSS,
     "docker-sflow": SWSS, "docker-teamd": SWSS,
