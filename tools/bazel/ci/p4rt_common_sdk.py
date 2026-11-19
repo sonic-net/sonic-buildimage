@@ -12,6 +12,11 @@ import shutil
 import subprocess
 
 
+# tests() keeps manual tests, which need their own environment: sonic-pins'
+# x86_64-only runtime_package_test needs gdb and runs in that repository's CI.
+P4RT_TESTS = r"tests(//p4rt_app/...) except attr(tags, '[\[ ]manual[,\]]', //p4rt_app/...)"
+
+
 def digest(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
@@ -88,8 +93,7 @@ def main():
             raise ValueError("P4RT must run with Bazel 6.4.0: " + version)
         (output / "bazel-version.txt").write_text(version + "\n")
         shutil.copyfile(sdk / "sdk-build.json", output / "sdk-build.json")
-        tests = sorted(capture(["query", override, "tests(//p4rt_app/...)",
-                                "--output=label"]).splitlines())
+        tests = sorted(capture(["query", override, P4RT_TESTS, "--output=label"]).splitlines())
         if not tests or any(not label.startswith(("//p4rt_app/", "//p4rt_app:")) for label in tests):
             raise ValueError("Expected explicit P4RT test labels")
         (output / "test-targets.txt").write_text("\n".join(tests) + "\n")

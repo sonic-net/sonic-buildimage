@@ -3,6 +3,7 @@
 
 import io
 import json
+import os
 from pathlib import Path
 import platform
 import struct
@@ -11,10 +12,12 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from tools.bazel.p4rt_common_sdk import build_sdk, prepare_repository
+from tools.bazel.ci import p4rt_common_sdk as handoff_check
 
 
 class P4rtCommonSdkTest(unittest.TestCase):
@@ -185,6 +188,43 @@ print-inputs:
         self.assertIn("tools/bazel/p4rt_common_sdk.py", inputs)
         self.assertIn("src/sonic-p4rt/common-sdk.BUILD.bazel", inputs)
         self.assertTrue(all((repository / name).is_file() for name in inputs), inputs)
+
+
+class P4rtHandoffCheckTest(unittest.TestCase):
+    def test_manual_owner_tests_are_not_requested(self):
+        """The x86_64-only runtime_package_test (manual) must not run on arm64."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ("bin", "pins", "sdk"):
+                (root / name).mkdir()
+            (root / "sdk/sdk-build.json").write_text("{}\n")
+            bazel = root / "bin/bazel"
+            bazel.write_text(f'''#!/usr/bin/env python3
+import json, sys
+with open({str(root / "calls.jsonl")!r}, "a") as calls:
+    calls.write(json.dumps(sys.argv[1:]) + "\\n")
+command = sys.argv[2]
+if command == "version":
+    print("bazel 6.4.0")
+elif command == "query":
+    print("//p4rt_app:regular_test")
+elif command == "aquery":
+    sys.exit(3)
+''')
+            bazel.chmod(0o755)
+            argv = ["p4rt_common_sdk.py", "--source", str(root / "pins"), "--sdk", str(root / "sdk"),
+                    "--output-base", str(root / "output-base"), "--output", str(root / "output"),
+                    "--arch", "arm64"]
+            path = f"{root / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}"
+            with mock.patch.dict(os.environ, {"PATH": path}), mock.patch.object(sys, "argv", argv):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    handoff_check.main()
+            calls = [json.loads(line) for line in (root / "calls.jsonl").read_text().splitlines()]
+            query, = [call for call in calls if call[1] == "query"]
+            self.assertIn(r"tests(//p4rt_app/...) except attr(tags, '[\[ ]manual[,\]]', //p4rt_app/...)",
+                          query)
+            self.assertEqual((root / "output/test-targets.txt").read_text(), "//p4rt_app:regular_test\n")
+            self.assertEqual(calls[-1][1], "shutdown")
 
 
 if __name__ == "__main__":

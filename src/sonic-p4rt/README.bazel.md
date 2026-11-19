@@ -77,8 +77,10 @@ consumer version. The normal P4RT Make packaging target still builds Debian
 packages; it is not the validation command above.
 
 The `P4RT with the Common SDK` workflow runs natively on AMD64 and ARM64.
-It builds the actual `//p4rt_app:p4rt` executable and queries
-`tests(//p4rt_app/...)` to run the full suite (58 tests at the pinned revision).
+It builds the actual `//p4rt_app:p4rt` executable and runs every non-manual
+test from `tests(//p4rt_app/...)` (58 tests at the pinned revision). Manual
+tests, such as sonic-pins' x86_64-only `runtime_package_test` that needs gdb,
+run in the owner repository's CI instead.
 The action check rejects Common compilation or Debian package outputs under
 Bazel 6. The executable check verifies its architecture, library name, startup,
 and that the loaded Common library has the SDK's checksum. Test results are
