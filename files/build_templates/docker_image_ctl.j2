@@ -316,6 +316,25 @@ function postStartAction()
     # Setup ebtables configuration
 {%- if sonic_asic_platform != "vs" %}
     ebtables_config
+{%- else %}
+    # On vs the kernel bridge is the data plane, so the full filter would stop
+    # ordinary flooding. Keep BPDUs out of forwarding only: stpd reads them,
+    # and a forwarded copy lets a bridge two hops away hear the root directly.
+    # PVST uses the Cisco address; MSTP uses the IEEE one, which the kernel
+    # bridge forwards because its own STP is off.
+    # The rule goes where the bridge is: the ASIC namespace on multi-ASIC,
+    # the host otherwise, the same split ebtables_config makes.
+    ns=""
+    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
+        ns="ip netns exec $NET_NS"
+    fi
+    if [[ "$ns" || ! ($NUM_ASIC -gt 1) ]]; then
+        for mac in 01:00:0c:cc:cc:cd 01:80:c2:00:00:00; do
+            $ns ebtables -D FORWARD -d $mac -j DROP 2>/dev/null || true
+            $ns ebtables -A FORWARD -d $mac -j DROP || \
+                echo "Warning: could not keep $mac out of the kernel bridge forwarding path"
+        done
+    fi
 {%- endif %}
     # chassisdb starts before database starts, bypass the PING check since other
     # databases are not availbale until database container is ready.

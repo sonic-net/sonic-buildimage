@@ -5,8 +5,9 @@ After=updategraph.service swss.service syncd.service
 Before=ntp-config.service
 BindsTo=sonic.target
 After=sonic.target
-StartLimitIntervalSec=1200
-StartLimitBurst=3
+# No start-rate limit: a stopped stp container leaves every port forwarding
+# with no loop protection.
+StartLimitIntervalSec=0
 
 [Service]
 User={{ sonicadmin_user }}
@@ -16,4 +17,4 @@ ExecStop=/usr/bin/{{docker_container_name}}.sh stop
 RestartSec=30
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sonic.target
