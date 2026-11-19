@@ -209,9 +209,48 @@ def test_internal_and_voq_unnumbered_peer_groups_are_distinct():
 
 
 def test_unnumbered_remote_as():
-    """Interface neighbor renders remote-as correctly."""
+    """Interface neighbor is created before remote-as is configured."""
     result = render_general_instance('PortChannel101', {'asn': '65200', 'name': 'spine1'})
-    assert 'neighbor PortChannel101 remote-as 65200' in result
+    interface = 'neighbor PortChannel101 interface peer-group PEER_UNNUMBERED'
+    remote_as = 'neighbor PortChannel101 remote-as 65200'
+    assert interface in result
+    assert remote_as in result
+    assert result.index(interface) < result.index(remote_as)
+
+
+def test_internal_unnumbered_remote_as_order():
+    """Internal interface neighbor is created before remote-as is configured."""
+    tf = TemplateFabric(TEMPLATE_PATH)
+    template = tf.from_file('bgpd/templates/internal/instance.conf.j2')
+    result = template.render(
+        CONFIG_DB__DEVICE_METADATA={'localhost': {'switch_type': 'switch'}},
+        neighbor_addr='PortChannel101',
+        bgp_session={'asn': '65100', 'name': 'peer_switch'},
+        bgp_asn='65100',
+    )
+    interface = 'neighbor PortChannel101 interface peer-group INTERNAL_PEER_UNNUMBERED'
+    remote_as = 'neighbor PortChannel101 remote-as 65100'
+    assert interface in result
+    assert remote_as in result
+    assert result.index(interface) < result.index(remote_as)
+
+
+def test_voq_unnumbered_remote_as_order():
+    """VoQ interface neighbor is created before remote-as is configured."""
+    tf = TemplateFabric(TEMPLATE_PATH)
+    template = tf.from_file('bgpd/templates/voq_chassis/instance.conf.j2')
+    result = template.render(
+        CONFIG_DB__DEVICE_METADATA={'localhost': {'type': 'SpineRouter', 'bgp_asn': '65100'}},
+        neighbor_addr='Ethernet0',
+        bgp_session={'asn': '65100', 'name': 'lc_peer'},
+        bgp_asn='65100',
+        constants={'bgp': {'maximum_paths': {'enabled': True, 'ipv4': 64, 'ipv6': 64}}},
+    )
+    interface = 'neighbor Ethernet0 interface peer-group VOQ_CHASSIS_PEER_UNNUMBERED'
+    remote_as = 'neighbor Ethernet0 remote-as 65100'
+    assert interface in result
+    assert remote_as in result
+    assert result.index(interface) < result.index(remote_as)
 
 
 def test_unnumbered_shutdown():
