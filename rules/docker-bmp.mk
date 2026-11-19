@@ -43,3 +43,28 @@ $(DOCKER_BMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_BMP)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 
 $(DOCKER_BMP)_BASE_IMAGE_FILES += monit_bmp:/etc/monit/conf.d
+
+# Select the native collector and configuration wheel on the supported VS profile.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_BMP) $(DOCKER_BMP_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_BMP)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_BMP_DBG)
+$(DOCKER_BMP_DBG)_PATH = $($(DOCKER_BMP)_PATH)
+$(DOCKER_BMP)_BAZEL_TARGET = //dockers/docker-sonic-bmp:$(DOCKER_BMP)
+$(DOCKER_BMP_DBG)_BAZEL_TARGET = //dockers/docker-sonic-bmp:$(DOCKER_BMP_DBG)
+SONIC_BAZEL_MANIFESTS += docker-sonic-bmp docker-sonic-bmp-dbg
+docker-sonic-bmp_MANIFEST_IMAGE = $(DOCKER_BMP)
+docker-sonic-bmp-dbg_MANIFEST_IMAGE = $(DOCKER_BMP)
+docker-sonic-bmp-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_BMP)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-bmp/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-bmp/image.env
+$(DOCKER_BMP_DBG)_BAZEL_DEPENDS = $($(DOCKER_BMP)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-bmp-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-sonic-bmp
+endif
+endif
+endif

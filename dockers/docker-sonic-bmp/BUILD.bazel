@@ -1,0 +1,201 @@
+"""AMD64 Trixie BMP runtime and debug images for the VS installer."""
+
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_PARENT = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
+_COMPATIBLE = ["@platforms//cpu:x86_64", "@sonic_build_infra//platforms:trixie", "@platforms//os:linux"]
+
+[
+    manifest_labels(
+        name = "labels" if not suffix else "debug_labels",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sonic-bmp" + suffix + ".manifest",
+    )
+    for suffix in ["", "-dbg"]
+]
+
+tar(
+    name = "config",
+    srcs = ["bmp.sh", "critical_processes", "supervisord.conf"],
+    mtree = [
+        "usr/bin/bmp.sh uid=0 gid=0 mode=0755 time=0 type=file content=$(location bmp.sh)",
+        "etc/supervisor/critical_processes uid=0 gid=0 mode=0644 time=0 type=file content=$(location critical_processes)",
+        "etc/supervisor/conf.d/supervisord.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location supervisord.conf)",
+    ],
+)
+
+# libswsscommon, py-common, the Python bindings and libyang come from the
+# config-engine parent. Only add the locked external BMP dependency closure.
+apt_layer(
+    name = "debian_runtime",
+    base = _PARENT,
+    dependency_set = "bmp_runtime_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["bmp_runtime_debian"]["amd64"],
+    policy = {"schema": 1, "image": "docker-sonic-bmp", "architecture": "amd64", "distribution": "trixie", "retained_source": "none", "features": {}},
+    variant = "runtime",
+)
+
+filegroup(name = "runtime_apt_selection", srcs = [":debian_runtime"], output_group = "selection")
+
+installed_packages(
+    name = "installed_packages",
+    architecture = "amd64",
+    apt_receipt = ":runtime_apt_selection",
+    base = _PARENT,
+    controls = [label + ":control" for label in APT_INPUTS["bmp_runtime_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_bmp//:runtime_packages.json"],
+    source_modules = {"sonic-bmp": "@image_source_modules//:sonic-bmp.MODULE.bazel"},
+    source_spec = "source_paths.json",
+    sources = {"sonic-bmp": "@sonic_bmp//:runtime"},
+)
+
+filegroup(name = "runtime_package_metadata", srcs = [":installed_packages"], output_group = "metadata")
+
+tar(
+    name = "runtime_package_state",
+    srcs = [":installed_packages", ":runtime_package_metadata"],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/bmp-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+sonic_layer(name = "debian_payload", tars = [":debian_runtime"])
+sonic_layer(name = "collector", tars = ["@sonic_bmp//:runtime"])
+
+oci_image(
+    name = "docker-sonic-bmp",
+    base = _PARENT,
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = "//tools/bazel/image/vs/metadata:docker-sonic-bmp.environment",
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [":debian_payload", ":collector", "//src/sonic-bmpcfgd:runtime", ":config", ":runtime_package_state"],
+)
+
+debug_symbols_layer(
+    name = "docker-sonic-bmp.debug_symbols",
+    image = ":docker-sonic-bmp",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-sonic-bmp",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-sonic-bmp",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "debug",
+)
+
+# Replace the parent's vim.tiny hardlink with the full debug Vim selection.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-sonic-bmp",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/bmp-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-sonic-bmp-dbg",
+    base = ":docker-sonic-bmp",
+    labels = ":debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-sonic-bmp.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-sonic-bmp" + suffix + ".gz",
+        image = ":docker-sonic-bmp" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-sonic-bmp",
+    groups = [{"name": "_ssh", "password": "x", "gid": 104}],
+)

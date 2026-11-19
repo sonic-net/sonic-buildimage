@@ -68,6 +68,15 @@ bazel_dep(
     version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
     repo_name = "sonic_sairedis",
 )
+# Validate the owner PR before its first version is published in the registry.
+bazel_dep(name = "sonic-bmp", version = "0.1.0", repo_name = "sonic_bmp")
+archive_override(
+    module_name = "sonic-bmp",
+    urls = ["https://github.com/securely1g/sonic-bmp/archive/cfcfc017dac17ce53122c350c8383b5886797681.tar.gz"],
+    strip_prefix = "sonic-bmp-cfcfc017dac17ce53122c350c8383b5886797681",
+    integrity = "sha256-f63utH8LVfx2Vk2LuWPldDs9bm6faHObZ6UPbzGf0QA=",
+)
+
 bazel_dep(name = "sonic-swss", version = "0.0.3-9c3797990d4b5a79100a40fe7689927c18212361", repo_name = "sonic_swss")
 bazel_dep(name = "sonic-platform-common", version = "1.0.0", repo_name = "sonic_platform_common")
 bazel_dep(name = "sonic-snmpagent", version = "2.1.0-a27e093fac394f7871ec1b19bb12ca6739c29fa9", repo_name = "sonic_snmpagent")
@@ -295,7 +304,7 @@ oci.pull(
 use_repo(oci, "debian_trixie", "debian_trixie_linux_amd64", "debian_trixie_linux_arm64_v8")
 
 # Select the base and config-engine sets from the same canonical lock.
-use_repo(apt, "base_debian", "base_debug_debian", "config_engine_debian", "radv_runtime_debian")
+use_repo(apt, "bmp_runtime_debian", "base_debian", "base_debug_debian", "config_engine_debian", "radv_runtime_debian")
 
 apt_inputs(
     name = "base_apt_inputs",
@@ -359,6 +368,7 @@ source_modules(
         "@otelcol_contrib//:MODULE.bazel": "otelcol-contrib",
         "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
         "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
+        "@sonic_bmp//:MODULE.bazel": "sonic-bmp",
         "@libteam//:MODULE.bazel": "libteam",
         "@sonic_dash_api//:MODULE.bazel": "sonic-dash-api",
         "@sonic_dash_ha//:MODULE.bazel": "sonic-dash-ha",
