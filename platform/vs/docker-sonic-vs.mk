@@ -39,11 +39,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
                               $(SYSMGR_DBG)
 endif
 
-ifeq ($(SONIC_ROUTING_STACK), frr)
 $(DOCKER_SONIC_VS)_DEPENDS += $(FRR)
-else
-$(DOCKER_SONIC_VS)_DEPENDS += $(GOBGP)
-endif
 
 ifeq ($(INCLUDE_FIPS), y)
 $(DOCKER_SONIC_VS)_DEPENDS += $(FIPS_KRB5_ALL)
@@ -72,4 +68,3 @@ $(DOCKER_SONIC_VS_CONSTANTS): files/build_templates/constants.yml.j2
 	ENABLE_FRR_SNMP_AGENT="$(ENABLE_FRR_SNMP_AGENT)" j2 $< > $@
 
 $(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_CONSTANTS)
-

@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import ipaddress
+import tempfile
 import tests.common_utils as utils
 import minigraph
 
@@ -12,6 +13,7 @@ from unittest import TestCase
 TOR_ROUTER = 'ToRRouter'
 BACKEND_TOR_ROUTER = 'BackEndToRRouter'
 BMC_MGMT_TOR_ROUTER = 'BmcMgmtToRRouter'
+NETWORK_BMC = 'NetworkBmc'
 
 class TestCfgGenCaseInsensitive(TestCase):
 
@@ -177,6 +179,27 @@ class TestCfgGenCaseInsensitive(TestCase):
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'console_mgmt': {'enabled': 'no'}}"))
+
+    def test_minigraph_console_mgmt_feature_platform_default(self):
+        # load_minigraph applies init_cfg.json first and the minigraph on top of it
+        with tempfile.NamedTemporaryFile('w', suffix='.json') as init_cfg:
+            json.dump({'CONSOLE_SWITCH': {'console_mgmt': {'enabled': 'yes'}}}, init_cfg)
+            init_cfg.flush()
+            argument = ['-j', init_cfg.name, '-m', self.sample_graph, '-p', self.port_config, '-v', 'CONSOLE_SWITCH']
+            output = self.run_script(argument)
+            self.assertEqual(
+                utils.to_dict(output.strip()),
+                utils.to_dict("{'console_mgmt': {'enabled': 'no'}}"))
+
+            try:
+                # A BMC keeps the platform default
+                output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (TOR_ROUTER, NETWORK_BMC), self.sample_graph])
+                output = self.run_script(argument)
+                self.assertEqual(
+                    utils.to_dict(output.strip()),
+                    utils.to_dict("{'console_mgmt': {'enabled': 'yes'}}"))
+            finally:
+                output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (NETWORK_BMC, TOR_ROUTER), self.sample_graph])
 
     def test_minigraph_console_port(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', 'CONSOLE_PORT']
