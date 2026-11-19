@@ -65,6 +65,7 @@ class ServiceChecker(HealthChecker):
     # 'optional_containers' object in system_health_monitoring_config.json.
     OPTIONAL_CONTAINERS = {
         'otel': 'docker-sonic-otel',
+        'hft': 'docker-hft',
     }
 
     def __init__(self):

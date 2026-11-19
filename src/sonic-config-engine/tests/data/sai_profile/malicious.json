@@ -1,0 +1,16 @@
+{
+    "SAI_PROFILE": {
+        "SAI_INIT_CONFIG_FILE": {
+            "value": "/tmp/evil.bcm"
+        },
+        "SAI_INIT_CONFIG_FILE=/tmp/evil": {
+            "value": "x"
+        },
+        "BAD\r\nKEY": {
+            "value": "y"
+        },
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128\r\nSAI_INIT_CONFIG_FILE=/tmp/evil"
+        }
+    }
+}

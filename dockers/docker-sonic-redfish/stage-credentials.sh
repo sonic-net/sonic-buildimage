@@ -87,23 +87,42 @@ source_dirs() {
 
 # --- Helpers ---------------------------------------------------------------
 
-# All files present and parsing. Separate from staging so the watcher can test
+# The certificate parses and is inside its validity window. bmcweb rejects an
+# expired or not yet valid certificate (for example on a BMC whose clock is
+# behind).
+cert_current() {
+    openssl x509 -noout -checkend 0 -in "$1" >/dev/null 2>&1 || return 1
+    local not_before start
+    not_before="$(openssl x509 -noout -startdate -in "$1" 2>/dev/null | cut -d= -f2)"
+    start="$(date -u -d "${not_before}" +%s 2>/dev/null)" || return 1
+    [ "${start}" -le "$(date -u +%s)" ]
+}
+
+# A certificate and private key bmcweb will accept: the certificate is current,
+# the key passes OpenSSL's consistency check (bmcweb runs the same check,
+# EVP_PKEY_check), and the two correspond. The public key derived from each is
+# compared, which works for RSA and EC. Both arguments may name one combined PEM.
+pair_ok() {
+    cert_current "$1" || return 1
+    openssl pkey -in "$2" -check -noout >/dev/null 2>&1 || return 1
+    local cert_pub key_pub
+    cert_pub="$(openssl x509 -in "$1" -noout -pubkey 2>/dev/null)"
+    key_pub="$(openssl pkey -in "$2" -pubout 2>/dev/null)"
+    [ -n "${cert_pub}" ] && [ "${cert_pub}" = "${key_pub}" ]
+}
+
+# All files present and usable. Separate from staging so the watcher can test
 # readiness before stopping a healthy bmcweb.
 certs_ready() {
     configured || return 1
     [ -f "${SERVER_CRT}" ] && \
     [ -f "${SERVER_KEY}" ] && \
     [ -f "${CA_CRT}" ]     || return 1
-    openssl x509 -noout -in "${SERVER_CRT}" >/dev/null 2>&1 || return 1
     openssl x509 -noout -in "${CA_CRT}" >/dev/null 2>&1 || return 1
 
     # Mid-rotation the cert and key are replaced in two separate operations, so
-    # they can briefly disagree. Compare the public key derived from each
-    # (works for RSA and EC) and skip the pass until they correspond.
-    local cert_pub key_pub
-    cert_pub="$(openssl x509 -in "${SERVER_CRT}" -noout -pubkey 2>/dev/null)"
-    key_pub="$(openssl pkey -in "${SERVER_KEY}" -pubout 2>/dev/null)"
-    [ -n "${cert_pub}" ] && [ "${cert_pub}" = "${key_pub}" ] || return 1
+    # they can briefly disagree; the pass is skipped until they correspond.
+    pair_ok "${SERVER_CRT}" "${SERVER_KEY}"
 }
 
 # Combined fingerprint of the three source files (content-based).
@@ -115,8 +134,11 @@ fingerprint() {
 # The staged output is complete and valid. Checked on the destination only, so
 # the answer does not depend on the source paths. Issuer differing from subject
 # is what separates a provisioned cert from bmcweb's self-signed fallback.
+# bmcweb replaces a server.pem it rejects with a self-signed certificate and
+# starts anyway, so anything it would reject must fail here, before the guard
+# lets it start.
 staged_ok() {
-    openssl x509 -noout -in "${SERVER_PEM}" >/dev/null 2>&1 || return 1
+    pair_ok "${SERVER_PEM}" "${SERVER_PEM}" || return 1
     local issuer subject
     issuer="$(openssl x509 -noout -issuer -in "${SERVER_PEM}" 2>/dev/null)"
     subject="$(openssl x509 -noout -subject -in "${SERVER_PEM}" 2>/dev/null)"
@@ -150,25 +172,50 @@ EOF
 }
 
 # Refresh the cert files bmcweb reads. Runs on first install AND every renewal.
+# The sources are read once, into temp files next to their destinations. The
+# temp files are validated and fingerprinted, and only then renamed into place,
+# so what is installed is exactly what was checked even if the source symlinks
+# are repointed mid-pass, and the stamp describes the installed bytes.
 stage_certs() {
     certs_ready || return 1
     mkdir -p "${HTTPS_DIR}" "${AUTH_DIR}"
+    local pem_tmp="${SERVER_PEM}.tmp" ca_tmp="${AUTH_DIR}/CA-cert.pem.tmp"
 
-    # Combine cert + key into the single PEM bmcweb expects; swap atomically.
-    cat "${SERVER_CRT}" "${SERVER_KEY}" > "${SERVER_PEM}.tmp" || return 1
-    mv -f "${SERVER_PEM}.tmp" "${SERVER_PEM}"
-
-    # The hash symlink is what OpenSSL's add_verify_path() looks up.
-    cp -f "${CA_CRT}" "${AUTH_DIR}/CA-cert.pem.tmp" || return 1
-    mv -f "${AUTH_DIR}/CA-cert.pem.tmp" "${AUTH_DIR}/CA-cert.pem"
-    local hash
-    hash="$(openssl x509 -hash -noout -in "${AUTH_DIR}/CA-cert.pem" 2>/dev/null)"
-    if [ -n "${hash}" ]; then
-        ln -sfn CA-cert.pem "${AUTH_DIR}/${hash}.0"
-    else
-        log "WARNING: could not compute CA hash; truststore symlink not created"
+    # Combine cert + key into the single PEM bmcweb expects. It holds the
+    # private key, so it is created 0600 rather than chmod'ed afterwards. umask
+    # applies only on creation, so a leftover temp file goes first, and a
+    # failed write leaves no partial key behind.
+    rm -f "${pem_tmp}" "${ca_tmp}"
+    if ! (umask 077 && cat "${SERVER_CRT}" "${SERVER_KEY}" > "${pem_tmp}") || \
+       ! cp -f "${CA_CRT}" "${ca_tmp}"; then
+        rm -f "${pem_tmp}" "${ca_tmp}"
         return 1
     fi
+
+    # A rotation that lands between the readiness check and the copy can leave
+    # a cert and key from different versions here. Nothing is installed then;
+    # the next reconcile sees the settled pair.
+    local hash
+    hash="$(openssl x509 -hash -noout -in "${ca_tmp}" 2>/dev/null)"
+    if ! pair_ok "${pem_tmp}" "${pem_tmp}" || [ -z "${hash}" ]; then
+        log "staged output failed validation (source changed mid-pass or unusable CA); nothing installed"
+        rm -f "${pem_tmp}" "${ca_tmp}"
+        return 1
+    fi
+    # Same bytes and order as fingerprint() over the sources.
+    local staged_fp
+    staged_fp="$(cat "${pem_tmp}" "${ca_tmp}" | sha256sum | awk '{print $1}')"
+
+    # Two renames, each atomic within its directory. The hash symlink is what
+    # OpenSSL's add_verify_path() looks up.
+    mv -f "${pem_tmp}" "${SERVER_PEM}" || return 1
+    mv -f "${ca_tmp}" "${AUTH_DIR}/CA-cert.pem" || return 1
+    ln -sfn CA-cert.pem "${AUTH_DIR}/${hash}.0" || return 1
+
+    # The stamp advances only once the whole set is in place, so a failure
+    # above leaves it behind and the next reconcile retries.
+    mkdir -p "$(dirname "${STAMP}")" 2>/dev/null
+    echo "${staged_fp}" > "${STAMP}" 2>/dev/null
     log "staged server.pem and CA truststore from ${SERVER_CRT} and ${CA_CRT}"
 }
 
@@ -183,7 +230,6 @@ apply_and_bounce() {
     local rc=0
     if stage_certs; then
         mark_provisioned
-        fingerprint > "${STAMP}" 2>/dev/null
     else
         log "staging failed; stamp not advanced, will retry on next reconcile"
         rc=1
@@ -205,7 +251,7 @@ publish_status() {
         last_error="REDFISH|certs not configured"
     elif ! certs_ready; then
         in_sync="false"
-        last_error="credentials not ready (missing files, unparseable cert, or cert/key mismatch)"
+        last_error="credentials not ready (missing files, unparseable or expired cert, invalid key, or cert/key mismatch)"
     elif [ "${src_fp}" != "${applied}" ]; then
         in_sync="false"
         last_error="source changed but not applied (staging pending or failing)"
@@ -256,7 +302,6 @@ run_once() {
     # first start already uses the real certificate.
     if stage_certs; then
         mark_provisioned
-        fingerprint > "${STAMP}" 2>/dev/null
         log "staged provisioned credentials before bmcweb start"
     else
         log "staging failed at container start; guard/watcher will retry"
@@ -271,7 +316,6 @@ run_guard() {
         log "guard: staged certificates missing or invalid; re-staging from source"
         if stage_certs; then
             mark_provisioned
-            fingerprint > "${STAMP}" 2>/dev/null
         fi
     fi
     # Fail closed: a provisioned unit never falls back to self-signed.
