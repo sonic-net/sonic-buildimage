@@ -10,6 +10,7 @@ try:
     import sys
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
+    from sonic_platform.thermal import CpuThermal
     from sonic_platform_pddf_base.pddf_psu_sensor import PsuVoltageSensor, PsuCurrentSensor
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -22,6 +23,7 @@ class Chassis(PddfChassis):
 
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
+        self._thermal_list.extend(CpuThermal.discover(len(self._thermal_list)))
         for position, psu in enumerate(self._psu_list, 1):
             self._voltage_sensor_list.append(PsuVoltageSensor(psu, position))
             self._current_sensor_list.append(PsuCurrentSensor(psu, position))
