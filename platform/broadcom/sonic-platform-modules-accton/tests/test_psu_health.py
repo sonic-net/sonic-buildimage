@@ -27,7 +27,7 @@ class PsuHealth(unittest.TestCase):
         config = json.loads((path / "system_health_monitoring_config.json").read_text())
         self.assertEqual(
             config["devices_to_ignore"],
-            ["asic", "psu.temperature", "PSU1_FAN1.speed", "PSU2_FAN1.speed"],
+            ["asic", "PSU1_FAN1.speed", "PSU2_FAN1.speed"],
         )
         plugin = json.loads((path / "pddf/pd-plugin.json").read_text())
         mapping = plugin["PSU"]["psu_fan_dir"]["i2c"]["valmap"]
