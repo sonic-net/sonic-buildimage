@@ -1,0 +1,19 @@
+{
+    "interval": 2,
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "True"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+    ]
+}

@@ -1,0 +1,11 @@
+ds6000/systemd/pddf-platform-init.service etc/systemd/system
+ds6000/systemd/pddf-platform-post.service etc/systemd/system
+build-ds6000/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_ds6000-r0/pddf
+ds6000/scripts/pre_pddf_init.sh usr/local/bin
+ds6000/scripts/post_pddf_init.sh usr/local/bin
+ds6000/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds6000/scripts/pddf_post_device_create.sh usr/local/bin
+ds6000/scripts/platform_sensors.py usr/local/bin
+ds6000/scripts/sensors usr/bin
+ds6000/scripts/ds6000_platform_shutdown.sh usr/local/bin
+ds6000/scripts/99-cpld-wdt.rules etc/udev/rules.d
