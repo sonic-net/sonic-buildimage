@@ -50,3 +50,4 @@
 0127-zebra-let-a-dataplane-module-learn-local-MACs.patch
 0128-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
+0130-SONiC-ONLY-zebra-keep-the-EVPN-router-MAC-for-the-FPM-on-recursive-nexthops.patch
