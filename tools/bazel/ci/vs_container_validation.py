@@ -31,7 +31,7 @@ ENTRYPOINTS = {
     "docker-syncd-vs": SUPERVISORD, "docker-sysmgr": SUPERVISORD,
     "docker-teamd": "/usr/bin/docker-teamd-init.sh",
     "docker-gnmi-sidecar": SUPERVISORD, "docker-restapi-sidecar": SUPERVISORD,
-
+    "docker-gnmi-watchdog": SUPERVISORD,
 }
 
 # These services check their inherited empty ExposedPorts on master. SNMP's

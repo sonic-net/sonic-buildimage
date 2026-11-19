@@ -1,4 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tar.bzl//tar:tar.bzl", "tar")
 
 py_library(
     name = "artifact_validation",
@@ -10,5 +12,30 @@ py_library(
 py_library(
     name = "validation_inputs",
     srcs = ["validation_inputs.py"],
+    visibility = ["//visibility:public"],
+)
+
+# Local executable roots keep the complete external runfiles relocatable in
+# tar.bzl's archive. These are probe inputs, never container payload layers.
+[
+    sh_binary(
+        name = "watchdog_" + tool,
+        srcs = ["watchdog_symbol_tool.sh"],
+        data = [label],
+        testonly = True,
+    )
+    for tool, label in {
+        "gdb": "@sonic_build_infra//tools/build_tools:gdb",
+        "readelf": "@sonic_build_infra//toolchains/binutils:readelf",
+        "objcopy": "@sonic_build_infra//toolchains/binutils:objcopy",
+    }.items()
+]
+
+tar(
+    name = "watchdog_symbol_tools",
+    compress = "gzip",
+    srcs = [":watchdog_gdb", ":watchdog_readelf", ":watchdog_objcopy"],
+    include_runfiles = True,
+    testonly = True,
     visibility = ["//visibility:public"],
 )

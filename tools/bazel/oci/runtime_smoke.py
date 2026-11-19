@@ -101,10 +101,10 @@ end
 '''
 
 
-def gdb_lookup(binary, directory, debug_directory, symbol=None):
+def gdb_lookup(binary, directory, debug_directory, symbol=None, *, gdb="gdb"):
     script = directory / 'lookup.gdb'
     script.write_text(GDB_SCRIPT.replace('__SONIC_DEBUG_SYMBOL__', repr(symbol)))
-    result = command(['gdb', '-nx', '-nh', '--batch',
+    result = command([gdb, '-nx', '-nh', '--batch',
                       '-iex', 'set auto-load off', '-iex', 'set debuginfod enabled off',
                       '-iex', 'set pagination off',
                       '-iex', 'set debug-file-directory ' + debug_directory,

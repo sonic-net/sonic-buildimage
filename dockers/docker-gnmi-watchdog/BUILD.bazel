@@ -1,0 +1,80 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+expand_template(
+    name = "tagged_rsyslog",
+    template = "//files/image_config:rsyslog/rsyslog-container-gnmi.conf",
+    out = "tagged-rsyslog.conf",
+    substitutions = {"%syslogtag%": "gnmi_watchdog#%syslogtag%"},
+)
+
+tar(
+    name = "service_files",
+    srcs = [
+        "supervisord.conf",
+        ":tagged_rsyslog",
+    ],
+    mtree = [
+        "etc/supervisor/conf.d/supervisord.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location supervisord.conf)",
+        "etc/rsyslog.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location :tagged_rsyslog)",
+    ],
+)
+
+manifest_labels(
+    name = "labels",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gnmi-watchdog.manifest",
+)
+
+manifest_labels(
+    name = "labels-dbg",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gnmi-watchdog-dbg.manifest",
+)
+
+oci_image(
+    name = "docker-gnmi-watchdog",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = "//tools/bazel/image/vs/metadata:docker-gnmi-watchdog.environment",
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":service_files",
+        "//dockers/docker-gnmi-watchdog/watchdog:runtime",
+    ],
+)
+
+# Collect inherited and service-owned symbols from the exact runtime graph.
+debug_symbols_layer(
+    name = "docker-gnmi-watchdog.debug_symbols",
+    image = ":docker-gnmi-watchdog",
+)
+
+oci_image(
+    name = "docker-gnmi-watchdog-dbg",
+    base = ":docker-gnmi-watchdog",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [":docker-gnmi-watchdog.debug_symbols"],
+)
+
+sonic_docker_archive(
+    name = "docker-gnmi-watchdog.gz",
+    image = ":docker-gnmi-watchdog",
+)
+
+sonic_docker_archive(
+    name = "docker-gnmi-watchdog-dbg.gz",
+    image = ":docker-gnmi-watchdog-dbg",
+)

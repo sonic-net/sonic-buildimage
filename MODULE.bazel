@@ -7,6 +7,16 @@ module(
 )
 
 include("//src/sonic-supervisord-utilities-rs:deps.MODULE.bazel")
+
+watchdog_crates = use_extension("@rules_rs//rs:extensions.bzl", "crate")
+watchdog_crates.from_cargo(
+    name = "gnmi_watchdog_crates",
+    cargo_lock = "//dockers/docker-gnmi-watchdog/watchdog:Cargo.lock",
+    cargo_toml = "//dockers/docker-gnmi-watchdog/watchdog:Cargo.toml",
+    platform_triples = ["x86_64-unknown-linux-gnu"],
+    use_legacy_rules_rust_platforms = True,
+)
+use_repo(watchdog_crates, "gnmi_watchdog_crates")
 include("//src/sonic-frr:deps.MODULE.bazel")
 
 # Cache Go module ZIPs by reviewed archive digests.

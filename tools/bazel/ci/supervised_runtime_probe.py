@@ -33,6 +33,28 @@ def main(image):
         assert os.access("/usr/bin/systemd_stub.py", os.X_OK)
         assert Path("/etc/supervisor/critical_processes").is_file()
         assert "restapi-sidecar#%syslogtag%" in Path("/etc/rsyslog.conf").read_text()
+    elif image == "docker-gnmi-watchdog":
+        name, port = "gnmi_watchdog", 51000
+        executable = "/usr/bin/" + name
+        with subprocess.Popen([executable], stdout=sys.stderr, stderr=sys.stderr) as server:
+            try:
+                for attempt in range(100):
+                    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+                    try:
+                        conn.request("GET", "/")
+                        response = conn.getresponse()
+                        result = json.loads(response.read())
+                        break
+                    except ConnectionRefusedError:
+                        if server.poll() is not None or attempt == 99:
+                            raise
+                        time.sleep(0.05)
+                    finally:
+                        conn.close()
+                if name == "gnmi_watchdog":
+                    assert response.status == 200 and result == {"gnmi_status": "OK"}, result
+            finally:
+                server.terminate()
     else:
         raise ValueError(image)
     print(json.dumps({"image": image, "status": "passed"}))

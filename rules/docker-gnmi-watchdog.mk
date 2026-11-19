@@ -31,3 +31,27 @@ $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_GNMI_WATCHDOG)_FILES += $(GNMI_RSYSLOG_CONF)
 
+
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_GNMI_WATCHDOG) $(DOCKER_GNMI_WATCHDOG_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_GNMI_WATCHDOG)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_GNMI_WATCHDOG_DBG)
+$(DOCKER_GNMI_WATCHDOG)_BAZEL_TARGET = //dockers/docker-gnmi-watchdog:$(DOCKER_GNMI_WATCHDOG)
+$(DOCKER_GNMI_WATCHDOG_DBG)_PATH = $($(DOCKER_GNMI_WATCHDOG)_PATH)
+$(DOCKER_GNMI_WATCHDOG_DBG)_BAZEL_TARGET = //dockers/docker-gnmi-watchdog:$(DOCKER_GNMI_WATCHDOG_DBG)
+SONIC_BAZEL_MANIFESTS += docker-gnmi-watchdog docker-gnmi-watchdog-dbg
+docker-gnmi-watchdog_MANIFEST_IMAGE = $(DOCKER_GNMI_WATCHDOG)
+docker-gnmi-watchdog-dbg_MANIFEST_IMAGE = $(DOCKER_GNMI_WATCHDOG)
+docker-gnmi-watchdog-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_GNMI_WATCHDOG)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-gnmi-watchdog/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-gnmi-watchdog/image.env
+$(DOCKER_GNMI_WATCHDOG_DBG)_BAZEL_DEPENDS = $($(DOCKER_GNMI_WATCHDOG)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-gnmi-watchdog-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-gnmi-watchdog
+endif
+endif
+endif

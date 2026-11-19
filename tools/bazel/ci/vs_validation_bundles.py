@@ -43,7 +43,7 @@ PARENT_IMAGES = {
     "docker-sonic-mgmt-framework": CONFIG, "docker-sonic-otel": CONFIG, P4RT: CONFIG,
     "docker-syncd-vs": CONFIG, "docker-sysmgr": CONFIG,
     "docker-gnmi-sidecar": CONFIG, "docker-restapi-sidecar": CONFIG,
-
+    "docker-gnmi-watchdog": CONFIG,
     "docker-dash-ha": SWSS, "docker-fpm-frr": SWSS, "docker-macsec": SWSS,
     "docker-sflow": SWSS, "docker-teamd": SWSS,
 }

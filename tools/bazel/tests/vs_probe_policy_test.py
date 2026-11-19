@@ -82,7 +82,7 @@ class VSProbePolicyTest(unittest.TestCase):
                     probe.verify_debug_separation(image, "debug", native, {"all-debug.tar": {symbols: {}}}, {symbols})
 
     def test_disabled_debug_does_not_request_owner_symbols(self):
-        for image in set(policy.FAMILIES) | {"docker-gnmi-sidecar", "docker-restapi-sidecar"}:
+        for image in set(policy.FAMILIES) | {"docker-gnmi-sidecar", "docker-restapi-sidecar", "docker-gnmi-watchdog"}:
             with self.subTest(image=image):
                 targets = policy.preparation_targets(image, False)
                 self.assertFalse([name for name in targets if "debug" in name or "symbols" in name])

@@ -21,8 +21,8 @@ TEAM = "docker-teamd"
 FRR = "docker-fpm-frr"
 NAT = "docker-nat"
 BMP = "docker-sonic-bmp"
-SUPERVISED = {"docker-gnmi-sidecar", "docker-restapi-sidecar"}
-WATCHDOGS = {}
+SUPERVISED = {"docker-gnmi-sidecar", "docker-restapi-sidecar", "docker-gnmi-watchdog"}
+WATCHDOGS = {"docker-gnmi-watchdog": "gnmi_watchdog"}
 STANDALONE_IMAGES = {BASE, CONFIG, SWSS, SYNCD, TEAM, FRR, NAT, BMP} | SUPERVISED
 
 
