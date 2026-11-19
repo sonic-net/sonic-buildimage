@@ -44,7 +44,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=10000"]
+OPTIONS = []
 
 
 def source_revision():
@@ -54,8 +54,8 @@ def source_revision():
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
 
 
-def profile_options(enabled):
-    return [*OPTIONS, "--@sonic_gnmi//tools/bazel:enable_dialout=" + ("true" if enabled else "false")]
+def profile_options(enabled, version):
+    return [*OPTIONS, build.image_version_option(version), "--@sonic_gnmi//tools/bazel:enable_dialout=" + ("true" if enabled else "false")]
 
 
 def build_images(args, directory):
@@ -64,7 +64,7 @@ def build_images(args, directory):
                   "gNMI image build requires native AMD64 Debian Trixie")
     receipt = {"status": "building", "architecture": "amd64", "commands": [],
                "dialout_enabled": args.dialout == "enabled", "image_version": args.image_version}
-    options = profile_options(receipt["dialout_enabled"])
+    options = profile_options(receipt["dialout_enabled"], receipt["image_version"])
     execute = partial(command_log.execute, cwd=ROOT)
     try:
         receipt["revision"] = source_revision()
@@ -132,7 +132,7 @@ def verify_config(config, parent, manifest, image_version, *, runtime):
         env.update(DEBIAN_FRONTEND="noninteractive", IMAGE_VERSION=image_version)
     check.require(environment(config.get("Env", [])) == env, "undeclared image environment change")
     expected.pop("Env", None)
-    expected["Labels"] = {**parent.get("Labels", {}),
+    expected["Labels"] = {**parent.get("Labels", {}), "Tag": image_version,
                           "com.azure.sonic.manifest": config.get("Labels", {}).get("com.azure.sonic.manifest")}
     check.require(json.loads(expected["Labels"]["com.azure.sonic.manifest"]) == manifest, "Make labels differ")
     check.require({key: value for key, value in config.items() if key != "Env"} == expected,
@@ -278,7 +278,7 @@ def incremental(args, directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "missing accepted build")
     check.require(source_revision() == receipt["revision"], "source changed before incremental check")
-    options = profile_options(receipt["dialout_enabled"])
+    options = profile_options(receipt["dialout_enabled"], receipt["image_version"])
     labels = [OWNER + name + suffix for name in IMAGES for suffix in ("", ".gz")]
     labels += [PARENT, TARGETS["source-runtime.tar"], TARGETS["all-debug.tar"]]
     command = [args.bazel, "build", *options, *labels]

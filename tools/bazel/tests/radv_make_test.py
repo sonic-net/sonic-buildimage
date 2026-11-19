@@ -43,7 +43,7 @@ class RadvMakeTest(unittest.TestCase):
         self.assertIn("/etc/sonic:/etc/sonic:ro", values[6])
         self.assertEqual(values[7], "docker-config-engine-trixie.gz")
         self.assertEqual(values[8], "docker-router-advertiser")
-        self.assertEqual(values[9:11], ["--//dockers/docker-router-advertiser:image_version=radv-parity-2"] * 2)
+        self.assertEqual(values[9:11], ["", ""])
         disabled = self.evaluate(INCLUDE_ROUTER_ADVERTISER="n")
         self.assertEqual(disabled[:2], images)
         self.assertEqual(disabled[4:6], ["", ""])

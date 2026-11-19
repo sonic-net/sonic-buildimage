@@ -20,7 +20,6 @@ from tools.bazel.ci.bazel_commands import inspect_actions
 from tools.bazel.gzip.source_archive import check_versions
 
 OPTIONS = (
-    "--jobs=4", "--local_resources=cpu=4", "--local_resources=memory=10000",
     "--lockfile_mode=update", "--noshow_progress", "--color=no", "--curses=no",
 )
 SOURCE_FILES = (

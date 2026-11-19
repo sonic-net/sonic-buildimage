@@ -56,16 +56,34 @@ Invalid metadata for a selected target and Bazel build errors remain failures.
 ### Build runtime and debug archives with the VS image
 
 During `make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`,
-the Trixie builder builds each selected, supported runtime/debug pair in one
-Bazel invocation. The two targets share the owner's configuration and declared
-inputs. This retains the runtime layers and Bazel state while producing the
-matching debug image, before the VS builder exits. Both complete Docker archives
-are exported to `target/`; each archive remains independently cacheable.
+the Trixie builder issues one `bazel build` for the selected container archives.
+The same rule handles `sonic-vs.img.gz`. Make collects the installer containers,
+local container packages and Bazel archives loaded by legacy Docker recipes.
+It includes each selected container's registered runtime and debug variants.
+Make prepares their prerequisites, then Bazel sees all container targets at once
+and can schedule independent actions in parallel.
 
 For the native AMD64 FIPS/DASH CI configuration, this produces
 `docker-orchagent.gz`, `docker-orchagent-dbg.gz`, `docker-syncd-vs.gz` and
-`docker-syncd-vs-dbg.gz` during the VS build. The existing owner guards determine
-which pairs are available in other configurations.
+`docker-syncd-vs-dbg.gz` in the same build. Bazel builds the original targets
+in a common configuration so their shared base layers have identical bytes.
+Syncd and gearbox consume the DASH SDK. Orchagent uses Sairedis libraries
+that are independent of that selection. The bridge gets the archive paths
+from the build event stream and exports them to `target/`.
+
+Make passes `--//tools/bazel/oci:image_version=$(SONIC_IMAGE_VERSION)` once.
+All 21 image recipes use it for the OCI `Tag` label, including both archives
+of each runtime/debug pair. For a standalone Bazel build, pass the same flag
+to reproduce a release label. The archive still loads as `<image>:latest`.
+The Dockerfiles that use an `IMAGE_VERSION` environment variable also retain
+that runtime input. Updating the release label reuses version-independent
+compilation outputs.
+
+Set `<archive>_BAZEL_SHARED_ARGS` to the owner's complete standalone
+`_BAZEL_ARGS` when every selected image can inherit them. Owners
+with private settings keep their standalone Make recipe, including the paired
+runtime/debug build. Conflicting values declared as shared fail before Bazel
+starts.
 
 Building a debug archive does not select it for installation.
 `INSTALL_DEBUG_TOOLS=y` selects the debug containers through the existing VS

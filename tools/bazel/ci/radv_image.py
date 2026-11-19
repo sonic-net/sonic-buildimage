@@ -45,8 +45,7 @@ CONFIGS = {
 
 
 def build_options(image_version):
-    return ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=10000",
-            "--//dockers/docker-router-advertiser:image_version=" + image_version]
+    return [build.image_version_option(image_version)]
 
 
 def build_images(args, directory):

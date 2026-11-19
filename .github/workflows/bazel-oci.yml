@@ -100,6 +100,8 @@ jobs:
           repository-cache: true
           disk-cache: false
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Retain the same verified GitLab sources used by the VS workflow
         run: |
           mkdir -p artifacts/source-image-inputs
@@ -354,6 +356,8 @@ jobs:
           repository-cache: true
           disk-cache: ${{ matrix.disk_cache }}
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -403,8 +407,6 @@ jobs:
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000 \
             --output artifacts/archive/action-audit.json \
             //tools/bazel/tests:sonic_docker_archive_test \
             //tools/bazel/tests:oci_base_layout_test \
@@ -422,7 +424,6 @@ jobs:
             //tools/bazel/tests:oci-consumer-first.gz
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --lockfile_mode=update --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/archive/test-events.jsonl" \
             //tools/bazel/tests:sonic_docker_archive_test \
@@ -455,10 +456,6 @@ jobs:
             --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
-
       - name: Test Python packages and check startup generation
         run: |
           set -euo pipefail
@@ -472,8 +469,6 @@ jobs:
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000 \
             --output artifacts/config-engine/action-audit.json \
             //tools/bazel/tests:apt_selection_test \
             //tools/bazel/tests:sonic_py_common_test \
@@ -503,7 +498,6 @@ jobs:
             //dockers/docker-orchagent/config:docker_init
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/config-engine/test-events.jsonl" \
             //tools/bazel/tests:apt_selection_test \
@@ -544,10 +538,7 @@ jobs:
             --architecture "${{ matrix.architecture }}" \
             --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }}
           git diff --exit-code
 
       - name: Check local cache reuse across fresh checkouts
@@ -559,10 +550,6 @@ jobs:
             --repository-cache "$("$BAZEL" info repository_cache)" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
-
       - name: Retain generated module lock and graph
         run: |
           python3 -B - <<'PY'
@@ -976,7 +963,6 @@ jobs:
             --output artifacts/swss-layer/consumer-action-audit.json "${targets[@]}"
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/swss-layer/consumer-events.jsonl" "${targets[@]}"
       - name: Check cached no-op and source edit through the image
@@ -1078,7 +1064,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           "$BAZEL" query 'kind(".*_test rule", @hsflowd//src/json:*)' > artifacts/sflow/owner-test-targets.txt
@@ -1207,7 +1193,7 @@ jobs:
           owner_output="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-output.XXXXXXXX")"
           owner_bazel="$(mktemp "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-bazel.XXXXXXXX")"
           export OWNER_OUTPUT="$owner_output"
-          owner_jvm="--host_jvm_args=-Xmx6g"
+          owner_jvm="--host_jvm_args=-Xmx2g"
           cleanup_owner_output() {
             local status=$?
             if [[ $status -ne 0 && -f "$OWNER_OUTPUT/server/jvm.out" ]]; then
@@ -1225,7 +1211,7 @@ jobs:
             exec "$BAZEL" --version
           fi
           : "${OWNER_OUTPUT:?expected OWNER_OUTPUT}"
-          owner_jvm="--host_jvm_args=-Xmx6g"
+          owner_jvm="--host_jvm_args=-Xmx2g"
           subcommand="$1"
           shift
           extra_flags=()
@@ -1247,7 +1233,7 @@ jobs:
             --artifacts artifacts/orchagent-owner --bazel "$owner_bazel" --reuse-build \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:x86_64_trixie \
-            --bazel-arg=--jobs=2 --bazel-arg=--local_resources=memory=8000
+
       - name: Verify SWSS native link closure and symbol lookups
         if: matrix.architecture == 'amd64'
         env:
@@ -2156,6 +2142,8 @@ jobs:
           repository-cache: true
           disk-cache: gbsyncd-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2396,6 +2384,8 @@ jobs:
           repository-cache: true
           disk-cache: dash-engine-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2419,7 +2409,7 @@ jobs:
         run: python3 -B tools/bazel/ci/dash_engine_image.py validate --artifacts "$DASH_ARTIFACTS"
       - name: Validate nnpy in the selected image dependency graph
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           audit=()
@@ -2576,6 +2566,8 @@ jobs:
           repository-cache: true
           disk-cache: otel-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2604,7 +2596,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           targets=(@otelcol_contrib//distributions/otelcol-contrib:source_contract_test
@@ -3243,6 +3235,8 @@ jobs:
           # This job resolves/downloads dependencies but executes no Bazel builds.
           disk-cache: false
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only
 
@@ -3525,8 +3519,15 @@ jobs:
             SONIC_RUN_CMDS='python3 -B tools/bazel/ci/check_kernel_sandbox.py' \
             2>&1 | tee artifacts/vs/kernel-sandbox.log
 
+      - name: Set the VS builder action memory budget
+        run: |
+          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
+
       - name: Build the VS installer (.bin)
         id: vs_build
+        env:
+          SONIC_VS_RETRY_GO_FETCH: "1"
         run: |
           set -o pipefail
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
@@ -3776,7 +3777,7 @@ jobs:
       SONIC_CONFIG_USE_DOCKER_CACHE: "y"
       SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
       SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
-      SONIC_BUILD_JOBS: "4"
+      SONIC_BUILD_JOBS: "1"
       ENABLE_DOCKER_BASE_PULL: "y"
       REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
       ACR_REGISTRY_NAME: sonicdev
@@ -3789,9 +3790,9 @@ jobs:
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
       SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
-      # Image recipes serialize through one Bazel server on this runner.
+      # Make schedules one recipe; Bazel schedules all selected container targets.
+      # Let Bazel choose its job count and CPU/memory scheduling budgets.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=4 --local_resources=memory=12288
         --remote_local_fallback
         --incompatible_remote_local_fallback_for_remote_cache
         --experimental_remote_downloader=grpc://172.16.0.4:9092
@@ -3822,6 +3823,9 @@ jobs:
           set -euo pipefail
           install -d -m 0700 "$DOCKER_CONFIG"
           printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
 
       - name: Validate shared NFS package cache
         run: bash tools/ci/runner/nfs_package_cache.sh
@@ -3904,10 +3908,16 @@ jobs:
             SONIC_RUN_CMDS='python3 -B tools/bazel/ci/check_kernel_sandbox.py' \
             2>&1 | tee artifacts/vs/kernel-sandbox.log
 
+      - name: Set the VS builder action memory budget
+        run: |
+          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
+
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
         env:
           SONIC_VS_IMAGE_TIMINGS: "1"
+          SONIC_VS_RETRY_GO_FETCH: "1"
           TERM: dumb
         run: |
           set -euo pipefail
@@ -3946,6 +3956,8 @@ jobs:
             --installer --secure-upgrade-mode no_sign \
             --expected-commit-id "$(git rev-parse --short HEAD)" \
             --json-output artifacts/vs/sonic-version.json
+          python3 -B tools/bazel/ci/verify_vs_image_tags.py \
+            --target target --version artifacts/vs/sonic-version.json --timings artifacts/vs/image-timings
           bash tools/bazel/ci/validate_vs.sh 2>&1 | tee artifacts/vs/validation.log
           sha256sum target/sonic-vs.bin target/docker-orchagent{,-dbg}.gz \
             target/docker-syncd-vs{,-dbg}.gz > artifacts/vs/outputs.sha256
@@ -4115,6 +4127,8 @@ jobs:
           repository-cache: true
           disk-cache: gnmi-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Configure shared source download mirrors
@@ -4306,6 +4320,8 @@ jobs:
           repository-cache: true
           disk-cache: management-framework-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -4497,6 +4513,8 @@ jobs:
           repository-cache: true
           disk-cache: radv-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership

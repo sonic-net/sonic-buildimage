@@ -31,12 +31,16 @@ class ArchiveRecipeFixture:
         self.fake_bazel.write_text("#!/usr/bin/env python3\n" + r"""
 import hashlib, json, os, pathlib, sys
 arguments = sys.argv[1:]
-operation = arguments[0]
+# Startup flags such as --invocation_policy=... precede the Bazel command.
+operation = next(arg for arg in arguments if not arg.startswith('-'))
 labels = json.loads(os.environ['FAKE_BAZEL_LABELS'])
-archives = [labels[arg] for arg in arguments if arg in labels]
+be_file = next((arg.split('=', 1)[1] for arg in arguments
+                if arg.startswith('--build_event_json_file=')), None)
+targets = [arg for arg in arguments if arg in labels]
+archives = [labels[target] for target in targets]
 prerequisites = [path for name in archives
                  for path in json.loads(os.environ['FAKE_BAZEL_PREREQUISITES'])[name]]
-record = {'arguments': arguments,
+record = {'operation': operation, 'arguments': arguments, 'archives': archives,
           'prerequisites_ready': all(pathlib.Path(path).is_file() for path in prerequisites),
           'prerequisite_sha256': {path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
                                   for path in prerequisites if pathlib.Path(path).is_file()}}
@@ -46,6 +50,22 @@ if not record['prerequisites_ready']:
     raise SystemExit('Make prerequisites were not prepared before Bazel')
 mode = os.environ.get('FAKE_BAZEL_MODE', '')
 if operation == 'build':
+    if mode == 'scripted_failures':
+        import gzip
+        failures_path = pathlib.Path('fixture-failures.json')
+        failures = json.loads(failures_path.read_text())
+        profile = next((a.split('=', 1)[1] for a in arguments if a.startswith('--profile=')), None)
+        if profile:
+            with gzip.open(profile, 'wt') as output:
+                json.dump({'traceEvents': []}, output)
+        if failures:
+            code, events = failures.pop(0)
+            failures_path.write_text(json.dumps(failures))
+            pathlib.Path(be_file).write_text(''.join(json.dumps(e) + '\n' for e in events))
+            print(events[0]['aborted']['description'], file=sys.stderr)
+            if code < 0:
+                os.kill(os.getpid(), -code)
+            raise SystemExit(code)
     if mode == 'build_failure':
         raise SystemExit('fixture build failure')
     for archive in archives:
@@ -56,6 +76,20 @@ if operation == 'build':
         else:
             source.write_bytes(b'' if mode == 'empty_output' else
                                os.environ.get('FAKE_BAZEL_PAYLOAD', 'new ' + archive).encode())
+    if be_file:
+        with pathlib.Path(be_file).open('w') as stream:
+            for label, archive in zip(targets, archives):
+                source = pathlib.Path('bazel-bin/archive outputs') / archive
+                if mode == 'missing_output' and label == targets[-1]:
+                    source = source.with_name('missing-output')
+                outputs = [{'name': source.name, 'uri': source.resolve().as_uri()}]
+                if mode == 'no_outputs':
+                    outputs = []
+                elif mode == 'multiple_outputs':
+                    outputs *= 2
+                event = {'id': {'targetCompleted': {'label': label}}, 'completed': {
+                    'success': True, 'outputGroup': [{'name': 'default', 'inlineFiles': outputs}]}}
+                print(json.dumps(event), file=stream)
 elif operation == 'cquery':
     source = pathlib.Path('bazel-bin/archive outputs') / labels[arguments[-1]]
     print('INFO: fixture query diagnostic', file=sys.stderr)
@@ -129,7 +163,7 @@ FOOTER = printf 'footer %s\n' '$@' >> publication-markers
         if not self.calls.exists():
             return []
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        return [call for call in calls if call['arguments'][0] in operations]
+        return [call for call in calls if call['operation'] in operations]
 
     def assert_success(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -179,7 +213,7 @@ registered: $(SONIC_TARGET_LIST)
                 self.assertEqual(destination.read_bytes(), ("new " + archive).encode())
                 self.assertEqual(destination.stat().st_mode & 0o777, 0o644)
                 calls = self.recorded_calls()
-                self.assertEqual([call['arguments'][0] for call in calls], ["build", "cquery"])
+                self.assertEqual([call['operation'] for call in calls], ["build", "cquery"])
                 self.assertTrue(all(call['prerequisites_ready'] for call in calls))
                 for call in calls:
                     self.assertEqual(call['arguments'][-1], self.labels[archive])
@@ -200,7 +234,7 @@ registered: $(SONIC_TARGET_LIST)
                     "BAZEL_CONTAINER_ARGS": "--platforms=//wrong:target --host_platform=//wrong:host",
                 }))
                 calls = self.recorded_calls()
-                self.assertEqual([call["arguments"][0] for call in calls], ["build", "cquery"])
+                self.assertEqual([call["operation"] for call in calls], ["build", "cquery"])
                 for call in calls:
                     for flag in ("--platforms=", "--host_platform="):
                         selected = [arg for arg in call["arguments"] if arg.startswith(flag)]
@@ -330,7 +364,7 @@ selection:
                 self.calls.unlink(missing_ok=True)
                 result = self.run_make(archive)
                 self.assert_success(result)
-                self.assertEqual([call["arguments"][0] for call in self.recorded_calls()], ["build", "cquery"])
+                self.assertEqual([call["operation"] for call in self.recorded_calls()], ["build", "cquery"])
                 self.assertEqual((self.target / archive).read_bytes(), ("new " + archive).encode())
         self.makefile = original
 
@@ -402,7 +436,7 @@ selection:
                 expected = ['build', 'cquery']
                 if mode == 'build_failure':
                     expected = ['build']
-                self.assertEqual([call['arguments'][0] for call in self.recorded_calls()], expected)
+                self.assertEqual([call['operation'] for call in self.recorded_calls()], expected)
                 self.assertFalse([path for path in self.target.glob(archive + '.*') if path.suffix != '.log'])
                 self.assertFalse(self.markers.exists(), 'failure continued to SBOM or footer')
                 self.assertTrue((self.root / 'logging-errors').is_file(),
@@ -418,7 +452,7 @@ selection:
             self.assert_success(self.run_make(environment={'FAKE_BAZEL_PAYLOAD': 'previous image'}))
             self.assertEqual(destination.read_bytes(), b'previous image')
             self.assertEqual(destination.stat().st_mtime_ns, previous)
-        self.assertEqual([call['arguments'][0] for call in self.recorded_calls()],
+        self.assertEqual([call['operation'] for call in self.recorded_calls()],
                          ['build', 'cquery', 'build', 'cquery'])
 
     def test_unusable_cache_fails_before_bazel_and_preserves_archive(self):

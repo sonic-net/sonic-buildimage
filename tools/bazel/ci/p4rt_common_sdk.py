@@ -57,7 +57,7 @@ def main():
     parser.add_argument("--output-base", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--arch", choices=("amd64", "arm64"), required=True)
-    parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--jobs", type=int)
     args = parser.parse_args()
     source, sdk = args.source.resolve(), args.sdk.resolve()
     output = args.output.resolve()
@@ -70,7 +70,7 @@ def main():
     mirrors = "--experimental_downloader_config=" + str(source.parent / "source_mirrors.cfg")
     options = [override, mirrors, "-c", "opt", "--fission=opt", "--copt=-g",
                "--copt=-gdwarf-4", "--copt=-Wno-array-bounds",
-               "--copt=-Wno-stringop-overflow", "--jobs=" + str(args.jobs)]
+               "--copt=-Wno-stringop-overflow", *(["--jobs=" + str(args.jobs)] if args.jobs is not None else [])]
 
     def run(arguments, **kwargs):
         return subprocess.run([*bazel, *arguments], cwd=source, env=env,

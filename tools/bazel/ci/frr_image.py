@@ -20,8 +20,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 OWNER = "//dockers/docker-fpm-frr:"
 IMAGES = ("docker-fpm-frr", "docker-fpm-frr-dbg")
 BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000",
-           "--//src/sonic-frr:snmp=true", "--//src/sonic-frr:tcmalloc=true",
+OPTIONS = ["--//src/sonic-frr:snmp=true", "--//src/sonic-frr:tcmalloc=true",
            "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 TARGETS = {
@@ -51,7 +50,7 @@ def build_images(args, directory):
                   platform.freedesktop_os_release().get("VERSION_CODENAME") == "trixie",
                   "FRR image acceptance requires native AMD64/Trixie")
     receipt = {"status": "building", "architecture": "amd64", "commands": []}
-    options = [*OPTIONS, "--//dockers/docker-fpm-frr:image_version=" + args.image_version]
+    options = [*OPTIONS, build.image_version_option(args.image_version)]
     receipt["image_version"] = args.image_version
     execute = partial(command_log.execute, cwd=ROOT)
     try:
@@ -204,7 +203,7 @@ def incremental(args, directory):
     baseline = json.loads((directory / "build-receipt.json").read_text())
     check.require(baseline["status"] == "built" and baseline["revision"] == source_identity()["revision"],
                   "incremental checkout differs from the completed build")
-    options = [*OPTIONS, "--//dockers/docker-fpm-frr:image_version=" + baseline["image_version"]]
+    options = [*OPTIONS, build.image_version_option(baseline["image_version"])]
 
     def output(label):
         return ROOT / subprocess.check_output([args.bazel, "cquery", *options, "--output=files", label], cwd=ROOT, text=True).strip()

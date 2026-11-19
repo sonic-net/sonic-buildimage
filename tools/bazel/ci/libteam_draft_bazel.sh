@@ -33,10 +33,13 @@ if "$source_review" || [[ -n "$revision" ]]; then
   registry="${registry%/main}/$revision"
 fi
 
+# The image exporter needs local top-level files. Accept its download policy
+# without granting other invocation policies precedence over review options.
+archive_policy='--invocation_policy=flag_policies { flag_name: "remote_download_outputs" disallow_values { disallowed_values: "minimal" new_value: "toplevel" } }'
 startup_options=()
 while [[ ${1:-} == --* ]]; do
   case "$1" in
-    --batch|--host_jvm_args=*|--output_base=*|--output_user_root=*)
+    --batch|--host_jvm_args=*|--output_base=*|--output_user_root=*|"$archive_policy")
       startup_options+=("$1"); shift ;;
     *)
       if ! "$source_review"; then break; fi

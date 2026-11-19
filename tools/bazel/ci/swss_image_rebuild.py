@@ -86,8 +86,7 @@ def probe_image(args, bazel, output_base):
 
     def build(phase):
         start = time.monotonic()
-        subprocess.run([*bazel, "build", *options, "--jobs=2",
-                        "--build_event_json_file=" + str(args.output / (phase + "-events.json")), *targets], check=True)
+        subprocess.run([*bazel, "build", *options, "--build_event_json_file=" + str(args.output / (phase + "-events.json")), *targets], check=True)
         digests = {}
         for target in targets:
             digests[target] = sha(query(target))

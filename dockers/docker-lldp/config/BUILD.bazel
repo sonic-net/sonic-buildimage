@@ -56,7 +56,6 @@ tar(
     name = "labels" if suffix == "" else "debug_labels",
     out = "manifest" + suffix + ".labels",
     manifest = "//:target/bazel-manifests/docker-lldp" + suffix + "/manifest.json",
-    image_version = "//dockers/docker-lldp:image_version",
     package_receipt = "//dockers/docker-lldp:runtime_package_metadata",
     version_packages = ["libswsscommon", "sonic-supervisord-utilities-rs"],
 ) for suffix in ["", "-dbg"]]

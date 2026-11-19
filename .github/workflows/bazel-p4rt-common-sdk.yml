@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [master]
     paths:
+      - tools/bazel/ci/resources.py
       - .github/workflows/bazel-p4rt-common-sdk.yml
       - .gitmodules
       - rules/p4rt.*
@@ -18,6 +19,7 @@ on:
   push:
     branches: [master]
     paths:
+      - tools/bazel/ci/resources.py
       - .github/workflows/bazel-p4rt-common-sdk.yml
       - .gitmodules
       - rules/p4rt.*
@@ -92,6 +94,8 @@ jobs:
           disk-cache: p4rt-common-sdk-${{ matrix.arch }}
           cache-version: "8.5.1-6.4.0"
 
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Configure shared source download mirrors
         run: |
           python3 -B tools/bazel/ci/source_mirrors.py \
@@ -106,7 +110,7 @@ jobs:
             --common-source src/sonic-swss-common \
             --output-dir "$RUNNER_TEMP/common-sdk" \
             --output-base "$RUNNER_TEMP/common-bazel-8" \
-            --arch '${{ matrix.arch }}' --bazel-arg=--jobs=2 \
+            --arch '${{ matrix.arch }}'  \
             --bazel-arg=--downloader_config="$RUNNER_TEMP/sonic-source-mirrors.cfg"
 
       - name: Install Common's external runtime dependencies
@@ -134,7 +138,7 @@ jobs:
             @libnl3//:libnl-nf-3_pkg
           )
           bazel --output_base="$RUNNER_TEMP/common-bazel-8" build \
-            "${native_args[@]}" --jobs=2 --//tools/bazel:yang_modules=True "${runtime_targets[@]}"
+            "${native_args[@]}"  --//tools/bazel:yang_modules=True "${runtime_targets[@]}"
           for target in "${runtime_targets[@]}"; do
             archive="$(bazel --output_base="$RUNNER_TEMP/common-bazel-8" cquery \
               "${native_args[@]}" --//tools/bazel:yang_modules=True --output=files "$target")"
@@ -149,7 +153,7 @@ jobs:
           python3 -B tools/bazel/ci/p4rt_common_sdk.py \
             --source src/sonic-p4rt/sonic-pins --sdk "$RUNNER_TEMP/common-sdk" \
             --output-base "$RUNNER_TEMP/p4rt-bazel-6" \
-            --output artifacts/p4rt --arch '${{ matrix.arch }}' --jobs 4
+            --output artifacts/p4rt --arch '${{ matrix.arch }}'
 
       - name: Upload SDK handoff validation
         if: always()

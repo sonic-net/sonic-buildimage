@@ -568,7 +568,14 @@ def enrich_breakdowns(api, repo, runs, limit):
                     pending.append(step)
             steps = recipe_steps(job) if run["workflow_path"] == ".github/workflows/bazel-oci.yml" else None
             summary = steps[1] if steps else None
-            need_recipes = summary and breakdown.retry_needed(job.get("image_recipe_timings"))
+            recipes = job.get("image_recipe_timings")
+            need_recipes = summary and breakdown.retry_needed(recipes)
+            # Before the per-image parser landed the publisher already retained V2
+            # totals. Re-read each such batch log once, preserving those measurements
+            # if the raw log has expired or lacks per-image action data.
+            need_members = (summary and recipes and recipes.get("version") == 2
+                            and any(row["owner"] == breakdown.CONTAINER_GROUP for row in recipes["recipes"])
+                            and breakdown.retry_needed(recipes.get("container_breakdown")))
             if need_recipes:
                 version = breakdown.RECIPE_STEP_VERSIONS[summary["name"]]
                 if summary["conclusion"] == "skipped":
@@ -577,7 +584,7 @@ def enrich_breakdowns(api, repo, runs, limit):
                 else:
                     job["image_recipe_timings"] = breakdown.recipe_unavailable("pending-collection", version)
                     need_recipes = summary["status"] == "completed"
-            if (not pending and not need_recipes) or job["status"] != "completed" or fetched >= limit:
+            if (not pending and not need_recipes and not need_members) or job["status"] != "completed" or fetched >= limit:
                 continue
             fetched += 1
             try:
@@ -587,11 +594,19 @@ def enrich_breakdowns(api, repo, runs, limit):
                     step["breakdown"] = breakdown.unavailable(error.reason)
                 if need_recipes:
                     job["image_recipe_timings"] = breakdown.recipe_unavailable(error.reason, version)
+                elif need_members:
+                    recipes["container_breakdown"] = breakdown.container_unavailable(error.reason)
                 continue
             for step in pending:
                 step["breakdown"] = breakdown.parse_log(log, step)
             if need_recipes:
                 job["image_recipe_timings"] = breakdown.parse_recipe_log(log, summary)
+            elif need_members:
+                parsed = breakdown.parse_recipe_log(log, summary)
+                if parsed.get("recipes") == recipes["recipes"] and "container_breakdown" in parsed:
+                    recipes["container_breakdown"] = parsed["container_breakdown"]
+                else:
+                    recipes["container_breakdown"] = breakdown.container_unavailable("invalid-timing")
 
 
 def completed_job_details(run):

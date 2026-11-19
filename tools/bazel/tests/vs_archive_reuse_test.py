@@ -14,7 +14,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci import vs_archive_reuse as reuse
+from tools.bazel.ci import verify_vs_image_tags, vs_archive_reuse as reuse
 
 
 def encoded(value):
@@ -81,6 +81,29 @@ class ArchiveReuseTest(unittest.TestCase):
         path = self.target / (name + ".gz")
         path.write_bytes(gzip.compress(tar_bytes([*entries, *extra_entries]), mtime=0))
         return path
+
+    def test_batch_tag_check_matches_each_selected_archive_with_the_installer_release(self):
+        version = self.workspace / "sonic-version.json"
+        version.write_bytes(encoded({"build_version": "same-build"}))
+        timings = self.workspace / "image-timings"
+        batch = timings / "vs-container-images"
+        runtime, debug = "docker-orchagent.gz", "docker-orchagent-dbg.gz"
+        for index, (code, archives) in enumerate(((1, ["missing.gz"]), (0, [runtime, debug]))):
+            directory = batch / f"recipe-{index}"
+            directory.mkdir(parents=True)
+            (directory / "build.timing.json").write_bytes(encoded({"start_epoch_seconds": index, "exit_code": code}))
+            (directory / "batch-targets.json").write_bytes(encoded({name: [runtime, "//images:" + name] for name in archives}))
+        self.assertEqual(verify_vs_image_tags.verify(self.target, version, timings), (2, "same-build"))
+
+        self.write_archive(debug=True, change_config=lambda config: config["config"]["Labels"].pop("Tag"))
+        with self.assertRaisesRegex(ValueError, "docker-orchagent-dbg.gz: expected Tag"):
+            verify_vs_image_tags.verify(self.target, version, timings)
+        self.write_archive(debug=True, config_digest="0" * 64)
+        with self.assertRaisesRegex(ValueError, "does not match its digest"):
+            verify_vs_image_tags.verify(self.target, version, timings)
+        (self.target / debug).unlink()
+        with self.assertRaises(FileNotFoundError):
+            verify_vs_image_tags.verify(self.target, version, timings)
 
     def test_capture_and_verify_complete_contents_without_publishing_settings(self):
         receipt = reuse.capture(self.workspace)

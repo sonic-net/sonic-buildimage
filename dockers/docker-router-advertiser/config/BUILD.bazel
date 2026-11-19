@@ -40,7 +40,6 @@ tar(
 [manifest_labels(
     name = "labels" if suffix == "" else "debug_labels",
     out = "manifest" + suffix + ".labels",
-    image_version = "//dockers/docker-router-advertiser:image_version",
     manifest = "//:target/bazel-manifests/docker-router-advertiser" + suffix + "/manifest.json",
 ) for suffix in [
     "",

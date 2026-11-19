@@ -387,14 +387,15 @@ class DashEngineImageTest(unittest.TestCase):
                   'User': '0', 'WorkingDir': '/', 'Labels': {'base': 'yes'}}
         actual = deepcopy(parent)
         actual.update(Entrypoint=['/usr/bin/start.sh'], Cmd=[], Env=parent['Env'] + ['DEBIAN_FRONTEND=noninteractive'])
+        actual['Labels']['Tag'] = 'engine-test'
         actual['Labels']['com.azure.sonic.manifest'] = '{"container_name":"dash_engine"}'
         expected = {'container_name': 'dash_engine'}
-        validate.verify_config(parent, actual, expected)
+        validate.verify_config(parent, actual, expected, "engine-test")
         for key, value in [('User', '1000'), ('Cmd', ['changed']), ('WorkingDir', '/tmp'),
                            ('Env', actual['Env'] + ['EXTRA=yes']), ('Healthcheck', {'Test': ['changed']})]:
             with self.subTest(key=key):
                 bad = deepcopy(actual);bad[key] = value
-                with self.assertRaises(ValueError): validate.verify_config(parent, bad, expected)
+                with self.assertRaises(ValueError): validate.verify_config(parent, bad, expected, "engine-test")
 
     def test_group_rows_and_metadata_are_exact(self):
         base = {'kind': 'file', 'mode': 0o644, 'uid': 0, 'gid': 0}
@@ -519,7 +520,7 @@ class DashEngineImageTest(unittest.TestCase):
             revision = {'revision': 'a'*40, 'tested_revision_parents': []}
             inventory = {name + '.gz': {'sha256': 'original'} for name in driver.IMAGES}
             (evidence / 'build-receipt.json').write_text(json.dumps({**revision, 'status': 'built',
-                'artifacts': inventory, 'layouts': {name: name for name in driver.IMAGES}}))
+                'image_version': 'engine-test', 'artifacts': inventory, 'layouts': {name: name for name in driver.IMAGES}}))
             calls = []
             def run(argv, **kwargs):
                 execution = Path(next(arg.split('=', 1)[1] for arg in argv if arg.startswith('--execution_log_json_file=')))
@@ -555,7 +556,8 @@ class DashEngineImageTest(unittest.TestCase):
 
     def test_resource_options_keep_platform_fixed(self):
         with mock.patch.dict('os.environ', {'SONIC_CONTAINER_BAZEL_OPTIONS': '--jobs=1 --local_resources=memory=4000'}):
-            options = driver.root_options()
+            options = driver.root_options("engine-test")
+        self.assertIn("--//tools/bazel/oci:image_version=engine-test", options)
         self.assertIn('--jobs=1', options)
         self.assertEqual(options[-2:], driver.OPTIONS[-2:])
 

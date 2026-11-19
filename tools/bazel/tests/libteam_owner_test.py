@@ -195,17 +195,17 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
             self.assertEqual(recorded[0], ["--version"])
             # query: no pre-shutdown, no build/test extra flags
             self.assertIn("query", recorded[1])
-            self.assertEqual(recorded[1][:2], [f"--output_base={owner_output}", "--host_jvm_args=-Xmx6g"])
+            self.assertEqual(recorded[1][:2], [f"--output_base={owner_output}", "--host_jvm_args=-Xmx2g"])
             self.assertNotIn("--noexecution_log_sort", recorded[1])
             self.assertNotIn("--experimental_build_event_upload_strategy=local", recorded[1])
             # build: pre-shutdown with matching startup flags + build with --noexecution_log_sort and local BEP upload
             self.assertEqual(recorded[2][-1], "shutdown")
             self.assertEqual(recorded[2][0], f"--output_base={owner_output}")
-            self.assertIn("--host_jvm_args=-Xmx6g", recorded[2])
+            self.assertIn("--host_jvm_args=-Xmx2g", recorded[2])
             self.assertIn("--nohome_rc", recorded[2])
             build_call = recorded[3]
-            self.assertEqual(build_call[:2], [f"--output_base={owner_output}", "--host_jvm_args=-Xmx6g"])
-            self.assertLess(build_call.index("--host_jvm_args=-Xmx6g"), build_call.index("build"))
+            self.assertEqual(build_call[:2], [f"--output_base={owner_output}", "--host_jvm_args=-Xmx2g"])
+            self.assertLess(build_call.index("--host_jvm_args=-Xmx2g"), build_call.index("build"))
             self.assertIn("--noexecution_log_sort", build_call)
             self.assertIn("--experimental_build_event_upload_strategy=local", build_call)
             self.assertLess(build_call.index("build"), build_call.index("--noexecution_log_sort"))

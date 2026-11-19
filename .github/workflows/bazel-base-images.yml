@@ -83,6 +83,8 @@ jobs:
           repository-cache: true
           disk-cache: base-images-${{ matrix.architecture }}
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership

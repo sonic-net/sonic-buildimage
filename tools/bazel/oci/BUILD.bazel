@@ -1,6 +1,14 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
 package(default_visibility = ["//visibility:public"])
+
+# One Make release identifies all SONiC runtime and debug images.
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+    make_variable = "SONIC_IMAGE_VERSION",
+)
 
 exports_files(["apt_subset.jq"])
 

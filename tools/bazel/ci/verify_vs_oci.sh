@@ -19,6 +19,7 @@ $(info VS_CI:DOCKER_CONFIG_ENGINE_TRIXIE=$(strip $(DOCKER_CONFIG_ENGINE_TRIXIE))
 $(info VS_CI:SONIC_P4RT=$(strip $(SONIC_P4RT)))
 $(info VS_CI:SONIC_P4RT_DBG=$(strip $(SONIC_P4RT_DBG)))
 $(info VS_CI:BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(strip $(BUILD_WITH_BAZEL_WHEN_AVAILABLE)))
+$(info VS_CI:SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION))
 $(info VS_CI:BLDENV=$(strip $(BLDENV)))
 $(info VS_CI:CONFIGURED_PLATFORM=$(strip $(CONFIGURED_PLATFORM)))
 $(info VS_CI:CONFIGURED_ARCH=$(strip $(CONFIGURED_ARCH)))
@@ -59,7 +60,7 @@ for image in docker-orchagent docker-syncd-vs; do
         exit 1
     fi
 done
-for key in DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE; do
+for key in DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE SONIC_IMAGE_VERSION; do
     [[ -n ${config[$key]} ]] || { echo "Missing Make package setting: $key" >&2; exit 1; }
 done
 if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" ${config[DOCKER_CONFIG_ENGINE_TRIXIE]} "* ]]; then
@@ -88,7 +89,15 @@ option_lines=$(python3 tools/bazel/build_helpers.py options \
     --arguments="${BAZEL_CONTAINER_ARGS-${BAZEL_SWSS_ARGS:-}}")
 bazel_options=()
 if test -n "$option_lines"; then mapfile -t bazel_options <<< "$option_lines"; fi
-bazel_options+=(--platforms=@sonic_build_infra//platforms:x86_64_trixie
+# The active Make VS job reads this release directly out of sonic-vs.bin.
+# A later Make invocation on a dirty checkout may have a different timestamp.
+image_version=${config[SONIC_IMAGE_VERSION]}
+if [[ -f artifacts/vs/sonic-version.json ]]; then
+    image_version=$(jq -er '.build_version | strings | select(length > 0)' artifacts/vs/sonic-version.json)
+fi
+bazel_options+=(--//tools/bazel/image/vs/metadata:use_make_metadata=true
+    "--//tools/bazel/oci:image_version=$image_version"
+    --platforms=@sonic_build_infra//platforms:x86_64_trixie
     --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
 
 collect_test_results() {

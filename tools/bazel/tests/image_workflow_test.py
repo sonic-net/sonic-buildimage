@@ -816,7 +816,9 @@ class VerificationWorkflowTest(unittest.TestCase):
 
     def test_static_checks_match_make_configs_and_stop_publication_on_failure(self):
         verifier = (ROOT / "tools/bazel/ci/verify_vs_oci.sh").read_text()
-        script = "set -euo pipefail\n" + verifier[verifier.index("# Match the archive recipes"):].split(
+        # This excerpt starts after the real verifier has queried slave.mk.
+        make_config = "declare -A config=([SONIC_IMAGE_VERSION]=release-from-make)\n"
+        script = "set -euo pipefail\n" + make_config + verifier[verifier.index("# Match the archive recipes"):].split(
             "\npython3 -B tools/bazel/ci/verify_p4rt_debug.py", 1)[0]
         with tempfile.TemporaryDirectory(prefix="image configs ") as temporary:
             directory = Path(temporary)
@@ -883,6 +885,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(len(target_calls), 2 if failure else 6)
         for invocation in target_calls:
             target = next(arg for arg in invocation if arg.startswith("//"))
+            self.assertIn("--//tools/bazel/oci:image_version=release-from-make", invocation)
             self.assertEqual("--config=syncd-dash" in invocation, "syncd" in target)
         for output in outputs:
             self.assertEqual(output.exists(), failure == 0)

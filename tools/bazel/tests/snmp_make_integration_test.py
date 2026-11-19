@@ -52,7 +52,7 @@ class SnmpMakeTests(unittest.TestCase):
         self.assertEqual(set(row['deps'].split()),{'target/bazel-manifests/'+name+'/manifest.json' for name in
                          ('docker-base-trixie','docker-config-engine-trixie','docker-snmp')})
         self.assertEqual(set(row['debug_deps'].split()),set(row['deps'].split())|{'target/bazel-manifests/docker-snmp-dbg/manifest.json'})
-        self.assertEqual(row['args'],'--//dockers/docker-snmp:image_version=snmp-test-version')
+        self.assertEqual(row['args'],'')
         self.assertEqual(row['debug_args'],row['args'])
         self.assertEqual(row['source_path'], 'dockers/docker-snmp')
         self.assertEqual(row['debug_source_path'], row['source_path'])

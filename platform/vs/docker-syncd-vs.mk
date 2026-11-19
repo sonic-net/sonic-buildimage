@@ -28,8 +28,9 @@ $(DOCKER_SYNCD_BASE_STEM)-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
 # Source owners build runtime/debug TARs; only service metadata is handed off by Make.
 $(DOCKER_SYNCD_BASE)_BAZEL_TARGET = //platform/vs/docker-syncd-vs:docker-syncd-vs.gz
 $(DOCKER_SYNCD_BASE_DBG)_BAZEL_TARGET = //platform/vs/docker-syncd-vs:docker-syncd-vs-dbg.gz
-$(DOCKER_SYNCD_BASE)_BAZEL_ARGS = --config=syncd-dash
-$(DOCKER_SYNCD_BASE_DBG)_BAZEL_ARGS = --config=syncd-dash
+$(DOCKER_SYNCD_BASE)_BAZEL_SHARED_ARGS = --config=syncd-dash
+$(DOCKER_SYNCD_BASE)_BAZEL_ARGS = $($(DOCKER_SYNCD_BASE)_BAZEL_SHARED_ARGS)
+$(DOCKER_SYNCD_BASE_DBG)_BAZEL_ARGS = $($(DOCKER_SYNCD_BASE)_BAZEL_ARGS)
 $(DOCKER_SYNCD_BASE)_BAZEL_DEPENDS = \
     $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
     $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \

@@ -97,6 +97,16 @@ breakdown lists the Make targets that invoked Bazel during installer
 construction, ordered by measured command and export time. Expand a target
 to inspect lock waits, compiler subprocesses, nested builds, cache fetches
 and exports. A Docker row can cover one archive or a runtime/debug pair.
+For a multi-image VS build, expand `vs-container-images` to see the selected
+containers in order of observed Bazel action time. For example, the Syncd VS
+row groups work on its runtime and debug images. Active time counts overlapping
+actions for that owner once. OCI archiving, gzip and cache reads can overlap
+within that time. Two owners can also be active at the same time. The shared
+command is measured once. The group lists time with only shared or unattributed
+actions, time with no action recorded, and time with multiple image owners
+active. The Export column measures Make's subsequent archive exports outside
+the shared Bazel command. Older runs with only recipe receipts show the
+recorded exports for each image.
 The Linux kernel row times the entire pinned launcher and reports its build,
 output query and module-graph profiles. When Make rebuilds the P4RT package,
 its row covers the nested Bazel build, tests, server shutdown and Debian package

@@ -124,7 +124,7 @@ class SetupBazelCacheTest(unittest.TestCase):
         prefetch = next(step for step in steps if "github_sources.py" in step.get("run", ""))
         build = next(step for step in steps if "src/sonic-sysmgr/bazel/ci.py" in step.get("run", ""))
         self.assertEqual(setup["with"]["module-root"], "src/sonic-sysmgr")
-        self.assertEqual(steps.index(handoff), steps.index(setup) + 1)
+        self.assertGreater(steps.index(handoff), steps.index(setup))
         self.assertLess(steps.index(handoff), steps.index(policy))
         self.assertLess(steps.index(policy), steps.index(prefetch))
         self.assertLess(steps.index(prefetch), steps.index(build))
@@ -249,7 +249,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'user': Path('.b
                 handoff = [s for s in steps if HELPER in s.get("run", "")]
                 self.assertEqual(len(handoff), 1)
                 handoff = handoff[0]
-                self.assertEqual(steps.index(handoff), steps.index(setup) + 1)
+                self.assertGreater(steps.index(handoff), steps.index(setup))
                 repository_only = setup["with"].get("disk-cache") is False
                 private_cache = (filename, job_name) in PRIVATE_CACHE_JOBS
                 self.assertEqual(handoff["run"].strip(), "python3 " + HELPER +

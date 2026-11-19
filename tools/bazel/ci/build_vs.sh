@@ -14,6 +14,9 @@ fi
 if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} == 1 ]]; then
     builder_args+=" -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
 fi
+if [[ ${SONIC_VS_RETRY_GO_FETCH:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_RETRY_GO_FETCH"
+fi
 options=(
     BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y
     ENABLE_ASAN=n ENABLE_SYNCD_RPC=n

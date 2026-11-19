@@ -1,4 +1,4 @@
-"""Convert a Make manifest and optional SONiC image version into OCI labels."""
+"""Convert a Make manifest and SONiC release version into OCI labels."""
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 
@@ -14,11 +14,10 @@ def _manifest_labels_impl(ctx):
         args.add("--package-metadata", ctx.file.package_receipt)
         args.add_all(ctx.attr.version_packages, before_each = "--version-package")
         inputs.append(ctx.file.package_receipt)
-    if ctx.attr.image_version:
-        image_version = ctx.attr.image_version[BuildSettingInfo].value
-        if not image_version and not ctx.attr._use_make_metadata[BuildSettingInfo].value:
-            image_version = ctx.attr._product_version[BuildSettingInfo].value
-        args.add("--image-version=" + image_version)
+    image_version = ctx.attr.image_version[BuildSettingInfo].value
+    if not image_version and not ctx.attr._use_make_metadata[BuildSettingInfo].value:
+        image_version = ctx.attr._product_version[BuildSettingInfo].value
+    args.add("--image-version=" + image_version)
     ctx.actions.run(
         arguments = [args],
         executable = ctx.attr._tool[DefaultInfo].files_to_run,
@@ -32,7 +31,7 @@ _manifest_labels = rule(
     attrs = {
         "component_labels": attr.label(allow_single_file = True),
         "manifest": attr.label(allow_single_file = True, mandatory = True),
-        "image_version": attr.label(providers = [BuildSettingInfo]),
+        "image_version": attr.label(default = Label("//tools/bazel/oci:image_version"), providers = [BuildSettingInfo]),
         "_product_version": attr.label(default = Label("//tools/bazel/image/vs/metadata:version"), providers = [BuildSettingInfo]),
         "_use_make_metadata": attr.label(default = Label("//tools/bazel/image/vs/metadata:use_make_metadata"), providers = [BuildSettingInfo]),
         "package_receipt": attr.label(allow_single_file = True),
@@ -46,8 +45,8 @@ _manifest_labels = rule(
     },
 )
 
-def manifest_labels(name, manifest, out = None, image_version = None, package_receipt = None, version_packages = [], component_labels = None, **kwargs):
-    """Encode Make's manifest and optional image and component version labels."""
+def manifest_labels(name, manifest, out = None, package_receipt = None, version_packages = [], component_labels = None, **kwargs):
+    """Encode Make's manifest, release Tag and optional component version labels."""
     if bool(package_receipt) != bool(version_packages):
         fail("package_receipt and version_packages must be supplied together")
     _manifest_labels(
@@ -55,7 +54,6 @@ def manifest_labels(name, manifest, out = None, image_version = None, package_re
         manifest = manifest,
         component_labels = component_labels,
         out = out or name + ".labels",
-        image_version = image_version,
         package_receipt = package_receipt,
         version_packages = version_packages,
         **kwargs

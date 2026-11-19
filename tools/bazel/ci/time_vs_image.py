@@ -47,13 +47,27 @@ def time_phase(directory, phase):
         (directory / f"{phase}.timing.json").write_text(json.dumps(record) + "\n")
 
 
+def run_phase(directory, phase, command, *, cwd=None, env=None):
+    if directory is not None and (phase in ("build", "test") or phase.startswith("cquery-")):
+        # Nested workspaces may pass startup flags before the Bazel command.
+        index = command.index(phase.split("-", 1)[0], 1) + 1
+        profile = directory.resolve() / f"{phase}.profile.json.gz"
+        flags = [f"--profile={profile}", "--noslim_profile"]
+        if directory.parent.name == "vs-container-images":
+            flags.append("--experimental_profile_include_target_label")
+        command = [*command[:index], *flags, *command[index:]]
+    with time_phase(directory, phase):
+        return subprocess.run(command, check=True, cwd=cwd, env=env)
+
+
 def main(arguments):
     if arguments[0] == "start-recipe":
         parser = argparse.ArgumentParser()
         parser.add_argument("workspace", type=Path)
         parser.add_argument("owner")
-        for key in ("bazel", "profiles", "exports"):
-            parser.add_argument("--" + key, nargs="+", required=True)
+        parser.add_argument("--bazel", nargs="+", required=True)
+        parser.add_argument("--profiles", nargs="+", required=True)
+        parser.add_argument("--exports", nargs="*", required=True)
         args = parser.parse_args(arguments[1:])
         print(start_recipe(args.workspace, args.owner, args.bazel, args.profiles, args.exports))
         return 0
@@ -65,16 +79,8 @@ def main(arguments):
         print(directory)
         return 0
     directory, phase, *command = arguments
-    directory = Path(directory)
-    if phase in ("build", "test") or phase.startswith("cquery-"):
-        # cquery's stdout is consumed by Make. Only the real command writes there.
-        profile = directory / f"{phase}.profile.json.gz"
-        # Nested workspaces can have Bazel startup options before the command.
-        index = command.index(phase.split("-")[0], 1) + 1
-        command[index:index] = [f"--profile={profile}", "--noslim_profile"]
     try:
-        with time_phase(directory, phase):
-            subprocess.run(command, check=True)
+        run_phase(Path(directory), phase, command)
     except subprocess.CalledProcessError as error:
         return exit_status(error.returncode)
     except FileNotFoundError as error:

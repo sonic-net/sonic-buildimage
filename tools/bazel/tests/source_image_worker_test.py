@@ -489,25 +489,25 @@ class ImageWorkerTest(unittest.TestCase):
                             url.replace('snapshot.debian.org', 'elsewhere.example')):
                 self.assertFalse(any(re.fullmatch(expression, altered) for expression, _ in rules))
 
-    def test_selected_profile_overrides_driver_defaults_in_actual_launcher(self):
+    def test_launcher_reserves_memory_and_preserves_explicit_cpu_arguments(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             binary = root / "bazel"
             binary.write_text("#!" + sys.executable + "\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
             binary.chmod(0o755)
             launcher = root / "launcher"
-            for cpus, jobs, memory in ((2, 1, 4000), (4, 2, 8000)):
+            for cpus in (2, 4):
                 with self.subTest(cpus=cpus):
                     profile = worker.select_build_profile(20 * 1024**3, cpus)
                     launcher.write_text(worker.launcher_text(str(binary), root / "output base", profile))
                     argv = json.loads(subprocess.check_output([sys.executable, str(launcher), "--nosystem_rc", "build",
                         "--jobs=6", "--local_resources=cpu=6", "--local_resources=memory=12000", "//example:image"], text=True))
                     self.assertEqual(argv[0], "--output_base=" + str(root / "output base"))
-                    self.assertIn("--host_jvm_args=-Xmx3g", argv)
+                    self.assertIn("--host_jvm_args=-Xmx2g", argv)
                     self.assertIn("--host_jvm_args=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts", argv)
-                    self.assertEqual([arg for arg in argv if arg.startswith("--jobs=")][-1], "--jobs=" + str(jobs))
-                    self.assertEqual([arg for arg in argv if arg.startswith("--local_resources=cpu=")][-1], "--local_resources=cpu=" + str(jobs))
-                    self.assertEqual([arg for arg in argv if arg.startswith("--local_resources=memory=")][-1], "--local_resources=memory=" + str(memory))
+                    self.assertEqual([arg for arg in argv if arg.startswith("--jobs=")][-1], "--jobs=6")
+                    self.assertEqual([arg for arg in argv if arg.startswith("--local_resources=cpu=")][-1], "--local_resources=cpu=6")
+                    self.assertEqual([arg for arg in argv if arg.startswith("--local_resources=memory=")][-1], "--local_resources=memory=14745")
                     self.assertIn("//example:image", argv)
                     shutdown = json.loads(subprocess.check_output([sys.executable, str(launcher), "shutdown"], text=True))
                     self.assertFalse(any(arg.startswith("--jobs=") for arg in shutdown))

@@ -60,6 +60,3 @@ $(DOCKER_MUX_DBG)_BAZEL_DEPENDS = $($(DOCKER_MUX)_BAZEL_DEPENDS) \
 endif
 endif
 endif
-
-$(DOCKER_MUX)_BAZEL_ARGS = --//dockers/docker-mux:image_version=$(SONIC_IMAGE_VERSION)
-$(DOCKER_MUX_DBG)_BAZEL_ARGS = $($(DOCKER_MUX)_BAZEL_ARGS)

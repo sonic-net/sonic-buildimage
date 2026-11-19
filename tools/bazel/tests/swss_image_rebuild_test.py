@@ -92,7 +92,6 @@ class SwssImageRebuildTest(unittest.TestCase):
                     value += value
             return subprocess.CompletedProcess(argv, 0, stdout=value)
         self.assertEqual(command, "build")
-        self.assertIn("--jobs=2", argv)
         event = next(arg.split("=", 1)[1] for arg in argv if arg.startswith("--build_event_json_file="))
         self.phase = Path(event).name.removesuffix("-events.json")
         self.phase_sources[self.phase] = self.private_source.read_bytes()

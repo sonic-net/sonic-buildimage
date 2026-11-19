@@ -10,6 +10,8 @@ from pathlib import Path
 import sys
 import unittest
 
+from tools.bazel.tests.integration.manifest_label_assertions import assert_manifest_labels
+
 INPUT_PATHS = [Path(value) for value in sys.argv[1:6]]
 INIT = INPUT_PATHS[0].read_text()
 RUNTIME, DEBUG = [json.loads(path.read_text()) for path in INPUT_PATHS[1:3]]
@@ -46,9 +48,7 @@ class RenderTest(unittest.TestCase):
             (DEBUG, INPUT_PATHS[4], "1.0.0+dbg"),
         ):
             self.assertEqual(manifest["package"]["version"], version)
-            key, value = labels.read_text().strip().split("=", 1)
-            self.assertEqual(key, "com.azure.sonic.manifest")
-            self.assertEqual(json.loads(value), manifest)
+            assert_manifest_labels(self, labels, manifest)
 
     def test_non_asan_init_retains_runtime_configuration(self):
         """Keep runtime configuration commands and shell variables after non-ASAN template rendering."""

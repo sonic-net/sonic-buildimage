@@ -166,7 +166,7 @@ def main():
     directory.mkdir(parents=True, exist_ok=True)
     receipt = {"status": "running", "architecture": "amd64", "commands": []}
     execute = partial(command_log.execute, cwd=ROOT)
-    options = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=10000"]
+    options = []
     parent_target = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
     try:
         receipt["revision"] = execute(["git", "rev-parse", "HEAD"], directory, receipt, "revision").strip()

@@ -835,6 +835,50 @@ test("all build recipes are ordered by recorded commands and exports with separa
   }
 }));
 
+test("expanded shared build lists the original per-image exports on older runs", () => withDocument(() => {
+  const job = recipeJob();
+  const group = {...job.image_recipe_timings.images[0], owner: "vs-container-images", bazel_seconds: 200,
+    bazel_phases: 1, bazel_expected: 1, profiles: 1, profiles_expected: 1,
+    exports: 0, exports_expected: 0, export_seconds: null};
+  const image = {...group, owner: "docker-sflow.gz", bazel_phases: 0, bazel_expected: 0,
+    profiles: 0, profiles_expected: 0, bazel_seconds: null, compile_seconds: null, foreign_seconds: null,
+    lock_seconds: null, fetch_seconds: null, exports: 2, exports_expected: 2, export_seconds: 4};
+  job.image_recipe_timings = {version: 2, status: "available", recipes: [group, image]};
+  const view = renderRecipeTimings(job), rows = descendants(view, node => node.tagName === "details");
+  assert.match(rows[0].textContent, /vs-container-images200sBazel \/ launcher200s/);
+  assert.equal(rows.length, 1);
+  assert.match(rows[0].textContent, /Containers \(1\)/);
+  assert.match(rows[0].textContent, /Per-container Bazel action times are unavailable/);
+  assert.match(rows[0].textContent, /ImageExportdocker-sflow.gz4s/);
+}));
+
+test("batch action times are nested, ordered by activity and distinct from subsequent exports", () => withDocument(() => {
+  const job = recipeJob(), group = {...job.image_recipe_timings.images[0], owner: "vs-container-images", bazel_seconds: 126,
+    bazel_expected: 3, profiles_expected: 3, exports_expected: 0, exports: 0, export_seconds: null};
+  const base = {...group, bazel_expected: 0, profiles_expected: 0, bazel_phases: 0, profiles: 0, exports_expected: 2,
+    bazel_seconds: null, compile_seconds: null, foreign_seconds: null, lock_seconds: null, fetch_seconds: null};
+  const images = [{...base, owner: "docker-teamd.gz", exports: 2, export_seconds: 4},
+    {...base, owner: "docker-syncd-vs.gz", exports: 1, export_seconds: 0}];
+  const shared = {rows: images.map((row, i) => ({owner: row.owner, actions: 12, action_seconds: i ? 81 : 23,
+    archive_seconds: 10, compress_seconds: 7, fetch_seconds: 1.5})),
+    other_action_seconds: 25, no_action_seconds: 2, parallel_seconds: 5};
+  job.image_recipe_timings = {version: 2, status: "available", recipes: [group, ...images], container_breakdown: shared};
+  const view = renderRecipeTimings(job), rows = descendants(view, node => node.tagName === "tr");
+  assert.equal(descendants(view, node => node.tagName === "details").length, 1);
+  assert.deepEqual(rows.map(tr => tr.children.map(cell => cell.textContent)), [
+    ["Image", "Actions", "Active", "Cache fetch", "OCI archive", "Gzip", "Export"],
+    ["docker-syncd-vs.gz", "12", "81s", "1.5s", "10s", "7s", "0s (1/2)"],
+    ["docker-teamd.gz", "12", "23s", "1.5s", "10s", "7s", "4s"]]);
+  assert.match(view.textContent, /Only shared or unattributed actions active25s/);
+  assert.match(view.textContent, /No action recorded2s/);
+  assert.match(view.textContent, /One or more image owners active99s/);
+  assert.match(view.textContent, /active together for 5s/);
+  shared.rows[1].action_seconds = "81";
+  const fallback = renderRecipeTimings(job);
+  assert.match(fallback.textContent, /Per-container Bazel action times are unavailable/);
+  assert.doesNotMatch(fallback.textContent, /81s/);
+}));
+
 test("unavailable or unverifiable profiles do not appear as measured recipes", () => withDocument(() => {
   const job = recipeJob();
   assert.equal(renderRecipeTimings({...job, kind: "container"}), null);

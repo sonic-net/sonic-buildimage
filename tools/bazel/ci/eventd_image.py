@@ -34,7 +34,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=10000"]
+OPTIONS = []
 CONFIGS = {"start.sh": "usr/bin/start.sh", "eventdb_wrapper.sh": "usr/bin/eventdb_wrapper.sh",
            "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
            "critical_processes": "etc/supervisor/critical_processes"}
@@ -46,6 +46,7 @@ def build_images(args, directory):
                   platform.freedesktop_os_release().get("VERSION_CODENAME") == "trixie",
                   "Eventd image build requires native AMD64 Debian Trixie")
     receipt = {"status": "building", "architecture": "amd64", "commands": [], "image_version": args.image_version}
+    options = [*OPTIONS, build.image_version_option(args.image_version)]
     execute = partial(command_log.execute, cwd=ROOT)
     try:
         receipt["revision"] = execute(["git", "rev-parse", "HEAD"], directory, receipt, "revision").strip()
@@ -59,12 +60,12 @@ def build_images(args, directory):
                  "DOCKERS_PATH=dockers", "SONIC_IMAGE_VERSION=" + args.image_version], directory, receipt, "manifests")
         layouts = [OWNER + name for name in IMAGES] + [PARENT]
         receipt["action_audit"] = bazel_commands.audit_targets(
-            args.bazel, OPTIONS, [*TARGETS.values(), *layouts], workspace=ROOT,
+            args.bazel, options, [*TARGETS.values(), *layouts], workspace=ROOT,
             output=directory / "action-audit.json")
-        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=OPTIONS)
-        execute([args.bazel, "build", *OPTIONS, *layouts], directory, receipt, "layouts")
+        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=options)
+        execute([args.bazel, "build", *options, *layouts], directory, receipt, "layouts")
         receipt["layouts"] = {target: execute(
-            [args.bazel, "cquery", *OPTIONS, target, "--output=files"], directory, receipt,
+            [args.bazel, "cquery", *options, target, "--output=files"], directory, receipt,
             "layout-" + str(index)).strip() for index, target in enumerate(layouts)}
         receipt["resolution"] = resolution.collect(ROOT, directory, bazel=[args.bazel])
         receipt["status"] = "built"
@@ -118,6 +119,8 @@ def validate_images(directory):
         check.require(config.get("Entrypoint") == ["/usr/local/bin/supervisord"], "entrypoint changed")
         check.require("DEBIAN_FRONTEND=noninteractive" in config.get("Env", []) and
                       "IMAGE_VERSION=" + receipt["image_version"] in config.get("Env", []), "image environment changed")
+        check.require(config.get("Labels", {}).get("Tag") == receipt["image_version"],
+                      "Make image version label differs: " + name)
         expected = json.loads((ROOT / "target/bazel-manifests" / name / "manifest.json").read_text())
         check.require(json.loads(config["Labels"]["com.azure.sonic.manifest"]) == expected, "Make labels differ")
         archive = image_validation.docker_archive(directory / (name + ".gz"), name + ":latest",
@@ -170,18 +173,19 @@ def require_clean_incremental_source(source, expected_revision):
 
 def incremental(args, directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
+    options = [*OPTIONS, build.image_version_option(receipt["image_version"])]
     check.require(receipt["status"] == "built", "missing accepted build")
     source = ROOT / "dockers/docker-eventd/host_events_info.json"
     require_clean_incremental_source(source, receipt["revision"])
     labels = [OWNER + name + suffix for name in IMAGES for suffix in ("", ".gz")]
     labels += [PARENT, TARGETS["eventd-runtime.tar"], TARGETS["all-debug.tar"]]
     paths = {label: ROOT / subprocess.check_output(
-        [args.bazel, "cquery", *OPTIONS, label, "--output=files"], cwd=ROOT, text=True).strip() for label in labels}
+        [args.bazel, "cquery", *options, label, "--output=files"], cwd=ROOT, text=True).strip() for label in labels}
 
     def snapshot(stage):
         started = time.monotonic()
         with (directory / ("incremental-" + stage + ".log")).open("w") as log:
-            subprocess.run([args.bazel, "build", *OPTIONS, *labels], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
+            subprocess.run([args.bazel, "build", *options, *labels], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
         return {"seconds": time.monotonic() - started, "sha256": {
             label: (oci_layout.validate_layout(path, "linux/amd64").descriptor["digest"] if path.is_dir()
                     else check.sha(path)) for label, path in paths.items()}}

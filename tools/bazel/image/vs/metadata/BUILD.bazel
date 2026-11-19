@@ -8,7 +8,7 @@ package(default_visibility = ["//visibility:public"])
 exports_files(["containers.json"])
 bool_flag(name = "use_make_metadata", build_setting_default = False)
 config_setting(name = "make_metadata", flag_values = {":use_make_metadata": "true"})
-string_flag(name = "version", build_setting_default = "local")
+string_flag(name = "version", build_setting_default = "local", make_variable = "SONIC_PRODUCT_VERSION")
 py_library(name = "render_lib", srcs = ["generate.py"], imports = ["."], deps = ["//tools/bazel/oci:manifest_labels_lib"])
 py_binary(name = "generate", srcs = ["generate.py"], deps = ["//tools/bazel/oci:manifest_labels_lib"])
 

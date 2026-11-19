@@ -8,10 +8,13 @@ container-specific startup and service-ordering checks remain with the owner.
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+
+from tools.bazel.tests.integration.manifest_label_assertions import assert_manifest_labels
 
 
 parser = argparse.ArgumentParser()
@@ -36,6 +39,7 @@ class ManifestLabelsActionTest(unittest.TestCase):
         return subprocess.run([
             str(INPUTS.tool.resolve()),
             "--manifest", str(source),
+            "--image-version=" + os.environ["EXPECTED_SONIC_IMAGE_VERSION"],
             "--output", str(output or self.output),
         ], capture_output=True, text=True, timeout=30)
 
@@ -46,9 +50,7 @@ class ManifestLabelsActionTest(unittest.TestCase):
             (INPUTS.debug_manifest, INPUTS.debug_labels),
         ):
             with self.subTest(manifest=manifest_path):
-                key, value = labels_path.read_text().rstrip("\n").split("=", 1)
-                self.assertEqual(key, "com.azure.sonic.manifest")
-                self.assertEqual(json.loads(value), json.loads(manifest_path.read_text()))
+                assert_manifest_labels(self, labels_path, json.loads(manifest_path.read_text()))
 
     def test_prepared_manifest_matches_declared_owner(self):
         """Reject another service's manifest even if its OCI label copies it correctly."""
@@ -79,7 +81,7 @@ class ManifestLabelsActionTest(unittest.TestCase):
         before = debug_output.read_bytes()
         result = self.run_tool(changed)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(self.output.read_text().split("=", 1)[1]), manifest)
+        assert_manifest_labels(self, self.output, manifest)
         self.assertEqual(debug_output.read_bytes(), before)
 
     def test_invalid_input_preserves_existing_output(self):

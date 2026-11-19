@@ -282,11 +282,12 @@ SWSS compilation, package contents and component tests are validated in the
 consumes those targets and validates the assembled OCI images, including their
 installed behavior and image-cache invalidation.
 
-The native VS Make build produces the runtime and debug archives together for
-each registered Bazel container, using the same builder and Bazel invocation
-for each pair. The normal installer still selects runtime containers;
-`INSTALL_DEBUG_TOOLS=y` selects debug containers. Producing a debug archive does
-not add it to the installer.
+The native VS Make build submits all selected Bazel container archives in one
+invocation. For example, Orchagent and Syncd build together from common base
+layers. The Syncd sources read the selected DASH settings. On the build dashboard, `vs-container-images`
+records that invocation and its profile. The container rows record their
+archive exports. The normal installer selects runtime containers, and
+`INSTALL_DEBUG_TOOLS=y` selects debug containers.
 
 The active **VS installer in SONiC slave (AMD64)** job uses a host agent and
 the native Make wrapper to build `target/sonic-vs.bin`. After managed-identity

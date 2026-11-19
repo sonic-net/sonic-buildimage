@@ -72,6 +72,3 @@ $(TARGET_PATH)/bazel-manifests/docker-lldp/image.env: dockers/docker-lldp/bazel/
 endif
 endif
 endif
-
-$(DOCKER_LLDP)_BAZEL_ARGS = --//dockers/docker-lldp:image_version=$(SONIC_IMAGE_VERSION)
-$(DOCKER_LLDP_DBG)_BAZEL_ARGS = $($(DOCKER_LLDP)_BAZEL_ARGS)

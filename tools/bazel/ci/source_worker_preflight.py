@@ -26,12 +26,14 @@ def select_build_profile(memory_bytes, cpus):
     if (type(memory_bytes) is not int or memory_bytes < MINIMUM_MEMORY_BYTES or
             type(cpus) not in (int, float) or not 2 <= cpus <= 6):
         raise ValueError("Worker does not meet the existing bounded resource gate")
-    parallel = cpus >= 4
-    return {"name": "two_actions" if parallel else "one_action", "status": "pilot",
-            "minimum_memory_bytes": MINIMUM_MEMORY_BYTES, "minimum_cpu": 4 if parallel else 2,
+    from tools.bazel.ci.resources import memory_budget_mb, JVM_HEAP_MB
+    return {"name": "bazel_default_cpu", "status": "pilot",
+            "minimum_memory_bytes": MINIMUM_MEMORY_BYTES, "minimum_cpu": 2,
             "measured_memory_limit_bytes": memory_bytes, "measured_cpu_limit": cpus,
-            "jvm_heap_gib": 3, "jobs": 2 if parallel else 1, "cpu": 2 if parallel else 1,
-            "scheduler_memory_mb": 8000 if parallel else 4000, "loaded_container_memory_gib": 4}
+            "jvm_heap_gib": JVM_HEAP_MB // 1024,
+            "scheduler_memory_mb": memory_budget_mb(memory_bytes, []),
+            "loaded_container_memory_gib": 4}
+
 
 
 def cpu_limit(value):

@@ -30,7 +30,7 @@ def require_item(files, path, item, *, image=None):
                   json.dumps({"image": image, "differences": differences}, sort_keys=True))
 
 
-def verify_config(parent, actual, manifest):
+def verify_config(parent, actual, manifest, version):
     expected = deepcopy(parent)
     expected["Entrypoint"] = ["/usr/bin/start.sh"]
     # rules_oci resets a base Cmd when an entrypoint is supplied.
@@ -41,7 +41,8 @@ def verify_config(parent, actual, manifest):
     check.require(len({entry.split("=", 1)[0] for entry in entries}) == len(entries), "duplicate OCI environment name")
     check.require(dict(entry.split("=", 1) for entry in entries) == environment, "OCI environment differs")
     expected["Env"] = entries
-    expected.setdefault("Labels", {})["com.azure.sonic.manifest"] = actual.get("Labels", {}).get("com.azure.sonic.manifest", "")
+    expected.setdefault("Labels", {})["Tag"] = version
+    expected["Labels"]["com.azure.sonic.manifest"] = actual.get("Labels", {}).get("com.azure.sonic.manifest", "")
     check.require(json.loads(expected["Labels"]["com.azure.sonic.manifest"]) == manifest, "Make manifest label differs")
     # OCI permits omitted empty Cmd; every other field must remain exact.
     normalized = deepcopy(actual)
@@ -206,7 +207,7 @@ def validate(directory):
                                ("usr/share/sonic/bazel/dash-engine" + ("-debug" if debug else "") + "-packages.json", prefix + ".packages.json")):
             check.require(files.get(path, {}).get("sha256") == check.sha(directory / artifact), "installed package state differs: " + path)
         check.require(all(item.get("elf_machine", 62) == 62 for item in files.values()), "foreign ELF architecture")
-        verify_config(parent.config.get("config", {}), layout.config.get("config", {}), manifest)
+        verify_config(parent.config.get("config", {}), layout.config.get("config", {}), manifest, receipt["image_version"])
         inventories[name] = files
         (directory / (name + ".validation.json")).write_text(json.dumps({"status": "passed",
             "manifest_digest": layout.descriptor["digest"], "rootfs": layout.config["rootfs"],

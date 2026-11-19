@@ -71,7 +71,7 @@ selected:
         self.assertEqual(selected["debug_inputs"].split(), selected["inputs"].split() +
                          ["target/bazel-manifests/docker-fpm-frr-dbg/manifest.json"])
         self.assertEqual(selected["args"], selected["debug_args"])
-        self.assertIn("--//dockers/docker-fpm-frr:image_version=202705.42", selected["args"].split())
+        self.assertEqual(selected["args"].split(), ["--//src/sonic-frr:tcmalloc=true", "--//src/sonic-frr:snmp=true"])
         self.assertEqual(selected["debug_path"], "dockers/docker-fpm-frr")
 
     def test_other_profiles_retain_the_make_builder(self):

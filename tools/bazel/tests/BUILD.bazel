@@ -539,6 +539,31 @@ py_test(
     ],
 )
 
+# Check the selected release against the build settings, independently of the label action.
+config_setting(
+    name = "use_product_image_version",
+    flag_values = {
+        "//tools/bazel/image/vs/metadata:use_make_metadata": "false",
+        "//tools/bazel/oci:image_version": "",
+    },
+)
+
+_IMAGE_VERSION_ENV = select({
+    ":use_product_image_version": {"EXPECTED_SONIC_IMAGE_VERSION": "$(SONIC_PRODUCT_VERSION)"},
+    "//conditions:default": {"EXPECTED_SONIC_IMAGE_VERSION": "$(SONIC_IMAGE_VERSION)"},
+})
+
+_IMAGE_VERSION_FLAGS = [
+    "//tools/bazel/image/vs/metadata:version",
+    "//tools/bazel/oci:image_version",
+]
+
+py_library(
+    name = "manifest_label_assertions",
+    testonly = True,
+    srcs = ["integration/manifest_label_assertions.py"],
+)
+
 manifest_labels(
     name = "runtime_manifest_fixture",
     testonly = True,
@@ -574,7 +599,10 @@ py_test(
         ":runtime_manifest_fixture",
         "//tools/bazel/oci:manifest_labels",
     ],
+    env = _IMAGE_VERSION_ENV,
     main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
 )
 
 # Check each owner's real outputs with the same implementation. The unrelated
@@ -603,7 +631,10 @@ py_test(
         "//dockers/docker-orchagent/config:manifest-dbg.json",
         "//tools/bazel/oci:manifest_labels",
     ],
+    env = _IMAGE_VERSION_ENV,
     main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
 )
 
 # Layer checks are shared by APT selection and both containers' CI suites.
@@ -955,7 +986,10 @@ py_test(
         "//dockers/docker-orchagent/config:manifest-dbg.json",
         "//dockers/docker-orchagent/config:manifest-dbg.labels",
     ],
+    env = _IMAGE_VERSION_ENV,
     main = "integration/swss_render_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
 )
 
 # Keep the checked-in dpkg include patterns aligned with Make's source list.
@@ -1131,7 +1165,10 @@ py_test(
         "//platform/vs/docker-syncd-vs/config:labels",
         "//tools/bazel/oci:manifest_labels",
     ],
+    env = _IMAGE_VERSION_ENV,
     main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
 )
 
 py_test(

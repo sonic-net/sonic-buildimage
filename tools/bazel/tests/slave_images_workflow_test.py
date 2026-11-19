@@ -340,8 +340,8 @@ elif name == "stat":
             (current.st_mode, current.st_uid, current.st_gid, current.st_mtime_ns),
             (original.st_mode, original.st_uid, original.st_gid, original.st_mtime_ns))
 
-    def test_vs_build_forwards_four_make_jobs_to_slave(self):
-        self.assertEqual(self.consumer["env"]["SONIC_BUILD_JOBS"], "4")
+    def test_vs_build_forwards_configured_make_jobs_to_slave(self):
+        jobs = self.consumer["env"]["SONIC_BUILD_JOBS"]
         self.assertNotIn("SONIC_BUILD_JOBS", self.publisher["env"])
         source = (ROOT / "Makefile.work").read_text()
         fragment = ("SHELL := /bin/bash\n" + assignment(source, "SONIC_BUILD_INSTRUCTION") +
@@ -350,13 +350,13 @@ elif name == "stat":
             ["/usr/bin/make", "--no-print-directory", "-f", "-", "check",
              "MAKE=" + str(self.commands / "make")],
             input=fragment, cwd=self.directory,
-            env=dict(self.environment, SONIC_BUILD_JOBS=self.consumer["env"]["SONIC_BUILD_JOBS"]),
+            env=dict(self.environment, SONIC_BUILD_JOBS=jobs),
             text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = self.recorded()
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][:3], ["make", "-f", "slave.mk"])
-        self.assertIn("SONIC_BUILD_JOBS=4", calls[0])
+        self.assertIn(f"SONIC_BUILD_JOBS={jobs}", calls[0])
         self.assertIn("target/sonic-vs.bin", calls[0])
 
     def test_private_docker_configuration_is_exported_before_docker_operations(self):

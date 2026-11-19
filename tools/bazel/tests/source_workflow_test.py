@@ -120,15 +120,13 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         self.assertEqual(
             job["env"]["SONIC_BAZEL_REMOTE_UPLOAD"],
             "${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}")
+        self.assertEqual(job["env"]["SONIC_BUILD_JOBS"], "1")
         for flag in (
-            "--jobs=4", "--local_resources=memory=12288",
             "--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache",
             "--experimental_remote_downloader=grpc://172.16.0.4:9092",
             "--experimental_remote_downloader_local_fallback",
         ):
             self.assertIn(flag, job["env"]["BAZEL_CONTAINER_ARGS"])
-        self.assertNotIn("--local_resources=cpu=2", job["env"]["BAZEL_CONTAINER_ARGS"])
-        self.assertNotIn("--local_resources=memory=3072", job["env"]["BAZEL_CONTAINER_ARGS"])
         checkout = job["steps"][0]["with"]
         directory = "vs-${{ github.run_id }}-${{ github.run_attempt }}"
         self.assertEqual(checkout["path"], directory)
