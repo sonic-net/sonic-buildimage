@@ -134,12 +134,6 @@ on_pkgs_in_parallel {
 			push @packages, $1;
 		}
 
-		for (keys %vermagic_strings) {
-			my $output = qx_cmd("dpkg", "-S", "/boot/vmlinuz-${_}");
-			my $package_name = $output =~ m/^([^:]+):\s+.*$/ ? $1 : "";
-			push @packages, $package_name;
-		}
-
 		$substvars->load($varlistfile) if -e $varlistfile;
 		$substvars->filter(remove => sub { $_[0] =~ m/^\Q$varnameprefix\E:/ });
 		if (@packages) {
