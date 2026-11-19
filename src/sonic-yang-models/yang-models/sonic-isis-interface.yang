@@ -34,21 +34,11 @@ module sonic-isis-interface {
         container ISIS_INTERFACE {
             list ISIS_INTERFACE_LIST {
                 key "vrf_name ifname";
-                must "ipv4_enabled = 'true' or ipv6_enabled = 'true'" {
-                    error-message "At least one address family must be enabled.";
-                }
-                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]" {
-                    error-message "Parent instance must exist in the interface VRF.";
-                }
-                must "level = 'level-1-2' or /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level" {
-                    error-message "Interface and instance levels must intersect.";
-                }
-                must "not(/lag:sonic-portchannel/lag:PORTCHANNEL_MEMBER/lag:PORTCHANNEL_MEMBER_LIST[lag:port=current()/ifname])" {
-                    error-message "PortChannel member ports cannot run IS-IS.";
-                }
-                must "(vrf_name = 'default' and not(/intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name) and not(/lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name) and not(/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name) and not(/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name) and not(/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name)) or /intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name = vrf_name or /lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name = vrf_name or /vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name = vrf_name or /lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name = vrf_name or /sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name = vrf_name" {
-                    error-message "IS-IS VRF must match the actual interface VRF.";
-                }
+                must "ipv4_enabled = 'true' or ipv6_enabled = 'true'";
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]";
+                must "level = 'level-1-2' or /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level";
+                must "not(/lag:sonic-portchannel/lag:PORTCHANNEL_MEMBER/lag:PORTCHANNEL_MEMBER_LIST[lag:port=current()/ifname])";
+                must "(vrf_name = 'default' and not(/intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name) and not(/lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name) and not(/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name) and not(/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name) and not(/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name)) or /intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name = vrf_name or /lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name = vrf_name or /vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name = vrf_name or /lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name = vrf_name or /sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name = vrf_name";
                 leaf vrf_name { type isisg:vrf-name; }
                 leaf ifname {
                     type union {

@@ -44,19 +44,13 @@ module sonic-isis-global {
         container ISIS_GLOBALS {
             list ISIS_GLOBALS_LIST {
                 key "vrf_name instance_name";
-                must "(not(spf_init_delay) and not(spf_short_delay) and not(spf_long_delay) and not(spf_hold_down) and not(spf_time_to_learn)) or (spf_init_delay and spf_short_delay and spf_long_delay and spf_hold_down and spf_time_to_learn)" {
-                    error-message "SPF backoff requires all five fields or none.";
-                }
-                must "not(spf_hold_down) or spf_hold_down > spf_time_to_learn" {
-                    error-message "SPF hold-down must exceed time-to-learn.";
-                }
+                must "(not(spf_init_delay) and not(spf_short_delay) and not(spf_long_delay) and not(spf_hold_down) and not(spf_time_to_learn)) or (spf_init_delay and spf_short_delay and spf_long_delay and spf_hold_down and spf_time_to_learn)";
+                must "not(spf_hold_down) or spf_hold_down > spf_time_to_learn";
                 leaf vrf_name { type vrf-name; }
                 leaf instance_name { type instance-name; }
                 leaf net_title {
                     type string { pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00'; }
-                    must "not(../../ISIS_GLOBALS_LIST[vrf_name=current()/../vrf_name][net_title][translate(substring(net_title, string-length(net_title)-16, 14), 'ABCDEF', 'abcdef') != translate(substring(current(), string-length(current())-16, 14), 'ABCDEF', 'abcdef')])" {
-                        error-message "All NETs in the same VRF must share a system ID.";
-                    }
+                    must "not(../../ISIS_GLOBALS_LIST[vrf_name=current()/../vrf_name][net_title][translate(substring(net_title, string-length(net_title)-16, 14), 'ABCDEF', 'abcdef') != translate(substring(current(), string-length(current())-16, 14), 'ABCDEF', 'abcdef')])";
                     description "One optional NET per instance.";
                 }
                 leaf level { type isis-level; default level-1-2; }

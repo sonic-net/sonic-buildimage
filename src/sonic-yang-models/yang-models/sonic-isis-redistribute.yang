@@ -18,18 +18,10 @@ module sonic-isis-redistribute {
         container ISIS_REDISTRIBUTE {
             list ISIS_REDISTRIBUTE_LIST {
                 key "vrf_name instance_name addr_family src_protocol level table_id";
-                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]" {
-                    error-message "Parent instance must exist in the same VRF.";
-                }
-                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level" {
-                    error-message "Redistribution level must be supported by the instance.";
-                }
-                must "(src_protocol = 'table' and table_id > 0) or (src_protocol != 'table' and table_id = 0)" {
-                    error-message "Table sources require ID 1-65535; ordinary sources require ID 0.";
-                }
-                must "(addr_family = 'ipv4' and src_protocol != 'ripng' and src_protocol != 'ospf6') or (addr_family = 'ipv6' and src_protocol != 'rip' and src_protocol != 'ospf' and src_protocol != 'eigrp')" {
-                    error-message "Source protocol must match its address family.";
-                }
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]";
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level";
+                must "(src_protocol = 'table' and table_id > 0) or (src_protocol != 'table' and table_id = 0)";
+                must "(addr_family = 'ipv4' and src_protocol != 'ripng' and src_protocol != 'ospf6') or (addr_family = 'ipv6' and src_protocol != 'rip' and src_protocol != 'ospf' and src_protocol != 'eigrp')";
                 leaf vrf_name { type isisg:vrf-name; }
                 leaf instance_name { type isisg:instance-name; }
                 leaf addr_family { type enumeration { enum ipv4; enum ipv6; } }
