@@ -111,6 +111,24 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - &setup_dashboard_gh
+        name: Install pinned GitHub CLI for the dashboard
+        shell: bash
+        env:
+          GH_CLI_VERSION: '2.101.0'
+          GH_CLI_SHA256: f876a3b87bf67c94f773d17becca4dc7340b056dab901473a9260ee2a73e237b
+        run: |
+          set -euo pipefail
+          directory=$(mktemp -d "${SONIC_BAZEL_JOB_TEMP:?}/dashboard-gh.XXXXXX")
+          package="$directory/gh.deb"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.deb" \
+            --output "$package"
+          printf '%s  %s\n' "$GH_CLI_SHA256" "$package" | sha256sum --check --status
+          dpkg-deb --extract "$package" "$directory"
+          "$directory/usr/bin/gh" --version
+          "$directory/usr/bin/gh" api --help | grep -F -- '--allow-escape-sequences' >/dev/null
+          echo "$directory/usr/bin" >> "$GITHUB_PATH"
       - name: Test metadata collection
         run: python3 -B -m unittest discover -s tools/ci/build_dashboard -p 'test_*.py' -v
       - name: Test profile evidence and workflow summary
@@ -158,6 +176,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
+      - *setup_dashboard_gh
       - name: Restore durable timing history
         shell: bash
         run: |
