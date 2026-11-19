@@ -76,9 +76,9 @@ retry:
       {
         AUTHMGR_EVENT_TRACE (AUTHMGR_TRACE_EVENTS, intIfNum,
             "%s:%d failure\n", __func__, __LINE__);
-        usleep(10*1000);
       }
     }
+    usleep(10*1000);
     retryCnt--;
     AUTHMGR_EVENT_TRACE (AUTHMGR_TRACE_EVENTS, intIfNum,
         "%s:%d retrying again (%d)", __func__, __LINE__, retryCnt);
