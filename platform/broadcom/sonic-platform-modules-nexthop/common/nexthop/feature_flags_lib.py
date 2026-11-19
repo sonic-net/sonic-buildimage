@@ -3,30 +3,6 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Generic FPGA-version feature-flag evaluator.
-
-A feature-flags.json artifact (shipped beside pddf-device.json.j2) lists boolean
-flags whose value is decided at boot by reading an FPGA revision register and
-comparing it (masked) against a threshold. This module evaluates each flag
-against the live hardware and returns {name: bool}, which gen_cli feeds to the
-pddf-device.json.j2 render as Jinja booleans so a `{% if flag %}` selects the
-right register layout per unit.
-
-Every entry is fully self-describing data — bdf_var (which FPGA), reg_offset,
-mask, comparison, version — so nothing here is specific to any platform, FPGA,
-or flag name. The data is produced by the platform_topology config generator;
-this evaluator just applies it.
-
-Example feature-flags.json entry:
-    {
-      "name": "fan_duty_packed_in_one_word",
-      "bdf_var": "switchcard_fpga_1_bdf",
-      "reg_offset": "0x0",
-      "mask": "0xfff",
-      "comparison": "LESS_THAN_OR_EQUAL",
-      "version": "0x304"
-    }
-"""
 
 import json
 import operator
@@ -36,7 +12,7 @@ import syslog
 from nexthop import fpga_lib
 
 # Comparison name -> operator(read_value, threshold). Names match the
-# FpgaVersionComparison enum (with its FPGA_VERSION_COMPARISON_ prefix stripped)
+# VersionComparison enum (with its VERSION_COMPARISON_ prefix stripped)
 # emitted into feature-flags.json by the config generator.
 _COMPARISONS = {
     "LESS_THAN": operator.lt,
@@ -46,7 +22,14 @@ _COMPARISONS = {
     "EQUAL": operator.eq,
 }
 
-_REQUIRED_FIELDS = ("name", "bdf_var", "reg_offset", "mask", "comparison", "version")
+FPGA_VERSION_SOURCE = "fpga_version"
+ONIE_DEVICE_VERSION_SOURCE = "onie_device_version"
+DEVICE_VERSION_VAR = "device_version"
+
+_REQUIRED_FIELDS = {
+    FPGA_VERSION_SOURCE: ("name", "bdf_var", "reg_offset", "mask", "comparison", "version"),
+    ONIE_DEVICE_VERSION_SOURCE: ("name", "comparison", "version"),
+}
 
 
 def evaluate_flag(flag: dict, bdf: str) -> bool:
@@ -58,18 +41,19 @@ def evaluate_flag(flag: dict, bdf: str) -> bool:
     return _COMPARISONS[flag["comparison"]](masked, threshold)
 
 
-def get_feature_flag_variables(feature_flags_filepath: str, pcie_vars: dict[str, str]) -> dict[str, bool]:
+def get_feature_flag_variables(feature_flags_filepath: str, template_vars: dict) -> dict[str, bool]:
     """Return {flag_name: bool} for every flag in feature_flags_filepath,
     evaluated against live hardware.
 
-    `pcie_vars` is the already-resolved pcie-variables.yaml mapping (var name ->
-    value, from pcie_lib.get_pcie_variables); each flag's bdf_var is looked up
-    there to avoid re-running the lookup commands.
+    `template_vars` holds the already-resolved pcie-variables.yaml mapping (var
+    name -> value, from pcie_lib.get_pcie_variables), where each flag's bdf_var
+    is looked up to avoid re-running the lookup commands, plus `device_version`
+    (gen_cli.get_device_version) for the flags that compare against it.
 
     Returns {} when the file is absent (a SKU declaring no flags). Raises on a
-    malformed entry, an unknown comparison, an unresolved bdf_var, or an
-    unreadable register, so the caller fails loudly rather than rendering the
-    wrong (else-branch) layout.
+    malformed entry, an unknown comparison, an unresolved bdf_var or
+    device_version, or an unreadable register, so the caller fails loudly rather
+    than rendering the wrong (else-branch) layout.
     """
     if not os.path.isfile(feature_flags_filepath):
         return {}
@@ -81,7 +65,13 @@ def get_feature_flag_variables(feature_flags_filepath: str, pcie_vars: dict[str,
 
     result: dict[str, bool] = {}
     for flag in flags:
-        missing = [field for field in _REQUIRED_FIELDS if field not in flag]
+        source = flag.get("source")
+        if source not in _REQUIRED_FIELDS:
+            raise ValueError(
+                f"{feature_flags_filepath}: feature flag entry has unknown source {source!r} "
+                f"(expected one of {sorted(_REQUIRED_FIELDS)}): {flag}"
+            )
+        missing = [field for field in _REQUIRED_FIELDS[source] if field not in flag]
         if missing:
             raise ValueError(f"{feature_flags_filepath}: feature flag entry missing field(s) {missing}: {flag}")
         name = flag["name"]
@@ -90,13 +80,22 @@ def get_feature_flag_variables(feature_flags_filepath: str, pcie_vars: dict[str,
                 f"{feature_flags_filepath}: feature flag '{name}' has unknown comparison "
                 f"'{flag['comparison']}' (expected one of {sorted(_COMPARISONS)})"
             )
-        bdf = pcie_vars.get(flag["bdf_var"])
-        if not bdf:
-            raise RuntimeError(
-                f"{feature_flags_filepath}: feature flag '{name}' references bdf_var "
-                f"'{flag['bdf_var']}' which is not defined in pcie-variables.yaml"
-            )
-        value = evaluate_flag(flag, bdf)
+        if source == ONIE_DEVICE_VERSION_SOURCE:
+            device_version = template_vars.get(DEVICE_VERSION_VAR)
+            if device_version is None:
+                raise RuntimeError(f"{feature_flags_filepath}: feature flag '{name}' needs the device version")
+            value = _COMPARISONS[flag["comparison"]](device_version, int(flag["version"], 16))
+            syslog.syslog(syslog.LOG_INFO, f"feature flag '{name}' = {value} (device_version={device_version})")
+        elif source == FPGA_VERSION_SOURCE:
+            bdf = template_vars.get(flag["bdf_var"])
+            if not bdf:
+                raise RuntimeError(
+                    f"{feature_flags_filepath}: feature flag '{name}' references bdf_var "
+                    f"'{flag['bdf_var']}' which is not defined in pcie-variables.yaml"
+                )
+            value = evaluate_flag(flag, bdf)
+            syslog.syslog(syslog.LOG_INFO, f"feature flag '{name}' = {value} (bdf={bdf})")
+        else:
+            raise ValueError(f"{feature_flags_filepath}: feature flag '{name}' has unhandled source {source!r}")
         result[name] = value
-        syslog.syslog(syslog.LOG_INFO, f"feature flag '{name}' = {value} (bdf={bdf})")
     return result

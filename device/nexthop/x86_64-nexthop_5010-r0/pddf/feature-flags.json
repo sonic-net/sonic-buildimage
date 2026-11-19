@@ -1,6 +1,7 @@
 [
   {
     "name": "CPU_CARD_FPGA_MEETS_MIN_VERSION_0x86",
+    "source": "fpga_version",
     "bdf_var": "cpu_card_fpga_bdf",
     "reg_offset": "0x0",
     "mask": "0xff",
@@ -9,6 +10,7 @@
   },
   {
     "name": "SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1d",
+    "source": "fpga_version",
     "bdf_var": "switchcard_fpga_bdf",
     "reg_offset": "0x0",
     "mask": "0xff",
@@ -17,6 +19,7 @@
   },
   {
     "name": "SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x1f",
+    "source": "fpga_version",
     "bdf_var": "switchcard_fpga_bdf",
     "reg_offset": "0x0",
     "mask": "0xff",

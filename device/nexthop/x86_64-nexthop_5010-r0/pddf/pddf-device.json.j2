@@ -1297,8 +1297,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
@@ -2728,8 +2726,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
@@ -18358,6 +18354,18 @@
         "hw_irq": 0,
         "watchdog_counter_msi_reg": "0x1D8"
       }{% else %}{}{% endif %}
+    }
+  },
+  "FPGA_REBOOT_CONF": {
+    "cpu_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0x8",
+      "enable_word": "0xdeadbeef"
+    },
+    "switch_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{switchcard_fpga_bdf}}",
+      "reg_offset": "0x4",
+      "enable_word": "0xdeadbeef"
     }
   }
 }
