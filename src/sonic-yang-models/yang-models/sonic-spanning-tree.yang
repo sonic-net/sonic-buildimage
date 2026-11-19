@@ -4,6 +4,14 @@ module sonic-spanning-tree {
 	
 	prefix stp;
 
+	import sonic-port {
+		prefix port;
+	}
+
+	import sonic-portchannel {
+		prefix lag;
+	}
+
 	/*
 	import sonic-extension {
 		prefix sonic-ext;
@@ -19,12 +27,43 @@ module sonic-spanning-tree {
 	description
 		"YANG model for Spanning Tree Protocol (STP) in SONiC, supporting PVST and MSTP";
 
+	revision 2026-11-03 {
+		description
+			"Allow root guard timeout in MST mode. Keep MST region config valid
+			 while spanning tree is disabled. Accept only bridge priorities that
+			 are a multiple of 4096 and port priorities that are a multiple of
+			 16. Make the ifname of STP_PORT, STP_VLAN_PORT and STP_MST_PORT
+			 reference PORT or PORTCHANNEL.";
+	}
+
 	revision 2025-03-15 {
 		description
 			"Initial YANG model written for PVST & MSTP configurations xFlow & BRCM";
 		reference
 			"Initial implementation for SONiC STP support";
-}
+	}
+
+	typedef bridge_priority {
+		type uint16 {
+			range "0 | 4096 | 8192 | 12288 | 16384 | 20480 | 24576 | 28672 | 32768 | 36864 | 40960 | 45056 | 49152 | 53248 | 57344 | 61440" {
+				error-message "Invalid Bridge Priority value, must be a multiple of 4096 from 0 to 61440";
+			}
+		}
+		description
+			"The manageable part of a bridge identifier: its upper four bits,
+			 so only multiples of 4096 up to 61440.";
+	}
+
+	typedef port_priority {
+		type uint8 {
+			range "0 | 16 | 32 | 48 | 64 | 80 | 96 | 112 | 128 | 144 | 160 | 176 | 192 | 208 | 224 | 240" {
+				error-message "Invalid Port Priority value, must be a multiple of 16 from 0 to 240";
+			}
+		}
+		description
+			"The manageable part of a port identifier: its upper four bits,
+			 so only multiples of 16 up to 240.";
+	}
 
 	grouping vlanModeAttr {
 		description
@@ -67,11 +106,7 @@ module sonic-spanning-tree {
 		}
 
 		leaf priority {
-			type uint16 {
-				range "0..61440" {
-					error-message "Invalid Bridge Priority value";
-				}
-			}
+			type bridge_priority;
 			default 32768;
 			description
 				"Bridge Identifier priority component";
@@ -94,11 +129,7 @@ module sonic-spanning-tree {
 		}
 
 		leaf priority {
-			type uint8 {
-				range "0..240" {
-					error-message "Invalid Port Priority value";
-				}
-			}
+			type port_priority;
 			default 128;
 			description
 				"Port priority in STP calculations";
@@ -154,10 +185,6 @@ module sonic-spanning-tree {
 						}
 					}
 					units "seconds";
-					must "../mode = 'pvst'" {
-						error-message "Root guard timeout configuration is allowed only in PVST mode";
-						/*error-app-tag stp-invalid;*/
-					}
 					default 30;
 					description
 						"Once superior BPDUs stop coming on the port, device will wait for a period until root guard timeout before moving the port to forwarding state";
@@ -220,8 +247,16 @@ module sonic-spanning-tree {
 				}
 
 				leaf ifname {
-					type leafref {
-						path "../../../STP_PORT/STP_PORT_LIST/ifname";
+					type union {
+						type leafref {
+							path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+						}
+						type leafref {
+							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+						}
+					}
+					must "../../../STP_PORT/STP_PORT_LIST[ifname=current()]" {
+						error-message "Configure spanning tree on the interface first";
 					}
 					description
 						"Reference to Ethernet interface or PortChannel";
@@ -244,7 +279,14 @@ module sonic-spanning-tree {
 				/*sonic-ext:dependent-on "sonic-spanning-tree:STP/STP_LIST";*/
 
 				leaf ifname {
-					type string;
+					type union {
+						type leafref {
+							path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+						}
+						type leafref {
+							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+						}
+					}
 					description
 						"Reference to Ethernet interface or PortChannel";
 				}
@@ -359,7 +401,7 @@ module sonic-spanning-tree {
 
 				leaf name {
 					type string;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -369,7 +411,7 @@ module sonic-spanning-tree {
 
 				leaf revision {
 					type uint32;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -379,7 +421,7 @@ module sonic-spanning-tree {
 
 				leaf max_hops {
 					type uint8;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -390,7 +432,7 @@ module sonic-spanning-tree {
 
 				leaf max_age {
 					type uint8;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -401,7 +443,7 @@ module sonic-spanning-tree {
 
 				leaf hello_time {
 					type uint8;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -412,7 +454,7 @@ module sonic-spanning-tree {
 
 				leaf forward_delay {
 					type uint8;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -423,7 +465,7 @@ module sonic-spanning-tree {
 
 				leaf hold_count {
 					type uint8;
-					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+					must "not(../../../STP/STP_LIST[keyleaf='GLOBAL']) or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
 						error-message "Configuration allowed in MST mode";
 						/*error-app-tag stp-invalid;*/
 					}
@@ -457,11 +499,7 @@ module sonic-spanning-tree {
 				}
 
 				leaf bridge_priority {
-					type uint16 {
-						range "0..61440" {
-							error-message "Invalid Bridge Priority value";
-						}
-					}
+					type bridge_priority;
 					default 32768;
 					description
 						"The manageable component of the Bridge Identifier";
@@ -487,8 +525,16 @@ module sonic-spanning-tree {
 				}
 
 				leaf ifname {
-					type leafref {
-						path "../../../STP_PORT/STP_PORT_LIST/ifname";
+					type union {
+						type leafref {
+							path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+						}
+						type leafref {
+							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+						}
+					}
+					must "../../../STP_PORT/STP_PORT_LIST[ifname=current()]" {
+						error-message "Configure spanning tree on the interface first";
 					}
 					description
 						"Reference to Ethernet interface or PortChannel";
