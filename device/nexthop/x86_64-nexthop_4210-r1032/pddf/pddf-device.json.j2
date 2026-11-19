@@ -27444,6 +27444,18 @@
       "reg_offset": "0x8",
       "enable_word": "0xdeadbeef"
     },
+    "switch_host_pwrcyc": {% if (NH4210_SWITCH_HOST_POWER_CYCLE_SUPPORTED and CPU_CARD_FPGA_MEETS_MIN_VERSION_0x15) %}{
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0x68",
+      "enable_word": "0xbaddf00d",
+      "timeout_ms": 2000
+    }{% else %}{}{% endif %},
+    "bmc_is_platform_manager": {
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0xcc",
+      "mask": "0x40000000",
+      "compare_val": "0x40000000"
+    },
     "switch_card_fpga_0_chassis_pwrcyc": {
       "fpga_bdf": "{{switchcard_fpga_0_bdf}}",
       "reg_offset": "0x4",

@@ -34,5 +34,11 @@
     "mask": "0xff",
     "comparison": "GREATER_THAN_OR_EQUAL",
     "version": "0x8e"
+  },
+  {
+    "name": "NH4210_SWITCH_HOST_POWER_CYCLE_SUPPORTED",
+    "source": "onie_device_version",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x2"
   }
 ]

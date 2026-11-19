@@ -111,6 +111,8 @@ def extract_xcvr_list(config):
 
 
 FPGA_REBOOT_CONF_KEY = "FPGA_REBOOT_CONF"
+SWITCH_HOST_KEY = "switch_host_pwrcyc"
+BMC_IS_PLATFORM_MANAGER_KEY = "bmc_is_platform_manager"
 
 
 def reboot_conf(config: dict) -> dict:

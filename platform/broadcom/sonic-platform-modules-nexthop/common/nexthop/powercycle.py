@@ -6,13 +6,16 @@ import syslog
 import time
 from typing import NoReturn
 
+from sonic_py_common import device_info
+
 from nexthop.fpga_lib import (
     DEFAULT_POWER_CYCLE_TIMEOUT_MS,
+    FpgaRegisterMatch,
     PowerCycleRegister,
     write_32,
 )
 from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf, get_switchcard_fpga_0_bdf
-from nexthop.pddf_config_parser import FpgaDeviceName, reboot_conf
+from nexthop.pddf_config_parser import BMC_IS_PLATFORM_MANAGER_KEY, SWITCH_HOST_KEY, FpgaDeviceName, reboot_conf
 
 CHASSIS_POWER_CYCLE_ORDER = ("cpu_card_fpga_0_chassis_pwrcyc", "switch_card_fpga_0_chassis_pwrcyc")
 
@@ -79,10 +82,26 @@ def watchdog_powercycle(config) -> NoReturn:
     raise Exception("Watchdog powercycle did not trigger")
 
 
+def should_power_cycle_switch_host(conf: dict) -> bool:
+    if not conf.get(SWITCH_HOST_KEY) or not device_info.is_switch_host():
+        return False
+    if not FpgaRegisterMatch.from_pddf(conf[BMC_IS_PLATFORM_MANAGER_KEY]).check():
+        log_to_kernel("Switch Host is the platform manager, skipping the Switch Host power cycle")
+        return False
+    return True
+
+
 def powercycle(config) -> NoReturn:
     conf = reboot_conf(config)
 
-    for name in CHASSIS_POWER_CYCLE_ORDER:
+    names: list[str] = list(CHASSIS_POWER_CYCLE_ORDER)
+    try:
+        if should_power_cycle_switch_host(conf):
+            names.insert(0, SWITCH_HOST_KEY)
+    except Exception as e:
+        log_to_kernel(f"Switch Host power cycle check failed: {e}")
+
+    for name in names:
         if name not in conf:
             continue
         log_to_kernel(f"Writing the {name} register to initiate reboot")

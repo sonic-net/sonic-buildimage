@@ -248,3 +248,23 @@ class PowerCycleRegister:
         write_32(checked_bdf(self.fpga_bdf), self.reg_offset, self.enable_word)
         time.sleep(self.timeout_ms / 1000)
         raise TimeoutError(f"no power cycle within {self.timeout_ms} ms")
+
+
+@dataclass(frozen=True)
+class FpgaRegisterMatch:
+    fpga_bdf: Union[str, None]
+    reg_offset: int
+    mask: int
+    compare_val: int
+
+    @classmethod
+    def from_pddf(cls, entry: dict) -> "FpgaRegisterMatch":
+        return cls(
+            fpga_bdf=entry.get("fpga_bdf"),
+            reg_offset=int(entry["reg_offset"], 16),
+            mask=int(entry["mask"], 16),
+            compare_val=int(entry["compare_val"], 16),
+        )
+
+    def check(self) -> bool:
+        return read_32(checked_bdf(self.fpga_bdf), self.reg_offset) & self.mask == self.compare_val
