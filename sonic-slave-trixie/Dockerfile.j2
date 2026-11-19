@@ -545,6 +545,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         hwdata \
         libzip-dev
 
+# Remove j2cli's deprecated pkg_resources version lookup.
+COPY ["j2cli-importlib-metadata.patch", "/tmp/"]
+RUN patch --batch --forward --fuzz=0 /usr/lib/python3/dist-packages/j2cli/__init__.py \
+        -i /tmp/j2cli-importlib-metadata.patch \
+ && rm /tmp/j2cli-importlib-metadata.patch
+
 {%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 RUN eatmydata apt-get install -y \
 # For p4 libraries
