@@ -15,6 +15,7 @@ SONIC_FRR_MODULE_FILES = \
 SONIC_FRR_TEST_FILES = \
 	dplane_fpm_sonic/tests/fpm_mac_test.c \
 	dplane_fpm_sonic/tests/fpm_mac_test.py
+DPLANE_FPM_SONIC_TESTS = dplane_fpm_sonic/tests/test_fpm_nhg_gtest.cpp dplane_fpm_sonic/tests/main.cpp dplane_fpm_sonic/tests/stubs.c
 
 # DEBEMAIL required by gpb dch
 export DEBEMAIL := sonicproject@googlegroups.com
@@ -56,6 +57,10 @@ endif
 	cp $(addprefix ../,$(SONIC_FRR_MODULE_FILES)) zebra/
 	cp $(addprefix ../,$(SONIC_FRR_TEST_FILES)) tests/zebra/
 
+	# Copy the module unit tests next to the tree they build against.
+	mkdir -p tests/sonic
+	cp $(addprefix ../,$(DPLANE_FPM_SONIC_TESTS)) tests/sonic/
+
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean
 
@@ -76,6 +81,23 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -P$${FRR_BUILD_PROFILES} -a$(CONFIGURED_ARCH) -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
 	dpkg-buildpackage -rfakeroot -b -us -uc -P$${FRR_BUILD_PROFILES} -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+endif
+
+ifeq ($(CROSS_BUILD_ENVIRON),)
+	# Build and run the dplane NHG unit tests (googletest, following the
+	# sonic-fib tests/ pattern) against the tree the package was just built
+	# from (out-of-tree build dir: build/). The module sources compile as
+	# C, the googletest cases as C++. Cross builds skip this: the test
+	# binary must run on the build host.
+	gcc -c -o /tmp/test_fpm_nhg_fpm.o zebra/fpm_nhg.c -Ibuild -I. -Ilib
+	gcc -c -o /tmp/test_fpm_nhg_stubs.o tests/sonic/stubs.c -Ibuild -I. -Ilib
+	g++ -std=gnu++17 -o /tmp/test_fpm_nhg \
+		tests/sonic/test_fpm_nhg_gtest.cpp tests/sonic/main.cpp \
+		/tmp/test_fpm_nhg_fpm.o /tmp/test_fpm_nhg_stubs.o \
+		-Ibuild -I. -Ilib \
+		-Lbuild/lib/.libs -lfrr -ljson-c -lnexthopgroup \
+		-lgtest -lpthread -lm
+	LD_LIBRARY_PATH=build/lib/.libs /tmp/test_fpm_nhg
 endif
 
 	popd
