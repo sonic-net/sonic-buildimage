@@ -72,9 +72,12 @@ class Chassis(ChassisBase):
 
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
+        from sonic_platform.psu_sensor import PsuVoltageSensor, PsuCurrentSensor
         for index in range(0, NUM_PSU):
             psu = Psu(index)
             self._psu_list.append(psu)
+            self._voltage_sensor_list.append(PsuVoltageSensor(psu, index + 1))
+            self._current_sensor_list.append(PsuCurrentSensor(psu, index + 1))
     
     def __initialize_thermals(self):
         from sonic_platform.thermal import Thermal, CpuThermal
