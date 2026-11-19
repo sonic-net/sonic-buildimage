@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 try:
+    import os
     import time
     import sys
     import syslog
@@ -52,6 +53,8 @@ class Chassis(ChassisBase):
     # List of Dcdc objects representing all dcdc
     # available on the chassis
     _dcdc_list = None
+    # The CPO construction hook sets an instance flag when first called.
+    _cpo_init_attempted = False
 
     STATUS_INSERTED = "1"
     STATUS_REMOVED = "0"
@@ -67,11 +70,15 @@ class Chassis(ChassisBase):
         self.int_case = interface()
         # Initialize SFP list
 
-        cpo_data = device_info.get_cpo_data()
-        if cpo_data:
-            # Older ChassisBase versions do not call the construction hook.
-            if not getattr(self, "_cpo_init_attempted", False):
-                self.construct_cpo_devices(cpo_data)
+        # The config file selects CPO initialization even if it cannot be loaded.
+        try:
+            cpo_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.CPO_FILE)
+        except (OSError, TypeError):
+            cpo_file = None
+        if cpo_file and os.path.isfile(cpo_file):
+            # The base class may already have attempted CPO construction.
+            if not self._cpo_init_attempted:
+                self.construct_cpo_devices(device_info.get_cpo_data())
         else:
             # sfp.py will read eeprom contents and retrive the eeprom data.
             # It will also provide support sfp controls like reset and setting
@@ -771,7 +778,7 @@ class Chassis(ChassisBase):
 
     def construct_cpo_devices(self, cpo_data):
         """Build CPO ports while allowing unrelated platform devices to initialize."""
-        if not getattr(self, "_cpo_init_attempted", False):
+        if not self._cpo_init_attempted:
             # Defaults for a failed initial CPO build; normal SFP setup is unchanged.
             self.port_start_index = 1
             self.port_num = 0
@@ -780,6 +787,8 @@ class Chassis(ChassisBase):
         self._cpo_init_attempted = True
         self._cpo_initialized = False
         try:
+            if cpo_data is None:
+                raise ValueError("cpo.json exists but could not be loaded")
             devices = cpo_data.get("devices")
             interfaces = cpo_data.get("interfaces")
             if not isinstance(devices, dict) or not devices or not isinstance(interfaces, dict) or not interfaces:
