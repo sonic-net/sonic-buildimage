@@ -359,9 +359,8 @@ is unchanged; enabling SBOM adds CycloneDX 1.6 + SPDX 2.3 + SLSA
 v1.0 in-toto provenance sidecars per built artifact, along with
 standalone CycloneDX scanner output for vulnerability reports.
 
-See [README.sbom.md](README.sbom.md) for the full design, build
-flag reference, vulnerability-report quick start, VEX workflow,
-reproducibility notes, and known limitations.
+See [README.sbom.md](README.sbom.md) for the build flags, outputs,
+architecture, vulnerability scanning, VEX and known limitations.
 
 ## Notes
 
