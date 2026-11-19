@@ -197,8 +197,10 @@ ifeq ($(SONIC_ENABLE_PFCWD_ON_START),y)
 ENABLE_PFCWD_ON_START = y
 endif
 
-ifeq ($(SONIC_INCLUDE_SYSTEM_TELEMETRY),y)
-INCLUDE_SYSTEM_TELEMETRY = y
+# Makefile.work always passes the host value, y or n; honor both so a host
+# "n" overrides the aspeed default above.
+ifneq ($(SONIC_INCLUDE_SYSTEM_TELEMETRY),)
+INCLUDE_SYSTEM_TELEMETRY = $(SONIC_INCLUDE_SYSTEM_TELEMETRY)
 endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
@@ -536,6 +538,10 @@ $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
 $(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
 $(info "INCLUDE_REDFISH"                 : "$(INCLUDE_REDFISH)")
+$(info "INCLUDE_SONIC_REDFISH"           : "$(INCLUDE_SONIC_REDFISH)")
+$(info "INCLUDE_PLATFORM_MONITOR"        : "$(INCLUDE_PLATFORM_MONITOR)")
+$(info "INCLUDE_SYSMGR"                  : "$(INCLUDE_SYSMGR)")
+$(info "ENABLE_SONIC_TARGET"             : "$(ENABLE_SONIC_TARGET)")
 $(info "INCLUDE_BOOTCHART"               : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART"                : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
