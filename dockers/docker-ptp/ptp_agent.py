@@ -7,7 +7,7 @@ import time
 from swsscommon.swsscommon import ConfigDBConnector
 
 PTP4L_CONFIGURATION = 'configuration'
-PTP4L_PTP = 'ptp'
+PTP4L_PTP = 'ptp4l'
 PTP4L_DEPENDENTS = ('telemetry', 'ptp_counters')
 PTP4L_RESTART_DELAY_SEC = 5
 
