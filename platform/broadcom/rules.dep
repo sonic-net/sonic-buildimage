@@ -13,7 +13,7 @@ include $(PLATFORM_PATH)/platform-modules-cel.dep
 #include $(PLATFORM_PATH)/platform-modules-delta.dep
 #include $(PLATFORM_PATH)/platform-modules-quanta.dep
 #include $(PLATFORM_PATH)/platform-modules-mitac.dep
-#include $(PLATFORM_PATH)/platform-modules-juniper.dep
+include $(PLATFORM_PATH)/platform-modules-juniper.dep
 #include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.dep
 #include $(PLATFORM_PATH)/platform-modules-ruijie.dep
 #include $(PLATFORM_PATH)/platform-modules-ragile.dep
