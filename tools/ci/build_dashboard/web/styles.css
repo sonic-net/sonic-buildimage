@@ -291,10 +291,10 @@ p {
 
 .legend {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   align-items: center;
-  white-space: nowrap;
-  padding-top: 17px;
+  padding: 0 25px 15px;
 }
 
 .legend span {
@@ -312,16 +312,9 @@ p {
   display: block;
 }
 
-.make-dot {
-  background: var(--teal);
-}
-
-.bazel-dot {
-  background: var(--navy);
-}
-
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 15px;
   padding: 0 25px 15px;
 }
@@ -337,6 +330,15 @@ p {
 .filters label:last-child {
   min-width: 230px;
   max-width: 410px;
+}
+
+.trend-filters label:first-child {
+  flex: 1;
+  min-width: 260px;
+}
+
+.trend-filters label:last-child {
+  min-width: 150px;
 }
 
 select {
@@ -385,6 +387,35 @@ select {
 
 .chart-point:hover .chart-marker,.chart-point:focus .chart-marker {
   r: 7;
+}
+
+.chart-preview {
+  margin: 4px 25px 0;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #f7fafb;
+  min-height: 112px;
+  font-size: .8rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.chart-preview p {
+  margin: 5px 0 0;
+}
+
+.chart-preview-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 14px;
+}
+
+.chart-preview-heading strong {
+  color: #142b40;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .panel-footnote {
@@ -761,6 +792,47 @@ tbody tr:hover {
 .recipe-failed {
   color: var(--red);
 }
+.target-analysis-panel { margin-top: 30px; }
+.target-analysis-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; margin-bottom: 18px; }
+.target-analysis-heading h2 { font-size: 1.65rem; margin: 0 0 8px; }
+.target-actions { display: flex; flex-shrink: 0; gap: 8px; }
+.target-actions button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; background: white; color: #294c5f; font-size: .8rem; }
+.target-card { min-width: 0; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 14px; background: white; overflow: hidden; }
+.target-card-summary { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 23px 26px; min-height: 100px; cursor: pointer; list-style: none; }
+.target-card-summary::-webkit-details-marker { display: none; }
+.target-card-summary::before { content: "+"; font-size: 1.3rem; font-weight: 600; color: #204458; }
+.target-card[open]>.target-card-summary::before { content: "-"; }
+.target-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.target-name>strong { font-size: 1.05rem; overflow-wrap: anywhere; }
+.diagnosis-badge { border-radius: 20px; padding: 5px 10px; background: #e7f2f2; color: #087973; font-size: .75rem; line-height: 1.3; }
+.target-duration { display: grid; gap: 3px; text-align: right; color: var(--teal); font-variant-numeric: tabular-nums; }
+.target-duration>strong { font-size: 1.9rem; font-weight: 750; line-height: 1.2; }
+.target-duration>span { font-size: .65rem; text-transform: uppercase; letter-spacing: .025em; color: var(--muted); }
+.target-card-body { padding: 20px 26px 24px; border-top: 1px solid var(--line); }
+.target-interpretation { margin: 0 0 16px; line-height: 1.6; font-size: .9rem; }
+.target-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; padding: 18px; border-radius: 10px; background: #f3f7f8; }
+.target-metrics dt { font-size: .75rem; color: var(--muted); margin-bottom: 6px; }
+.target-metrics dd { margin: 0; font-size: .95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.target-evidence { margin-top: 24px; }
+.target-evidence h4 { margin: 0 0 10px; font-size: .95rem; }
+.target-evidence-table { width: 100%; table-layout: fixed; }
+.target-evidence-table th,.target-evidence-table td { white-space: normal; overflow-wrap: anywhere; font-size: .8rem; vertical-align: top; }
+.target-evidence-table td { font-variant-numeric: tabular-nums; }
+@media(max-width:700px) {
+  .target-analysis-heading { flex-direction: column; gap: 6px; }
+  .target-card-summary { padding: 18px 14px; gap: 8px; grid-template-columns: 14px minmax(0,1fr) auto; }
+  .target-name { gap: 7px; }
+  .target-name>strong { font-size: .9rem; }
+  .target-duration>strong { font-size: 1.4rem; }
+  .target-duration>span { max-width: 95px; font-size: .58rem; }
+  .diagnosis-badge { font-size: .67rem; }
+  .target-card-body { padding: 16px 14px; }
+  .target-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 12px; }
+  .target-metrics dd { font-size: .8rem; overflow-wrap: anywhere; }
+  .target-evidence-table th,.target-evidence-table td { padding: 8px 6px; font-size: .7rem; }
+  .command-receipts { min-width: 650px; table-layout: auto; }
+  .command-receipts th,.command-receipts td { white-space: nowrap; overflow-wrap: normal; }
+}
 
 .steps {
   border-top: 1px solid var(--line);
@@ -1114,10 +1186,25 @@ footer a {
   .filters label {
     min-width: 0;
   }
+  .trend-filters label:first-child {
+    grid-column: 1/-1;
+    min-width: 0;
+  }
+  .legend {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+  .chart-preview {
+    margin-left: 17px;
+    margin-right: 17px;
+  }
   .filters label:last-child {
     grid-column: 1/-1;
     min-width: 0;
     max-width: none;
+  }
+  .trend-filters label:last-child {
+    grid-column: auto;
   }
   .trend {
     padding: 0 4px;

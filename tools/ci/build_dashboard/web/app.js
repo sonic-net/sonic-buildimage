@@ -9,12 +9,24 @@ const HOST_VS_BUILD_STEP = "Build sonic-vs.bin through the host Make wrapper";
 const IMAGE_STEP_LABELS = {
   [HOST_VS_BUILD_STEP]: "VS installer (.bin) and paired image archives through host Make",
   "Build the VS installer (.bin)": "VS installer (.bin); VM generation and boot checks excluded",
+  "Build sonic-vs.bin directly with slave.mk": "VS installer (.bin), direct slave.mk; VM generation and boot checks excluded",
   "Build the VS image": "VS build with embedded boot checks; post-build validation excluded",
   "Build the VS image with Bazel SWSS archives": "Build the VS image with Bazel SWSS archives",
   "Build the VS image and both OCI container variants": "VS build, OCI follow-up and archive validation",
   "Build the Bazel VS installer": "Build the Bazel VS installer",
   "Build Bazel VS installer": "Build Bazel VS installer",
   "Build and verify sonic-vs.bin with Bazel": "Build and verify sonic-vs.bin with Bazel",
+};
+const IMAGE_SERIES_STYLES = {
+  [HOST_VS_BUILD_STEP]: ["Host Make .bin + archives", "#b02c45"],
+  "Build the VS installer (.bin)": ["Outer Make .bin", "#007f78"],
+  "Build sonic-vs.bin directly with slave.mk": ["Direct slave .bin", "#a34d12"],
+  "Build the VS image": ["Legacy VM image", "#7458a6"],
+  "Build the VS image with Bazel SWSS archives": ["Legacy VM + SWSS archives", "#8d4773"],
+  "Build the VS image and both OCI container variants": ["Legacy image + OCI validation", "#536775"],
+  "Build the Bazel VS installer": ["Installer build", "#23548a"],
+  "Build Bazel VS installer": ["Installer build (earlier step)", "#356aa0"],
+  "Build and verify sonic-vs.bin with Bazel": ["Installer + verification", "#5165a0"],
 };
 // Keep this vocabulary in sync with breakdown.py. Never display labels or log text from a snapshot.
 const SECTION_LABELS = {
@@ -76,6 +88,19 @@ const RECIPE_METRICS = [
   ["fetch_seconds", "Cache fetch", "profiles", "profiles_expected"],
   ["export_seconds", "Export", "exports", "exports_expected"],
 ];
+const BUILD_EVIDENCE = {
+  repository_seconds: "Repository preparation",
+  repository_read_seconds: "Repository input reads/waits",
+  compile_seconds: "Compiler subprocesses",
+  foreign_seconds: "Nested build subprocesses",
+  packaging_seconds: "Image/tar/gzip critical path",
+  package_selection_seconds: "APT selection critical path",
+  validation_seconds: "Identity/source validation critical path",
+  fetch_seconds: "Cache input/output fetch",
+  cache_write_seconds: "Cache write spans (not proof of remote upload)",
+  arm64_repository_seconds: "ARM64 package repository preparation",
+  armhf_repository_seconds: "ARMHF package repository preparation",
+};
 const state = {data: null, selectedRun: null, selectedJob: null, loading: false};
 
 function seconds(value) { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null; }
@@ -252,6 +277,39 @@ function imageMeasurements(snapshot) {
   }
   const records = [...unique.values()].sort((a, b) => timestamp(b.execution.startedAt) - timestamp(a.execution.startedAt) || b.run.attempt - a.run.attempt || b.run.run_id - a.run.run_id);
   return {records, unverified};
+}
+function imageSeries(job) {
+  const measurement = imageMeasurement(job);
+  const names = measurement.signature === null ? [] : JSON.parse(measurement.signature);
+  const styles = names.map(name => Object.hasOwn(IMAGE_SERIES_STYLES, name) ?
+    IMAGE_SERIES_STYLES[name] : [IMAGE_STEP_LABELS[name] ?? "Unknown image step", "#536775"]);
+  const label = styles.length ? styles.map(style => style[0]).join(" + ") : "Boundary unknown";
+  return {
+    key: JSON.stringify([job.kind, job.architecture || "unknown", measurement.signature]),
+    label: `${kindLabel(job)} · ${label} · ${architecture(job)}`,
+    color: styles.length === 1 ? styles[0][1] : "#536775",
+  };
+}
+function selectTrendPoints(points, {series = "all", days = "all", limit = "60", reference = Date.now()} = {}) {
+  const cutoff = days === "all" ? null : reference - Number(days) * 86400000;
+  const matching = points.filter(item => (series === "all" || imageSeries(item.job).key === series) &&
+    (cutoff === null || (timestamp(item.execution?.startedAt) >= cutoff && timestamp(item.execution?.startedAt) <= reference)))
+    .sort((a, b) => timestamp(b.execution?.startedAt) - timestamp(a.execution?.startedAt) || b.run.attempt - a.run.attempt || b.run.run_id - a.run.run_id);
+  return {matching, points: (limit === "all" ? [...matching] : matching.slice(0, Number(limit))).reverse()};
+}
+function chartScale(maximum) {
+  const target = Math.max(1, maximum * 1.08) / 5;
+  const step = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400]
+    .find(value => value >= target) || Math.ceil(target / 86400) * 86400;
+  const end = Math.ceil(Math.max(1, maximum * 1.08) / step) * step;
+  return {maximum: end, ticks: Array.from({length: end / step + 1}, (_, index) => index * step)};
+}
+function imageBreakdownLabel(job) {
+  const details = (Array.isArray(job.steps) ? job.steps : []).filter(step => Object.hasOwn(IMAGE_STEP_LABELS, step?.name))
+    .map(step => normalizeBreakdown(step.breakdown));
+  const available = details.filter(detail => detail?.status === "available").length;
+  return available ? available === details.length ? "Measured breakdown" : "Partial breakdown" :
+    details.some(Boolean) ? "Breakdown unavailable" : "Breakdown not recorded";
 }
 function imageResult(jobs) {
   const outcomes = jobs.filter(imageJob).map(result);
@@ -453,25 +511,45 @@ function renderTrend() {
   const measurements = imageMeasurements(state.data);
   const all = measurements.records.filter(item => matchesRun(item.run) && matchesJob(item.job));
   const unverified = measurements.unverified.filter(item => matchesRun(item.run) && matchesJob(item.job)).length;
-  const points = all.slice(0, 60).reverse();
+  const select = byId("series-filter"), old = select.value;
+  const series = [...new Map(all.map(item => { const value = imageSeries(item.job); return [value.key, value]; })).values()]
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const option = el("option", "", "All measurement series (scatter)"); option.value = "all";
+  select.replaceChildren(option);
+  for (const value of series) {
+    const option = el("option", "", value.label); option.value = value.key; select.append(option);
+  }
+  select.value = series.some(value => value.key === old) ? old : "all";
+  const {matching, points} = selectTrendPoints(all, {
+    series: select.value, days: byId("date-filter").value, limit: byId("limit-filter").value,
+    reference: timestamp(state.data.generated_at) ?? Date.now(),
+  });
   const container = byId("trend");
   container.replaceChildren();
-  byId("trend-note").textContent = `Showing ${points.length} of ${all.length} matching verified image executions; carried retries count once and ${unverified} unverified records are omitted. Dates are image step or job execution starts. Select a point to inspect its job. Lines join only the same build path, architecture and measured step; they do not imply a controlled comparison.`;
-  if (!points.length) { container.append(el("p", "empty", "No verified successful image executions match these filters.\nFailed, skipped, pending, and unverified records remain visible below.")); return; }
+  const legend = byId("history-legend"); legend.replaceChildren();
+  for (const value of series.filter(value => points.some(item => imageSeries(item.job).key === value.key))) {
+    const item = el("span"), dot = el("i"); dot.style.backgroundColor = value.color; dot.setAttribute("aria-hidden", "true");
+    item.append(dot, document.createTextNode(value.label)); legend.append(item);
+  }
+  legend.hidden = !points.length;
+  const preview = byId("trend-preview");
+  preview.replaceChildren(el("p", "", "Hover or focus a point to inspect its measurement, source revision and breakdown availability. Select it to open the full run details."));
+  byId("trend-note").textContent = `${points.length < matching.length ? `Showing the newest ${points.length} of ${matching.length}` : `Showing all ${points.length}`} matching verified image executions; carried retries count once and ${unverified} unverified records are omitted. ${select.value === "all" ? "Scatter overview: select one measurement series to show its trend." : "Lines join only one build path, architecture and exact measured step."} Dates are image step or job execution starts, and date ranges end at the published snapshot. Cache state and runner configuration are not controlled; this is not a performance comparison.`;
+  if (!points.length) { container.append(el("p", "empty", "No successful image measurements with verified execution times match these filters.\nFailed, skipped, pending, and unverified records remain visible below.")); return; }
   const padding = getComputedStyle(container);
   const width = Math.max(240, Math.round(container.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight)));
   const height = width < 520 ? 250 : 265;
   const left = 55, right = 40, top = 19, bottom = 41;
-  const maxSeconds = Math.max(60, ...points.map(item => item.job.image_build_seconds)) * 1.14;
+  const scale = chartScale(points.reduce((maximum, item) => Math.max(maximum, item.job.image_build_seconds), 0));
+  const maxSeconds = scale.maximum;
   const firstTime = Math.min(...points.map(item => timestamp(item.execution.startedAt)));
   const lastTime = Math.max(...points.map(item => timestamp(item.execution.startedAt)));
   const x = item => lastTime === firstTime ? (width + left - right) / 2 : left + (timestamp(item.execution.startedAt) - firstTime) / (lastTime - firstTime) * (width - left - right);
   const y = item => top + (1 - item.job.image_build_seconds / maxSeconds) * (height - top - bottom);
-  const svg = svgEl("svg", {viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "Successful image build times, in minutes, ordered by image execution start time. Each point opens run details."});
-  for (let step = 0; step <= 4; step++) {
-    const value = maxSeconds * step / 4;
-    const position = top + (1 - step / 4) * (height - top - bottom);
-    svg.append(svgEl("line", {x1: left, y1: position, x2: width - right, y2: position, stroke: "#e6edef", "stroke-dasharray": step ? "3 4" : "0"}), svgEl("text", {x: left - 11, y: position + 4, "text-anchor": "end"}, `${Math.round(value / 60)}m`));
+  const svg = svgEl("svg", {viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "Successful image build durations, ordered by image execution start time. Each point opens run details."});
+  for (const value of scale.ticks) {
+    const position = top + (1 - value / maxSeconds) * (height - top - bottom);
+    svg.append(svgEl("line", {x1: left, y1: position, x2: width - right, y2: position, stroke: "#e6edef", "stroke-dasharray": value ? "3 4" : "0"}), svgEl("text", {x: left - 11, y: position + 4, "text-anchor": "end"}, value ? duration(value).replace(/ 0[ms]$/, "") : "0"));
   }
   const dateCount = lastTime === firstTime ? 1 : width < 400 ? 2 : width < 700 ? 3 : 5;
   for (let index = 0; index < dateCount; index++) {
@@ -479,18 +557,28 @@ function renderTrend() {
     const tick = firstTime + (lastTime - firstTime) * fraction;
     svg.append(svgEl("text", {x: left + fraction * (width - left - right), y: height - 13, "text-anchor": "middle"}, dateTime(new Date(tick).toISOString(), true)));
   }
-  for (const items of imageTrendGroups(points)) {
-    const color = items[0].job.kind === "make-vs" ? "#007f78" : "#23548a";
+  for (const items of select.value === "all" ? [] : imageTrendGroups(points).filter(items => items.length > 1)) {
+    const color = imageSeries(items[0].job).color;
     const line = svgEl("polyline", {points: items.map(item => `${x(item)},${y(item)}`).join(" "), fill: "none", stroke: color, "stroke-opacity": ".45", "stroke-width": "2", "stroke-dasharray": items[0].job.architecture === "arm64" ? "5 4" : "0"});
     svg.append(line);
   }
   for (const item of points) {
     const prs = prNumbers(item.run).map(number => `PR #${number}`).join(", ") || item.run.branch || "Branch build";
-    const label = `${prs} · ${kindLabel(item.job)} · ${architecture(item.job)} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
+    const source = String(item.run.source_sha || "unknown").slice(0, 12), breakdown = imageBreakdownLabel(item.job);
+    const label = `${prs} · ${imageSeries(item.job).label} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · Source ${source} · ${breakdown} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
     const point = svgEl("g", {class: "chart-point", tabindex: "0", role: "button", "aria-label": label});
     point.append(svgEl("title", {}, label));
     point.append(svgEl("circle", {cx: x(item), cy: y(item), r: 17, fill: "transparent", "pointer-events": "all"}));
-    point.append(svgEl("circle", {class: "chart-marker", cx: x(item), cy: y(item), r: 4.5, fill: item.job.kind === "make-vs" ? "#007f78" : "#23548a", stroke: "white", "stroke-width": 2, "pointer-events": "none"}));
+    point.append(svgEl("circle", {class: "chart-marker", cx: x(item), cy: y(item), r: 4.5, fill: imageSeries(item.job).color, stroke: "white", "stroke-width": 2, "pointer-events": "none"}));
+    const inspect = () => {
+      const heading = el("div", "chart-preview-heading");
+      heading.append(el("strong", "", duration(item.job.image_build_seconds)), el("span", "", imageSeries(item.job).label));
+      preview.replaceChildren(heading,
+        el("p", "", `${item.run.workflow_name || "Workflow"} · ${prs} · ${source} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`),
+        el("p", "", `${imageMeasurement(item.job).label}. ${breakdown}.`));
+    };
+    point.addEventListener("mouseenter", inspect);
+    point.addEventListener("focus", inspect);
     point.addEventListener("click", () => setSelected(item.run, item.job.job_id));
     point.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); setSelected(item.run, item.job.job_id); } });
     svg.append(point);
@@ -678,12 +766,201 @@ function recipeRows(value) {
       if (row[count] === 0 ? row[metric] !== null :
           seconds(row[metric]) === null || row[metric] > Number.MAX_SAFE_INTEGER) return null;
     }
+    if (Object.hasOwn(raw, "build") && (legacy || !validBuildEvidence(raw.build, row))) return null;
+    if (Object.hasOwn(raw, "details") && (legacy || !validNamedEvidence(raw.details, row))) return null;
     owners.add(row.owner);
     // Only Bazel commands and the separate exports contribute to this sum.
     const recorded = row.bazel_phases || row.exports ? (row.bazel_seconds ?? 0) + (row.export_seconds ?? 0) : null;
     result.push({...row, recorded});
   }
   return result.sort((a, b) => (b.recorded ?? -1) - (a.recorded ?? -1) || a.owner.localeCompare(b.owner));
+}
+
+function validBuildEvidence(build, row) {
+  if (build === null) return true;
+  const metrics = ["lock_seconds", ...Object.keys(BUILD_EVIDENCE)];
+  const fields = ["expected", "timings", "profiles", "seconds", ...metrics];
+  if (!build || typeof build !== "object" || Object.keys(build).length !== fields.length ||
+      fields.some(key => !Object.hasOwn(build, key)) ||
+      !Number.isInteger(build.expected) || build.expected < 1 || build.expected > row.bazel_expected ||
+      !Number.isInteger(build.timings) || build.timings < 0 || build.timings > Math.min(build.expected, row.bazel_phases) ||
+      !Number.isInteger(build.profiles) || build.profiles < 0 || build.profiles > Math.min(build.expected, row.profiles)) return false;
+  for (const [count, keys] of [["timings", ["seconds"]], ["profiles", metrics]]) {
+    if (keys.some(key => build[count] ? seconds(build[key]) === null || build[key] > Number.MAX_SAFE_INTEGER : build[key] !== null)) return false;
+  }
+  return build.timings !== build.expected || build.profiles !== build.expected || build.lock_seconds <= build.seconds;
+}
+
+function buildNonlock(row) {
+  const b = row.build;
+  return b && b.expected === b.timings && b.expected === b.profiles ? b.seconds - b.lock_seconds : null;
+}
+
+const CRITICAL_KINDS = {
+  OCIImage: "OCI image", OCITarball: "OCI tarball", OCITarballManifest: "OCI tar manifest",
+  Gzip: "Gzip compression", APTDebug: "Select debug APT additions", APTRuntime: "Select runtime APT additions",
+  ValidatePackages: "Validate installed package identities", ValidateSource: "Validate source/runtime identities",
+  GoCompilePkg: "Go package compilation", GoLink: "Go linking", GoStdlib: "Go standard library",
+  GoToolchainBinaryBuild: "Go toolchain builder", PackageControls: "Derive Debian package controls",
+  Unpack: "Unpack package", KernelBuild: "Kernel package action", KernelTools: "Prepare kernel build tools", Genrule: "Genrule",
+};
+function evidenceFields(value, fields) {
+  return value && typeof value === "object" && !Array.isArray(value) &&
+    Object.keys(value).length === fields.length && fields.every(key => Object.hasOwn(value, key));
+}
+function publicTarget(value) {
+  return value === null || typeof value === "string" && value.length <= 240 &&
+    /^(?:(?:@{1,2}[A-Za-z0-9_.+~-]+)?\/\/[A-Za-z0-9_+./~-]*:[A-Za-z0-9_+./~-]+|(?:platform|dockers|tools|src|external)\/[A-Za-z0-9_+./~-]+)$/.test(value) &&
+    !/\s/.test(value) && !value.split(/[/:]/).some(part => part === "." || part === "..");
+}
+function validNamedEvidence(value, row) {
+  const groups = ["repositories", "critical_path", "phases"], numeric = value => seconds(value) !== null && value <= Number.MAX_SAFE_INTEGER;
+  if (!evidenceFields(value, ["scope", "expected", "profiles", "phase_count", ...groups]) ||
+      !["build", "kernel-build", "unavailable"].includes(value.scope) ||
+      ["expected", "profiles", "phase_count"].some(key => !Number.isInteger(value[key]) || value[key] < 0 || value[key] > (key === "phase_count" ? 131070 : 65535)) ||
+      value.profiles > Math.min(value.expected, row.profiles) || value.phase_count !== row.bazel_phases + row.exports ||
+      groups.some(key => !Array.isArray(value[key]) || value[key].length > 8) ||
+      value.phases.length !== Math.min(8, value.phase_count)) return false;
+  if (value.scope === "build" && (!row.build || value.expected !== row.build.expected || value.profiles !== row.build.profiles) ||
+      value.scope === "kernel-build" && (row.owner !== "linux-kernel" || row.build != null) ||
+      value.scope === "unavailable" && (value.expected || value.profiles) ||
+      !value.profiles && (value.repositories.length || value.critical_path.length)) return false;
+  return value.repositories.every(span => evidenceFields(span, ["name", "seconds", "read_count", "read_seconds"]) &&
+    typeof span.name === "string" && /^\/\/:[A-Za-z0-9_.+~-]{1,188}$/.test(span.name) && !/\s/.test(span.name) &&
+    numeric(span.seconds) && numeric(span.read_seconds) && span.read_seconds <= span.seconds + 1e-6 &&
+    Number.isInteger(span.read_count) && span.read_count >= 0 && span.read_count <= 1000000) &&
+    value.critical_path.every(span => evidenceFields(span, ["kind", "target", "seconds"]) &&
+      typeof span.kind === "string" && Object.hasOwn(CRITICAL_KINDS, span.kind) && publicTarget(span.target) && numeric(span.seconds)) &&
+    value.phases.every(phase => evidenceFields(phase, ["phase", "seconds", "lock_seconds", "start_epoch_seconds", "exit_code"]) &&
+      typeof phase.phase === "string" && /^[A-Za-z0-9][A-Za-z0-9_.+-]{0,191}$/.test(phase.phase) && !/\s/.test(phase.phase) &&
+      numeric(phase.seconds) && (phase.lock_seconds === null || numeric(phase.lock_seconds)) &&
+      (phase.start_epoch_seconds === null || numeric(phase.start_epoch_seconds) && phase.start_epoch_seconds <= 253402300799) &&
+      Number.isInteger(phase.exit_code) && phase.exit_code >= 0 && phase.exit_code <= 255);
+}
+function readable(elapsed) {
+  if (elapsed === null || elapsed === undefined) return "Unavailable";
+  if (elapsed > 0 && elapsed < 0.01) return "<0.01s";
+  if (elapsed > 0 && elapsed < 1) return elapsed.toFixed(2) + "s";
+  const rounded = Math.round(elapsed), hours = Math.floor(rounded / 3600), minutes = Math.floor(rounded % 3600 / 60), secs = rounded % 60;
+  return hours ? `${hours}h${String(minutes).padStart(2, "0")}m${String(secs).padStart(2, "0")}s` :
+    minutes ? `${minutes}m${String(secs).padStart(2, "0")}s` : `${secs}s`;
+}
+function measuredDuration(elapsed) {
+  return readable(elapsed) + (elapsed >= 1 ? ` (${elapsed.toFixed(2)}s)` : "");
+}
+function cardTime(row) {
+  return buildNonlock(row) ?? (row.owner === "linux-kernel" && row.bazel_phases === row.bazel_expected ? row.bazel_seconds : null);
+}
+function buildDiagnosis(row) {
+  const b = row.build;
+  if (!b) return row.owner === "linux-kernel" ? "Isolated kernel launcher" : "Detailed profiling unavailable";
+  if (!b.profiles) return "Build profile unavailable";
+  const critical = row.details?.critical_path ?? [], repositories = row.details?.repositories ?? [];
+  const debug = critical.some(span => ["Gzip", "OCIImage", "OCITarball"].includes(span.kind) && span.target?.includes("-dbg"));
+  const primary = Object.keys(BUILD_EVIDENCE).sort((a, c) => (b[c] ?? 0) - (b[a] ?? 0))[0];
+  if (!b[primary]) return "Analysis/setup not fully attributed";
+  if (["repository_seconds", "repository_read_seconds"].includes(primary)) {
+    if (repositories.some(span => span.name.includes("++gcc+") || span.name.includes("++sysroots+"))) return "Toolchain and repository preparation";
+    return b.packaging_seconds ? `Repository preparation + ${debug ? "debug" : "image"} packaging` : "Repository preparation";
+  }
+  if (primary === "compile_seconds" && critical.some(span => span.kind === "GoCompilePkg") && critical.some(span => span.kind === "GoLink")) return "Go compilation and linking";
+  return {
+    packaging_seconds: b.validation_seconds ? `${debug ? "Debug" : "Image"} packaging and validation` : "Image/archive processing",
+    compile_seconds: "Source compilation", foreign_seconds: "Nested build subprocesses",
+    package_selection_seconds: "APT selection and package assembly", validation_seconds: "Source and package identity validation",
+    cache_write_seconds: "Cache I/O and output processing", fetch_seconds: "Cache input/output fetch",
+  }[primary] || BUILD_EVIDENCE[primary];
+}
+
+function buildExplanation(row) {
+  const b = row.build;
+  if (!b) return row.owner === "linux-kernel" ?
+    "Separate kernel launcher: bootstrap, build, output query and module resolution; not a directly comparable image build." :
+    "Detailed build-only evidence was not recorded.";
+  if (!b.profiles) return "Build profile unavailable; no cause inferred from elapsed time.";
+  const evidence = Object.entries(BUILD_EVIDENCE).filter(([key]) => b[key] > 0).sort((a, c) => b[c[0]] - b[a[0]]);
+  let text = evidence.length ? `Largest recorded work category: ${evidence[0][1]} (${readable(b[evidence[0][0]])}${b.profiles < b.expected ? ", partial" : ""}).` :
+    "No matching work spans recorded; remaining analysis/setup work is not attributed.";
+  if (buildNonlock(row) !== null) {
+    if (b.lock_seconds > b.seconds / 2) text = "Most build-command elapsed time was server lock waiting. " + text;
+    if (row.profiles === row.profiles_expected && row.lock_seconds > b.lock_seconds) {
+      text += ` Other-command lock wait: ${recipeSeconds(row.lock_seconds - b.lock_seconds)}.`;
+    }
+  }
+  return text;
+}
+
+function evidenceTable(title, columns, rows, empty) {
+  const section = el("section", "target-evidence");
+  section.append(el("h4", "", title));
+  if (!rows.length) { section.append(el("p", "stage-note", empty)); return section; }
+  const scroll = el("div", "table-scroll"), table = el("table", `target-evidence-table${columns.length === 5 ? " command-receipts" : ""}`), head = el("thead"), tr = el("tr"), body = el("tbody");
+  scroll.tabIndex = 0; scroll.setAttribute("role", "region"); scroll.setAttribute("aria-label", title);
+  for (const column of columns) {
+    const th = el("th", "", column); th.setAttribute("scope", "col"); tr.append(th);
+  }
+  head.append(tr);
+  for (const values of rows) {
+    const tr = el("tr");
+    for (const value of values) tr.append(el("td", "", value));
+    body.append(tr);
+  }
+  table.append(head, body); scroll.append(table); section.append(scroll);
+  return section;
+}
+
+function renderBuildExplanations(rows, context = "") {
+  const box = el("section", "recipe-explanations");
+  const heading = el("div", "target-analysis-heading"), title = el("div"), actions = el("div", "target-actions"), cards = [];
+  title.append(el("h2", "", "Why each target took its time"),
+    el("p", "stage-note", `${context ? context + " · " : ""}${rows.length} targets · ordered by build elapsed excluding lock. Kernel launcher elapsed has a different scope.`));
+  for (const [label, open] of [["Expand visible", true], ["Collapse visible", false]]) {
+    const button = el("button", "", label); button.type = "button";
+    button.addEventListener("click", () => { for (const card of cards) card.open = open; }); actions.append(button);
+  }
+  heading.append(title, actions); box.append(heading);
+  for (const row of [...rows].sort((a, b) => (cardTime(b) ?? -1) - (cardTime(a) ?? -1) || a.owner.localeCompare(b.owner))) {
+    const card = el("details", "target-card"), summary = el("summary", "target-card-summary"), name = el("span", "target-name");
+    const build = row.build, details = row.details, scope = row.owner === "linux-kernel" && !build ? "Launcher elapsed" : "Build excluding lock";
+    name.append(el("strong", "", row.owner + (row.owner === "linux-kernel" ? " *" : "")), el("span", "diagnosis-badge", buildDiagnosis(row)));
+    if (row.failed) name.append(el("small", "recipe-failed", "Command failed"));
+    const time = el("span", "target-duration"); time.append(el("strong", "", readable(cardTime(row))), el("span", "", scope));
+    summary.append(name, time);
+    const body = el("div", "target-card-body"), metrics = el("dl", "target-metrics");
+    body.append(el("p", "target-interpretation", buildExplanation(row)));
+    const otherLock = build && build.profiles === build.expected && row.profiles === row.profiles_expected ?
+      Math.max(0, row.lock_seconds - build.lock_seconds) : null;
+    for (const [label, value] of [
+      [scope, cardTime(row)], ["Build elapsed", build?.seconds ?? null], ["Build lock", build?.lock_seconds ?? null],
+      ["Other-command lock", otherLock], ["All command elapsed", row.bazel_seconds], ["Exports", row.export_seconds],
+    ]) {
+      const metric = el("div"); metric.append(el("dt", "", label), el("dd", "", measuredDuration(value))); metrics.append(metric);
+    }
+    body.append(metrics);
+    if (build) {
+      body.append(el("p", "stage-note", `Build coverage: ${build.timings}/${build.expected} receipts; ${build.profiles}/${build.expected} profiles. All-command/export metrics retain recorded partial coverage shown in Run details.`),
+        evidenceTable("Recorded work categories", ["Category", "Observed span coverage"],
+          Object.entries(BUILD_EVIDENCE).filter(([key]) => build[key] > 0).map(([key, label]) => [label, measuredDuration(build[key])]),
+          "No matching work-category spans recorded."));
+    }
+    if (details) {
+      body.append(el("p", "stage-note", `Named evidence: ${details.profiles}/${details.expected} build profiles. Up to eight longest recognized repository/action spans are retained, not an exhaustive partition.${details.scope === "kernel-build" ? " Kernel spans describe its build profile only, not the whole launcher." : ""}`),
+        evidenceTable("Longest repository spans", ["Repository", "Span", "Nested reads/waits"],
+          details.repositories.map(span => [span.name, measuredDuration(span.seconds), `${span.read_count} reads; ${measuredDuration(span.read_seconds)}`]),
+          details.profiles ? "No recognized repository spans recorded." : "Build profile unavailable."),
+        evidenceTable("Longest critical-path actions", ["Action", "Target / output", "Span"],
+          details.critical_path.map(span => [CRITICAL_KINDS[span.kind], span.target ?? "—", measuredDuration(span.seconds)]),
+          details.profiles ? "No recognized critical-path actions recorded." : "Build profile unavailable."),
+        evidenceTable(`Command receipts (${details.phases.length}/${details.phase_count} shown)`, ["Phase", "Requested (UTC)", "Elapsed", "Lock", "Exit"],
+          details.phases.map(phase => [phase.phase, phase.start_epoch_seconds === null ? "Unavailable" :
+            new Date(phase.start_epoch_seconds * 1000).toISOString().replace("T", " "), measuredDuration(phase.seconds),
+          measuredDuration(phase.lock_seconds), String(phase.exit_code)]), "No command receipts recorded."),
+        el("p", "stage-note", "Receipts include server lock waiting; queries and exports are not included in the build-only ranking. Missing lock profiles are not zero. Receipt tables scroll horizontally on narrow screens."));
+    } else body.append(el("p", "stage-note", "Named spans were not recorded for this historical run."));
+    card.append(summary, body); cards.push(card); box.append(card);
+  }
+  box.append(el("p", "stage-note", "Evidence spans overlap and must not be added. Repository reads can wait for other repositories; packaging and critical-path actions can include cached-output materialization rather than execution. Cache writes do not establish remote publication. ARM repository spans do not prove unnecessary work or achievable savings. Unattributed analysis/setup work remains. * Kernel launcher elapsed is not directly comparable to image build-only time."));
+  return box;
 }
 
 const recipeNumber = new Intl.NumberFormat(undefined, {maximumFractionDigits: 3});
@@ -756,6 +1033,8 @@ function renderRecipeTimings(job, repository) {
 
 function renderDetails() {
   const box = byId("details"); box.replaceChildren();
+  const analysis = byId("target-analysis");
+  if (analysis) { analysis.replaceChildren(); analysis.hidden = true; }
   const run = state.data.runs.find(item => runKey(item) === state.selectedRun);
   if (!run) { box.append(el("p", "empty", "Select a chart point, pull request, or workflow run to see its timing breakdown.")); return; }
   const heading = el("p", "detail-meta");
@@ -812,6 +1091,11 @@ function renderDetails() {
   box.append(bar, legend, el("p", "stage-note", "Stage totals sum recorded step durations. They may not equal job elapsed time, and the build phase can include more work than the image build step. Step times exclude queue time. Total elapsed can include waiting for a runner when a job never starts. Cache state and runner comparability are unknown."));
   const recipes = renderRecipeTimings(job, state.data.repository);
   if (recipes) box.append(recipes);
+  const targetRows = recipes && recipeRows(job.image_recipe_timings);
+  if (analysis && targetRows?.length) {
+    analysis.append(renderBuildExplanations(targetRows, `Run ${run.run_id} · ${job.name}`));
+    analysis.hidden = false;
+  }
   const steps = el("details", "steps"); steps.append(el("summary", "", `Step timings · ${job.steps.length} steps`));
   const list = el("ol");
   for (const step of job.steps) list.append(renderStep(step));
@@ -844,6 +1128,7 @@ async function refresh() {
 if (typeof document !== "undefined") {
   byId("refresh").addEventListener("click", refresh);
   for (const id of ["path-filter", "arch-filter", "pr-filter"]) byId(id).addEventListener("change", () => { if (state.data) renderFiltered(); });
+  for (const id of ["series-filter", "date-filter", "limit-filter"]) byId(id).addEventListener("change", () => { if (state.data) renderTrend(); });
   let chartWidth = 0;
   const chartResize = new ResizeObserver(entries => {
     const width = Math.round(entries[0].contentRect.width);
@@ -856,4 +1141,4 @@ if (typeof document !== "undefined") {
   refresh();
   setInterval(() => { if (!document.hidden) refresh(); }, 300000);
 }
-if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, coverageRows, baseSummary, prStateLabel};
+if (typeof module !== "undefined") module.exports = {seconds, duration, timestamp, safeGithubUrl, validateSnapshot, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, imageSeries, selectTrendPoints, chartScale, imageBreakdownLabel, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, recipeRows, renderBuildExplanations, coverageRows, baseSummary, prStateLabel};

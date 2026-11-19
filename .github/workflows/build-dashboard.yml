@@ -10,6 +10,8 @@ on:
       - '.github/workflows/build-dashboard.yml'
       - '.github/workflows/bazel-oci.yml'
       - 'tools/ci/build_dashboard/**'
+      - 'tools/bazel/ci/summarize_vs_image_timings.py'
+      - 'tools/bazel/tests/vs_image_timing_summary_test.py'
       - 'slave.mk'
       - 'update_screen.sh'
       - 'build_debian.sh'
@@ -26,6 +28,8 @@ on:
       - '.github/workflows/build-dashboard.yml'
       - '.github/workflows/bazel-oci.yml'
       - 'tools/ci/build_dashboard/**'
+      - 'tools/bazel/ci/summarize_vs_image_timings.py'
+      - 'tools/bazel/tests/vs_image_timing_summary_test.py'
       - 'slave.mk'
       - 'update_screen.sh'
       - 'build_debian.sh'
@@ -109,6 +113,8 @@ jobs:
           migrated-job: 'true'
       - name: Test metadata collection
         run: python3 -B -m unittest discover -s tools/ci/build_dashboard -p 'test_*.py' -v
+      - name: Test profile evidence and workflow summary
+        run: python3 -B tools/bazel/tests/vs_image_timing_summary_test.py
       - name: Check dashboard JavaScript
         run: |
           node --check tools/ci/build_dashboard/web/app.js

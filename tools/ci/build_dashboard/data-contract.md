@@ -97,6 +97,50 @@ file, without dropping records or replacing the previous output on overflow.
   Version 1 history keeps `images` for FRR, mux, TeamD and Syncd VS, with
   three command timings, three profiles and two exports expected per pair.
   Jobs predating the profiling step omit this field.
+  Version 2 rows may additionally contain `build`: `null` for non-image-launcher
+  scopes, or a strictly allowlisted numeric object. `expected`, `timings` and
+  `profiles` count explicit build commands, their receipts and their profiles.
+  `seconds` is the summed build receipt time. `lock_seconds`, `compile_seconds`,
+  `foreign_seconds`, `fetch_seconds`, `repository_seconds`,
+  `repository_read_seconds`, `packaging_seconds`, `cache_write_seconds`,
+  `package_selection_seconds`, `validation_seconds`,
+  `arm64_repository_seconds` and `armhf_repository_seconds` cover only those
+  build profiles, with per-category interval unions inside each invocation.
+  Repository input reads must be enclosed by a repository call on the same thread.
+  Packaging covers matching OCI image, tar/manifest and gzip critical-path spans,
+  not duplicate action-processing records. ARM fields describe observed package
+  repositories, not whether the work was necessary. Counts cannot exceed their
+  parent recipe coverage. Missing source counts require null metrics. Non-lock
+  build time is derived only with complete matching receipts and profiles and
+  cannot be negative. Older rows without this field remain valid and display
+  missing diagnostic evidence, not zero-duration work. No repository labels,
+  action names, commands, environment or log text are retained in this object.
+  Version 2 rows may also contain `details` for bounded named evidence:
+  - `scope` is `build`, `kernel-build`, or `unavailable`. `expected` and `profiles`
+    describe the build-profile coverage; kernel spans do not cover the whole launcher.
+  - `repositories` retains up to eight longest individual repository spans:
+    `name`, `seconds`, `read_count`, `read_seconds`. Names must be canonical
+    `//:` repository identifiers containing only ASCII letters/digits and
+    `_ . + ~ -`, with at most 188 identifier characters. Read coverage is the
+    interval union of enclosed same-thread `read` spans, not parsing CPU time.
+  - `critical_path` retains up to eight longest recognized actions: `kind`,
+    `target`, `seconds`. Kinds are allowlisted packaging, APT selection,
+    validation, Go build, package-control, unpack, kernel or genrule categories.
+    Targets are null or validated Bazel labels/workspace-relative output paths,
+    at most 240 characters. Absolute paths, traversal, arguments and raw
+    free-form action descriptions are not accepted.
+  - `phases` retains the first eight recorded receipts in request-clock order
+    where available: `phase`, `seconds`, `lock_seconds`, `start_epoch_seconds`,
+    `exit_code`. Phase names use the owner identifier alphabet/length.
+    Missing clocks and lock profiles are null, not zero. `phase_count` records
+    all observed command/export receipts, including any beyond the retained eight.
+    Repeated invocations contribute individual spans, not summed same-name spans.
+  Each list is sent in a separate `evidence` marker with `owner`, `group`, and
+  `values`, following its recipe marker's metadata and three empty list placeholders.
+  The final count trailer adds `evidence_count`. All three groups, even empty,
+  must arrive once for every detailed recipe; missing, duplicate, oversized or
+  unbound groups invalidate the receipt. Each marker remains at most 4096 bytes.
+  Old count-only trailers and rows without named evidence remain valid.
 - Each step: `number`, `name`, `status`, `conclusion`, `started_at`,
   `completed_at`, `duration_seconds`, `phase`.
   An optional `breakdown` provides nested Make build timings without changing

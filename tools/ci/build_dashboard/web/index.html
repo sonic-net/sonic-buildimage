@@ -43,12 +43,8 @@
         <div class="panel-heading">
           <div>
             <p class="eyebrow">SUCCESSFUL IMAGE BUILDS</p>
-            <h2 id="history-title">Build time over time</h2>
+            <h2 id="history-title">Image build duration</h2>
             <p>Image build step only; setup, checks, and uploads are separate.</p>
-          </div>
-          <div id="history-legend" class="legend">
-            <span><i class="make-dot"></i>Make VS</span>
-            <span><i class="bazel-dot"></i>Bazel VS installer</span>
           </div>
         </div>
         <div class="filters">
@@ -73,7 +69,30 @@
             </select>
           </label>
         </div>
+        <div class="filters trend-filters">
+          <label>Measurement series
+            <select id="series-filter">
+              <option value="all">All measurement series (scatter)</option>
+            </select>
+          </label>
+          <label>Date range
+            <select id="date-filter">
+              <option value="all">All recorded dates</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+            </select>
+          </label>
+          <label>Measurements shown
+            <select id="limit-filter">
+              <option value="60">Newest 60</option>
+              <option value="120">Newest 120</option>
+              <option value="all">Show all</option>
+            </select>
+          </label>
+        </div>
+        <div id="history-legend" class="legend" aria-label="Visible measurement series"></div>
         <div id="trend" class="trend"></div>
+        <div id="trend-preview" class="chart-preview"></div>
         <p id="trend-note" class="panel-footnote"></p>
       </section>
       <div class="workspace">
@@ -112,12 +131,13 @@
           <div id="details"></div>
         </section>
       </div>
+      <div id="target-analysis" class="target-analysis-panel" hidden></div>
       <section class="panel runs-panel" aria-labelledby="runs-title">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">RECORDED WORKFLOWS</p>
             <h2 id="runs-title">Run history</h2>
-            <p>Includes failed, skipped, and pending runs. Filters above also apply here.</p>
+            <p>Includes failed, skipped, and pending runs. Build path, architecture, and pull request filters also apply here; chart-only controls do not.</p>
           </div>
           <span id="run-count" class="count-pill"></span>
         </div>

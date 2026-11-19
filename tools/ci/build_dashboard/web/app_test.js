@@ -1,8 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const {readFileSync} = require("node:fs");
 const test = require("node:test");
-const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, coverageRows, baseSummary, prStateLabel} = require("./app.js");
+const vm = require("node:vm");
+const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, imageSeries, selectTrendPoints, chartScale, imageBreakdownLabel, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, recipeRows, renderBuildExplanations, coverageRows, baseSummary, prStateLabel} = require("./app.js");
 const pr72Fixture = require("../testdata/pr72-carried-image-execution.json");
 
 test("closed draft PRs remain closed while open drafts and merged PRs keep their states", () => {
@@ -319,6 +321,140 @@ test("duplicate legacy job identities keep different executions unverified", () 
   assert.equal(run.jobs.length, 2);
 });
 
+test("direct-slave, outer-Make and legacy image scopes have distinct stable series", () => {
+  const points = ["Build sonic-vs.bin directly with slave.mk", "Build the VS installer (.bin)",
+    "Build the VS image", "Build the VS image and both OCI container variants"].map(name => timingPoint(name));
+  const before = structuredClone(points);
+  assert.equal(new Set(points.map(point => imageSeries(point.job).key)).size, 4);
+  assert.equal(new Set(points.map(point => imageSeries(point.job).color)).size, 4);
+  assert.match(imageMeasurement(points[0].job).label, /direct slave.mk; VM generation and boot checks excluded/);
+  assert.deepEqual(imageTrendGroups([points[0], timingPoint("Build sonic-vs.bin directly with slave.mk"), points[1]]),
+    [[points[0], timingPoint("Build sonic-vs.bin directly with slave.mk")], [points[1]]]);
+  assert.notEqual(imageSeries(points[0].job).key, imageSeries({...points[0].job, architecture: "arm64"}).key);
+  assert.notEqual(imageSeries(points[0].job).key, imageSeries({...points[0].job, kind: "bazel-vs"}).key);
+  assert.deepEqual(points, before, "series metadata must not change recorded timings");
+});
+
+test("every recognized measurement boundary has a distinct series style", () => {
+  const context = vm.createContext({module: {exports: {}}, URL});
+  vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
+  const names = Array.from(vm.runInContext("Object.keys(IMAGE_STEP_LABELS)", context));
+  const series = names.map(name => imageSeries(timingPoint(name).job));
+  assert.ok(names.includes("Build sonic-vs.bin through the host Make wrapper"));
+  assert.equal(new Set(series.map(value => value.key)).size, names.length);
+  assert.equal(new Set(series.map(value => value.label)).size, names.length);
+  assert.equal(new Set(series.map(value => value.color)).size, names.length);
+  for (const value of series) assert.match(value.color, /^#[0-9a-f]{6}$/);
+});
+
+test("host-Make and unknown boundaries remain selectable without changing measurements", () => {
+  const points = [datedPoint(1, "2026-11-10T00:00:00Z", "Build sonic-vs.bin through the host Make wrapper"),
+    datedPoint(2, "2026-11-11T00:00:00Z", "Future unrecognized image step")];
+  const before = structuredClone(points);
+  const host = imageSeries(points[0].job), unknown = imageSeries(points[1].job);
+  assert.match(host.label, /Host Make \.bin \+ archives/);
+  assert.match(unknown.label, /Boundary unknown/);
+  assert.notEqual(host.color, unknown.color);
+  assert.deepEqual(selectTrendPoints(points, {series: host.key}).points, [points[0]]);
+  assert.deepEqual(selectTrendPoints(points, {series: unknown.key}).points, [points[1]]);
+  assert.deepEqual(points, before);
+});
+
+test("recognized future boundaries without styles use a safe named fallback", () => {
+  const context = vm.createContext({module: {exports: {}}, URL});
+  vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
+  vm.runInContext(`
+    IMAGE_STEP_LABELS["Future installer boundary"] = "Future installer measurement";
+    IMAGE_STEP_LABELS["constructor"] = "Future prototype-named boundary";
+  `, context);
+  const points = [datedPoint(1, "2026-11-10T00:00:00Z", "Future installer boundary"),
+    datedPoint(2, "2026-11-11T00:00:00Z", "constructor")];
+  const before = structuredClone(points);
+  const {imageSeries: seriesFor, selectTrendPoints: select} = context.module.exports;
+  for (const [index, label] of ["Future installer measurement", "Future prototype-named boundary"].entries()) {
+    const series = seriesFor(points[index].job);
+    assert.ok(series.label.includes(label));
+    assert.equal(series.color, "#536775");
+    const selection = select(points, {series: series.key});
+    assert.deepEqual(Array.from(selection.points, point => point.run.run_id), [index + 1]);
+  }
+  assert.notEqual(seriesFor(points[0].job).key, seriesFor(points[1].job).key);
+  assert.deepEqual(points, before);
+});
+
+function datedPoint(run_id, started_at, name = "Build the VS installer (.bin)") {
+  const point = timingPoint(name);
+  const completed_at = started_at === null ? null : new Date(Date.parse(started_at) + 120000).toISOString();
+  return {
+    job: {...point.job, name: "Make VS image", job_id: run_id, status: "completed", started_at, completed_at,
+      image_build_step_numbers: [1], url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${run_id}/job/${run_id}`,
+      steps: point.job.steps.map((step, index) => ({...step, number: index + 1, status: "completed", conclusion: "success", started_at, completed_at}))},
+    run: {run_id, attempt: 1, status: "completed", conclusion: "success", started_at, completed_at,
+      started_at_source: "run_started_at", pr_numbers: [], source_sha: "abcdef0123456789",
+      workflow_name: "Bazel OCI", workflow_path: ".github/workflows/bazel-oci.yml", branch: "master"},
+    execution: {startedAt: started_at},
+  };
+}
+
+test("chart date windows use the original execution time and count carried retries once", () => {
+  const snapshot = pr72CarriedSnapshot(), measurements = imageMeasurements(snapshot);
+  const reference = Date.parse("2026-10-31T12:00:00Z");
+  assert.equal(measurements.records.length, 1);
+  assert.equal(selectTrendPoints(measurements.records, {days: "1", reference}).points.length, 0);
+  const points = selectTrendPoints(measurements.records, {days: "2", reference}).points;
+  assert.equal(points.length, 1);
+  assert.equal(points[0].execution.startedAt, "2026-10-30T11:55:36.000Z");
+  assert.equal(points[0].run.attempt, 2);
+});
+
+test("chart limits expose the newest measurements and show-all preserves the entire selection", () => {
+  const reference = Date.parse("2026-11-12T00:00:00Z");
+  const points = Array.from({length: 84}, (_, index) => datedPoint(index + 1,
+    new Date(reference - index * 3600000).toISOString(),
+    index % 2 ? "Build sonic-vs.bin directly with slave.mk" : "Build the VS installer (.bin)"));
+  const before = structuredClone(points);
+  const selection = selectTrendPoints(points);
+  assert.equal(selection.matching.length, 84);
+  assert.equal(selection.points.length, 60);
+  assert.deepEqual([selection.points[0].run.run_id, selection.points.at(-1).run.run_id], [60, 1]);
+  assert.equal(selectTrendPoints(points, {limit: "all"}).points.length, 84);
+  const direct = selectTrendPoints(points, {series: imageSeries(points[1].job).key, limit: "all"});
+  assert.equal(direct.points.length, 42);
+  assert.ok(direct.points.every(point => point.job.steps[0].name.includes("directly")));
+  assert.deepEqual(points, before);
+});
+
+test("date windows are inclusive and anchored to the snapshot rather than the viewer clock", () => {
+  const reference = Date.parse("2026-11-12T00:00:00Z"), cutoff = reference - 7 * 86400000;
+  const points = [datedPoint(1, new Date(cutoff - 1).toISOString()), datedPoint(2, new Date(cutoff).toISOString()),
+    datedPoint(3, new Date(reference).toISOString()), datedPoint(4, new Date(reference + 1).toISOString()),
+    datedPoint(5, null)];
+  assert.deepEqual(selectTrendPoints(points, {days: "7", reference}).points.map(point => point.run.run_id), [2, 3]);
+  assert.equal(selectTrendPoints(points, {days: "all", reference}).points.length, 5);
+  assert.equal(selectTrendPoints(points.slice(0, 1), {days: "7", reference}).points.length, 0);
+});
+
+test("duration scales use readable intervals without clipping long or zero-length builds", () => {
+  assert.deepEqual(chartScale(269 * 60), {maximum: 5 * 3600, ticks: [0, 3600, 7200, 10800, 14400, 18000]});
+  for (const maximum of [0, 0.1, 25, 120, 5399, 3 * 86400]) {
+    const scale = chartScale(maximum);
+    assert.ok(scale.maximum > maximum);
+    assert.equal(scale.ticks[0], 0);
+    assert.equal(scale.ticks.at(-1), scale.maximum);
+    assert.ok(scale.ticks.length >= 2 && scale.ticks.length <= 6);
+  }
+});
+
+test("point previews distinguish available, partial, missing and malformed breakdowns", () => {
+  const job = timingPoint("Build the VS installer (.bin)").job;
+  assert.equal(imageBreakdownLabel(job), "Breakdown not recorded");
+  assert.equal(imageBreakdownLabel({...job, steps: [{...job.steps[0], breakdown: {version: 99}}]}), "Breakdown unavailable");
+  const step = {...job.steps[0], breakdown: exampleBreakdown()};
+  assert.equal(imageBreakdownLabel({...job, steps: [step]}), "Measured breakdown");
+  assert.equal(imageBreakdownLabel({...job, steps: [step, {name: "Build the VS image"}]}), "Partial breakdown");
+  assert.equal(imageBreakdownLabel({...job, steps: [step, {name: "Validate archives"}]}), "Measured breakdown");
+});
+
 function imageOutcome(conclusion, extra = {}) {
   return {kind: "make-vs", status: "completed", conclusion, ...extra};
 }
@@ -508,8 +644,11 @@ test("small timestamp rounding differences and empty task lists remain supported
 
 // A deliberately small DOM fixture: rendering must use nodes and text, never an HTML parser.
 class TestElement {
-  constructor(tag) { this.tagName = tag; this.children = []; this.style = {}; this.attributes = {}; this.text = ""; }
+  constructor(tag) { this.tagName = tag; this.children = []; this.style = {}; this.attributes = {}; this.text = ""; this.listeners = {}; }
   append(...children) { this.children.push(...children); }
+  replaceChildren(...children) { this.text = ""; this.children = [...children]; }
+  addEventListener(name, callback) { this.listeners[name] = callback; }
+  get options() { return this.children; }
   set textContent(value) { this.text = value; this.children = []; }
   get textContent() { return this.text + this.children.map(child => child.textContent).join(""); }
   set innerHTML(_) { throw new Error("Untrusted data must not use innerHTML"); }
@@ -523,6 +662,115 @@ function withDocument(callback) {
 function descendants(node, predicate) {
   return [node, ...(node.children || []).flatMap(child => descendants(child, predicate))].filter(predicate);
 }
+function chartFixture(points, width = 1100) {
+  const nodes = Object.fromEntries(["trend", "trend-note", "trend-preview", "history-legend",
+    "series-filter", "path-filter", "arch-filter", "pr-filter", "date-filter", "limit-filter"]
+    .map(id => [id, new TestElement(id.endsWith("filter") ? "select" : "div")]));
+  for (const node of Object.values(nodes)) node.value = "all";
+  nodes["limit-filter"].value = "60";
+  nodes.trend.clientWidth = width;
+  const context = vm.createContext({module: {exports: {}}, URL, getComputedStyle: () => ({paddingLeft: "17px", paddingRight: "17px"})});
+  vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
+  context.document = {getElementById: id => nodes[id], createElement: tag => new TestElement(tag),
+    createElementNS: (_, tag) => new TestElement(tag), createTextNode: text => ({textContent: text})};
+  context.snapshot = {repository: "securely1g/sonic-buildimage", generated_at: "2026-11-12T00:00:00Z",
+    runs: points.map(point => ({...point.run, jobs: [point.job]}))};
+  const render = () => vm.runInContext("state.data = snapshot; renderTrend();", context);
+  render();
+  return {nodes, render};
+}
+
+test("chart renders host-Make and unknown-boundary snapshots and filters their series", () => {
+  const points = [datedPoint(1, "2026-11-10T00:00:00Z", "Build sonic-vs.bin through the host Make wrapper"),
+    datedPoint(2, "2026-11-11T00:00:00Z", "Future unrecognized image step")];
+  const {nodes, render} = chartFixture(points);
+  assert.equal(descendants(nodes.trend, node => node.attributes?.class === "chart-point").length, 2);
+  assert.equal(nodes["history-legend"].children.length, 2);
+  assert.match(nodes["history-legend"].textContent, /Host Make \.bin \+ archives/);
+  assert.match(nodes["history-legend"].textContent, /Boundary unknown/);
+  nodes["series-filter"].value = imageSeries(points[0].job).key;
+  render();
+  assert.equal(descendants(nodes.trend, node => node.attributes?.class === "chart-point").length, 1);
+  assert.equal(nodes["history-legend"].children.length, 1);
+  assert.match(nodes["history-legend"].textContent, /Host Make \.bin \+ archives/);
+});
+
+test("chart overview is scatter-only with a visible-series legend and keyboard point previews", () => {
+  const points = [datedPoint(1, "2026-11-10T00:00:00Z"), datedPoint(2, "2026-11-11T00:00:00Z"),
+    datedPoint(3, "2026-11-12T00:00:00Z", "Build sonic-vs.bin directly with slave.mk")];
+  points[2].job.image_build_seconds = 269 * 60;
+  const {nodes, render} = chartFixture(points);
+  assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 0);
+  assert.equal(nodes["history-legend"].children.length, 2);
+  assert.doesNotMatch(nodes["history-legend"].textContent, /Bazel VS installer/);
+  assert.match(nodes["trend-note"].textContent, /Showing all 3.*Scatter overview/);
+  const ticks = descendants(nodes.trend, node => node.tagName === "text").map(node => node.textContent);
+  assert.ok(ticks.includes("1h") && ticks.includes("5h"), "long builds should use rounded hour ticks");
+  const point = descendants(nodes.trend, node => node.attributes?.class === "chart-point")[0];
+  assert.equal(point.attributes.tabindex, "0");
+  point.listeners.focus();
+  assert.match(nodes["trend-preview"].textContent, /2m 0s.*Outer Make .bin.*Bazel OCI.*abcdef012345.*VM generation and boot checks excluded.*Breakdown not recorded/);
+  nodes["series-filter"].value = imageSeries(points[0].job).key;
+  render();
+  assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 1);
+  assert.equal(nodes["history-legend"].children.length, 1);
+  assert.doesNotMatch(nodes["history-legend"].textContent, /Direct slave/);
+  assert.match(nodes["trend-note"].textContent, /Showing all 2.*Lines join only one/);
+});
+
+test("unknown boundaries never gain trend lines and empty filters clear stale chart details", () => {
+  const points = [datedPoint(1, "2026-11-01T00:00:00Z", "Unknown image step"),
+    datedPoint(2, "2026-11-02T00:00:00Z", "Unknown image step")];
+  const {nodes, render} = chartFixture(points, 320);
+  assert.equal(descendants(nodes.trend, node => node.attributes?.class === "chart-point").length, 2);
+  nodes["series-filter"].value = imageSeries(points[0].job).key;
+  render();
+  assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 0);
+  nodes["date-filter"].value = "7";
+  render();
+  assert.match(nodes.trend.textContent, /No successful image measurements/);
+  assert.equal(nodes["history-legend"].children.length, 0);
+  assert.equal(nodes["history-legend"].hidden, true);
+  assert.match(nodes["trend-preview"].textContent, /Hover or focus a point/);
+  assert.doesNotMatch(nodes.trend.textContent, /NaN|Infinity/);
+});
+
+test("page startup wires chart-only filters without hiding retained workflow history", async () => {
+  const html = readFileSync(require.resolve("./index.html"), "utf8");
+  const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new TestElement("div")]));
+  for (const node of Object.values(nodes)) node.value = "all";
+  nodes["limit-filter"].value = "60";
+  nodes.trend.clientWidth = 1100;
+  const points = [datedPoint(1, "2026-11-01T00:00:00Z"),
+    datedPoint(2, "2026-11-12T00:00:00Z", "Build sonic-vs.bin directly with slave.mk")];
+  const snapshot = {schema_version: 1, repository: "securely1g/sonic-buildimage", generated_at: "2026-11-12T00:00:00Z",
+    pull_requests: [], runs: points.map(point => ({...point.run, jobs: [point.job]}))};
+  const context = vm.createContext({
+    document: {getElementById: id => nodes[id], createElement: tag => new TestElement(tag),
+      createElementNS: (_, tag) => new TestElement(tag), createTextNode: text => ({textContent: text})},
+    getComputedStyle: () => ({paddingLeft: "17px", paddingRight: "17px"}),
+    ResizeObserver: class { observe() {} },
+    setInterval() {}, URL, AbortSignal,
+    window: {location: {href: "https://example.test/"}},
+    fetch: async () => ({ok: true, json: async () => snapshot}),
+  });
+  vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes["load-status"].textContent, "", "the actual page must load without missing-element errors");
+  assert.equal(nodes.dashboard.hidden, false);
+  assert.equal(nodes["run-count"].textContent, "2 of 2");
+  nodes["date-filter"].value = "7";
+  nodes["date-filter"].listeners.change();
+  assert.match(nodes["trend-note"].textContent, /Showing all 1/);
+  assert.equal(nodes["run-count"].textContent, "2 of 2", "chart date controls must not change retained history");
+  nodes["series-filter"].value = imageSeries(points[1].job).key;
+  nodes["series-filter"].listeners.change();
+  const point = descendants(nodes.trend, node => node.attributes?.class === "chart-point")[0];
+  assert.match(point.attributes["aria-label"], /Source abcdef012345.*Breakdown not recorded/);
+  point.listeners.mouseenter();
+  assert.match(nodes["trend-preview"].textContent, /Direct slave .bin/);
+});
+
 function stepWith(breakdown) { return {name: "Make VS image", status: "completed", conclusion: "success", duration_seconds: 101, ...(breakdown === undefined ? {} : {breakdown})}; }
 
 const hostStepName = "Build sonic-vs.bin through the host Make wrapper";
@@ -605,6 +853,49 @@ test("unavailable or unverifiable profiles do not appear as measured recipes", (
   }
 }));
 
+test("per-target explanations rank build-only time and keep query locks and historical gaps separate", () => withDocument(() => {
+  const job = recipeJob();
+  const build = {expected: 1, timings: 1, profiles: 1, seconds: 30, lock_seconds: 5,
+    compile_seconds: 0, foreign_seconds: 0, fetch_seconds: 2, repository_seconds: 12,
+    repository_read_seconds: 10, packaging_seconds: 8, cache_write_seconds: 4,
+    package_selection_seconds: 3, validation_seconds: 1,
+    arm64_repository_seconds: 3, armhf_repository_seconds: 0};
+  const base = {...job.image_recipe_timings.images[0], bazel_expected: 3, profiles_expected: 3, exports_expected: 2};
+  const repo = {...base, owner: "docker-repo.gz", build, lock_seconds: 105};
+  const fast = {...base, owner: "docker-fast.gz", build: {...build, seconds: 7}};
+  const kernel = {...base, owner: "linux-kernel", build: null, bazel_seconds: 10, bazel_phases: 1, bazel_expected: 1};
+  job.image_recipe_timings = {version: 2, status: "available", recipes: [fast, kernel, repo]};
+  const section = renderBuildExplanations(recipeRows(job.image_recipe_timings));
+  const rows = descendants(section, node => node.className === "target-card");
+  assert.match(section.textContent, /Why each target took its time/);
+  assert.match(rows[0].textContent, /docker-repo.gzRepository preparation \+ image packaging25sBuild excluding lock/);
+  assert.match(rows[0].textContent, /Largest recorded work category: Repository preparation/);
+  assert.match(rows[0].textContent, /Repository preparation12s \(12.00s\)/);
+  assert.match(rows[0].textContent, /Repository input reads\/waits10s/);
+  assert.match(rows[0].textContent, /ARM64 package repository preparation3s/);
+  assert.match(rows[0].textContent, /APT selection critical path3s/);
+  assert.match(rows[0].textContent, /Other-command lock wait: 100s/);
+  assert.match(rows[1].textContent, /linux-kernel \*Isolated kernel launcher10sLauncher elapsed/);
+  assert.match(rows[1].textContent, /Separate kernel launcher/);
+  assert.match(rows[2].textContent, /docker-fast.gzRepository preparation \+ image packaging2sBuild excluding lock/);
+  assert.match(rows[2].textContent, /Most build-command elapsed time was server lock waiting/);
+  const buttons = descendants(section, node => node.tagName === "button");
+  buttons[0].listeners.click();
+  assert.ok(rows.every(row => row.open));
+  buttons[1].listeners.click();
+  assert.ok(rows.every(row => !row.open));
+  assert.match(section.textContent, /overlap and must not be added/);
+  assert.match(renderBuildExplanations(recipeRows(recipeJob().image_recipe_timings)).textContent, /Detailed build-only evidence was not recorded/);
+  repo.build = {...build, profiles: 0, ...Object.fromEntries(Object.keys(build).filter(key => key.endsWith("_seconds")).map(key => [key, null]))};
+  const partial = renderBuildExplanations(recipeRows(job.image_recipe_timings)).textContent;
+  assert.match(partial, /Build profile unavailable/);
+  for (const change of [{repository: "<script>"}, {expected: true}, {repository_seconds: Infinity},
+                        {lock_seconds: 31}, {repository_seconds: "12"}]) {
+    repo.build = {...build, ...change};
+    assert.match(renderRecipeTimings(job).textContent, /could not be verified/);
+  }
+}));
+
 test("the recipe evidence link opens this job's successful timing artifact upload", () => withDocument(() => {
   const repository = "securely1g/sonic-buildimage", job = recipeJob();
   job.url = `https://github.com/${repository}/actions/runs/123/job/456`;
@@ -622,6 +913,44 @@ test("the recipe evidence link opens this job's successful timing artifact uploa
   job.steps[1] = upload;
   job.url = "https://github.com/unrelated/repo/actions/runs/123/job/456";
   assert.equal(links().length, 0);
+}));
+
+test("profile cards show named spans and receipts without accepting raw private action text", () => withDocument(() => {
+  const job = recipeJob(), base = job.image_recipe_timings.images[0];
+  const row = {...base, owner: "linux-kernel", build: null, bazel_expected: 1, bazel_phases: 1,
+    bazel_seconds: 183.843, profiles_expected: 3, exports: 0, exports_expected: 0, export_seconds: null,
+    details: {scope: "kernel-build", expected: 1, profiles: 1, phase_count: 1,
+      repositories: [{name: "//:apt+example", seconds: 12, read_seconds: 10, read_count: 2}],
+      critical_path: [{kind: "OCIImage", target: "//example:image", seconds: 8}],
+      phases: [{phase: "launcher", seconds: 183.843, lock_seconds: null, start_epoch_seconds: 1794944781.5, exit_code: 0}]}};
+  const value = {version: 2, status: "available", recipes: [row]};
+  job.image_recipe_timings = value;
+  const section = renderBuildExplanations(recipeRows(value)), card = descendants(section, node => node.className === "target-card")[0];
+  assert.match(card.textContent, /3m04sLauncher elapsed/);
+  assert.match(card.textContent, /Longest repository spansRepositorySpanNested reads\/waits\/\/:apt\+example12s \(12.00s\)2 reads; 10s/);
+  assert.match(card.textContent, /OCI image\/\/example:image8s/);
+  assert.match(card.textContent, /2026-11-17 19:46:21.500Z/);
+  assert.match(card.textContent, /Kernel spans describe its build profile only, not the whole launcher/);
+  assert.match(card.textContent, /Command receipts \(1\/1 shown\)/);
+  assert.equal(card.open, undefined, "Cards are collapsed initially");
+  const original = structuredClone(row.details);
+  for (const [group, edits] of [
+    ["repositories", {name: "/home/private"}], ["repositories", {name: "//:example\n"}],
+    ["repositories", {read_seconds: 13}], ["repositories", {command: "--token=never-publish"}],
+    ["critical_path", {kind: "Unknown command"}], ["critical_path", {target: "/home/private"}],
+    ["critical_path", {target: "platform/../private"}], ["critical_path", {target: "//example:../private"}],
+    ["critical_path", {target: "//..:image"}], ["critical_path", {target: "//example:image\n"}],
+    ["phases", {phase: "build --token=x"}], ["phases", {start_epoch_seconds: 253402300800}],
+  ]) {
+    row.details = structuredClone(original);
+    Object.assign(row.details[group][0], edits);
+    assert.equal(recipeRows(value), null);
+    assert.match(renderRecipeTimings(job).textContent, /could not be verified/);
+  }
+  row.details = {...original, repositories: Array(9).fill(original.repositories[0])};
+  assert.equal(recipeRows(value), null);
+  row.details = {...original, profiles: 0};
+  assert.equal(recipeRows(value), null);
 }));
 
 test("legacy snapshots keep their step duration without requiring a breakdown", () => withDocument(() => {

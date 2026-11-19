@@ -200,6 +200,30 @@ class BazelRecipeTimingsTest(unittest.TestCase):
         self.assertEqual(self.parse([self.line({"count": 0})]), {"version": 2, "status": "available", "recipes": []})
         self.assertEqual(self.parse([]), {"version": 2, "status": "unavailable", "reason": "not-recorded", "recipes": []})
 
+    def test_optional_numeric_build_evidence_survives_history_and_rejects_untrusted_details(self):
+        build = {"expected": 1, "timings": 1, "profiles": 1, "seconds": 30,
+                 **{key: 0 for key in collector.breakdown.BUILD_PROFILE_METRICS}}
+        build.update(lock_seconds=5, repository_seconds=12, repository_read_seconds=10)
+        row = dict(self.row("docker-example.gz"), build=build)
+        lines = [self.line({"recipe": row}), self.line({"count": 1})]
+        saved = collector.collect(api_with(host_job(summary_step=self.summary_step), log(lines)), REPO, empty())
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "history.json"
+            collector.write_atomic(path, saved)
+            self.assertEqual(collector.load_history(path, REPO), saved)
+        self.assertEqual(self.parse(lines)["recipes"][0]["build"], build)
+        for edits in ({"seconds": "30"}, {"repository_seconds": float("inf")}, {"expected": True},
+                      {"timings": 4}, {"profiles": 4}, {"lock_seconds": 31},
+                      {"repository_seconds": -1}, {"repository": "never publish"},
+                      {"profiles": 0}, {"expected": 0}):
+            with self.subTest(edits=edits):
+                candidate = dict(row, build=dict(build, **edits))
+                result = self.parse([self.line({"recipe": candidate}), self.line({"count": 1})])
+                self.assertEqual(result["reason"], "invalid-timing")
+        partial = dict(build, profiles=0, **{key: None for key in collector.breakdown.BUILD_PROFILE_METRICS})
+        row["build"] = partial
+        self.assertEqual(self.parse([self.line({"recipe": row}), self.line({"count": 1})])["recipes"][0]["build"], partial)
+
     def test_rejects_partial_duplicate_and_mixed_transports_and_untrusted_rows(self):
         row = self.row("docker-eventd.gz")
         item = self.line({"recipe": row})
@@ -218,3 +242,80 @@ class BazelRecipeTimingsTest(unittest.TestCase):
         over_limit = [{"recipe": self.row(f"recipe-{n}")} for n in range(collector.breakdown.MAX_RECIPES + 1)]
         self.assertEqual(self.parse([self.line(obj) for obj in [*over_limit, {"count": len(over_limit)}]])["reason"],
                          "invalid-timing")
+
+    def test_named_evidence_requires_complete_groups_and_survives_history(self):
+        row = dict(self.row("linux-kernel"), bazel_phases=1, bazel_expected=1, exports=0,
+                   exports_expected=0, export_seconds=None, build=None, details={
+                       "scope": "kernel-build", "expected": 1, "profiles": 1, "phase_count": 1,
+                       "repositories": [{"name": "//:apt+example", "seconds": 12, "read_seconds": 10, "read_count": 2}],
+                       "critical_path": [{"kind": "OCIImage", "target": "//example:image", "seconds": 8}],
+                       "phases": [{"phase": "launcher", "seconds": 100, "lock_seconds": None,
+                                   "start_epoch_seconds": 1794944781.5, "exit_code": 0}],
+                   })
+
+        def lines(candidate):
+            header = copy.deepcopy(candidate)
+            header["details"].update(repositories=[], critical_path=[], phases=[])
+            return [self.line({"recipe": header}), *[
+                self.line({"evidence": {"owner": candidate["owner"], "group": group,
+                                       "values": candidate["details"][group]}})
+                for group in ("repositories", "critical_path", "phases")],
+                self.line({"count": 1, "evidence_count": 3})]
+
+        records = lines(row)
+        self.assertEqual(self.parse(records)["recipes"], [row])
+        saved = collector.collect(
+            api_with(host_job(summary_step=self.summary_step), log(records)), REPO, empty())
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "history.json"
+            collector.write_atomic(path, saved)
+            self.assertEqual(collector.load_history(path, REPO), saved)
+        for records in (
+                lines(row)[:-1], lines(row)[:2] + lines(row)[3:],
+                lines(row)[:2] + lines(row)[1:], list(reversed(lines(row))),
+                lines(row)[:-1] + [self.line({"count": 1})],
+                lines(row)[:-1] + [self.line({"count": 1, "evidence_count": True})],
+                lines(row)[:1] + [self.line({"evidence": {
+                    "owner": "other-owner", "group": "repositories", "values": []}})] + lines(row)[2:]):
+            with self.subTest(records=records):
+                self.assertEqual(self.parse(records)["reason"], "invalid-timing")
+        for group, edits in (
+                ("repositories", {"name": "/home/private"}),
+                ("repositories", {"name": "//:example\n"}),
+                ("repositories", {"read_seconds": 13}),
+                ("repositories", {"read_count": True}),
+                ("repositories", {"command": "--token=never-publish"}),
+                ("critical_path", {"kind": "Unknown --token=never-publish"}),
+                ("critical_path", {"target": "/home/private"}),
+                ("critical_path", {"target": "platform/../private"}),
+                ("critical_path", {"target": "//example:../private"}),
+                ("critical_path", {"target": "//..:image"}),
+                ("critical_path", {"target": "//example:image --token=x"}),
+                ("critical_path", {"target": "//example:image\n"}),
+                ("phases", {"phase": "build --token=x"}),
+                ("phases", {"start_epoch_seconds": 253402300800}),
+                ("phases", {"exit_code": True})):
+            candidate = copy.deepcopy(row)
+            candidate["details"][group][0].update(edits)
+            with self.subTest(group=group, edits=edits):
+                self.assertEqual(self.parse(lines(candidate))["reason"], "invalid-timing")
+        candidate = copy.deepcopy(row)
+        candidate["details"]["repositories"] *= 9
+        self.assertEqual(self.parse(lines(candidate))["reason"], "invalid-timing")
+        candidate = copy.deepcopy(row)
+        candidate["details"]["profiles"] = 0
+        self.assertEqual(self.parse(lines(candidate))["reason"], "invalid-timing")
+
+        longest = copy.deepcopy(row)
+        longest.update(exports=7, exports_expected=7, export_seconds=2)
+        longest["details"].update(
+            phase_count=8,
+            repositories=[{"name": "//:" + "r" * 188, "seconds": 9007199254740991,
+                           "read_seconds": 9007199254740991, "read_count": 1000000}] * 8,
+            critical_path=[{"kind": "GoToolchainBinaryBuild", "target": "//example:".ljust(240, "p"),
+                            "seconds": 9007199254740991}] * 8,
+            phases=[{"phase": "p" * 192, "seconds": 9007199254740991,
+                     "lock_seconds": 9007199254740991, "start_epoch_seconds": 253402300799,
+                     "exit_code": 255}] * 8)
+        self.assertEqual(self.parse(lines(longest))["recipes"], [longest])
+        self.assertTrue(all(len(line.encode()) + 192 <= 4096 for line in lines(longest)))

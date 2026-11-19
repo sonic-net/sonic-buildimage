@@ -39,6 +39,22 @@ Point tooltips, job details and the latest measurement identify the timing
 boundary. Unknown boundaries remain
 isolated points, and historical durations are preserved.
 
+The chart starts as a scatter overview with a legend for the visible measurement
+scopes. Select one **Measurement series** to show its trend without connecting
+different build paths, architectures or measured steps. Date ranges end at the
+published snapshot time and use verified image execution starts, not retry
+attempt starts. Carried retry records count once and retain their original
+execution date. The default view shows the newest 60 matching points;
+choose **Show all** to remove that display limit. These chart-only controls do
+not filter PR coverage or run history. Hover or focus a point to inspect its
+measured scope, source revision and breakdown availability.
+
+Host-Make installer and paired-archive builds have their own **Host Make .bin +
+archives** series and color. Recognized measurement boundaries without an
+explicit style use their measurement label and a neutral color rather than
+breaking chart rendering. Unrecognized boundaries remain **Boundary unknown**;
+the fallback does not infer a measurement scope or change recorded timings.
+
 The PR result comes from recognized image jobs (`make-vs` or `bazel-vs`), not
 the surrounding workflow conclusion. A successful workflow whose image job was
 skipped contributes only to **Skipped**. The latest associated run containing
@@ -91,10 +107,32 @@ Partial measurements show how many expected records are present. A measured
 zero means Bazel recorded no matching span. Concurrent work can contribute to
 more than one category, and cache fetches include both disk and remote reads.
 
+**Why each target took its time** ranks targets by build wall time excluding
+measured build-command lock waiting, separately from output-query waits. New
+profiles supply numeric evidence for repository preparation and input-read waits,
+compiler/nested-build subprocesses, image/tar/gzip processing, APT selection and
+identity/source validation on the critical path,
+cache fetch/write spans and ARM package-repository preparation. These are
+overlapping observations, not an additive attribution or proof of CPU, network,
+disk bottlenecks, unnecessary cross-architecture work or achievable savings.
+Cache writes do not establish remote publication. The same section is written
+to the VS workflow's job summary. Partial build coverage leaves the non-lock
+duration unavailable; historical runs are not assigned invented explanations.
+The isolated kernel launcher remains explicitly incomparable with an image build.
+This section uses full-width, initially collapsed cards with diagnosis badges,
+readable durations and **Expand visible / Collapse visible** controls. Each card
+includes the eight longest recognized named repository spans (with nested read
+coverage), eight longest recognized critical-path actions, and the first eight
+command receipts with UTC request times, elapsed/lock time and exit status.
+Repeated invocations retain individual spans; these lists are bounded evidence,
+not an exhaustive causal partition. Historical runs without these details say so.
+The workflow summary uses GitHub-native collapsible sections and the same evidence
+tables; GitHub does not support the dashboard's custom styling or JavaScript controls.
+
 Open the upload log linked from the timings to download
 `sonic-vs-bazel-timings-amd64` during its 14-day retention period. Open a
 Bazel profile in Perfetto to inspect individual actions within a recipe. The
-dashboard keeps the numeric breakdown in build history. Earlier instrumented
+dashboard keeps the numeric breakdown and validated, bounded named evidence in build history. Earlier instrumented
 runs keep their four-image reports, and pre-profiling runs keep their original
 Make timings.
 
