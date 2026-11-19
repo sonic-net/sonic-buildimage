@@ -10,7 +10,8 @@ $(DOCKER_CONFIG_ENGINE_TRIXIE)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
                                           $(SONIC_EVENTD) \
                                           $(SONIC_SUPERVISORD_UTILITIES_RS)
-$(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(REDIS_DUMP_LOAD_PY3) \
+                                                  $(SONIC_PY_COMMON_PY3) \
                                                   $(SONIC_YANG_MGMT_PY3) \
                                                   $(SONIC_YANG_MODELS_PY3) \
                                                   $(SONIC_CONTAINERCFGD)

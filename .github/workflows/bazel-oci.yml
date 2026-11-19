@@ -175,6 +175,8 @@ jobs:
             //tools/bazel/tests:sonic_py_common_test \
             //tools/bazel/tests:sonic_yang_mgmt_full_test \
             //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
+            //src/sonic-yang-mgmt:sonic_yang_mgmt_runtime_test \
+            @sonic_yang_mgmt//:sonic_yang_mgmt_runtime_test \
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
@@ -205,6 +207,8 @@ jobs:
             //tools/bazel/tests:sonic_py_common_test \
             //tools/bazel/tests:sonic_yang_mgmt_full_test \
             //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
+            //src/sonic-yang-mgmt:sonic_yang_mgmt_runtime_test \
+            @sonic_yang_mgmt//:sonic_yang_mgmt_runtime_test \
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
@@ -589,7 +593,10 @@ jobs:
       SONIC_VS_VALIDATION_BUNDLES: "1"
       # Make schedules one recipe; Bazel schedules all selected container targets.
       # Let Bazel choose its job count and CPU/memory scheduling budgets.
+      # Debug exports need the space otherwise used by a duplicate local action
+      # cache. Keep the output base and shared remote/repository caches available.
       BAZEL_CONTAINER_ARGS: >-
+        ${{ inputs.enable_debug_layer && '--disk_cache=' || '' }}
         --remote_local_fallback
         --incompatible_remote_local_fallback_for_remote_cache
         --experimental_remote_downloader=grpc://172.16.0.4:9092
@@ -990,6 +997,16 @@ jobs:
         with:
           name: ${{ steps.bundles.outputs.prefix }}-docker-nat
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-nat/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-gnmi-sidecar for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-gnmi-sidecar')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-gnmi-sidecar
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-gnmi-sidecar/
           if-no-files-found: error
           compression-level: 0
           retention-days: 3

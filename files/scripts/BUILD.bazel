@@ -1,3 +1,8 @@
 exports_files(["arp_update"])
 
 exports_files(["update_chassisdb_config"])
+
+exports_files([
+    "gnmi.sh",
+    "k8s_pod_control.sh",
+])

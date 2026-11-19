@@ -167,13 +167,13 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual([step["if"] for step in matrix_steps[restore + 1:]
                           if "git submodule update" in step.get("run", "")],
                          ["matrix.image == 'docker-sonic-p4rt'", "matrix.image == 'docker-sysmgr'"])
-        kernel_only = []
+        restore_populated = []
         for filename, name in (("bazel-frr-python.yml", "packages"),):
-            kernel_only.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
-        for job in kernel_only:
+            restore_populated.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
+        for job in restore_populated:
             steps = job["steps"]
             register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
-            self.assertEqual(steps[register + 1].get("run"), f"bash {script} --kernel-only")
+            self.assertEqual(steps[register + 1].get("run"), f"bash {script} --populated-only")
 
         frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr.yml").read_text())["jobs"]["native"]
         self.assertIn(f"bash {script} --populated-only", [step.get("run") for step in frr["steps"]])

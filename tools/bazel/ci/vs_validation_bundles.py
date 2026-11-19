@@ -42,6 +42,8 @@ PARENT_IMAGES = {
     "docker-router-advertiser": CONFIG, "docker-snmp": CONFIG, "docker-sonic-gnmi": CONFIG,
     "docker-sonic-mgmt-framework": CONFIG, "docker-sonic-otel": CONFIG, P4RT: CONFIG,
     "docker-syncd-vs": CONFIG, "docker-sysmgr": CONFIG,
+    "docker-gnmi-sidecar": CONFIG,
+
     "docker-dash-ha": SWSS, "docker-fpm-frr": SWSS, "docker-macsec": SWSS,
     "docker-sflow": SWSS, "docker-teamd": SWSS,
 }
@@ -60,10 +62,8 @@ COMMON_FILES = (
     *ACCOUNT_PATHS,
 )
 
-
 def family(archive):
     return archive.removesuffix(".gz").removesuffix("-dbg")
-
 
 def validation_targets(archives, registered_debug, debug_enabled, validation_only_debug=()):
     from tools.bazel.ci import vs_probe_policy
@@ -101,7 +101,6 @@ def validation_targets(archives, registered_debug, debug_enabled, validation_onl
             entry["apt_lock"] = DASH_LOCK
     return families
 
-
 def extra_targets(families):
     # The archives, layouts and test fixtures share one Bazel configuration and
     # one build. Some fixtures are external targets with apparent repo names.
@@ -114,7 +113,6 @@ def extra_targets(families):
             if field in entry:
                 labels.add(entry[field])
     return sorted(labels)
-
 
 def configured_outputs(bazel, options, labels, events):
     # Build private owner fixtures as top-level targets. A filegroup wrapper
@@ -165,7 +163,6 @@ def configured_outputs(bazel, options, labels, events):
             outputs[label] = local_path(paths[0])
     return {key: outputs[label] for key, label in canonical.items()}
 
-
 def copy_output(source, output):
     if output.exists() and source.samefile(output):
         return
@@ -175,7 +172,6 @@ def copy_output(source, output):
         if exc.errno not in (errno.EXDEV, errno.EACCES, errno.EPERM, errno.EMLINK):
             raise
         shutil.copyfile(source, output)
-
 
 def layout_metadata(directory):
     def blob(descriptor):
@@ -193,7 +189,6 @@ def layout_metadata(directory):
     manifest_descriptor, = index["manifests"]
     manifest = metadata(manifest_descriptor)
     return manifest_descriptor, manifest, metadata(manifest["config"]), [blob(item) for item in manifest["layers"]]
-
 
 def write_inventory(directory, variant, bundle, prefixes, *, account_layers, retain=False):
     descriptor, manifest, config, layers = layout_metadata(directory)
@@ -218,7 +213,6 @@ def write_inventory(directory, variant, bundle, prefixes, *, account_layers, ret
         stream.write(json.dumps(report, sort_keys=True, separators=(",", ":")).encode())
     return path, manifest, config, {name: files[name] for name in COMMON_FILES if name in files}
 
-
 @lru_cache(maxsize=4)
 def redis_config(source_tar):
     """The private Redis probe uses just this file from the normalized parent TAR."""
@@ -228,16 +222,18 @@ def redis_config(source_tar):
         require(member.isfile(), f"{source_tar}: expected regular {name}")
         return source.extractfile(member).read()
 
-
 def stage_probe_fixtures(image, artifacts, bundle):
-    from tools.bazel.ci.vs_standalone_probes import STANDALONE_IMAGES
+    from tools.bazel.ci.vs_standalone_probes import STANDALONE_IMAGES, SUPERVISED
 
     # Standalone checks use the owner records projected in *.owners.json.
     # P4RT also needs the original parent TAR for its separate SDK test.
     if image in STANDALONE_IMAGES:
         for name in ("base.source.tar", "config-engine.source.tar", "syncd.source.tar", "source-runtime.tar"):
             artifacts.pop(name, None)
-    elif image != "docker-sonic-p4rt":
+    if image in SUPERVISED:
+        for name in ("service.files.tar", "watchdog.source.tar", "all-debug.tar"):
+            artifacts.pop(name, None)
+    elif image not in STANDALONE_IMAGES and image != "docker-sonic-p4rt":
         for name in ("config-engine-source.tar", "config-engine.source.tar"):
             source = artifacts.pop(name, None)
             if source is None:
@@ -252,11 +248,9 @@ def stage_probe_fixtures(image, artifacts, bundle):
             artifacts[fixture.name] = fixture
     return artifacts
 
-
 @lru_cache(maxsize=128)
 def account_bytes(layer, path):
     return file_bytes(layer, {path})[path]
-
 
 def stage_accounts(bundle, image, variant, files, layers):
     if image not in GROUP_CHECKS and not (image == "docker-teamd" and variant == "parent"):
@@ -271,7 +265,6 @@ def stage_accounts(bundle, image, variant, files, layers):
         output.write_bytes(account_bytes(layers[path, digest], path))
         fixtures[output.name] = digest
     return fixtures
-
 
 def stage_parent(bundle, image, references, account_layers):
     parent = PARENT_IMAGES.get(image)
@@ -291,7 +284,6 @@ def stage_parent(bundle, image, references, account_layers):
         fixtures["parent.oci.json.gz"] = parent_manifest["fixtures"][filename]
     fixtures.update(stage_accounts(bundle, image, "parent", references[parent]["files"], account_layers))
     return fixtures
-
 
 def write_bundles(args, families, paths, version, *, dialout=None):
     from tools.bazel.ci import vs_probe_policy
@@ -379,7 +371,6 @@ def write_bundles(args, families, paths, version, *, dialout=None):
             destination.rename(Path(work) / "previous")
         staged.rename(destination)
 
-
 def matrix(directory, debug_layer):
     # Use Make's selected archive list, including expected companion variants.
     # Losing a bundle or manifest member on disk must not shrink the job matrix.
@@ -397,7 +388,6 @@ def matrix(directory, debug_layer):
         require(set(bundle["archives"]) == variants, f"{image}: missing selected archive during publication")
         output.append({"image": image})
     return {"include": output}
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)

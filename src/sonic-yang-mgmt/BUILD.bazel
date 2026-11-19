@@ -1,6 +1,7 @@
 load("@config_engine_pip//:requirements.bzl", "requirement")
 load("@rules_python//python:packaging.bzl", "py_wheel")
 load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
 load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
 
 package(default_visibility = ["//visibility:public"])
@@ -8,6 +9,7 @@ package(default_visibility = ["//visibility:public"])
 exports_files([
     "setup.py",
     "requirements.in",
+    "requirements_lock.txt",
 ])
 
 _MODULES = [
@@ -16,9 +18,14 @@ _MODULES = [
     "sonic_yang_path.py",
 ]
 
+filegroup(
+    name = "sonic_yang_mgmt_sources",
+    srcs = _MODULES,
+)
+
 py_library(
     name = "sonic_yang_mgmt",
-    srcs = _MODULES,
+    srcs = [":sonic_yang_mgmt_sources"],
     imports = ["."],
     deps = [
         "@libyang_python//:libyang",
@@ -140,7 +147,7 @@ site_packages(
     site_packages = "/usr/local/lib/python3.13/dist-packages",
     summary = _SOURCE_SUMMARY,
     version = _SOURCE_VERSION,
-    runtime_deps = ["//src/sonic-yang-models:sonic-yang-models.runtime"],
+    runtime_deps = ["@sonic_yang_models//:sonic-yang-models.runtime"],
 )
 
 filegroup(
@@ -159,6 +166,16 @@ filegroup(
         "COPYING*",
         "NOTICE*",
         "AUTHORS*",
-    ]),
+    ], allow_empty = True),
     visibility = ["//tools/bazel/tests:__pkg__"],
+)
+
+# Preserve the registered module's public production-model consumer check.
+py_test(
+    name = "sonic_yang_mgmt_runtime_test",
+    srcs = ["sonic_yang_mgmt_runtime_test.py"],
+    args = ["$(rootpath @sonic_yang_models//:yang_models)"],
+    data = ["@sonic_yang_models//:yang_models"],
+    python_version = "3.13",
+    deps = [":sonic_yang_mgmt"],
 )

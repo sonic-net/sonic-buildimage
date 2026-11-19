@@ -99,6 +99,17 @@ bazel_dep(
     repo_name = "sonic_yang_models",
 )
 
+# These source owners live in this checkout. Use Make's exact models and
+# management library for both Common's schema generator and the image layer.
+local_path_override(
+    module_name = "sonic-yang-mgmt",
+    path = "src/sonic-yang-mgmt",
+)
+local_path_override(
+    module_name = "sonic-yang-models",
+    path = "src/sonic-yang-models",
+)
+
 # Dependency overrides do not propagate from Common. Keep its cgo header
 # repair selected when another module requests the unpatched stable release.
 single_version_override(

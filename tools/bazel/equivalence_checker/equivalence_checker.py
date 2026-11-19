@@ -111,8 +111,9 @@ def run_existing(args) -> int:
     revision = checkout_revision(source_checkout)
     tool_revision = checkout_revision(registry_lib.REPO_ROOT)
     report = registry_lib.REPO_ROOT / args.report
+    provenance_report = {}
     sources, required, tools, manifest_sha256 = existing_oci.load(
-        args.existing_oci.absolute(), revision, report=report
+        args.existing_oci.absolute(), revision, report=report, provenance_report=provenance_report
     )
     with tempfile.TemporaryDirectory(prefix="equivalence-") as tmp:
         ctx = Context(sink=DiagnosticSink(), index=ArtifactIndex(), bazel=None, tools=tools, needs_build=False, debian_release=args.bldenv, jobs=args.jobs, workdir=Path(tmp))
@@ -128,6 +129,8 @@ def run_existing(args) -> int:
         payload["provenance_manifest"] = {"path": str(args.existing_oci.absolute()), "sha256": manifest_sha256}
         payload["source_checkout"] = {"path": str(source_checkout), "revision": revision, "clean": True}
         payload["tool_checkout"] = {"path": str(registry_lib.REPO_ROOT), "revision": tool_revision, "clean": True}
+        if provenance_report:
+            payload["producer_inputs"] = provenance_report
         report.write_text(json.dumps(payload, indent=2) + "\n")
         print_report(ctx, classified)
         print(f"Required OCI pairs: {result['required_status']}; all compared pairs: {result['all_compared_status']}")

@@ -85,6 +85,109 @@ logs and producer evidence and independently review the complete closure before
 acceptance. Never create a provenance file merely to relabel historical outputs
 as products of the current checkout.
 
+### Source archives and different lock formats
+
+Schema 1 retains its exact source/configuration/lock equality checks. Use
+`schema: 2` in the manifest and both producer records when the actual sources
+include release archives or the builders use different lock formats. This
+changes input validation only; it still runs the same OCI extraction, comparison,
+required-pair checks and diagnostic rules.
+
+Schema 2 keeps the original commands, clean checkout, configuration and artifact
+hashes above. Each project source has one of these forms:
+
+```json
+{"kind": "git", "revision": "<actual Git commit>", "patches": []}
+```
+
+```json
+{
+  "kind": "archive",
+  "release": "<actual source release>",
+  "archives": {
+    "component.orig.tar.gz": {"path": "<retained original archive>", "sha256": "<SHA256>", "origin": "<immutable source URL>"},
+    "component.debian.tar.xz": {"path": "<retained Debian packaging archive>", "sha256": "<SHA256>", "origin": "<immutable source URL>"}
+  },
+  "patches": [
+    {"path": "<retained patch>", "sha256": "<SHA256>", "origin": "<patch owner and revision>"}
+  ]
+}
+```
+
+Git sources use the same retained-file records for their ordered patches.
+Every archive and patch is rehashed. Archive identities are release names and
+full SHA256 values; an archive hash must never be shortened into a Git revision.
+The complete project source set, original identities and configuration must
+match. Do not omit inherited project components or relabel them as external
+packages.
+
+`locks` contains each builder's original retained lock files, with `path`,
+`sha256`, `origin` and the supported `format`. `external_dependencies` records
+the resolved runtime packages, keyed by ecosystem/name/target, with their exact
+version, artifact checksums, activated features, consuming archive names and
+retained producer selection evidence. Checksums/features/images are sorted,
+unique lists. Each selection must reference its original lock; every retained
+lock must have selected runtime inputs. The checker verifies supported lock
+contents and rejects unknown formats or selections the retained inputs cannot
+establish. Preserve actual Make downloads and resolver logs, including any
+fallback from its declared constraints. A constraints file alone cannot prove
+which wheel was installed.
+
+Different lock serialization does not establish a dependency difference. The
+checker compares the resolved package identities. Any actual difference fails
+unless `EXTERNAL_DEPENDENCY_DIFFERENCES` contains a reviewed rule binding the
+exact dependency name, both complete selections, affected archive names and a
+reason. That table is empty by default, and caller manifests cannot add rules.
+An admission never accepts a file-content, ABI, ELF or service difference;
+those still need their own evidence and narrowly named diagnostic rules.
+
+For metadata-only patch differences, `SOURCE_PATCH_DIFFERENCES` must bind the
+same original source identity, both exact ordered patch lists and a reason.
+Both producers must retain their prepared source directories and a hashed
+manifest with `schema: 1` and `entries`: each relative path maps to its type,
+file SHA256 and mode, directory mode, or literal symlink target. The checker
+rehashes and inventories the complete actual directories before comparing them.
+Only the rule's exact `nonproduction_paths` may be excluded. Caller exclusions,
+wildcards, stale exclusions, omitted files and changed production files fail.
+Equal prepared files cannot excuse a different Git revision or source archive.
+This rule table is also empty by default.
+
+Schema 2 reports retain both complete producer records and every matched input
+rule under `producer_inputs`. Original producer evidence still needs independent
+review: a JSON receipt cannot authenticate a claimed build or establish that its
+author included every runtime dependency.
+
+Supported lock formats are `cargo-lock` (registry packages in Cargo.lock),
+`requirements-lock` (exact Python requirements with SHA256 hashes), `apt-lock`
+(the selected SONiC apt.lock.json), `debian-packages` (a retained Packages index),
+and `versions-py3` (Make's exact Python constraints). The last format additionally
+requires `artifacts`, a list of retained wheel file records. The checker reads
+each wheel's METADATA and verifies its package, version and full archive hash.
+It does not infer source identity from a wheel filename.
+
+For example, a resolved external entry has this shape:
+
+```json
+{
+  "cargo/example/x86_64-unknown-linux-gnu": {
+    "lock": "owner-Cargo.lock",
+    "version": "1.2.3",
+    "checksums": ["<actual crate SHA256 from Cargo.lock>"],
+    "features": ["default"],
+    "images": ["docker-example-dbg.gz", "docker-example.gz"],
+    "selection_evidence": [
+      {"path": "selection.json", "sha256": "<SHA256>", "origin": "<original producer and collection command>"}
+    ]
+  }
+}
+```
+
+The selection receipt has `schema: 1` and `dependencies` mapping the same key
+to exactly `version`, `checksums`, `features` and `images` above. Retain the
+original graph/resolver evidence behind that receipt. Lock parsing independently
+checks the package identities; features and image consumers remain recorded
+producer context and require review against the actual build graph.
+
 Additional explicit OCI pairs are diagnostics. Their comparison findings remain
 in the normal report, while `scope.required_status` and the exit status depend
 on the required runtime/debug set. `scope.all_compared_status` retains the

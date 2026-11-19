@@ -1,0 +1,99 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+_FILES = {
+    "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
+    "systemd_scripts/gnmi.service": "usr/share/sonic/systemd_scripts/gnmi.service",
+    "systemd_scripts/gnmi.sh": "usr/share/sonic/systemd_scripts/gnmi.sh",
+    ":tagged_rsyslog": "etc/rsyslog.conf",
+}
+
+_EXECUTABLES = {
+    "systemd_stub.py": "usr/bin/systemd_stub.py",
+    "//files/scripts:k8s_pod_control.sh": "usr/share/sonic/scripts/k8s_pod_control.sh",
+    "//files/scripts:gnmi.sh": "usr/share/sonic/systemd_scripts/gnmi_v1.sh",
+} | {
+    path: "usr/share/sonic/" + path
+    for path in glob(["systemd_scripts/container_checker_*"])
+}
+
+expand_template(
+    name = "tagged_rsyslog",
+    template = "//files/image_config:rsyslog/rsyslog-container-gnmi.conf",
+    out = "tagged-rsyslog.conf",
+    substitutions = {"%syslogtag%": "gnmi-sidecar#%syslogtag%"},
+)
+
+tar(
+    name = "service_files",
+    srcs = _FILES.keys() + _EXECUTABLES.keys(),
+    mtree = [
+        path + " uid=0 gid=0 mode=" + mode + " time=0 type=file content=$(location " + source + ")"
+        for items, mode in [(_FILES, "0644"), (_EXECUTABLES, "0755")]
+        for source, path in items.items()
+    ],
+)
+
+genrule(
+    name = "service_environment",
+    srcs = ["//tools/bazel/image/vs/metadata:docker-gnmi-sidecar.environment"],
+    outs = ["service.env"],
+    cmd = "cat $< > $@ && printf '%s\\n' IS_V1_ENABLED=false CONTAINER_CHECKER_SYNC_ENABLED=false >> $@",
+)
+
+manifest_labels(
+    name = "labels",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gnmi-sidecar.manifest",
+)
+
+manifest_labels(
+    name = "labels-dbg",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gnmi-sidecar-dbg.manifest",
+)
+
+# Config Engine supplies the source-built Python wheels and native bindings.
+oci_image(
+    name = "docker-gnmi-sidecar",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = ":service_environment",
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [":service_files"],
+)
+
+# Collect inherited and service-owned symbols from the exact runtime graph.
+debug_symbols_layer(
+    name = "docker-gnmi-sidecar.debug_symbols",
+    image = ":docker-gnmi-sidecar",
+)
+
+oci_image(
+    name = "docker-gnmi-sidecar-dbg",
+    base = ":docker-gnmi-sidecar",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [":docker-gnmi-sidecar.debug_symbols"],
+)
+
+sonic_docker_archive(
+    name = "docker-gnmi-sidecar.gz",
+    image = ":docker-gnmi-sidecar",
+)
+
+sonic_docker_archive(
+    name = "docker-gnmi-sidecar-dbg.gz",
+    image = ":docker-gnmi-sidecar-dbg",
+)

@@ -157,6 +157,29 @@ class VSContainerValidationTest(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "changed inherited payload: usr/bin/cat"):
                         vs_standalone_probes.verify_full_parent(self.directory, {"image": image}, variant, "probe")
 
+    def test_supervised_services_allow_only_their_declared_parent_file_replacements(self):
+        original = {"kind": "file", "mode": 0o644, "uid": 0, "gid": 0, "sha256": digest(b"original")}
+        changed = dict(original, sha256=digest(b"replacement"))
+        inherited = {"usr/bin/cat": original, "etc/rsyslog.conf": original}
+        inherited.update({name: {"kind": "symlink", "linkname": target} for name, target in
+                          {"bin": "usr/bin", "sbin": "usr/sbin", "lib": "usr/lib", "var/run": "/run"}.items()})
+        def write_inventory(variant, files):
+            data = {"files": files, "config": {"rootfs": {"diff_ids": ["parent"]}}}
+            (self.directory / (variant + ".oci.json.gz")).write_bytes(gzip.compress(json.dumps(data).encode()))
+        write_inventory("parent", inherited)
+        (self.directory / "parent.json").write_text(json.dumps({"image": "docker-config-engine-trixie"}))
+        for image in vs_standalone_probes.SUPERVISED:
+            for variant in ("runtime", "debug"):
+                with self.subTest(image=image, variant=variant):
+                    owners = {"service.files.tar": {"etc/rsyslog.conf": changed}}
+                    (self.directory / (variant + ".owners.json")).write_text(json.dumps({"owners": owners}))
+                    files = inherited | {"etc/rsyslog.conf": changed}
+                    write_inventory(variant, files)
+                    vs_standalone_probes.verify_full_parent(self.directory, {"image": image}, variant, "unused")
+                    write_inventory(variant, files | {"usr/bin/cat": changed})
+                    with self.assertRaisesRegex(ValueError, "changed inherited payload: usr/bin/cat"):
+                        vs_standalone_probes.verify_full_parent(self.directory, {"image": image}, variant, "unused")
+
     def test_enabled_debug_extends_the_published_runtime(self):
         self.bundle["debug_enabled"] = True
         self.add_image("debug", [b"base", b"runtime", b"debug tools"])
@@ -218,6 +241,29 @@ class VSContainerValidationTest(unittest.TestCase):
                 self.add_image("debug", layers, changed)
                 with self.assertRaisesRegex(ValueError, message):
                     vs_container_probe.runtime_report(self.directory, self.validate(True))
+
+    def test_supervised_probes_follow_the_selected_runtime_and_debug_archives(self):
+        """A normal installer job never tries to load or inspect an unselected debug companion."""
+        for image in vs_standalone_probes.SUPERVISED:
+            for debug in (False, True):
+                with self.subTest(image=image, debug=debug):
+                    variants = {"runtime": {"file": image + ".gz"}}
+                    if debug:
+                        variants["debug"] = {"file": image + "-dbg.gz"}
+                    bundle = {"image": image, "archives": variants, "architecture": "amd64"}
+                    report = {"images": {row["file"].removesuffix(".gz"): {} for row in variants.values()},
+                              "runtime_native": {}}
+                    output = json.dumps({"image": image, "status": "passed"})
+                    with patch.object(validate, "loaded_image", side_effect=lambda *args: nullcontext("fixture")), \
+                            patch.object(vs_standalone_probes, "verify_full_parent"), \
+                            patch.object(vs_standalone_probes, "verify_watchdog_symbols", return_value={}) as symbols, \
+                            patch.object(vs_standalone_probes, "run", return_value=output) as run:
+                        vs_standalone_probes.standalone(image, self.directory, bundle, report)
+                    self.assertEqual(run.call_count, len(variants))
+                    self.assertEqual(symbols.call_count, int(debug and image in vs_standalone_probes.WATCHDOGS))
+                    for row in variants.values():
+                        receipt = self.directory / (row["file"].removesuffix(".gz") + ".runtime.json")
+                        self.assertEqual(json.loads(receipt.read_text())["status"], "passed")
 
     def test_wrong_revision_or_release_fails_before_probing(self):
         with self.assertRaisesRegex(ValueError, "checkout"):

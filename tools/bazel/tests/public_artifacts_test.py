@@ -494,7 +494,7 @@ class PublicArtifactsTest(unittest.TestCase):
             with self.subTest(logical=logical):
                 command = workflow.split(event_path, 1)[1].split("2>&1 | tee", 1)[0]
                 labels = [line.strip().rstrip("\\").strip()
-                          for line in command.splitlines() if line.strip().startswith("//")]
+                          for line in command.splitlines() if line.strip().startswith(("//", "@"))]
                 self.assertEqual(len(labels), len(set(labels)))
                 self.assertEqual(count, len(labels))
 

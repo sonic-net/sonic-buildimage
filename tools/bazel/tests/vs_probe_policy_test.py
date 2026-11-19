@@ -40,8 +40,49 @@ class VSProbePolicyTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "already owned by its parent"):
                 probe.runtime_report(directory, {"image": "docker-teamd"})
 
+    def test_supervised_services_bind_selected_owner_outputs_to_the_installer_build(self):
+        from tools.bazel.ci import vs_standalone_probes as standalone
+        from tools.bazel.ci import vs_validation_bundles as bundles
+        for image in standalone.SUPERVISED:
+            with self.subTest(image=image), tempfile.TemporaryDirectory() as temporary:
+                runtime, debug = image + ".gz", image + "-dbg.gz"
+                label = "//dockers/" + image + ":"
+                for enabled in (False, True):
+                    archives = {runtime: label + runtime}
+                    if enabled:
+                        archives[debug] = label + debug
+                    family = bundles.validation_targets(archives, [debug], enabled)[image]
+                    self.assertEqual(set(family["members"]), {"runtime", "debug"} if enabled else {"runtime"})
+                    targets = family["sources"]
+                    self.assertEqual(targets["service.files.tar"], label + "service_files")
+                    self.assertEqual("all-debug.tar" in targets, enabled)
+                    if enabled:
+                        self.assertEqual(targets["all-debug.tar"], label + image + ".debug_symbols")
+                    if image in standalone.WATCHDOGS:
+                        self.assertEqual(targets["watchdog.source.tar"], "//dockers/" + image + "/watchdog:runtime")
+                    artifacts = {name: Path(temporary) / name for name in targets}
+                    artifacts["runtime.owners.json"] = Path(temporary) / "runtime.owners.json"
+                    projected = bundles.stage_probe_fixtures(image, artifacts, Path(temporary))
+                    expected = {"runtime.owners.json"}
+                    if enabled and image in standalone.WATCHDOGS:
+                        self.assertEqual(targets["watchdog-symbol-tools.tar.gz"], "//tools/bazel/ci:watchdog_symbol_tools")
+                        expected.add("watchdog-symbol-tools.tar.gz")
+                    self.assertEqual(set(projected), expected)
+
+    def test_supervised_runtime_rejects_detached_symbols_from_its_debug_companion(self):
+        from tools.bazel.ci.vs_standalone_probes import SUPERVISED
+        native = {"usr/bin/watchdog": {"build_id": "abcd"}}
+        symbols = "usr/lib/debug/.build-id/ab/cd.debug"
+        for image in SUPERVISED:
+            with self.subTest(image=image):
+                probe.verify_debug_separation(image, "runtime", native, {}, {"usr/bin/watchdog"})
+                with self.assertRaisesRegex(ValueError, "runtime contains debug-only files"):
+                    probe.verify_debug_separation(image, "runtime", native, {}, {symbols})
+                with self.assertRaisesRegex(ValueError, "runtime contains debug-only files"):
+                    probe.verify_debug_separation(image, "debug", native, {"all-debug.tar": {symbols: {}}}, {symbols})
+
     def test_disabled_debug_does_not_request_owner_symbols(self):
-        for image in policy.FAMILIES:
+        for image in set(policy.FAMILIES) | {"docker-gnmi-sidecar"}:
             with self.subTest(image=image):
                 targets = policy.preparation_targets(image, False)
                 self.assertFalse([name for name in targets if "debug" in name or "symbols" in name])

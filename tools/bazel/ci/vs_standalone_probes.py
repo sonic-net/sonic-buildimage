@@ -1,6 +1,7 @@
 """Run the installed probes for VS images which do not provide a *_loaded.py entry point."""
 
 import json
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -20,7 +21,9 @@ TEAM = "docker-teamd"
 FRR = "docker-fpm-frr"
 NAT = "docker-nat"
 BMP = "docker-sonic-bmp"
-STANDALONE_IMAGES = {BASE, CONFIG, SWSS, SYNCD, TEAM, FRR, NAT, BMP}
+SUPERVISED = {"docker-gnmi-sidecar"}
+WATCHDOGS = {}
+STANDALONE_IMAGES = {BASE, CONFIG, SWSS, SYNCD, TEAM, FRR, NAT, BMP} | SUPERVISED
 
 
 def extra_standalone_targets(image, debug_selected):
@@ -50,6 +53,17 @@ def extra_standalone_targets(image, debug_selected):
         if debug_selected:
             targets.update({"syncd-debug.packages.json": package + "debug_package_metadata",
                             "syncd-debug.status": package + "debug_installed_packages"})
+    if image in SUPERVISED:
+        package = "//dockers/" + image + ":"
+        targets.update({"service.files.tar": package + "service_files",
+                        "base.source.tar": "//dockers/docker-base-trixie:source_runtime",
+                        "config-engine.source.tar": "//dockers/docker-config-engine-trixie:source_runtime"})
+        if image in WATCHDOGS:
+            targets["watchdog.source.tar"] = "//dockers/" + image + "/watchdog:runtime"
+        if debug_selected:
+            targets["all-debug.tar"] = package + image + ".debug_symbols"
+            if image in WATCHDOGS:
+                targets["watchdog-symbol-tools.tar.gz"] = "//tools/bazel/ci:watchdog_symbol_tools"
     return targets
 
 
@@ -130,7 +144,7 @@ def verify_parent(directory, bundle, variant, inventory, inherited):
 def verify_full_parent(directory, bundle, variant, tag):
     """Compare the assembled service with its published parent and declared owner replacements."""
     image = bundle["image"]
-    parent_image = CONFIG if image == SWSS else SWSS
+    parent_image = CONFIG if image == SWSS or image in SUPERVISED else SWSS
     parent_record = json.loads((directory / "parent.json").read_bytes())
     require(parent_record["image"] == parent_image, "Wrong VS parent for " + image)
     parent = vs_container_validation.read_oci(directory, "parent")
@@ -146,7 +160,9 @@ def verify_full_parent(directory, bundle, variant, tag):
         packages = json.loads((directory / "config-engine.packages.json").read_bytes())
         artifact_validation.verify_swss_component_labels(current["config"]["config"]["Labels"],
                                                          packages["dependency_check"]["packages"])
-    if image == SWSS:
+    if image in SUPERVISED:
+        artifact_validation.verify_inherited_files(inherited, files, owners["service.files.tar"], set(), image)
+    elif image == SWSS:
         artifact_validation.verify_inherited_files(inherited, files, {}, {"var/lib/dpkg/status"}, "SWSS layer")
     elif image == TEAM:
         teamd_image.verify_parent_files(inherited, files, owners["teamd.files.tar"],
@@ -157,6 +173,62 @@ def verify_full_parent(directory, bundle, variant, tag):
     else:
         frr_image.verify_parent_files(inherited, files, owners["frr.files.tar"], owners["frr.python.tar"],
                                       owners["frr.debug-tools.tar"] if debug else {})
+
+
+def verify_watchdog_symbols(directory, image, tag, work):
+    """Inspect exact installed bytes with the validation runner's GDB, never add image packages."""
+    from tools.bazel.oci.runtime_smoke import gdb_lookup
+
+    tools = work / "inspection-tools"
+    tools.mkdir()
+    with tarfile.open(directory / "watchdog-symbol-tools.tar.gz") as archive:
+        archive.extractall(tools, filter="data")
+    executables = {name: tools / "tools/bazel/ci" / ("watchdog_" + name)
+                   for name in ("gdb", "readelf", "objcopy")}
+    require(all(path.is_file() and not path.is_symlink() for path in executables.values()),
+            "Missing declared watchdog inspection executable")
+    gdb, readelf, objcopy = (str(executables[name]) for name in ("gdb", "readelf", "objcopy"))
+    binary_name = WATCHDOGS[image]
+    path = "usr/bin/" + binary_name
+    runtime = vs_container_validation.read_oci(directory, "runtime")["files"]
+    debug = vs_container_validation.read_oci(directory, "debug")["files"]
+    owner = json.loads((directory / "runtime.owners.json").read_bytes())["native"][path]
+    build_id = owner["build_id"]
+    require(build_id and owner["has_debuglink"], "Watchdog owner lacks split symbols: " + image)
+    debug_path = f"usr/lib/debug/.build-id/{build_id[:2]}/{build_id[2:]}.debug"
+    root = work / "symbols"
+    binary, symbols = root / path, root / debug_path
+    binary.parent.mkdir(parents=True)
+    symbols.parent.mkdir(parents=True)
+    container = subprocess.check_output([
+        "docker", "create", "--name", "sonic-symbol-check-" + uuid.uuid4().hex,
+        "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+        "--entrypoint=/bin/true", tag], text=True, timeout=60).strip()
+    try:
+        for source, target in ((path, binary), (debug_path, symbols)):
+            subprocess.run(["docker", "cp", container + ":/" + source, str(target)], check=True, timeout=60)
+    finally:
+        subprocess.run(["docker", "rm", "--force", container], check=True, capture_output=True, timeout=60)
+    require(sha(binary) == runtime[path]["sha256"] == debug[path]["sha256"],
+            "Extracted watchdog differs from its selected runtime: " + path)
+    require(sha(symbols) == debug[debug_path]["sha256"], "Extracted watchdog symbols differ: " + debug_path)
+    original, detached = artifact_validation.elf_info(binary, readelf=readelf), artifact_validation.elf_info(symbols, readelf=readelf)
+    require(original["build_id"] == detached["build_id"] == build_id and detached["has_dwarf"],
+            "Watchdog symbols lack matching build ID or DWARF")
+    artifact_validation.verify_debuglink(binary, symbols, path, expected_name=build_id[2:] + ".debug", objcopy=objcopy)
+    isolated, empty = work / binary_name, work / "empty-symbols"
+    shutil.copyfile(binary, isolated)
+    empty.mkdir()
+    symbol = binary_name + "::main"
+    without = gdb_lookup(isolated, work, str(empty), symbol, gdb=gdb)
+    require(not without.get("found"), "Watchdog source lookup succeeded without packaged symbols")
+    lookup = gdb_lookup(binary, work, str(root / "usr/lib/debug"), symbol, gdb=gdb)
+    require(lookup.get("found") and lookup.get("source") == "dockers/" + image + "/watchdog/src/main.rs",
+            "Watchdog symbols do not provide source, line and type information for the service")
+    return {"path": path, "debug_path": debug_path, "build_id": build_id,
+            "without_symbols": without, "with_symbols": lookup,
+            "tool_archive_sha256": sha(directory / "watchdog-symbol-tools.tar.gz"),
+            "gdb_version": artifact_validation.command([gdb, "--version"]).splitlines()[0]}
 
 
 def validate_base(directory, variant, name, summary):
@@ -190,7 +262,7 @@ def standalone(image, directory, bundle, report):
             summary = {**report["images"][name], "architecture": bundle["architecture"],
                        "runtime_native": report["runtime_native"]}
             with vs_container_validation.loaded_image(directory, spec, bundle) as tag:
-                if image in (SWSS, FRR, TEAM):
+                if image in (SWSS, FRR, TEAM) or image in SUPERVISED:
                     verify_full_parent(directory, bundle, variant, tag)
                 if image in (BASE, CONFIG, SYNCD):
                     verify_installed_declaration(directory, bundle, variant, tag)
@@ -205,6 +277,14 @@ def standalone(image, directory, bundle, report):
                         options=[*bind(OCI / "runtime_smoke.py", "/probe/check.py"),
                                  "--tmpfs", "/etc/sai.d", "--tmpfs", "/usr/share/sonic/hwsku"],
                         stdin=json.dumps(probe))
+                elif image in SUPERVISED:
+                    output = run(tag, "/usr/bin/python3", ["-B", "/probe/check.py", image],
+                                 options=bind(ROOT / "tools/bazel/ci/supervised_runtime_probe.py", "/probe/check.py"))
+                    result = json.loads(output)
+                    require(result["status"] == "passed", name + " installed service probe did not pass")
+                    if variant == "debug" and image in WATCHDOGS:
+                        result["debug"] = verify_watchdog_symbols(directory, image, tag, work)
+                    (directory / (name + ".runtime.json")).write_text(json.dumps(result) + "\n")
                 elif image == NAT:
                     script = (ROOT / "dockers/docker-nat/verify-installed.sh").read_text()
                     run(tag, "/bin/sh", ["-s", "--", name], stdin=script)
