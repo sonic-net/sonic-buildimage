@@ -12,7 +12,6 @@ except ImportError as e:
 class Psu(PsuInputTelemetry, PddfPsu):
     """PDDF Platform-Specific PSU class"""
     
-    PLATFORM_PSU_CAPACITY = 1200
 
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
         PddfPsu.__init__(self, index, pddf_data, pddf_plugin_data)
@@ -25,7 +24,11 @@ class Psu(PsuInputTelemetry, PddfPsu):
             A float number, the maximum power output in Watts.
             e.g. 1200.1
         """
-        return float(self.PLATFORM_PSU_CAPACITY)
+        return PddfPsu.get_maximum_supplied_power(self)
+
+    def get_capacity(self):
+        """Return the manufacturer output capacity in watts."""
+        return int(self.get_maximum_supplied_power())
 
     def get_type(self):
         """
