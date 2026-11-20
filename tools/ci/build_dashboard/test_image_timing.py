@@ -15,6 +15,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 HELPER = ROOT / "scripts/image_timing.py"
+KVM_MARKER = "[ image phases ] [ target/sonic-vs.img.gz ] "
 spec = importlib.util.spec_from_file_location("image_timing", HELPER)
 timing = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(timing)
@@ -47,17 +48,19 @@ class ReceiptTestCase(unittest.TestCase):
 
 
 class ProducerTests(ReceiptTestCase):
-    def test_microsecond_endpoints_partition_bios_uefi_and_multiasic(self):
-        for pattern in (timing.SINGLE, timing.MULTI):
+    def test_microsecond_endpoints_partition_each_installer_recipe(self):
+        for target, pattern in ((timing.KVM_TARGET, timing.SINGLE), (timing.KVM_TARGET, timing.MULTI),
+                                (timing.ONIE_TARGET, timing.ONIE)):
+            marker = f"[ image phases ] [ {target} ] "
             with self.subTest(pattern=len(pattern)):
                 with mock.patch.object(timing, "now_us", side_effect=[
                         100_000_000 + i * 1_234_567 for i in range(len(pattern) + 1)]):
                     path = self.begin()
                     self.complete(path, pattern)
-                    line = timing.end(path)
+                    line = timing.end(path, target)
                 self.assertFalse(Path(path).exists())
-                self.assertTrue(line.startswith(timing.MARKER))
-                result = json.loads(line[len(timing.MARKER):])
+                self.assertTrue(line.startswith(marker))
+                result = json.loads(line[len(marker):])
                 self.assertEqual(result["version"], 1)
                 self.assertEqual([(s["phase"], s["context"]) for s in result["segments"]], pattern)
                 self.assertEqual(result["segments"][0]["offset_seconds"], 0)
@@ -78,6 +81,15 @@ class ProducerTests(ReceiptTestCase):
                             self.cli(path, "switch", *event)
                 self.assertEqual(self.cli(path, "end").stdout, "")
                 self.assertFalse(Path(path).exists())
+
+    def test_wrong_target_or_missing_onie_docker_phase_cannot_publish(self):
+        for pattern, target in ((timing.SINGLE, timing.ONIE_TARGET), (timing.ONIE, timing.KVM_TARGET),
+                                ([event for event in timing.ONIE if event[1] != "docker-load"], timing.ONIE_TARGET)):
+            path = self.begin()
+            for event in pattern[1:]:
+                self.cli(path, "switch", *event)
+            self.assertEqual(self.cli(path, "end", target).stdout, "")
+            self.assertFalse(Path(path).exists())
 
     def test_invalid_labels_duplicates_and_oversized_receipts_are_quiet(self):
         for content in ("invalid\n", "x" * (timing.MAX_BYTES + 1),
@@ -212,22 +224,26 @@ export -f git make
         source = (ROOT / "slave.mk").read_text()
         begin = source.split("\t# The receipt is private;", 1)[1].split("\t# Pass initramfs", 1)[0]
         begin = begin[begin.index("\tunset SONIC_IMAGE_TIMING_FILE"):]
-        begin = begin.replace("$$", "$").replace('"$@"', '"target/sonic-vs.img.gz"')
+        # Exercise the real ONIE target with the shell's automatic variable expanded by Make.
+        begin = begin.replace("$$", "$").replace('"$@"', '"target/sonic-vs.bin"')
         end = source.split("\t# Reached only on success,", 1)[1].split("\t$(FOOTER)", 1)[0]
-        end = end[end.index("\tif [ -n"):].replace("$$", "$")
+        end = end[end.index("\tif [ -n"):].replace("$$", "$").replace('"$@"', '"target/sonic-vs.bin"')
         transitions = "\n".join("python3 ./scripts/image_timing.py switch " + " ".join(event)
-                                for event in timing.SINGLE[1:])
-        for fail in (False, True):
-            with self.subTest(failure=fail):
+                                for event in timing.ONIE[1:])
+        marker = "[ image phases ] [ target/sonic-vs.bin ] "
+        for enabled, fail in (("1", False), ("1", True), ("", False)):
+            with self.subTest(enabled=enabled, failure=fail):
                 script = begin + '\nprintf "%s" "$SONIC_IMAGE_TIMING_FILE" > receipt-path\n'
                 script += "(echo original-target-log\n" + transitions + ") >> target.log 2>&1\n"
                 script += "exit 37\n" if fail else end
-                result = self.shell(script)
+                result = self.shell(script, SONIC_VS_IMAGE_TIMINGS=enabled)
                 receipt_path = (self.cwd / "receipt-path").read_text()
-                self.assertFalse(Path(receipt_path).exists())
+                self.assertEqual(bool(receipt_path), bool(enabled))
+                if receipt_path:
+                    self.assertFalse(Path(receipt_path).exists())
                 self.assertEqual(result.returncode, 37 if fail else 0, result.stderr)
-                self.assertEqual(result.stdout.count(timing.MARKER), 0 if fail else 1)
-                self.assertNotIn(timing.MARKER, (self.cwd / "target.log").read_text())
+                self.assertEqual(result.stdout.count(marker), 1 if enabled and not fail else 0)
+                self.assertNotIn(marker, (self.cwd / "target.log").read_text())
                 self.assertIn("original-target-log", (self.cwd / "target.log").read_text())
 
     def test_final_filesystem_compression_boundaries_and_failure(self):
@@ -251,17 +267,53 @@ FILESYSTEM_DOCKERFS=dockerfs.tar.gz
 INSTALLER_PAYLOAD=payload.zip
 PLATFORM_DIR=platform
 '''
-        for failure in (0, 43):
+        for image_type, pattern in (("onie", timing.ONIE), ("kvm", timing.FILESYSTEM)):
+            squashfs = pattern.index(("compression", "filesystem"))
+            for failure in (0, 43):
+                with self.subTest(image_type=image_type, failure=failure):
+                    path = self.begin()
+                    self.complete(path, pattern[:squashfs])
+                    result = self.shell(stub + tail, **{timing.ENV: path, "IMAGE_TYPE": image_type,
+                                                       "FAIL_SQUASHFS": str(failure)})
+                    self.assertEqual(result.returncode, failure, result.stderr)
+                    events = [json.loads(line) for line in Path(path).read_text().splitlines()]
+                    stop = squashfs + 1 if failure else pattern.index(("assembly", "installer"))
+                    self.assertEqual([(e[1], e[2]) for e in events], pattern[:stop])
+                    self.assertIn("mksquashfs", (self.cwd / "commands").read_text())
+                    if not failure:
+                        self.assertIn("zip -g", (self.cwd / "commands").read_text())
+
+    def test_onie_load_interval_encloses_the_rendered_images_and_manifest_checks(self):
+        template = (ROOT / "files/build_templates/sonic_debian_extension.j2").read_text()
+        before, rest = template.split("switch assembly docker-load", 1)
+        loop, after = rest.split("switch assembly filesystem", 1)
+        self.assertIn("docker info", before)
+        for command in ("docker load -i", "docker tag", "docker inspect", "jq -e"):
+            self.assertIn(command, loop)
+        self.assertIn("{% for docker_installation_target in installer_images", loop)
+        self.assertIn("{% endfor %}", loop)
+        self.assertIn("SONIC_PACKAGE_MANAGER_FOLDER=", after)
+
+    def test_onie_wrapper_is_timed_through_completion_only(self):
+        source = (ROOT / "build_image.sh").read_text()
+        branch = source.split('if [ "$IMAGE_TYPE" = "onie" ]; then', 1)[1].split('## Build a raw', 1)[0]
+        stub = """
+OUTPUT_ONIE_IMAGE=target/sonic-vs.bin
+sudo() { :; }
+generate_device_list() { :; }
+generate_onie_installer_image() {
+    tail -n1 "$SONIC_IMAGE_TIMING_FILE" > at-wrapper
+    return "$WRAPPER_STATUS"
+}
+"""
+        for status in (0, 42):
             path = self.begin()
-            timing.switch(path, "assembly", "filesystem")
-            result = self.shell(stub + tail, **{timing.ENV: path, "FAIL_SQUASHFS": str(failure)})
-            self.assertEqual(result.returncode, failure, result.stderr)
-            events = [json.loads(line) for line in Path(path).read_text().splitlines()]
-            expected = timing.FILESYSTEM[:3 if failure else 6]
-            self.assertEqual([(e[1], e[2]) for e in events], expected)
-            self.assertIn("mksquashfs", (self.cwd / "commands").read_text())
-            if not failure:
-                self.assertIn("zip -g", (self.cwd / "commands").read_text())
+            self.complete(path, timing.ONIE[:-2])
+            result = self.shell(stub + branch, **{timing.ENV: path, "WRAPPER_STATUS": str(status)})
+            self.assertEqual(result.returncode, status, result.stderr)
+            self.assertEqual(json.loads((self.cwd / "at-wrapper").read_text())[1:], ["assembly", "installer"])
+            line = self.cli(path, "end", timing.ONIE_TARGET).stdout
+            self.assertEqual(bool(line), not status)
 
     def test_gnu_make_oneshell_relay_and_exit_trap_with_production_log_pipeline(self):
         source = (ROOT / "slave.mk").read_text()
@@ -301,8 +353,8 @@ PLATFORM_DIR=platform
                 if failure != "none":
                     # The existing LOG pipeline deliberately maps a tool error to 1.
                     self.assertIn("Error " + ("37" if failure == "recipe" else "1"), result.stderr)
-                self.assertEqual(result.stdout.count(timing.MARKER), 1 if failure == "none" else 0)
-                self.assertNotIn(timing.MARKER, log.read_text())
+                self.assertEqual(result.stdout.count(KVM_MARKER), 1 if failure == "none" else 0)
+                self.assertNotIn(KVM_MARKER, log.read_text())
                 self.assertIn("original-target-log", log.read_text())
 
     def test_first_rootfs_and_other_products_disable_inherited_receipt(self):
@@ -310,7 +362,7 @@ PLATFORM_DIR=platform
         guard = source.split("# Only the final VS recipe", 1)[1].split("ORGANIZATION_BUILD_HOOK=", 1)[0]
         guard = guard[guard.index("if [["):]
         for overrides in ({"RFS_SPLIT_FIRST_STAGE": "y"}, {"RFS_SPLIT_LAST_STAGE": "n"},
-                          {"TARGET_MACHINE": "broadcom"}, {"IMAGE_TYPE": "onie"}):
+                          {"TARGET_MACHINE": "broadcom"}, {"IMAGE_TYPE": "raw"}):
             path = self.begin()
             env = {timing.ENV: path, "RFS_SPLIT_LAST_STAGE": "y", "RFS_SPLIT_FIRST_STAGE": "n",
                    "TARGET_MACHINE": "vs", "IMAGE_TYPE": "kvm", **overrides}
@@ -358,10 +410,10 @@ python3 ./scripts/image_timing.py end 2>/dev/null || true
                         (self.cwd / "scripts/image_timing.py").unlink()
                     result = self.shell(script, **{timing.ENV: path, **env})
                     self.assertEqual(result.returncode, status, result.stderr)
-                    lines = [line for line in result.stdout.splitlines() if line.startswith(timing.MARKER)]
+                    lines = [line for line in result.stdout.splitlines() if line.startswith(KVM_MARKER)]
                     self.assertEqual(len(lines), 0 if status or env.get("BROKEN_TIMING") else 1)
                     if not status and not env.get("BROKEN_TIMING"):
-                        summary = json.loads(lines[0][len(timing.MARKER):])
+                        summary = json.loads(lines[0][len(KVM_MARKER):])
                         self.assertEqual([(s["phase"], s["context"]) for s in summary["segments"]], timing.SINGLE)
                         self.assertNotIn("not-for-the-summary", lines[0])
         finally:

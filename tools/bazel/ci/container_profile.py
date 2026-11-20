@@ -6,6 +6,18 @@ import math
 from operator import itemgetter
 
 
+COMPILERS = {"CppCompile", "CppModuleCompile", "Rustc", "GoCompilePkg", "GoCompile"}
+
+
+def subprocess_mnemonic(event):
+    """A local process names its tool. A sandbox process takes its enclosing action's mnemonic."""
+    if event.get("cat") == "Local execution process wall time":
+        return event["name"]
+    if event.get("cat") == "general information" and event["name"] == "subprocess.run":
+        return ""
+    return None
+
+
 def union_seconds(intervals):
     """Return the observed wall time, counting simultaneously active threads once."""
     return sum(end - start for start, end in merged(intervals)) / 1_000_000
@@ -48,7 +60,7 @@ def old_archive_paths(events, archives):
     return {archive: paths.pop() for archive, paths in outputs.items() if len(paths) == 1}
 
 
-def batch_profile(events, elapsed, archives, *, legacy):
+def batch_profile(events, elapsed, archives, *, legacy, owner_bounds=None):
     """archives maps selected archive names to (Make owner, public Bazel label)."""
     if not archives:
         return None
@@ -102,7 +114,7 @@ def batch_profile(events, elapsed, archives, *, legacy):
         return None
 
     actions = defaultdict(list)
-    downloads = defaultdict(list)
+    children = defaultdict(list)
     spans = {owner: defaultdict(list) for owner, _ in archives.values()}
     all_actions = []
     for event in events:
@@ -113,34 +125,45 @@ def batch_profile(events, elapsed, archives, *, legacy):
         thread = (event["pid"], event["tid"])
         if event.get("cat") == "action processing":
             owner = owning_image(event)
-            actions[thread].append((start, stop, owner))
+            mnemonic = event.get("args", {}).get("mnemonic")
+            actions[thread].append((start, stop, owner, mnemonic))
             all_actions.append((start, stop))
             if owner is not None:
                 span = spans[owner]
                 span["action"].append((start, stop))
-                mnemonic = event.get("args", {}).get("mnemonic")
                 if mnemonic == "OCITarball":
                     span["archive"].append((start, stop))
                 elif mnemonic == "GzipCompress":
                     span["compress"].append((start, stop))
         elif cache_fetch(event):
-            downloads[thread].append((start, stop))
+            children[thread].append((start, stop, "fetch"))
+        else:
+            process = subprocess_mnemonic(event)
+            if process == "" or process in COMPILERS:
+                # An unnamed subprocess can be classified only after finding its parent.
+                children[thread].append((start, stop, "compile" if process else None))
 
-    for thread, children in downloads.items():
+    for thread, intervals in children.items():
         parents = sorted(actions[thread], key=itemgetter(0))
-        for start, end in children:
+        for start, end, metric in intervals:
             index = bisect_right(parents, start, key=itemgetter(0)) - 1
             if index >= 0:
-                _, parent_end, owner = parents[index]
+                _, parent_end, owner, mnemonic = parents[index]
                 if owner is not None and end <= parent_end:
-                    spans[owner]["fetch"].append((start, end))
+                    if metric is not None:
+                        spans[owner][metric].append((start, end))
+                    elif mnemonic in COMPILERS:
+                        spans[owner]["compile"].append((start, end))
 
     rows = []
     changes = Counter()
     for owner, kinds in sorted(spans.items()):
+        if owner_bounds is not None and kinds["action"]:
+            owner_bounds[owner] = (min(start for start, _ in kinds["action"]),
+                                   max(end for _, end in kinds["action"]))
         rows.append({"owner": owner, "actions": len(kinds["action"]),
                      **{k + "_seconds": union_seconds(kinds[k])
-                        for k in ("action", "fetch", "archive", "compress")}})
+                        for k in ("action", "compile", "fetch", "archive", "compress")}})
         for start, end in merged(kinds["action"]):
             changes[start] += 1
             changes[end] -= 1

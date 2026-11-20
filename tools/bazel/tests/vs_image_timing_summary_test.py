@@ -4,6 +4,7 @@ import gzip
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -83,14 +84,49 @@ class ImageTimingSummaryTest(unittest.TestCase):
         result = batch_profile(list(reversed(events)), 12, archives, legacy=False)
         self.assertEqual(result, {
             "rows": [{"owner": "one.gz", "actions": 2, "action_seconds": 6, "archive_seconds": 4,
-                      "compress_seconds": 3, "fetch_seconds": 2},
+                      "compile_seconds": 0, "compress_seconds": 3, "fetch_seconds": 2},
                      {"owner": "two.gz", "actions": 1, "action_seconds": 3, "archive_seconds": 3,
-                      "compress_seconds": 0, "fetch_seconds": 0}],
+                      "compile_seconds": 0, "compress_seconds": 0, "fetch_seconds": 0}],
             "other_action_seconds": 2, "no_action_seconds": 3, "parallel_seconds": 2})
         both = combine_batches([result, result])
         self.assertEqual(both["rows"][0]["action_seconds"], 12)
         self.assertEqual(both["rows"][0]["actions"], 4)
         self.assertEqual(both["other_action_seconds"], 4)
+
+    def test_container_compilation_counts_owned_compiler_processes_on_their_enclosing_threads(self):
+        archives = {name + ".gz": (name + ".gz", f"//dockers/{name}:image") for name in ("one", "two", "cached", "idle")}
+
+        def action(target, mnemonic, start, duration, tid):
+            record = event("action processing", target, start, duration, tid, mnemonic)
+            record["args"]["target"] = target
+            return record
+
+        events = [
+            action("//dockers/one:cc", "CppCompile", 0, 7, 1),
+            event("general information", "subprocess.run", 1, 5, tid=1),
+            action("//dockers/one:module", "CppModuleCompile", 3, 6, 2),
+            event("Local execution process wall time", "CppModuleCompile", 4, 4, tid=2),
+            action("//dockers/two:rust", "Rustc", 3, 6, 3),
+            event("general information", "subprocess.run", 4, 2, tid=3),
+            action("//dockers/two:go", "GoCompilePkg", 8, 6, 4),
+            event("Local execution process wall time", "GoCompilePkg", 10, 2, tid=4),
+            action("//dockers/cached:object", "CppCompile", 0, 8, 5),
+            event("remote output download", "download outputs", 1, 3, tid=5),
+            action("//dockers/one:link", "CppLink", 10, 3, 6),
+            event("general information", "subprocess.run", 11, 1, tid=6),
+            action("@@dep+//lib:external", "CppCompile", 13, 8, 7),
+            event("general information", "subprocess.run", 14, 6, tid=7),
+            event("Local execution process wall time", "CppCompile", 15, 1, tid=8),
+            event("general information", "subprocess.run", 6, 5, tid=1),
+        ]
+        bounds = {}
+        result = batch_profile(list(reversed(events)), 25, archives, legacy=False, owner_bounds=bounds)
+        compile_times = {row["owner"]: row["compile_seconds"] for row in result["rows"]}
+        self.assertEqual(compile_times, {"one.gz": 7, "two.gz": 4, "cached.gz": 0, "idle.gz": 0})
+        self.assertEqual(bounds, {"one.gz": (0, 13_000_000), "two.gz": (3_000_000, 14_000_000),
+                                  "cached.gz": (0, 8_000_000)})
+        self.assertEqual({row["owner"]: row["compile_seconds"] for row in combine_batches([result, result])["rows"]},
+                         {name: 2 * elapsed for name, elapsed in compile_times.items()})
 
     def test_reprocess_previous_profiles_using_confirmed_archive_outputs(self):
         archives = {"one.gz": ("one.gz", ""), "one-dbg.gz": ("one.gz", "")}
@@ -102,7 +138,7 @@ class ImageTimingSummaryTest(unittest.TestCase):
                   event("action processing", "OCI Descriptor dockers/one/input.tar", 6, 1, mnemonic="OCIDescriptor")]
         row, = batch_profile(events, 7, archives, legacy=True)["rows"]
         self.assertEqual(row, {"owner": "one.gz", "actions": 4, "action_seconds": 5, "fetch_seconds": 0,
-                               "archive_seconds": 2, "compress_seconds": 2})
+                               "archive_seconds": 2, "compress_seconds": 2, "compile_seconds": 0})
         self.assertIsNone(batch_profile(events[:-2], 7, archives, legacy=True))
         # The same basename appearing in two packages cannot identify a legacy owner.
         events.append(event("action processing", "Compressing other to unrelated/one.gz", 7, 1,
@@ -139,6 +175,55 @@ class ImageTimingSummaryTest(unittest.TestCase):
             self.assertEqual(phase_evidence[0][0]["seconds"], 7)
             (group / "build.profile.json.gz").unlink()
             self.assertNotIn("container_breakdown", report(root)[0])
+
+    def test_per_image_total_matches_first_owned_action_to_last_successful_export(self):
+        build_start = 1_790_000_000
+        archive = "demo.gz"
+        debug = "demo-dbg.gz"
+
+        def timing(instance, phase, start, elapsed, code=0):
+            (instance / f"{phase}.timing.json").write_text(json.dumps({
+                "phase": phase, "start_epoch_seconds": start, "elapsed_seconds": elapsed, "exit_code": code,
+            }))
+
+        for case in ("complete", "missing profile clock", "missing owned action", "missing export",
+                     "failed export", "early export", "wrong archive", "independent image build", "two batches"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                workspace = Path(tmp)
+                group = time_vs_image.start_recipe(workspace, "vs-container-images", ["build"], ["build"], [])
+                targets = {name: [archive, f"//dockers/demo:{name}"] for name in (archive, debug)}
+                (group / "batch-targets.json").write_text(json.dumps(targets))
+                timing(group, "build", build_start, 15)
+                trace_start = (build_start + 2) * 1000
+                action = event("action processing", "Compile", 3, 4, mnemonic="CppCompile")
+                action["args"]["target"] = "//external:shared" if case == "missing owned action" else "//dockers/demo:lib"
+                profile = {"traceEvents": [action, event("general information", "subprocess.run", 4, 2)]}
+                if case != "missing profile clock":
+                    profile["otherData"] = {"profile_start_ts": trace_start}
+                with gzip.open(group / "build.profile.json.gz", "wt") as stream:
+                    json.dump(profile, stream)
+
+                debug_phase = "export-wrong.gz" if case == "wrong archive" else "export-" + debug
+                image = time_vs_image.start_recipe(workspace, archive, [], [], ["export-" + archive, debug_phase])
+                timing(image, "export-" + archive, build_start + 18, 5)
+                if case != "missing export":
+                    timing(image, debug_phase, build_start + (12 if case == "early export" else 27),
+                           2, int(case == "failed export"))
+                if case == "independent image build":
+                    time_vs_image.start_recipe(workspace, archive, ["build"], [], [])
+                if case == "two batches":
+                    shutil.copytree(group, group.parent / "recipe-second")
+
+                receipt, _ = report(group.parent.parent)
+                row, = receipt["container_breakdown"]["rows"]
+                if case == "complete":
+                    # First action at +5, last export finishes at +29. Idle time belongs to the span.
+                    self.assertEqual(row["total_seconds"], 24)
+                else:
+                    self.assertNotIn("total_seconds", row)
+                observed_batches = 2 if case == "two batches" else int(case != "missing owned action")
+                self.assertEqual(row["action_seconds"], 4 * observed_batches)
+                self.assertEqual(row["compile_seconds"], 2 * observed_batches)
 
     def test_compilation_counts_running_processes_and_unions_parallel_workers(self):
         events = [

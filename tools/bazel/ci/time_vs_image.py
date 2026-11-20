@@ -3,6 +3,7 @@
 import argparse
 from contextlib import contextmanager
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -22,6 +23,17 @@ def start_recipe(workspace, owner, bazel, profiles, exports):
 
 def exit_status(returncode):
     return returncode if returncode >= 0 else 128 - returncode
+
+
+@contextmanager
+def log_make_phase(name, *, vs_make):
+    """Write a paired VS build-log marker only when the phase succeeds."""
+    enabled = vs_make and os.environ.get("SONIC_VS_IMAGE_TIMINGS") == "1"
+    if enabled:
+        print(f"[ vs timing ] [ {name} ] [ start ]", file=sys.stderr, flush=True)
+    yield
+    if enabled:
+        print(f"[ vs timing ] [ {name} ] [ end ]", file=sys.stderr, flush=True)
 
 
 @contextmanager

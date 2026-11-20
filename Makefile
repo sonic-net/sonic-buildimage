@@ -44,6 +44,7 @@ PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_REPO=$(PLATFORM_REPO) PLATFORM_REF=$(PLATFORM_REF) PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
 MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
+vs_bookworm_cleanup_marker = $(if $(filter 1:0:target/sonic-vs.bin,$(SONIC_VS_IMAGE_TIMINGS):$(NOTRIXIE):$@),echo '[ vs timing ] [ bookworm-cleanup ] [ $(1) ]')
 
 %::
 	@echo "+++ --- Making $@ --- +++"
@@ -66,7 +67,9 @@ ifeq ($(NOTRIXIE), 0)
 	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work $@
 endif
 
+	@$(call vs_bookworm_cleanup_marker,start)
 	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
+	@$(call vs_bookworm_cleanup_marker,end)
 
 jessie:
 	@echo "+++ Making $@ +++"

@@ -804,7 +804,11 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 .PHONY: sonic-slave-build sonic-slave-bash sonic-slave-run init reset
 
 
-COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
+# The collector runs inside the builder. Its exit marker and the host marker
+# immediately after docker run bound the wait for the disposable builder to exit.
+vs_installer_tail_timing = $(filter 1:trixie:target/sonic-vs.bin,$(SONIC_VS_IMAGE_TIMINGS):$(BLDENV):$@)
+vs_host_timing_marker = $(if $(vs_installer_tail_timing),echo '[ vs timing ] [ $(1) ] [ $(2) ]')
+COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh $(if $(vs_installer_tail_timing),--vs-timings )\$$?; }
 
 ifdef SOURCE_FOLDER
 	DOCKER_RUN += -v $(SOURCE_FOLDER):/var/$(USER)/src
@@ -844,7 +848,10 @@ endif
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; export BUILD_HOSTNAME=$(shell hostname); $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
+	@$(call vs_host_timing_marker,builder-exit,end)
+	@$(call vs_host_timing_marker,trixie-image-cleanup,start)
 	$(Q)$(docker-image-cleanup)
+	@$(call vs_host_timing_marker,trixie-image-cleanup,end)
 
 docker-cleanup:
 	$(Q)$(docker-image-cleanup)

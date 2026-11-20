@@ -1,5 +1,6 @@
 """Keep private test-runtime materialization faithful to the declared TARs."""
 
+from contextlib import redirect_stderr
 from pathlib import Path
 import io
 import json
@@ -8,6 +9,7 @@ import tarfile
 import tempfile
 import os
 import subprocess
+import sys
 from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
@@ -321,8 +323,10 @@ class RuntimeTest(unittest.TestCase):
                 patch.object(image.p4rt_handoff, 'source_identity'), \
                 patch.object(image.command_log, 'execute', side_effect=execute), \
                 patch.object(image.bazel_commands, 'audit_targets', side_effect=audit):
-            with self.assertRaisesRegex(RuntimeError, 'stop before any compilation'):
+            with patch.dict(os.environ, {'SONIC_VS_IMAGE_TIMINGS': '1'}), redirect_stderr(io.StringIO()) as log, \
+                    self.assertRaisesRegex(RuntimeError, 'stop before any compilation'):
                 image.prepare_owner(args)
+        self.assertEqual(log.getvalue(), '')
         self.assertEqual(events, ['manifests', 'audit'])
 
     def test_owner_preparation_passes_the_audited_libyang_runtime_tar_to_sdk(self):
@@ -402,7 +406,16 @@ class RuntimeTest(unittest.TestCase):
                 patch.object(image.build, 'collect_archives', side_effect=collect), \
                 patch.object(image, 'prepare_repository'), patch.object(image.p4rt_handoff, 'same_common_library'), \
                 patch.object(image, 'run_owner'), patch.object(image.p4rt_handoff, 'stage'), patch.object(image, 'write') as write:
-            image.prepare_owner(args, make_build=True)
+            command = ['p4rt_image.py', 'prepare-make-owner', '--directory', str(args.directory),
+                       '--owner-source', str(args.owner_source), '--owner-revision', args.owner_revision,
+                       '--owner-output-base', str(self.root / 'owner-output'), '--bazel', args.bazel]
+            with patch.object(sys, 'argv', command), patch.dict(os.environ, {'SONIC_VS_IMAGE_TIMINGS': '1'}), \
+                    redirect_stderr(io.StringIO()) as log:
+                image.main()
+        phases = ('p4rt-audit', 'p4rt-sdk', 'p4rt-owner', 'p4rt-handoff')
+        children = [f'[ vs timing ] [ {phase} ] [ {event} ]' for phase in phases for event in ('start', 'end')]
+        self.assertEqual(log.getvalue().splitlines(),
+                         ['[ vs timing ] [ p4rt-prep ] [ start ]', *children, '[ vs timing ] [ p4rt-prep ] [ end ]'])
         owner_identity.assert_called_once_with(args.owner_source, args.owner_revision)
         self.assertEqual(identity.call_count, 2)
         render.assert_not_called()

@@ -2,6 +2,16 @@
 
 [[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
+if [[ ${1:-} == --vs-timings ]]; then
+    shift
+    # Only a successful installer has a teardown interval. Skip failed attempts
+    # so retries can produce one complete set of markers for the final build.
+    if [[ $1 == 0 ]]; then
+        echo '[ vs timing ] [ build-version-collection ] [ start ]'
+        trap 'printf "%s\n" "[ vs timing ] [ build-version-collection ] [ end ]" "[ vs timing ] [ builder-exit ] [ start ]"' EXIT
+    fi
+fi
+
 RET=$1
 BLDENV=$2
 TARGET_PATH=$3

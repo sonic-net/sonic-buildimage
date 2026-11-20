@@ -25,7 +25,8 @@
 set -x -e
 
 # Only the final VS recipe owns a receipt; the first rootfs stage is separate.
-if [[ "${RFS_SPLIT_LAST_STAGE:-}" != y || "${RFS_SPLIT_FIRST_STAGE:-}" == y || "${TARGET_MACHINE:-}" != vs || "${IMAGE_TYPE:-}" != kvm ]]; then
+if [[ "${RFS_SPLIT_LAST_STAGE:-}" != y || "${RFS_SPLIT_FIRST_STAGE:-}" == y ||
+      "${TARGET_MACHINE:-}" != vs || ( "${IMAGE_TYPE:-}" != kvm && "${IMAGE_TYPE:-}" != onie ) ]]; then
     unset SONIC_IMAGE_TIMING_FILE
 elif [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
     python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
@@ -655,6 +656,12 @@ sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
 fi
 
 if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
+    # The Make recipe opens a separate descriptor for public job-log markers.
+    rfs_timing() {
+        if [[ ${SONIC_VS_RFS_TIMING_FD:-} =~ ^[1-9][0-9]+$ ]]; then
+            { printf '[ vs timing ] [ %s ] [ %s ]\n' "$@" >&"$SONIC_VS_RFS_TIMING_FD"; } 2>/dev/null || :
+        fi
+    }
     echo '[INFO] Finished with RFS first stage'
     echo '[INFO] Umount all'
 
@@ -664,10 +671,12 @@ if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /proc || true
     ## Wait fuser fully kill the processes
     sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
+    rfs_timing rootfs-prepare end rootfs-compress start
 
     sudo rm -f $TARGET_PATH/$RFS_SQUASHFS_NAME
     sudo mksquashfs $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME -Xcompression-level 1
 
+    rfs_timing rootfs-compress end
     exit 0
 fi
 
@@ -997,7 +1006,11 @@ fi
 
 ## Compress docker files
 if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
-    python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
+    if [[ ${IMAGE_TYPE:-} == onie ]]; then
+        python3 ./scripts/image_timing.py switch compression docker-store 2>/dev/null || true
+    else
+        python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
+    fi
 fi
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
     pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
@@ -1005,6 +1018,9 @@ else
     pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
 fi
 
+if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
+    python3 ./scripts/image_timing.py switch assembly payload 2>/dev/null || true
+fi
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
 sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS

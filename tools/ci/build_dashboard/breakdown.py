@@ -25,7 +25,8 @@ MAX_PHASE_JSON_BYTES = 16 * 1024
 PHASE_CLOCK_TOLERANCE_SECONDS = 2
 PHASE_PARTITION_TOLERANCE_SECONDS = 0.00001
 IMAGE_PHASES = {"assembly", "boot-checks", "compression"}
-IMAGE_CONTEXTS = {"recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic"}
+IMAGE_CONTEXTS = {"recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic",
+                  "docker-load", "docker-store", "payload"}
 PHASE_REASONS = {"not-recorded", "invalid-timing", "incomplete-timing"}
 FINAL_IMAGE_TARGETS = {"target/sonic-vs.bin", "target/sonic-vs.img.gz"}
 REASONS = {
@@ -87,10 +88,11 @@ TASK_LABELS = {
     "teamd": "Team daemon container",
     "macsec": "MACsec container",
 }
+VS_ROOTFS_TARGET = "target/sonic-vs.bin__vs__rfs.squashfs"
 EXACT_TARGETS = {
     "target/vs-container-images": "vs-container-images",
     "target/sonic-vs.bin": "final-image",
-    "target/sonic-vs.bin__vs__rfs.squashfs": "rootfs",
+    VS_ROOTFS_TARGET: "rootfs",
     "target/sonic-vs.img.gz": "final-image",
     "target/sonic-vs.img.gz__vs__rfs.squashfs": "rootfs",
     "target/docker-orchagent.gz": "orchagent-release",
@@ -105,7 +107,37 @@ for _kind in TASK_LABELS.keys() - {
 }:
     EXACT_TARGETS[f"target/docker-{_kind}.gz"] = _kind
 
+# Explicit pipeline spans emitted by the VS Make build. Only the stable IDs and
+# their measured boundaries are retained, never arbitrary command output.
+VS_TIMING = re.compile(r"\[ vs timing \] \[ ([a-z0-9-]+) \] \[ (start|end) \]\Z")
+VS_ROOTFS_TIMING_LABELS = {
+    "rootfs-prepare": "Prepare the stage-one root filesystem",
+    "rootfs-compress": "Compress the intermediate squashfs",
+    "rootfs-cache-save": "Save the intermediate squashfs to cache",
+}
+VS_TIMING_LABELS = {
+    "kernel-prep": "Kernel package preparation",
+    "p4rt-prep": "P4RT source and SDK preparation",
+    "p4rt-audit": "P4RT dependency graph audit",
+    "p4rt-sdk": "P4RT SDK inputs",
+    "p4rt-owner": "P4RT source build",
+    "p4rt-handoff": "P4RT artifact handoff",
+    **VS_ROOTFS_TIMING_LABELS,
+    "build-version-collection": "Collect build-version metadata",
+    "builder-exit": "Exit the builder and return to the host",
+    "trixie-image-cleanup": "Trixie image cleanup",
+    "bookworm-cleanup": "Bookworm cleanup invocation"
+}
+TASK_LABELS.update(VS_TIMING_LABELS)
+TASK_LABELS.update({
+    "device-data": "SONiC device data package",
+    "config-engine-load": "Load the config-engine base image",
+    "swss-layer-load": "Load the SWSS base image",
+})
+
 DISTRO_CONTAINER = re.compile(r"target/docker-(base|config-engine|swss-layer)-(bookworm|trixie)\.gz\Z")
+BASE_IMAGE_LOAD = re.compile(r"target/docker-(config-engine|swss-layer)-(?:bookworm|trixie)\.gz-load\Z")
+DEVICE_DATA = re.compile(r"target/debs/(?:trixie|bookworm)/sonic-device-data_[0-9][A-Za-z0-9.+~:-]{0,63}_all\.deb\Z")
 P4RT = re.compile(r"target/files/(?:bookworm|trixie)/sonic-p4rt(-dbgsym)?_[0-9][A-Za-z0-9.+~:-]{0,63}_amd64\.tar\.bz2\Z")
 P4RT_DEB = re.compile(r"target/debs/(?:bookworm|trixie)/sonic-p4rt(-dbgsym)?_[0-9][A-Za-z0-9.+~:-]{0,63}_amd64\.deb\Z")
 STAMP = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z) (.*)$")
@@ -251,10 +283,17 @@ def valid_container_breakdown(value, recipes):
     members = {row["owner"] for row in recipes if row["owner"].endswith(".gz") and row["exports_expected"] > 0}
     seen = set()
     for row in value["rows"]:
-        if (not isinstance(row, dict) or set(row) != {"owner", "actions"} | CONTAINER_METRICS
+        if (not isinstance(row, dict)
+                or set(row) - {"compile_seconds", "total_seconds"} != {"owner", "actions"} | CONTAINER_METRICS
                 or not isinstance(row["owner"], str) or row["owner"] not in members or row["owner"] in seen
                 or type(row["actions"]) is not int or not finite_seconds(row["actions"])
                 or not all(finite_seconds(row[key]) for key in CONTAINER_METRICS)):
+            return False
+        if "compile_seconds" in row and (not finite_seconds(row["compile_seconds"])
+                                         or row["compile_seconds"] > row["action_seconds"] + 1e-6):
+            return False
+        if "total_seconds" in row and (not finite_seconds(row["total_seconds"])
+                                       or row["total_seconds"] + 1e-6 < row["action_seconds"]):
             return False
         seen.add(row["owner"])
     return True
@@ -518,6 +557,11 @@ def target_kind(target):
     match = DISTRO_CONTAINER.fullmatch(target)
     if match:
         return match[1]
+    match = BASE_IMAGE_LOAD.fullmatch(target)
+    if match:
+        return f"{match[1]}-load"
+    if DEVICE_DATA.fullmatch(target):
+        return "device-data"
     match = P4RT.fullmatch(target) or P4RT_DEB.fullmatch(target)
     if match:
         return "p4rt-debug" if match[1] else "p4rt-runtime"
@@ -550,7 +594,7 @@ def moment(value):
 
 def log_rows(log):
     for line in log.decode("utf-8-sig").splitlines():
-        match = STAMP.fullmatch(line)
+        match = STAMP.fullmatch(line.removeprefix("\ufeff"))
         if match:
             when = moment(match[1])
             if when is not None:
@@ -596,6 +640,7 @@ are observed recipe/cache intervals and are deliberately not summed.
     current = None
     task_count = 0
     active_phases = {}
+    timed_starts = {}
     for when, text in rows[first:last]:
         # Phase marker failures affect only the optional inner measurement. A
         # marker is associated with the exact currently building image target;
@@ -631,6 +676,7 @@ are observed recipe/cache intervals and are deliberately not summed.
             continue
         outer = OUTER.fullmatch(text)
         if outer:
+            timed_starts.clear()
             kind = OUTER_TARGETS.get(outer[1]) or target_kind(outer[1])
             kind = "vs-image" if kind == "final-image" else kind
             if kind not in SECTION_LABELS:
@@ -650,36 +696,54 @@ are observed recipe/cache intervals and are deliberately not summed.
             if len(sections) > MAX_SECTIONS:
                 return unavailable("unsupported-log-format")
             continue
-        target = TARGET.fullmatch(text)
-        if not target:
-            continue
-        outcome, identity = target.groups()
-        kind = target_kind(identity)
-        if kind is None:
-            continue
-        if current is None:
-            return unavailable("incomplete-log")
-        if outcome == "building":
-            if identity in active:
-                return unavailable("incomplete-log")
-            active[identity] = when
-            if identity in FINAL_IMAGE_TARGETS:
-                active_phases[identity] = {"seen": 0, "error": None, "value": None, "when": None}
+        timing = VS_TIMING.fullmatch(text)
+        if timing:
+            kind, boundary = timing.groups()
+            if not current or current["label"] != SECTION_LABELS["vs-image"] or kind not in VS_TIMING_LABELS:
+                continue
+            if kind in VS_ROOTFS_TIMING_LABELS and VS_ROOTFS_TARGET not in active:
+                continue
+            if boundary == "start":
+                timed_starts[kind] = when if kind not in timed_starts else None
+                continue
+            began = timed_starts.pop(kind, None)
+            if began is None:
+                continue
+            identity, outcome = kind, "finished"
         else:
+            target = TARGET.fullmatch(text)
+            if not target:
+                continue
+            outcome, identity = target.groups()
+            kind = target_kind(identity)
+            if kind is None:
+                continue
+            if current is None:
+                return unavailable("incomplete-log")
+            if outcome == "building":
+                if identity in active:
+                    return unavailable("incomplete-log")
+                active[identity] = when
+                if identity in FINAL_IMAGE_TARGETS:
+                    active_phases[identity] = {"seen": 0, "error": None, "value": None, "when": None}
+                continue
+            if identity == VS_ROOTFS_TARGET:
+                for name in VS_ROOTFS_TIMING_LABELS:
+                    timed_starts.pop(name, None)
             began = active.pop(identity, None)
             if began is None:
                 return unavailable("incomplete-log")
-            task_count += 1
-            if task_count > MAX_TASKS:
-                return unavailable("unsupported-log-format")
             kind = active_pairs.pop(identity, kind)
-            count = sum(task["id"].rsplit("-", 1)[0] == kind for task in current["tasks"]) + 1
-            task = {"id": f"{kind}-{count}", "label": TASK_LABELS[kind],
-                    "offset_seconds": round((began - current["start"]).total_seconds(), 6),
-                    "duration_seconds": round((when - began).total_seconds(), 6), "outcome": outcome}
-            if identity in FINAL_IMAGE_TARGETS:
-                task["phase_breakdown"] = complete_phase_breakdown(active_phases.pop(identity), began, when, outcome)
-            current["tasks"].append(task)
+        task_count += 1
+        if task_count > MAX_TASKS:
+            return unavailable("unsupported-log-format")
+        count = sum(task["id"].rsplit("-", 1)[0] == kind for task in current["tasks"]) + 1
+        task = {"id": f"{kind}-{count}", "label": TASK_LABELS[kind],
+                "offset_seconds": round((began - current["start"]).total_seconds(), 6),
+                "duration_seconds": round((when - began).total_seconds(), 6), "outcome": outcome}
+        if identity in FINAL_IMAGE_TARGETS:
+            task["phase_breakdown"] = complete_phase_breakdown(active_phases.pop(identity), began, when, outcome)
+        current["tasks"].append(task)
     if not current or active:
         return unavailable("incomplete-log")
     if not any(task["id"].startswith("final-image-") for section in sections for task in section["tasks"]):

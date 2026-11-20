@@ -52,6 +52,7 @@ IMAGE_STEPS = {
 MAX_LOG_JOBS = 20
 LOG_TIMEOUT_SECONDS = 45
 MAX_HISTORY_BYTES = 95 * 1024**2
+MAX_COMMIT_TITLE = 256
 
 
 class LogReadError(RuntimeError):
@@ -395,6 +396,29 @@ def run_start(raw):
     return started, source
 
 
+def commit_title(message):
+    if not isinstance(message, str) or not message:
+        return None
+    first_line = message.splitlines()[0]
+    title = " ".join("".join(c if c.isprintable() else " " for c in first_line).split())
+    if len(title) > MAX_COMMIT_TITLE:
+        title = title[:MAX_COMMIT_TITLE - 1].rstrip() + "…"
+    return title or None
+
+
+def master_run(branch, event):
+    return branch == "master" and event not in ("pull_request", "pull_request_target")
+
+
+def remember_master_title(titles, raw):
+    commit, sha = raw.get("head_commit"), raw.get("head_sha")
+    if (master_run(raw.get("head_branch"), raw.get("event"))
+            and isinstance(sha, str) and SHA_RE.fullmatch(sha) and isinstance(commit, dict) and commit.get("id") == sha):
+        title = commit_title(commit.get("message"))
+        if title:
+            titles[sha] = title
+
+
 def event_bases(raw):
     # Event metadata is evidence of the recorded PR base, not a job checkout.
     return [{"number": pr["number"], "ref": pr.get("base", {}).get("ref"),
@@ -452,7 +476,7 @@ def load_history(path, repo):
     allowed = {
         "document": {"schema_version", "repository", "generated_at", "pull_requests", "runs", "comparisons"},
         "pr": {"number", "title", "state", "draft", "url", "head_sha", "base_sha", "base_branch", "base_target_sha", "base_target_observed_at", "head_branch", "updated_at", "merged_at"},
-        "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "event_bases", "started_at", "started_at_source", "completed_at", "updated_at", "url", "jobs"},
+        "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "source_commit_title", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "event_bases", "started_at", "started_at_source", "completed_at", "updated_at", "url", "jobs"},
         "event_base": {"number", "ref", "sha"},
         "job": {"job_id", "name", "kind", "architecture", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "image_build_seconds", "image_build_elapsed_seconds", "image_build_step_numbers", "image_recipe_timings", "phases", "steps", "url"},
         "step": {"number", "name", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "phase", "breakdown"},
@@ -469,6 +493,12 @@ def load_history(path, repo):
     keys = set()
     for run in history["runs"]:
         check_fields(run, "run")
+        if "source_commit_title" in run:
+            title = run["source_commit_title"]
+            if (not master_run(run.get("branch"), run.get("event"))
+                    or not isinstance(title, str) or title != commit_title(title)
+                    or not SHA_RE.fullmatch(str(run.get("source_sha", "")))):
+                raise CollectionError("Dashboard history contains an invalid source commit title")
         if not isinstance(run.get("event_bases", []), list):
             raise CollectionError("Dashboard history contains invalid event base metadata")
         for base in run.get("event_bases", []):
@@ -629,6 +659,8 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
     historical_prs = {pr["number"]: pr for pr in history["pull_requests"]}
     historical_prs.update({pr["number"]: normalize_pr(pr, repo, bases, base_observed_at) for pr in pulls})
     retained = {(run["run_id"], run["attempt"]): copy.deepcopy(run) for run in history["runs"]}
+    titles = {run["source_sha"]: run["source_commit_title"] for run in retained.values()
+              if "source_commit_title" in run}
     # Recompute derived image totals from cached public steps as recognition
     # evolves; keep precise measurements even when old logs have expired.
     for old in retained.values():
@@ -648,6 +680,7 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
                 f"repos/{repo}/actions/workflows/{workflow}/runs", "workflow_runs"))
     pending = []
     for workflow, latest_raw in latest:
+        remember_master_title(titles, latest_raw)
         current_id, current_attempt = integer(latest_raw.get("id")), integer(latest_raw.get("run_attempt"))
         if not current_id or not current_attempt:
             raise CollectionError("Run-list response is missing its ID or attempt")
@@ -687,6 +720,8 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
                 f"repos/{repo}/actions/runs/{current_id}/attempts/{attempt}")
             if raw.get("id") != current_id or raw.get("run_attempt") != attempt:
                 raise CollectionError("Run-attempt response does not match the requested identity")
+            if attempt < current_attempt:
+                remember_master_title(titles, raw)
             association = associations.identify(raw)
             pending.append((workflow, raw, association, associations.notes.get(raw.get("head_sha"))))
 
@@ -707,6 +742,9 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
             if (run["source_sha"], run["workflow_path"]) == (previous.get("source_sha"), previous.get("workflow_path")):
                 retain_breakdowns(run["jobs"], previous.get("jobs", []))
             retained[(run["run_id"], run["attempt"])] = run
+    for run in retained.values():
+        if master_run(run.get("branch"), run.get("event")) and run.get("source_sha") in titles:
+            run["source_commit_title"] = titles[run["source_sha"]]
     enrich_breakdowns(api, repo, retained.values(), max(0, min(MAX_LOG_JOBS, log_jobs)))
     return {
         "schema_version": 1, "repository": repo,

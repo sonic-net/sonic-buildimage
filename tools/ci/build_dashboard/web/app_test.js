@@ -4,17 +4,8 @@ const assert = require("node:assert/strict");
 const {readFileSync} = require("node:fs");
 const test = require("node:test");
 const vm = require("node:vm");
-const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, imageSeries, selectTrendPoints, chartScale, imageBreakdownLabel, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, recipeRows, renderBuildExplanations, coverageRows, baseSummary, prStateLabel} = require("./app.js");
+const {duration, measured, completedImageSeconds, imageMeasurement, imageTrendGroups, imageSeries, selectTrendPoints, chartScale, imageBreakdownLabel, attemptTimeLabel, imageExecution, executionTimeLabel, executionOriginLabel, jobExecutionLabel, imageMeasurements, imageResult, prCoverage, summarizePrCoverage, safeGithubUrl, validateSnapshot, normalizeBreakdown, normalizePhaseBreakdown, renderStep, renderRecipeTimings, recipeRows, renderBuildExplanations, baseSummary} = require("./app.js");
 const pr72Fixture = require("../testdata/pr72-carried-image-execution.json");
-
-test("closed draft PRs remain closed while open drafts and merged PRs keep their states", () => {
-  assert.equal(prStateLabel({state: "closed", draft: true}), "Closed");
-  assert.equal(prStateLabel({state: "closed", draft: false}), "Closed");
-  assert.equal(prStateLabel({state: "closed", draft: true, merged_at: "2026-10-21T00:00:00Z"}), "Merged");
-  assert.equal(prStateLabel({state: "open", draft: true}), "Draft");
-  assert.equal(prStateLabel({state: "open", draft: false}), "open");
-  assert.equal(prStateLabel({draft: true}), "unknown");
-});
 
 test("current selected base and recorded event base never imply tested-base validation", () => {
   const pr = {number: 13, base_branch: "stack/base", base_target_sha: "a".repeat(40), base_sha: "b".repeat(40)};
@@ -27,7 +18,7 @@ test("current selected base and recorded event base never imply tested-base vali
   assert.equal(baseSummary({number: 13, base_sha: "b".repeat(40)}, {}).selected, "Selected base: unavailable");
 });
 
-test("PR coverage follows the latest image attempt, with unmeasured PRs last", () => {
+test("PR status uses the latest associated image attempt and counts PRs without one", () => {
   const image = {kind: "make-vs", conclusion: "failure", image_build_seconds: null};
   const run = (number, started_at, jobs = [image], completed_at = null) => ({pr_numbers: [number], started_at, completed_at, jobs});
   const data = {
@@ -42,8 +33,8 @@ test("PR coverage follows the latest image attempt, with unmeasured PRs last", (
       run(6, null),
     ],
   };
-  const rows = coverageRows(data);
-  assert.deepEqual(rows.map(row => row.pr.number), [4, 3, 1, 2, 6, 7, 5]);
+  const rows = prCoverage(data);
+  assert.equal(summarizePrCoverage(rows).unmeasured, 2);
   assert.equal(rows.find(row => row.pr.number === 2).latestImageRun.started_at, "2026-10-21T01:00:00Z");
   assert.equal(rows.find(row => row.pr.number === 5).latestImageRun, null);
   assert.deepEqual(data.pull_requests.map(pr => pr.number), [1, 2, 3, 4, 5, 6, 7]);
@@ -326,7 +317,6 @@ test("direct-slave, outer-Make and legacy image scopes have distinct stable seri
     "Build the VS image", "Build the VS image and both OCI container variants"].map(name => timingPoint(name));
   const before = structuredClone(points);
   assert.equal(new Set(points.map(point => imageSeries(point.job).key)).size, 4);
-  assert.equal(new Set(points.map(point => imageSeries(point.job).color)).size, 4);
   assert.match(imageMeasurement(points[0].job).label, /direct slave.mk; VM generation and boot checks excluded/);
   assert.deepEqual(imageTrendGroups([points[0], timingPoint("Build sonic-vs.bin directly with slave.mk"), points[1]]),
     [[points[0], timingPoint("Build sonic-vs.bin directly with slave.mk")], [points[1]]]);
@@ -335,7 +325,7 @@ test("direct-slave, outer-Make and legacy image scopes have distinct stable seri
   assert.deepEqual(points, before, "series metadata must not change recorded timings");
 });
 
-test("every recognized measurement boundary has a distinct series style", () => {
+test("every recognized measurement boundary has a distinct series key and label", () => {
   const context = vm.createContext({module: {exports: {}}, URL});
   vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
   const names = Array.from(vm.runInContext("Object.keys(IMAGE_STEP_LABELS)", context));
@@ -343,8 +333,6 @@ test("every recognized measurement boundary has a distinct series style", () => 
   assert.ok(names.includes("Build sonic-vs.bin through the host Make wrapper"));
   assert.equal(new Set(series.map(value => value.key)).size, names.length);
   assert.equal(new Set(series.map(value => value.label)).size, names.length);
-  assert.equal(new Set(series.map(value => value.color)).size, names.length);
-  for (const value of series) assert.match(value.color, /^#[0-9a-f]{6}$/);
 });
 
 test("host-Make and unknown boundaries remain selectable without changing measurements", () => {
@@ -354,13 +342,12 @@ test("host-Make and unknown boundaries remain selectable without changing measur
   const host = imageSeries(points[0].job), unknown = imageSeries(points[1].job);
   assert.match(host.label, /Host Make \.bin \+ archives/);
   assert.match(unknown.label, /Boundary unknown/);
-  assert.notEqual(host.color, unknown.color);
   assert.deepEqual(selectTrendPoints(points, {series: host.key}).points, [points[0]]);
   assert.deepEqual(selectTrendPoints(points, {series: unknown.key}).points, [points[1]]);
   assert.deepEqual(points, before);
 });
 
-test("recognized future boundaries without styles use a safe named fallback", () => {
+test("recognized future boundaries without a short label use a safe named fallback", () => {
   const context = vm.createContext({module: {exports: {}}, URL});
   vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
   vm.runInContext(`
@@ -374,7 +361,6 @@ test("recognized future boundaries without styles use a safe named fallback", ()
   for (const [index, label] of ["Future installer measurement", "Future prototype-named boundary"].entries()) {
     const series = seriesFor(points[index].job);
     assert.ok(series.label.includes(label));
-    assert.equal(series.color, "#536775");
     const selection = select(points, {series: series.key});
     assert.deepEqual(Array.from(selection.points, point => point.run.run_id), [index + 1]);
   }
@@ -415,12 +401,15 @@ test("chart limits expose the newest measurements and show-all preserves the ent
   const before = structuredClone(points);
   const selection = selectTrendPoints(points);
   assert.equal(selection.matching.length, 84);
-  assert.equal(selection.points.length, 60);
-  assert.deepEqual([selection.points[0].run.run_id, selection.points.at(-1).run.run_id], [60, 1]);
+  assert.equal(selection.points.length, 10);
+  assert.deepEqual([selection.points[0].run.run_id, selection.points.at(-1).run.run_id], [10, 1]);
+  assert.equal(selectTrendPoints(points, {limit: "60"}).points.length, 60);
   assert.equal(selectTrendPoints(points, {limit: "all"}).points.length, 84);
   const direct = selectTrendPoints(points, {series: imageSeries(points[1].job).key, limit: "all"});
   assert.equal(direct.points.length, 42);
   assert.ok(direct.points.every(point => point.job.steps[0].name.includes("directly")));
+  const ten = selectTrendPoints(points, {series: imageSeries(points[1].job).key, limit: "10"});
+  assert.deepEqual(ten.points, direct.points.slice(-10));
   assert.deepEqual(points, before);
 });
 
@@ -664,17 +653,18 @@ function descendants(node, predicate) {
 }
 function chartFixture(points, width = 1100) {
   const nodes = Object.fromEntries(["trend", "trend-note", "trend-preview", "history-legend",
-    "series-filter", "path-filter", "arch-filter", "pr-filter", "date-filter", "limit-filter"]
+    "series-filter", "path-filter", "arch-filter", "source-filter", "commit-filter", "pr-filter", "date-filter", "limit-filter"]
     .map(id => [id, new TestElement(id.endsWith("filter") ? "select" : "div")]));
   for (const node of Object.values(nodes)) node.value = "all";
-  nodes["limit-filter"].value = "60";
+  nodes["source-filter"].value = "master";
+  nodes["limit-filter"].value = "10";
   nodes.trend.clientWidth = width;
   const context = vm.createContext({module: {exports: {}}, URL, getComputedStyle: () => ({paddingLeft: "17px", paddingRight: "17px"})});
   vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
   context.document = {getElementById: id => nodes[id], createElement: tag => new TestElement(tag),
     createElementNS: (_, tag) => new TestElement(tag), createTextNode: text => ({textContent: text})};
   context.snapshot = {repository: "securely1g/sonic-buildimage", generated_at: "2026-11-12T00:00:00Z",
-    runs: points.map(point => ({...point.run, jobs: [point.job]}))};
+    runs: points.map(point => ({...point.run, jobs: point.jobs || [point.job]}))};
   const render = () => vm.runInContext("state.data = snapshot; renderTrend();", context);
   render();
   return {nodes, render};
@@ -703,7 +693,7 @@ test("chart overview is scatter-only with a visible-series legend and keyboard p
   assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 0);
   assert.equal(nodes["history-legend"].children.length, 2);
   assert.doesNotMatch(nodes["history-legend"].textContent, /Bazel VS installer/);
-  assert.match(nodes["trend-note"].textContent, /Showing all 3.*Scatter overview/);
+  assert.match(nodes["trend-note"].textContent, /Showing all 3.*Select one measurement series/);
   const ticks = descendants(nodes.trend, node => node.tagName === "text").map(node => node.textContent);
   assert.ok(ticks.includes("1h") && ticks.includes("5h"), "long builds should use rounded hour ticks");
   const point = descendants(nodes.trend, node => node.attributes?.class === "chart-point")[0];
@@ -715,7 +705,7 @@ test("chart overview is scatter-only with a visible-series legend and keyboard p
   assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 1);
   assert.equal(nodes["history-legend"].children.length, 1);
   assert.doesNotMatch(nodes["history-legend"].textContent, /Direct slave/);
-  assert.match(nodes["trend-note"].textContent, /Showing all 2.*Lines join only one/);
+  assert.match(nodes["trend-note"].textContent, /Showing all 2.*one build source/);
 });
 
 test("unknown boundaries never gain trend lines and empty filters clear stale chart details", () => {
@@ -731,20 +721,58 @@ test("unknown boundaries never gain trend lines and empty filters clear stale ch
   assert.match(nodes.trend.textContent, /No successful image measurements/);
   assert.equal(nodes["history-legend"].children.length, 0);
   assert.equal(nodes["history-legend"].hidden, true);
-  assert.match(nodes["trend-preview"].textContent, /Hover or focus a point/);
+  assert.ok(nodes["trend-preview"].hidden || !nodes["trend-preview"].textContent.includes("Hover or focus a point"));
   assert.doesNotMatch(nodes.trend.textContent, /NaN|Infinity/);
 });
 
-test("page startup wires chart-only filters without hiding retained workflow history", async () => {
+test("a selected master commit with a pending installer explains the missing duration and links to that job", () => {
+  const sha = "a".repeat(40), point = datedPoint(2, "2026-11-11T18:00:00Z");
+  Object.assign(point.run, {source_sha: sha, event: "push", status: "in_progress", conclusion: null, completed_at: null});
+  const job = {...point.job, name: "VS installer in SONiC slave (AMD64)", status: "queued", conclusion: null,
+    completed_at: null, image_build_seconds: null, steps: []};
+  const skipped = {...job, name: "Make VS with Bazel SWSS (AMD64)", job_id: 3, status: "completed",
+    conclusion: "skipped", url: job.url.replace("/job/2", "/job/3")};
+  point.jobs = [skipped, job];
+  const {nodes, render} = chartFixture([point]);
+  nodes["source-filter"].value = "master";
+  nodes["commit-filter"].value = sha;
+  for (const [status, expected] of [["queued", /queued|waiting for a runner/i], ["in_progress", /running|in progress/i]]) {
+    job.status = status;
+    render();
+    assert.match(nodes.trend.textContent, expected);
+    assert.ok(descendants(nodes.trend, el => el.tagName === "a").some(link => link.href === job.url));
+    assert.equal(descendants(nodes.trend, el => el.attributes?.class === "chart-point").length, 0);
+    assert.ok(nodes["trend-preview"].hidden || !nodes["trend-preview"].textContent.includes("Hover or focus a point"));
+  }
+
+  const success = datedPoint(1, "2026-11-01T00:00:00Z");
+  success.run.source_sha = sha;
+  const dated = chartFixture([success, point]);
+  dated.nodes["source-filter"].value = "master";
+  dated.nodes["commit-filter"].value = sha;
+  dated.nodes["date-filter"].value = "7";
+  dated.render();
+  assert.match(dated.nodes.trend.textContent, /match.*filters/i);
+  assert.equal(descendants(dated.nodes.trend, el => el.tagName === "a").length, 0);
+  assert.equal(descendants(dated.nodes.trend, el => el.attributes?.class === "chart-point").length, 0);
+  dated.nodes["date-filter"].value = "all";
+  dated.render();
+  assert.equal(descendants(dated.nodes.trend, el => el.attributes?.class === "chart-point").length, 1);
+  assert.equal(dated.nodes["trend-preview"].hidden, false);
+  assert.match(dated.nodes["trend-preview"].textContent, /Hover or focus a point/);
+});
+
+async function loadDashboard(points, pullRequests = []) {
   const html = readFileSync(require.resolve("./index.html"), "utf8");
   const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new TestElement("div")]));
   for (const node of Object.values(nodes)) node.value = "all";
-  nodes["limit-filter"].value = "60";
+  for (const [, id, options] of html.matchAll(/<select id="([^"]+)">([\s\S]*?)<\/select>/g)) {
+    const choices = [...options.matchAll(/<option value="([^"]+)"( selected)?>/g)];
+    nodes[id].value = (choices.find(choice => choice[2]) || choices[0])[1];
+  }
   nodes.trend.clientWidth = 1100;
-  const points = [datedPoint(1, "2026-11-01T00:00:00Z"),
-    datedPoint(2, "2026-11-12T00:00:00Z", "Build sonic-vs.bin directly with slave.mk")];
-  const snapshot = {schema_version: 1, repository: "securely1g/sonic-buildimage", generated_at: "2026-11-12T00:00:00Z",
-    pull_requests: [], runs: points.map(point => ({...point.run, jobs: [point.job]}))};
+  const snapshot = () => ({schema_version: 1, repository: "securely1g/sonic-buildimage", generated_at: "2026-11-12T00:00:00Z",
+    pull_requests: pullRequests, runs: points.map(point => ({...point.run, jobs: [point.job]}))});
   const context = vm.createContext({
     document: {getElementById: id => nodes[id], createElement: tag => new TestElement(tag),
       createElementNS: (_, tag) => new TestElement(tag), createTextNode: text => ({textContent: text})},
@@ -752,12 +780,19 @@ test("page startup wires chart-only filters without hiding retained workflow his
     ResizeObserver: class { observe() {} },
     setInterval() {}, URL, AbortSignal,
     window: {location: {href: "https://example.test/"}},
-    fetch: async () => ({ok: true, json: async () => snapshot}),
+    fetch: async () => ({ok: true, json: async () => snapshot()}),
   });
   vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(nodes["load-status"].textContent, "", "the actual page must load without missing-element errors");
   assert.equal(nodes.dashboard.hidden, false);
+  return nodes;
+}
+
+test("page startup wires chart-only filters without hiding retained workflow history", async () => {
+  const points = [datedPoint(1, "2026-11-01T00:00:00Z"),
+    datedPoint(2, "2026-11-12T00:00:00Z", "Build sonic-vs.bin directly with slave.mk")];
+  const nodes = await loadDashboard(points);
   assert.equal(nodes["run-count"].textContent, "2 of 2");
   nodes["date-filter"].value = "7";
   nodes["date-filter"].listeners.change();
@@ -769,6 +804,199 @@ test("page startup wires chart-only filters without hiding retained workflow his
   assert.match(point.attributes["aria-label"], /Source abcdef012345.*Breakdown not recorded/);
   point.listeners.mouseenter();
   assert.match(nodes["trend-preview"].textContent, /Direct slave .bin/);
+  let activated = false;
+  point.listeners.keydown({key: "Enter", preventDefault() { activated = true; }});
+  assert.equal(activated, true);
+  assert.match(nodes.details.textContent, /Build sonic-vs.bin directly with slave.mk/);
+});
+
+test("build source filters the chart and run history, including PR events without a PR number", async () => {
+  const points = [
+    {event: "push", branch: "master", pr_numbers: [20]},
+    {event: "pull_request", branch: "master"},
+    {event: "schedule", branch: "master"},
+    {event: "workflow_dispatch", branch: "topic", pr_numbers: [20]},
+    {event: "push", branch: "release"},
+    {event: "pull_request_target", branch: "topic", pr_numbers: [20], conclusion: "failure"},
+  ].map((run, index) => {
+    const point = datedPoint(index + 1, `2026-11-0${index + 1}T00:00:00Z`);
+    Object.assign(point.run, run, {workflow_name: `Workflow ${index + 1}`,
+      url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${index + 1}`});
+    point.job.conclusion = point.run.conclusion;
+    return point;
+  });
+  const nodes = await loadDashboard(points, [{number: 20, title: "Image test"}]);
+  const select = (id, value) => { nodes[id].value = value; nodes[id].listeners.change(); };
+  const markers = () => descendants(nodes.trend, node => node.attributes?.class === "chart-marker");
+  const runs = () => nodes["runs-body"].children.map(row => descendants(row, node => node.tagName === "button")[0]?.textContent);
+  const green = "#187247", yellow = "#facc15", ochre = "#805f00";
+  assert.equal(nodes["source-filter"].value, "master");
+  assert.equal(nodes["commit-filter"].value, "all");
+  assert.equal(nodes["limit-filter"].value, "10");
+  assert.deepEqual(runs(), ["Workflow 3", "Workflow 1"]);
+  assert.deepEqual(markers().map(marker => marker.attributes.fill), [green, green]);
+  select("source-filter", "combined");
+  assert.deepEqual(runs(), ["Workflow 6", "Workflow 4", "Workflow 3", "Workflow 2", "Workflow 1"]);
+  assert.deepEqual(markers().map(marker => marker.attributes.fill), [green, yellow, green, yellow]);
+  assert.match(nodes["history-legend"].textContent, /Master/i);
+  assert.match(nodes["history-legend"].textContent, /Pull request/i);
+  assert.ok(markers().filter(marker => marker.attributes.fill === yellow).every(marker => marker.attributes.stroke === ochre));
+  const prDot = nodes["history-legend"].children.find(item => item.textContent.startsWith("Pull request")).children[0];
+  assert.equal(prDot.style.backgroundColor, yellow);
+  assert.equal(prDot.style.border, `1px solid ${ochre}`);
+  assert.match(nodes["coverage-summary"].textContent, /Failed1/);
+  assert.equal(nodes["coverage-body"], undefined);
+  assert.match(nodes["latest-branch-status"].textContent, /master/i);
+  assert.match(nodes["latest-branch-status"].textContent, /success/i);
+  assert.equal(descendants(nodes["latest-branch-status"], node => node.tagName === "a")[0].href, points[2].run.url);
+
+  select("series-filter", imageSeries(points[0].job).key);
+  const lines = descendants(nodes.trend, node => node.tagName === "polyline");
+  assert.equal(lines.length, 2);
+  for (const line of lines) {
+    const sameSource = markers().filter(marker => (marker.attributes.fill === yellow ? ochre : green) === line.attributes.stroke);
+    assert.equal(sameSource.length, 2);
+    assert.equal(line.attributes.points, sameSource.map(({attributes}) => `${attributes.cx},${attributes.cy}`).join(" "));
+  }
+
+  select("source-filter", "pr");
+  assert.equal(nodes["latest-branch-status"].hidden, true);
+  assert.equal(nodes["pr-build-status"].hidden, false);
+  assert.deepEqual(runs(), ["Workflow 6", "Workflow 4", "Workflow 2"]);
+  assert.deepEqual(markers().map(marker => marker.attributes.fill), [yellow, yellow]);
+  select("pr-filter", "20");
+  assert.deepEqual(runs(), ["Workflow 6", "Workflow 4"]);
+  select("source-filter", "master");
+  assert.equal(nodes["latest-branch-status"].hidden, false);
+  assert.equal(nodes["pr-build-status"].hidden, true);
+  assert.equal(nodes["pr-filter"].value, "all");
+  assert.equal(nodes["pr-filter"].disabled, true);
+  assert.deepEqual(runs(), ["Workflow 3", "Workflow 1"]);
+  assert.deepEqual(markers().map(marker => marker.attributes.fill), [green, green]);
+  select("source-filter", "other");
+  assert.equal(descendants(nodes["latest-branch-status"], node => node.tagName === "a")[0].href, points[4].run.url);
+  assert.deepEqual(runs(), ["Workflow 5"]);
+  assert.equal(markers().length, 1);
+  select("source-filter", "combined");
+  assert.equal(nodes["pr-filter"].disabled, false);
+  assert.equal(markers().length, 4);
+});
+
+test("choosing a master commit scopes status, chart, history and details to the exact revision", async () => {
+  const succeeded = "0123456789ab" + "1".repeat(28), failed = "0123456789ab" + "2".repeat(28);
+  const checksOnly = "a".repeat(40), prOnly = "b".repeat(40);
+  const points = [succeeded, failed, succeeded, checksOnly, prOnly, null].map((sha, index) => {
+    const id = index + 1;
+    const point = datedPoint(id, `2026-11-0${id}T18:00:00Z`);
+    Object.assign(point.run, {source_sha: sha, event: "push", workflow_name: `Workflow ${id}`,
+      url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${id}`});
+    return point;
+  });
+  points[1].job.conclusion = points[1].run.conclusion = "failure";
+  points[3].job.kind = "checks";
+  points[4].run.event = "pull_request"; // A PR can also come from a branch named master.
+  const nodes = await loadDashboard(points);
+  const select = (id, value) => { nodes[id].value = value; nodes[id].listeners.change(); };
+  const commits = nodes["commit-filter"];
+  const chartPoints = () => descendants(nodes.trend, node => node.attributes?.class === "chart-point");
+  const history = () => descendants(nodes["runs-body"], node => node.tagName === "button").map(node => node.textContent);
+  assert.equal(nodes["commit-filter-label"].hidden, false);
+  assert.ok(nodes["pr-filter-label"].hidden);
+  assert.deepEqual(commits.options.map(option => option.value), ["all", checksOnly, succeeded, failed]);
+  const optionLabel = sha => commits.options.find(option => option.value === sha).textContent;
+  for (const sha of [succeeded, failed]) assert.ok(optionLabel(sha).includes(sha.slice(0, 13)), "colliding SHA prefixes must be distinguishable");
+
+  select("commit-filter", succeeded);
+  assert.deepEqual(history(), ["Workflow 3", "Workflow 1"]);
+  assert.equal(chartPoints().length, 2);
+  assert.match(nodes["latest-branch-status"].textContent, /success/i);
+  assert.ok(descendants(nodes["latest-branch-status"], node => node.href === points[2].run.url).length);
+  assert.match(nodes.details.textContent, /Workflow 3/);
+  select("commit-filter", failed);
+  assert.deepEqual(history(), ["Workflow 2"]);
+  assert.equal(chartPoints().length, 0);
+  assert.match(nodes["latest-branch-status"].textContent, /fail/i);
+  assert.match(nodes.details.textContent, /Workflow 2/);
+  select("commit-filter", checksOnly);
+  assert.deepEqual(history(), ["Workflow 4"]);
+  assert.match(nodes["latest-branch-status"].textContent, /no image build/i);
+  assert.match(nodes.details.textContent, /Workflow 4/);
+
+  select("source-filter", "pr");
+  assert.ok(nodes["commit-filter-label"].hidden);
+  assert.equal(commits.value, "all");
+  assert.equal(nodes["pr-filter-label"].hidden, false);
+  assert.deepEqual(history(), ["Workflow 5"]);
+  select("source-filter", "master");
+  assert.deepEqual(history(), ["Workflow 6", "Workflow 4", "Workflow 3", "Workflow 2", "Workflow 1"]);
+});
+
+test("master commit labels pair each revision with its own title and latest run date", async () => {
+  const installer = "1".repeat(40), kernel = "2".repeat(40), untitled = "3".repeat(40);
+  const points = [installer, kernel, untitled, installer, untitled, untitled].map((sha, index) => {
+    const id = index + 1;
+    const point = datedPoint(id, `2026-11-0${id}T18:00:00Z`);
+    Object.assign(point.run, {source_sha: sha, workflow_name: "VS workflow", event: "push"});
+    return point;
+  });
+  points[0].run.source_commit_title = "Build <installer> from the shared archive";
+  points[1].run.source_commit_title = "Update the kernel configuration";
+  Object.assign(points[4].run, {event: "pull_request", source_commit_title: "PR title"});
+  Object.assign(points[5].run, {branch: "topic", source_commit_title: "Feature branch title"});
+  const nodes = await loadDashboard(points);
+  nodes["source-filter"].value = "master";
+  nodes["source-filter"].listeners.change();
+  const commits = nodes["commit-filter"].options;
+  assert.deepEqual(commits.map(option => option.value), ["all", installer, untitled, kernel]);
+  const label = sha => commits.find(option => option.value === sha).textContent;
+  const runDate = point => new Date(point.run.started_at).toLocaleString(undefined,
+    {month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"});
+  assert.equal(label(installer), `111111111111 · Build <installer> from the shared archive · ${runDate(points[3])}`);
+  assert.equal(label(kernel), `222222222222 · Update the kernel configuration · ${runDate(points[1])}`);
+  assert.equal(label(untitled), `333333333333 · ${runDate(points[2])}`);
+});
+
+test("refresh preserves a selected master commit until it leaves the retained history", async () => {
+  const kept = datedPoint(1, "2026-11-01T18:00:00Z"), removed = datedPoint(2, "2026-11-02T18:00:00Z");
+  kept.run.source_sha = "1".repeat(40);
+  removed.run.source_sha = "2".repeat(40);
+  const points = [kept, removed];
+  const nodes = await loadDashboard(points);
+  nodes["source-filter"].value = "master";
+  nodes["source-filter"].listeners.change();
+  const commits = nodes["commit-filter"];
+  commits.value = removed.run.source_sha;
+  commits.listeners.change();
+  removed.run.source_commit_title = "Refresh the base image";
+  await nodes.refresh.listeners.click();
+  assert.equal(commits.value, removed.run.source_sha);
+  assert.match(commits.options.find(option => option.value === commits.value).textContent, /Refresh the base image/);
+  assert.equal(nodes["runs-body"].children.length, 1);
+  points.pop();
+  await nodes.refresh.listeners.click();
+  assert.equal(commits.value, "all");
+  assert.deepEqual(commits.options.map(option => option.value), ["all", kept.run.source_sha]);
+  assert.match(nodes.details.textContent, /Source 111111111111/);
+});
+
+test("a master build associated with a merge keeps the PR's own image result", async () => {
+  const pr = datedPoint(1, "2026-11-01T00:00:00Z"), merge = datedPoint(2, "2026-11-02T00:00:00Z");
+  Object.assign(pr.run, {event: "pull_request", branch: "topic", pr_numbers: [19]});
+  pr.job.conclusion = "failure";
+  Object.assign(merge.run, {event: "push", branch: "master", pr_numbers: [19]});
+  const nodes = await loadDashboard([merge, pr], [{number: 19, title: "Image test"}]);
+  nodes["source-filter"].value = "combined";
+  nodes["source-filter"].listeners.change();
+  assert.match(nodes["latest-branch-status"].textContent, /success/);
+  assert.match(nodes["coverage-summary"].textContent, /Success0Failed1/);
+});
+
+test("master status is empty when only a PR used a branch named master", async () => {
+  const point = datedPoint(1, "2026-11-01T00:00:00Z");
+  point.run.event = "pull_request";
+  const nodes = await loadDashboard([point]);
+  assert.match(nodes["latest-branch-status"].textContent, /no image build recorded/i);
+  assert.equal(descendants(nodes["latest-branch-status"], node => node.tagName === "a").length, 0);
 });
 
 function stepWith(breakdown) { return {name: "Make VS image", status: "completed", conclusion: "success", duration_seconds: 101, ...(breakdown === undefined ? {} : {breakdown})}; }
@@ -835,7 +1063,7 @@ test("all build recipes are ordered by recorded commands and exports with separa
   }
 }));
 
-test("expanded shared build lists the original per-image exports on older runs", () => withDocument(() => {
+function sharedContainerJob() {
   const job = recipeJob();
   const group = {...job.image_recipe_timings.images[0], owner: "vs-container-images", bazel_seconds: 200,
     bazel_phases: 1, bazel_expected: 1, profiles: 1, profiles_expected: 1,
@@ -844,12 +1072,17 @@ test("expanded shared build lists the original per-image exports on older runs",
     profiles: 0, profiles_expected: 0, bazel_seconds: null, compile_seconds: null, foreign_seconds: null,
     lock_seconds: null, fetch_seconds: null, exports: 2, exports_expected: 2, export_seconds: 4};
   job.image_recipe_timings = {version: 2, status: "available", recipes: [group, image]};
+  return job;
+}
+
+test("expanded shared build lists the original per-image exports on older runs", () => withDocument(() => {
+  const job = sharedContainerJob();
   const view = renderRecipeTimings(job), rows = descendants(view, node => node.tagName === "details");
   assert.match(rows[0].textContent, /vs-container-images200sBazel \/ launcher200s/);
   assert.equal(rows.length, 1);
   assert.match(rows[0].textContent, /Containers \(1\)/);
   assert.match(rows[0].textContent, /Per-container Bazel action times are unavailable/);
-  assert.match(rows[0].textContent, /ImageExportdocker-sflow.gz4s/);
+  assert.match(rows[0].textContent, /ImageTotal elapsedCompile timeExportdocker-sflow.gz——4s/);
 }));
 
 test("batch action times are nested, ordered by activity and distinct from subsequent exports", () => withDocument(() => {
@@ -860,23 +1093,53 @@ test("batch action times are nested, ordered by activity and distinct from subse
   const images = [{...base, owner: "docker-teamd.gz", exports: 2, export_seconds: 4},
     {...base, owner: "docker-syncd-vs.gz", exports: 1, export_seconds: 0}];
   const shared = {rows: images.map((row, i) => ({owner: row.owner, actions: 12, action_seconds: i ? 81 : 23,
+    total_seconds: i ? 119.5 : 85, compile_seconds: i ? 8.25 : 0,
     archive_seconds: 10, compress_seconds: 7, fetch_seconds: 1.5})),
     other_action_seconds: 25, no_action_seconds: 2, parallel_seconds: 5};
   job.image_recipe_timings = {version: 2, status: "available", recipes: [group, ...images], container_breakdown: shared};
   const view = renderRecipeTimings(job), rows = descendants(view, node => node.tagName === "tr");
   assert.equal(descendants(view, node => node.tagName === "details").length, 1);
   assert.deepEqual(rows.map(tr => tr.children.map(cell => cell.textContent)), [
-    ["Image", "Actions", "Active", "Cache fetch", "OCI archive", "Gzip", "Export"],
-    ["docker-syncd-vs.gz", "12", "81s", "1.5s", "10s", "7s", "0s (1/2)"],
-    ["docker-teamd.gz", "12", "23s", "1.5s", "10s", "7s", "4s"]]);
+    ["Image", "Actions", "Total elapsed", "Active", "Compile time", "Cache fetch", "OCI archive", "Gzip", "Export"],
+    ["docker-syncd-vs.gz", "12", "119.5s", "81s", "8.25s", "1.5s", "10s", "7s", "0s (1/2)"],
+    ["docker-teamd.gz", "12", "85s", "23s", "0s", "1.5s", "10s", "7s", "4s"]]);
   assert.match(view.textContent, /Only shared or unattributed actions active25s/);
   assert.match(view.textContent, /No action recorded2s/);
   assert.match(view.textContent, /One or more image owners active99s/);
   assert.match(view.textContent, /active together for 5s/);
+  delete shared.rows[0].total_seconds;
+  const containerRow = () => descendants(renderRecipeTimings(job), node => node.tagName === "tr")[2];
+  assert.deepEqual(containerRow().children.slice(2, 5).map(cell => cell.textContent), ["—", "23s", "0s"]);
+  delete shared.rows[0].compile_seconds;
+  const legacyRow = containerRow();
+  assert.deepEqual(legacyRow.children.map(cell => cell.textContent),
+    ["docker-teamd.gz", "12", "—", "23s", "—", "1.5s", "10s", "7s", "4s"]);
+  assert.equal(legacyRow.children[2].attributes["aria-label"], "Total elapsed unavailable");
+  assert.equal(legacyRow.children[4].attributes["aria-label"], "Compile time unavailable");
+  for (const invalid of [null, "85", 22.99, Infinity]) {
+    shared.rows[0].total_seconds = invalid;
+    assert.match(renderRecipeTimings(job).textContent, /Per-container Bazel action times are unavailable/);
+  }
+  delete shared.rows[0].total_seconds;
+  for (const invalid of [null, "2", -1, 23.01, Infinity]) {
+    shared.rows[0].compile_seconds = invalid;
+    assert.match(renderRecipeTimings(job).textContent, /Per-container Bazel action times are unavailable/);
+  }
+  delete shared.rows[0].compile_seconds;
   shared.rows[1].action_seconds = "81";
   const fallback = renderRecipeTimings(job);
   assert.match(fallback.textContent, /Per-container Bazel action times are unavailable/);
   assert.doesNotMatch(fallback.textContent, /81s/);
+}));
+
+test("a measured zero total remains visible without compiler timing", () => withDocument(() => {
+  const job = sharedContainerJob(), receipt = job.image_recipe_timings;
+  const image = receipt.recipes.at(-1);
+  image.export_seconds = 0;
+  receipt.container_breakdown = {rows: [{owner: image.owner, actions: 1, action_seconds: 0, total_seconds: 0,
+    fetch_seconds: 0, archive_seconds: 0, compress_seconds: 0}], other_action_seconds: 0, no_action_seconds: 200, parallel_seconds: 0};
+  const [, imageRow] = descendants(renderRecipeTimings(job), node => node.tagName === "tr");
+  assert.deepEqual(imageRow.children.slice(2, 5).map(cell => cell.textContent), ["0s", "0s", "—"]);
 }));
 
 test("unavailable or unverifiable profiles do not appear as measured recipes", () => withDocument(() => {
@@ -995,6 +1258,160 @@ test("profile cards show named spans and receipts without accepting raw private 
   assert.equal(recipeRows(value), null);
   row.details = {...original, profiles: 0};
   assert.equal(recipeRows(value), null);
+}));
+
+// Measured boundaries of the master VS installer build in run 44638292829.
+function nativeInstallerStep() {
+  const tasks = [
+    {id: "vs-container-images-1", offset_seconds: 2023.544782, duration_seconds: 2817.313521},
+    {id: "rootfs-1", offset_seconds: 5441.178008, duration_seconds: 243.355476},
+    {id: "final-image-1", offset_seconds: 5712.876499, duration_seconds: 920.387027},
+  ].map(task => ({...task, outcome: "finished"}));
+  const section = {id: "vs-image-1", duration_seconds: 6929.801178, offset_seconds: 0, tasks};
+  return {...stepWith({version: 1, status: "available", source: "github-job-log", duration_seconds: section.duration_seconds, sections: [section]}),
+    name: "Build sonic-vs.bin through the host Make wrapper", duration_seconds: 6930};
+}
+
+const installerStageNames = [
+  "Prepare kernel, packages and P4RT",
+  "Build and export Bazel container images",
+  "Finish Make containers and stage the root filesystem",
+  "Assemble the final ONIE installer",
+  "Finish the Make invocation",
+];
+
+function installerStages(view) {
+  return descendants(view, node => node.tagName === "details" && node.children[0]?.tagName === "summary" &&
+    installerStageNames.some(label => node.children[0].textContent.includes(label)));
+}
+
+function installerPoint(step) {
+  const point = datedPoint(1, "2026-11-01T00:00:00Z", step.name);
+  const completed = new Date(Date.parse(point.run.started_at) + step.duration_seconds * 1000).toISOString();
+  Object.assign(point.job.steps[0], step, {completed_at: completed});
+  Object.assign(point.job, {conclusion: step.conclusion, completed_at: completed, duration_seconds: step.duration_seconds,
+    image_build_seconds: step.conclusion === "success" ? step.duration_seconds : null});
+  Object.assign(point.run, {conclusion: step.conclusion, completed_at: completed});
+  return point;
+}
+
+test("historical native installer boundaries account for all five intervals without inventing child timings", () => withDocument(() => {
+  const step = nativeInstallerStep(), view = renderStep(step), stages = installerStages(view);
+  const [batch, , installer] = step.breakdown.sections[0].tasks;
+  const boundaries = [0, batch.offset_seconds, batch.offset_seconds + batch.duration_seconds,
+    installer.offset_seconds, installer.offset_seconds + installer.duration_seconds, step.breakdown.duration_seconds];
+  assert.equal(stages.length, installerStageNames.length);
+  stages.forEach((stage, index) => {
+    const [summary, ...body] = stage.children;
+    assert.ok(summary.textContent.includes(installerStageNames[index]));
+    assert.ok(summary.textContent.includes(duration(boundaries[index + 1] - boundaries[index])));
+    assert.ok(body.some(child => child.textContent.trim()), "every stage should explain its measurements when opened");
+  });
+  for (const index of [0, 4]) assert.match(stages[index].textContent, /no .*timings recorded/i);
+  assert.match(stages[2].textContent, /Root filesystem squashfs/);
+  assert.match(stages[3].textContent, /not measured|not recorded|unavailable/i);
+  assert.doesNotMatch(view.textContent, /Collect build-version metadata|P4RT source build|Compress the intermediate squashfs/);
+}));
+
+test("Run details exposes the five wall-clock stages before the separate Bazel breakdown", async () => {
+  const point = installerPoint(nativeInstallerStep());
+  point.job.image_recipe_timings = sharedContainerJob().image_recipe_timings;
+  const {details} = await loadDashboard([point]);
+  const overview = details.children.find(section => section.children.some(node =>
+    /^h[1-6]$/.test(node.tagName) && node.textContent === "Image build steps"));
+  assert.ok(overview, "the stage list should open directly under Run details");
+  const stages = installerStages(overview);
+  assert.equal(stages.length, 5);
+  assert.equal(installerStages(details).length, 5, "the raw CI steps should not repeat the same five stages");
+  assert.match(stages[1].textContent, /Shared Bazel command/);
+  assert.match(stages[1].textContent, /Export docker-sflow\.gz/);
+  const bazel = details.children.find(section => descendants(section, node =>
+    /^h[1-6]$/.test(node.tagName) && node.textContent === "Bazel build breakdown").length);
+  assert.ok(details.children.indexOf(bazel) > details.children.indexOf(overview));
+  assert.match(bazel.textContent, /docker-sflow\.gz/);
+});
+
+test("Run details keeps raw CI evidence for an untimed legacy build and a failed installer step", async () => {
+  for (const outcome of ["success", "failure"]) {
+    const step = nativeInstallerStep();
+    if (outcome === "success") delete step.breakdown;
+    step.conclusion = outcome;
+    const {details} = await loadDashboard([installerPoint(step)]);
+    assert.equal(installerStages(details).length, 0);
+    const raw = descendants(details, node => node.tagName === "details" && node.children[0]?.textContent.startsWith("Step timings"))[0];
+    assert.ok(raw.textContent.includes(step.name));
+    assert.ok(raw.textContent.includes(duration(step.duration_seconds)));
+    if (outcome === "failure") assert.match(raw.textContent, /Root filesystem squashfs/);
+  }
+});
+
+test("incomplete, repeated or overlapping native boundary pairs preserve the underlying spans", () => withDocument(() => {
+  const cases = [
+    step => { step.name = "Build the VS image"; }, step => { step.conclusion = "failure"; },
+    (_, tasks) => { tasks.shift(); }, (_, tasks) => { tasks.pop(); },
+    (_, tasks) => { tasks.push({...tasks[0], id: "vs-container-images-2"}); },
+    (_, tasks) => { tasks.push({...tasks[2], id: "final-image-2"}); },
+    (_, tasks) => { tasks[0].offset_seconds = tasks[2].offset_seconds - tasks[0].duration_seconds + 1; },
+    (_, tasks) => { tasks[2].outcome = "cached"; },
+  ];
+  for (const change of cases) {
+    const step = nativeInstallerStep();
+    change(step, step.breakdown.sections[0].tasks);
+    const view = renderStep(step);
+    assert.equal(installerStages(view).length, 0);
+    assert.match(view.textContent, /Root filesystem squashfs/);
+  }
+}));
+
+test("native preparation substeps, ONIE Docker phases and unmarked cleanup time retain their scope", () => withDocument(() => {
+  const step = nativeInstallerStep(), tasks = step.breakdown.sections[0].tasks;
+  const installer = tasks.find(task => task.id === "final-image-1");
+  const tailStart = installer.offset_seconds + installer.duration_seconds;
+  const task = (kind, offset_seconds, duration_seconds) => ({id: kind + "-1", offset_seconds, duration_seconds, outcome: "finished"});
+  tasks.push(task("kernel-prep", 60, 155), task("p4rt-prep", 440, 1300), task("p4rt-owner", 480, 1000),
+    task("rootfs-prepare", 5442, 180), task("rootfs-compress", 5622, 25), task("rootfs-cache-save", 5649, 30),
+    task("build-version-collection", tailStart + 3, 2), task("builder-exit", tailStart + 5, 280),
+    task("trixie-image-cleanup", tailStart + 285, 1), task("bookworm-cleanup", tailStart + 286, 3));
+  installer.phase_breakdown = {version: 1, source: "build-phase-markers", status: "available", reason: null,
+    duration_seconds: installer.duration_seconds, segments: [
+      {phase: "assembly", context: "docker-load", offset_seconds: 0, duration_seconds: 200},
+      {phase: "compression", context: "docker-store", offset_seconds: 200, duration_seconds: 110},
+      {phase: "compression", context: "payload", offset_seconds: 310, duration_seconds: installer.duration_seconds - 310},
+    ]};
+  const view = renderStep(step);
+  for (const label of ["Kernel package preparation", "P4RT source and SDK preparation", "P4RT source build",
+    "Collect build-version metadata", "Exit the builder and return to the host",
+    "Trixie image cleanup", "Bookworm cleanup invocation",
+    "Assembly · Load and tag Docker images", "Compression · Compress the Docker store", "Compression · Build the payload ZIP"]) {
+    assert.ok(view.textContent.includes(label), label);
+  }
+  const intervals = installerStages(view);
+  const nestedTasks = (stage, parent) => descendants(stage, node => node.tagName === "li" &&
+    node.children[0]?.children?.[0]?.textContent === parent)[0].children.find(child => child.tagName === "ul");
+  assert.match(nestedTasks(intervals[0], "P4RT source and SDK preparation").textContent, /P4RT source build/);
+  const rootfs = nestedTasks(intervals[2], "Root filesystem squashfs");
+  for (const label of ["Prepare the stage-one root filesystem", "Compress the intermediate squashfs", "Save the intermediate squashfs to cache"]) {
+    assert.ok(rootfs.textContent.includes(label), label);
+  }
+  assert.match(intervals[3].textContent, /Assembly · Load and tag Docker images/);
+  assert.match(intervals[4].textContent, /Trixie image cleanup/);
+  const cleanup = tasks.filter(task => task.offset_seconds >= tailStart);
+  const total = step.breakdown.duration_seconds - tailStart;
+  const gap = total - cleanup.reduce((sum, task) => sum + task.duration_seconds, 0);
+  assert.ok(intervals[4].textContent.includes(`Unattributed wall time: ${duration(gap)}`));
+  tasks.find(task => task.id === "builder-exit-1").offset_seconds -= 1;
+  const overlappingTail = installerStages(renderStep(step))[4];
+  assert.ok(overlappingTail.textContent.includes(`Unattributed wall time: ${duration(gap + 1)}`));
+}));
+
+test("a task crossing the start of the container batch contributes only its portion to each stage", () => withDocument(() => {
+  const step = nativeInstallerStep(), tasks = step.breakdown.sections[0].tasks;
+  const start = tasks.find(task => task.id === "vs-container-images-1").offset_seconds;
+  tasks.push({id: "kernel-prep-1", offset_seconds: start - 3, duration_seconds: 8, outcome: "finished"});
+  const stages = installerStages(renderStep(step));
+  assert.match(stages[0].textContent, /Kernel package preparation3s.*8s task/);
+  assert.match(stages[1].textContent, /Kernel package preparation5s.*8s task/);
+  assert.ok(stages[0].textContent.includes(`Unattributed wall time: ${duration(start - 3)}`));
 }));
 
 test("legacy snapshots keep their step duration without requiring a breakdown", () => withDocument(() => {
@@ -1207,3 +1624,27 @@ test("phase-unavailable messages come only from fixed reasons", () => withDocume
     assert.match(row.textContent, /30s/);
   }
 }));
+
+test("batch receipts show measured commands from the selected host step and preserve zero and partial export counts", () => {
+  const {containerBatchMeasurements} = require("./app.js");
+  const job = sharedContainerJob(), [step] = job.steps;
+  step.conclusion = "success";
+  const [batch, archive] = job.image_recipe_timings.recipes;
+  const paired = {...archive, owner: "docker-syncd-vs.gz", exports: 1, exports_expected: 2, export_seconds: 0};
+  const independent = {...archive, owner: "docker-independent.gz", bazel_expected: 1};
+  job.image_recipe_timings.recipes.push(paired, independent);
+  assert.deepEqual(containerBatchMeasurements(job, step), {bazelSeconds: 200, exports: [
+    ["Export docker-sflow.gz (2 archive commands)", 4],
+    ["Export docker-syncd-vs.gz (1 of 2 recorded archive commands)", 0],
+  ]});
+  assert.deepEqual(containerBatchMeasurements(job, {...step}), null);
+  job.steps.push({...step});
+  assert.deepEqual(containerBatchMeasurements(job, step), null);
+  job.steps.pop();
+  batch.bazel_expected = 2;
+  assert.deepEqual(containerBatchMeasurements(job, step), null);
+  batch.bazel_expected = 1;
+  archive.exports = 0;
+  assert.deepEqual(containerBatchMeasurements(job, step), null, "reject inconsistent receipt rather than imputing a duration");
+  assert.deepEqual(containerBatchMeasurements({kind: "make-vs", steps: [step]}, step), null);
+});

@@ -27,7 +27,13 @@ file, without dropping records or replacing the previous output on overflow.
   `event`, `status`, `conclusion`, `pr_numbers`, `pr_association`, `pr_association_note`, `started_at`, `started_at_source`,
   `completed_at`, `updated_at`, `url`, `jobs`, `event_bases`.
   `source_sha` is GitHub's run `head_sha`; it is not replaced by the current PR
-  head. `pr_association` is `github` (run's explicit PR links), `commit` (exact
+  head. For master builds, optional `source_commit_title` contains the first
+  line of GitHub's `head_commit.message` when `head_commit.id` matches the
+  run's full `source_sha`. The collector normalizes whitespace and bounds the
+  title to 256 characters. A normal refresh also fills in earlier master runs
+  at the same SHA using the workflow metadata it already reads. A revision
+  without a verified title keeps its SHA and date in the picker.
+  `pr_association` is `github` (run's explicit PR links), `commit` (exact
   current same-repository PR head, or a unique exact fork repository/branch/head
   match for a `pull_request` event), `branch` (unique same-repository feature
   branch, additionally verified through GitHub's commit-to-PR endpoint), or
@@ -61,7 +67,7 @@ file, without dropping records or replacing the previous output on overflow.
   not guaranteed to partition job wall time (runner overhead is separate).
   `image_build_seconds` is populated only for successful, explicitly recognized
   image-build steps; `image_build_elapsed_seconds` also records a failed image
-  build's elapsed time. The PR table and job details keep a completed build's timing
+  build's elapsed time. Run details keeps a completed build's timing
   when later validation fails. The performance chart requires a successful job.
   Exact recognized step names identify the measurement scope. In particular,
   `Build the VS installer (.bin)` excludes VM generation and boot checks;
@@ -100,8 +106,20 @@ file, without dropping records or replacing the previous output on overflow.
     `container_breakdown`. Its `rows` identify participating archive owners
     from the same recipe list. Each row contains an action count (`actions`),
     union time across the owner's observed actions (`action_seconds`), and
-    observed `fetch_seconds`, `archive_seconds` and `compress_seconds`. An
-    owner can include both runtime and debug archive targets. Shared inputs
+    observed `fetch_seconds`, `archive_seconds` and `compress_seconds`.
+    New rows also include `compile_seconds`, the wall time of compiler subprocesses
+    inside actions attributed to that image. Overlapping compiler processes count
+    once. For example, if two compiles each run for five seconds and overlap for
+    three, the image records seven seconds. This time is included in
+    `action_seconds`. A measured zero means no compiler subprocess was attributed
+    to this image in the observed profile. Older rows omit the field and display
+    an unavailable compile time.
+    When the first image-owned action and the last successful archive export can be
+    timed together, `total_seconds` gives the elapsed time between them. For
+    example, an image whose first action starts at 10:00 and whose last export
+    finishes at 10:12 takes 12 minutes, including gaps between its actions and
+    exports. A row may omit either timing independently when evidence is missing.
+    An owner can include both runtime and debug archive targets. Shared inputs
     are counted with their identifiable producer or remain unattributed.
     The `other_action_seconds` field counts intervals with only shared or
     unattributed actions active. `no_action_seconds` counts launcher time
@@ -178,7 +196,12 @@ file, without dropping records or replacing the previous output on overflow.
   - Each task contains a known `id`, fixed `label`, `offset_seconds` relative to
     its containing section, `duration_seconds`, and `outcome` (`finished` or
     `cached`). Tasks can overlap and are not an additive partition of the
-    section. Unobserved work inside a recipe is not synthesized.
+    section. The native installer also emits paired `[ vs timing ]` start/end
+    markers for kernel/P4RT preparation, P4RT substeps, intermediate root
+    filesystem preparation, compression and cache save (when writes are enabled),
+    version collection, builder exit and host cleanup. Intermediate root filesystem
+    timings must occur within the corresponding ONIE squashfs target's markers. A completed pair produces a task from the
+    same fixed vocabulary. An unmatched optional marker contributes no duration.
   - A final-image task may additionally contain `phase_breakdown`:
     - `version`: `1`; `source`: `build-phase-markers`.
     - `status`: `available` or `unavailable`; `reason`: `null`, `not-recorded`,
@@ -187,7 +210,7 @@ file, without dropping records or replacing the previous output on overflow.
       unavailable.
     - `segments`: at most 64 sequential, contiguous intervals, each with
       `phase` (`assembly`, `boot-checks`, or `compression`), `context` (`recipe`,
-      `filesystem`, `installer`, `bios`, `uefi`, `4-asic`, or `6-asic`),
+      `filesystem`, `installer`, `docker-load`, `docker-store`, `payload`, `bios`, `uefi`, `4-asic`, or `6-asic`),
       `offset_seconds` relative to the producer interval, and `duration_seconds`.
       Labels are derived from these fixed identifiers. Segments partition the
       producer interval; category totals aggregate repeated segments without
@@ -204,7 +227,7 @@ file, without dropping records or replacing the previous output on overflow.
     make that inner detail unavailable while preserving valid outer timings.
     The `.bin` installer and `.img.gz` VM target identities are distinct when
     associating receipts. Both support outer recipe and root-filesystem task
-    timing; current `.bin` builds do not emit inner-phase receipts.
+    timing. Instrumented `.bin` builds emit their own ONIE phase receipt.
     Previously retained tasks without this optional field remain supported.
   Timing values must be finite and nonnegative; child intervals must fit their
   parent. Identifiers and labels come from the parser's allowlist, never
@@ -234,7 +257,7 @@ evidence because there is no earlier attempt in that run. Duplicate run or job
 identities remain in raw history and are unverified. Colliding metric keys are
 deduplicated only when the execution signatures match.
 
-PR coverage and run details label image step time, job execution time and retry
+Run details labels image step time, job execution time and retry
 attempt start separately. Verified carried records link to the original job.
 Performance counts and trends count each verified origin once and use the image
 step's execution start, or a labeled job start when step identities are absent.

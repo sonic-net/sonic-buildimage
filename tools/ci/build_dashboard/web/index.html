@@ -22,7 +22,7 @@
       <div>
         <p class="eyebrow">SONIC BUILDIMAGE</p>
         <h1 id="page-title">Image build performance</h1>
-        <p class="lede">Track image builds across pull requests. Follow the build stages, spot changes, and open the CI evidence.</p>
+        <p class="lede">Track image builds on master and pull requests. Follow the build stages, spot changes, and open the CI evidence.</p>
       </div>
       <div class="refresh-block">
         <button id="refresh" class="secondary" type="button">Refresh data <span aria-hidden="true">↻</span></button>
@@ -39,6 +39,36 @@
         <p><strong>Build history, with context.</strong> These are observed CI timings. Cache state and runner configuration are not yet controlled, so differences are not attributed to PR changes. A skipped or missing image build is never counted as a faster build.</p>
       </div>
       <section id="metrics" class="metrics" aria-label="Build summary"></section>
+      <section class="panel" aria-labelledby="coverage-title">
+        <div class="panel-heading status-heading">
+          <h2 id="coverage-title">Image build status</h2>
+          <div class="source-filters">
+            <label class="source-select">Build source
+              <select id="source-filter">
+                <option value="combined">Master + pull requests</option>
+                <option value="master" selected>Master</option>
+                <option value="pr">Pull requests</option>
+                <option value="other">Other branches</option>
+              </select>
+            </label>
+            <label id="commit-filter-label" class="source-select">Master commit
+              <select id="commit-filter">
+                <option value="all" selected>All master commits</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <p id="latest-branch-status" class="status-line"></p>
+        <div id="pr-build-status" hidden>
+          <p class="status-line">
+            <strong>Pull requests</strong>
+            <span id="coverage-count" class="count-pill"></span>
+            <span>Latest image result per PR</span>
+          </p>
+          <dl id="coverage-summary" class="coverage-summary" aria-label="Pull request image outcomes"></dl>
+          <p id="coverage-other" class="coverage-other" hidden></p>
+        </div>
+      </section>
       <section class="panel history-panel" aria-labelledby="history-title">
         <div class="panel-heading">
           <div>
@@ -63,9 +93,9 @@
               <option value="unknown">Unknown</option>
             </select>
           </label>
-          <label>Pull request
+          <label id="pr-filter-label" hidden>Pull request
             <select id="pr-filter">
-              <option value="all">All pull requests &amp; branches</option>
+              <option value="all">All pull requests</option>
             </select>
           </label>
         </div>
@@ -84,60 +114,34 @@
           </label>
           <label>Measurements shown
             <select id="limit-filter">
+              <option value="10" selected>Newest 10</option>
               <option value="60">Newest 60</option>
               <option value="120">Newest 120</option>
               <option value="all">Show all</option>
             </select>
           </label>
         </div>
-        <div id="history-legend" class="legend" aria-label="Visible measurement series"></div>
+        <div id="history-legend" class="legend" aria-label="Build sources and measurement series"></div>
         <div id="trend" class="trend"></div>
         <div id="trend-preview" class="chart-preview"></div>
         <p id="trend-note" class="panel-footnote"></p>
       </section>
-      <div class="workspace">
-        <section class="panel coverage-panel" aria-labelledby="coverage-title">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">PULL REQUESTS</p>
-              <h2 id="coverage-title">PR coverage</h2>
-              <p>All collected PRs · latest associated image result. Filters above do not apply.</p>
-            </div>
-            <span id="coverage-count" class="count-pill"></span>
+      <section class="panel detail-panel" aria-labelledby="detail-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">CI EVIDENCE</p>
+            <h2 id="detail-title">Run details</h2>
           </div>
-          <dl id="coverage-summary" class="coverage-summary" aria-label="Pull request image outcomes"></dl>
-          <p id="coverage-other" class="coverage-other" hidden></p>
-          <div class="table-scroll">
-            <table class="coverage-table">
-              <thead>
-                <tr>
-                  <th scope="col">Pull request</th>
-                  <th scope="col">Image result</th>
-                  <th scope="col">Build step</th>
-                </tr>
-              </thead>
-              <tbody id="coverage-body"></tbody>
-            </table>
-          </div>
-          <p class="panel-footnote">Only PRs with a successful or failed image result are listed. Image timestamps describe the recorded step or job execution; retry attempt start stays in Run details. Carried executions link to their verified origin, and missing or ambiguous origins remain unverified. Branch association is a best-effort match. Select a PR to inspect its jobs and source revision.</p>
-        </section>
-        <section class="panel detail-panel" aria-labelledby="detail-title">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">CI EVIDENCE</p>
-              <h2 id="detail-title">Run details</h2>
-            </div>
-          </div>
-          <div id="details"></div>
-        </section>
-      </div>
+        </div>
+        <div id="details"></div>
+      </section>
       <div id="target-analysis" class="target-analysis-panel" hidden></div>
       <section class="panel runs-panel" aria-labelledby="runs-title">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">RECORDED WORKFLOWS</p>
             <h2 id="runs-title">Run history</h2>
-            <p>Includes failed, skipped, and pending runs. Build path, architecture, and pull request filters also apply here; chart-only controls do not.</p>
+            <p>Includes failed, skipped, and pending runs for the selected source, revision, build path, and architecture.</p>
           </div>
           <span id="run-count" class="count-pill"></span>
         </div>

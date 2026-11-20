@@ -19,7 +19,7 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import artifact_validation as check
-from tools.bazel.ci import bazel_commands, build, command_log, p4rt_handoff, resolution
+from tools.bazel.ci import bazel_commands, build, command_log, p4rt_handoff, resolution, time_vs_image
 from tools.bazel.p4rt_common_sdk import prepare_repository
 from tools.bazel.build_helpers import cache_options, remote_cache_options
 from tools.bazel.ci.preserve_setup_bazel_cache import PRIVATE_CACHE_ENDPOINT
@@ -229,27 +229,32 @@ def prepare_owner(args, *, make_build=False):
         revision = receipt['revision'] = identity()
         if not make_build:
             prepare_manifests(execute, preparation, receipt)
-        receipt['action_audit'] = bazel_commands.audit_targets(args.bazel, options, list(PREPARATION_TARGETS.values()),
-            workspace=ROOT, output=preparation / 'action-audit.json')
-        build.collect_archives(ROOT, preparation, receipt, PREPARATION_TARGETS, bazel=args.bazel, options=options, use_execution_root=True)
-        module = (preparation / 'common.MODULE.bazel').read_text()
-        check.require(re.search(r'version\s*=\s*[\"\']0\.0\.9-' + COMMON_REVISION + r'[\"\']', module),
-                      'The fetched Common owner differs from the selected image parent')
-        prepare_repository(preparation / 'common-sdk.tar', sdk, 'amd64', {
-            'producer_bazel_version': '8.5.1', 'producer_target': PREPARATION_TARGETS['common-sdk.tar'],
-            'common_source_commit': COMMON_REVISION, 'common_source_has_tracked_changes': False,
-            'common_module_sha256': check.sha(preparation / 'common.MODULE.bazel'),
-            'image_source_revision': revision, 'yang_modules': True,
-        }, libnl_archives={PREPARATION_TARGETS[name]: preparation / name
-                           for name in ('libnl-nf-sdk.tar', 'libnl-genl-sdk.tar')},
-            libyang_archive=preparation / 'libyang-runtime.tar',
-            parent_archive=preparation / 'config-engine.source.tar')
-        receipt['parent_common'] = p4rt_handoff.same_common_library(sdk,
-            preparation / 'common-runtime.tar', preparation / 'config-engine.source.tar')
-        run_owner(args, sdk, output, 'build', preparation, receipt, make_build=make_build)
-        receipt['owner_handoff'] = p4rt_handoff.stage(args.owner_source, args.owner_revision, sdk, output,
-            ROOT / '.bazel-inputs/p4rt-owner', receipt['parent_common'])
-        check.require(identity() == revision, 'Image source changed during owner preparation')
+        phase = partial(time_vs_image.log_make_phase, vs_make=make_build)
+        with phase('p4rt-audit'):
+            receipt['action_audit'] = bazel_commands.audit_targets(args.bazel, options, list(PREPARATION_TARGETS.values()),
+                workspace=ROOT, output=preparation / 'action-audit.json')
+        with phase('p4rt-sdk'):
+            build.collect_archives(ROOT, preparation, receipt, PREPARATION_TARGETS, bazel=args.bazel, options=options, use_execution_root=True)
+            module = (preparation / 'common.MODULE.bazel').read_text()
+            check.require(re.search(r'version\s*=\s*[\"\']0\.0\.9-' + COMMON_REVISION + r'[\"\']', module),
+                          'The fetched Common owner differs from the selected image parent')
+            prepare_repository(preparation / 'common-sdk.tar', sdk, 'amd64', {
+                'producer_bazel_version': '8.5.1', 'producer_target': PREPARATION_TARGETS['common-sdk.tar'],
+                'common_source_commit': COMMON_REVISION, 'common_source_has_tracked_changes': False,
+                'common_module_sha256': check.sha(preparation / 'common.MODULE.bazel'),
+                'image_source_revision': revision, 'yang_modules': True,
+            }, libnl_archives={PREPARATION_TARGETS[name]: preparation / name
+                               for name in ('libnl-nf-sdk.tar', 'libnl-genl-sdk.tar')},
+                libyang_archive=preparation / 'libyang-runtime.tar',
+                parent_archive=preparation / 'config-engine.source.tar')
+            receipt['parent_common'] = p4rt_handoff.same_common_library(sdk,
+                preparation / 'common-runtime.tar', preparation / 'config-engine.source.tar')
+        with phase('p4rt-owner'):
+            run_owner(args, sdk, output, 'build', preparation, receipt, make_build=make_build)
+        with phase('p4rt-handoff'):
+            receipt['owner_handoff'] = p4rt_handoff.stage(args.owner_source, args.owner_revision, sdk, output,
+                ROOT / '.bazel-inputs/p4rt-owner', receipt['parent_common'])
+            check.require(identity() == revision, 'Image source changed during owner preparation')
         # CI validation and publication accept only the clean-checkout 'prepared' receipt.
         receipt.update(status='prepared-for-make' if make_build else 'prepared', elapsed_seconds=time.monotonic() - started)
     except Exception as error:
@@ -440,9 +445,10 @@ def main():
     parser.add_argument('--jobs', type=int, default=1)
     args = parser.parse_args()
     check.require(args.jobs > 0, 'Owner jobs must be positive')
-    {'prepare-owner': prepare_owner, 'prepare-make-owner': partial(prepare_owner, make_build=True),
-     'prepare-owner-runtime': prepare_runtime,
-     'build': build_images, 'owner-tests': owner_tests}[args.phase](args)
+    actions = {'prepare-owner': prepare_owner, 'prepare-make-owner': partial(prepare_owner, make_build=True),
+               'prepare-owner-runtime': prepare_runtime, 'build': build_images, 'owner-tests': owner_tests}
+    with time_vs_image.log_make_phase('p4rt-prep', vs_make=args.phase == 'prepare-make-owner'):
+        actions[args.phase](args)
 
 
 if __name__ == '__main__':

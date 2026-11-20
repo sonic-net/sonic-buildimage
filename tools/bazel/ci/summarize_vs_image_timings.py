@@ -15,12 +15,13 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from tools.bazel.ci.container_profile import batch_profile, cache_fetch, combine_batches, union_seconds
+from tools.bazel.ci.container_profile import (
+    COMPILERS, batch_profile, cache_fetch, combine_batches, subprocess_mnemonic, union_seconds,
+)
 
 
 PUBLIC_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,191}\Z")
 MAX_BATCH_ARCHIVES = 1024
-COMPILERS = {"CppCompile", "CppModuleCompile", "Rustc", "GoCompilePkg", "GoCompile"}
 CATEGORIES = ("lock", "compile", "foreign", "fetch")
 LOCK_EVENTS = {
     "Blocking on busy Bazel server (in client)",
@@ -142,10 +143,11 @@ def summarize_profile(events):
         thread = (event["pid"], event["tid"])
         if category == "action processing":
             actions[thread].append((*interval, event.get("args", {}).get("mnemonic", "")))
-        elif category == "general information" and name == "subprocess.run":
-            sandbox_processes[thread].append(interval)
-        elif category == "Local execution process wall time":
-            add_process(spans, name, interval)
+        elif (process := subprocess_mnemonic(event)) is not None:
+            if process:
+                add_process(spans, process, interval)
+            else:
+                sandbox_processes[thread].append(interval)
         elif category == "build phase marker" and name in LOCK_EVENTS:
             spans["lock"].append(interval)
         elif cache_fetch(event):
@@ -240,10 +242,12 @@ def read_plan(path):
 
 def read_profile(path):
     with gzip.open(path, "rt") as stream:
-        events = json.load(stream)["traceEvents"]
+        profile = json.load(stream)
+    events = profile["traceEvents"]
     if not isinstance(events, list) or not events:
         raise ValueError("empty trace")
-    return events
+    metadata = profile.get("otherData")
+    return events, metadata.get("profile_start_ts") if isinstance(metadata, dict) else None
 
 
 def batch_targets(instance, legacy_archives):
@@ -263,7 +267,28 @@ def batch_targets(instance, legacy_archives):
     return archives, False
 
 
-def read_owner(directory, *, legacy_archives=None, batches=None):
+def batch_image_starts(epoch_ms, bounds, archives, build_record):
+    """Match Bazel's relative action timestamps to the launcher's wall clock."""
+    if (type(epoch_ms) is not int or not 0 < epoch_ms <= 253402300799000 or
+            not build_record or build_record["start_epoch_seconds"] is None or build_record["exit_code"]):
+        return {}
+    build_start = build_record["start_epoch_seconds"]
+    build_end = build_start + build_record["seconds"]
+    phases = defaultdict(set)
+    for archive, (owner, _) in archives.items():
+        phases[owner].add(f"export-{archive}")
+    starts = {}
+    for owner, (first_us, last_us) in bounds.items():
+        first = epoch_ms / 1000 + first_us / 1e6
+        last = epoch_ms / 1000 + last_us / 1e6
+        # The profile epoch has millisecond precision. Reject clocks that would
+        # place the observed actions outside the command that generated them.
+        if build_start - .001 <= first <= last <= build_end + .001:
+            starts[owner] = (first, max(last, build_end), phases[owner])
+    return starts
+
+
+def read_owner(directory, *, legacy_archives=None, batches=None, exports_by_owner=None):
     row = {"owner": directory.name, "bazel_seconds": None, "export_seconds": None,
            **{key + "_seconds": None for key in CATEGORIES}, "failed": False,
            "bazel_phases": 0, "bazel_expected": 0, "profiles": 0, "profiles_expected": 0,
@@ -287,6 +312,7 @@ def read_owner(directory, *, legacy_archives=None, batches=None):
         details["expected"] += int(has_named)
         phase_records = []
         build_seconds = None
+        build_record = None
         for group, count, expected, metric in (
                 ("bazel", "bazel_phases", "bazel_expected", "bazel_seconds"),
                 ("exports", "exports", "exports_expected", "export_seconds")):
@@ -313,6 +339,7 @@ def read_owner(directory, *, legacy_archives=None, batches=None):
                     "start_epoch_seconds": started, "exit_code": code,
                 })
                 if group == "bazel" and phase == "build":
+                    build_record = phase_records[-1]
                     build_seconds = seconds
                     build["timings"] += 1
                     build["seconds"] = (build["seconds"] or 0) + seconds
@@ -322,7 +349,7 @@ def read_owner(directory, *, legacy_archives=None, batches=None):
         row["profiles_expected"] += len(plan["profiles"])
         for phase in plan["profiles"]:
             try:
-                events = read_profile(instance / f"{phase}.profile.json.gz")
+                events, epoch_ms = read_profile(instance / f"{phase}.profile.json.gz")
                 durations = summarize_profile(events)
                 evidence = named = None
                 if phase == "build" and has_named:
@@ -334,9 +361,11 @@ def read_owner(directory, *, legacy_archives=None, batches=None):
             if batches is not None and phase == "build" and build_seconds is not None:
                 try:
                     archives, legacy = batch_targets(instance, legacy_archives)
-                    attribution = batch_profile(events, build_seconds, archives, legacy=legacy)
+                    bounds = {}
+                    attribution = batch_profile(events, build_seconds, archives, legacy=legacy, owner_bounds=bounds)
                     if attribution is not None:
-                        batches.append(attribution)
+                        starts = batch_image_starts(epoch_ms, bounds, archives, build_record) if len(plans) == 1 else {}
+                        batches.append((attribution, starts))
                 except (OSError, ValueError, KeyError, TypeError, AttributeError):
                     problems.append("per-container profile ownership unavailable")
             del events
@@ -356,6 +385,14 @@ def read_owner(directory, *, legacy_archives=None, batches=None):
                 for key in ("repositories", "critical_path"):
                     details[key] = sorted(
                         details[key] + named[key], key=lambda span: span["seconds"], reverse=True)[:MAX_SPANS]
+        if (exports_by_owner is not None and len(plans) == 1 and plan["exports"] and
+                not plan["bazel"] and not plan["profiles"] and len(phase_records) == len(plan["exports"]) and
+                all(p["start_epoch_seconds"] is not None and not p["exit_code"] for p in phase_records)):
+            exports_by_owner[directory.name] = (
+                {p["phase"] for p in phase_records},
+                min(p["start_epoch_seconds"] for p in phase_records),
+                max(p["start_epoch_seconds"] + p["seconds"] for p in phase_records),
+            )
         details["phase_count"] += len(phase_records)
         details["phases"] = sorted(
             details["phases"] + phase_records,
@@ -534,6 +571,7 @@ def historical_archives(root):
 
 def report(root):
     batches = []
+    exports_by_owner = {}
     breakdown = None
     recipes = []
     notes = []
@@ -542,13 +580,22 @@ def report(root):
             if directory.name == "vs-container-images":
                 row, problems = read_owner(directory, legacy_archives=historical_archives(root), batches=batches)
                 if batches and len(batches) == row["profiles_expected"]:
-                    breakdown = combine_batches(batches)
+                    breakdown = combine_batches([detail for detail, _ in batches])
             else:
-                row, problems = read_owner(directory)
+                row, problems = read_owner(directory, exports_by_owner=exports_by_owner)
             if row is not None:
                 recipes.append(row)
             if problems:
                 notes.append(f"- `{directory.name}` — " + ", ".join(problems))
+    if breakdown and len(batches) == 1:
+        _, starts = batches[0]
+        for member in breakdown["rows"]:
+            owner = member["owner"]
+            if owner in starts and owner in exports_by_owner:
+                first, build_end, expected = starts[owner]
+                observed, export_start, export_end = exports_by_owner[owner]
+                if expected == observed and build_end <= export_start <= export_end <= 253402300799:
+                    member["total_seconds"] = export_end - first
     recipes.sort(key=lambda row: (
         row["bazel_phases"] == row["exports"] == 0,
         -((row["bazel_seconds"] or 0) + (row["export_seconds"] or 0)),
@@ -588,13 +635,15 @@ def report(root):
     if breakdown is not None:
         receipt["container_breakdown"] = breakdown
         lines.extend(["", "### Images in the shared Bazel command", "",
-                      "| Image | Actions | Action wall (s) | OCI tar (s) | Compression (s) | Cache fetch (s) |",
-                      "|---|---:|---:|---:|---:|---:|"])
+                      "| Image | Actions | Total elapsed (s) | Action wall (s) | Compile (s) | OCI tar (s) | Compression (s) | Cache fetch (s) |",
+                      "|---|---:|---:|---:|---:|---:|---:|---:|"])
         for row in sorted(breakdown["rows"], key=lambda r: (-r["action_seconds"], r["owner"])):
-            lines.append("| {owner} | {actions} | {action_seconds:.2f} | {archive_seconds:.2f} | "
-                         "{compress_seconds:.2f} | {fetch_seconds:.2f} |".format(**row))
-        lines.extend(["", "Image rows can overlap. OCI tar, compression and cache fetch are included in "
-                      "action wall time. Archive exports are measured separately.",
+            lines.append("| {owner} | {actions} | {total} | {action_seconds:.2f} | {compile_seconds:.2f} | "
+                         "{archive_seconds:.2f} | {compress_seconds:.2f} | {fetch_seconds:.2f} |".format(
+                             total=measured(row.get("total_seconds")), **row))
+        lines.extend(["", "Image rows can overlap. Compiler subprocesses, OCI tar, compression and cache fetch are included in "
+                      "action wall time. Total elapsed runs from the first action attributed to the image through its last "
+                      "archive export, including any waits between them.",
                       f"Images ran concurrently for {breakdown['parallel_seconds']:.2f}s. "
                       f"Only shared or unattributed actions ran for {breakdown['other_action_seconds']:.2f}s. "
                       f"No action was recorded for {breakdown['no_action_seconds']:.2f}s."])

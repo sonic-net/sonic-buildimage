@@ -860,11 +860,12 @@ def main():
     workspace = args.workspace.resolve(strict=True)
     configuration = parse_kernel_config(args.kernel_config)
     if args.command == "ensure":
-        result = ensure(workspace, architecture=args.architecture, kernel_config=configuration, state=args.state_dir,
-                        cache_directory=args.cache_directory, remote_cache=args.remote_cache,
-                        upload=args.upload_local_results,
-                        ca_bundle=args.ca_bundle, java_trust_store=args.java_trust_store, distdir=args.distdir,
-                        debs_directory=args.debs_directory)
+        with time_vs_image.log_make_phase("kernel-prep", vs_make=configuration.get("CONFIGURED_PLATFORM") == "vs"):
+            result = ensure(workspace, architecture=args.architecture, kernel_config=configuration, state=args.state_dir,
+                            cache_directory=args.cache_directory, remote_cache=args.remote_cache,
+                            upload=args.upload_local_results,
+                            ca_bundle=args.ca_bundle, java_trust_store=args.java_trust_store, distdir=args.distdir,
+                            debs_directory=args.debs_directory)
     elif args.command in {"plan", "build"}:
         if args.state_dir is None:
             parser.error("plan/build require --state-dir")

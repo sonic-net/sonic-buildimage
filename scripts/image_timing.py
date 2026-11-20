@@ -17,11 +17,13 @@ from contextlib import contextmanager
 
 ENV = "SONIC_IMAGE_TIMING_FILE"
 PREFIX = "sonic-image-timing-"
-MARKER = "[ image phases ] [ target/sonic-vs.img.gz ] "
+KVM_TARGET = "target/sonic-vs.img.gz"
+ONIE_TARGET = "target/sonic-vs.bin"
 MAX_BYTES = 16384
 MAX_SEGMENTS = 64
 PHASES = {"assembly", "boot-checks", "compression"}
-CONTEXTS = {"recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic"}
+CONTEXTS = {"recipe", "filesystem", "installer", "bios", "uefi", "4-asic", "6-asic",
+            "docker-load", "docker-store", "payload"}
 FILESYSTEM = [
     ("assembly", "recipe"),
     ("assembly", "filesystem"),
@@ -40,6 +42,20 @@ def image_events(context):
 
 SINGLE = FILESYSTEM + image_events("bios") + image_events("uefi")
 MULTI = SINGLE + image_events("4-asic") + image_events("6-asic")
+ONIE = [
+    ("assembly", "recipe"),
+    ("assembly", "filesystem"),
+    ("assembly", "docker-load"),
+    ("assembly", "filesystem"),
+    ("compression", "filesystem"),
+    ("assembly", "filesystem"),
+    ("compression", "docker-store"),
+    ("assembly", "payload"),
+    ("assembly", "recipe"),
+    ("assembly", "installer"),
+    ("assembly", "recipe"),
+]
+PATTERNS = {KVM_TARGET: (SINGLE, MULTI), ONIE_TARGET: (ONIE,)}
 
 
 def now_us():
@@ -87,10 +103,11 @@ def read_events(stream):
     return events
 
 
-def expected(events, complete=False):
+def expected(events, target=None):
     labels = [(event[1], event[2]) for event in events]
-    return any(labels == (pattern if complete else pattern[:len(labels)])
-               for pattern in (SINGLE, MULTI))
+    if target is not None:
+        return labels in PATTERNS.get(target, ())
+    return any(labels == pattern[:len(labels)] for patterns in PATTERNS.values() for pattern in patterns)
 
 
 def begin():
@@ -118,12 +135,12 @@ def switch(path, phase, context):
         stream.write(json.dumps(event, separators=(",", ":")) + "\n")
 
 
-def end(path):
+def end(path, target=KVM_TARGET):
     with receipt(path) as (stream, info):
         try:
             events = read_events(stream)
             finish = now_us()
-            if not expected(events, complete=True) or finish < events[-1][0]:
+            if not expected(events, target) or finish < events[-1][0]:
                 return None
             start = events[0][0]
             ends = [event[0] for event in events[1:]] + [finish]
@@ -138,7 +155,7 @@ def end(path):
                 ],
             }
             encoded = json.dumps(value, separators=(",", ":"), allow_nan=False)
-            return MARKER + encoded if len(encoded) <= MAX_BYTES else None
+            return f"[ image phases ] [ {target} ] {encoded}" if len(encoded) <= MAX_BYTES else None
         finally:
             remove_receipt(path, info)
 
@@ -154,8 +171,8 @@ def main(argv):
             return
         if len(argv) == 3 and argv[0] == "switch":
             switch(path, argv[1], argv[2])
-        elif argv == ["end"]:
-            value = end(path)
+        elif argv == ["end"] or (len(argv) == 2 and argv[0] == "end" and argv[1] in PATTERNS):
+            value = end(path, argv[1] if len(argv) == 2 else KVM_TARGET)
             if value:
                 print(value)
         elif argv == ["discard"]:

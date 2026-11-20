@@ -69,6 +69,64 @@ def final_tasks(value):
     return [task for section in value["sections"] for task in section["tasks"] if task["id"].startswith("final-image-")]
 
 
+class VSPipelineTimingTests(unittest.TestCase):
+    def test_measured_preparation_and_host_cleanup_survive_collection(self):
+        def marker(second, kind, event):
+            return f"2026-10-10T00:00:{second:02d}Z [ vs timing ] [ {kind} ] [ {event} ]\n".encode()
+
+        early = (marker(2, "kernel-prep", "start") + marker(4, "kernel-prep", "end") +
+                 marker(4, "p4rt-prep", "start") + marker(5, "p4rt-audit", "start") +
+                 b"\xef\xbb\xbf" + marker(8, "p4rt-audit", "end") + marker(9, "p4rt-prep", "end"))
+        late = (b"2026-10-10T00:08:01Z [ vs timing ] [ build-version-collection ] [ start ]\n"
+                b"2026-10-10T00:08:04Z [ vs timing ] [ build-version-collection ] [ end ]\n"
+                b"2026-10-10T00:08:04Z [ vs timing ] [ builder-exit ] [ start ]\n"
+                b"2026-10-10T00:08:06Z [ vs timing ] [ builder-exit ] [ end ]\n")
+        log = synthetic_log().replace(b"2026-10-10T00:00:10Z", early + b"2026-10-10T00:00:10Z")
+        log = log.replace(FINAL_FINISH, FINAL_FINISH + late).replace(b"sonic-vs.img.gz", b"sonic-vs.bin")
+        value = breakdown.parse_log(log, job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        tasks = {t["id"]: t for t in value["sections"][0]["tasks"]}
+        for kind, seconds in [("kernel-prep", 2), ("p4rt-prep", 5), ("p4rt-audit", 3),
+                              ("build-version-collection", 3), ("builder-exit", 2)]:
+            self.assertEqual(tasks[kind + "-1"]["duration_seconds"], seconds)
+
+    def test_rootfs_preparation_compression_and_cache_spans_require_their_own_recipe(self):
+        target = breakdown.VS_ROOTFS_TARGET
+        def parse_events(events):
+            extra = "".join(f"2026-10-10T00:01:{second:02d}Z {event}\n" for second, event in events)
+            log = synthetic_log().replace(FINAL_START, extra.encode() + FINAL_START)
+            value = breakdown.parse_log(log, job()["steps"][0])
+            self.assertEqual(value["status"], "available")
+            return {t["id"]: t["duration_seconds"] for t in value["sections"][0]["tasks"]
+                    if t["id"].startswith("rootfs-")}
+
+        start = f"[ building ] [ {target} ]"
+        end = f"[ finished ] [ {target} ]"
+        prep_start = "[ vs timing ] [ rootfs-prepare ] [ start ]"
+        prep_end = "[ vs timing ] [ rootfs-prepare ] [ end ]"
+        zip_start = "[ vs timing ] [ rootfs-compress ] [ start ]"
+        zip_end = "[ vs timing ] [ rootfs-compress ] [ end ]"
+        save_start = "[ vs timing ] [ rootfs-cache-save ] [ start ]"
+        save_end = "[ vs timing ] [ rootfs-cache-save ] [ end ]"
+        self.assertEqual(parse_events([(13, start), (14, prep_start), (33, prep_end),
+                                       (33, zip_start), (41, zip_end), (43, save_start),
+                                       (50, save_end), (51, end)]),
+                         {"rootfs-1": 38, "rootfs-prepare-1": 19,
+                          "rootfs-compress-1": 8, "rootfs-cache-save-1": 7})
+        self.assertEqual(parse_events([(13, prep_start), (14, start), (15, prep_end),
+                                       (16, zip_start), (17, end), (18, start),
+                                       (19, zip_end), (20, end), (21, save_start), (22, save_end)]),
+                         {"rootfs-1": 3, "rootfs-2": 2})
+
+    def test_partial_unpaired_and_unrecognized_markers_cannot_fabricate_timings(self):
+        extra = (b"2026-10-10T00:00:02Z [ vs timing ] [ p4rt-prep ] [ start ]\n"
+                 b"2026-10-10T00:00:03Z [ vs timing ] [ private-host ] [ start ]\n"
+                 b"2026-10-10T00:00:04Z [ vs timing ] [ private-host ] [ end ]\n"
+                 b"2026-10-10T00:00:05Z [ vs timing ] [ builder-exit ] [ end ]\n")
+        log = synthetic_log().replace(b"2026-10-10T00:00:10Z", extra + b"2026-10-10T00:00:10Z")
+        self.assertEqual(breakdown.parse_log(log, job()["steps"][0]), parsed())
+
+
 class ImagePhaseTests(unittest.TestCase):
     def parse(self, log):
         value = breakdown.parse_log(log, job()["steps"][0])
@@ -275,6 +333,16 @@ class ImagePhaseTests(unittest.TestCase):
 
 
 class ParserTests(unittest.TestCase):
+    def test_device_package_and_base_loads_keep_distinct_make_timings(self):
+        log = synthetic_log().replace(b"target/docker-base-trixie.gz", b"target/debs/trixie/sonic-device-data_1.0-1_all.deb")
+        log = log.replace(b"target/docker-config-engine-trixie.gz", b"target/docker-config-engine-trixie.gz-load")
+        log = log.replace(b"target/private-host-secret.gz", b"target/docker-swss-layer-trixie.gz-load")
+        result = breakdown.parse_log(log, job()["steps"][0])
+        self.assertTrue(breakdown.valid(result))
+        tasks = result["sections"][0]["tasks"]
+        self.assertEqual([(t["id"], t["duration_seconds"]) for t in tasks[:3]],
+                         [("device-data-1", 60), ("config-engine-load-1", 50), ("swss-layer-load-1", 1)])
+
     def test_shared_container_build_has_its_own_make_interval(self):
         log = synthetic_log().replace(b"target/docker-base-trixie.gz", b"target/vs-container-images")
         value = breakdown.parse_log(log, job()["steps"][0])

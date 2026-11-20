@@ -995,7 +995,11 @@ fi
 sudo mkdir $FILESYSTEM_ROOT/target
 sudo mount --bind target $FILESYSTEM_ROOT/target
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker info
+{% endif %}
 
+if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
+    python3 ./scripts/image_timing.py switch assembly docker-load 2>/dev/null || true
+fi
 {% for docker_installation_target in installer_images.strip().split() -%}
 {% set pkgname, docker_build_path, machine, image = docker_installation_target.split('|') %}
 {% set imagefilepath = image.split(':')|first -%}
@@ -1018,7 +1022,11 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag {{imag
 {% endif %}
 fi
 {% endfor %}
+if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
+    python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
+fi
 
+{% if installer_images.strip() -%}
 if [[ $CONFIGURED_PLATFORM == pensando ]]; then
 #Disable rc.local
 sudo LANG=C chroot $FILESYSTEM_ROOT chmod -x /etc/rc.local

@@ -427,6 +427,26 @@ class KernelBundleTest(unittest.TestCase):
                 self.assertRaises(FileNotFoundError):
             kernel.main()
 
+    def test_vs_kernel_preparation_marks_the_successful_handoff_only(self):
+        for platform, timings, fails, events in (
+                ("vs", "1", False, ["start", "end"]), ("vs", "1", True, ["start"]),
+                ("vs", "0", False, []), ("mellanox", "1", False, [])):
+            command = ["prepare.py", "ensure", "--workspace", str(self.root),
+                       "--kernel-config", "CONFIGURED_PLATFORM=" + platform]
+            with self.subTest(platform=platform, timings=timings, fails=fails), \
+                    patch.dict(os.environ, {"SONIC_VS_IMAGE_TIMINGS": timings}), patch.object(sys, "argv", command), \
+                    patch.object(kernel, "ensure", return_value={"reused": True},
+                                 side_effect=ValueError("staging failed") if fails else None), \
+                    redirect_stderr(io.StringIO()) as log, redirect_stdout(io.StringIO()) as output:
+                if fails:
+                    with self.assertRaisesRegex(ValueError, "staging failed"):
+                        kernel.main()
+                else:
+                    kernel.main()
+                    self.assertEqual(json.loads(output.getvalue()), {"reused": True})
+                self.assertEqual(log.getvalue().splitlines(),
+                                 [f"[ vs timing ] [ kernel-prep ] [ {event} ]" for event in events])
+
     def test_cli_verify_ignores_managed_trust(self):
         with patch.dict(os.environ, {"SONIC_BAZEL_JAVA_TRUST_STORE": str(self.root / "missing-cacerts")}), \
                 patch.object(sys, "argv", ["prepare.py", "verify", "--workspace", str(self.root)]), \

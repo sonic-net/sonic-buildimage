@@ -7,7 +7,7 @@ unset PASSWORD
 ## Enable debug output for script
 set -x -e
 
-if [[ "${TARGET_MACHINE:-}" != vs || "${IMAGE_TYPE:-}" != kvm ]]; then
+if [[ "${TARGET_MACHINE:-}" != vs || ( "${IMAGE_TYPE:-}" != kvm && "${IMAGE_TYPE:-}" != onie ) ]]; then
     unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
 fi
 
@@ -160,6 +160,9 @@ generate_device_list()
 }
 
 if [ "$IMAGE_TYPE" = "onie" ]; then
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch assembly installer 2>/dev/null || true
+    fi
     echo "Build ONIE installer"
     mkdir -p `dirname $OUTPUT_ONIE_IMAGE`
     sudo rm -f $OUTPUT_ONIE_IMAGE
@@ -167,6 +170,9 @@ if [ "$IMAGE_TYPE" = "onie" ]; then
     generate_device_list "./installer/platforms_asic"
 
     generate_onie_installer_image
+    if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+        python3 ./scripts/image_timing.py switch assembly recipe 2>/dev/null || true
+    fi
 
 ## Build a raw partition dump image using the ONIE installer that can be
 ## used to dd' in-lieu of using the onie-nos-installer. Used while migrating

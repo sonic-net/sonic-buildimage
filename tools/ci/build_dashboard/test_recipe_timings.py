@@ -283,6 +283,42 @@ class BazelRecipeTimingsTest(unittest.TestCase):
                 collector.collect(api, REPO, updated)
                 self.assertEqual(api.log_calls, [])
 
+    def test_container_compile_and_total_times_are_optional_in_new_logs_and_retained_history(self):
+        main, member, totals = self.batch()
+        raw = host_job(summary_step=self.summary_step)
+        for metrics in ({}, {"compile_seconds": 0}, {"total_seconds": 60},
+                        {"compile_seconds": 7.25, "total_seconds": member["action_seconds"]}):
+            with self.subTest(metrics=metrics), tempfile.TemporaryDirectory() as tmp:
+                row = {**member, **metrics}
+                lines = main + ["SONIC_VS_CONTAINER_TIMINGS_V1 " + json.dumps(value)
+                                for value in ({"row": row}, {"count": 1, **totals})]
+                api = api_with(raw, log(lines))
+                saved = collector.collect(api, REPO, empty())
+                self.assertEqual(saved["runs"][0]["jobs"][0]["image_recipe_timings"]["container_breakdown"]["rows"],
+                                 [row])
+                path = Path(tmp) / "history.json"
+                collector.write_atomic(path, saved)
+                retained = collector.load_history(path, REPO)
+                self.assertEqual(retained, saved)
+                api.log_calls.clear()
+                collector.collect(api, REPO, retained)
+                self.assertEqual(api.log_calls, [])
+
+    def test_invalid_container_times_preserve_the_recipe_measurements(self):
+        main, member, totals = self.batch()
+        recipes = self.parse(main)["recipes"]
+        invalid_numbers = (None, True, "7.25", -1, float("nan"), float("inf"), 2**53)
+        for field, out_of_bounds in (("compile_seconds", member["action_seconds"] + 0.1),
+                                     ("total_seconds", member["action_seconds"] - 0.1)):
+            for invalid in (*invalid_numbers, out_of_bounds):
+                with self.subTest(field=field, invalid=invalid):
+                    row = {**member, field: invalid}
+                    lines = main + ["SONIC_VS_CONTAINER_TIMINGS_V1 " + json.dumps(value)
+                                    for value in ({"row": row}, {"count": 1, **totals})]
+                    parsed = self.parse(lines)
+                    self.assertEqual(parsed["recipes"], recipes)
+                    self.assertEqual(parsed["container_breakdown"], {"status": "unavailable", "reason": "invalid-timing"})
+
     def test_rejects_partial_duplicate_and_mixed_transports_and_untrusted_rows(self):
         row = self.row("docker-eventd.gz")
         item = self.line({"recipe": row})
