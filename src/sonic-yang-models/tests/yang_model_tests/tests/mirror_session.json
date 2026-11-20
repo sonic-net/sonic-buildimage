@@ -137,5 +137,36 @@
     "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
         "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
         "eStrKey": "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL": {
+        "desc": "Configuring ERSPAN entry with a valid label."
+    },
+    "MIRROR_SPAN_ENTRY_WITH_VALID_LABEL": {
+        "desc": "Configuring SPAN entry with a valid label."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_MIN": {
+        "desc": "Configuring ERSPAN entry with a minimum-length label."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_MAX": {
+        "desc": "Configuring ERSPAN entry with a 31-character label, the maximum that fits the 32-byte SAI chardata field."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_SPECIAL": {
+        "desc": "Configuring ERSPAN entry with a label containing underscore and hyphen."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_EMPTY": {
+        "desc": "Configuring ERSPAN entry with an empty label.",
+        "eStr": "Mirror session label must be 1..31 characters"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_TOO_LONG": {
+        "desc": "Configuring ERSPAN entry with a 32-character label, which does not fit the 32-byte SAI chardata field.",
+        "eStr": "Mirror session label must be 1..31 characters"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_SPACE": {
+        "desc": "Configuring ERSPAN entry with a label containing a space.",
+        "eStr": "Mirror session label must match [a-zA-Z0-9_-]+"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_PUNCTUATION": {
+        "desc": "Configuring ERSPAN entry with a label containing punctuation.",
+        "eStr": "Mirror session label must match [a-zA-Z0-9_-]+"
     }
 }

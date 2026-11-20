@@ -730,5 +730,170 @@
                 ]
             }
         }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "EVERFLOW_TUNNEL"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_SPAN_ENTRY_WITH_VALID_LABEL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "1",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "span",
+                        "type": "SPAN",
+                        "dst_port": "Ethernet0",
+                        "label": "LOCAL_MONITOR"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_MIN": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "A"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_MAX": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "ABCDEFGHIJKLMNOPQRSTUVWXYZ01234"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_LABEL_SPECIAL": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "everflow-tunnel_1"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_EMPTY": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": ""
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_TOO_LONG": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_SPACE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "EVERFLOW TUNNEL"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_LABEL_PUNCTUATION": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "label": "everflow.tunnel"
+                    }
+                ]
+            }
+        }
     }
 }
