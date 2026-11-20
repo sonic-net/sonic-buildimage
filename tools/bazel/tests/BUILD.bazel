@@ -1420,6 +1420,7 @@ py_test(
     name = "source_installation_test",
     srcs = ["integration/source_installation_test.py"],
     args = [
+        "--redis-wheel=$(rootpath @redis_dump_load//:wheel)",
         "--yang-mgmt-dependencies",
         "$(rootpaths //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata)",
         "--metadata",
@@ -1438,6 +1439,7 @@ py_test(
         "--setup=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
     ],
     data = [
+        "@redis_dump_load//:wheel",
         ":source_installation_metadata",
         "//src/sonic-config-engine:setup.py",
         "//src/sonic-config-engine:sonic-config-engine.runtime",
