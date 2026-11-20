@@ -198,3 +198,51 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/files/build/versions
       artifact: 'sonic-buildimage.versions'
       displayName: 'Archive SONiC versions'
+
+- stage: NotifyFailure
+  displayName: Notify version upgrade pipeline failure
+  dependsOn:
+  - Prepare
+  - Build
+  - UpgradeVersions
+  condition: failed()
+  pool: sonic-ubuntu-1c
+  variables:
+  - group: sonicbld
+  jobs:
+  - job: Notify
+    displayName: Send failure notification
+    timeoutInMinutes: 5
+    steps:
+    - checkout: none
+    - bash: |
+        set +x
+        set -euo pipefail
+
+        cert=$(printf '%s' "$CERT" | base64 -d |
+          openssl pkcs12 -nokeys -nodes -passin pass: |
+          openssl x509 -noout -fingerprint -sha1 |
+          sed 's/^.*=//' | tr -d ':' | tr 'A-Z' 'a-z')
+        if [[ ! "$cert" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "##vso[task.logissue type=error]Invalid notification certificate thumbprint"
+          exit 1
+        fi
+
+        payload=$(jq -cn \
+          --arg name "version_upgrade_pipeline_failure" \
+          --arg branch "$BUILD_SOURCEBRANCH" \
+          --arg pipeline "$BUILD_DEFINITIONNAME" \
+          '{name: $name, branch: $branch, pipeline: $pipeline}')
+        response=$(curl --fail-with-body --silent --show-error \
+          --connect-timeout 10 --max-time 60 \
+          -H 'Content-Type: application/json' \
+          -H "thumbprint: $cert" \
+          -X POST https://notice-center.azurewebsites.net/noti_center/notice \
+          -d "$payload")
+        if ! printf '%s' "$response" | jq -e '.success == true'; then
+          echo "##vso[task.logissue type=error]Notice-center did not confirm the failure notification"
+          exit 1
+        fi
+      displayName: Notify notice-center
+      env:
+        CERT: $(cert-noti)
