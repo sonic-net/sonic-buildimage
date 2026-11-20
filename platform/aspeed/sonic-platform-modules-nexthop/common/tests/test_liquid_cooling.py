@@ -3,11 +3,12 @@
 #
 # Author: Chinmoy Dey <chinmoy@nexthop.ai>
 #
-"""Unit tests for the Nexthop BMC (Aspeed) leak test API implementation in
-liquid_cooling.py.
+"""Unit tests for the Nexthop BMC (Aspeed) liquid cooling implementation in
+liquid_cooling.py: the GPIO-backed leak sensors and the leak test API.
 
-These run on any host: the injection markers are redirected to a tmp directory
-and syslog is stubbed, so no BMC hardware or pmon container is required.
+These run on any host: GPIO reads go through a fake, the injection markers are
+redirected to a tmp directory and syslog is stubbed, so no BMC hardware or pmon
+container is required.
 
 The leak test API contract is defined by sonic-platform-common
 (sonic_platform_base/leakage_sensor_test_base.py). The vendor tests here
@@ -18,6 +19,7 @@ the marker-file behaviour specific to this platform.
 
 import importlib.util
 import os
+import subprocess
 import sys
 import types
 
@@ -68,24 +70,66 @@ from sonic_platform_base.liquid_cooling_base import (  # noqa: E402
     LeakSeverity,
 )
 
-# sonic_platform is not installed in the unit-test environment; load the module
+# sonic_platform is not installed in the unit-test environment. Bind the
+# package to the source directory without executing its __init__.py, so that
+# liquid_cooling.py can import sonic_platform.leak_detect, and load the module
 # under test by path.
+_platform = sys.modules.get("sonic_platform")
+if _platform is None:
+    _platform = types.ModuleType("sonic_platform")
+    sys.modules["sonic_platform"] = _platform
+_platform.__path__ = [os.path.join(COMMON_DIR, "sonic_platform")]
+
 _spec = importlib.util.spec_from_file_location(
     "nexthop_liquid_cooling",
     os.path.join(COMMON_DIR, "sonic_platform", "liquid_cooling.py"))
 liquid_cooling = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(liquid_cooling)
 
-SENSOR_NAMES = ["leakage1", "leakage2"]
+SENSOR_NAMES = ["coldplate_leak", "driptray_leak"]
+LINES = {"coldplate_leak": "leak_fault_0", "driptray_leak": "leak_fault_1"}
 
 
 def marker(tmp_path, sensor_name):
     return tmp_path / "{}.{}".format(sensor_name, liquid_cooling.TEST_LEAK_SUFFIX)
 
 
+class FakeGpio:
+    """Stands in for gpioget. Lines default to dry; a value of None makes the
+    read fail as an absent or claimed line would.
+
+    script[line] is an optional list of values returned by successive reads,
+    one per read, before falling back to values[line]. It models a line that
+    changes between two reads of the same poll."""
+
+    def __init__(self):
+        self.values = {line: "0" for line in LINES.values()}
+        self.script = {}
+        self.reads = []
+
+    def __call__(self, line):
+        self.reads.append(line)
+        queued = self.script.get(line)
+        value = queued.pop(0) if queued else self.values[line]
+        if value is None:
+            raise liquid_cooling.leak_detect.LeakLineError(
+                "cannot read {}".format(line))
+        return value + "\n"
+
+
 @pytest.fixture
-def lc(tmp_path):
-    return liquid_cooling.LiquidCooling(leak_test_dir=str(tmp_path))
+def gpio():
+    return FakeGpio()
+
+
+def make_lc(leak_test_dir, gpio=None):
+    return liquid_cooling.LiquidCooling(leak_test_dir=str(leak_test_dir),
+                                        read_line=gpio or FakeGpio())
+
+
+@pytest.fixture
+def lc(tmp_path, gpio):
+    return make_lc(tmp_path, gpio)
 
 
 @pytest.fixture
@@ -94,34 +138,254 @@ def leak_test(lc):
 
 
 class TestSensors:
-    """Sensor inventory and hardware state (no hardware read path yet, so never
-    leaking)."""
+    """Sensor inventory and profiles."""
 
-    def test_sensors_and_profile(self, lc):
+    def test_sensors(self, lc):
         assert lc.get_num_leak_sensors() == 2
         names = [s.get_name() for s in lc.get_all_leak_sensors()]
         assert names == SENSOR_NAMES
 
-        sensor = lc.get_leak_sensor(0)
-        assert sensor.get_leak_sensor_type() == liquid_cooling.SENSOR_TYPE
-        assert sensor.get_leak_sensor_location() == "Intake"
-        assert sensor.is_leak_sensor_ok() == True
+        coldplate, driptray = lc.get_all_leak_sensors()
+        assert coldplate.get_leak_sensor_type() == "FlexPCB"
+        assert coldplate.get_leak_sensor_location() == "ColdPlate"
+        assert driptray.get_leak_sensor_type() == "Rope"
+        assert driptray.get_leak_sensor_location() == "DripTray"
+        for sensor in (coldplate, driptray):
+            assert sensor.line == LINES[sensor.get_name()]
+            assert sensor.is_leak_sensor_ok() == True
 
-        profile = sensor.get_leak_profile()
-        assert isinstance(profile, LeakSensorProfileBase)
-        assert profile.get_type() == liquid_cooling.SENSOR_TYPE
-        assert profile.get_leak_max_minor_duration_sec() == \
-            liquid_cooling.DEFAULT_MAX_MINOR_DURATION_SEC
-        assert lc.get_all_profiles() == [profile]
-        assert lc.get_profile(liquid_cooling.SENSOR_TYPE) is profile
+    def test_one_profile_per_sensor_type(self, lc):
+        profiles = lc.get_all_profiles()
+        assert sorted(p.get_type() for p in profiles) == ["FlexPCB", "Rope"]
+        for sensor in lc.get_all_leak_sensors():
+            profile = sensor.get_leak_profile()
+            assert isinstance(profile, LeakSensorProfileBase)
+            assert profile.get_type() == sensor.get_leak_sensor_type()
+            assert lc.get_profile(profile.get_type()) is profile
+            assert profile.get_leak_max_minor_duration_sec() == \
+                liquid_cooling.DEFAULT_MAX_MINOR_DURATION_SEC
 
-    def test_no_leak_without_injection(self, lc):
+    def test_no_leak_when_lines_are_dry(self, lc):
         assert lc.get_leak_sensor_status() == []
         for sensor in lc.get_all_leak_sensors():
             assert sensor.is_leak() == False
             assert sensor.is_test_leak() == False
             assert sensor.get_leak_severity() is None
             assert sensor.is_leak_sensor_ok() == True
+
+
+class TestHardware:
+    """Leak state read from the BMC GPIO lines, and how it combines with an
+    injected test leak."""
+
+    @pytest.mark.parametrize("name,severity", [
+        ("coldplate_leak", LeakSeverity.MINOR),
+        ("driptray_leak", LeakSeverity.CRITICAL),
+    ])
+    def test_asserted_line_is_a_real_leak(self, lc, gpio, name, severity):
+        gpio.values[LINES[name]] = "1"
+
+        leaking = lc.get_leak_sensor_status()
+        assert [s.get_name() for s in leaking] == [name]
+        assert leaking[0].is_test_leak() == False
+        assert leaking[0].get_leak_severity() is severity
+        assert leaking[0].is_leak_sensor_ok() == True
+
+    def test_each_sensor_reads_its_own_line(self, lc, gpio):
+        for sensor in lc.get_all_leak_sensors():
+            gpio.reads.clear()
+            sensor.is_leak()
+            assert gpio.reads == [LINES[sensor.get_name()]]
+
+    def test_clearing_line_clears_leak(self, lc, gpio):
+        sensor = lc.get_leak_sensor(1)
+        gpio.values["leak_fault_1"] = "1"
+        assert sensor.is_leak() == True
+        gpio.values["leak_fault_1"] = "0"
+        assert sensor.is_leak() == False
+        assert sensor.get_leak_severity() is None
+
+    def test_hardware_leak_takes_precedence_over_injection(self, lc, gpio,
+                                                           leak_test):
+        # A real leak must never be reported as a test leak, or consumers
+        # would skip mitigation for it.
+        sensor = lc.get_leak_sensor(0)
+        leak_test.set_test_leak("coldplate_leak", True,
+                                severity=LeakSeverity.CRITICAL)
+        assert sensor.is_leak() == True
+        assert sensor.is_test_leak() == True
+
+        gpio.values["leak_fault_0"] = "1"
+        assert sensor.is_leak() == True
+        assert sensor.is_test_leak() == False
+        assert sensor.get_leak_severity() is LeakSeverity.MINOR
+
+    def test_withdrawal_returns_to_hardware_state(self, lc, gpio, leak_test):
+        # A leak that starts while an injection is active is still reported
+        # once the injection is withdrawn.
+        sensor = lc.get_leak_sensor(1)
+        leak_test.set_test_leak("driptray_leak", True)
+        assert sensor.is_leak() == True
+        gpio.values["leak_fault_1"] = "1"
+        assert leak_test.set_test_leak("driptray_leak", False) == True
+
+        assert sensor.is_leak() == True
+        assert sensor.is_test_leak() == False
+        assert sensor.get_leak_severity() is LeakSeverity.CRITICAL
+
+    @pytest.mark.parametrize("value", [None, "banana", ""])
+    def test_unreadable_line_is_a_faulty_sensor(self, lc, gpio, value):
+        # An absent DTB entry, a line held by a gpio-hog or output we do not
+        # understand must show up as a faulty sensor, not a clean dry reading.
+        gpio.values["leak_fault_0"] = value
+        sensor = lc.get_leak_sensor(0)
+
+        assert sensor.is_leak_sensor_ok() == False
+        assert sensor.is_leak() == False
+        assert sensor.is_leak_sensor_ok() == False
+        assert lc.get_leak_sensor(1).is_leak_sensor_ok() == True
+
+    def test_injection_is_reported_on_unreadable_line(self, lc, gpio,
+                                                      leak_test):
+        gpio.values["leak_fault_0"] = None
+        leak_test.set_test_leak("coldplate_leak", True)
+        sensor = lc.get_leak_sensor(0)
+
+        assert sensor.is_leak() == True
+        assert sensor.is_test_leak() == True
+        assert sensor.is_leak_sensor_ok() == False
+
+
+def thermalctld_poll(sensor):
+    """One sensor poll in the order thermalctld's LiquidCoolingUpdater makes it,
+    returning what it would publish."""
+    ok = sensor.is_leak_sensor_ok()
+    leak = sensor.is_leak()
+    return (ok, leak, sensor.get_leak_severity(), sensor.is_test_leak())
+
+
+DRY = (True, False, None, False)
+FAULT = (False, False, None, False)
+
+
+class TestCoherentSample:
+    """Health, leak state, severity and test provenance must describe the same
+    read of the line, under the order thermalctld calls the accessors in."""
+
+    @pytest.mark.parametrize("value,expected", [
+        ("0", DRY),
+        ("1", (True, True, LeakSeverity.CRITICAL, False)),
+        (None, FAULT),
+    ])
+    def test_stable_line(self, lc, gpio, value, expected):
+        gpio.values["leak_fault_1"] = value
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == expected
+        assert thermalctld_poll(sensor) == expected
+
+    def test_one_read_per_poll(self, lc, gpio):
+        sensor = lc.get_leak_sensor(1)
+        thermalctld_poll(sensor)
+        assert gpio.reads == ["leak_fault_1"]
+        thermalctld_poll(sensor)
+        assert gpio.reads == ["leak_fault_1", "leak_fault_1"]
+
+    def test_success_then_failure(self, lc, gpio):
+        # A line that fails between the health and the leak read must not be
+        # published as a healthy dry sensor: that would end a tracked leak
+        # episode. The poll reports the first read, consistently.
+        gpio.script["leak_fault_1"] = ["1", None]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+        # The failure is seen on the next poll, as a fault, not as dry.
+        assert thermalctld_poll(sensor) == (False, False, None, False)
+
+    def test_failure_then_asserted(self, lc, gpio):
+        gpio.script["leak_fault_1"] = [None, "1"]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == FAULT
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+
+    def test_success_then_failure_with_injection(self, lc, gpio, leak_test):
+        # Test provenance belongs to the same sample as health: an injection
+        # over a line that has just failed is still a test leak on a faulty
+        # sensor, never a healthy test leak.
+        leak_test.set_test_leak("driptray_leak", True,
+                                severity=LeakSeverity.CRITICAL)
+        gpio.script["leak_fault_1"] = [None, "0"]
+        sensor = lc.get_leak_sensor(1)
+        ok, leak, severity, test = thermalctld_poll(sensor)
+        assert (ok, leak, test) == (False, True, True)
+
+    def test_hardware_leak_under_injection_is_not_a_test_leak(self, lc, gpio,
+                                                              leak_test):
+        leak_test.set_test_leak("driptray_leak", True,
+                                severity=LeakSeverity.CRITICAL)
+        gpio.script["leak_fault_1"] = ["1", "0"]
+        sensor = lc.get_leak_sensor(1)
+        assert thermalctld_poll(sensor) == (True, True, LeakSeverity.CRITICAL,
+                                            False)
+
+    def test_reverse_order_shares_a_sample(self, lc, gpio):
+        gpio.script["leak_fault_1"] = ["1", None]
+        sensor = lc.get_leak_sensor(1)
+        assert sensor.is_leak() == True
+        assert sensor.is_leak_sensor_ok() == True
+        assert gpio.reads == ["leak_fault_1"]
+
+    def test_repeated_accessor_reads_again(self, lc, gpio):
+        sensor = lc.get_leak_sensor(1)
+        sensor.is_leak()
+        sensor.is_leak()
+        sensor.is_leak_sensor_ok()
+        sensor.is_leak_sensor_ok()
+        assert len(gpio.reads) == 3
+
+    def test_stale_sample_is_not_reused(self, lc, gpio, monkeypatch):
+        clock = [100.0]
+        monkeypatch.setattr(liquid_cooling.time, "monotonic", lambda: clock[0])
+        gpio.script["leak_fault_1"] = ["0", "1"]
+        sensor = lc.get_leak_sensor(1)
+        assert sensor.is_leak_sensor_ok() == True
+        clock[0] += liquid_cooling.SAMPLE_REUSE_SEC + 0.1
+        assert sensor.is_leak() == True
+        assert len(gpio.reads) == 2
+
+
+class TestReadGpioLine:
+    """read_gpio_line(), the default line reader, with gpioget replaced."""
+
+    def _run(self, monkeypatch, result=None, exc=None):
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            if exc is not None:
+                raise exc
+            return result
+
+        monkeypatch.setattr(liquid_cooling.subprocess, "run", fake_run)
+        return calls
+
+    def test_reads_line_by_name(self, monkeypatch):
+        calls = self._run(monkeypatch, subprocess.CompletedProcess(
+            [], 0, stdout="1\n", stderr=""))
+        assert liquid_cooling.read_gpio_line("leak_fault_0") == "1\n"
+        assert calls == [["gpioget", "--strict", "--numeric", "--consumer",
+                          "leak-detect", "leak_fault_0"]]
+
+    @pytest.mark.parametrize("result,exc", [
+        (subprocess.CompletedProcess([], 1, stdout="",
+                                     stderr="Device or resource busy"), None),
+        (None, FileNotFoundError("gpioget")),
+        (None, subprocess.TimeoutExpired("gpioget", 5)),
+    ])
+    def test_failures_raise(self, monkeypatch, result, exc):
+        self._run(monkeypatch, result, exc)
+        with pytest.raises(liquid_cooling.leak_detect.LeakLineError):
+            liquid_cooling.read_gpio_line("leak_fault_0")
 
 
 class TestLeakTestApi:
@@ -135,28 +399,28 @@ class TestLeakTestApi:
 
     def test_severity_is_keyword_only(self, leak_test):
         with pytest.raises(TypeError):
-            leak_test.set_test_leak("leakage1", True, LeakSeverity.CRITICAL)
+            leak_test.set_test_leak("coldplate_leak", True, LeakSeverity.CRITICAL)
 
     def test_default_severity_is_minor(self, lc, leak_test, tmp_path):
-        assert leak_test.set_test_leak("leakage1", True) == True
-        assert marker(tmp_path, "leakage1").read_text() == LeakSeverity.MINOR.value
+        assert leak_test.set_test_leak("coldplate_leak", True) == True
+        assert marker(tmp_path, "coldplate_leak").read_text() == LeakSeverity.MINOR.value
 
         sensor = lc.get_leak_sensor(0)
         assert sensor.is_leak() == True
         assert sensor.get_leak_severity() is LeakSeverity.MINOR
 
     def test_set_test_leak_is_idempotent(self, leak_test):
-        assert leak_test.set_test_leak("leakage1", True) == True
-        assert leak_test.set_test_leak("leakage1", True) == True
-        assert leak_test.is_test_leak_enabled("leakage1") == True
-        assert leak_test.set_test_leak("leakage1", False) == True
-        assert leak_test.set_test_leak("leakage1", False) == True
-        assert leak_test.is_test_leak_enabled("leakage1") == False
+        assert leak_test.set_test_leak("coldplate_leak", True) == True
+        assert leak_test.set_test_leak("coldplate_leak", True) == True
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == True
+        assert leak_test.set_test_leak("coldplate_leak", False) == True
+        assert leak_test.set_test_leak("coldplate_leak", False) == True
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == False
         assert leak_test.clear_test_leaks() == True
 
     def test_reinjection_updates_severity(self, lc, leak_test):
-        leak_test.set_test_leak("leakage1", True, severity=LeakSeverity.MINOR)
-        leak_test.set_test_leak("leakage1", True, severity=LeakSeverity.CRITICAL)
+        leak_test.set_test_leak("coldplate_leak", True, severity=LeakSeverity.MINOR)
+        leak_test.set_test_leak("coldplate_leak", True, severity=LeakSeverity.CRITICAL)
 
         sensor = lc.get_leak_sensor(0)
         assert sensor.is_leak() == True
@@ -172,14 +436,14 @@ class TestLeakTestApi:
         assert leak_test.clear_test_leaks() == True
 
     def test_injected_leak_is_flagged(self, lc, leak_test):
-        assert leak_test.set_test_leak("leakage1", True,
+        assert leak_test.set_test_leak("coldplate_leak", True,
                                        severity=LeakSeverity.CRITICAL) == True
-        assert leak_test.is_test_leak_enabled("leakage1") == True
-        assert leak_test.is_test_leak_enabled("leakage2") == False
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == True
+        assert leak_test.is_test_leak_enabled("driptray_leak") == False
 
         leaking = lc.get_leak_sensor_status()
         assert len(leaking) == 1
-        assert leaking[0].get_name() == "leakage1"
+        assert leaking[0].get_name() == "coldplate_leak"
         assert leaking[0].is_test_leak() == True
         assert leaking[0].get_leak_severity() is LeakSeverity.CRITICAL
         assert leaking[0].is_leak_sensor_ok() == True
@@ -204,14 +468,14 @@ class TestLeakTestApi:
         # A marker not written through this object (e.g. by another process)
         # is still an injection on that sensor and must survive a withdrawal
         # aimed at a different sensor.
-        marker(tmp_path, "leakage2").write_text(LeakSeverity.CRITICAL.value)
-        leak_test.set_test_leak("leakage1", True)
+        marker(tmp_path, "driptray_leak").write_text(LeakSeverity.CRITICAL.value)
+        leak_test.set_test_leak("coldplate_leak", True)
 
-        assert leak_test.set_test_leak("leakage1", False) == True
-        assert leak_test.is_test_leak_enabled("leakage1") == False
-        assert leak_test.is_test_leak_enabled("leakage2") == True
+        assert leak_test.set_test_leak("coldplate_leak", False) == True
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == False
+        assert leak_test.is_test_leak_enabled("driptray_leak") == True
         leaking = lc.get_leak_sensor_status()
-        assert [s.get_name() for s in leaking] == ["leakage2"]
+        assert [s.get_name() for s in leaking] == ["driptray_leak"]
         assert leaking[0].get_leak_severity() is LeakSeverity.CRITICAL
 
 
@@ -219,44 +483,43 @@ class TestMarkerFiles:
     """Platform-specific behaviour of the marker-file backing store."""
 
     def test_marker_is_created_under_leak_test_dir(self, leak_test, tmp_path):
-        leak_test.set_test_leak("leakage1", True, severity=LeakSeverity.CRITICAL)
-        assert marker(tmp_path, "leakage1").read_text() == LeakSeverity.CRITICAL.value
-        assert sorted(os.listdir(tmp_path)) == [marker(tmp_path, "leakage1").name]
+        leak_test.set_test_leak("coldplate_leak", True, severity=LeakSeverity.CRITICAL)
+        assert marker(tmp_path, "coldplate_leak").read_text() == LeakSeverity.CRITICAL.value
+        assert sorted(os.listdir(tmp_path)) == [marker(tmp_path, "coldplate_leak").name]
 
     def test_leak_test_dir_is_created_on_demand(self, tmp_path):
         leak_dir = tmp_path / "nested" / "leak_sim"
-        lc = liquid_cooling.LiquidCooling(leak_test_dir=str(leak_dir))
+        lc = make_lc(leak_dir)
         leak_test = lc.get_leak_sensor_test()
 
         # Reading and withdrawing before the directory exists are no-ops.
         assert lc.get_leak_sensor_status() == []
-        assert leak_test.is_test_leak_enabled("leakage1") == False
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == False
         assert leak_test.clear_test_leaks() == True
         assert not leak_dir.exists()
 
-        assert leak_test.set_test_leak("leakage1", True) == True
-        assert marker(leak_dir, "leakage1").exists()
+        assert leak_test.set_test_leak("coldplate_leak", True) == True
+        assert marker(leak_dir, "coldplate_leak").exists()
 
     def test_injection_survives_new_liquid_cooling_instance(self, tmp_path):
         # thermalctld and the injection CLI hold separate LiquidCooling objects,
         # so the state has to come from the markers rather than from memory.
-        liquid_cooling.LiquidCooling(
-            leak_test_dir=str(tmp_path)).get_leak_sensor_test().set_test_leak(
-                "leakage1", True, severity=LeakSeverity.MINOR)
+        make_lc(tmp_path).get_leak_sensor_test().set_test_leak(
+                "coldplate_leak", True, severity=LeakSeverity.MINOR)
 
-        lc = liquid_cooling.LiquidCooling(leak_test_dir=str(tmp_path))
-        assert lc.get_leak_sensor_test().is_test_leak_enabled("leakage1") == True
+        lc = make_lc(tmp_path)
+        assert lc.get_leak_sensor_test().is_test_leak_enabled("coldplate_leak") == True
         leaking = lc.get_leak_sensor_status()
         assert len(leaking) == 1
-        assert leaking[0].get_name() == "leakage1"
+        assert leaking[0].get_name() == "coldplate_leak"
         assert leaking[0].is_test_leak() == True
         assert leaking[0].get_leak_severity() is LeakSeverity.MINOR
 
     def test_withdrawal_from_other_instance_is_observed(self, tmp_path):
-        injector = liquid_cooling.LiquidCooling(leak_test_dir=str(tmp_path))
-        poller = liquid_cooling.LiquidCooling(leak_test_dir=str(tmp_path))
+        injector = make_lc(tmp_path)
+        poller = make_lc(tmp_path)
 
-        injector.get_leak_sensor_test().set_test_leak("leakage1", True)
+        injector.get_leak_sensor_test().set_test_leak("coldplate_leak", True)
         assert len(poller.get_leak_sensor_status()) == 1
 
         assert injector.get_leak_sensor_test().clear_test_leaks() == True
@@ -264,12 +527,12 @@ class TestMarkerFiles:
         assert poller.get_leak_sensor(0).is_test_leak() == False
 
     def test_accessors_report_last_poll(self, lc, leak_test):
-        # Only is_leak() re-reads the marker; the other accessors report the
-        # state recorded by the last poll, so one poll gives a consistent view.
+        # get_leak_severity() and is_test_leak() never re-read the marker;
+        # they report the state recorded by the last sample.
         sensor = lc.get_leak_sensor(0)
         assert sensor.is_leak() == False
 
-        leak_test.set_test_leak("leakage1", True)
+        leak_test.set_test_leak("coldplate_leak", True)
         assert sensor.is_test_leak() == False
         assert sensor.get_leak_severity() is None
 
@@ -278,12 +541,13 @@ class TestMarkerFiles:
         assert sensor.get_leak_severity() is LeakSeverity.MINOR
 
     def test_invalid_marker_content_reports_critical(self, lc, tmp_path):
-        marker(tmp_path, "leakage1").write_text("bogus")
+        marker(tmp_path, "coldplate_leak").write_text("bogus")
 
         sensor = lc.get_leak_sensor(0)
         assert sensor.is_leak() == True
         assert sensor.is_test_leak() == True
-        assert sensor.get_leak_severity() is liquid_cooling.HW_SEVERITY
+        assert sensor.get_leak_severity() is \
+            liquid_cooling.INVALID_INJECTION_SEVERITY
         assert sensor.get_leak_severity() is LeakSeverity.CRITICAL
 
     def test_unwritable_leak_test_dir_returns_false(self, tmp_path):
@@ -291,8 +555,7 @@ class TestMarkerFiles:
         # the API reports that rather than raising.
         bogus_dir = tmp_path / "not_a_dir"
         bogus_dir.write_text("")
-        leak_test = liquid_cooling.LiquidCooling(
-            leak_test_dir=str(bogus_dir)).get_leak_sensor_test()
+        leak_test = make_lc(bogus_dir).get_leak_sensor_test()
 
-        assert leak_test.set_test_leak("leakage1", True) == False
-        assert leak_test.is_test_leak_enabled("leakage1") == False
+        assert leak_test.set_test_leak("coldplate_leak", True) == False
+        assert leak_test.is_test_leak_enabled("coldplate_leak") == False
