@@ -109,15 +109,15 @@ test_leak_injection_sim.py --verify-db   # also wait for thermalctld to publish 
 ```
 
 With `--verify-db` it waits (default 60 s, `--db-timeout`) for
-`LIQUID_COOLING_INFO|<sensor>` to show `leaking=Yes`, `test_leak=Yes` and the
-injected severity, and `SYSTEM_LEAK_STATUS|system` to show
-`test_leak_status=CRITICAL` while `device_leak_status` stays `None`, then for
-both to clear after withdrawal. This needs `swsscommon` importable and
-thermalctld running with liquid cooling enabled; otherwise that check is
-skipped, not failed. It is also skipped, and nothing is injected, if
-thermalctld does not publish `test_leak`: such a thermalctld counts an injected
-CRITICAL leak toward `device_leak_status`, and bmcctld's default policy powers
-the switch off on that.
+`LIQUID_COOLING_INFO|<sensor>` to show `leaking=Yes`, `test_leak=Enabled`,
+`leak_source=test` and the injected `test_leak_severity`, and
+`SYSTEM_LEAK_STATUS|system` to show `device_leak_status=CRITICAL` with
+`test_leak=Enabled`, then for both to clear after withdrawal. This needs
+`swsscommon` importable and thermalctld running with liquid cooling enabled;
+otherwise that check is skipped, not failed. It is also skipped, and nothing is injected, if
+thermalctld does not publish `test_leak`: such a thermalctld reports an
+injected CRITICAL leak in `device_leak_status` without marking it as a test
+leak, and bmcctld's default policy powers the switch off on that.
 
 Both scripts accept `--leak-test-dir DIR` to operate on another marker
 directory. That bypasses `Chassis()` and, on a development host without the
@@ -131,17 +131,20 @@ python3 scripts/test_leak_injection_sim.py --leak-test-dir /tmp/leak_sim
 
 ## How thermalctld handles a test leak
 
-thermalctld publishes a test leak but never acts on it. The sensor's
-`LIQUID_COOLING_INFO` row shows `leaking=Yes` and `test_leak=Yes`, and
-`SYSTEM_LEAK_STATUS|system` reports it in `test_leak_status`. It is kept out of
-`device_leak_status`, the field bmcctld takes mitigation action on, and out of
-the MINOR-to-MAJOR escalation, the CRITICAL event log and leak-episode
-tracking. A hardware leak is never flagged as a test leak, so it is acted on
-even while an injection is present.
+A test leak is reported like a real one but never triggers a power action
+(sonic-net/sonic-platform-daemons#943). The sensor's `LIQUID_COOLING_INFO` row
+shows `leaking=Yes`, `test_leak=Enabled`, `leak_source=test` and the injected
+`test_leak_severity`. `SYSTEM_LEAK_STATUS|system` carries the leak in
+`device_leak_status` and sets `test_leak=Enabled` only while every active leak
+is a test leak. bmcctld, seeing `test_leak=Enabled`, logs the action it would
+have taken and dispatches nothing. A hardware leak is never flagged as a test
+leak and keeps the system `test_leak` at `Disabled`, so it is acted on even
+while an injection is present.
 
-This needs a thermalctld with test-leak support (sonic-platform-daemons).
-Older thermalctld ignores `is_test_leak()` and treats an injected leak like a
-real one, so do not inject a CRITICAL leak on a system running it.
+This needs thermalctld and bmcctld with test-leak support
+(sonic-platform-daemons#943). Older daemons ignore `is_test_leak()` and treat an
+injected leak like a real one, so do not inject a CRITICAL leak on a system
+running them.
 
 ## Manual test on the BMC
 
