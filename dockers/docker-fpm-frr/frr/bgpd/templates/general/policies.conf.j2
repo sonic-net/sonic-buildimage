@@ -151,10 +151,8 @@ route-map TO_BGP_PEER_V4 permit 60
 !
 {% endif %}
 {% endif %}
-{% if bgp_session is defined and bgp_session.get('address_family') == 'evpn' %}
 {% for vnet, vnet_data in (CONFIG_DB__VNET | default({})).items() if vnet_data.get('evpn_enabled') == 'true' %}
 {% include 'bgpd/templates/general/vnet_evpn.conf.j2' %}
 {% endfor %}
-{% endif %}
 ! end of template: bgpd/templates/general/policies.conf.j2
 !

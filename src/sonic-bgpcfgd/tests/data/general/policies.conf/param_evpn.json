@@ -1,0 +1,22 @@
+{
+    "loopback0_ipv4": "10.10.10.10/32",
+    "bgp_asn": "65100",
+    "bgp_session": {
+        "asn": "65200",
+        "name": "remote_peer"
+    },
+    "CONFIG_DB__VNET": {
+        "Vnet1": {
+            "vxlan_tunnel": "vtep",
+            "vni": "10000",
+            "evpn_enabled": "true"
+        }
+    },
+    "constants": {
+        "bgp": {
+            "allow_list": {
+                "enabled": false
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter"
+        }
+    },
+    "neighbor_addr": "10.10.10.10",
+    "bgp_session": {
+        "asn": "65200",
+        "name": "remote_peer",
+        "address_family": "evpn"
+    },
+    "bgp_asn": "65100"
+}
