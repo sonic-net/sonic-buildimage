@@ -32,18 +32,16 @@ EOF
 
 chmod +x "${STUB_BIN}/sonic-cfggen" "${STUB_BIN}/sonic-db-cli" "${STUB_BIN}/telemetry"
 
-for image in docker-sonic-gnmi docker-sonic-telemetry; do
-    script="${DOCKERS_DIR}/${image}/$([[ "${image}" == docker-sonic-gnmi ]] && printf gnmi-native.sh || printf telemetry.sh)"
-    test_script="${TEST_ROOT}/${image}.sh"
+script="${DOCKERS_DIR}/docker-sonic-gnmi/gnmi-native.sh"
+test_script="${TEST_ROOT}/docker-sonic-gnmi.sh"
 
-    [[ "$(grep -c '^TELEMETRY_VARS_FILE=' "${script}")" == 1 ]]
-    [[ "$(grep -c '^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$' "${script}")" == 1 ]]
-    sed \
-        -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
-        -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|exec "${F050_TEST_TELEMETRY}" ${TELEMETRY_ARGS}|' \
-        "${script}" > "${test_script}"
-    chmod +x "${test_script}"
-done
+[[ "$(grep -c '^TELEMETRY_VARS_FILE=' "${script}")" == 1 ]]
+[[ "$(grep -c '^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$' "${script}")" == 1 ]]
+sed \
+    -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
+    -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|exec "${F050_TEST_TELEMETRY}" ${TELEMETRY_ARGS}|' \
+    "${script}" > "${test_script}"
+chmod +x "${test_script}"
 
 run_launcher() {
     local image=$1
@@ -65,8 +63,7 @@ run_launcher() {
     export F050_TEST_TELEMETRY="${STUB_BIN}/telemetry"
 
     RUN_STATUS=0
-    TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED=false \
-        PATH="${STUB_BIN}:${PATH}" "${test_script}" \
+    PATH="${STUB_BIN}:${PATH}" "${test_script}" \
         > "${F050_STDOUT_FILE}" 2> "${F050_STDERR_FILE}" || RUN_STATUS=$?
 }
 
@@ -133,41 +130,39 @@ empty_x509="$(jq -c '.x509 = {
 }' <<< "${valid_x509}")"
 no_tls_config="$(jq -cn '{certs: "", x509: "", gnmi: ""}')"
 
-for image in docker-sonic-gnmi docker-sonic-telemetry; do
-    run_launcher "${image}" "${valid_certs}"
-    assert_started
-    assert_has_arg --server_crt
-    assert_has_arg /server.crt
-    assert_has_arg --server_key
-    assert_has_arg /server.key
-    assert_no_arg --insecure
-    assert_no_arg --noTLS
+run_launcher docker-sonic-gnmi "${valid_certs}"
+assert_started
+assert_has_arg --server_crt
+assert_has_arg /server.crt
+assert_has_arg --server_key
+assert_has_arg /server.key
+assert_no_arg --insecure
+assert_no_arg --noTLS
 
-    run_launcher "${image}" "${valid_x509}"
-    assert_started
-    assert_has_arg /legacy.crt
-    assert_has_arg /legacy.key
-    assert_no_arg --insecure
+run_launcher docker-sonic-gnmi "${valid_x509}"
+assert_started
+assert_has_arg /legacy.crt
+assert_has_arg /legacy.key
+assert_no_arg --insecure
 
-    run_launcher "${image}" "${partial_certs}"
-    assert_failed_closed
+run_launcher docker-sonic-gnmi "${partial_certs}"
+assert_failed_closed
 
-    run_launcher "${image}" "${partial_x509}"
-    assert_failed_closed
+run_launcher docker-sonic-gnmi "${partial_x509}"
+assert_failed_closed
 
-    run_launcher "${image}" "${empty_certs}"
-    assert_failed_closed
+run_launcher docker-sonic-gnmi "${empty_certs}"
+assert_failed_closed
 
-    run_launcher "${image}" "${empty_x509}"
-    assert_failed_closed
+run_launcher docker-sonic-gnmi "${empty_x509}"
+assert_failed_closed
 
-    run_launcher "${image}" "${no_tls_config}"
-    assert_started
-    assert_has_arg --noTLS
-    assert_has_arg --bind_address
-    assert_has_arg 127.0.0.1
-    assert_no_arg --insecure
-done
+run_launcher docker-sonic-gnmi "${no_tls_config}"
+assert_started
+assert_has_arg --noTLS
+assert_has_arg --bind_address
+assert_has_arg 127.0.0.1
+assert_no_arg --insecure
 
 for dpu_marker in type switch_type; do
     device_type=SmartSwitchDPU
@@ -208,4 +203,4 @@ for dpu_marker in type switch_type; do
     done
 done
 
-echo "native gNMI and legacy telemetry TLS fallback tests passed"
+echo "native gNMI TLS fallback tests passed"

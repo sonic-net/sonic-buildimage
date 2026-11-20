@@ -352,6 +352,45 @@ class TestCfgGenCaseInsensitive(TestCase):
             else:
                 self.assertTrue("mux_cable" not in port)
 
+    def test_minigraph_gnmi(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "GNMI"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            {
+                'gnmi': {'client_auth': 'true', 'port': '50051', 'log_level': '2'},
+                'certs': {
+                    'server_crt': '/etc/sonic/telemetry/streamingtelemetryserver.cer',
+                    'server_key': '/etc/sonic/telemetry/streamingtelemetryserver.key',
+                    'ca_crt': '/etc/sonic/telemetry/dsmsroot.cer'
+                }
+            }
+        )
+
+    def test_minigraph_dpu_no_gnmi(self):
+        dpu_graph = os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-dpu.xml')
+        result = minigraph.parse_xml(dpu_graph, port_config_file=self.port_config)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['switch_type'], 'dpu')
+        self.assertNotIn('GNMI', result)
+
+    def test_minigraph_smartswitch_dpu_type_no_gnmi(self):
+        with open(os.path.join(self.test_dir, 'simple-sample-graph-case-ip-decap-dpu.xml')) as f:
+            graph = f.read()
+        graph = graph.replace('<ElementType>ToRRouter</ElementType>', '<ElementType>SmartSwitchDPU</ElementType>', 1)
+        graph = graph.replace('<a:Name>SwitchType</a:Name>', '<a:Name>UnusedProperty</a:Name>')
+        with tempfile.NamedTemporaryFile('w', suffix='.xml') as dpu_graph:
+            dpu_graph.write(graph)
+            dpu_graph.flush()
+            result = minigraph.parse_xml(dpu_graph.name, port_config_file=self.port_config)
+        self.assertEqual(result['DEVICE_METADATA']['localhost']['type'], 'SmartSwitchDPU')
+        self.assertNotIn('switch_type', result['DEVICE_METADATA']['localhost'])
+        self.assertNotIn('GNMI', result)
+
+    def test_minigraph_no_telemetry(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "TELEMETRY is defined or 'telemetry' in FEATURE|default({})"]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), 'False')
+
     def test_minigraph_storage_device(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'storage_device\']"]
         output = self.run_script(argument)
