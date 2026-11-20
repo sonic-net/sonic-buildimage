@@ -1,0 +1,4 @@
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-_nvf6exg/burn.vme
+asic_detect 
+cpldupdate --gpio --print-progress /tmp/mpfa-phfd0b7h/burn.vme
