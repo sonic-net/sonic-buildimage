@@ -4,6 +4,8 @@ import subprocess
 
 from swsscommon import swsscommon
 
+from ._redis_transport import use_local_redis_socket
+
 from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
 from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
@@ -33,7 +35,7 @@ CHASSIS_FABRIC_ASIC_INFO_TABLE='CHASSIS_FABRIC_ASIC_TABLE'
 # to prevent duplicate connections from being opened
 config_db_handle = {}
 
-def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the config DB for a given namespace and
     returns the handle
@@ -45,12 +47,15 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
       handle to the config_db for a namespace
     """
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
+    options = {"use_unix_socket_path": authenticate or use_local_redis_socket("CONFIG_DB", namespace)}
+    if authenticate:
+        options["authenticate"] = True
+    config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
     config_db.connect()
     return config_db
 
 
-def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the DBs for a given namespace and
     returns the handle
@@ -67,7 +72,10 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     Returns:
         handle to all the dbs for a namespaces
     """
-    db = swsscommon.SonicV2Connector(namespace=namespace)
+    options = {"use_unix_socket_path": authenticate or use_local_redis_socket("CONFIG_DB", namespace)}
+    if authenticate:
+        options["authenticate"] = True
+    db = swsscommon.SonicV2Connector(namespace=namespace, **options)
     db_list = list(db.get_db_list())
     if not is_supervisor():
         try:
@@ -340,7 +348,7 @@ def mod_entry(table, key, value, namespace=None, modIfExists=False):
 
     for ns in ns_list:
         if not modIfExists or get_table_entry_for_asic(table, key, ns):
-            config_db = connect_config_db_for_ns(ns)
+            config_db = connect_config_db_for_ns(ns, authenticate=True)
             config_db.mod_entry(table, key, value)
 
 

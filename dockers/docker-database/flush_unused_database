@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 from swsscommon import swsscommon
+from swsscommon.redis import connection_pool
+import redis
 import subprocess
 import time
 import syslog
 
 while(True):
-    output = subprocess.Popen(['sonic-db-cli', 'PING'], stdout=subprocess.PIPE, text=True).communicate()[0]
+    output = subprocess.Popen(['sonic-db-cli', '-s', 'PING'], stdout=subprocess.PIPE, text=True).communicate()[0]
     if 'PONG' in output:
         break
     time.sleep(1)
@@ -31,12 +33,13 @@ for instname, v in instlists.items():
             #    https://github.com/redis/redis-py/blob/d95d8a24ed2af3eae80b7b0f14cbccc9dbe86e96/redis/client.py#L1006
             if instsocket is not None:
                 # connect with Unix socket
-                connector = swsscommon.DBConnector(dbid, instsocket, 0)
+                connector = redis.Redis(connection_pool=connection_pool(
+                    unix_socket_path=instsocket, db=dbid, authenticate=True))
             else:
                 # connect with TCP socket
                 port = swsscommon.SonicDBConfig.getDbPort(dbname);
                 connector = swsscommon.DBConnector(dbid, insthost, port, 0)
 
             connector.flushdb()
-        except RuntimeError:
+        except (RuntimeError, redis.RedisError):
            syslog.syslog(syslog.LOG_INFO,"flushdb:Redis Unix Socket connection error for path {} and dbaname {}".format(instsocket, dbname))

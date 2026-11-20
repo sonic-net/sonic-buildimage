@@ -555,3 +555,54 @@ def test_register_adds_dhcp4relay_clear_vlan_counters(patch_import_module):
     clear_dhcp_relay.register(cli)
     # Check that dhcp4relay_clear_vlan_counters was registered as a command
     cli.add_command.assert_any_call(clear_dhcp_relay.dhcp4relay_clear_vlan_counters)
+
+
+@pytest.mark.parametrize("version", ["ipv4", "ipv6"])
+def test_dhcpmon_clear_requests_authenticated_db(patch_import_module, version):
+    module = patch_import_module
+    requested = []
+
+    class WriterDb:
+        def __init__(self, authenticate=False):
+            requested.append(authenticate)
+
+    with patch.object(module, "Db", WriterDb), \
+         patch.object(module, "clear_dhcpmon_counters") as clear:
+        result = CliRunner().invoke(module.dhcp_relay.commands[version].commands["counters"])
+    assert result.exit_code == 0
+    assert requested == [True]
+    assert isinstance(clear.call_args.args[0], WriterDb)
+
+
+@pytest.mark.parametrize("version", ["ipv4", "ipv6"])
+def test_dhcpmon_clear_help_does_not_construct_db(patch_import_module, version):
+    module = patch_import_module
+
+    class UnavailableDb:
+        def __init__(self, authenticate=False):
+            raise AssertionError("help must not construct Db")
+
+    with patch.object(module, "Db", UnavailableDb), \
+         patch.object(module, "clear_dhcpmon_counters") as clear:
+        result = CliRunner().invoke(module.dhcp_relay.commands[version].commands["counters"], ["--help"])
+    assert result.exit_code == 0
+    clear.assert_not_called()
+
+
+@pytest.mark.parametrize("version", ["ipv4", "ipv6"])
+def test_dhcpmon_clear_preserves_injected_db(patch_import_module, version):
+    module = patch_import_module
+    requested = []
+
+    class WriterDb:
+        def __init__(self, authenticate=False):
+            requested.append(authenticate)
+
+    supplied = WriterDb()
+    requested.clear()
+    with patch.object(module, "Db", WriterDb), \
+         patch.object(module, "clear_dhcpmon_counters") as clear:
+        result = CliRunner().invoke(module.dhcp_relay.commands[version].commands["counters"], obj=supplied)
+    assert result.exit_code == 0
+    assert requested == []
+    assert clear.call_args.args[0] is supplied

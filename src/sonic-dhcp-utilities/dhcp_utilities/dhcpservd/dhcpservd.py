@@ -124,7 +124,7 @@ class DhcpServd(object):
 
 
 def main():
-    dhcp_db_connector = DhcpDbConnector(redis_sock=REDIS_SOCK_PATH)
+    dhcp_db_connector = DhcpDbConnector(redis_sock=REDIS_SOCK_PATH, authenticate=True)
     hook_lib_path_res = subprocess.run(["find", "/", "-name", "libdhcp_run_script.so"],
                                        capture_output=True).stdout.decode().strip()
     if len(hook_lib_path_res) == 0:

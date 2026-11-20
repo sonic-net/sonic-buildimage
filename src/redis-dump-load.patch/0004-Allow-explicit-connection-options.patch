@@ -1,0 +1,137 @@
+Subject: [PATCH] Forward explicit connection pools through dump and load
+
+--- a/redisdl.py
++++ b/redisdl.py
+@@ -105,24 +105,22 @@
+             return p.expireat(key, int(time))
+ 
+ def client(host='localhost', port=6379, password=None, db=0,
+-                 unix_socket_path=None, encoding='utf-8'):
++                 unix_socket_path=None, encoding='utf-8', connection_pool=None):
++    options = dict(password=password, db=db, encoding=encoding)
++    # A supplied pool can use a native-backed connection without exposing credentials.
++    if connection_pool is not None:
++        options['connection_pool'] = connection_pool
+     if unix_socket_path is not None:
+-        r = RedisWrapper(unix_socket_path=unix_socket_path,
+-                        password=password,
+-                        db=db,
+-                        encoding=encoding)
+-    else:
+-        r = RedisWrapper(host=host,
+-                        port=port,
+-                        password=password,
+-                        db=db,
+-                        encoding=encoding)
++        r = RedisWrapper(unix_socket_path=unix_socket_path, **options)
++    else:
++        r = RedisWrapper(host=host, port=port, **options)
+     return r
+ 
+ def dumps(host='localhost', port=6379, password=None, db=0, pretty=False,
+-          unix_socket_path=None, encoding='utf-8', keys='*'):
++          unix_socket_path=None, encoding='utf-8', keys='*', connection_pool=None):
+     r = client(host=host, port=port, password=password, db=db,
+-               unix_socket_path=unix_socket_path, encoding=encoding)
++               unix_socket_path=unix_socket_path, encoding=encoding,
++               connection_pool=connection_pool)
+     kwargs = {}
+     if not pretty:
+         kwargs['separators'] = (',', ':')
+@@ -146,21 +144,23 @@
+         return self.stream.write(str.encode())
+ 
+ def dump(fp, host='localhost', port=6379, password=None, db=0, pretty=False,
+-         unix_socket_path=None, encoding='utf-8', keys='*'):
+-
++         unix_socket_path=None, encoding='utf-8', keys='*', connection_pool=None):
++
+     try:
+         fp.write('')
+     except TypeError:
+         fp = BytesWriteWrapper(fp)
+-
++
+     if pretty:
+         # hack to avoid implementing pretty printing
+         fp.write(dumps(host=host, port=port, password=password, db=db,
+-            pretty=pretty, encoding=encoding, keys=keys))
++            pretty=pretty, encoding=encoding, keys=keys,
++            unix_socket_path=unix_socket_path, connection_pool=connection_pool))
+         return
+ 
+     r = client(host=host, port=port, password=password, db=db,
+-               unix_socket_path=unix_socket_path, encoding=encoding)
++               unix_socket_path=unix_socket_path, encoding=encoding,
++               connection_pool=connection_pool)
+     kwargs = {}
+     if not pretty:
+         kwargs['separators'] = (',', ':')
+@@ -353,9 +353,10 @@
+         r.delete(key)
+ 
+ def loads(s, host='localhost', port=6379, password=None, db=0, empty=False,
+-          unix_socket_path=None, encoding='utf-8', use_expireat=False):
++          unix_socket_path=None, encoding='utf-8', use_expireat=False, connection_pool=None):
+     r = client(host=host, port=port, password=password, db=db,
+-               unix_socket_path=unix_socket_path, encoding=encoding)
++               unix_socket_path=unix_socket_path, encoding=encoding,
++               connection_pool=connection_pool)
+     if empty:
+         _empty(r)
+     table = json.loads(s)
+@@ -381,6 +382,7 @@
+ 
+ def load_lump(fp, host='localhost', port=6379, password=None, db=0,
+     empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,
++    connection_pool=None,
+ ):
+     s = fp.read()
+     if py3:
+@@ -388,7 +390,8 @@
+         # if bytes, decode to a string because loads requires input to be a string.
+         if isinstance(s, bytes):
+             s = s.decode(encoding)
+-    loads(s, host, port, password, db, empty, unix_socket_path, encoding, use_expireat=use_expireat)
++    loads(s, host, port, password, db, empty, unix_socket_path, encoding,
++          use_expireat=use_expireat, connection_pool=connection_pool)
+ 
+ def get_ijson(local_streaming_backend):
+     if local_streaming_backend:
+@@ -472,12 +475,13 @@
+ 
+ def load_streaming(fp, host='localhost', port=6379, password=None, db=0,
+     empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,
+-    streaming_backend=None,
++    streaming_backend=None, connection_pool=None,
+ ):
+     loader = create_loader(fp, streaming_backend)
+ 
+     r = client(host=host, port=port, password=password, db=db,
+-               unix_socket_path=unix_socket_path, encoding=encoding)
++               unix_socket_path=unix_socket_path, encoding=encoding,
++               connection_pool=connection_pool)
+ 
+     counter = 0
+     for key, item in loader():
+@@ -500,16 +504,17 @@
+ 
+ def load(fp, host='localhost', port=6379, password=None, db=0,
+     empty=False, unix_socket_path=None, encoding='utf-8', use_expireat=False,
+-    streaming_backend=None,
++    streaming_backend=None, connection_pool=None,
+ ):
+     if have_streaming_load:
+         load_streaming(fp, host=host, port=port, password=password, db=db,
+             empty=empty, unix_socket_path=unix_socket_path, encoding=encoding,
+-            use_expireat=use_expireat, streaming_backend=streaming_backend)
++            use_expireat=use_expireat, streaming_backend=streaming_backend,
++            connection_pool=connection_pool)
+     else:
+         load_lump(fp, host=host, port=port, password=password, db=db,
+             empty=empty, unix_socket_path=unix_socket_path, encoding=encoding,
+-            use_expireat=use_expireat)
++            use_expireat=use_expireat, connection_pool=connection_pool)
+ 
+ def _writer(r, p, key, type, value, ttl, expireat, use_expireat):
+     p.delete(key)

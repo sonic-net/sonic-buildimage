@@ -81,7 +81,7 @@ def do_work():
         'cfg_mgr':   ConfigMgr(frr),
         'tf':        TemplateFabric(),
         'constants': read_constants(),
-        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0, False)
+        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0, False, "", True)
     }
     managers = [
         # Config DB managers

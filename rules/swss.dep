@@ -3,10 +3,11 @@ SPATH       := $($(SWSS)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/swss.mk rules/swss.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(SPATH).patch/)
-SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+SMDEP_PATHS := $(SPATH) $(SRC_PATH)/sonic-swss-common
+$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) && git ls-files)))))
 
 $(SWSS)_CACHE_MODE  := GIT_CONTENT_SHA 
 $(SWSS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) ENABLE_ASAN=$(ENABLE_ASAN) ENABLE_GCOV=$(ENABLE_GCOV)
 $(SWSS)_DEP_FILES   := $(DEP_FILES)
-$(SWSS)_SMDEP_FILES := $(SMDEP_FILES)
-$(SWSS)_SMDEP_PATHS := $(SPATH)
+$(SWSS)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
+$(SWSS)_SMDEP_PATHS := $(SMDEP_PATHS)

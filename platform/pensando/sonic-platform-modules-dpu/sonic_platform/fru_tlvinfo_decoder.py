@@ -736,7 +736,11 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
             A redis client instance
         """
         if not self._redis_client:
-            self._redis_client = redis.Redis(db=STATE_DB_INDEX)
+            from swsscommon import swsscommon
+            from swsscommon.redis import connection_pool
+            self._redis_client = redis.Redis(connection_pool=connection_pool(
+                unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"),
+                db=swsscommon.SonicDBConfig.getDbId("STATE_DB")))
         return self._redis_client
 
     def _redis_hget(self, key, field):
