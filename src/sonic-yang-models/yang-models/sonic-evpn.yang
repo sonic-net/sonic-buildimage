@@ -12,6 +12,10 @@ module sonic-evpn {
         prefix lag;
     }
 
+    import ietf-yang-types {
+        prefix yang;
+    }
+
     organization
         "SONiC";
 
@@ -87,6 +91,39 @@ module sonic-evpn {
                         }
                     }
                     default 32767;
+                }
+
+                leaf es_id {
+                    description
+                        "Optional explicit local discriminator (3-byte) used to build the Type-3
+                         (MAC-based) ESI, mapped to FRR 'evpn mh es-id'. When unset for a Type-3
+                         segment, it is derived from the interface/PortChannel number. Not used
+                         for Type-0 segments, which carry the full ESI in the 'esi' leaf.";
+                    type uint32 {
+                        range "1..16777215" {
+                            error-message "ES ID value out of range";
+                            error-app-tag es-id-invalid;
+                        }
+                    }
+                }
+
+                leaf es_sys_mac {
+                    description
+                        "Optional explicit system MAC used to build the Type-3 (MAC-based) ESI,
+                         mapped to FRR 'evpn mh es-sys-mac'. When unset for a Type-3 segment, the
+                         PortChannel's system_mac is used. Not used for Type-0 segments.";
+                    type yang:mac-address;
+                }
+
+                /* es_id and es_sys_mac are Type-3 inputs; Type-0 carries the full ESI instead. */
+                must "not(es_id) or type = 'TYPE_3_MAC_BASED'" {
+                    error-message "es_id is only valid for TYPE_3_MAC_BASED segments";
+                    error-app-tag es-id-type-invalid;
+                }
+
+                must "not(es_sys_mac) or type = 'TYPE_3_MAC_BASED'" {
+                    error-message "es_sys_mac is only valid for TYPE_3_MAC_BASED segments";
+                    error-app-tag es-sys-mac-type-invalid;
                 }
 
                 /*

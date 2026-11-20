@@ -40,6 +40,21 @@
     "EVPN_MH_VALID_TEST": {
         "desc": "Valid EVPN Ethernet Segment Configuration"
     },
+    "EVPN_ES_TYPE3_EXPLICIT_ESID_VALID": {
+        "desc": "Valid Type 3 ES with explicit es_id and PortChannel system_mac"
+    },
+    "EVPN_INVALID_ES_ID_RANGE": {
+        "desc": "ES ID value out of range 1..16777215",
+        "eStr": "ES ID value out of range"
+    },
+    "EVPN_INVALID_ES_ID_ON_TYPE_0": {
+        "desc": "es_id set on a Type 0 segment is not allowed",
+        "eStr": "es_id is only valid for TYPE_3_MAC_BASED segments"
+    },
+    "EVPN_INVALID_ES_SYS_MAC_ON_TYPE_0": {
+        "desc": "es_sys_mac set on a Type 0 segment is not allowed",
+        "eStr": "es_sys_mac is only valid for TYPE_3_MAC_BASED segments"
+    },
     "EVPN_INVALID_STARTUP_DELAY": {
         "desc": "Global Startup Delay value out of range",
         "eStr": "Startup Delay value out of range"
