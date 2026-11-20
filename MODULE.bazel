@@ -68,13 +68,10 @@ bazel_dep(
     version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
     repo_name = "sonic_sairedis",
 )
-# Validate the owner PR before its first version is published in the registry.
-bazel_dep(name = "sonic-bmp", version = "0.1.0", repo_name = "sonic_bmp")
-archive_override(
-    module_name = "sonic-bmp",
-    urls = ["https://github.com/securely1g/sonic-bmp/archive/cfcfc017dac17ce53122c350c8383b5886797681.tar.gz"],
-    strip_prefix = "sonic-bmp-cfcfc017dac17ce53122c350c8383b5886797681",
-    integrity = "sha256-f63utH8LVfx2Vk2LuWPldDs9bm6faHObZ6UPbzGf0QA=",
+bazel_dep(
+    name = "sonic-bmp",
+    version = "0.1.0-5548176381e6ea889276859b6dbf8a535e4c5182",
+    repo_name = "sonic_bmp",
 )
 
 bazel_dep(name = "sonic-swss", version = "0.0.3-9c3797990d4b5a79100a40fe7689927c18212361", repo_name = "sonic_swss")
