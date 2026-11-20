@@ -475,7 +475,7 @@ elif name == "stat":
             ["az", "version", "--output", "none"],
             ["az", "login", "--identity", "--output", "none"],
             ["az", "account", "set", "--subscription", "fixture-subscription"],
-            ["az", "acr", "login", "--name", "sonicdev", "--expose-token",
+            ["az", "acr", "login", "--name", "sonicdev", "--suffix", "microsoft", "--expose-token",
              "--query", "accessToken", "--output", "tsv"],
             ["docker", "login", "sonicdev-microsoft.azurecr.io:443",
              "--username", "00000000-0000-0000-0000-000000000000", "--password-stdin"],
@@ -496,6 +496,10 @@ elif name == "stat":
         result = self.run_shell(script, REGISTRY_PORT="5000")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.recorded()[-1][2], "sonicdev-microsoft.azurecr.io:5000")
+        result = self.run_shell(script, REGISTRY_SERVER="sonicdev.azurecr.io")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("--suffix", self.recorded()[-2])
+        self.assertEqual(self.recorded()[-1][2], "sonicdev.azurecr.io:443")
         environment = dict(self.environment)
         del environment["ACR_REGISTRY_NAME"]
         result = subprocess.run(
