@@ -21,8 +21,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 OWNER = "//dockers/docker-dash-ha:"
 IMAGES = ("docker-dash-ha", "docker-dash-ha-dbg")
 BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000",
-           "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+OPTIONS = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 TARGETS = {
     **{name + ".gz": OWNER + name + ".gz" for name in IMAGES},

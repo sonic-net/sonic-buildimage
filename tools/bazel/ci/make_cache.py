@@ -211,12 +211,13 @@ def bazel_invocation(arguments):
     if subcommand == "build":
         options = ["--execution_log_json_file=" + str(ACTION_LOG), *options]
     return ["bazel", "--batch", "--nosystem_rc", "--nohome_rc",
+            "--host_jvm_args=-Xmx2048m",
             "--install_base=" + str(INSTALL_BASE), "--output_base=" + str(OUTPUT_BASE), subcommand, *options]
 
 
 def container_options():
-    return ["--override_module=sonic-swss-common=" + str(CONTAINER_PRIVATE / "common-source"),
-            "--jobs=4", "--local_resources=cpu=4", "--local_resources=memory=10000",
+    from tools.bazel.ci.resources import build_options
+    return [*build_options(), "--override_module=sonic-swss-common=" + str(CONTAINER_PRIVATE / "common-source"),
             "--spawn_strategy=linux-sandbox", "--strategy=Genrule=linux-sandbox",
             # Upstream OCI layout copies declare no-sandbox. Keep this exception
             # specific to copying; compilation and linking still use the sandbox.

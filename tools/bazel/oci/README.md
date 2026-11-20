@@ -161,9 +161,15 @@ manifest_labels(
 ```
 
 Set each `oci_image` target's `labels` attribute to the corresponding action.
-The `manifest_labels` macro takes the manifest, an optional `out` filename and
-an optional `image_version` string build setting. It encodes the JSON manifest
-on one line and writes Make's `Tag` label when the caller supplies a version setting.
+The `manifest_labels` macro takes the manifest and an optional `out` filename.
+It encodes the JSON manifest on one line and writes the image's `Tag` label
+from the shared `//tools/bazel/oci:image_version` setting. Make supplies its
+`SONIC_IMAGE_VERSION` to the shared build and to standalone archive recipes.
+Direct Bazel callers can set `--//tools/bazel/oci:image_version=RELEASE`.
+With native metadata and no explicit override, `Tag` uses
+`//tools/bazel/image/vs/metadata:version`, which defaults to `local`.
+Make selects `--//tools/bazel/image/vs/metadata:use_make_metadata=true`
+for individual and batched archives, so an empty Make release emits `Tag=`.
 Owners can also pass `package_receipt` from their installed package receipt and
 `version_packages` for the components that Make labels with a name and version.
 The declared input lets Bazel invalidate the

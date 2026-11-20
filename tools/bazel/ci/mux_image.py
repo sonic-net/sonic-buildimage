@@ -37,7 +37,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=10000"]
+OPTIONS = []
 CONFIGS = {
     "docker-init.sh": ("usr/bin/docker-init.sh", 0o755),
     "supervisord.conf": ("etc/supervisor/conf.d/supervisord.conf", 0o644),
@@ -84,7 +84,7 @@ def build_images(args, directory):
     check.require(platform.machine() == "x86_64" and
                   platform.freedesktop_os_release().get("VERSION_CODENAME") == "trixie",
                   "MUX image build requires native AMD64 Debian Trixie")
-    options = OPTIONS + ["--//dockers/docker-mux:image_version=" + args.image_version]
+    options = OPTIONS + [build.image_version_option(args.image_version)]
     receipt = {"status": "building", "architecture": "amd64", "commands": [], "image_version": args.image_version}
     execute = partial(command_log.execute, cwd=ROOT)
     try:
@@ -217,7 +217,7 @@ def validate_images(directory):
 
 def incremental(args, directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
-    options = OPTIONS + ["--//dockers/docker-mux:image_version=" + receipt["image_version"]]
+    options = OPTIONS + [build.image_version_option(receipt["image_version"])]
     check.require(receipt["status"] == "built", "missing accepted build")
     check.require(checkout_revision(directory) == receipt["revision"], "checkout differs from built source")
     labels = [OWNER + name + suffix for name in IMAGES for suffix in ("", ".gz")]

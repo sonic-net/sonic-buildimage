@@ -38,10 +38,9 @@ class DatabaseMakeTest(unittest.TestCase):
                 ["make", "--no-print-directory", "-f", str(recipe), "result",
                  *[key + "=" + value for key, value in settings.items()]], cwd=ROOT, text=True).splitlines()
 
-    def test_make_passes_the_selected_version_to_both_archives(self):
+    def test_both_archives_use_the_common_version_setting(self):
         values = self.evaluate(SONIC_IMAGE_VERSION="202705.1")
-        expected = "--//dockers/docker-database:image_version=202705.1"
-        self.assertEqual(values[-2:], [expected, expected])
+        self.assertEqual(values[-2:], ["", ""])
 
     def test_native_handoff_retains_legacy_and_host_inputs(self):
         values = self.evaluate()

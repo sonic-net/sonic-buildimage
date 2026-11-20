@@ -78,7 +78,9 @@ file, without dropping records or replacing the previous output on overflow.
   `image_recipe_timings`. Version 2 stores a `recipes` list. Each `owner`
   is the Make output basename or package build group. New owners appear as
   the build registers them. Repeated invocations for an owner contribute to
-  that owner's row.
+  that owner's row. The VS installer records a multi-image Bazel command once
+  under `vs-container-images`. Each participating image records its own exports
+  and expects zero individual Bazel commands and profiles for that invocation.
   - `bazel_seconds`, `bazel_phases` and `bazel_expected` report the measured
     duration, recorded timing count and expected timing count for its commands.
     The kernel measures its launcher once per invocation.
@@ -94,6 +96,24 @@ file, without dropping records or replacing the previous output on overflow.
   recipes. An unavailable result has a fixed `reason` and an empty list.
   The collector reads one bounded record per recipe and verifies the final
   count from the same job's summary step before persisting the result.
+  - A V2 summary with `vs-container-images` can also contain a
+    `container_breakdown`. Its `rows` identify participating archive owners
+    from the same recipe list. Each row contains an action count (`actions`),
+    union time across the owner's observed actions (`action_seconds`), and
+    observed `fetch_seconds`, `archive_seconds` and `compress_seconds`. An
+    owner can include both runtime and debug archive targets. Shared inputs
+    are counted with their identifiable producer or remain unattributed.
+    The `other_action_seconds` field counts intervals with only shared or
+    unattributed actions active. `no_action_seconds` counts launcher time
+    outside observed action spans. `parallel_seconds` counts intervals with
+    two or more image owners active. Per-owner active time can overlap.
+    Exports remain in the original V2 recipe rows.
+  - Independent `SONIC_VS_CONTAINER_TIMINGS_V1` log records have the same
+    step boundary and per-line size limit as the V2 receipts. A count trailer
+    and unique owner names are required. Missing or invalid detail preserves
+    the measured V2 data and records a fixed unavailable reason. Historical
+    receipts with no detail field stay valid. The collector checks retained
+    batch logs once for the optional markers, retrying transient log failures.
   Version 1 history keeps `images` for FRR, mux, TeamD and Syncd VS, with
   three command timings, three profiles and two exports expected per pair.
   Jobs predating the profiling step omit this field.

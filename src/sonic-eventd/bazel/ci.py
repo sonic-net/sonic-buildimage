@@ -38,7 +38,7 @@ def main():
     output = args.artifacts.resolve(); output.mkdir(parents=True, exist_ok=True)
     options = ['--platforms=@sonic_build_infra//platforms:'+selected,
                '--host_platform=@sonic_build_infra//platforms:'+selected,
-               '--jobs=4','--local_resources=cpu=4','--local_resources=memory=7000',*args.bazel_arg]
+               *args.bazel_arg]
     audit_targets(args.bazel,options,[*TESTS,*TARS.values()],workspace=ROOT,output=output/'action-audit.json')
     resolution_flags = [value for value in args.bazel_arg if value.startswith(
         ('--override_module=', '--override_repository=', '--registry=', '--repository_cache='))]

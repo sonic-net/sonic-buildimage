@@ -1,6 +1,5 @@
 """FRR container-owned configuration; native payloads stay with their owners."""
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@frr_image_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_oci//oci:defs.bzl", "oci_image")
@@ -15,9 +14,10 @@ load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
 package(default_visibility = ["//visibility:public"])
 
-string_flag(
+# Compatibility for callers of the previous per-image command-line flag.
+alias(
     name = "image_version",
-    build_setting_default = "",
+    actual = "//tools/bazel/oci:image_version",
 )
 
 _SCRIPTS = [
@@ -115,7 +115,6 @@ tar(
 [
     manifest_labels(
         name = "labels" + suffix,
-        image_version = ":image_version",
         out = "manifest" + suffix + ".labels",
         manifest = "//:target/bazel-manifests/docker-fpm-frr" + suffix + "/manifest.json",
     )

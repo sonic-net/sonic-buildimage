@@ -25,10 +25,10 @@ class EventdMakeTest(unittest.TestCase):
                  "$(DOCKER_EVENTD)_DEPENDS", "$(DOCKER_EVENTD)_INSTALL_PYTHON_WHEELS",
                  "$(DOCKER_EVENTD)_INSTALL_DEBS", "$(DOCKER_EVENTD)_RUN_OPT",
                  "SONIC_BAZEL_IMAGE_ENVIRONMENTS", "$(DOCKER_EVENTD)_PATH",
-                 "$(DOCKER_EVENTD_DBG)_PATH", "SONIC_BAZEL_VS_PAIR_OUTPUTS"]
+                 "$(DOCKER_EVENTD_DBG)_PATH", "SONIC_BAZEL_VS_BATCH_ARCHIVES"]
         with tempfile.TemporaryDirectory() as temporary:
             recipe = Path(temporary) / "Makefile"
-            recipe.write_text("include rules/docker-eventd.mk\ninclude tools/bazel/docker.mk\nresult:\n\t@printf '%s\\n' " +
+            recipe.write_text("include rules/docker-eventd.mk\ninclude platform/vs/one-image.mk\ninclude tools/bazel/docker.mk\nresult:\n\t@printf '%s\\n' " +
                               " ".join("'$(" + name + ")'" for name in names) + "\n")
             return subprocess.check_output(
                 ["make", "--no-print-directory", "-f", str(recipe), "result",
@@ -44,7 +44,7 @@ class EventdMakeTest(unittest.TestCase):
         self.assertIn("/etc/sonic:/etc/sonic:ro", values[7])
         self.assertEqual(values[8], "docker-eventd")
         self.assertEqual(values[9:11], ["dockers/docker-eventd", "dockers/docker-eventd"])
-        self.assertEqual(values[11].split(), ["docker-eventd.gz", "docker-eventd-dbg.gz"])
+        self.assertCountEqual(values[11].split(), ["docker-eventd.gz", "docker-eventd-dbg.gz"])
 
     def test_other_profiles_keep_make_producers(self):
         for settings in ({"CONFIGURED_ARCH": "arm64"}, {"CONFIGURED_PLATFORM": "broadcom"},

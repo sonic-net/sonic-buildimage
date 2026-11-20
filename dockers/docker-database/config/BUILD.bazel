@@ -89,7 +89,6 @@ tar(
 [
     manifest_labels(
         name = "labels" if suffix == "" else "debug_labels",
-        image_version = "//dockers/docker-database:image_version",
         component_labels = "//:target/bazel-manifests/docker-database/components.labels" if not suffix else None,
         out = "manifest" + suffix + ".labels",
         manifest = "//:target/bazel-manifests/docker-database" + suffix + "/manifest.json",

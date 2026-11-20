@@ -12,6 +12,11 @@ import shutil
 import subprocess
 
 
+# tests() keeps manual tests, which need their own environment: sonic-pins'
+# x86_64-only runtime_package_test needs gdb and runs in that repository's CI.
+P4RT_TESTS = r"tests(//p4rt_app/...) except attr(tags, '[\[ ]manual[,\]]', //p4rt_app/...)"
+
+
 def digest(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
@@ -57,20 +62,25 @@ def main():
     parser.add_argument("--output-base", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--arch", choices=("amd64", "arm64"), required=True)
-    parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--jobs", type=int)
     args = parser.parse_args()
     source, sdk = args.source.resolve(), args.sdk.resolve()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    private = args.output_base.resolve().parent / "p4rt-private-evidence"
+    # Sibling output bases can run concurrently. Keep their raw action/test
+    # records separate, while aliases of one output base share its identity.
+    output_base = args.output_base.resolve()
+    identity = hashlib.sha256(os.fsencode(output_base)).hexdigest()
+    private = output_base.parent / "p4rt-private-evidence" / identity
     private.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, USE_BAZEL_VERSION="6.4.0")
     bazel = ["bazel", "--output_base=" + str(args.output_base.resolve())]
     override = "--override_repository=sonic_swss_common=" + str(sdk)
-    mirrors = "--experimental_downloader_config=" + str(source.parent / "source_mirrors.cfg")
-    options = [override, mirrors, "-c", "opt", "--fission=opt", "--copt=-g",
+    mirror_cfg = source.parent / "source_mirrors.cfg"
+    mirrors = ["--experimental_downloader_config=" + str(mirror_cfg)] if mirror_cfg.is_file() else []
+    options = [override, *mirrors, "-c", "opt", "--fission=opt", "--copt=-g",
                "--copt=-gdwarf-4", "--copt=-Wno-array-bounds",
-               "--copt=-Wno-stringop-overflow", "--jobs=" + str(args.jobs)]
+               "--copt=-Wno-stringop-overflow", *(["--jobs=" + str(args.jobs)] if args.jobs is not None else [])]
 
     def run(arguments, **kwargs):
         return subprocess.run([*bazel, *arguments], cwd=source, env=env,
@@ -88,8 +98,7 @@ def main():
             raise ValueError("P4RT must run with Bazel 6.4.0: " + version)
         (output / "bazel-version.txt").write_text(version + "\n")
         shutil.copyfile(sdk / "sdk-build.json", output / "sdk-build.json")
-        tests = sorted(capture(["query", override, "tests(//p4rt_app/...)",
-                                "--output=label"]).splitlines())
+        tests = sorted(capture(["query", override, P4RT_TESTS, "--output=label"]).splitlines())
         if not tests or any(not label.startswith(("//p4rt_app/", "//p4rt_app:")) for label in tests):
             raise ValueError("Expected explicit P4RT test labels")
         (output / "test-targets.txt").write_text("\n".join(tests) + "\n")

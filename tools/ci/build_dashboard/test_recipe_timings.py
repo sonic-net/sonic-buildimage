@@ -224,6 +224,65 @@ class BazelRecipeTimingsTest(unittest.TestCase):
         row["build"] = partial
         self.assertEqual(self.parse([self.line({"recipe": row}), self.line({"count": 1})])["recipes"][0]["build"], partial)
 
+    def batch(self):
+        group = dict(self.row("vs-container-images"), exports_expected=0, exports=0, export_seconds=None)
+        image = dict(self.row("docker-syncd-vs.gz"), bazel_phases=0, bazel_expected=0, profiles=0, profiles_expected=0,
+                     bazel_seconds=None, compile_seconds=None, lock_seconds=None, foreign_seconds=None, fetch_seconds=None)
+        main = [self.line({"recipe": row}) for row in [group, image]] + [self.line({"count": 2})]
+        member = {"owner": image["owner"], "action_seconds": 50.25, "actions": 4, "fetch_seconds": 1.25,
+                  "archive_seconds": 38., "compress_seconds": 3.}
+        totals = {"other_action_seconds": 12., "parallel_seconds": 0., "no_action_seconds": 3.}
+        return main, member, totals
+
+    def test_optional_container_markers_are_bounded_and_cannot_invalidate_the_original_receipt(self):
+        main, member, totals = self.batch()
+        def encoded(values):
+            return ["SONIC_VS_CONTAINER_TIMINGS_V1 " + json.dumps(value) for value in values]
+        trailer = {"count": 1, **totals}
+        lines = encoded([{"row": member}, trailer])
+        for order in (main + lines, lines + main):
+            result = self.parse(order)
+            self.assertEqual(result["container_breakdown"], {"rows": [member], **totals})
+            self.assertTrue(collector.breakdown.valid_recipes(result))
+        existing = self.parse(main)
+        self.assertEqual(existing["container_breakdown"], {"status": "unavailable", "reason": "not-recorded"})
+        for invalid in ([{"row": member}], [trailer], [{"row": member}, dict(trailer, count=True)],
+                        [{"row": dict(member, owner="unknown.gz")}, trailer],
+                        [{"row": dict(member, actions=True)}, trailer],
+                        [{"row": dict(member, compress_seconds=-1)}, trailer],
+                        [{"row": dict(member, argv="private")}, trailer],
+                        [{"row": member}, trailer, trailer],
+                        [{"row": member}]*2 + [dict(trailer, count=2)]):
+            with self.subTest(invalid=invalid):
+                parsed = self.parse(main + encoded(invalid))
+                self.assertEqual(parsed["recipes"], existing["recipes"])
+                self.assertEqual(parsed["container_breakdown"], {"status": "unavailable", "reason": "invalid-timing"})
+        for malformed in ["{} trailing", '{"row":' + "x"*5000, '{"row":false,"row":true}']:
+            parsed = self.parse(main + ["SONIC_VS_CONTAINER_TIMINGS_V1 " + malformed])
+            self.assertEqual(parsed["recipes"], existing["recipes"])
+            self.assertEqual(parsed["container_breakdown"]["reason"], "invalid-timing")
+
+    def test_previously_retained_batch_is_enriched_once_without_erasing_old_exports(self):
+        main, member, totals = self.batch()
+        values = [{"row": member}, dict(totals, count=1)]
+        lines = main + ["SONIC_VS_CONTAINER_TIMINGS_V1 " + json.dumps(value) for value in values]
+        raw = host_job(summary_step=self.summary_step)
+        for get_log, expected in [(log(lines), {"rows": [member], **totals}),
+                                  (log(main), {"status": "unavailable", "reason": "not-recorded"}),
+                                  (collector.LogReadError("logs-expired"), {"status": "unavailable", "reason": "logs-expired"})]:
+            with self.subTest(expected=expected):
+                previous = collector.collect(api_with(raw, log(main)), REPO, empty())
+                old = previous["runs"][0]["jobs"][0]["image_recipe_timings"]
+                del old["container_breakdown"]
+                api = api_with(raw, get_log)
+                updated = collector.collect(api, REPO, previous)
+                saved = updated["runs"][0]["jobs"][0]["image_recipe_timings"]
+                self.assertEqual(api.log_calls, [(REPO, 99)])
+                self.assertEqual(saved, {**old, "container_breakdown": expected})
+                api.log_calls.clear()
+                collector.collect(api, REPO, updated)
+                self.assertEqual(api.log_calls, [])
+
     def test_rejects_partial_duplicate_and_mixed_transports_and_untrusted_rows(self):
         row = self.row("docker-eventd.gz")
         item = self.line({"recipe": row})

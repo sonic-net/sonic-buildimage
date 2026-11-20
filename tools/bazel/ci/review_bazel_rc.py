@@ -6,6 +6,7 @@ import sys
 
 
 VALUE_OPTIONS = {
+    "--local_ram_resources",
     "--disk_cache",
     "--distdir",
     "--downloader_config",
@@ -45,6 +46,9 @@ def configuration(workspace, home):
             continue
         for line in path.read_text().splitlines():
             tokens = shlex.split(line, comments=True)
+            if tokens == ["startup", "--host_jvm_args=-Xmx2048m"]:
+                lines.append(line)
+                continue
             if not tokens or tokens[0] not in ("common", "build", "test"):
                 continue
             options = iter(tokens[1:])

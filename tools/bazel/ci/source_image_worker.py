@@ -345,7 +345,6 @@ def cache_layout(image):
 
 def launcher_text(binary, base, profile):
     flags = ["--remote_cache=", "--remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$",
-             "--jobs=" + str(profile["jobs"]), "--local_resources=cpu=" + str(profile["cpu"]),
              "--local_resources=memory=" + str(profile["scheduler_memory_mb"])]
     return ("#!/usr/bin/env python3\nimport os, sys\n" +
             "binary = " + repr(binary) + "\nbase = " + repr(str(base)) + "\nargs = sys.argv[1:]\n" +

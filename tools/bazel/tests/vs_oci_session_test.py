@@ -70,6 +70,7 @@ if command == 'cquery':
             "DOCKER_CONFIG_ENGINE_TRIXIE": "docker-config-engine-trixie.gz",
             "SONIC_BAZEL_DOCKER_IMAGES": " ".join([*ARCHIVES[::2], "docker-config-engine-trixie.gz"]),
             "SONIC_BAZEL_DBG_DOCKER_IMAGES": " ".join(ARCHIVES[1::2]),
+            "SONIC_IMAGE_VERSION": "master.42-test",
             "SONIC_P4RT_VERSION": "0.0.1",
             "SONIC_P4RT": "sonic-p4rt_$(SONIC_P4RT_VERSION)_$(CONFIGURED_ARCH).deb",
             "SONIC_P4RT_DBG": "sonic-p4rt-dbgsym_$(SONIC_P4RT_VERSION)_$(CONFIGURED_ARCH).deb",
@@ -102,11 +103,11 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
                      "BAZEL_CONTAINER_ARGS", "BAZEL_SWSS_ARGS", "BAZEL_CONTAINER_CACHE_DIR", "BAZEL_SWSS_CACHE_DIR"):
             self.environment.pop(name, None)
 
-    def run_verifier(self, *, settings=None, **environment):
+    def run_verifier(self, *, settings=None, runtime_only=False, **environment):
         arguments = [str(self.make), "--no-print-directory", "-j8", "-f", "slave.mk"]
         arguments += [key + "=" + value for key, value in (settings or {}).items()]
         return subprocess.run(
-            ["bash", "tools/bazel/ci/verify_vs_oci.sh", *arguments],
+            ["bash", "tools/bazel/ci/verify_vs_oci.sh", *(["--runtime-only"] if runtime_only else []), *arguments],
             cwd=self.directory, env=dict(self.environment, **environment),
             text=True, capture_output=True, check=False)
 
@@ -142,6 +143,17 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.directory / "target/.vs-bazel").exists())
 
+    def test_reference_images_use_the_release_recorded_inside_the_installer(self):
+        version = self.directory / "artifacts/vs/sonic-version.json"
+        version.parent.mkdir(parents=True)
+        version.write_text(json.dumps({"build_version": "master.42-built"}))
+        result = self.run_verifier(settings={"SONIC_IMAGE_VERSION": "master.42-later"})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = (self.directory / "bazel-arguments.jsonl").read_text().splitlines()
+        for call in map(json.loads, calls):
+            self.assertIn("--//tools/bazel/image/vs/metadata:use_make_metadata=true", call)
+            self.assertIn("--//tools/bazel/oci:image_version=master.42-built", call)
+
     def test_verification_keeps_archive_options_logs_and_deb_inputs(self):
         cache = self.directory / "cache with spaces"
         result = self.run_verifier(BAZEL_CONTAINER_CACHE_DIR=str(cache),
@@ -154,7 +166,8 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
                              for args in target_calls for arg in args))
         test_calls = [args[args.index("test"):] for args in target_calls if "test" in args]
         common = [f"--repository_cache={cache}/repository_cache", f"--disk_cache={cache}/disk_cache",
-                  "--distdir=/input with spaces", "--jobs=3",
+                  "--distdir=/input with spaces", "--jobs=3", "--//tools/bazel/image/vs/metadata:use_make_metadata=true",
+                  "--//tools/bazel/oci:image_version=master.42-test",
                   "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
                   "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
         for index, (target, flags) in enumerate((("swss_images_test", []),
@@ -171,6 +184,16 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         debug = json.loads((self.directory / "debug-arguments.json").read_text())
         self.assertEqual(debug[:4], ["--runtime-deb", DEB_PATHS[0], "--debug-deb", DEB_PATHS[1]])
         self.assertIn("debug verification output", (self.directory / "artifacts/vs/p4rt-debug-verification.log").read_text())
+
+    def test_runtime_only_verifier_binds_runtime_policies_without_debug_producers(self):
+        result = self.run_verifier(runtime_only=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.make_calls()), 1)
+        self.assertFalse((self.directory / "producers.log").exists())
+        self.assertFalse((self.directory / "debug-arguments.json").exists())
+        for family in ("swss", "syncd"):
+            path = self.directory / "artifacts/vs" / (family + "-installed-images-policy.json")
+            self.assertEqual(path.read_text(), "//tools/bazel/tests:" + family + "_runtime_installed_images_policy")
 
     def test_image_test_failure_retains_evidence_and_stops_debug_verification(self):
         result = self.run_verifier(IMAGE_STATUS="7")

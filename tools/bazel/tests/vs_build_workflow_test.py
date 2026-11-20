@@ -86,7 +86,7 @@ else:
         for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "MAKELEVEL", "FAIL_ACTION",
                      "FORBID_VALIDATION", "CHANGE_REVISION_ACTION", "NOBOOKWORM", "NOTRIXIE",
                      "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL",
-                     "SONIC_VS_IMAGE_TIMINGS"):
+                     "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH"):
             self.environment.pop(name, None)
 
     def run_script(self, name, *args, **environment):
@@ -127,6 +127,17 @@ else:
         self.assertEqual(self.calls()[0]["build_revision"], "a" * 40)
         self.assertEqual([path.name for path in (self.root / "artifacts/vs").iterdir()], ["build-revision.txt"])
 
+    def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
+        result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls()[0]["args"], ["target/sonic-vs.bin", *self.profile_options(),
+                                                  "SONIC_ENABLE_DEBUG_LAYER=n"])
+        result = self.run_script("validate_vs.sh", "--runtime-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([call["goal"] for call in self.calls()], ["target/sonic-vs.bin", "sonic-slave-run"])
+        self.assertIn("SONIC_RUN_CMDS=bash tools/bazel/ci/verify_vs_oci.sh --runtime-only $(SONIC_BUILD_INSTRUCTION)",
+                      self.calls()[1]["args"])
+
     def test_build_failure_propagates_without_a_followup(self):
         result = self.run_script("build_vs.sh", FAIL_ACTION="make", FORBID_VALIDATION="1")
         self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
@@ -137,6 +148,15 @@ else:
         result = self.run_script("build_vs.sh", SONIC_VS_IMAGE_TIMINGS="1")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_IMAGE_TIMINGS", self.calls()[0]["args"])
+
+    def test_go_fetch_retry_reaches_the_full_installer_builder(self):
+        result = self.run_script("build_vs.sh", SONIC_VS_RETRY_GO_FETCH="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_RETRY_GO_FETCH", self.calls()[0]["args"])
+        workflows = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        enabled = [step["id"] for job in workflows.values() for step in job.get("steps", [])
+                   if step.get("env", {}).get("SONIC_VS_RETRY_GO_FETCH") == "1"]
+        self.assertCountEqual(enabled, ["vs_build", "native_build"])
 
     def test_native_handoff_is_forwarded_to_the_build_and_separate_validation_container(self):
         option = self.profile_options()[-1] + " -e SONIC_VS_REUSE_BAZEL_PRODUCERS"

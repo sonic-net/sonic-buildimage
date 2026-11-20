@@ -23,7 +23,7 @@ OWNER = "//platform/vs/docker-gbsyncd-vs:"
 SHARED = "//platform/vs/docker-syncd-vs:"
 BASE = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
 IMAGES = ("docker-gbsyncd-vs", "docker-gbsyncd-vs-dbg")
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000", "--config=syncd-dash"]
+OPTIONS = ["--config=syncd-dash"]
 TARGETS = {
     "source-excludes.txt": "//tools/bazel/dpkg:dpkg_excludes.txt",
     "source-includes.txt": "//tools/bazel/dpkg:oci_includes",
@@ -94,6 +94,7 @@ def build_images(args, directory):
     check.require(platform.machine() == "x86_64" and platform.freedesktop_os_release().get("VERSION_CODENAME") == "trixie",
                   "gearbox acceptance requires native AMD64/Trixie")
     receipt = {"status": "building", "architecture": "amd64", "image_version": args.image_version, "commands": []}
+    options = [*OPTIONS, build.image_version_option(args.image_version)]
     execute = partial(command_log.execute, cwd=ROOT)
     try:
         clean_source(directory)
@@ -105,15 +106,15 @@ def build_images(args, directory):
                  "PLATFORM_PATH=platform/vs", "SONIC_IMAGE_VERSION=" + args.image_version,
                  "manifests", "target/bazel-manifests/docker-gbsyncd-vs/image.env"], directory, receipt, "manifests")
         layouts = [BASE, *[OWNER + name for name in IMAGES]]
-        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, OPTIONS, [*TARGETS.values(), *layouts],
+        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, options, [*TARGETS.values(), *layouts],
             workspace=ROOT, output=directory / "action-audit.json")
         # Retain completed independent source actions even if another target fails.
-        build_options = [*OPTIONS, "--keep_going"]
+        build_options = [*options, "--keep_going"]
         build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=build_options)
         execute([args.bazel, "build", *build_options, *layouts], directory, receipt, "layouts")
-        receipt["layouts"] = {name: execute([args.bazel, "cquery", *OPTIONS, "--output=files", OWNER + name],
+        receipt["layouts"] = {name: execute([args.bazel, "cquery", *options, "--output=files", OWNER + name],
             directory, receipt, name + ".layout").strip() for name in IMAGES}
-        receipt["base_layout"] = execute([args.bazel, "cquery", *OPTIONS, "--output=files", BASE], directory, receipt, "base.layout").strip()
+        receipt["base_layout"] = execute([args.bazel, "cquery", *options, "--output=files", BASE], directory, receipt, "base.layout").strip()
         receipt["resolution"] = resolution.collect(ROOT, directory, bazel=[args.bazel])
         clean_source(directory)
         check.require(identity()["revision"] == receipt["revision"], "source changed during build")
@@ -179,6 +180,8 @@ def validate_images(directory):
                                ("usr/share/sonic/bazel/gbsyncd" + ("-debug" if variant == "debug" else "") + "-packages.json", variant + "-packages.json")]:
             check.require(files[path]["sha256"] == check.sha(directory / artifact), "installed package state differs: " + path)
         check.require(files["usr/bin/gbsyncdmgrd"]["mode"] == 0o755, "installed gearbox manager is not executable")
+        check.require(layout.config["config"].get("Labels", {}).get("Tag") == receipt["image_version"],
+                      "Make image version label differs: " + name)
         env = dict(value.split("=", 1) for value in layout.config["config"]["Env"])
         check.require(env.get("IMAGE_VERSION") == receipt["image_version"], "Make image version was lost")
         inventories[name] = files
@@ -196,15 +199,16 @@ def validate_images(directory):
 
 def incremental(args, directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
+    options = [*OPTIONS, build.image_version_option(receipt["image_version"])]
     clean_source(directory)
     check.require(identity()["revision"] == receipt["revision"] and receipt["status"] == "built", "source/build identity differs")
     labels = [OWNER + name + suffix for name in IMAGES for suffix in ("", ".gz")]
     labels += [BASE, OWNER + "source_runtime", OWNER + "all_debug_symbols"]
-    paths = {label: ROOT / subprocess.check_output([args.bazel, "cquery", *OPTIONS, "--output=files", label], cwd=ROOT, text=True).strip() for label in labels}
+    paths = {label: ROOT / subprocess.check_output([args.bazel, "cquery", *options, "--output=files", label], cwd=ROOT, text=True).strip() for label in labels}
     def snapshot(stage):
         start = time.monotonic()
         with (directory / ("incremental-" + stage + ".log")).open("w") as log:
-            subprocess.run([args.bazel, "build", *OPTIONS, *labels], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
+            subprocess.run([args.bazel, "build", *options, *labels], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
         return {"seconds": time.monotonic() - start, "sha256": {label: (
             oci_layout.validate_layout(path, "linux/amd64").descriptor["digest"] if path.is_dir() else check.sha(path)) for label, path in paths.items()}}
     result = {"baseline": snapshot("baseline"), "noop": snapshot("noop")}

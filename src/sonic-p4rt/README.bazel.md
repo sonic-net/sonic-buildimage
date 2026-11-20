@@ -77,8 +77,10 @@ consumer version. The normal P4RT Make packaging target still builds Debian
 packages; it is not the validation command above.
 
 The `P4RT with the Common SDK` workflow runs natively on AMD64 and ARM64.
-It builds the actual `//p4rt_app:p4rt` executable and queries
-`tests(//p4rt_app/...)` to run the full suite (58 tests at the pinned revision).
+It builds the actual `//p4rt_app:p4rt` executable and runs every non-manual
+test from `tests(//p4rt_app/...)` (58 tests at the pinned revision). Manual
+tests, such as sonic-pins' x86_64-only `runtime_package_test` that needs gdb,
+run in the owner repository's CI instead.
 The action check rejects Common compilation or Debian package outputs under
 Bazel 6. The executable check verifies its architecture, library name, startup,
 and that the loaded Common library has the SDK's checksum. Test results are
@@ -119,3 +121,25 @@ legacy DEB selection. `p4rt_debug_test.py` compiles native ELF/DWP fixtures and
 checks isolated GDB lookup, including invalid and unrelated symbols. These
 fixture checks do not establish production P4RT compilation, image assembly or
 forwarding for a given source revision and architecture.
+
+The source-image SDK handoff gives the separate Bazel 6 P4RT owner the same
+libyang library used by its config-engine parent. It collects the existing
+`@libyang//:libyang_pkg` runtime TAR, checks the AMD64
+`libyang.so.3.9.1` bytes and relative `libyang.so.3` alias against the parent
+TAR, then declares the SONAME through `cc_import`. This replaces the ambient
+`-lyang` search only for that image handoff. The standalone Common SDK keeps
+its existing slave dependency contract.
+
+Synthetic cases in `tools/bazel/ci/p4rt_image_test.py` cover declared linkage,
+parent-byte drift, wrong architecture, missing inputs, unsafe aliases, and
+preservation of the previous SDK on rejection. These pure checks do not prove
+the native owner link or image runtime; those remain part of the image CI run.
+
+The image SDK preserves the four libnl development aliases from the declared
+owner SDK TARs (`libnl*.so -> libnl*.so.200`) and uses those linker names in its
+existing `cc_import` targets. The pinned P4RT owner's `receive_genetlink` rule
+also supplies `-lnl-*` options, so importing only the versioned SONAME leaves
+its `-lnl-nf-3` input unresolved. Each alias must point to the exact validated
+SONAME; the real library bytes remain bound to the selected parent image.
+Standalone legacy SDK behavior and the owner checkout are unchanged. Guarded
+synthetic tests cover these paths; native link acceptance belongs to CI.

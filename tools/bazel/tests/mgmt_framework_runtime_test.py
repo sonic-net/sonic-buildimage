@@ -38,8 +38,18 @@ class StartupTest(unittest.TestCase):
           'rest-server':{'statename':'RUNNING','exitstatus':0,'pid':13},
           'supervisor-proc-exit-listener':{'statename':'RUNNING','exitstatus':0,'pid':14}}
  def test_original_listener_can_complete_successfully(self):
-  r=self.records();self.assertTrue(probe.services_ready(r,set(r)))
-  r['dependent-startup'].update(statename='EXITED',pid=0);self.assertTrue(probe.services_ready(r,set(r)))
+  r=self.records()
+  with mock.patch.object(probe,'process_record',return_value={'executable':'/usr/sbin/rest_server'}):
+   self.assertTrue(probe.services_ready(r,set(r)))
+   r['dependent-startup'].update(statename='EXITED',pid=0);self.assertTrue(probe.services_ready(r,set(r)))
+ def test_rest_launcher_is_running_before_certificate_generation_finishes(self):
+  records = self.records()
+  rest_pid = records['rest-server']['pid']
+  with mock.patch.object(probe, 'process_record', side_effect=[
+      {'executable': '/usr/bin/bash'}, {'executable': '/usr/sbin/rest_server'}]) as observed:
+   self.assertFalse(probe.services_ready(records, set(records)))
+   self.assertTrue(probe.services_ready(records, set(records)))
+  self.assertEqual(observed.call_args_list, [mock.call(rest_pid), mock.call(rest_pid)])
  def test_failed_oneshots_or_missing_or_dead_persistent_service_rejected(self):
   original=self.records()
   for name,changes in [('start',{'exitstatus':1}),('dependent-startup',{'statename':'EXITED','exitstatus':3}),('rsyslogd',{'statename':'EXITED'}),('rest-server',{'pid':0})]:

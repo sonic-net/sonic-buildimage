@@ -27,8 +27,7 @@ def main():
     args = parser.parse_args()
     if platform.machine() != "x86_64":
         raise ValueError("config-engine incremental acceptance requires native AMD64")
-    options = ["--jobs=4", "--local_resources=cpu=4", "--local_resources=memory=10000",
-               "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+    options = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
                "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
     receipt = {"status": "running", "scope": "same output base; no cold-build or remote-cache-hit claim",
                "phases": {}}

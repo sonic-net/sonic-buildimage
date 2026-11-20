@@ -1,6 +1,5 @@
 """AMD64 MUX images using the source-built config-engine parent."""
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@mux_runtime_apt_inputs//:apt_inputs.bzl", RUNTIME_APT_INPUTS = "APT_INPUTS")
 load("@sysmgr_apt_inputs//:apt_inputs.bzl", DEBUG_APT_INPUTS = "APT_INPUTS")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
@@ -14,9 +13,10 @@ load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
 package(default_visibility = ["//visibility:public"])
 
-string_flag(
+# Compatibility for callers of the previous per-image command-line flag.
+alias(
     name = "image_version",
-    build_setting_default = "",
+    actual = "//tools/bazel/oci:image_version",
 )
 
 exports_files([

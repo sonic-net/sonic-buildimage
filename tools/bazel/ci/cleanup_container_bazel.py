@@ -21,7 +21,8 @@ LOCAL_CACHES = (*CACHE_NAMES, "bazelisk")
 UPLOAD_PREFIX = "bazel_upload_"
 AUTHORIZATION = "bazel-cleanup-authorization.json"
 IDENTITY = "job-identity.json"
-CONTAINER_JOBS = {"archive", "gearbox_archive", "dash_engine_archive", "radv_native", "native", "otel_archive"}
+CONTAINER_JOBS = {"archive", "gearbox_archive", "dash_engine_archive", "radv_native", "native", "otel_archive",
+                  "p4rt_native"}
 SUPPORTED_JOBS = CONTAINER_JOBS | {"package"}
 MIGRATED_JOBS = {
     "bazel-frr-python.yml": {"packages"},
@@ -174,8 +175,8 @@ def artifact_directories(migrated=False):
         if os.environ["GITHUB_JOB"] == "publish":
             return ("site", "history")
         return ("artifacts",)
-    if os.environ["GITHUB_JOB"] == "dash_engine_archive":
-        # DASH evidence lives entirely inside the registered job directory.
+    if os.environ["GITHUB_JOB"] in {"dash_engine_archive", "p4rt_native"}:
+        # DASH and P4RT evidence lives entirely inside the registered job directory.
         return ()
     if os.environ["GITHUB_JOB"] == "otel_archive":
         return ("artifacts/otel",)

@@ -2,8 +2,10 @@
 # Validate both OCI image families and P4 debug packages in one Trixie builder.
 set -euo pipefail
 
+runtime_only=false
+if [[ ${1:-} == --runtime-only ]]; then runtime_only=true; shift; fi
 if (( $# == 0 )); then
-    echo 'Usage: verify_vs_oci.sh MAKE [MAKE_ARGUMENT ...]' >&2
+    echo 'Usage: verify_vs_oci.sh [--runtime-only] MAKE [MAKE_ARGUMENT ...]' >&2
     exit 2
 fi
 make_command=("$@")
@@ -19,6 +21,7 @@ $(info VS_CI:DOCKER_CONFIG_ENGINE_TRIXIE=$(strip $(DOCKER_CONFIG_ENGINE_TRIXIE))
 $(info VS_CI:SONIC_P4RT=$(strip $(SONIC_P4RT)))
 $(info VS_CI:SONIC_P4RT_DBG=$(strip $(SONIC_P4RT_DBG)))
 $(info VS_CI:BUILD_WITH_BAZEL_WHEN_AVAILABLE=$(strip $(BUILD_WITH_BAZEL_WHEN_AVAILABLE)))
+$(info VS_CI:SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION))
 $(info VS_CI:BLDENV=$(strip $(BLDENV)))
 $(info VS_CI:CONFIGURED_PLATFORM=$(strip $(CONFIGURED_PLATFORM)))
 $(info VS_CI:CONFIGURED_ARCH=$(strip $(CONFIGURED_ARCH)))
@@ -59,27 +62,29 @@ for image in docker-orchagent docker-syncd-vs; do
         exit 1
     fi
 done
-for key in DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE; do
+for key in DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE SONIC_IMAGE_VERSION; do
     [[ -n ${config[$key]} ]] || { echo "Missing Make package setting: $key" >&2; exit 1; }
 done
 if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" ${config[DOCKER_CONFIG_ENGINE_TRIXIE]} "* ]]; then
     echo 'Shared image validation requires the Bazel config-engine archive producer' >&2
     exit 1
 fi
-runtime_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT]}
-debug_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT_DBG]}
-base_archive=${config[TARGET_PATH]}/${config[DOCKER_CONFIG_ENGINE_TRIXIE]}
-# Preserve the owner's dependency installation, freshness and cache rules.
-# Finish the legacy P4 workspace before testing the image workspace.
-# A standalone verifier may need to materialize the base for the Docker checks.
-prerequisites=("$runtime_deb" "$debug_deb")
-# The native installer already published config-engine. Its phony Make recipe
-# would regenerate the retained image and its Make manifests in this container.
-if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then prerequisites+=("$base_archive"); fi
-"${make_command[@]}" --no-print-directory -j1 "${prerequisites[@]}"
-for package in "$runtime_deb" "$debug_deb" "$base_archive"; do
-    [[ -s $package ]] || { echo "Missing or empty P4RT prerequisite: $package" >&2; exit 1; }
-done
+if ! "$runtime_only"; then
+    runtime_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT]}
+    debug_deb=${config[DEBS_PATH]}/${config[SONIC_P4RT_DBG]}
+    base_archive=${config[TARGET_PATH]}/${config[DOCKER_CONFIG_ENGINE_TRIXIE]}
+    # Preserve the owner's dependency installation, freshness and cache rules.
+    # Finish the legacy P4 workspace before testing the image workspace.
+    # A standalone verifier may need to materialize the base for the Docker checks.
+    prerequisites=("$runtime_deb" "$debug_deb")
+    # The native installer already published config-engine. Its phony Make recipe
+    # would regenerate the retained image and its Make manifests in this container.
+    if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} != 1 ]]; then prerequisites+=("$base_archive"); fi
+    "${make_command[@]}" --no-print-directory -j1 "${prerequisites[@]}"
+    for package in "$runtime_deb" "$debug_deb" "$base_archive"; do
+        [[ -s $package ]] || { echo "Missing or empty P4RT prerequisite: $package" >&2; exit 1; }
+    done
+fi
 
 # Match the archive recipes, including the caller's cache and distdir settings.
 # Keep one output base and server; only Syncd selects its DASH configuration.
@@ -88,8 +93,32 @@ option_lines=$(python3 tools/bazel/build_helpers.py options \
     --arguments="${BAZEL_CONTAINER_ARGS-${BAZEL_SWSS_ARGS:-}}")
 bazel_options=()
 if test -n "$option_lines"; then mapfile -t bazel_options <<< "$option_lines"; fi
-bazel_options+=(--platforms=@sonic_build_infra//platforms:x86_64_trixie
+# The active Make VS job reads this release directly out of sonic-vs.bin.
+# A later Make invocation on a dirty checkout may have a different timestamp.
+image_version=${config[SONIC_IMAGE_VERSION]}
+if [[ -f artifacts/vs/sonic-version.json ]]; then
+    image_version=$(jq -er '.build_version | strings | select(length > 0)' artifacts/vs/sonic-version.json)
+fi
+bazel_options+=(--//tools/bazel/image/vs/metadata:use_make_metadata=true
+    "--//tools/bazel/oci:image_version=$image_version"
+    --platforms=@sonic_build_infra//platforms:x86_64_trixie
     --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
+
+# cquery alone does not materialize cached policy outputs.
+write_installed_policy() {
+    local family=$1 variant=$2 policy label
+    shift 2
+    label="//tools/bazel/tests:${family}_${variant}installed_images_policy"
+    "${BAZEL:-bazel}" build "${bazel_options[@]}" "$@" "$label"
+    policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" "$@" --output=files "$label")
+    cp --remove-destination -- "$policy" "artifacts/vs/$family-installed-images-policy.json"
+}
+
+if "$runtime_only"; then
+    write_installed_policy swss runtime_
+    write_installed_policy syncd runtime_ --config=syncd-dash
+    exit
+fi
 
 collect_test_results() {
     local test_name="$1" output="artifacts/vs/$2" file path
@@ -114,13 +143,8 @@ collect_test_results swss_images_test swss-images
 collect_test_results syncd_p4_images_test syncd-p4-images
 if test "$test_status" -ne 0; then exit "$test_status"; fi
 
-# cquery alone does not materialize cached policy outputs.
-"${BAZEL:-bazel}" build "${bazel_options[@]}" //tools/bazel/tests:swss_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --output=files //tools/bazel/tests:swss_installed_images_policy)
-cp --remove-destination -- "$policy" artifacts/vs/swss-installed-images-policy.json
-"${BAZEL:-bazel}" build "${bazel_options[@]}" --config=syncd-dash //tools/bazel/tests:syncd_installed_images_policy
-policy=$("${BAZEL:-bazel}" cquery "${bazel_options[@]}" --config=syncd-dash --output=files //tools/bazel/tests:syncd_installed_images_policy)
-cp --remove-destination -- "$policy" artifacts/vs/syncd-installed-images-policy.json
+write_installed_policy swss ''
+write_installed_policy syncd '' --config=syncd-dash
 
 python3 -B tools/bazel/ci/verify_p4rt_debug.py \
     --runtime-deb "$runtime_deb" --debug-deb "$debug_deb" \

@@ -14,8 +14,14 @@ def main():
     parser.add_argument("--archive", nargs=2, action="append", required=True)
     parser.add_argument("--architecture", required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--runtime-only", action="store_true")
     args = parser.parse_args()
-    policy = installed_images_policy([json.loads(path.read_bytes()) for path in args.policy],
+    declarations = [json.loads(path.read_bytes()) for path in args.policy]
+    if args.runtime_only:
+        for declaration in declarations:
+            debug = {pair["debug"] for pair in declaration.pop("symbol_pairs", [])}
+            declaration["images"] = [image for image in declaration["images"] if image["name"] not in debug]
+    policy = installed_images_policy(declarations,
                                      dict(args.layout), dict(args.archive), args.architecture)
     args.out.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n")
 

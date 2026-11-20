@@ -72,6 +72,8 @@ jobs:
           disk-cache: buildimage-frr-python-${{ matrix.architecture }}
           cache-version: "8.5.1"
 
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
 
@@ -89,7 +91,7 @@ jobs:
           set -euo pipefail
           options=(--platforms="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
                    --host_platform="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
-                   --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000
+
                    --lockfile_mode=update)
           bazel build "${options[@]}" \
             //src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel \
@@ -187,7 +189,6 @@ jobs:
           python3 tools/bazel/ci/frr_python_rebuild.py \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
             --output=artifacts/frr-python/rebuild.json
           git diff --exit-code
 

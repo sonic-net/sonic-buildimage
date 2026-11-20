@@ -6,7 +6,15 @@ from pathlib import Path
 import shlex
 
 
-def preserve(workspace, home, repository_only=False, private_remote_cache=False):
+PRIVATE_CACHE_ENDPOINT = "grpc://172.16.0.4:9092"
+PRIVATE_REMOTE_SETTINGS = (
+    "common --remote_cache=" + PRIVATE_CACHE_ENDPOINT,
+    "common --experimental_remote_downloader=" + PRIVATE_CACHE_ENDPOINT,
+    "common --experimental_remote_downloader_local_fallback",
+)
+
+
+def setup_cache_settings(home, repository_only=False):
     prefixes = {"common --repository_cache=": "repository"}
     if not repository_only:
         prefixes["build --disk_cache="] = "disk"
@@ -23,12 +31,34 @@ def preserve(workspace, home, repository_only=False, private_remote_cache=False)
         settings[kind] = line
     if set(settings) != set(prefixes.values()):
         raise ValueError("setup-bazel cache settings are missing")
-    selected = list(settings.values())
+    return list(settings.values())
+
+
+def write_bazel6_owner_rc(path, home, downloader_config, *, private_remote_cache):
+    """Select only local caches and the approved pool services for an isolated Bazel 6 owner."""
+    if not downloader_config.is_absolute() or not downloader_config.is_file():
+        raise ValueError("Expected the verified downloader configuration")
+    selected = []
+    for line in setup_cache_settings(home):
+        command, flag = shlex.split(line, comments=True)
+        if not Path(flag.split("=", 1)[1]).is_absolute():
+            raise ValueError("Expected an absolute setup-bazel cache path")
+        selected.append(command + " " + shlex.quote(flag))
     if private_remote_cache:
+        selected.extend(PRIVATE_REMOTE_SETTINGS)
+    selected.extend((
+        "common " + shlex.quote("--experimental_downloader_config=" + str(downloader_config)),
+        "build --remote_upload_local_results=false",
+    ))
+    with path.open("x") as output:
+        output.write("\n".join(selected) + "\n")
+
+
+def preserve(workspace, home, repository_only=False, private_remote_cache=False):
+    selected = setup_cache_settings(home, repository_only)
+    if private_remote_cache:
+        selected.extend(PRIVATE_REMOTE_SETTINGS)
         selected.extend([
-            "common --remote_cache=grpc://172.16.0.4:9092",
-            "common --experimental_remote_downloader=grpc://172.16.0.4:9092",
-            "common --experimental_remote_downloader_local_fallback",
             # Local actions and their BEP files must survive a cache outage.
             "build --remote_local_fallback",
             "build --incompatible_remote_local_fallback_for_remote_cache",

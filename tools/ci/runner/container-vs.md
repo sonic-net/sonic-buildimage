@@ -137,12 +137,15 @@ runs, use `rcache` (read entries only).
 Matching dependency/configuration keys are required for hits. This does not
 replace Bazel's remote cache or resolve its connection failures.
 
-The VS job sets `SONIC_BUILD_JOBS=4` for concurrent Make recipes. Per-package
-compilation parallelism remains at its existing default, and Bazel retains its
-separate `--jobs=4` and 12-GiB local-memory budget. Image recipes use the normal
-shared workspace server, so their commands serialize; increasing Make concurrency
-does not bypass that lock. No per-image server lifecycle or custom shared-server
-wrapper is added. P4RT and kernel workspaces retain their independent launchers.
+The VS job sets `SONIC_BUILD_JOBS=1`, so Make schedules one recipe at a time.
+The selected VS container archives share one Bazel build command, allowing Bazel
+to schedule their common dependencies and independent actions together. Bazel
+uses its default job count and CPU scheduling budget. CI reserves a 2 GiB JVM
+heap and assigns 80% of the remaining effective memory to actions. The effective
+memory is the smaller of host RAM and enclosing cgroup limits. Action resource
+estimates remain owned by their build rules. Per-package compilation keeps its
+existing default. Standalone archive goals retain their individual entry points. P4RT and kernel workspaces retain
+their independent launchers. Cache settings remain unchanged.
 
 Before local cache cleanup, the job uses noninteractive `sudo` to check that the
 cache directory exists and is NFS-backed. The `stat --file-system` probe triggers
@@ -335,3 +338,18 @@ no command time. The
 and phase timings. Open a compressed Bazel JSON trace in Perfetto to inspect
 individual actions. Cache fetches include disk and remote reads.
 [Build dashboard](https://securely1g.github.io/sonic-buildimage/)
+
+## Shared Bazel CI memory policy
+
+Component jobs run `python3 -B tools/bazel/ci/resources.py --configure` after
+setup-bazel. This preserves existing cache settings and writes the same memory
+policy to the home and workspace user RC files. Source-review wrappers forward
+the memory budget; the independent kernel adapter configures its private RC.
+The isolated source-worker launcher uses the same calculation with its measured
+memory limit.
+
+Bazel chooses CPU scheduling and action concurrency. The JVM maximum heap is
+2 GiB. Actions receive 80% of the smaller of host RAM and enclosing cgroup
+memory limits, after subtracting that heap. This leaves system and non-heap
+headroom. The shared memory flag also supports the Bazel 6.4 P4 runtime checks.
+Action resource estimates still need to describe their actual processes.

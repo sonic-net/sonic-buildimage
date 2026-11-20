@@ -14,7 +14,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci import vs_archive_reuse as reuse
+from tools.bazel.ci import verify_vs_image_tags, vs_archive_reuse as reuse
 
 
 def encoded(value):
@@ -81,6 +81,61 @@ class ArchiveReuseTest(unittest.TestCase):
         path = self.target / (name + ".gz")
         path.write_bytes(gzip.compress(tar_bytes([*entries, *extra_entries]), mtime=0))
         return path
+
+    def test_batch_tag_check_matches_each_selected_archive_with_the_installer_release(self):
+        version = self.workspace / "sonic-version.json"
+        version.write_bytes(encoded({"build_version": "same-build"}))
+        timings = self.workspace / "image-timings"
+        batch = timings / "vs-container-images"
+        runtime, debug = "docker-orchagent.gz", "docker-orchagent-dbg.gz"
+        for index, (code, archives) in enumerate(((1, ["missing.gz"]), (0, [runtime, debug]))):
+            directory = batch / f"recipe-{index}"
+            directory.mkdir(parents=True)
+            (directory / "build.timing.json").write_bytes(encoded({"start_epoch_seconds": index, "exit_code": code}))
+            (directory / "batch-targets.json").write_bytes(encoded({name: [runtime, "//images:" + name] for name in archives}))
+        self.assertEqual(verify_vs_image_tags.verify(self.target, version, timings), (2, "same-build"))
+
+        self.write_archive(debug=True, change_config=lambda config: config["config"]["Labels"].pop("Tag"))
+        with self.assertRaisesRegex(ValueError, "docker-orchagent-dbg.gz: expected Tag"):
+            verify_vs_image_tags.verify(self.target, version, timings)
+        self.write_archive(debug=True, config_digest="0" * 64)
+        with self.assertRaisesRegex(ValueError, "does not match its digest"):
+            verify_vs_image_tags.verify(self.target, version, timings)
+        (self.target / debug).unlink()
+        with self.assertRaises(FileNotFoundError):
+            verify_vs_image_tags.verify(self.target, version, timings)
+
+    def test_runtime_only_receipt_rejects_debug_in_build_export_or_installer(self):
+        self.write_archive(image="docker-syncd-vs")
+        version = self.workspace / "sonic-version.json"
+        version.write_bytes(encoded({"build_version": "same-build"}))
+        receipt = self.workspace / "container-build.json"
+        timings = self.workspace / "image-timings"
+        batch = timings / "vs-container-images" / "recipe-1"
+        batch.mkdir(parents=True)
+        (batch / "build.timing.json").write_bytes(encoded({"start_epoch_seconds": 1, "exit_code": 0}))
+        names = [image + ".gz" for image in reuse.ENTRYPOINTS]
+        plan = batch / "batch-targets.json"
+        plan.write_bytes(encoded(dict.fromkeys(names)))
+        selected = self.target / "sonic-vs.bin.dockers"
+        selected.write_text("".join("target/" + name + "\n" for name in names))
+        verify = lambda: verify_vs_image_tags.verify(self.target, version, timings,
+                                                     runtime_only=True, receipt=receipt)
+        with self.assertRaisesRegex(ValueError, "exported a debug archive"):
+            verify()
+        (self.target / "docker-orchagent-dbg.gz").unlink()
+        plan.write_bytes(encoded(dict.fromkeys([*names, "docker-orchagent-dbg.gz"])))
+        with self.assertRaisesRegex(ValueError, "requested a debug archive"):
+            verify()
+        plan.write_bytes(encoded(dict.fromkeys(names)))
+        self.assertEqual(verify(), (2, "same-build"))
+        result = json.loads(receipt.read_bytes())
+        self.assertEqual(result["archives"], sorted(names))
+        self.assertEqual(result["installer_selection"]["sha256"], hashlib.sha256(selected.read_bytes()).hexdigest())
+        with selected.open("a") as stream:
+            stream.write("target/docker-example-dbg.gz\n")
+        with self.assertRaisesRegex(ValueError, "normal VS installer selects a debug image"):
+            verify()
 
     def test_capture_and_verify_complete_contents_without_publishing_settings(self):
         receipt = reuse.capture(self.workspace)

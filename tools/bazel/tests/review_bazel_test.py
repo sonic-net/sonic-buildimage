@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
+from tools.bazel.build_container_batch import EXPORT_POLICY
 from tools.bazel.ci import review_bazel_rc as rc
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -85,10 +86,11 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
                 env = dict(os.environ, PATH=str(self.directory) + os.pathsep + os.environ['PATH'],
                            REVIEW_TEST_RECORD=str(self.record), BAZEL_REAL='/unused/worker/launcher',
                            SONIC_BAZEL_REGISTRY_REVISION=REVISION, SONIC_BASE_REVIEW_REGISTRY=base_revision)
-                result = subprocess.run([str(wrapper), 'build', '//owner:runtime'], cwd=self.workspace,
+                result = subprocess.run([str(wrapper), EXPORT_POLICY, 'build', '//owner:runtime'], cwd=self.workspace,
                                         env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 arguments = json.loads(self.record.read_text())['arguments']
+                self.assertIn(EXPORT_POLICY, arguments[:arguments.index('build')])
                 self.assertEqual([arg for arg in arguments if arg.startswith('--registry=')], [
                     '--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/' +
                     (base_revision or 'main'), '--registry=https://bcr.bazel.build'])
@@ -102,6 +104,8 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
     def test_home_and_local_cache_values_survive(self):
         (self.home / '.bazelrc').write_text('''build --disk_cache='/persistent/action cache'
 common --repository_cache=/persistent/downloads
+startup --host_jvm_args=-Xmx2048m
+build --local_ram_resources=3276
 common --registry=https://example.invalid/catalog
 build --override_module=owner=/not-accepted
 ''')
@@ -115,6 +119,8 @@ try-import /not-imported
         result = rc.configuration(self.workspace, self.home)
         parsed = [shlex.split(line, comments=True) for line in result.splitlines()]
         self.assertIn(['build', '--disk_cache=/persistent/action cache'], parsed)
+        self.assertIn(['build', '--local_ram_resources=3276'], parsed)
+        self.assertIn(['startup', '--host_jvm_args=-Xmx2048m'], parsed)
         self.assertIn(['common', '--repository_cache=/persistent/downloads'], parsed)
         self.assertLess(parsed.index(['common', '--repository_cache=/persistent/downloads']),
                         parsed.index(['common', '--repository_cache=/existing/local-downloads']))

@@ -282,11 +282,12 @@ SWSS compilation, package contents and component tests are validated in the
 consumes those targets and validates the assembled OCI images, including their
 installed behavior and image-cache invalidation.
 
-The native VS Make build produces the runtime and debug archives together for
-each registered Bazel container, using the same builder and Bazel invocation
-for each pair. The normal installer still selects runtime containers;
-`INSTALL_DEBUG_TOOLS=y` selects debug containers. Producing a debug archive does
-not add it to the installer.
+The native VS Make build submits all selected Bazel container archives in one
+invocation. For example, Orchagent and Syncd build together from common base
+layers. The Syncd sources read the selected DASH settings. On the build dashboard, `vs-container-images`
+records that invocation and its profile. The container rows record their
+archive exports. The normal installer selects runtime containers, and
+`INSTALL_DEBUG_TOOLS=y` selects debug containers.
 
 The active **VS installer in SONiC slave (AMD64)** job uses a host agent and
 the native Make wrapper to build `target/sonic-vs.bin`. After managed-identity
@@ -320,6 +321,15 @@ checks belong to `target/sonic-vs.img.gz` and are not exercised by this `.bin`
 CI path. The separate VM target retains those checks.
 The build records its starting Git revision; validation requires that revision
 before checks and again before writing its timing summary.
+
+For a runtime-only VS installer, choose the **Bazel OCI** manual workflow,
+leave `source_image=none`, clear `skip_vs`, and clear `enable_debug_layer`.
+The installer job passes `SONIC_ENABLE_DEBUG_LAYER=n` to Make. It verifies the
+installer and its runtime archives. The default paired run handles the debug
+archive and symbol checks. To compare the two modes, dispatch both from the
+same revision and compare the **Build sonic-vs.bin through the host Make wrapper**
+step. The `sonic-vs-bazel-timings-amd64` artifact includes the selected archive
+names, Bazel profile and export times for that step.
 
 [`validate_vs.sh`](validate_vs.sh) runs in the separate **Validate VS container
 pairs and P4 debug symbols** step after a successful build, using the same
@@ -398,8 +408,9 @@ final byte-integrity verification remains mandatory.
 `runtime-debug-pairs-timing.json` (schema 2) records the revision and profile,
 P4 validation time, pair validation time and their total. It does not include
 the image build duration.
-The successful image artifact contains `target/sonic-vs.bin` and the four
-Orchagent/Syncd runtime/debug archives. The recorded installer selection is
+The successful image artifact contains `target/sonic-vs.bin` and the
+Orchagent/Syncd runtime archives. The default paired run also includes their
+debug archives. The recorded installer selection is
 `target/sonic-vs.bin.dockers`.
 Do not parallelize top-level Make goals that share Docker state.
 

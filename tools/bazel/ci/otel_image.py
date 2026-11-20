@@ -21,8 +21,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 OWNER = "//dockers/docker-sonic-otel:"
 IMAGES = ("docker-sonic-otel", "docker-sonic-otel-dbg")
 BASE = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000",
-           "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+OPTIONS = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 TARGETS = {
     **{name + ".gz": OWNER + name + ".gz" for name in IMAGES},
@@ -80,6 +79,7 @@ def build_images(args, directory):
                   "OTEL image acceptance requires native AMD64/Trixie")
     receipt = {"status": "building", "architecture": "amd64", "image_version": args.image_version, "commands": [],
                "invocation": {"bazel": args.bazel}}
+    options = [*OPTIONS, build.image_version_option(args.image_version)]
     execute = partial(command_log.execute, cwd=ROOT)
     try:
         clean_source(directory)
@@ -91,15 +91,15 @@ def build_images(args, directory):
                  "DOCKERS_PATH=dockers", "SONIC_IMAGE_VERSION=" + args.image_version,
                  "manifests", "target/bazel-manifests/docker-sonic-otel/image.env"], directory, receipt, "manifests")
         layouts = [BASE, *[OWNER + name for name in IMAGES]]
-        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, OPTIONS, [*TARGETS.values(), *layouts],
+        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, options, [*TARGETS.values(), *layouts],
             workspace=ROOT, output=directory / "action-audit.json")
-        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=OPTIONS)
+        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=options)
         # Remote/cache hits for compressed archives need not materialize the
         # layouts inspected below. Request those outputs explicitly.
-        execute([args.bazel, "build", *OPTIONS, *layouts], directory, receipt, "layouts")
-        receipt["layouts"] = {name: execute([args.bazel, "cquery", *OPTIONS, "--output=files", OWNER + name],
+        execute([args.bazel, "build", *options, *layouts], directory, receipt, "layouts")
+        receipt["layouts"] = {name: execute([args.bazel, "cquery", *options, "--output=files", OWNER + name],
             directory, receipt, name + ".layout").strip() for name in IMAGES}
-        receipt["base_layout"] = execute([args.bazel, "cquery", *OPTIONS, "--output=files", BASE],
+        receipt["base_layout"] = execute([args.bazel, "cquery", *options, "--output=files", BASE],
             directory, receipt, "base.layout").strip()
         receipt["resolution"] = resolution.collect(ROOT, directory, bazel=[args.bazel])
         clean_source(directory)
@@ -196,6 +196,8 @@ def validate_images(directory):
                       "IMAGE_VERSION=" + receipt["image_version"] in config.get("Env", []), "missing OTEL environment")
         check.require(config.get("ExposedPorts", {}) == parent.config.get("config", {}).get("ExposedPorts", {}),
                       "OTEL unexpectedly changed inherited exposed ports")
+        check.require(config.get("Labels", {}).get("Tag") == receipt["image_version"],
+                      "Make image version label differs: " + name)
         manifest = json.loads(config["Labels"]["com.azure.sonic.manifest"])
         check.require(manifest == json.loads((ROOT / "target/bazel-manifests" / name / "manifest.json").read_text()),
                       "OTEL Make metadata label differs")
@@ -284,17 +286,18 @@ def validate_images(directory):
 def incremental(args, directory):
     clean_source(directory)
     baseline = json.loads((directory / "build-receipt.json").read_text())
+    options = [*OPTIONS, build.image_version_option(baseline["image_version"])]
     check.require(baseline["status"] == "built" and source_identity()["revision"] == baseline["revision"],
                   "incremental checkout differs from built source")
     def output(label):
-        return ROOT / subprocess.check_output([args.bazel, "cquery", *OPTIONS, "--output=files", label], cwd=ROOT, text=True).strip()
+        return ROOT / subprocess.check_output([args.bazel, "cquery", *options, "--output=files", label], cwd=ROOT, text=True).strip()
     archives = {name: output(OWNER + name + ".gz") for name in IMAGES}
     owners = {name: output(TARGETS[name]) for name in ("otel.source.tar",)}
     base = output(BASE)
     layouts = {name: ROOT / path for name, path in baseline["layouts"].items()}
     targets = [OWNER + name + suffix for name in IMAGES for suffix in ("", ".gz")]
     targets += [BASE, *[TARGETS[name] for name in owners]]
-    command = [args.bazel, "build", *OPTIONS, *targets]
+    command = [args.bazel, "build", *options, *targets]
     def snapshot():
         return {"images": {name: oci_layout.validate_layout(path, "linux/amd64").descriptor["digest"] for name, path in layouts.items()},
                 "archives": {name: check.sha(path) for name, path in archives.items()},

@@ -56,35 +56,55 @@ Invalid metadata for a selected target and Bazel build errors remain failures.
 ### Build runtime and debug archives with the VS image
 
 During `make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`,
-the Trixie builder builds each selected, supported runtime/debug pair in one
-Bazel invocation. The two targets share the owner's configuration and declared
-inputs. This retains the runtime layers and Bazel state while producing the
-matching debug image, before the VS builder exits. Both complete Docker archives
-are exported to `target/`; each archive remains independently cacheable.
+the Trixie builder issues one `bazel build` for the selected container archives.
+The same rule handles `sonic-vs.img.gz`. Make collects the installer containers,
+local container packages and Bazel archives loaded by legacy Docker recipes.
+By default it includes each selected container's registered runtime and debug variants.
+Make prepares their prerequisites, then Bazel sees all container targets at once
+and can schedule independent actions in parallel.
 
 For the native AMD64 FIPS/DASH CI configuration, this produces
 `docker-orchagent.gz`, `docker-orchagent-dbg.gz`, `docker-syncd-vs.gz` and
-`docker-syncd-vs-dbg.gz` during the VS build. The existing owner guards determine
-which pairs are available in other configurations.
+`docker-syncd-vs-dbg.gz` in the same build. Bazel builds the original targets
+in a common configuration so their shared base layers have identical bytes.
+Syncd and gearbox consume the DASH SDK. Orchagent uses Sairedis libraries
+that are independent of that selection. The bridge gets the archive paths
+from the build event stream and exports them to `target/`.
 
-Building a debug archive does not select it for installation.
-`INSTALL_DEBUG_TOOLS=y` selects the debug containers through the existing VS
-installer list; a normal image continues to install the runtime containers.
+Make passes `--//tools/bazel/oci:image_version=$(SONIC_IMAGE_VERSION)` once.
+All 21 image recipes use it for the OCI `Tag` label, including both archives
+of each runtime/debug pair. For a standalone Bazel build, pass the same flag
+to reproduce a release label. The archive still loads as `<image>:latest`.
+The Dockerfiles that use an `IMAGE_VERSION` environment variable also retain
+that runtime input. Updating the release label reuses version-independent
+compilation outputs.
+
+Set `<archive>_BAZEL_SHARED_ARGS` to the owner's complete standalone
+`_BAZEL_ARGS` when every selected image can inherit them. Owners
+with private settings keep their standalone Make recipe, including the paired
+runtime/debug build. Conflicting values declared as shared fail before Bazel
+starts.
+
+To build a normal VS installer with just its required Bazel archives, run
+
+```sh
+make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y SONIC_ENABLE_DEBUG_LAYER=n
+```
+
+For example, this requests `docker-syncd-vs.gz` and `docker-gbsyncd-vs.gz`.
+Their companion debug archives and shared debug-symbol layer are built only if
+another requested target needs them. An explicitly requested archive such as
+`target/docker-syncd-vs-dbg.gz` still builds. Use the default paired build for
+debug validation or when selecting a debug installer with `INSTALL_DEBUG_TOOLS=y`.
 Standalone archive requests and unsupported Make configurations retain their
 existing behavior. A selected pair fails if either build/export fails or the
 owner declares different Bazel arguments for its two variants.
 
-The active VS CI job makes that request directly through `slave.mk` in a
-privileged SONiC slave. Validation checks both pairs and the installer's
-`target/sonic-vs.bin.dockers` selection, then runs the shared SWSS/Syncd static
-image tests and Docker-load checks in the same worker. The verifier also
-resolves the config-engine archive and existing P4RT runtime/debug package
-prerequisites before checking the images and symbols. It does not request the
-Orchagent or Syncd archives again, and their retained bytes must remain unchanged.
-The disabled legacy VS job retains `build_vs.sh`/`validate_vs.sh` dispatch and
-the separate SWSS/Syncd source-package suites; those suites are not currently
-selected by the active direct-slave job.
-See [CI evidence and timing](ci/README.md).
+The VS CI job invokes Make through `build_vs.sh` and checks the installer's
+`target/sonic-vs.bin.dockers` selection. The paired run verifies the retained
+Orchagent and Syncd debug archives and checks that their symbols match the
+runtime binaries. The runtime-only run verifies the runtime archives and their
+installed images. See [CI evidence and timing](ci/README.md).
 
 The `.bin` target produces the ONIE installer without KVM. The separate
 `target/sonic-vs.img.gz` target generates BIOS/UEFI VM disks and runs their boot

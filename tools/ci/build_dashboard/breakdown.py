@@ -47,6 +47,7 @@ SECTION_LABELS = {
 OUTER_TARGETS = {"bazel-vs-oci": "oci-session", "bazel-vs-oci-verify": "oci-verification"}
 TASK_LABELS = {
     "final-image": "Final VS image recipe",
+    "vs-container-images": "Bazel container images",
     "rootfs": "Root filesystem squashfs",
     "base": "Base container",
     "config-engine": "Config-engine container",
@@ -87,6 +88,7 @@ TASK_LABELS = {
     "macsec": "MACsec container",
 }
 EXACT_TARGETS = {
+    "target/vs-container-images": "vs-container-images",
     "target/sonic-vs.bin": "final-image",
     "target/sonic-vs.bin__vs__rfs.squashfs": "rootfs",
     "target/sonic-vs.img.gz": "final-image",
@@ -99,7 +101,7 @@ EXACT_TARGETS = {
 for _kind in TASK_LABELS.keys() - {
     "final-image", "rootfs", "base", "config-engine", "swss-layer", "orchagent-release",
     "orchagent-debug", "syncd-release", "syncd-debug", "p4rt-runtime", "p4rt-debug",
-    "orchagent-pair", "syncd-pair",
+    "orchagent-pair", "syncd-pair", "vs-container-images",
 }:
     EXACT_TARGETS[f"target/docker-{_kind}.gz"] = _kind
 
@@ -127,6 +129,10 @@ RECIPE_REASONS = {"pending-collection", "step-not-successful", "logs-expired", "
                   "logs-temporarily-unavailable", "not-recorded", "invalid-timing"}
 RECIPE_MARKER = "SONIC_VS_IMAGE_TIMINGS_V1"
 BAZEL_RECIPE_MARKER = "SONIC_VS_BAZEL_TIMINGS_V2"
+CONTAINER_MARKER = "SONIC_VS_CONTAINER_TIMINGS_V1"
+CONTAINER_GROUP = "vs-container-images"
+CONTAINER_METRICS = {"action_seconds", "fetch_seconds", "archive_seconds", "compress_seconds"}
+CONTAINER_TOTALS = {"other_action_seconds", "no_action_seconds", "parallel_seconds"}
 RECIPE_STEP_VERSIONS = {"Summarize VS image build timings": 1, "Summarize VS Bazel build timings": 2}
 RECIPE_LISTS = {1: "images", 2: "recipes"}
 RECIPE_OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]{0,191}\Z")
@@ -228,6 +234,32 @@ def recipe_unavailable(reason, version=1):
     return {"version": version, "status": "unavailable", "reason": reason, RECIPE_LISTS[version]: []}
 
 
+def container_unavailable(reason):
+    return {"status": "unavailable", "reason": reason}
+
+
+def valid_container_breakdown(value, recipes):
+    if not isinstance(value, dict) or not any(row["owner"] == CONTAINER_GROUP for row in recipes):
+        return False
+    if set(value) == {"status", "reason"}:
+        return (value["status"] == "unavailable" and isinstance(value["reason"], str)
+                and value["reason"] in RECIPE_REASONS)
+    if (set(value) != {"rows"} | CONTAINER_TOTALS
+            or not all(finite_seconds(value[key]) for key in CONTAINER_TOTALS)
+            or not isinstance(value["rows"], list) or not 0 < len(value["rows"]) <= MAX_RECIPES):
+        return False
+    members = {row["owner"] for row in recipes if row["owner"].endswith(".gz") and row["exports_expected"] > 0}
+    seen = set()
+    for row in value["rows"]:
+        if (not isinstance(row, dict) or set(row) != {"owner", "actions"} | CONTAINER_METRICS
+                or not isinstance(row["owner"], str) or row["owner"] not in members or row["owner"] in seen
+                or type(row["actions"]) is not int or not finite_seconds(row["actions"])
+                or not all(finite_seconds(row[key]) for key in CONTAINER_METRICS)):
+            return False
+        seen.add(row["owner"])
+    return True
+
+
 def valid_recipes(value):
     if not isinstance(value, dict) or type(value.get("version")) is not int or value["version"] not in RECIPE_LISTS:
         return False
@@ -236,7 +268,8 @@ def valid_recipes(value):
     if value.get("status") == "unavailable":
         return (set(value) == {"version", "status", "reason", key} and value[key] == []
                 and isinstance(value["reason"], str) and value["reason"] in RECIPE_REASONS)
-    if (set(value) != {"version", "status", key} or value["status"] != "available"
+    fields = set(value) - ({"container_breakdown"} if version == 2 else set())
+    if (fields != {"version", "status", key} or value["status"] != "available"
             or not isinstance(value[key], list) or len(value[key]) > MAX_RECIPES):
         return False
     owners = set()
@@ -264,6 +297,8 @@ def valid_recipes(value):
             return False
         if "details" in row and not valid_named_evidence(row["details"], row):
             return False
+    if "container_breakdown" in value:
+        return valid_container_breakdown(value["container_breakdown"], value[key])
     return version == 2 or owners == RECIPE_OWNERS
 
 
@@ -287,6 +322,16 @@ def recipe_markers(log, start, end):
                 groups += int(command)
             elif ANSI.sub("", line).lstrip().startswith(RECIPE_COMMAND):
                 command = True
+        elif output and line.startswith(CONTAINER_MARKER + " "):
+            # Optional detail must never discard trustworthy outer recipe timings.
+            try:
+                if len(line.encode()) > 4096:
+                    raise ValueError("oversized container marker")
+                value = json.loads(line[len(CONTAINER_MARKER) + 1:], object_pairs_hook=unique_json_object,
+                                   parse_constant=reject_json_constant)
+            except (ValueError, RecursionError):
+                value = None
+            yield "container", value
         elif output and line.startswith((RECIPE_MARKER, BAZEL_RECIPE_MARKER)):
             prefix, _, payload = line.partition(" ")
             if (prefix not in markers or not payload.startswith("{") or not payload.endswith("}")
@@ -309,9 +354,23 @@ def parse_recipe_log(log, step):
         return recipe_unavailable("invalid-timing", version)
     rows = []
     owners, evidence_seen = {}, set()
+    members = []
+    container_totals = None
+    container_error = False
     result = None
     try:
         for marker_version, value in recipe_markers(log, start, end):
+            if marker_version == "container":
+                if not isinstance(value, dict) or container_error or container_totals is not None:
+                    container_error = True
+                elif set(value) == {"row"} and len(members) < MAX_RECIPES:
+                    members.append(value["row"])
+                elif (set(value) == {"count"} | CONTAINER_TOTALS and type(value["count"]) is int
+                      and value["count"] == len(members)):
+                    container_totals = {key: value[key] for key in CONTAINER_TOTALS}
+                else:
+                    container_error = True
+                continue
             if (expected is not None and marker_version != expected) or result is not None:
                 return recipe_unavailable("invalid-timing", version)
             expected = version = marker_version
@@ -350,7 +409,16 @@ def parse_recipe_log(log, step):
         return recipe_unavailable("invalid-timing", version)
     if result is None and not rows:
         return recipe_unavailable("not-recorded", version)
-    return result if valid_recipes(result) else recipe_unavailable("invalid-timing", version)
+    if not valid_recipes(result):
+        return recipe_unavailable("invalid-timing", version)
+    if version == 2 and any(row["owner"] == CONTAINER_GROUP for row in rows):
+        detail = None if container_totals is None else {"rows": members, **container_totals}
+        if not container_error and valid_container_breakdown(detail, rows):
+            result["container_breakdown"] = detail
+        else:
+            reason = "invalid-timing" if container_error or members or container_totals is not None else "not-recorded"
+            result["container_breakdown"] = container_unavailable(reason)
+    return result
 
 
 def phase_unavailable(reason):

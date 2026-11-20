@@ -3,6 +3,7 @@ name: Bazel Rust supervisor
 on:
   pull_request:
     paths:
+      - tools/bazel/ci/resources.py
       - .github/actions/bazel-post-job-cleanup/**
       - tools/bazel/ci/cleanup_container_bazel.py
       - .github/workflows/bazel-supervisor-rust.yml
@@ -23,6 +24,7 @@ on:
   push:
     branches: [master]
     paths:
+      - tools/bazel/ci/resources.py
       - .github/actions/bazel-post-job-cleanup/**
       - tools/bazel/ci/cleanup_container_bazel.py
       - .github/workflows/bazel-supervisor-rust.yml
@@ -96,6 +98,8 @@ jobs:
           disk-cache: ${{ github.workflow }}-${{ matrix.arch }}
           cache-version: "8.5.1"
 
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -134,7 +138,7 @@ jobs:
           BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
         run: |
           set -euo pipefail
-          flags=(--jobs=4
+          flags=(
             "--platforms=@sonic_build_infra//platforms:${MACHINE}_trixie"
             "--host_platform=@sonic_build_infra//platforms:${MACHINE}_trixie")
           targets=(//src/sonic-supervisord-utilities-rs:unit_tests

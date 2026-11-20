@@ -83,7 +83,7 @@ class KernelBundleTest(unittest.TestCase):
             'bazel_dep(name = "sonic-linux-kernel", version = "0.0.1-' + self.gitlink + '", repo_name = "sonic_linux_kernel")'))
         ci = self.root / "tools/bazel/ci"
         ci.mkdir(parents=True)
-        for name in ("resolution.py", "time_vs_image.py"):
+        for name in ("resolution.py", "time_vs_image.py", "resources.py"):
             shutil.copyfile(ROOT / "tools/bazel/ci" / name, ci / name)
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "add", ".gitmodules", "Makefile.work", "rules", "tools"], check=True)

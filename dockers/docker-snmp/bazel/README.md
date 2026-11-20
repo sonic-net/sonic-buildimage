@@ -48,8 +48,8 @@ make -f tools/bazel/prepare_manifests.mk \
 bazel build //dockers/docker-snmp:docker-snmp.gz //dockers/docker-snmp:docker-snmp-dbg.gz
 ```
 
-Make supplies `SONIC_IMAGE_VERSION` through the declared `:image_version` build
-setting. Direct callers can set `--//dockers/docker-snmp:image_version=VERSION`.
+Make supplies `SONIC_IMAGE_VERSION` through the shared `//tools/bazel/oci:image_version` build
+setting. Direct callers can set `--//tools/bazel/oci:image_version=VERSION`.
 A changed version invalidates the OCI configuration, without rebuilding wheels.
 Make-generated labels and normal/debug tags remain intact. The legacy Dockerfile
 places `EXPOSE 161/udp 162/udp` only in its builder stage; its final `FROM $BASE`

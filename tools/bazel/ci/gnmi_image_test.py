@@ -17,6 +17,7 @@ class GnmiImageValidationTest(unittest.TestCase):
         self.runtime.pop("Cmd")
         self.runtime["Entrypoint"] = ["/usr/local/bin/supervisord"]
         self.runtime["Env"].append("IMAGE_VERSION=fixture")
+        self.runtime["Labels"]["Tag"] = "fixture"
         self.runtime["Labels"]["com.azure.sonic.manifest"] = json.dumps(self.manifest)
         self.accounts = {"etc/group": {"kind": "file", "uid": 0, "gid": 0, "mode": 0o644},
                          "etc/passwd": {"sha256": "original-passwd"},
@@ -39,6 +40,8 @@ class GnmiImageValidationTest(unittest.TestCase):
                 self.verify({**self.runtime, key: value})
 
     def test_reject_extra_duplicate_environment_and_labels(self):
+        with self.assertRaises(ValueError):
+            self.verify({**self.runtime, "Labels": {**self.runtime["Labels"], "Tag": "wrong-release"}})
         for extra in ("UNDECLARED=yes", "IMAGE_VERSION=fixture"):
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 self.verify({**self.runtime, "Env": [*self.runtime["Env"], extra]})

@@ -9,8 +9,11 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.bazel.ci import time_vs_image
+from tools.bazel.ci.container_profile import batch_profile, combine_batches
 from tools.bazel.ci.summarize_vs_image_timings import (
     BUILD_EVIDENCE, build_evidence, build_explanation, build_nonlock,
     markdown_row, named_spans, read_owner, report, summarize_profile,
@@ -26,6 +29,117 @@ def event(category, name, start, duration, tid=1, mnemonic=None):
 
 
 class ImageTimingSummaryTest(unittest.TestCase):
+    def test_shared_command_and_individual_exports_have_distinct_timing_coverage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            group = Path(subprocess.check_output([
+                sys.executable, time_vs_image.__file__, "start-recipe", tmp, "vs-container-images",
+                "--bazel", "build", "--profiles", "build", "--exports",
+            ], text=True).strip())
+            command = ["bazel", "--output_base=local", "build", "//:first", "//:second"]
+            with mock.patch.object(time_vs_image.subprocess, "run") as execute:
+                time_vs_image.run_phase(group, "build", command, cwd=workspace)
+                execute.assert_called_once_with(
+                    [*command[:3], f"--profile={group}/build.profile.json.gz", "--noslim_profile",
+                     "--experimental_profile_include_target_label", *command[3:]],
+                    check=True, cwd=workspace, env=None)
+                execute.reset_mock()
+                time_vs_image.run_phase(None, "build", command, cwd=workspace)
+                execute.assert_called_once_with(command, check=True, cwd=workspace, env=None)
+            with gzip.open(group / "build.profile.json.gz", "wt") as stream:
+                json.dump({"traceEvents": [event("Local execution process wall time", "CppCompile", 0, 5)]}, stream)
+            for name in ("first", "second"):
+                owner = time_vs_image.start_recipe(workspace, name, [], [], ["export"])
+                with time_vs_image.time_phase(owner, "export"):
+                    pass
+            receipt, markdown = report(workspace / "artifacts/vs/image-timings")
+            rows = {row["owner"]: row for row in receipt["recipes"]}
+            self.assertEqual(set(rows), {"first", "second", "vs-container-images"})
+            self.assertEqual(rows["vs-container-images"]["compile_seconds"], 5)
+            self.assertEqual(sum(row["bazel_phases"] for row in rows.values()), 1)
+            self.assertEqual(sum(row["profiles"] for row in rows.values()), 1)
+            self.assertEqual(sum(row["exports"] for row in rows.values()), 2)
+            self.assertIn("| first | n/a | n/a | n/a | n/a | n/a |", markdown)
+
+    def test_batch_profile_counts_parallel_owners_once_and_covers_launcher_time(self):
+        archives = {"one.gz": ("one.gz", "//dockers/one:one.gz"),
+                    "one-dbg.gz": ("one.gz", "//dockers/one:one-dbg.gz"),
+                    "two.gz": ("two.gz", "//platform/vs/two:two.gz")}
+
+        def action(label, mnemonic, start, duration, thread):
+            record = event("action processing", "uses a file in dockers/one", start, duration, thread, mnemonic)
+            record["args"]["target"] = label
+            return record
+
+        events = [action("//dockers/one/config:table", "OCITarball", 1, 4, 1),
+                  action("@@//dockers/one:debug", "GzipCompress", 4, 3, 2),
+                  action("//platform/vs/two:image", "OCITarball", 5, 3, 3),
+                  action("@@dependency+//dockers/one:shared", "CppCompile", 0, 6, 4),
+                  action("//src/shared:lib", "CppCompile", 9, 1, 5),
+                  event("remote output download", "stage remote inputs", 3, 2, 1),
+                  event("remote output download", "download outputs", 4, 1, 2),
+                  event("remote output download", "download outputs", 3, 2, 4),
+                  event("remote output download", "download outputs", 3, 5, 3)]
+        result = batch_profile(list(reversed(events)), 12, archives, legacy=False)
+        self.assertEqual(result, {
+            "rows": [{"owner": "one.gz", "actions": 2, "action_seconds": 6, "archive_seconds": 4,
+                      "compress_seconds": 3, "fetch_seconds": 2},
+                     {"owner": "two.gz", "actions": 1, "action_seconds": 3, "archive_seconds": 3,
+                      "compress_seconds": 0, "fetch_seconds": 0}],
+            "other_action_seconds": 2, "no_action_seconds": 3, "parallel_seconds": 2})
+        both = combine_batches([result, result])
+        self.assertEqual(both["rows"][0]["action_seconds"], 12)
+        self.assertEqual(both["rows"][0]["actions"], 4)
+        self.assertEqual(both["other_action_seconds"], 4)
+
+    def test_reprocess_previous_profiles_using_confirmed_archive_outputs(self):
+        archives = {"one.gz": ("one.gz", ""), "one-dbg.gz": ("one.gz", "")}
+        events = [event("action processing", "OCI Image //dockers/one:one", 1, 1, mnemonic="OCIImage"),
+                  event("action processing", "OCITarball dockers/one/one.load/tarball.tar", 2, 2,
+                        mnemonic="OCITarball"),
+                  event("action processing", "Compressing o to dockers/one/one.gz", 4, 1, mnemonic="GzipCompress"),
+                  event("action processing", "Compressing d to dockers/one/one-dbg.gz", 5, 1, mnemonic="GzipCompress"),
+                  event("action processing", "OCI Descriptor dockers/one/input.tar", 6, 1, mnemonic="OCIDescriptor")]
+        row, = batch_profile(events, 7, archives, legacy=True)["rows"]
+        self.assertEqual(row, {"owner": "one.gz", "actions": 4, "action_seconds": 5, "fetch_seconds": 0,
+                               "archive_seconds": 2, "compress_seconds": 2})
+        self.assertIsNone(batch_profile(events[:-2], 7, archives, legacy=True))
+        # The same basename appearing in two packages cannot identify a legacy owner.
+        events.append(event("action processing", "Compressing other to unrelated/one.gz", 7, 1,
+                            mnemonic="GzipCompress"))
+        self.assertIsNone(batch_profile(events, 8, archives, legacy=True))
+
+    def test_github_receipt_retains_owner_rows_and_independent_bounded_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            group = time_vs_image.start_recipe(workspace, "vs-container-images", ["build"], ["build"], [])
+            (group / "batch-targets.json").write_text('{"demo.gz":["demo.gz","//example:demo.gz"]}')
+            (group / "build.timing.json").write_text('{"phase":"build","elapsed_seconds":7,"exit_code":0}')
+            record = event("action processing", "action", 0, 3, mnemonic="OCITarball")
+            record["args"]["target"] = "//example:demo"
+            with gzip.open(group / "build.profile.json.gz", "wt") as stream:
+                json.dump({"traceEvents": [record]}, stream)
+            time_vs_image.start_recipe(workspace, "demo.gz", [], [], ["export-demo.gz"])
+            root = group.parent.parent
+            script = Path(__file__).resolve().parents[1] / "ci/summarize_vs_image_timings.py"
+            run = subprocess.run([sys.executable, "-B", script, str(root), "--github-actions"],
+                                 capture_output=True, text=True, check=True)
+            receipt = json.loads((root / "summary.json").read_text())
+            v1 = [json.loads(line.split(" ", 1)[1]) for line in run.stdout.splitlines()
+                  if line.startswith("SONIC_VS_CONTAINER_TIMINGS_V1 ")]
+            self.assertEqual(v1[0], {"row": receipt["container_breakdown"]["rows"][0]})
+            self.assertEqual(v1[1], {"count": 1, "no_action_seconds": 4, "other_action_seconds": 0,
+                                     "parallel_seconds": 0})
+            v2 = [json.loads(line.split(" ", 1)[1]) for line in run.stdout.splitlines()
+                  if line.startswith("SONIC_VS_BAZEL_TIMINGS_V2 ")]
+            self.assertEqual(v2[-1], {"count": 2, "evidence_count": 6})
+            phase_evidence = [item["evidence"]["values"] for item in v2 if "evidence" in item
+                              and item["evidence"]["owner"] == "vs-container-images"
+                              and item["evidence"]["group"] == "phases"]
+            self.assertEqual(phase_evidence[0][0]["seconds"], 7)
+            (group / "build.profile.json.gz").unlink()
+            self.assertNotIn("container_breakdown", report(root)[0])
+
     def test_compilation_counts_running_processes_and_unions_parallel_workers(self):
         events = [
             event("action processing", "Compiling a.cc", 0, 10, mnemonic="CppCompile"),

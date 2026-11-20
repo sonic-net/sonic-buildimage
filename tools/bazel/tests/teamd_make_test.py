@@ -48,7 +48,7 @@ class TeamdMakeTest(unittest.TestCase):
         self.assertIn("-v /etc/sonic:/etc/sonic:ro", result[9])
         self.assertEqual(result[10:12], ["syncd", "swss"])
         self.assertEqual(result[12:14], result[:2])
-        self.assertEqual(result[14:16], ["--//dockers/docker-teamd:image_version=202705.42"] * 2)
+        self.assertEqual(result[14:16], ["", ""])
         self.assertEqual(result[16], "dockers/docker-teamd")
 
     def test_excluded_profiles_keep_legacy_inputs_and_service_selection(self):

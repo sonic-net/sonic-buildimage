@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--bazel', default='bazel')
     parser.add_argument('--registry', default='https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main')
     parser.add_argument('--artifacts', type=Path, required=True)
-    parser.add_argument('--jobs', type=int, default=4)
+    parser.add_argument('--jobs', type=int)
     parser.add_argument('--startup-arg', action='append', default=[])
     args = parser.parse_args()
     assert platform.machine() == 'x86_64'
@@ -39,10 +39,10 @@ def main():
     # defaults so this review uses exactly one catalog followed by BCR.
     start = ['--nosystem_rc', '--noworkspace_rc', *args.startup_arg]
     resolution = ['--registry=' + args.registry, '--registry=https://bcr.bazel.build/']
-    options = [*resolution, '--check_direct_dependencies=off', '--lockfile_mode=update',
+    options = [*resolution, *(['--jobs=' + str(args.jobs)] if args.jobs is not None else []), '--check_direct_dependencies=off', '--lockfile_mode=update',
                '--platforms=@sonic_build_infra//platforms:x86_64_trixie',
                '--host_platform=@sonic_build_infra//platforms:x86_64_trixie',
-               '--compilation_mode=opt', '--copt=-g', '--jobs=' + str(args.jobs),
+               '--compilation_mode=opt', '--copt=-g',
                '--remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$',
                '--spawn_strategy=linux-sandbox', '--strategy=Genrule=linux-sandbox',
                '--strategy=TestRunner=linux-sandbox', '--noincompatible_legacy_local_fallback',

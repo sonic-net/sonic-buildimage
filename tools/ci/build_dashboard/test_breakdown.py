@@ -275,6 +275,14 @@ class ImagePhaseTests(unittest.TestCase):
 
 
 class ParserTests(unittest.TestCase):
+    def test_shared_container_build_has_its_own_make_interval(self):
+        log = synthetic_log().replace(b"target/docker-base-trixie.gz", b"target/vs-container-images")
+        value = breakdown.parse_log(log, job()["steps"][0])
+        self.assertTrue(breakdown.valid(value))
+        shared = next(task for task in value["sections"][0]["tasks"] if task["id"] == "vs-container-images-1")
+        self.assertEqual(shared["duration_seconds"], 60)
+        self.assertEqual(shared["label"], "Bazel container images")
+
     def test_installer_and_vm_targets_keep_distinct_recipe_and_rootfs_timings(self):
         for target, name in (("sonic-vs.bin", "Build the VS installer (.bin)"),
                              ("sonic-vs.img.gz", "Build the VS image")):

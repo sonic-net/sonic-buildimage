@@ -23,8 +23,7 @@ from tools.bazel.oci import oci_layout
 OWNER = "//platform/vs/docker-dash-engine:"
 IMAGES = ("docker-dash-engine", "docker-dash-engine-dbg")
 BASE = "//dockers/docker-base-trixie:docker-base-trixie"
-OPTIONS = ["--jobs=2", "--local_resources=cpu=2", "--local_resources=memory=8000",
-           "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+OPTIONS = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 APT_LOCK = "@sonic_build_infra//apt:apt.lock.json"
 TARGETS = {
@@ -51,10 +50,10 @@ TARGETS = {
 }
 
 
-def root_options():
+def root_options(version):
     cache = os.environ.get("SONIC_CONTAINER_BAZEL_CACHE_DIR", os.environ.get("SONIC_SWSS_BAZEL_CACHE_DIR", ""))
     extra = os.environ.get("SONIC_CONTAINER_BAZEL_OPTIONS", os.environ.get("SONIC_SWSS_BAZEL_OPTIONS", ""))
-    return OPTIONS[:-2] + cache_options(cache) + shlex.split(extra) + OPTIONS[-2:]
+    return OPTIONS[:-2] + cache_options(cache) + shlex.split(extra) + [build.image_version_option(version), *OPTIONS[-2:]]
 
 
 def prepare_manifests(execute, directory, receipt, version):
@@ -110,21 +109,22 @@ def build_images(args, directory):
     try:
         clean_source(directory)
         receipt.update(source_identity())
+        options = root_options(args.image_version)
         prepare_manifests(execute, directory, receipt, args.image_version)
         layouts = [BASE, *[OWNER + name for name in IMAGES]]
-        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, root_options(), [*TARGETS.values(), *layouts],
+        receipt["action_audit"] = bazel_commands.audit_targets(args.bazel, options, [*TARGETS.values(), *layouts],
             workspace=ROOT, output=directory / "action-audit.json")
         # Materialize layouts and archives together. A later layout build can
         # rebuild source packages after their archives have already been copied.
         build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel,
-                               options=root_options(), use_execution_root=True,
+                               options=options, use_execution_root=True,
                                additional_targets=[*layouts, APT_LOCK])
-        lock_output = execute([args.bazel, "cquery", *root_options(), "--output=files", APT_LOCK],
+        lock_output = execute([args.bazel, "cquery", *options, "--output=files", APT_LOCK],
                               directory, receipt, "apt-lock.query").strip()
         receipt["apt_lock_sha256"] = check.sha(build.execution_root_from_bep(directory / "build-events.jsonl") / lock_output)
-        receipt["layouts"] = {name: execute([args.bazel, "cquery", *root_options(), "--output=files", OWNER + name],
+        receipt["layouts"] = {name: execute([args.bazel, "cquery", *options, "--output=files", OWNER + name],
             directory, receipt, name + ".layout").strip() for name in IMAGES}
-        receipt["base_layout"] = execute([args.bazel, "cquery", *root_options(), "--output=files", BASE],
+        receipt["base_layout"] = execute([args.bazel, "cquery", *options, "--output=files", BASE],
             directory, receipt, "base.layout").strip()
         receipt["resolution"] = resolution.collect(ROOT, directory, bazel=[args.bazel])
         clean_source(directory)
@@ -200,9 +200,10 @@ def incremental(args, directory):
     baseline = json.loads((directory / "build-receipt.json").read_text())
     check.require(baseline["status"] == "built" and identity["revision"] == baseline["revision"],
                   "incremental checkout differs from built source")
+    options = root_options(baseline["image_version"])
     root = build.execution_root_from_bep(directory / "build-events.jsonl")
     def output(label):
-        paths = subprocess.check_output([args.bazel, "cquery", *root_options(), "--output=files", label], cwd=ROOT, text=True).splitlines()
+        paths = subprocess.check_output([args.bazel, "cquery", *options, "--output=files", label], cwd=ROOT, text=True).splitlines()
         check.require(len(paths) == 1, "expected one declared output: " + label)
         return root / paths[0]
     archives = {name: output(OWNER + name + ".gz") for name in IMAGES}
@@ -223,7 +224,7 @@ def incremental(args, directory):
         log_path = directory / ("incremental-" + name + ".log")
         events = directory / ("incremental-" + name + ".events.jsonl")
         with log_path.open("w") as log:
-            result = subprocess.run([args.bazel, "build", *root_options(),
+            result = subprocess.run([args.bazel, "build", *options,
                 "--execution_log_json_file=" + str(execution),
                 "--build_event_json_file=" + str(events),
                 *targets], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)

@@ -38,3 +38,26 @@ $(DOCKER_NAT)_BASE_IMAGE_FILES += natctl:/usr/bin/natctl
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_NAT)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_NAT_DBG)
+
+# Use the Bazel archives for the native VS profile that ships NAT.
+ifeq ($(BLDENV):$(INCLUDE_NAT),trixie:y)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_NAT) $(DOCKER_NAT_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_NAT)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_NAT_DBG)
+$(DOCKER_NAT_DBG)_PATH = $($(DOCKER_NAT)_PATH)
+$(DOCKER_NAT)_BAZEL_TARGET = //dockers/docker-nat:$(DOCKER_NAT)
+$(DOCKER_NAT_DBG)_BAZEL_TARGET = //dockers/docker-nat:$(DOCKER_NAT_DBG)
+SONIC_BAZEL_MANIFESTS += docker-nat docker-nat-$(DBG_IMAGE_MARK)
+docker-nat_MANIFEST_IMAGE = $(DOCKER_NAT)
+docker-nat-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_NAT)
+docker-nat-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_NAT)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-nat/manifest.json
+$(DOCKER_NAT_DBG)_BAZEL_DEPENDS = $($(DOCKER_NAT)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-nat-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

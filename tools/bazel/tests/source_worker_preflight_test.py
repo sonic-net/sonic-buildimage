@@ -64,20 +64,20 @@ class WorkerPreflightTest(unittest.TestCase):
             self.assertEqual(receipt["checks"]["bounded_build_resources"], expected)
             self.assertEqual(receipt["facts"]["memory_limit_bytes"], gib * 1024**3)
             if expected:
-                self.assertEqual(receipt["build_profile"]["name"], "two_actions")
+                self.assertEqual(receipt["build_profile"]["name"], "bazel_default_cpu")
                 self.assertEqual(receipt["build_profile"]["measured_memory_limit_bytes"], gib * 1024**3)
                 self.assertEqual(receipt["build_profile"]["measured_cpu_limit"], 4)
                 self.assertEqual(receipt["build_profile"]["minimum_memory_bytes"], 20 * 1024**3)
             else:
                 self.assertIsNone(receipt["build_profile"])
 
-    def test_cpu_boundary_selects_two_actions_only_on_four_cpu_workers(self):
-        for cpus, jobs, memory in ((2, 1, 4000), (3.999, 1, 4000), (4, 2, 8000), (6, 2, 8000)):
+    def test_action_memory_reserves_heap_independently_of_cpu_capacity(self):
+        for cpus in (2, 3.999, 4, 6):
             with self.subTest(cpus=cpus):
                 profile = worker.select_build_profile(20 * 1024**3, cpus)
-                self.assertEqual((profile["jobs"], profile["cpu"], profile["scheduler_memory_mb"]), (jobs, jobs, memory))
+                self.assertEqual(profile["scheduler_memory_mb"], 14745)
                 self.assertEqual(profile["measured_cpu_limit"], cpus)
-                self.assertEqual(profile["jvm_heap_gib"], 3)
+                self.assertEqual(profile["jvm_heap_gib"], 2)
         for memory, cpus in ((20 * 1024**3 - 1, 4), (20 * 1024**3, 1.999),
                              (20 * 1024**3, 6.001), (20 * 1024**3, float("nan"))):
             with self.subTest(memory=memory, cpus=cpus), self.assertRaises(ValueError):

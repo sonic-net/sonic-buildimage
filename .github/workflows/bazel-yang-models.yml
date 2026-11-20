@@ -3,6 +3,7 @@ name: Bazel YANG models
 on:
   pull_request:
     paths:
+      - tools/bazel/ci/resources.py
       - '.github/actions/bazel-post-job-cleanup/**'
       - 'tools/bazel/ci/cleanup_container_bazel.py'
       - 'tools/bazel/tests/container_bazel_cleanup_test.py'
@@ -21,6 +22,7 @@ on:
   push:
     branches: [master]
     paths:
+      - tools/bazel/ci/resources.py
       - '.github/actions/bazel-post-job-cleanup/**'
       - 'tools/bazel/ci/cleanup_container_bazel.py'
       - 'tools/bazel/tests/container_bazel_cleanup_test.py'
@@ -104,6 +106,8 @@ jobs:
           bazelisk-cache: true
           repository-cache: true
           disk-cache: yang-models-${{ matrix.architecture }}
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for the image-root query
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Configure shared source download mirrors

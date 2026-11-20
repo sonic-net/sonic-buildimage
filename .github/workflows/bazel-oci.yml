@@ -24,6 +24,10 @@ on:
         description: Optional successful source-download run in this repository
         type: string
         default: ''
+      enable_debug_layer:
+        description: Build companion debug archives for the VS installer
+        type: boolean
+        default: true
       skip_vs:
         description: Skip the full VS image build
         type: boolean
@@ -100,6 +104,8 @@ jobs:
           repository-cache: true
           disk-cache: false
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Retain the same verified GitLab sources used by the VS workflow
         run: |
           mkdir -p artifacts/source-image-inputs
@@ -354,6 +360,8 @@ jobs:
           repository-cache: true
           disk-cache: ${{ matrix.disk_cache }}
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -403,8 +411,6 @@ jobs:
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000 \
             --output artifacts/archive/action-audit.json \
             //tools/bazel/tests:sonic_docker_archive_test \
             //tools/bazel/tests:oci_base_layout_test \
@@ -422,7 +428,6 @@ jobs:
             //tools/bazel/tests:oci-consumer-first.gz
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --lockfile_mode=update --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/archive/test-events.jsonl" \
             //tools/bazel/tests:sonic_docker_archive_test \
@@ -455,10 +460,6 @@ jobs:
             --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
-
       - name: Test Python packages and check startup generation
         run: |
           set -euo pipefail
@@ -472,8 +473,6 @@ jobs:
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000 \
             --output artifacts/config-engine/action-audit.json \
             //tools/bazel/tests:apt_selection_test \
             //tools/bazel/tests:sonic_py_common_test \
@@ -503,7 +502,6 @@ jobs:
             //dockers/docker-orchagent/config:docker_init
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/config-engine/test-events.jsonl" \
             //tools/bazel/tests:apt_selection_test \
@@ -544,10 +542,7 @@ jobs:
             --architecture "${{ matrix.architecture }}" \
             --bazel "$BAZEL" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }}
           git diff --exit-code
 
       - name: Check local cache reuse across fresh checkouts
@@ -559,10 +554,6 @@ jobs:
             --repository-cache "$("$BAZEL" info repository_cache)" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--jobs=4 \
-            --bazel-arg=--local_resources=cpu=4 \
-            --bazel-arg=--local_resources=memory=10000
-
       - name: Retain generated module lock and graph
         run: |
           python3 -B - <<'PY'
@@ -976,7 +967,6 @@ jobs:
             --output artifacts/swss-layer/consumer-action-audit.json "${targets[@]}"
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie \
-            --jobs=4 --local_resources=cpu=4 --local_resources=memory=10000 \
             --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/swss-layer/consumer-events.jsonl" "${targets[@]}"
       - name: Check cached no-op and source edit through the image
@@ -1078,7 +1068,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           "$BAZEL" query 'kind(".*_test rule", @hsflowd//src/json:*)' > artifacts/sflow/owner-test-targets.txt
@@ -1207,7 +1197,7 @@ jobs:
           owner_output="$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-output.XXXXXXXX")"
           owner_bazel="$(mktemp "$SONIC_BAZEL_JOB_TEMP/orchagent-owner-bazel.XXXXXXXX")"
           export OWNER_OUTPUT="$owner_output"
-          owner_jvm="--host_jvm_args=-Xmx6g"
+          owner_jvm="--host_jvm_args=-Xmx2g"
           cleanup_owner_output() {
             local status=$?
             if [[ $status -ne 0 && -f "$OWNER_OUTPUT/server/jvm.out" ]]; then
@@ -1225,7 +1215,7 @@ jobs:
             exec "$BAZEL" --version
           fi
           : "${OWNER_OUTPUT:?expected OWNER_OUTPUT}"
-          owner_jvm="--host_jvm_args=-Xmx6g"
+          owner_jvm="--host_jvm_args=-Xmx2g"
           subcommand="$1"
           shift
           extra_flags=()
@@ -1247,7 +1237,7 @@ jobs:
             --artifacts artifacts/orchagent-owner --bazel "$owner_bazel" --reuse-build \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:x86_64_trixie \
-            --bazel-arg=--jobs=2 --bazel-arg=--local_resources=memory=8000
+
       - name: Verify SWSS native link closure and symbol lookups
         if: matrix.architecture == 'amd64'
         env:
@@ -2088,6 +2078,239 @@ jobs:
           BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
 
+  p4rt_native:
+    name: Build and inspect P4RT images (AMD64)
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    # P4RT keeps two Bazel output bases and the finished OCI archives on the VS build pool.
+    runs-on: [self-hosted, linux, bazel-x64, vs]
+    timeout-minutes: 360
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    env:
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+      P4RT_TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
+      - name: Initialize P4RT's pinned source owner
+        run: git submodule update --init -- src/sonic-p4rt/sonic-pins
+      - name: Install P4RT source execution dependencies
+        run: |
+          apt-get install -y --no-install-recommends bison flex libfl-dev libgmp-dev patch zip \
+            libarchive-tools libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-nf-3-dev \
+            libnl-route-3-dev libzmq3-dev libboost-serialization-dev nlohmann-json3-dev uuid-dev
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/src/sonic-p4rt/sonic-pins"
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: p4rt-native-amd64
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches and enable the pool service for trusted sources
+        if: env.P4RT_TRUSTED_CACHE == 'true'
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Preserve local setup-bazel caches for fork builds
+        if: env.P4RT_TRUSTED_CACHE != 'true'
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Allocate fresh P4RT build and owner output paths
+        id: p4rt_storage
+        run: |
+          scratch=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/p4rt.XXXXXXXX")
+          printf 'scratch=%s\n' "$scratch" >> "$GITHUB_OUTPUT"
+          python3 - "$scratch" <<'PYSPACE'
+          from pathlib import Path
+          import shutil, sys
+          path = Path(sys.argv[1])
+          free = shutil.disk_usage(path).free
+          print(f"P4RT scratch has {free / 1024**3:.1f} GiB available for both Bazel output bases and archives")
+          if free < 90 * 1024**3:
+              raise SystemExit("P4RT requires 90 GiB of free build space")
+          PYSPACE
+          printf 'P4RT_SCRATCH=%s\nP4RT_ARTIFACTS=%s/artifacts\n' "$scratch" "$scratch" >> "$GITHUB_ENV"
+          df -h "$scratch" "$GITHUB_WORKSPACE"
+      - name: Bound P4RT build phases and verify execution tools
+        run: |
+          for tool in bsdtar gdb readelf objcopy make git python3 zip bison flex g++ pkg-config; do
+            command -v "$tool" >/dev/null
+          done
+          PYTHONPATH="$PWD" python3 -B - <<'PYLAUNCH'
+          import os, shlex, shutil
+          from pathlib import Path
+          from tools.bazel.ci.preserve_setup_bazel_cache import write_bazel6_owner_rc
+          real = shutil.which("bazel")
+          if not real:
+              raise SystemExit("Bazelisk is unavailable")
+          directory = Path(os.environ["P4RT_SCRATCH"]) / "bazel-bin"
+          directory.mkdir()
+          owner_rc = directory.parent / "p4rt-owner.bazelrc"
+          write_bazel6_owner_rc(owner_rc, Path.home(), Path(os.environ["RUNNER_TEMP"]) / "sonic-source-mirrors.cfg",
+                                private_remote_cache=os.environ["P4RT_TRUSTED_CACHE"] == "true")
+          for name, heap in (("bazel", "3g"), ("owner", "2g")):
+              path = directory / name
+              if name == "owner":
+                  # Retain the PINS workspace rc and its split-DWARF configuration.
+                  startup = " --nosystem_rc --nohome_rc --bazelrc=" + shlex.quote(str(owner_rc))
+              else:
+                  startup = " --output_base=" + shlex.quote(str(directory.parent / "root-output-base"))
+              path.write_text("#!/bin/sh\nset -eu\n"
+                  'if [ "$#" -eq 1 ] && [ "$1" = --version ]; then\n'
+                  "  exec " + shlex.quote(real) + ' "$@"\nfi\n'
+                  "exec " + shlex.quote(real) + startup + " --host_jvm_args=-Xmx" + heap + ' "$@"\n')
+              path.chmod(0o755)
+          with Path(os.environ["GITHUB_ENV"]).open("a") as output:
+              output.write("P4RT_OWNER_BAZEL=" + str(directory / "owner") + "\n")
+          with Path(os.environ["GITHUB_PATH"]).open("a") as output:
+              output.write(str(directory) + "\n")
+          PYLAUNCH
+      - name: Check P4RT storage before SDK preparation
+        run: df -h / "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
+      - name: Prepare matching Common SDK and source-owned P4RT TARs
+        run: |
+          python3 -B tools/bazel/ci/p4rt_image.py prepare-owner --bazel "$BAZEL" \
+            --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
+            --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
+            --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+      - name: Check P4RT storage before image build
+        run: df -h / "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
+      - name: Build P4RT runtime and debug images
+        run: |
+          python3 -B tools/bazel/ci/p4rt_image.py build --bazel "$BAZEL" \
+            --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
+            --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
+            --owner-output-base "$P4RT_SCRATCH/owner-output-base"
+      - name: Check P4RT storage before image validation
+        run: df -h / "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
+      - name: Validate P4RT image contents and cache reuse
+        run: |
+          python3 -B tools/bazel/ci/p4rt_validate.py validate --directory "$P4RT_ARTIFACTS" \
+            --owner-source src/sonic-p4rt/sonic-pins --bazel "$BAZEL"
+          python3 -B tools/bazel/ci/p4rt_validate.py incremental --directory "$P4RT_ARTIFACTS" \
+            --owner-source src/sonic-p4rt/sonic-pins --bazel "$BAZEL"
+      - name: Run all original P4RT tests against the selected image SDK
+        run: |
+          for phase in prepare-owner-runtime owner-tests; do
+            python3 -B tools/bazel/ci/p4rt_image.py "$phase" --bazel "$BAZEL" \
+              --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
+              --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
+              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+          done
+      - name: Prepare reviewed P4RT public evidence
+        id: p4rt_public
+        if: always() && steps.p4rt_storage.outcome == 'success'
+        run: python3 -B tools/bazel/ci/p4rt_public.py --directory "$P4RT_ARTIFACTS"
+      - name: Retain P4RT images and acceptance evidence
+        id: bazel_upload_p4rt_public
+        if: always() && steps.p4rt_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: p4rt-images-amd64-${{ github.sha }}
+          path: ${{ env.P4RT_ARTIFACTS }}/public
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  p4rt_runtime:
+    name: Load and run P4RT images (AMD64)
+    needs: p4rt_native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Initialize P4RT's pinned probe owner
+        run: git submodule update --init -- src/sonic-p4rt/sonic-pins
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: p4rt-images-amd64-${{ github.sha }}
+          path: artifacts/p4rt
+      - name: Check installed P4RT startup, ConfigDB and software RPCs
+        run: |
+          python3 -B tools/bazel/ci/p4rt_loaded.py --release-downloaded-inputs --directory artifacts/p4rt \
+            --owner-source src/sonic-p4rt/sonic-pins
+      - name: Verify source, SDK, owner tests and both image receipts
+        run: python3 -B tools/bazel/ci/p4rt_acceptance.py --directory artifacts/p4rt
+      - name: Retain installed P4RT evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: p4rt-installed-amd64-${{ github.sha }}
+          path: artifacts/p4rt/*.runtime.json
+          if-no-files-found: error
+          retention-days: 14
+
   gearbox_archive:
     name: Gearbox archive (AMD64)
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
@@ -2156,6 +2379,8 @@ jobs:
           repository-cache: true
           disk-cache: gbsyncd-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2396,6 +2621,8 @@ jobs:
           repository-cache: true
           disk-cache: dash-engine-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2419,7 +2646,7 @@ jobs:
         run: python3 -B tools/bazel/ci/dash_engine_image.py validate --artifacts "$DASH_ARTIFACTS"
       - name: Validate nnpy in the selected image dependency graph
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           audit=()
@@ -2576,6 +2803,8 @@ jobs:
           repository-cache: true
           disk-cache: otel-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -2604,7 +2833,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
         run: |
-          options=(--jobs=2 --local_resources=cpu=2 --local_resources=memory=8000
+          options=(
             --platforms=@sonic_build_infra//platforms:x86_64_trixie
             --host_platform=@sonic_build_infra//platforms:x86_64_trixie)
           targets=(@otelcol_contrib//distributions/otelcol-contrib:source_contract_test
@@ -2729,7 +2958,7 @@ jobs:
     # Keep the required status on the job that actually loads and tests both archives.
     name: Container archive (AMD64)
     if: always() && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')
-    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime, macsec_runtime, otel_runtime, dash_engine_runtime]
+    needs: [archive, database_acceptance, frr_runtime, teamd_runtime, radv_acceptance, lldp_runtime, mux_runtime, gearbox_runtime, macsec_runtime, otel_runtime, dash_engine_runtime, p4rt_native, p4rt_runtime]
     runs-on: [self-hosted, Linux, X64, ubuntu-x64]
     timeout-minutes: 20
     steps:
@@ -3243,6 +3472,8 @@ jobs:
           # This job resolves/downloads dependencies but executes no Bazel builds.
           disk-cache: false
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only
 
@@ -3255,6 +3486,7 @@ jobs:
 
       - name: Check Make handoff and archive validation
         run: |
+          PYTHONPATH="$PWD" python3 -B -m unittest discover -s tools/bazel/ci -p 'p4rt_*_test.py'
           python3 -B -m unittest discover -s tools/bazel/tests -p '*_test.py'
           python3 -B -m unittest discover -s tools/ci/tests -p '*_test.py'
           python3 -B -m unittest discover -s tools/ci/runner -p '*_test.py'
@@ -3525,8 +3757,15 @@ jobs:
             SONIC_RUN_CMDS='python3 -B tools/bazel/ci/check_kernel_sandbox.py' \
             2>&1 | tee artifacts/vs/kernel-sandbox.log
 
+      - name: Set the VS builder action memory budget
+        run: |
+          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
+
       - name: Build the VS installer (.bin)
         id: vs_build
+        env:
+          SONIC_VS_RETRY_GO_FETCH: "1"
         run: |
           set -o pipefail
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
@@ -3776,7 +4015,8 @@ jobs:
       SONIC_CONFIG_USE_DOCKER_CACHE: "y"
       SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
       SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
-      SONIC_BUILD_JOBS: "4"
+      SONIC_BUILD_JOBS: "1"
+      SONIC_ENABLE_DEBUG_LAYER: ${{ (github.event_name != 'workflow_dispatch' || inputs.enable_debug_layer) && 'y' || 'n' }}
       ENABLE_DOCKER_BASE_PULL: "y"
       REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
       ACR_REGISTRY_NAME: sonicdev
@@ -3789,9 +4029,9 @@ jobs:
       SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
       PREFER_DEBIAN_REPO: "y"
       SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
-      # Image recipes serialize through one Bazel server on this runner.
+      # Make schedules one recipe; Bazel schedules all selected container targets.
+      # Let Bazel choose its job count and CPU/memory scheduling budgets.
       BAZEL_CONTAINER_ARGS: >-
-        --jobs=4 --local_resources=memory=12288
         --remote_local_fallback
         --incompatible_remote_local_fallback_for_remote_cache
         --experimental_remote_downloader=grpc://172.16.0.4:9092
@@ -3822,6 +4062,9 @@ jobs:
           set -euo pipefail
           install -d -m 0700 "$DOCKER_CONFIG"
           printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
 
       - name: Validate shared NFS package cache
         run: bash tools/ci/runner/nfs_package_cache.sh
@@ -3904,10 +4147,16 @@ jobs:
             SONIC_RUN_CMDS='python3 -B tools/bazel/ci/check_kernel_sandbox.py' \
             2>&1 | tee artifacts/vs/kernel-sandbox.log
 
+      - name: Set the VS builder action memory budget
+        run: |
+          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
+
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
         env:
           SONIC_VS_IMAGE_TIMINGS: "1"
+          SONIC_VS_RETRY_GO_FETCH: "1"
           TERM: dumb
         run: |
           set -euo pipefail
@@ -3939,16 +4188,36 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Validate the installer and retained container pairs
+      - name: Validate the installer release and selected container archives
         run: |
           set -euo pipefail
           python3 -B scripts/validate_sonic_version.py target/sonic-vs.bin \
             --installer --secure-upgrade-mode no_sign \
             --expected-commit-id "$(git rev-parse --short HEAD)" \
             --json-output artifacts/vs/sonic-version.json
+          selection=()
+          archives=(target/docker-orchagent.gz target/docker-syncd-vs.gz)
+          if [[ $SONIC_ENABLE_DEBUG_LAYER == n ]]; then
+            selection+=(--runtime-only)
+          else
+            archives+=(target/docker-orchagent-dbg.gz target/docker-syncd-vs-dbg.gz)
+          fi
+          python3 -B tools/bazel/ci/verify_vs_image_tags.py \
+            --target target --version artifacts/vs/sonic-version.json --timings artifacts/vs/image-timings \
+            --receipt artifacts/vs/container-build.json "${selection[@]}"
+          sha256sum target/sonic-vs.bin "${archives[@]}" > artifacts/vs/outputs.sha256
+
+      - name: Validate the installer and retained container pairs
+        if: env.SONIC_ENABLE_DEBUG_LAYER == 'y'
+        run: |
+          set -euo pipefail
           bash tools/bazel/ci/validate_vs.sh 2>&1 | tee artifacts/vs/validation.log
-          sha256sum target/sonic-vs.bin target/docker-orchagent{,-dbg}.gz \
-            target/docker-syncd-vs{,-dbg}.gz > artifacts/vs/outputs.sha256
+
+      - name: Prepare runtime-only installed image checks
+        if: env.SONIC_ENABLE_DEBUG_LAYER == 'n'
+        run: |
+          set -euo pipefail
+          bash tools/bazel/ci/validate_vs.sh --runtime-only 2>&1 | tee artifacts/vs/validation.log
 
       - name: Verify installed base, SWSS and Syncd images
         timeout-minutes: 20
@@ -3971,6 +4240,7 @@ jobs:
           if grep -Eq 'not found|undefined symbol|symbol lookup error' artifacts/vs/tlm-teamd-linkage.txt; then
             exit 1
           fi
+          python3 -B tools/bazel/ci/verify_nat_archives.py
           SH
           make -f Makefile.work BLDENV=trixie sonic-slave-run \
             DOCKER_ROOT="$PWD/fsroot.docker.verify-images" \
@@ -4115,6 +4385,8 @@ jobs:
           repository-cache: true
           disk-cache: gnmi-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Configure shared source download mirrors
@@ -4306,6 +4578,8 @@ jobs:
           repository-cache: true
           disk-cache: management-framework-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership
@@ -4497,6 +4771,8 @@ jobs:
           repository-cache: true
           disk-cache: radv-image-amd64
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
       - name: Restore default Bazel startup ownership

@@ -37,6 +37,7 @@ const SECTION_LABELS = {
   "p4rt-runtime": "P4RT runtime package", "p4rt-debug": "P4RT debug package",
 };
 const TASK_LABELS = {
+  "vs-container-images": "Bazel container images",
   "final-image": "Final VS image recipe", rootfs: "Root filesystem squashfs", base: "Base container",
   "config-engine": "Config-engine container", "orchagent-release": "Orchagent release container",
   "orchagent-debug": "Orchagent debug container", "syncd-release": "Syncd release container",
@@ -969,7 +970,81 @@ function recipeSeconds(elapsed) {
   return elapsed > 0 && elapsed < 0.001 ? "<0.001s" : recipeNumber.format(elapsed) + "s";
 }
 
-function renderRecipeRows(rows, legacy) {
+function containerMembers(rows, detail) {
+  const images = rows.filter(row => row.owner.endsWith(".gz") && row.exports_expected > 0);
+  const byOwner = new Map(images.map(row => [row.owner, row]));
+  const fallback = () => ({profile: null, members: images
+    .filter(row => row.owner.startsWith("docker-") && row.bazel_expected === 0 && row.profiles_expected === 0)
+    .map(recipe => ({recipe}))});
+  const validTime = value => seconds(value) !== null && value <= Number.MAX_SAFE_INTEGER;
+  if (!Array.isArray(detail?.rows) || !detail.rows.length || detail.rows.length > 1024 ||
+      ![detail.other_action_seconds, detail.no_action_seconds, detail.parallel_seconds].every(validTime)) return fallback();
+  const seen = new Set(), members = [];
+  for (const member of detail.rows) {
+    const recipe = byOwner.get(member?.owner);
+    if (!recipe || seen.has(member.owner) || !Number.isSafeInteger(member.actions) || member.actions < 0 ||
+        ![member.action_seconds, member.archive_seconds, member.compress_seconds, member.fetch_seconds].every(validTime)) return fallback();
+    seen.add(member.owner);
+    members.push({...member, recipe});
+  }
+  members.sort((a, b) => b.action_seconds - a.action_seconds || a.recipe.owner.localeCompare(b.recipe.owner));
+  return {profile: detail, members};
+}
+
+function renderContainerMembers({profile, members}, wallSeconds) {
+  const box = el("section", "container-members");
+  box.append(el("h4", "", `Containers (${members.length})`));
+  if (!members.length) {
+    box.append(el("p", "stage-note", "No per-container measurements were recorded for this batch."));
+    return box;
+  }
+  if (profile) {
+    box.append(el("p", "stage-note", "Active time counts intervals with at least one observed action owned by the image. Images run in parallel. Cache fetch, OCI archive and gzip can overlap within active time. Make exports the archives after Bazel returns."));
+    const totals = el("dl", "recipe-metrics");
+    if (wallSeconds !== null && wallSeconds >= profile.other_action_seconds + profile.no_action_seconds) {
+      const imageWall = wallSeconds - profile.other_action_seconds - profile.no_action_seconds;
+      totals.append(el("dt", "", "One or more image owners active"), el("dd", "", recipeSeconds(imageWall)));
+    }
+    for (const [key, label] of [["other_action_seconds", "Only shared or unattributed actions active"],
+      ["no_action_seconds", "No action recorded"]]) {
+      totals.append(el("dt", "", label), el("dd", "", recipeSeconds(profile[key])));
+    }
+    box.append(totals, el("p", "stage-note", `Two or more image owners were active together for ${recipeSeconds(profile.parallel_seconds)} of the measured image time.`));
+  } else {
+    box.append(el("p", "stage-note", "This run retained per-container export times. Per-container Bazel action times are unavailable."));
+  }
+  const scroll = el("div", "table-scroll"), table = el("table"), head = el("thead"), header = el("tr"), body = el("tbody");
+  scroll.setAttribute("tabindex", "0");
+  scroll.setAttribute("role", "region");
+  scroll.setAttribute("aria-label", "Container timings");
+  const columns = profile ? ["Image", "Actions", "Active", "Cache fetch", "OCI archive", "Gzip", "Export"] : ["Image", "Export"];
+  for (const label of columns) {
+    const th = el("th", "", label); th.setAttribute("scope", "col"); header.append(th);
+  }
+  head.append(header);
+  for (const member of members) {
+    const recipe = member.recipe, tr = el("tr"), name = el("th", "", recipe.owner);
+    name.setAttribute("scope", "row");
+    if (recipe.failed) name.append(el("small", "recipe-failed", "Command failed"));
+    tr.append(name);
+    if (profile) {
+      tr.append(el("td", "", recipeNumber.format(member.actions)));
+      for (const metric of ["action_seconds", "fetch_seconds", "archive_seconds", "compress_seconds"]) {
+        tr.append(el("td", "", recipeSeconds(member[metric])));
+      }
+    }
+    const exported = el("td", "", recipeSeconds(recipe.export_seconds));
+    if (recipe.exports < recipe.exports_expected) {
+      exported.append(el("small", "recipe-sample", ` (${recipe.exports}/${recipe.exports_expected})`));
+    }
+    if (recipe.bazel_expected || recipe.profiles_expected) exported.append(el("small", "recipe-sample", " (all invocations)"));
+    tr.append(exported); body.append(tr);
+  }
+  table.append(head, body); scroll.append(table); box.append(scroll);
+  return box;
+}
+
+function renderRecipeRows(rows, legacy, detail) {
   const box = el("section", "recipe-list");
   box.append(el("h3", "", legacy ? "Bazel timings for four image recipes" : "Bazel build breakdown"));
   if (!rows.length) {
@@ -977,10 +1052,14 @@ function renderRecipeRows(rows, legacy) {
     return box;
   }
   box.append(el("p", "stage-note", "Recipes are ordered by recorded Bazel and export command time. Expand a recipe for its breakdown."));
-  const list = el("ol");
-  for (const row of rows) {
+  const list = el("ol"), group = rows.find(row => row.owner === "vs-container-images");
+  const batch = group && containerMembers(rows, detail);
+  const exportsInBatch = new Set(batch?.members.filter(({recipe}) =>
+    recipe.bazel_expected === 0 && recipe.profiles_expected === 0).map(({recipe}) => recipe.owner));
+  const topRows = rows.filter(row => !exportsInBatch.has(row.owner));
+  for (const row of topRows) {
     const item = el("li"), details = el("details");
-    details.open = row === rows[0];
+    details.open = row === topRows[0];
     const summary = el("summary", "timing-row");
     const name = el("span", "timing-name", row.owner);
     if (row.failed) name.append(el("small", "recipe-failed", "Command failed"));
@@ -996,6 +1075,7 @@ function renderRecipeRows(rows, legacy) {
       metrics.append(el("dt", "", title), cell);
     }
     details.append(summary, metrics);
+    if (row === group) details.append(renderContainerMembers(batch, row.bazel_seconds));
     item.append(details); list.append(item);
   }
   const notes = ["Lock waits, compiler subprocesses, nested builds and cache reads can overlap. The Bazel total also includes work such as analysis and linking. Cache fetch includes disk and remote reads."];
@@ -1012,7 +1092,7 @@ function renderRecipeTimings(job, repository) {
   const value = job.image_recipe_timings, rows = recipeRows(value);
   const box = el("div", "recipe-timings");
   if (rows) {
-    box.append(renderRecipeRows(rows, value.version === 1));
+    box.append(renderRecipeRows(rows, value.version === 1, value.container_breakdown));
   } else {
     let reason = value === undefined ? "not-recorded" : "invalid-timing";
     if ((value?.version === 1 || value?.version === 2) && value.status === "unavailable" &&

@@ -1,0 +1,276 @@
+"""NAT runtime and debug archives for the native AMD64 Trixie VS installer."""
+
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@orchagent_debug_apt_inputs//:apt_inputs.bzl", DEBUG_APT_INPUTS = "APT_INPUTS")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+_BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
+
+_LOCK = "@sonic_build_infra//apt:apt.lock.json"
+
+_COMPATIBLE = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+] + select({
+    "@sonic_swss//tools/bazel:asan_enabled": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-nat",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+_FILES = {
+    "start.sh": ("usr/bin/start.sh", "0755"),
+    "restore_nat_entries.py": ("usr/bin/restore_nat_entries.py", "0755"),
+    "supervisord.conf": ("etc/supervisor/conf.d/supervisord.conf", "0644"),
+    "critical_processes": ("etc/supervisor/critical_processes", "0644"),
+}
+
+tar(
+    name = "files",
+    srcs = _FILES.keys(),
+    mtree = [
+        path + " uid=0 gid=0 mode=" + mode + " time=0 type=file content=$(location " + source + ")"
+        for source, (path, mode) in _FILES.items()
+    ],
+)
+
+# The locked iptables postinst registers four alternatives. Debian selects
+# nft in auto mode, keeping the legacy IPv4/IPv6 alternatives available.
+_TABLES = [
+    "iptables",
+    "ip6tables",
+    "arptables",
+    "ebtables",
+]
+
+_SUFFIXES = [
+    "",
+    "-restore",
+    "-save",
+]
+
+tar(
+    name = "iptables_alternatives",
+    srcs = ["alternatives/" + table for table in _TABLES],
+    mtree = [
+        "var/lib/dpkg/alternatives/{0} uid=0 gid=0 mode=0644 time=0 type=file content=$(location alternatives/{0})".format(table)
+        for table in _TABLES
+    ] + [
+        "etc/alternatives/{0}{1} uid=0 gid=0 mode=0777 time=0 type=link link=/usr/sbin/{0}-nft{1}".format(table, suffix)
+        for table in _TABLES
+        for suffix in _SUFFIXES
+    ] + [
+        "usr/sbin/{0}{1} uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/{0}{1}".format(table, suffix)
+        for table in _TABLES
+        for suffix in _SUFFIXES
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" + suffix,
+        out = "manifest" + suffix + ".labels",
+        manifest = "//tools/bazel/image/vs/metadata:docker-nat" + suffix + ".manifest",
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+# The SWSS parent already installs natmgrd and natsyncd from swss_pkg.
+apt_layer(
+    name = "debian_runtime",
+    base = _BASE,
+    dependency_set = "nat_runtime_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["nat_runtime_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "debian_runtime_payload",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["nat_runtime_debian"]["amd64"].values()],
+    source_spec = ":inherited_packages.json",
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/nat-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-nat",
+    base = _BASE,
+    entrypoint = ["/usr/local/bin/supervisord"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    labels = ":labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_payload",
+        ":iptables_alternatives",
+        ":files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-nat.debug_symbols",
+    image = ":docker-nat",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-nat",
+    dependency_set = "orchagent_debug_subset_debian",
+    lock = "//dockers/docker-orchagent/bazel:debug_apt.lock.json",
+    packages = DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+# The maintained base now supplies vim as a hardlink to vim.tiny. Match the
+# shared debug-image convention when selecting the full Vim package.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+# Match the selected FIPS OpenSSH owner's ssh-agent group contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = ":docker-nat",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-nat",
+    controls = [label + ":control" for label in DEBUG_APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = ":debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/nat-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-nat-dbg",
+    base = ":docker-nat",
+    labels = ":labels-dbg",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-nat.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        ":debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-nat" + suffix + ".gz",
+        image = ":docker-nat" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]

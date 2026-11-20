@@ -8,6 +8,10 @@ from tools.bazel.build_helpers import export_archive
 from tools.bazel.ci import artifact_validation, command_log
 
 
+def image_version_option(version):
+    return "--//tools/bazel/oci:image_version=" + version
+
+
 def execution_root_from_bep(path):
     """Read the unique output root recorded by the accepted Bazel invocation."""
     roots = set()

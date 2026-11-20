@@ -60,6 +60,6 @@ Both runtime and debug variants and their exact recorded hashes are required.
 Generated evidence belongs under `artifacts/<name>`; untracked source files
 and tracked source edits cause acceptance to fail.
 
-The image version is passed through the `image_version` build setting to the
+The image version is passed through the shared `//tools/bazel/oci:image_version` build setting to the
 Make `Tag` label. Inherited component labels use the installed package receipt,
 including Common and the Rust supervisor listener.

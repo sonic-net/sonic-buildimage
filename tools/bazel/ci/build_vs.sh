@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the native VS ONIE installer and both runtime/debug container pairs.
+# Build the native VS ONIE installer with the selected container archive variants.
 set -euo pipefail
 
 if (( $# )); then
@@ -14,11 +14,17 @@ fi
 if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} == 1 ]]; then
     builder_args+=" -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
 fi
+if [[ ${SONIC_VS_RETRY_GO_FETCH:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_RETRY_GO_FETCH"
+fi
 options=(
     BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y
     ENABLE_ASAN=n ENABLE_SYNCD_RPC=n
     "SONIC_BUILDER_EXTRA_CMDLINE=$builder_args"
 )
+if [[ ${SONIC_ENABLE_DEBUG_LAYER:-y} == n ]]; then
+    options+=(SONIC_ENABLE_DEBUG_LAYER=n)
+fi
 revision=$(git rev-parse HEAD)
 mkdir -p artifacts/vs
 printf '%s\n' "$revision" > artifacts/vs/build-revision.txt

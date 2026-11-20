@@ -3,14 +3,26 @@ name: Image assembly rule contracts
 on:
   pull_request:
     paths:
+      - tools/bazel/ci/resources.py
       - tools/bazel/image/**
+      - tools/bazel/build_container_batch.py
+      - tools/bazel/common.bazelrc
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/tests/integration/container_batch.py
       - tools/bazel/image-assembly-design.md
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
   push:
     branches: [master]
     paths:
+      - tools/bazel/ci/resources.py
       - tools/bazel/image/**
+      - tools/bazel/build_container_batch.py
+      - tools/bazel/common.bazelrc
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/tests/integration/container_batch.py
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
   workflow_dispatch:
@@ -44,6 +56,14 @@ jobs:
           repository-cache: true
           disk-cache: image-rule-actions-${{ matrix.architecture }}
           cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Compare batched and standalone configured container outputs
+        run: python3 tools/bazel/tests/integration/container_batch.py --architecture ${{ matrix.architecture }}
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
       - name: Run public Bazel rule actions
         env:
           BAZELISK_GITHUB_TOKEN: ""

@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from tools.bazel.ci import resolution, time_vs_image
+from tools.bazel.ci import resolution, time_vs_image, resources
 
 MANIFEST = "kernel-packages.json"
 PROVENANCE = "kernel-provenance.json"
@@ -35,6 +35,7 @@ DEFAULT_REGISTRY = REGISTRY_PREFIX + "main"
 WATCHED = [
     ".gitmodules", "Makefile", "Makefile.work", "rules/linux-kernel.mk", "rules/linux-kernel.dep",
     "tools/bazel/ci/resolution.py", "tools/bazel/ci/time_vs_image.py",
+    "tools/bazel/ci/resources.py",
     "tools/bazel/ci/kernel_make_smoke.py", "rules/config",
     "tools/bazel/kernel", "build_debian.sh", "slave.mk", "Makefile.cache",
     "tools/bazel/ci/kernel_install_smoke.sh", "scripts/build_sbom.py",
@@ -673,19 +674,29 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
     state.mkdir(parents=True, mode=0o700, exist_ok=False)
     consumer = state / "consumer"
     shutil.copytree(workspace / "tools/bazel/kernel", consumer)
+    resource_policy = ""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        # The pinned producer launcher passes --jobs=1.
+        resource_policy = 'flag_policies { flag_name: "jobs" use_default {} }'
+        with (consumer / ".bazelrc").open("a") as rc:
+            rc.write(f"\nstartup --host_jvm_args=-Xmx{resources.JVM_HEAP_MB}m\n")
+            rc.write("build " + resources.build_options()[0] + "\n")
     shutil.copyfile(regular(workspace / DOWNLOADER_CONFIG), consumer / DOWNLOADER_CONFIG.name)
     require(configure_registry(consumer) == prepared["registry"], "kernel registry selection changed")
     if prepared["runner_cache_rc"]:
         # The pinned build.py skips the home RC and passes --repository_cache
         # on the command line. Import the worker's remote cache settings and
         # keep that launcher option from re-enabling a local repository cache.
-        policy = ('flag_policies { flag_name: "repository_cache" set_value { '
+        policy = resource_policy + ('flag_policies { flag_name: "repository_cache" set_value { '
                   'flag_value: "" behavior: FINAL_VALUE_IGNORE_OVERRIDES } }')
         with (consumer / ".bazelrc").open("a") as rc:
             rc.write("\nimport " + shlex.quote(prepared["runner_cache_rc"]) + "\n")
             # build.py also skips the system RC that configures Squid on native workers.
             rc.write("try-import /run/sonic-native-apt/bazel-source.bazelrc\n")
             rc.write("startup --invocation_policy=" + shlex.quote(policy) + "\n")
+    elif resource_policy:
+        with (consumer / ".bazelrc").open("a") as rc:
+            rc.write("startup --invocation_policy=" + shlex.quote(resource_policy) + "\n")
     (state / "plan.json").write_text(json.dumps(prepared, indent=2, sort_keys=True) + "\n")
     timings = None
     if os.environ.get("SONIC_VS_IMAGE_TIMINGS") == "1":

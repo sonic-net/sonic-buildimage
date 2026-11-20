@@ -1,7 +1,6 @@
 """AMD64 router-advertisement images using the source-built config-engine parent."""
 
 load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
@@ -22,9 +21,10 @@ exports_files([
     "critical_processes",
 ])
 
-string_flag(
+# Compatibility for callers of the previous per-image command-line flag.
+alias(
     name = "image_version",
-    build_setting_default = "",
+    actual = "//tools/bazel/oci:image_version",
     visibility = ["//dockers/docker-router-advertiser/config:__pkg__"],
 )
 

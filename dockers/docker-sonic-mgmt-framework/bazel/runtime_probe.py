@@ -42,7 +42,9 @@ def services_ready(records, expected):
             and (dependency["statename"] == "RUNNING" or
                  (dependency["statename"] == "EXITED" and dependency["exitstatus"] == 0))
             and all(item["statename"] == "RUNNING" and item["pid"] > 0
-                    for name, item in records.items() if name not in ("start", "dependent-startup")))
+                    for name, item in records.items() if name not in ("start", "dependent-startup"))
+            # Supervisor can report the launcher as RUNNING while it generates the TLS certificate.
+            and process_record(records["rest-server"]["pid"])["executable"] == "/usr/sbin/rest_server")
 
 
 def private_redis_identity(unix, tcp, pid):
@@ -171,7 +173,7 @@ def main():
                         break
                 except OSError:
                     pass
-                require(time.monotonic() < deadline, "original Supervisor startup did not finish\n" + details())
+                require(time.monotonic() < deadline, "timed out waiting for Supervisor and /usr/sbin/rest_server\n" + details())
                 time.sleep(0.1)
             require(Path("/var/sonic/config_status").read_bytes() == b"# Config files managed by sonic-config-engine\n", "original start hook failed")
             require(certificate.is_file() and key.is_file(), "original REST launcher did not generate its TLS certificate")
