@@ -3,6 +3,34 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Evaluates the boolean feature flags in a feature-flags.json file.
+
+Each entry compares a value read from the hardware against `version` using
+`comparison`. `source` says which value:
+
+- "fpga_version": the register at `reg_offset`, masked with `mask`, of the FPGA
+  whose PCI address is the pcie-variables.yaml variable `bdf_var`.
+- "onie_device_version": the ONIE Device Version of the CPU card IDPROM.
+
+Example feature-flags.json:
+    [
+      {
+        "name": "fan_duty_packed_in_one_word",
+        "source": "fpga_version",
+        "bdf_var": "switchcard_fpga_1_bdf",
+        "reg_offset": "0x0",
+        "mask": "0xfff",
+        "comparison": "LESS_THAN_OR_EQUAL",
+        "version": "0x304"
+      },
+      {
+        "name": "NH4210_SWITCH_HOST_POWER_CYCLE_SUPPORTED",
+        "source": "onie_device_version",
+        "comparison": "GREATER_THAN_OR_EQUAL",
+        "version": "0x2"
+      }
+    ]
+"""
 
 import json
 import operator
