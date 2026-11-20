@@ -32,6 +32,14 @@ def sonic_docker_archive(name, image, visibility = None):
 
     stem = name[:-len(".gz")]
 
+    # Materialize this exact producer's layout alongside its archive on demand.
+    native.filegroup(
+        name = name + ".boot-oci",
+        srcs = [image],
+        tags = ["manual"],
+        visibility = visibility,
+    )
+
     oci_load(
         name = stem + ".load",
         image = image,

@@ -1676,6 +1676,21 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 
 	$(FOOTER)
 
+# An existing installer must be rebuilt when switching its image-store format.
+ifeq ($(CONFIGURED_PLATFORM),vs)
+vs_boot_mode_stamp := $(TARGET_PATH)/.installer-docker-load-on-boot
+ifeq ($(DOCKER_LOAD_ON_BOOT),y)
+vs_boot_bundle_inputs := files/docker/docker files/docker/load-images.conf files/docker/sonic-load-images \
+                        installer/install.sh onie-mk-demo.sh scripts/build_boot_packages.py \
+                        tools/bazel/image/boot_image_bundle.py tools/bazel/image/image_config.py \
+                        tools/bazel/oci/boot_layout.py tools/bazel/oci/oci_layout.py
+endif
+.PHONY: check-vs-boot-mode
+$(vs_boot_mode_stamp): check-vs-boot-mode
+	@mkdir -p "$(@D)"
+	@printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' | cmp -s - "$@" || printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' > "$@"
+endif
+
 # targets for building installers with base image
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export PASSWORD := $(PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD := $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
@@ -1684,6 +1699,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         onie-image.conf \
         build_debian.sh \
         scripts/validate_sonic_version.py \
+        $(vs_boot_mode_stamp) \
+        $(vs_boot_bundle_inputs) \
         files/build_templates/sonic_version.yml.j2 \
         files/build_templates/sonic_debian_extension.j2 \
         files/build_templates/docker_image_ctl.j2 \
@@ -1761,6 +1778,12 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(LINUX_KBUILD)-install)
 
 	$(HEADER)
+	case "$(DOCKER_LOAD_ON_BOOT)" in
+	    n) ;;
+	    y) case "$(CONFIGURED_PLATFORM):$($*_IMAGE_TYPE)" in vs:onie|vs:kvm|vs:raw) ;; *) echo "DOCKER_LOAD_ON_BOOT=y requires a VS ONIE, KVM or raw installer" >&2; exit 1;; esac ;;
+	    *) echo "DOCKER_LOAD_ON_BOOT must be y or n" >&2; exit 1 ;;
+	esac
+	export DOCKER_LOAD_ON_BOOT="$(DOCKER_LOAD_ON_BOOT)"
 	# The receipt is private; only the completed summary bypasses the target log.
 	unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
 	if [[ "$@" = "target/sonic-vs.img.gz" || ( "$@" = "target/sonic-vs.bin" && "$${SONIC_VS_IMAGE_TIMINGS:-}" = 1 ) ]]; then

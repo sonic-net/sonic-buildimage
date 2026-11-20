@@ -76,6 +76,7 @@ jobs:
             disk_targets=(//tools/bazel/image/action_test:disk_action_test)
           fi
           bazel test //tools/bazel/image:assembly_formats_test \
+            //tools/bazel/image:boot_image_bundle_test \
             //tools/bazel/image:mkinitramfs_test \
             //tools/bazel/image:kernel_deb_test \
             //tools/bazel/image/tar_split_json:format_test \
@@ -95,7 +96,7 @@ jobs:
           retained = resolution.collect(Path.cwd(), directory)
           (directory / 'resolution.json').write_text(json.dumps(retained, indent=2) + '\n')
           PY
-          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
             directory="artifacts/image-rule-actions/${target%%/*}"
             mkdir -p "$directory"
             cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
@@ -110,7 +111,7 @@ jobs:
           test -s artifacts/image-rule-actions/module-graph.json
           test -s artifacts/image-rule-actions/module-graph-inspection.json
           test -s artifacts/image-rule-actions/resolution.json
-          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
             test -s "artifacts/image-rule-actions/$target/test.log"
             test -s "artifacts/image-rule-actions/$target/test.xml"
           done

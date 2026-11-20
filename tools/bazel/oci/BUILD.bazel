@@ -182,6 +182,12 @@ py_binary(
 
 # The same validator is used by Make publication and the Bazel consumer.
 py_library(
+    name = "boot_layout",
+    srcs = ["boot_layout.py"],
+    imports = ["."],
+)
+
+py_library(
     name = "oci_layout",
     srcs = ["oci_layout.py"],
     imports = ["."],

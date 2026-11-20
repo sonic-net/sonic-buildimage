@@ -3774,10 +3774,14 @@ jobs:
       - name: Build the VS installer (.bin)
         id: vs_build
         env:
+          DOCKER_LOAD_ON_BOOT: "y"
           SONIC_VS_RETRY_GO_FETCH: "1"
         run: |
           set -o pipefail
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
+          python3 -B scripts/validate_sonic_version.py target/sonic-vs.bin \
+            --installer --expect-boot-bundle --secure-upgrade-mode no_sign \
+            --expected-commit-id "$(git rev-parse --short HEAD)"
 
       - name: Validate VS container pairs and P4 debug symbols
         id: vs_validation
@@ -4167,6 +4171,7 @@ jobs:
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
         env:
+          DOCKER_LOAD_ON_BOOT: "y"
           SONIC_VS_IMAGE_TIMINGS: "1"
           SONIC_VS_RETRY_GO_FETCH: "1"
           TERM: dumb
@@ -4204,7 +4209,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B scripts/validate_sonic_version.py target/sonic-vs.bin \
-            --installer --secure-upgrade-mode no_sign \
+            --installer --expect-boot-bundle --secure-upgrade-mode no_sign \
             --expected-commit-id "$(git rev-parse --short HEAD)" \
             --json-output artifacts/vs/sonic-version.json
           selection=()

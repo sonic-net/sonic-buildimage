@@ -103,6 +103,21 @@ Standalone archive requests and unsupported Make configurations retain their
 existing behavior. A selected pair fails if either build/export fails or the
 owner declares different Bazel arguments for its two variants.
 
+Set `DOCKER_LOAD_ON_BOOT=y` to build the VS installer with an offline container
+image bundle. The default is `n`. The VS installer CI sets it to `y`.
+
+```sh
+make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y DOCKER_LOAD_ON_BOOT=y
+```
+
+The bundle carries the selected runtime images, package images and their tags.
+The installer places it in the version-specific Docker store. On first startup
+Docker imports the images before services start, verifies the tags and image
+IDs against the inventory in the host rootfs, and releases the bundle after
+success. An interrupted import is retried. The upgrade chroot also performs
+this step when package migration opens the new image's Docker store. A switch
+with a RAM-backed Docker store retains the source bundle for subsequent boots.
+
 The VS CI job invokes Make through `build_vs.sh` and checks the installer's
 `target/sonic-vs.bin.dockers` selection. The paired run verifies the retained
 Orchagent and Syncd debug archives and checks that their symbols match the

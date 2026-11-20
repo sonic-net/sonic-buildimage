@@ -13,7 +13,37 @@ import zipfile
 import yaml
 
 
-def read_installer_version(path):
+def validate_boot_bundle(archive, payload, squashfs):
+    name = "sonic-images.tar.gz"
+    if "dockerfs.tar.gz" in payload.namelist() or "installer/dockerfs.tar.gz" in archive.getnames():
+        raise ValueError("load-on-boot installer also contains a classic Docker store")
+    if name in payload.namelist():
+        source = payload.open(name)
+    else:
+        source = archive.extractfile("installer/" + name)
+    expected = json.loads(subprocess.check_output(
+        ["unsquashfs", "-cat", str(squashfs), "usr/share/sonic/docker-image-inventory.json"]
+    ))
+    with source, tarfile.open(fileobj=source, mode="r|gz") as bundle:
+        first = bundle.next()
+        if first is None or first.name != "manifest.json":
+            raise ValueError("boot bundle must start with a Docker load manifest")
+        images = json.load(bundle.extractfile(first))
+    actual = {}
+    for image in images:
+        config = image["Config"]
+        if not config.startswith("blobs/sha256/") or not image["RepoTags"]:
+            raise ValueError("invalid image config or missing tags in boot bundle")
+        for tag in image["RepoTags"]:
+            if tag in actual:
+                raise ValueError("duplicate tag in boot bundle: " + tag)
+            actual[tag] = "sha256:" + config.split("/")[-1]
+    if not actual or actual != expected:
+        raise ValueError("boot bundle tags or image IDs disagree with the installed inventory")
+    print(f"Verified {len(images)} packaged images and {len(expected)} boot-time tags")
+
+
+def read_installer_version(path, expect_boot_bundle=False):
     """Read the packaged filesystem without executing the installer wrapper."""
     with path.open("rb") as stream:
         marker = b"\nexit_marker\n"
@@ -30,6 +60,8 @@ def read_installer_version(path):
                     squashfs = Path(temporary) / "fs.squashfs"
                     with filesystem_zip.open("fs.squashfs") as source, squashfs.open("wb") as target:
                         shutil.copyfileobj(source, target)
+                    if expect_boot_bundle:
+                        validate_boot_bundle(archive, filesystem_zip, squashfs)
                     result = subprocess.run(
                         ["unsquashfs", "-cat", str(squashfs), "etc/sonic/sonic_version.yml"],
                         check=True, capture_output=True, text=True,
@@ -61,11 +93,12 @@ def main():
         "--secure-upgrade-mode", required=True, choices=("no_sign", "dev", "prod")
     )
     parser.add_argument("--installer", action="store_true", help="read version_file as a sonic-vs.bin installer")
+    parser.add_argument("--expect-boot-bundle", action="store_true", help="verify the offline bundle against the installed inventory")
     parser.add_argument("--expected-commit-id", help="require the packaged commit_id to match this build")
     parser.add_argument("--json-output", type=Path, help="save validated metadata as a CI receipt")
     args = parser.parse_args()
     try:
-        data = (read_installer_version(args.version_file) if args.installer
+        data = (read_installer_version(args.version_file, args.expect_boot_bundle) if args.installer
                 else yaml.safe_load(args.version_file.read_text()))
         validate_version(data, args.secure_upgrade_mode)
         if args.expected_commit_id is not None and data["commit_id"] != args.expected_commit_id:

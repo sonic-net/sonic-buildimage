@@ -62,7 +62,7 @@ def boot_config(text, kernel, options, version=None, root=None):
 
 
 @contextmanager
-def compressed_output(path, compression, zstd=None, pigz=None):
+def compressed_output(path, compression, zstd=None, pigz=None, gzip_level=None):
     if compression not in ('none', 'gzip', 'zstd'):
         raise ValueError('unsupported archive compression: ' + compression)
     tool = pigz if compression == 'gzip' else zstd
@@ -73,6 +73,8 @@ def compressed_output(path, compression, zstd=None, pigz=None):
             yield raw
             return
         command = [tool, '-n', '-c'] if compression == 'gzip' else [tool, '-q', '-c']
+        if compression == 'gzip' and gzip_level is not None:
+            command.append(f'-{gzip_level}')
         process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=raw)
         try:
             yield process.stdin

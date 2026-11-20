@@ -52,6 +52,24 @@ py_binary(
 )
 
 py_binary(
+    name = "boot_image_bundle",
+    srcs = ["boot_image_bundle.py"],
+    deps = [
+        ":kernel_inputs",
+        "//tools/bazel/oci:boot_layout",
+        "//tools/bazel/oci:oci_layout",
+    ],
+)
+
+py_test(
+    name = "boot_image_bundle_test",
+    srcs = ["boot_image_bundle_test.py"],
+    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
+    data = ["@sonic_build_infra//tools/build_tools:pigz"],
+    deps = [":boot_image_bundle"],
+)
+
+py_binary(
     name = "overlay2_store",
     srcs = ["overlay2_store.py"],
     deps = [":assembly_lib"],

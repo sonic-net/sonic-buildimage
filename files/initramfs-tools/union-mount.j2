@@ -171,7 +171,13 @@ mount_docker()
     if [ "$docker_inram" = true ]; then
         # Create an in memory filesystem (tmpfs, zram) and extract dockerfs.tar.gz
         mount_docker_inram
-        extract_dockerfs
+        if [ -x "${rootmnt}/usr/lib/docker/sonic-load-images" ] && [ "$secureboot" = false ]; then
+            # Keep the persistent source for the next RAM-backed boot. The
+            # importer releases only this link after verifying the image IDs.
+            ln -s "/host/$image_dir/sonic-images.tar.gz" "${rootmnt}/var/lib/docker/sonic-images.tar.gz"
+        else
+            extract_dockerfs
+        fi
     else
         # Mount the working directory of docker engine in the raw partition, bypass the overlay
         mount --bind ${rootmnt}/host/$image_dir/{{ DOCKERFS_DIR }} ${rootmnt}/var/lib/docker

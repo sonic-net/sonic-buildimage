@@ -31,10 +31,13 @@ class VSInstallerMetadataTest(unittest.TestCase):
         self.installer = self.directory / "sonic-vs.bin"
         self.receipt = self.directory / "metadata.json"
 
-    def package(self, metadata, *, tar_name="installer/fs.zip", zip_name="fs.squashfs"):
+    def package(self, metadata, *, tar_name="installer/fs.zip", zip_name="fs.squashfs", inventory=None):
         rootfs = self.directory / "rootfs"
         (rootfs / "etc/sonic").mkdir(parents=True)
         (rootfs / "etc/sonic/sonic_version.yml").write_text(metadata)
+        if inventory is not None:
+            (rootfs / "usr/share/sonic").mkdir(parents=True)
+            (rootfs / "usr/share/sonic/docker-image-inventory.json").write_text(json.dumps(inventory))
         squashfs = self.directory / "fs.squashfs"
         subprocess.run(
             ["mksquashfs", str(rootfs), str(squashfs), "-comp", "zstd",
@@ -44,6 +47,15 @@ class VSInstallerMetadataTest(unittest.TestCase):
         payload = io.BytesIO()
         with zipfile.ZipFile(payload, "w") as archive:
             archive.write(squashfs, zip_name)
+            if inventory is not None:
+                contents = io.BytesIO()
+                with tarfile.open(fileobj=contents, mode="w:gz") as bundle:
+                    data = json.dumps([{"RepoTags": ["example:latest"],
+                                        "Config": "blobs/sha256/" + "a" * 64}]).encode()
+                    entry = tarfile.TarInfo("manifest.json")
+                    entry.size = len(data)
+                    bundle.addfile(entry, io.BytesIO(data))
+                archive.writestr("sonic-images.tar.gz", contents.getvalue())
         outer = io.BytesIO()
         with tarfile.open(fileobj=outer, mode="w") as archive:
             member = tarfile.TarInfo(tar_name)
@@ -56,11 +68,11 @@ class VSInstallerMetadataTest(unittest.TestCase):
             (ROOT / "installer/sharch_body.sh").read_bytes() + outer.getvalue()
         )
 
-    def validate(self, commit_id="123456789"):
+    def validate(self, commit_id="123456789", *options):
         return subprocess.run(
             [sys.executable, "-B", str(ROOT / "scripts/validate_sonic_version.py"),
              str(self.installer), "--installer", "--secure-upgrade-mode", "no_sign",
-             "--expected-commit-id", commit_id, "--json-output", str(self.receipt)],
+             "--expected-commit-id", commit_id, "--json-output", str(self.receipt), *options],
             capture_output=True, text=True, timeout=30,
         )
 
@@ -71,6 +83,17 @@ class VSInstallerMetadataTest(unittest.TestCase):
         result = self.validate()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(json.loads(self.receipt.read_text()), METADATA)
+
+    def test_boot_bundle_matches_installed_inventory(self):
+        self.package(yaml.safe_dump(METADATA), inventory={"example:latest": "sha256:" + "a" * 64})
+        result = self.validate("123456789", "--expect-boot-bundle")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_boot_bundle_rejects_mismatched_tag(self):
+        self.package(yaml.safe_dump(METADATA), inventory={"example:release": "sha256:" + "a" * 64})
+        result = self.validate("123456789", "--expect-boot-bundle")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("disagree", result.stderr)
 
     def test_rejects_metadata_from_another_build(self):
         self.package(yaml.safe_dump(METADATA))
