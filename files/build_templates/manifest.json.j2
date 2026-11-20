@@ -38,6 +38,7 @@
     "container": {
         "privileged": {{ privileged if privileged else 'false' }},
         "volumes": {{ volumes.split()|json if volumes is defined else [] }},
+        "capabilities": {{ capabilities.split()|json if capabilities is defined else [] }},
         "tmpfs": {{ tmpfs.split()|json if tmpfs is defined else [] }}
     },
     "cli": {

@@ -17,7 +17,12 @@ $(DOCKER_PTP)_CONTAINER_NAME = ptp
 $(DOCKER_PTP)_SERVICE_REQUIRES = config-setup
 $(DOCKER_PTP)_SERVICE_AFTER = database syncd
 $(DOCKER_PTP)_CONTAINER_PRIVILEGED = false
+$(DOCKER_PTP)_CONTAINER_CAPABILITIES += NET_ADMIN SYS_TIME
 $(DOCKER_PTP)_CONTAINER_VOLUMES += /etc/sonic:/etc/sonic:ro
+# RUN_OPT mirrors CONTAINER_CAPABILITIES/CONTAINER_VOLUMES for installer docker_image_ctl.j2
+# (copied to /usr/bin/ptp.sh at image build). SPM uses the same options from manifest.json.
+$(DOCKER_PTP)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_TIME
+$(DOCKER_PTP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 
 $(DOCKER_PTP)_CLI_CONFIG_PLUGIN = /cli/config/plugins/ptp.py
 $(DOCKER_PTP)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_ptp.py
@@ -41,7 +46,3 @@ else
 SONIC_PACKAGES_LOCAL += $(DOCKER_PTP)
 endif
 endif
-
-# $(DOCKER_PTP)_RUN_OPT unused for SONIC_PACKAGES_LOCAL (see sonic-package-manager manifest path)
-# $(DOCKER_PTP)_RUN_OPT += -t --cap-add=SYS_TIME --cap-add=NET_ADMIN
-# $(DOCKER_PTP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
