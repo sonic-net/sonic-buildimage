@@ -52,6 +52,9 @@
 {% if 'peer_port' in nbr_or_peer %}
  neighbor {{name_or_ip}} port {{nbr_or_peer['peer_port']}}
 {% endif %}
+{% if 'tcp_mss' in nbr_or_peer %}
+ neighbor {{name_or_ip}} tcp-mss {{nbr_or_peer['tcp_mss']}}
+{% endif %}
 {% if 'passive_mode' in nbr_or_peer and nbr_or_peer['passive_mode'] == 'true' %}
  neighbor {{name_or_ip}} passive
 {% endif %}
