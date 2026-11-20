@@ -12,6 +12,14 @@
         "eStrKey" : "InvalidValue",
         "eStr": ["multiplier"]
     },
+    "LLDP_GLOBAL_TEST_INVALID_MGMT_ADDR_INTF": {
+        "desc": "LLDP test global table with mgmt_addr_interface not matching any L3 interface",
+        "eStrKey" : "LeafRef"
+    },
+    "LLDP_GLOBAL_TEST_MGMT_ADDR_INTF_WITH_SUPP_MGMT_TLV": {
+        "desc": "LLDP test global table rejects mgmt_addr_interface when supp_mgmt_address_tlv is true",
+        "eStr": ["mgmt_addr_interface cannot be set when supp_mgmt_address_tlv is true"]
+    },
     "LLDP_PORT_TEST": {
         "desc": "LLDP test LLDP port table"
     },

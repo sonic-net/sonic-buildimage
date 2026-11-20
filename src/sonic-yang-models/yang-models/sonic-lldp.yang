@@ -7,6 +7,22 @@ module sonic-lldp {
         prefix prt;
     }
 
+    import sonic-loopback-interface {
+        prefix lointf;
+    }
+
+    import sonic-vlan {
+        prefix vlan;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-mgmt_port {
+        prefix mgmtprt;
+    }
+
     organization
         "SONiC";
 
@@ -87,6 +103,33 @@ module sonic-lldp {
                     default false;
                     description
                         "Suppress sending of Management Address TLV in LLDP frames";
+                }
+
+                leaf mgmt_addr_interface {
+                    must "not(../supp_mgmt_address_tlv = 'true')" {
+                        error-message
+                            "mgmt_addr_interface cannot be set when supp_mgmt_address_tlv is true";
+                    }
+                    type union {
+                        type leafref {
+                            path "/lointf:sonic-loopback-interface/lointf:LOOPBACK_INTERFACE/lointf:LOOPBACK_INTERFACE_LIST/lointf:name";
+                        }
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/mgmtprt:sonic-mgmt_port/mgmtprt:MGMT_PORT/mgmtprt:MGMT_PORT_LIST/mgmtprt:name";
+                        }
+                    }
+                    description
+                        "Interface whose IP is advertised in the LLDP Management
+                        Address TLV. lldpmgrd resolves the IP at runtime.";
                 }
 
                 leaf supp_system_capabilities_tlv {

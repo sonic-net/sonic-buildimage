@@ -7,11 +7,21 @@
                         "enabled": "true",
                         "hello_time": "20",
                         "multiplier": "5",
-                        "supp_mgmt_address_tlv": "true",
+                        "supp_mgmt_address_tlv": "false",
                         "supp_system_capabilities_tlv": "false",
+                        "mgmt_addr_interface": "Loopback0",
                         "system_name": "sonic",
                         "system_description": "sonic-system"
                 }
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
             }
         }
     },
@@ -76,6 +86,46 @@
                         "system_name": "sonic",
                         "system_description": "sonic-system"
                 }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_INVALID_MGMT_ADDR_INTF": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "10",
+                        "multiplier": "5",
+                        "mgmt_addr_interface": "Loopback99",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        }
+    },
+    "LLDP_GLOBAL_TEST_MGMT_ADDR_INTF_WITH_SUPP_MGMT_TLV": {
+        "sonic-lldp:sonic-lldp": {
+            "sonic-lldp:LLDP": {
+                "sonic-lldp:GLOBAL": {
+                        "mode": "TRANSMIT",
+                        "enabled": "true",
+                        "hello_time": "10",
+                        "multiplier": "5",
+                        "supp_mgmt_address_tlv": "true",
+                        "mgmt_addr_interface": "Loopback0",
+                        "system_name": "sonic",
+                        "system_description": "sonic-system"
+                }
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
             }
         }
     },
