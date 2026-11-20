@@ -17,14 +17,21 @@
 #
 
 import os
-from typing import List, Tuple
+import tempfile
+from pathlib import Path
+from typing import List, Optional, Tuple
 
 try:
-    from sonic_platform_base.liquid_cooling_base import LiquidCoolingBase
+    from sonic_platform_base.leakage_sensor_test_base import LeakageSensorTestBase
+    from sonic_platform_base.liquid_cooling_base import LeakSeverity, LiquidCoolingBase
+    from sonic_platform import leakage_sensor
     from sonic_platform.leakage_sensor import LeakageSensor
     from sonic_platform.utils import hw_mgmt_path
+    from sonic_py_common.logger import Logger
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
+
+logger = Logger()
 
 
 def _sorted_numeric_subdirs(parent: str) -> List[int]:
@@ -58,9 +65,83 @@ def _discover_leakage_hw_indices() -> List[Tuple[int, int]]:
     return pairs
 
 
+def _store_test_leak(sensor: LeakageSensor, severity: Optional[LeakSeverity]):
+    """
+    Write the marker of `sensor` with `severity`, or remove it if `severity`
+    is None. The marker is replaced atomically by a rename. Raises OSError.
+    """
+    marker, store = sensor._test_leak_marker(), leakage_sensor.LEAK_TEST_DIR
+    if severity is None:
+        Path(marker).unlink(missing_ok=True)
+        return
+    if sensor._get_test_leak() == severity:
+        return
+    # Create only the leaf, never /run/bmc itself.
+    Path(store).mkdir(0o755, exist_ok=True)
+    os.chmod(store, 0o755)  # override the umask
+    fd, tmp = tempfile.mkstemp(dir=store)
+    try:
+        with os.fdopen(fd, "w") as tmp_file:
+            tmp_file.write(severity.value)
+        os.replace(tmp, marker)
+    except BaseException:
+        os.remove(tmp)
+        raise
+
+
+class LeakageSensorTest(LeakageSensorTestBase):
+    """
+    Leak test interface of the NVIDIA BMC. Test leaks are marker files that
+    each LeakageSensor reads. Every request is logged to syslog.
+    """
+
+    def __init__(self, sensors):
+        super().__init__()
+        names = [sensor.get_name() for sensor in sensors]
+        # A name shared by two channels is ambiguous and cannot be addressed.
+        self._sensors = {name: sensor for name, sensor in zip(names, sensors) if names.count(name) == 1}
+
+    def set_test_leak(self, sensor_name, enable, *, severity=LeakSeverity.MINOR):
+        request = f"inject severity={getattr(severity, 'value', severity)}" if enable else "withdraw"
+        sensor = self._sensors.get(sensor_name)
+        if sensor is None:
+            logger.log_notice(f"leak test: sensor {sensor_name!r}: {request}: refused, no single sensor has this name")
+            return False
+        try:
+            _store_test_leak(sensor, LeakSeverity(severity) if enable else None)
+        except (OSError, ValueError) as exc:
+            logger.log_notice(f"leak test: sensor {sensor_name}: {request}: failed: {exc}")
+            return False
+        logger.log_notice(f"leak test: sensor {sensor_name}: {request}: done")
+        return True
+
+    def is_test_leak_enabled(self, sensor_name):
+        sensor = self._sensors.get(sensor_name)
+        return sensor is not None and sensor._get_test_leak() is not None
+
+    def clear_test_leaks(self):
+        """Remove every marker, including files that belong to no sensor."""
+        store = leakage_sensor.LEAK_TEST_DIR
+        try:
+            for name in os.listdir(store):
+                try:
+                    os.remove(os.path.join(store, name))
+                except OSError:
+                    pass
+            cleared = not os.listdir(store)
+        except FileNotFoundError:
+            cleared = True
+        except OSError:
+            cleared = False
+        result = "done" if cleared else "failed, the store is not empty"
+        logger.log_notice(f"leak test: withdraw all: {result}")
+        return cleared
+
+
 class LiquidCooling(LiquidCoolingBase):
     def __init__(self):
         sensors = [LeakageSensor(a2d, channel) for a2d, channel in _discover_leakage_hw_indices()]
+        self._leak_test = LeakageSensorTest(sensors)
 
         profiles_by_type = {}
         for sensor in sensors:
@@ -69,3 +150,6 @@ class LiquidCooling(LiquidCoolingBase):
                 continue
             profiles_by_type.setdefault(profile.get_type(), profile)
         super().__init__(len(sensors), sensors, profiles=list(profiles_by_type.values()))
+
+    def get_leak_sensor_test(self):
+        return self._leak_test
