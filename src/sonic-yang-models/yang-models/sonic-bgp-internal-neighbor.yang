@@ -23,6 +23,14 @@ module sonic-bgp-internal-neighbor {
         prefix lag;
     }
 
+    import sonic-vlan {
+        prefix vlan;
+    }
+
+    import sonic-vlan-sub-interface {
+        prefix subintf;
+    }
+
     organization
         "SONiC";
 
@@ -31,6 +39,14 @@ module sonic-bgp-internal-neighbor {
 
     description
         "SONIC BGP Internal Neighbor for multi asic platforms";
+
+    revision 2026-11-19 {
+        description
+            "neighbor names a VLAN by leafref to VLAN and a sub-interface by leafref to
+             VLAN_SUB_INTERFACE, so an unnumbered neighbor cannot name an interface that does
+             not exist and the interface's removal finds the neighbors that use it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2021-04-10 {
         description
@@ -48,6 +64,9 @@ module sonic-bgp-internal-neighbor {
                 }
 
                 leaf neighbor {
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type union {
                         type inet:ip-address;
                         type leafref {
@@ -56,14 +75,16 @@ module sonic-bgp-internal-neighbor {
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                         }
-                        type string {
-                            pattern '(Ethernet|Eth|PortChannel|Po)[0-9]+\.[0-9]+';
+                        type leafref {
+                            path "/subintf:sonic-vlan-sub-interface/subintf:VLAN_SUB_INTERFACE/subintf:VLAN_SUB_INTERFACE_LIST/subintf:name";
                         }
                     }
-                    description "BGP Neighbor address or interface name";
+                    description
+                        "BGP neighbor address, or the port, port channel, VLAN or VLAN sub-interface
+                         of an unnumbered neighbor; the interface must exist in its table.";
                 }
                 uses bgpcmn:sonic-bgp-cmn-neigh {
                     refine asn {

@@ -546,6 +546,11 @@ The table key can be a plain neighbor IP (e.g. `BGP_NEIGHBOR|10.0.0.61`) or a
 form, `vrf_name` accepts a VRF name (e.g. `default`, `Vrf1`) or a VNet name
 (e.g. `Vnet1`) for overlay BGP neighbors.
 
+An unnumbered neighbor is keyed by a port, port channel, VLAN or VLAN sub-interface,
+which must exist in `PORT`, `PORTCHANNEL`, `VLAN` or `VLAN_SUB_INTERFACE`.
+`local_addr` may name a port, port channel, loopback or VLAN, which must exist in
+`PORT`, `PORTCHANNEL`, `LOOPBACK_INTERFACE` or `VLAN`.
+
 ```
 {
 "BGP_NEIGHBOR": {
@@ -1210,6 +1215,9 @@ instance is supported in SONiC.
 
 ### DHCPV4_RELAY
 
+The key names a VLAN, which must exist in `VLAN`. `source_interface` must exist in `PORT`,
+`PORTCHANNEL`, `VLAN` or `LOOPBACK_INTERFACE`.
+
 ```
 {
 "DHCPV4_RELAY": {
@@ -1247,6 +1255,7 @@ BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_tab
 
 ### DHCP_SERVER_IPV4
 IPV4 DHCP Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT**, **DHCP_SERVER_IPV4_MATCH**, **DHCP_SERVER_IPV4_BINDING** tables.
+The **DHCP_SERVER_IPV4** key names a VLAN, which must exist in `VLAN`, or the midplane bridge.
 ```
 {
     "DHCP_SERVER_IPV4": {
@@ -2065,6 +2074,7 @@ The **MUX_LINKMGR** table is used for dualtor device configuration.
 ### NEIGH
 
 The **NEIGH** table is used to keep track of resolved and static neighbors.
+The interface in the key must exist in `PORT`, `PORTCHANNEL` or `VLAN`.
 
 Resolve case:
 ```
@@ -3527,6 +3537,7 @@ For the flags that can be changed by reconfiguration, we can update entries in `
 ### RADIUS
 
 The RADIUS and RADIUS_SERVER tables define RADIUS configuration parameters. RADIUS table carries global configuration while RADIUS_SERVER table carries per server configuration.
+A RADIUS_SERVER `src_intf` must exist in `PORT`, `PORTCHANNEL`, `VLAN`, `LOOPBACK_INTERFACE` or `MGMT_PORT`.
 
 ```
    "RADIUS": {
@@ -3868,7 +3879,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 
 **dpu_vnet**: Name of the vnet used for VNET tunnel route in SmartSwitch HA scenarios. Replaces `vnet_name`.
 
-**dpu_vlan**: DPU VLAN identifier, referencing a VLAN name from the VLAN table.
+**dpu_vlan**: The VLAN hamgrd resolves the DPU PA address on; it must exist in the VLAN table.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 

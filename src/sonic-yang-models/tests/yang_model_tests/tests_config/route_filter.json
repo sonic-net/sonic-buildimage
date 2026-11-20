@@ -635,6 +635,132 @@
                 ]
             }
         }
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_interface": "Vlan100"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_MISSING": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_interface": "Vlan100"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_neighbor": [
+                            "Vlan100"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN_MISSING": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_neighbor": [
+                            "Vlan100"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_4095": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_interface": "Vlan4095"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN_4095": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "stmt_name": 1,
+                        "route_operation": "permit",
+                        "match_neighbor": [
+                            "Vlan4095"
+                        ]
+                    }
+                ]
+            }
+        }
     }
 }
 

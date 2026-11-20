@@ -352,5 +352,377 @@
                 ]
             }
         }
+    },
+    "MCLAG_UNIQUE_IP_VALID_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet10",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet10",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel2"
+                    },
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel10"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan12"
+                    },
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "PortChannel10",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan12"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan12"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "12.1.1.1/24",
+                        "scope": "global",
+                        "name": "Vlan12"
+                    }
+                ]
+            }
+        },
+        "sonic-mclag:sonic-mclag": {
+            "sonic-mclag:MCLAG_DOMAIN": {
+                "MCLAG_DOMAIN_LIST": [
+                    {
+                        "domain_id": "123",
+                        "source_ip": "12.1.1.1",
+                        "peer_ip": "12.1.1.2",
+                        "peer_link": "PortChannel2",
+                        "keepalive_interval": "1",
+                        "session_timeout": "30"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_INTERFACE": {
+                "MCLAG_INTERFACE_LIST": [
+                    {
+                        "domain_id": "123",
+                        "if_name": "PortChannel10",
+                        "if_type": "Portchannel"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_UNIQUE_IP": {
+                "MCLAG_UNIQUE_IP_LIST": [
+                    {
+                        "if_name": "Vlan100",
+                        "unique_ip": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "MCLAG_UNIQUE_IP_VLAN_MISSING_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet10",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet10",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel2"
+                    },
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel10"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan12"
+                    },
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "PortChannel10",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan12"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan12"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "12.1.1.1/24",
+                        "scope": "global",
+                        "name": "Vlan12"
+                    }
+                ]
+            }
+        },
+        "sonic-mclag:sonic-mclag": {
+            "sonic-mclag:MCLAG_DOMAIN": {
+                "MCLAG_DOMAIN_LIST": [
+                    {
+                        "domain_id": "123",
+                        "source_ip": "12.1.1.1",
+                        "peer_ip": "12.1.1.2",
+                        "peer_link": "PortChannel2",
+                        "keepalive_interval": "1",
+                        "session_timeout": "30"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_INTERFACE": {
+                "MCLAG_INTERFACE_LIST": [
+                    {
+                        "domain_id": "123",
+                        "if_name": "PortChannel10",
+                        "if_type": "Portchannel"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_UNIQUE_IP": {
+                "MCLAG_UNIQUE_IP_LIST": [
+                    {
+                        "if_name": "Vlan200",
+                        "unique_ip": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "MCLAG_UNIQUE_IP_VLAN_4095_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet10",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet10",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel2"
+                    },
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel10"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan12"
+                    },
+                    {
+                        "name": "Vlan100"
+                    },
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "PortChannel10",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan12"
+                    },
+                    {
+                        "port": "PortChannel2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan12"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "12.1.1.1/24",
+                        "scope": "global",
+                        "name": "Vlan12"
+                    }
+                ]
+            }
+        },
+        "sonic-mclag:sonic-mclag": {
+            "sonic-mclag:MCLAG_DOMAIN": {
+                "MCLAG_DOMAIN_LIST": [
+                    {
+                        "domain_id": "123",
+                        "source_ip": "12.1.1.1",
+                        "peer_ip": "12.1.1.2",
+                        "peer_link": "PortChannel2",
+                        "keepalive_interval": "1",
+                        "session_timeout": "30"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_INTERFACE": {
+                "MCLAG_INTERFACE_LIST": [
+                    {
+                        "domain_id": "123",
+                        "if_name": "PortChannel10",
+                        "if_type": "Portchannel"
+                    }
+                ]
+            },
+            "sonic-mclag:MCLAG_UNIQUE_IP": {
+                "MCLAG_UNIQUE_IP_LIST": [
+                    {
+                        "if_name": "Vlan4095",
+                        "unique_ip": "enable"
+                    }
+                ]
+            }
+        }
     }
 }

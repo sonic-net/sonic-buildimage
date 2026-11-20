@@ -27,5 +27,9 @@
     "VALID_NEIGH_PORT": {
         "desc": "Load valid PORT"
  
+    },
+    "NEIGH_VLAN_MISSING": {
+        "desc": "Load NEIGH on a VLAN that does not exist",
+        "eStrKey": "LeafRef"
     }
 }
