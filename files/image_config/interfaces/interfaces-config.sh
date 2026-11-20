@@ -103,7 +103,7 @@ CFGGEN_PARAMS=(
 # so interfaces.j2 can render the BMC interface stanza with the correct IP.
 #   switch_bmc=1  -> use bmc_addr  (BMC's own IP on the link)
 #   switch_host=1 -> use bmc_if_addr (Switch-Host's IP on the BMC link)
-PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+PLATFORM=$(sonic-cfggen-lite-rs -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
 PLATFORM_ENV_CONF="/usr/share/sonic/device/$PLATFORM/platform_env.conf"
 IS_SWITCH_BMC=0
 IS_SWITCH_HOST=0

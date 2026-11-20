@@ -1,0 +1,5 @@
+sonic-cfggen-lite-rs (1.0.0) unstable; urgency=medium
+
+  * Initial release.
+
+ -- SONiC Team <sonic-dev@lists.sonicfoundation.dev>  Thu, 20 Aug 2026 00:00:00 +0000

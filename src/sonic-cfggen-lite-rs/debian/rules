@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+
+TARGET_ARCH := $(or $(DEB_HOST_ARCH),$(shell dpkg-architecture -qDEB_HOST_ARCH))
+RUST_TARGET := $(strip \
+	$(if $(filter amd64,$(TARGET_ARCH)),x86_64-unknown-linux-gnu, \
+	$(if $(filter arm64,$(TARGET_ARCH)),aarch64-unknown-linux-gnu, \
+	$(if $(filter armhf,$(TARGET_ARCH)),armv7-unknown-linux-gnueabihf))))
+ifeq ($(RUST_TARGET),)
+$(error Unsupported Rust target architecture: $(TARGET_ARCH))
+endif
+CARGO_TARGET_DIR ?= target
+CARGO_FLAGS := --locked --target $(RUST_TARGET)
+SOURCE_PARENT := $(abspath $(CURDIR)/..)
+export RUSTFLAGS := $(strip $(RUSTFLAGS) --remap-path-prefix=$(SOURCE_PARENT)=.)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release --all-features $(CARGO_FLAGS)
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
+	cargo test --all-targets --all-features $(CARGO_FLAGS)
+endif
+
+override_dh_auto_install:
+	install -D -m 0755 $(CARGO_TARGET_DIR)/$(RUST_TARGET)/release/sonic-cfggen-lite-rs \
+		debian/sonic-cfggen-lite-rs/usr/bin/sonic-cfggen-lite-rs
+
+override_dh_auto_clean:
+	cargo clean

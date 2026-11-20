@@ -4,6 +4,7 @@ DOCKER_CONFIG_ENGINE_TRIXIE = docker-config-engine-trixie.gz
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_PATH = $(DOCKERS_PATH)/docker-config-engine-trixie
 
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_DEPENDS += $(LIBSWSSCOMMON) \
+                                          $(SONIC_CFGGEN_LITE_RS) \
                                           $(LIBYANG3) \
                                           $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
