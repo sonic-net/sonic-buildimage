@@ -10,7 +10,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.debian.tar.xz==c4f4c43714cf0d226c605a9cfaba3d0b
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3-2.dsc==edb9e0d93d51d322676e230db212c9cb
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.3.orig.tar.gz==f7cff5c6a848e34c474d35b72c017a7f
-https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==c008df7303a670b38b47f44418d3a81e
+https://api.github.com/repos/fullstorydev/grpcurl/releases/latest==510206e1585cd2382cbe6d54cf006daa
 https://api.github.com/repos/influxdata/influxdb/releases/latest==f2b3d280953c802d2c9cec574ee474de
 https://api.github.com/repos/nanomsg/nanomsg/releases/latest==6e3be7094a1d2296f3b10893de16565b
 https://api.github.com/repos/sflow/sflowtool/releases/latest==6b39361ee3e1293d23f6f7189b25e585

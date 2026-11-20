@@ -159,7 +159,7 @@ gettext==0.21-12
 gettext-base==0.21-12
 gfortran==4:12.2.0-3
 gfortran-12==12.2.0-14+deb12u1
-ghostscript==10.0.0~dfsg-11+deb12u8
+ghostscript==10.0.0~dfsg-11+deb12u9
 gir1.2-atk-1.0==2.46.0-5
 gir1.2-atspi-2.0==2.46.0-5
 gir1.2-freedesktop==1.74.0-3
@@ -721,9 +721,9 @@ libgrpc++-dev==1.51.1-3+b1
 libgrpc++1.51==1.51.1-3+b1
 libgrpc-dev==1.51.1-3+b1
 libgrpc29==1.51.1-3+b1
-libgs-common==10.0.0~dfsg-11+deb12u8
-libgs10==10.0.0~dfsg-11+deb12u8
-libgs10-common==10.0.0~dfsg-11+deb12u8
+libgs-common==10.0.0~dfsg-11+deb12u9
+libgs10==10.0.0~dfsg-11+deb12u9
+libgs10-common==10.0.0~dfsg-11+deb12u9
 libgsl27==2.7.1+dfsg-5+deb12u1
 libgslcblas0==2.7.1+dfsg-5+deb12u1
 libgsm1==1.0.22-1
