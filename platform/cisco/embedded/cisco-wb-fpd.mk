@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # See platform/cisco/COPYRIGHT for the full license text.
 
-export CISCO_WB_FPD := \
+CISCO_WB_FPD := \
     cisco-wb-fpd-util_$(CISCO_WB_FPD_VERSION)_amd64.deb \
     cisco-wb-fpd_$(CISCO_WB_FPD_VERSION)_all.deb
 

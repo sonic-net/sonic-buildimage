@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-import shutil
+import tempfile
 import subprocess
 
 from setuptools import find_packages, setup
@@ -11,10 +11,10 @@ deb_path = Path(os.environ["CISCO_EMBEDDED_PLATFORM_MODULE_DEB"])
 if not deb_path.is_file():
     raise RuntimeError(f"Cisco platform module deb not found: {deb_path}")
 
-stage = deb_path.parent / ".cisco-platform-wheel-src"
-shutil.rmtree(stage, ignore_errors=True)
-stage.mkdir(parents=True)
-try:
+with tempfile.TemporaryDirectory(
+    prefix=".cisco-platform-wheel-src-", dir=deb_path.parent
+) as stage_dir:
+    stage = Path(stage_dir)
     subprocess.run(["dpkg-deb", "-x", str(deb_path), str(stage)], check=True)
     package_root = stage / "usr/lib/python3/dist-packages"
     packages = find_packages(
@@ -30,6 +30,5 @@ try:
         license="Apache-2.0",
         packages=packages,
         package_dir={"": str(package_root)},
+        package_data={"sonic_platform": ["**/*"]},
     )
-finally:
-    shutil.rmtree(stage, ignore_errors=True)

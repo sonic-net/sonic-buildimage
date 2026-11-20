@@ -3,7 +3,7 @@
 # See platform/cisco/COPYRIGHT for the full license text.
 
 # Embedded platforms use the SDK SAI artifact.
-export SDK_SAI := \
+SDK_SAI := \
     cisco-gibraltar_$(CISCO_Q200_SILICON_ONE_VERSION)_amd64.deb
 
 # SDK SAI dependency aliases.

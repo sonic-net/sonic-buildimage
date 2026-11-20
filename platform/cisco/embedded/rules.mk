@@ -10,8 +10,7 @@ include $(PLATFORM_SRC_PATH)/versions.mk
 include $(PLATFORM_SRC_PATH)/platform-rules.mk
 
 # Platform setup: platform.conf and device data.
-rc := $(shell CISCO_PLATFORM_ID=$(CISCO_PLATFORM_ID) IMAGE_DISTRO=$(IMAGE_DISTRO) \
-    $(PLATFORM_PATH)/platform_setup.sh >/dev/null; echo $$?)
+rc := $(shell $(PLATFORM_PATH)/platform_setup.sh >/dev/null; echo $$?)
 ifneq ($(rc),0)
 $(error Cisco embedded platform_setup.sh returned error $(rc))
 endif

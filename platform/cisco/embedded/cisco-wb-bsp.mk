@@ -4,10 +4,10 @@
 
 # BSP packages.
 
-export CISCO_WB_BSP := cisco-wb-bsp_$(CISCO_WB_BSP_VERSION)_amd64.deb
-export CISCO_WB_BSP_PYLIB := cisco-wb-bsp-pylib_$(CISCO_WB_BSP_VERSION)_amd64.deb
+CISCO_WB_BSP := cisco-wb-bsp_$(CISCO_WB_BSP_VERSION)_amd64.deb
+CISCO_WB_BSP_PYLIB := cisco-wb-bsp-pylib_$(CISCO_WB_BSP_VERSION)_amd64.deb
 
-export CISCO_WB_BSP_ACPI_PID_DEBS := \
+CISCO_WB_BSP_ACPI_PID_DEBS := \
     cisco-wb-acpi-8102-64h-o_$(CISCO_WB_BSP_VERSION)_amd64.deb \
     cisco-wb-acpi-8201-32fh-o_$(CISCO_WB_BSP_VERSION)_amd64.deb \
     cisco-wb-acpi-8101-32fh-o-c01_$(CISCO_WB_BSP_VERSION)_amd64.deb
@@ -18,10 +18,10 @@ CISCO_WB_BSP_8201_32FH_O := \
     cisco-wb-8201-32fh-o_$(CISCO_WB_BSP_VERSION)_amd64.deb
 CISCO_WB_BSP_8101_32FH_O_C01 := \
     cisco-wb-8101-32fh-o-c01_$(CISCO_WB_BSP_VERSION)_amd64.deb
-export CISCO_WB_BSP_8000 := \
+CISCO_WB_BSP_8000 := \
     cisco-wb-8000_$(CISCO_WB_BSP_VERSION)_amd64.deb
 
-export CISCO_WB_BSP_PID_DEBS := \
+CISCO_WB_BSP_PID_DEBS := \
     $(CISCO_WB_BSP_8102_64H_O) \
     $(CISCO_WB_BSP_8201_32FH_O) \
     $(CISCO_WB_BSP_8101_32FH_O_C01) \

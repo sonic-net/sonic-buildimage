@@ -8,7 +8,7 @@ set -e
 ROOT=$(pwd)
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
-if [ -f "${SCRIPT_DIR}/src/platform_setup.sh" ]; then
+if [ -f "${SCRIPT_DIR}/src/rules.mk" ]; then
     bash "${SCRIPT_DIR}/src/platform_setup.sh"
     PLATFORM_CONF_SOURCE="${SCRIPT_DIR}/src/platform.conf"
 else

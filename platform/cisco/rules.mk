@@ -14,7 +14,6 @@ PLATFORM_SRC_PATH := $(CISCO_EMBEDDED_PLATFORM_PATH)
 CISCO_PLATFORM_SOURCE_MODE := embedded
 endif
 export PLATFORM_SRC_PATH
-export CISCO_PLATFORM_SOURCE_MODE
 
 include $(PLATFORM_SRC_PATH)/rules.mk
 
@@ -27,7 +26,6 @@ endif
 # Comma-separated capabilities supported by this platform. Source-backed
 # platforms retain the current DShell behavior unless they override this.
 CISCO_PLATFORM_CAPABILITIES ?= dshell
-export CISCO_PLATFORM_CAPABILITIES
 
 # The vendor rules already include these shared Docker fragments through
 # PLATFORM_PATH. The embedded rules do not, so include them only for fallback.
