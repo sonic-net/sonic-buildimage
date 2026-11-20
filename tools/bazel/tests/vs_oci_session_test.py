@@ -186,7 +186,9 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         self.assertIn("debug verification output", (self.directory / "artifacts/vs/p4rt-debug-verification.log").read_text())
 
     def test_runtime_only_verifier_binds_runtime_policies_without_debug_producers(self):
-        result = self.run_verifier(runtime_only=True)
+        result = self.run_verifier(runtime_only=True, settings={
+            "SONIC_BAZEL_DBG_DOCKER_IMAGES": "", "DEBS_PATH": "", "SONIC_P4RT": "", "SONIC_P4RT_DBG": "",
+        })
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(self.make_calls()), 1)
         self.assertFalse((self.directory / "producers.log").exists())
@@ -194,6 +196,15 @@ $(addprefix target/,docker-orchagent.gz docker-orchagent-dbg.gz docker-syncd-vs.
         for family in ("swss", "syncd"):
             path = self.directory / "artifacts/vs" / (family + "-installed-images-policy.json")
             self.assertEqual(path.read_text(), "//tools/bazel/tests:" + family + "_runtime_installed_images_policy")
+
+    def test_runtime_only_verifier_requires_all_runtime_producers(self):
+        images = self.settings["SONIC_BAZEL_DOCKER_IMAGES"].split()
+        for missing in images:
+            with self.subTest(missing=missing):
+                producers = " ".join(image for image in images if image != missing)
+                result = self.run_verifier(runtime_only=True, settings={"SONIC_BAZEL_DOCKER_IMAGES": producers})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.directory / "bazel-arguments.jsonl").exists())
 
     def test_image_test_failure_retains_evidence_and_stops_debug_verification(self):
         result = self.run_verifier(IMAGE_STATUS="7")
