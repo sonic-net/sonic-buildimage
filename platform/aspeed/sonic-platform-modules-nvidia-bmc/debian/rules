@@ -44,6 +44,19 @@ override_dh_auto_install:
 	echo "HW_MANAGEMENT $(MLNX_HW_MANAGEMENT_VERSION)" > $(CURDIR)/component-versions
 	echo "KERNEL $(KVERSION_SHORT)" >> $(CURDIR)/component-versions
 	dh_install -p$(PACKAGE_NAME) component-versions etc/mlnx/
+	# Console mux helper + the console-monitor proxy drop-in that calls it.
+	# A drop-in is a plain conf file, not a unit, so dh_installsystemd never
+	# touches it -- it has to be dh_install'd explicitly (same trap as a named
+	# .service file).
+	dh_installdirs -p$(PACKAGE_NAME) usr/bin/
+	dh_install -p$(PACKAGE_NAME) scripts/nvidia-bmc-console-mux.sh usr/bin/
+	dh_installdirs -p$(PACKAGE_NAME) usr/lib/systemd/system/console-monitor-proxy@.service.d/
+	dh_install -p$(PACKAGE_NAME) systemd/console-monitor-proxy@.service.d/10-nvidia-console-mux.conf usr/lib/systemd/system/console-monitor-proxy@.service.d/
+	# The mux reconciler: a path unit and the oneshot it triggers. Neither has an
+	# [Install] section -- the path is pulled in by the drop-in's Wants= and bound
+	# to the proxy's lifetime -- so they only need installing, not enabling.
+	dh_install -p$(PACKAGE_NAME) systemd/nvidia-bmc-console-mux-reconcile@.path usr/lib/systemd/system/
+	dh_install -p$(PACKAGE_NAME) systemd/nvidia-bmc-console-mux-reconcile@.service usr/lib/systemd/system/
 
 override_dh_clean:
 	dh_clean
