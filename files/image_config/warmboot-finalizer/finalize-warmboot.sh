@@ -162,9 +162,57 @@ function set_cpufreq_governor() {
         || debug "Failed to set CPUFreq scaling governor to $governor"
 }
 
+# Objects re-created during warm boot get new VIDs, leaving counter entries of the
+# previous VIDs without an owner. VIDs are never reused, so once the view is applied
+# any counter entry whose VID is not in ASIC_DB VIDTORID is dead.
+function remove_stale_counters()
+{
+    local candidates live stale db
+
+    candidates=$(
+        for db in COUNTERS_DB FLEX_COUNTER_DB; do
+            sonic-db-cli -n "$NETNS" "$db" KEYS '*oid:0x*' | sed "s/^/$db /"
+        done
+        for map in $(sonic-db-cli -n "$NETNS" COUNTERS_DB KEYS 'COUNTERS_*_MAP'); do
+            sonic-db-cli -n "$NETNS" COUNTERS_DB HKEYS "$map" | grep '^oid:0x' | sed "s/^/COUNTERS_DB $map /"
+        done
+    )
+
+    # VIDTORID must be read after listing candidates, so objects created in between are never seen as stale.
+    live=$(sonic-db-cli -n "$NETNS" ASIC_DB HKEYS VIDTORID)
+    if [[ -z "$live" ]]; then
+        debug "No VIDs in ASIC_DB, skipping stale counter cleanup"
+        return
+    fi
+
+    # Keep only the candidates whose OID is not a live VID.
+    # awk stores the live VIDs (first input, NR == FNR) as keys of an array, then prints each
+    # candidate whose OID, taken from its last field, is not one of those keys.
+    stale=$(awk 'NR == FNR { live[$1]; next }
+                 match($NF, /oid:0x[0-9a-f]+/) && !(substr($NF, RSTART, RLENGTH) in live)' \
+                <(echo "$live") <(echo "$candidates"))
+    if [[ -z "$stale" ]]; then
+        debug "No stale counter entries found"
+        return
+    fi
+
+    for db in COUNTERS_DB FLEX_COUNTER_DB; do
+        awk -v db="$db" '$1 == db && NF == 2 { print $2 }' <<< "$stale" |
+            xargs -r -n 500 sonic-db-cli -n "$NETNS" "$db" DEL > /dev/null
+    done
+    awk 'NF == 3 { print $2, $3 }' <<< "$stale" | while read -r map field; do
+        sonic-db-cli -n "$NETNS" COUNTERS_DB HDEL "$map" "$field" > /dev/null
+    done
+
+    debug "Removed $(wc -l <<< "$stale") stale counter entries"
+}
+
 function finalize_warm_boot()
 {
     debug "Finalizing warmboot..."
+    if [[ x"$(get_component_state orchagent)" == x"${EXP_STATE}" ]]; then
+        remove_stale_counters
+    fi
     sudo config warm_restart disable -n "$NETNS"
 }
 
