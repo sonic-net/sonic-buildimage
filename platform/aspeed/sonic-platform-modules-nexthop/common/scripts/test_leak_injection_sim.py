@@ -212,8 +212,9 @@ def check_cli(report, poller, leak_test_dir, names):
 
 def check_state_db(report, leak_test, names, timeout):
     """Verify the running thermalctld publishes the injection to STATE_DB as a
-    test leak: visible per sensor and in test_leak_status, but never in
-    device_leak_status, which is what bmcctld takes mitigation action on.
+    test leak: flagged per sensor (test_leak=Enabled, leak_source=test) and, in
+    SYSTEM_LEAK_STATUS, with test_leak=Enabled next to device_leak_status.
+    bmcctld takes no mitigation action while test_leak is Enabled.
     """
     try:
         from swsscommon.swsscommon import SonicV2Connector
@@ -246,9 +247,9 @@ def check_state_db(report, leak_test, names, timeout):
                       "liquid cooling enabled?".format(name))
         return
 
-    # A thermalctld that does not publish test_leak also does not hold test
-    # leaks back from device_leak_status, and bmcctld powers the switch off on
-    # a CRITICAL there. Never inject into such a consumer.
+    # A thermalctld that does not publish test_leak does not mark an injected
+    # leak as a test leak, and bmcctld powers the switch off on a CRITICAL
+    # device_leak_status that is not marked. Never inject into such a consumer.
     if "test_leak" not in (db.get_all(db.STATE_DB, "LIQUID_COOLING_INFO|{}".format(name)) or {}):
         report.record(SKIP, "STATE_DB verification",
                       "thermalctld does not publish test_leak; it would act on an "
@@ -257,18 +258,20 @@ def check_state_db(report, leak_test, names, timeout):
 
     leak_test.set_test_leak(name, True, severity=sim.severity_from_name("CRITICAL"))
     ok, entry, system = wait_for(
-        lambda e, s: e.get("leaking") == "Yes" and e.get("test_leak") == "Yes"
-        and "CRITICAL" in e.get("leak_severity", "")
-        and s.get("test_leak_status") == "CRITICAL")
+        lambda e, s: e.get("leaking") == "Yes" and e.get("test_leak") == "Enabled"
+        and e.get("leak_source") == "test"
+        and "CRITICAL" in e.get("test_leak_severity", "")
+        and s.get("device_leak_status") == "CRITICAL")
     report.check("STATE_DB shows CRITICAL test leak on {} within {}s".format(name, timeout), ok,
                  "sensor={} system={}".format(entry, system))
-    report.check("test leak is kept out of device_leak_status",
-                 system.get("device_leak_status") == "None",
+    report.check("system leak status is marked as a test leak",
+                 system.get("test_leak") == "Enabled",
                  "system={}".format(system))
 
     leak_test.set_test_leak(name, False)
     ok, entry, system = wait_for(
-        lambda e, s: e.get("leaking") == "No" and s.get("test_leak_status") == "None")
+        lambda e, s: e.get("leaking") == "No" and e.get("test_leak") == "Disabled"
+        and s.get("device_leak_status") == "None" and s.get("test_leak") == "Disabled")
     report.check("STATE_DB clears within {}s after withdraw".format(timeout), ok,
                  "sensor={} system={}".format(entry, system))
 
