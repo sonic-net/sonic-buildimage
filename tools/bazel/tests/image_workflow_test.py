@@ -171,12 +171,15 @@ class VerificationWorkflowTest(unittest.TestCase):
                 "gnmi_runtime", "mgmt_framework_runtime",
             )
         ]
-        for filename, name in (("bazel-frr-python.yml", "packages"), ("bazel-frr.yml", "native")):
+        for filename, name in (("bazel-frr-python.yml", "packages"),):
             kernel_only.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
         for job in kernel_only:
             steps = job["steps"]
             register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
             self.assertEqual(steps[register + 1].get("run"), f"bash {script} --kernel-only")
+
+        frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr.yml").read_text())["jobs"]["native"]
+        self.assertIn(f"bash {script} --retained-only", [step.get("run") for step in frr["steps"]])
 
         env = dict(os.environ, GIT_ALLOW_PROTOCOL="file")
 
@@ -255,6 +258,17 @@ class VerificationWorkflowTest(unittest.TestCase):
             git(checkout, "commit", "-qm", "pin new kernel")
             prepare("--kernel-only")
             self.assertEqual(git(retained_kernel, "rev-parse", "HEAD"), next_kernel)
+
+            # Source checks restore retained PINS without cloning unused modules.
+            git(checkout, "submodule", "update", "--init", "--", pins)
+            git(checkout / pins, "checkout", "-q", old)
+            git(checkout, "config", "--remove-section", f"submodule.{pins}")
+            prepare("--retained-only", protocol="")
+            self.assertEqual(git(checkout / pins, "rev-parse", "HEAD"), pinned)
+            self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
+            self.assertFalse((checkout / gnoi / ".git").exists())
+            self.assertFalse((checkout / unused / ".git").exists())
+            git(checkout, "submodule", "deinit", "-f", "--", pins)
 
             prepare()
             self.assertEqual(git(checkout / gnoi, "rev-parse", "HEAD"), pinned)
