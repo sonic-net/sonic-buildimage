@@ -143,6 +143,10 @@ class SfpUtil(SfpUtilBase):
             write_syslog(syslog.LOG_ERR, "get cpo list for oe temperature failed:{}".format(e))
             return self.TEMP_ERROR
 
+        if not cpo_list:
+            write_syslog(syslog.LOG_ERR, "no CPO port for oe temperature")
+            return self.TEMP_ERROR
+
         seen_oes = set()
         read_error = False
         for cpo in cpo_list:
@@ -181,6 +185,10 @@ class SfpUtil(SfpUtilBase):
             cpo_list = platform_chassis.get_all_cpos()
         except Exception as e:
             write_syslog(syslog.LOG_ERR, "get cpo list for els temperature failed:{}".format(e))
+            return self.TEMP_ERROR
+
+        if not cpo_list:
+            write_syslog(syslog.LOG_ERR, "no CPO port for els temperature")
             return self.TEMP_ERROR
 
         seen_els = set()
