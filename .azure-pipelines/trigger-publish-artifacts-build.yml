@@ -53,6 +53,7 @@ steps:
               **/*.swi\n
               **/*.raw\n
               **/*.img.gz\n
+              **/*.fd\n
               **/*-rpc.gz\n
               **/*.deb"},
       publishContext: {"publishPrefix":"${{ parameters.publishPrefix }}",

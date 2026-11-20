@@ -49,10 +49,9 @@ generate_kvm_image()
     fi
 
     echo "Build $NUM_ASIC-asic ${BOOT_FIRMWARE} KVM image"
+	KVM_IMAGE_DISK=${KVM_IMAGE%.gz}
     if [[ "$BOOT_FIRMWARE" == "UEFI" ]]; then
-        KVM_IMAGE_DISK=${KVM_IMAGE%.img.gz}-uefi.img
-    else
-        KVM_IMAGE_DISK=${KVM_IMAGE%.gz}
+        KVM_IMAGE_DISK=${KVM_IMAGE_DISK%.img}-uefi.img
     fi
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
