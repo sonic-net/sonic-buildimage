@@ -17,6 +17,10 @@ module sonic-smart-switch {
 		prefix sonic-vnet;
 	}
 
+	import sonic-vlan {
+		prefix vlan;
+	}
+
 	organization
 		"SONiC";
 
@@ -51,6 +55,13 @@ module sonic-smart-switch {
 	
 	revision 2026-03-25 {
 		description "Add dpu_vnet, dpu_vlan (string). Allow underscore in dpu name.";
+	}
+
+	revision 2026-11-19 {
+		description
+			"DASH_HA_GLOBAL_CONFIG dpu_vlan names its VLAN by leafref to VLAN, so it
+			 cannot name a VLAN that does not exist and the VLAN's removal finds the
+			 setting that uses it.";
 	}
 
 	container sonic-smart-switch {
@@ -308,9 +319,11 @@ module sonic-smart-switch {
 				}
 
 				leaf dpu_vlan {
-					description "DPU VLAN identifier, name of the VLAN";
-					type string {
-						length "1..255";
+					description
+						"The VLAN hamgrd resolves the DPU PA address on; it must exist
+						 in VLAN.";
+					type leafref {
+						path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
 					}
 				}
 

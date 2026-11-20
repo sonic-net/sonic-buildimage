@@ -15,10 +15,9 @@ module sonic-system-radius {
         prefix lag;
     }
 
-// Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
-//    import sonic-vlan {
-//        prefix vlan;
-//    }
+    import sonic-vlan {
+        prefix vlan;
+    }
 
     import sonic-loopback-interface {
         prefix loopback;
@@ -30,6 +29,13 @@ module sonic-system-radius {
 
     description
         "Remote Authentication Dial-In User Service (RADIUS) YANG module for SONiC OS.";
+
+    revision 2026-11-19 {
+        description
+            "RADIUS_SERVER src_intf names a VLAN by leafref to VLAN, so a server cannot name a
+             VLAN that does not exist and the VLAN's removal finds the servers that use it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2022-11-11 {
         description "Initial revision.";
@@ -181,6 +187,9 @@ module sonic-system-radius {
                 }
 
                 leaf src_intf {
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type union {
                         type leafref {
                             path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
@@ -188,10 +197,9 @@ module sonic-system-radius {
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                         }
-
                         type leafref {
                             path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
                         }
@@ -199,7 +207,9 @@ module sonic-system-radius {
                             path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
                         }
                     }
-                    description "Source interface to use for RADIUS server communication.";
+                    description
+                        "The port, port channel, VLAN, loopback or management port to source
+                         RADIUS server communication from; it must exist in its table.";
                 }
             }
         }

@@ -484,6 +484,9 @@ class Test_SonicYang(object):
     @pytest.fixture
     def dhcp_match_config(self):
         return {
+            "VLAN": {
+                "Vlan100": {"vlanid": "100"},
+            },
             "DHCP_SERVER_IPV4": {
                 "Vlan100": {
                     "mode": "PORT",
@@ -784,6 +787,46 @@ class Test_SonicYang(object):
             "default quiet=False must log 'Try to load Data': {}".format(msgs)
 
         return
+
+    BGP_NEIGHBOR_XPATH = "/sonic-bgp-neighbor:sonic-bgp-neighbor/BGP_NEIGHBOR/BGP_NEIGHBOR_LIST"
+
+    def _leaf_type(self, syc, leaf):
+        snodes = list(syc.ctx.find_path("{}/{}".format(self.BGP_NEIGHBOR_XPATH, leaf)))
+        assert len(snodes) == 1
+        return snodes[0].type()
+
+    def test_union_member_types_keeps_trailing_leafrefs(self, sonic_yang_data):
+        # neighbor is a union of inet:ip-address (itself a union of ipv4 and
+        # ipv6) and four leafrefs; libyang compiles it flat into six members.
+        syc = sonic_yang_data['syc']
+        neighbor = self._leaf_type(syc, "neighbor")
+
+        members = sy.SonicYang.union_member_types(neighbor)
+        assert [m.basename() for m in members] == ['string', 'string'] + ['leafref'] * 4
+        assert 'VLAN_SUB_INTERFACE_LIST' in members[-1].leafref_path()
+        # union_types() pairs the six compiled members with the five parsed
+        # ones and drops the last.
+        assert len(list(neighbor.union_types())) == 5
+
+    def test_union_member_types_of_non_union(self, sonic_yang_data):
+        syc = sonic_yang_data['syc']
+        assert sy.SonicYang.union_member_types(self._leaf_type(syc, "peer_group_name")) == []
+
+    def test_yjson_union_keeps_trailing_leafrefs(self, sonic_yang_data):
+        syc = sonic_yang_data['syc']
+
+        def child(node, kind, name):
+            children = node[kind] if isinstance(node[kind], list) else [node[kind]]
+            return next(c for c in children if c['@name'] == name)
+
+        module = next(m['module'] for m in syc.yJson if m['module']['@name'] == 'sonic-bgp-neighbor')
+        node = child(module, 'container', 'sonic-bgp-neighbor')
+        node = child(node, 'container', 'BGP_NEIGHBOR')
+        node = child(node, 'list', 'BGP_NEIGHBOR_LIST')
+        node = child(node, 'leaf', 'neighbor')
+        members = node['type']['type']
+        assert len(members) == 6
+        assert 'VLAN_SUB_INTERFACE_LIST' in members[-1]['path']['@value']
 
     def teardown_class(self):
         pass

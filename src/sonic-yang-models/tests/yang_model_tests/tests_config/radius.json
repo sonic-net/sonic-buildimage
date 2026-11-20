@@ -134,6 +134,74 @@
                 ]
             }
         }
+    },
+    "RADIUS_SERVER_SRC_INTF_VLAN_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                    {
+                        "ipaddress": "192.168.1.1",
+                        "priority": 5,
+                        "timeout": 6,
+                        "auth_type": "chap",
+                        "passkey": "brcm123",
+                        "src_intf": "Vlan100",
+                        "vrf": "default"
+                    }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_SRC_INTF_VLAN_MISSING_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                    {
+                        "ipaddress": "192.168.1.1",
+                        "priority": 5,
+                        "timeout": 6,
+                        "auth_type": "chap",
+                        "passkey": "brcm123",
+                        "src_intf": "Vlan100",
+                        "vrf": "default"
+                    }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_SRC_INTF_VLAN_4095_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                    {
+                        "ipaddress": "192.168.1.1",
+                        "priority": 5,
+                        "timeout": 6,
+                        "auth_type": "chap",
+                        "passkey": "brcm123",
+                        "src_intf": "Vlan4095",
+                        "vrf": "default"
+                    }
+                ]
+            }
+        }
     }
-
 }

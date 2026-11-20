@@ -18,5 +18,25 @@
         "desc": "VOQ chassis BGP neighbor description contains a newline.",
         "eStrKey": "Pattern",
         "eStr": ["name"]
+    },
+    "BGP_VOQ_CHASSIS_VLAN_NEIGHBOR_VALID": {
+        "desc": "A BGP_VOQ_CHASSIS_NEIGHBOR on an existing VLAN is accepted."
+    },
+    "BGP_VOQ_CHASSIS_VLAN_NEIGHBOR_MISSING": {
+        "desc": "A BGP_VOQ_CHASSIS_NEIGHBOR naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_VOQ_CHASSIS_SUBINTF_NEIGHBOR_VALID": {
+        "desc": "A BGP_VOQ_CHASSIS_NEIGHBOR on an existing VLAN sub-interface is accepted."
+    },
+    "BGP_VOQ_CHASSIS_SUBINTF_NEIGHBOR_MISSING": {
+        "desc": "A BGP_VOQ_CHASSIS_NEIGHBOR naming a VLAN sub-interface that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_VOQ_CHASSIS_VLAN_NEIGHBOR_4095": {
+        "desc": "A BGP_VOQ_CHASSIS_NEIGHBOR on Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
 }

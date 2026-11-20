@@ -18,15 +18,21 @@ module sonic-neigh {
 	import sonic-port {
 		prefix port;
 	}
-	// TODO: Uncomment the following lines when sonic-vlan.yang is available
-	// import sonic-vlan {
-	// 	prefix svlan;
-	// }
+
+	import sonic-vlan {
+		prefix svlan;
+	}
 
 	organization "SONiC";
 	contact "SONiC";
 
 	description "NEIGH YANG Module for SONiC OS";
+
+	revision 2026-11-19 {
+		description
+			"NEIGH port names a VLAN by leafref to VLAN, so a neighbor cannot name a
+			 VLAN that does not exist and the VLAN's removal finds the neighbors on it.";
+	}
 
 	revision 2023-03-31 {
 		description "Initial Revision";
@@ -39,7 +45,9 @@ module sonic-neigh {
 				key "port neighbor";
 
 				leaf port {
-					description "Neighbor interface ex. Vlan1000, PortChannel1024";
+					description
+						"The port channel, port or VLAN the neighbor is on, ex. Vlan1000 or
+						 PortChannel1024; it must exist in its table.";
 					type union {
 						type leafref {
 							path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
@@ -47,13 +55,9 @@ module sonic-neigh {
 						type leafref {
 							path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
 						}
-						type string {
-							pattern "Vlan[0-9]+";
+						type leafref {
+							path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
 						}
-						// TODO: Uncomment the following lines when sonic-vlan.yang is available
-						// type leafref {
-						// 	path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
-						// }
 					}
 				}
 

@@ -3,6 +3,11 @@ import pytest
 
 def match_binding_data(match_name="vendor", binding_name="b1"):
     return {
+        "sonic-vlan:sonic-vlan": {
+            "VLAN": {
+                "VLAN_LIST": [{"name": "Vlan100"}],
+            },
+        },
         "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "DHCP_SERVER_IPV4": {
                 "DHCP_SERVER_IPV4_LIST": [{

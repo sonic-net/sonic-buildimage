@@ -321,5 +321,38 @@
     "BGP_SENTINEL_INVALID_RANGE_IPV6": {
         "desc": "does not satisfy.",
         "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
+    },
+    "BGP_NEIGHBOR_VLAN_VALID": {
+        "desc": "A BGP neighbor on an existing VLAN is accepted."
+    },
+    "BGP_NEIGHBOR_VLAN_MISSING": {
+        "desc": "A BGP neighbor naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_NEIGHBOR_SUBINTF_VALID": {
+        "desc": "A BGP neighbor on an existing VLAN sub-interface is accepted."
+    },
+    "BGP_NEIGHBOR_SUBINTF_MISSING": {
+        "desc": "A BGP neighbor naming a VLAN sub-interface that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_NEIGHBOR_LOCAL_ADDR_VLAN_VALID": {
+        "desc": "A BGP neighbor local_addr naming an existing VLAN is accepted."
+    },
+    "BGP_NEIGHBOR_LOCAL_ADDR_VLAN_MISSING": {
+        "desc": "A BGP neighbor local_addr naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "BGP_NEIGHBOR_VLAN_4095": {
+        "desc": "A BGP neighbor on Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
+    },
+    "BGP_NEIGHBOR_LOCAL_ADDR_VLAN_4095": {
+        "desc": "A BGP neighbor local_addr of Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
 }
