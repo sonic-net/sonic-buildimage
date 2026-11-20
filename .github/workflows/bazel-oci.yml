@@ -3779,6 +3779,10 @@ jobs:
         run: |
           set -o pipefail
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
+
+      - name: Validate the VS installer boot bundle
+        run: |
+          set -euo pipefail
           python3 -B scripts/validate_sonic_version.py target/sonic-vs.bin \
             --installer --expect-boot-bundle --secure-upgrade-mode no_sign \
             --expected-commit-id "$(git rev-parse --short HEAD)"

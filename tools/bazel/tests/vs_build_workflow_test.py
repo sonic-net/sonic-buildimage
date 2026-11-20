@@ -86,7 +86,8 @@ else:
         for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "MAKELEVEL", "FAIL_ACTION",
                      "FORBID_VALIDATION", "CHANGE_REVISION_ACTION", "NOBOOKWORM", "NOTRIXIE",
                      "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL",
-                     "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH", "SONIC_ENABLE_DEBUG_LAYER"):
+                     "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH", "SONIC_ENABLE_DEBUG_LAYER",
+                     "DOCKER_LOAD_ON_BOOT"):
             self.environment.pop(name, None)
 
     def run_script(self, name, *args, **environment):
@@ -115,8 +116,9 @@ else:
             "SONIC_BUILDER_EXTRA_CMDLINE=--label vs-fixture-label -e BAZEL=fixture-bazel -e BAZEL_CONTAINER_ARGS",
         ]
 
-    def assert_profile(self, call, target, debug_layer):
-        self.assertEqual(call["args"], [target, *self.profile_options(), f"SONIC_ENABLE_DEBUG_LAYER={debug_layer}"])
+    def assert_profile(self, call, target, debug_layer, load_on_boot="n"):
+        self.assertEqual(call["args"], [target, *self.profile_options(), f"DOCKER_LOAD_ON_BOOT={load_on_boot}",
+                                        f"SONIC_ENABLE_DEBUG_LAYER={debug_layer}"])
         self.assertEqual(call["bazel_args"], self.environment["BAZEL_CONTAINER_ARGS"])
 
     def test_build_records_revision_before_one_make_without_validation_receipts(self):
@@ -131,6 +133,20 @@ else:
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="y")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "y")
+
+    def test_ci_builds_and_verifies_the_boot_bundle(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        profiles = [job["steps"] for job in workflow["jobs"].values()
+                    if any("bash tools/bazel/ci/build_vs.sh" in step.get("run", "") for step in job["steps"])]
+        self.assertEqual(len(profiles), 2)
+        for profile in profiles:
+            build = next(step for step in profile if "bash tools/bazel/ci/build_vs.sh" in step.get("run", ""))
+            verify = next(step for step in profile if "--expect-boot-bundle" in step.get("run", ""))
+            self.assertEqual(build["env"]["DOCKER_LOAD_ON_BOOT"], "y")
+            self.assertLess(profile.index(build), profile.index(verify))
+        result = self.run_script("build_vs.sh", DOCKER_LOAD_ON_BOOT="y")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "n", load_on_boot="y")
 
     def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")
