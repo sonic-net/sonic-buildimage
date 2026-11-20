@@ -1,0 +1,16 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+# Dependencies for the Cisco embedded platform data path.
+PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/embedded
+
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/rules.mk \
+             $(PLATFORM_PATH)/rules.dep $(PLATFORM_PATH)/sonic-device-data.dep \
+             $(PLATFORM_PATH)/platform_setup.sh \
+             $(PLATFORM_SRC_PATH)/platform.conf \
+             $(PLATFORM_SRC_PATH)/platform_setup.sh
+DEP_FILES += $(wildcard $(PLATFORM_SRC_PATH)/*.mk)
+DEP_FILES += $(shell find $(PLATFORM_SRC_PATH)/device -type f -print)
+
+$(SONIC_DEVICE_DATA)_DEP_FILES += $(shell find $(PLATFORM_SRC_PATH)/device -type f -print)
