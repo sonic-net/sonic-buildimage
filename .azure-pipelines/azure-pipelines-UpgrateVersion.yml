@@ -219,6 +219,11 @@ stages:
         set +x
         set -euo pipefail
 
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jq
+        fi
+
         cert=$(printf '%s' "$CERT" | base64 -d |
           openssl pkcs12 -nokeys -nodes -passin pass: |
           openssl x509 -noout -fingerprint -sha1 |
