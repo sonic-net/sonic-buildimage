@@ -83,7 +83,8 @@ py_library(
         requirement("natsort"),
         requirement("protobuf"),
         requirement("pyyaml"),
-        requirement("redis-dump-load"),
+        requirement("redis"),
+        "@redis_dump_load//:redisdl",
         "@sonic_swss_common//pyext:swsscommon",
     ],
 )

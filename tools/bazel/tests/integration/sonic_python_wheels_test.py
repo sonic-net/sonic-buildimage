@@ -13,7 +13,7 @@ from tools.bazel.tests.integration.wheel_contract import assert_wheel_contract, 
 
 
 parser = argparse.ArgumentParser()
-for option in ("common-wheel", "config-wheel", "yang-wheel", "common-setup", "config-setup"):
+for option in ("common-wheel", "config-wheel", "yang-wheel", "redis-wheel", "common-setup", "config-setup"):
     parser.add_argument("--" + option, type=Path, required=True)
 INPUTS, TEST_ARGS = parser.parse_known_args()
 RECEIPT = {}
@@ -26,15 +26,21 @@ class InstalledWheelsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.packages = []
-        for kind in ("common", "config"):
-            wheel = getattr(INPUTS, kind + "_wheel").absolute()
-            setup = getattr(INPUTS, kind + "_setup").absolute()
-            contract = setup_contract(setup)
-            cls.packages.append((wheel, setup, contract))
+        # setup.py checks prerequisites before declaring its package contract.
+        # Read the source-owned distribution metadata from the declared wheel.
+        sys.path.insert(0, str(INPUTS.redis_wheel.absolute()))
+        try:
+            for kind in ("common", "config"):
+                wheel = getattr(INPUTS, kind + "_wheel").absolute()
+                setup = getattr(INPUTS, kind + "_setup").absolute()
+                contract = setup_contract(setup)
+                cls.packages.append((wheel, setup, contract))
+        finally:
+            sys.path.pop(0)
         own_roots = [Path(__file__).absolute().parents[4], Path(__file__).resolve().parents[4]]
         # Config-engine imports YANG from its installed wheel, with owner source
         # trees excluded by the shared fixture. Retain that dependency's hash too.
-        cls.receipt_wheels = [INPUTS.yang_wheel.absolute(), *[wheel for wheel, _, _ in cls.packages]]
+        cls.receipt_wheels = [INPUTS.redis_wheel.absolute(), INPUTS.yang_wheel.absolute(), *[wheel for wheel, _, _ in cls.packages]]
         installed = cls.enterClassContext(installed_wheels(
             cls.receipt_wheels, exclude_source_roots=own_roots))
         cls.installed = installed
@@ -77,6 +83,7 @@ from sonic_grpc.gnoi import system_pb2
 value=system_pb2.RebootRequest(method=system_pb2.HALT)
 assert system_pb2.RebootRequest.FromString(value.SerializeToString()).method==system_pb2.HALT
 import redisdl
+assert pathlib.Path(redisdl.__file__).resolve().is_relative_to(site)
 # SONiC's existing redis-dump-load patch adds this batched pipeline reader.
 # Empty input exercises that entry point without connecting to a Redis server.
 assert list(redisdl._read_keys(None, [], pretty=False, encoding="utf-8"))==[]

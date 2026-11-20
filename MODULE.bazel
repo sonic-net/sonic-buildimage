@@ -22,6 +22,7 @@ bazel_dep(name = "gawk", version = "5.3.2.sonic.1")
 bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "redis-dump-load", version = "1.1.sonic.2", repo_name = "redis_dump_load")
 
 # PI and BMv2 export their native Bazel outputs as installation TARs.
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.6", repo_name = "p4lang_pi")
@@ -123,13 +124,6 @@ python.toolchain(python_version = "3.11")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 
-# Keep the Redis dump behavior identical to Make by reusing its existing patch.
-# The second Make patch only changes setup.py, which is not part of the wheel.
-pip.override(
-    file = "redis_dump_load-1.1-py3-none-any.whl",
-    patch_strip = 1,
-    patches = ["//src/redis-dump-load.patch:0001-Use-pipelines-when-dumping-52.patch"],
-)
 pip.parse(
     # bitarray 2.8.1 builds from source on Python 3.13. Use the native GCC
     # execution tools installed by CI rather than standalone Python's clang.

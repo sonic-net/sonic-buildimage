@@ -14,13 +14,13 @@ not introduce DEB generation.
 | Event services and Rust supervisor utility | `//src/sonic-eventd:eventd_runtime`, `//src/sonic-supervisord-utilities-rs:runtime` |
 | Config-engine, py-common, YANG management, containercfgd and Python supervisor utility | Five owner wheel targets listed in `:python_runtime` |
 | YANG models and package metadata | `@sonic_yang_models//:yang_models_pkg` |
+| Redis dump/load | `@redis_dump_load//:wheel` |
 | Runtime Python dependencies | `@config_engine_pip`, using the committed source lock |
 | Startup files and SWSS template | `//dockers/docker-config-engine-trixie/config:files` |
 
-The pip input for redis-dump-load is the same immutable source commit as Make's
-submodule: `758549795174dc6b3be70810e0e4d6308f80f1a3`, archive SHA256
-`aece61c694f887af8307e8e82d128ca08f2768017d98ef606ca1380f6ceb593e`.
-`MODULE.bazel` applies the existing pipeline-reader patch to its built wheel.
+The registry module `redis-dump-load@1.1.sonic.2` supplies the native wheel
+through `@redis_dump_load//:wheel`. It owns Make's immutable source commit
+`758549795174dc6b3be70810e0e4d6308f80f1a3` and the existing SONiC patches.
 Make orders sonic-py-common after SWSSSDK; the current py-common `setup.py`
 requires redis-dump-load, natsort, YAML and the selected gRPC/protobuf versions,
 not SWSSSDK. That build-order declaration does not add SWSSSDK to this image.

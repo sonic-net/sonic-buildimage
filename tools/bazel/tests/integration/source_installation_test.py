@@ -31,6 +31,7 @@ from tools.bazel.tests.integration.wheel_contract import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--package", action="append", required=True)
 parser.add_argument("--setup", action="append", required=True)
+parser.add_argument("--redis-wheel", type=Path, required=True)
 parser.add_argument("--metadata", nargs="+", required=True)
 parser.add_argument("--yang-mgmt-dependencies", nargs="+", required=True)
 ARGS = parser.parse_args()
@@ -141,6 +142,9 @@ def check_source_package(name, archive_path, setup, destination):
 
 
 def main():
+    # setup.py queries Redis distribution metadata. The isolated install probe
+    # below retains only directory entries, so it cannot import from the wheel.
+    sys.path.insert(0, str(ARGS.redis_wheel.absolute()))
     with tempfile.TemporaryDirectory(dir=os.environ["TEST_TMPDIR"]) as temporary:
         root = Path(temporary)
         records = [check_source_package(name, archive, SETUPS[name], root) for name, archive in PACKAGES.items()]
