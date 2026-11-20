@@ -13,7 +13,7 @@ from platform_test_utils import SOURCE, BASE, DEVICE, definitions
 
 
 class As5835Psu(unittest.TestCase):
-    def test_only_unsupported_psu_target_comparisons_are_excluded(self):
+    def test_only_selected_psu_fan_comparisons_are_excluded(self):
         config = json.loads(
             (
                 SOURCE / (DEVICE + "as5835_54x-r0/system_health_monitoring_config.json")
@@ -21,7 +21,8 @@ class As5835Psu(unittest.TestCase):
         )
         self.assertEqual(
             config["devices_to_ignore"],
-            ["asic", "psu.temperature", "PSU-1 FAN-1.speed", "PSU-2 FAN-1.speed"],
+            ["asic", "psu.temperature", "PSU-1 FAN-1.speed", "PSU-2 FAN-1.speed",
+             "PSU-1 FAN-1.direction", "PSU-2 FAN-1.direction"],
         )
         from test_as5835_pddf import load_classes, mapped_api
         classes = load_classes()

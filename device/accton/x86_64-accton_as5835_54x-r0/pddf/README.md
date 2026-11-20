@@ -35,6 +35,18 @@ an existing platform directory. Both layouts use the same API mappings.
 This ordering makes EEPROM decoding available to ZTP, system health and
 watchdog startup without enabling generic PDDF device creation.
 
+## PSU airflow health policy
+
+This AS5835 policy assumes the installed PSU airflow matches the chassis.
+Exclude only `PSU-1 FAN-1.direction` and `PSU-2 FAN-1.direction` comparisons
+from system health. Raw PMBus/CPLD direction values remain visible through
+the platform API and CLI. This is a policy assumption, not a measured
+confirmation of physical airflow.
+
+PSU fan presence/status checks, chassis fan direction/speed checks and PSU
+voltage checks remain enabled. The existing unsupported PSU target-speed
+and PSU temperature-threshold exclusions are unchanged.
+
 ## Validation
 
 - Regression tests exercise missing/existing host platform links, the PMON
@@ -50,3 +62,5 @@ watchdog startup without enabling generic PDDF device creation.
   with the ZTP identity headers receives HTTP 200 through the management VRF.
 - System-health and watchdog-control services start successfully. The wdat
   watchdog passed an arm/disarm test at its configured 30-second timeout.
+- With the narrow PSU direction exclusions, the live AS5835 system-health
+  result is Services OK / Hardware OK and the physical status LED is green.
