@@ -2361,6 +2361,12 @@ jobs:
         run: |
           printf '\nbuild --remote_upload_local_results=%s\n' \
             "$UPLOAD_CACHE" >> .bazelrc.user
+          # Master pushes upload the 6-9 GB Syncd debug layer and Gearbox debug
+          # archive. The cache does not resume interrupted writes, so allow
+          # each upload call 10 minutes instead of Bazel's 60 s default.
+          if [[ $UPLOAD_CACHE == true ]]; then
+            printf 'build --remote_timeout=600s\n' >> .bazelrc.user
+          fi
 
       - name: Check native architecture and generated dependency state
         run: |

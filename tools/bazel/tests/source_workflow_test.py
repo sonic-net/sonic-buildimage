@@ -110,6 +110,24 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         self.assertIn("runs-on: [self-hosted, linux, bazel-x64, vs]",
                       workflow_jobs["vs_container"])
 
+    def test_gearbox_master_uploads_allow_multi_gb_remote_writes(self):
+        step = steps(jobs()["gearbox_archive"])["Configure remote cache uploads"]
+        self.assertIn("github.event_name == 'push' && github.ref == 'refs/heads/master'", step)
+        with tempfile.TemporaryDirectory(prefix="gearbox-cache-policy-") as directory:
+            rc = Path(directory) / ".bazelrc.user"
+            for upload, expected in (
+                    ("true", ["build --remote_upload_local_results=true",
+                              "build --remote_timeout=600s"]),
+                    ("false", ["build --remote_upload_local_results=false"])):
+                with self.subTest(upload=upload):
+                    rc.unlink(missing_ok=True)
+                    result = subprocess.run(
+                        ["bash", "-e", "-o", "pipefail", "-c", shell(step)],
+                        cwd=directory, env=dict(os.environ, UPLOAD_CACHE=upload),
+                        capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(rc.read_text().splitlines(), ["", *expected])
+
     def test_host_installer_is_isolated_and_preserves_input_and_output_contracts(self):
         job = yaml.safe_load(WORKFLOW.read_text())["jobs"]["vs_container"]
         self.assertNotIn("concurrency", job)

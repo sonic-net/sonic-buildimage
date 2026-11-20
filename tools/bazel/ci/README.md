@@ -229,7 +229,11 @@ ARM64 archive builds and VS builds only on pushes to `master`. Pull requests
 and manual runs remain read-only. The archive job overrides the default in its
 ignored `.bazelrc.user`, which the shared Bazel configuration imports without
 modifying tracked files. The active `vs_container` job and the disabled legacy
-`vs` job forward the same policy through `BAZEL_CONTAINER_ARGS`. The specialized
+`vs` job forward the same policy through `BAZEL_CONTAINER_ARGS`. When the
+Gearbox archive job uploads, it also sets `--remote_timeout=600s`: it uploads
+the 6-9 GB Syncd debug layer and Gearbox debug archive, and the cache does not
+resume interrupted writes, so with the 60 s default each upload fails after
+exhausting its retries. The specialized
 upstream source-image and VS slave worker pools retain their existing selectors.
 
 The agents and builder containers must be able to reach the remote cache, and
