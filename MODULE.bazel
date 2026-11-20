@@ -205,7 +205,7 @@ register_toolchains("@bsd_tar_toolchains//:all")
 # reviewed APT identities, dependency edges and snapshot sources.
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 apt.import_lock(lock = "@sonic_build_infra//apt:apt.lock.json")
-use_repo(apt, "orchagent_debian", "orchagent_debug_debian", "trixie")
+use_repo(apt, "nat_runtime_debian", "orchagent_debian", "orchagent_debug_debian", "trixie")
 
 # Generate BUILD input labels from the same reviewed lock during repository setup.
 apt_inputs = use_repo_rule("@sonic_build_infra//apt:inputs_repository.bzl", "apt_inputs")

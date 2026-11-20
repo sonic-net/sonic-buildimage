@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "packages": {
+    "openssh-client": {
+      "required_paths": [
+        "usr/bin/ssh",
+        "usr/bin/ssh-agent"
+      ]
+    }
+  }
+}

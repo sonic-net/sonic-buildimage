@@ -2,6 +2,7 @@ load("//tools/bazel/oci:apt_layer.bzl", "apt_subset_lock")
 
 package(default_visibility = [
     "//dockers/docker-orchagent:__pkg__",
+    "//dockers/docker-nat:__pkg__",
     "//tools/bazel/tests:__pkg__",
 ])
 

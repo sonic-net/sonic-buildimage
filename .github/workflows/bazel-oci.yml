@@ -4240,6 +4240,7 @@ jobs:
           if grep -Eq 'not found|undefined symbol|symbol lookup error' artifacts/vs/tlm-teamd-linkage.txt; then
             exit 1
           fi
+          python3 -B tools/bazel/ci/verify_nat_archives.py
           SH
           make -f Makefile.work BLDENV=trixie sonic-slave-run \
             DOCKER_ROOT="$PWD/fsroot.docker.verify-images" \
