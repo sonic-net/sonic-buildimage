@@ -50,5 +50,6 @@
 0127-zebra-let-a-dataplane-module-learn-local-MACs.patch
 0128-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
-0130-zebra-Add-bridge-port-protection-FPM-contract.patch
-0131-SONiC-ONLY-distribute-protection-encoder-header.patch
+0130-lib-fix-use-after-free-in-agentx_events_update.patch
+0131-zebra-Add-bridge-port-protection-FPM-contract.patch
+0132-SONiC-ONLY-distribute-protection-encoder-header.patch

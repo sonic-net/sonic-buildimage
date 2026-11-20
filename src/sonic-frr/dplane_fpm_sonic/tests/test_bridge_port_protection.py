@@ -32,7 +32,7 @@ def prepare_netlink_contract(build):
                       '#define HAVE_NETLINK 1\n\n#ifdef HAVE_NETLINK\n\n'
                       '#include <stddef.h>\n#include <stdbool.h>\n#include <stdint.h>\n'
                       '#include <linux/netlink.h>\n' + declarations + '\n#endif\n#endif\n')
-    extension = patch_dir / '0130-zebra-Add-bridge-port-protection-FPM-contract.patch'
+    extension = patch_dir / '0131-zebra-Add-bridge-port-protection-FPM-contract.patch'
     subprocess.run(['patch', '--batch', '--fuzz=0', '-p1', '-d', str(build),
                     '-i', str(extension)], check=True, text=True)
 

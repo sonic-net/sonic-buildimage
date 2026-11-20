@@ -27,6 +27,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from mellanox_fw_manager import vmod
+from mellanox_fw_manager.firmware_base import FirmwareManagerError
 from mellanox_fw_manager.spectrum_manager import SpectrumFirmwareManager
 
 # flint -d <pci> --vmod --downstream_device_ids 0 q, MFT 4.37.0-1010, FW 39_2020_0770-00x
@@ -282,7 +283,9 @@ class TestSpectrumVmodCompare:
     @pytest.fixture(autouse=True)
     def reads(self):
         with mock.patch.object(vmod, 'get_hw_versions') as self.mock_hw, \
-                mock.patch.object(vmod, 'get_mfa_version') as self.mock_mfa:
+                mock.patch.object(vmod, 'get_mfa_version') as self.mock_mfa, \
+                mock.patch.object(SpectrumFirmwareManager, '_has_prod_image_dev_capable_device',
+                                  return_value=False) as self.mock_security:
             yield
 
     def _manager(self, cpo=True, hw=("95.10.0752", "95.10.0752"), mfa="95.2020.0752"):
@@ -331,6 +334,14 @@ class TestSpectrumVmodCompare:
         self.mock_hw.assert_not_called()
         self.mock_mfa.assert_not_called()
 
+    def test_dev_capable_asic_skips_the_vmod_read(self):
+        self.mock_security.return_value = True
+        manager = self._manager()
+        assert manager.is_upgrade_required() is True
+        self.mock_hw.assert_not_called()
+        self.mock_mfa.assert_not_called()
+        assert manager.get_vmod_status() == "not checked (ASIC firmware upgrade needed)"
+
     def test_versions_are_read_once(self):
         manager = self._manager()
         manager.is_upgrade_required()
@@ -372,11 +383,12 @@ class TestSpectrumVmodCompare:
         assert manager.get_vmod_status() == "not checked (ASIC firmware upgrade needed)"
 
     def test_vmod_status_not_checked_after_an_error(self):
+        self.mock_security.return_value = None
         manager = self._manager()
-        with mock.patch('mellanox_fw_manager.firmware_base.FirmwareManagerBase.is_upgrade_required',
-                        side_effect=Exception("flint failed")):
-            with pytest.raises(Exception):
-                manager.is_upgrade_required()
+        with pytest.raises(FirmwareManagerError, match="Unable to determine security attributes"):
+            manager.is_upgrade_required()
+        self.mock_hw.assert_not_called()
+        self.mock_mfa.assert_not_called()
         assert manager.get_vmod_status() == "not checked (ASIC firmware check failed)"
 
     def test_unparsable_mfa_version_does_not_force_upgrade(self):

@@ -1,0 +1,14 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+#
+# Script to execute any syncd pre shutdown routine.
+#
+
+#If dshell_clietn is running, stop the client service otherwise
+#this blocks the dshell server shutdown, blocking syncd shutdown
+#Making it best effort, non-blocking to not delay the shutdown precess
+touch /tmp/.request_pre_shutdown
+supervisorctl stop dshell_client > /dev/null &
