@@ -4,38 +4,55 @@
 #                 (disk) backup using rsync
 #
 # Usage:
-#   ram2disk.sh sync        — Periodic tmpfs to Disk sync with rename detection
-#   ram2disk.sh restore     — Boot-time: archive previous session, restore
-#                                active logs to tmpfs
+#   ram2disk.sh sync         — Periodic tmpfs to disk sync with rotation replay
 #   ram2disk.sh pre-shutdown — Final sync before shutdown/reboot
 #
 # Design:
-#   Disk layout Example:
+#   Disk layout example:
 #     /var/log.disk/
-#     ├── current_session/                     live mirror of this boot's /var/log
+#     ├── current_session/                 live mirror of this boot's /var/log
 #     │   ├── syslog
 #     │   ├── syslog.1
 #     │   ├── syslog.2.gz ...
+#     │   ├── syslog.5000~20261115T010203.gz  generation tmpfs deleted (disk only)
 #     │   └── frr/bgpd.log ...
-#     ├── legacy_20260619_065000/      (optional) stray files from a non-tmpfs boot
-#     ├── session_20260619_065000/     previous boot (immutable, compressed)
-#     ├── session_20260618_120000/     older boot (immutable, compressed)
+#     ├── legacy_20260619_065000/          (optional) stray files from a non-tmpfs boot
+#     ├── session_20260619_065000/         previous boot (immutable)
+#     ├── session_20260618_120000/         older boot (immutable)
+#     ├── .ram2disk/staging/               mirror files in flight during a replay (Not used in normal operation)
 #     └── .boot_id
 #
-#   Cleanup:
-#     - Oldest legacy_*/session_* directories are rm -rf'd when Disk free space is low
+#   Sync = replay rotations on the mirror, rsync, commit (sync_current_session):
+#     1. ram2disk_replay.py replay   repeats on current_session/ the renames
+#        tmpfs went through since the last sync, so rsync delta-updates the
+#        same generation instead of overwriting another one. Policy agnostic:
+#        it follows tmpfs inode numbers, not names or logrotate config.
+#        Generations tmpfs deleted are kept as <name>~<mtime>.
+#     2. rsync -a --inplace --no-whole-file (no --delete: the mirror never
+#        loses a file because tmpfs did).
+#     3. ram2disk_replay.py commit   records what the mirror now holds.
 #
+#   Replay state is boot-local in R2D_STATE_DIR (tmpfs)
+#   Every mode runs under R2D_LOCK, which the logrotate wrapper also holds.
+#
+#   Cleanup:
+#     - Oldest legacy_*/session_* directories, then oldest current_session files
 # =============================================================================
 
-MODE="${1:-sync}"    # sync | restore | pre-shutdown
+MODE="${1:-sync}"    # sync | pre-shutdown
 
 : "${SRC_RAM_DIR:=/var/log}"
 : "${DST_DISK_DIR:=/var/log.disk}"
 : "${CURRENT_MIRROR_DIR:=${DST_DISK_DIR}/current_session}"
 : "${BOOT_ID_FILE:=${DST_DISK_DIR}/.boot_id}"
-
-# Counter library that maintains per-file rotation counters in /dev/shm/logrotate.
-COUNTER_FUNCS="/usr/local/bin/logrotate-counter-functions.sh"
+: "${KERNEL_BOOT_ID:=/proc/sys/kernel/random/boot_id}"
+# Rotation lock, shared with the logrotate wrapper: rotation never overlaps a sync.
+: "${R2D_LOCK:=/dev/shm/logrotate/synchronization.lock}"
+: "${R2D_LOCK_WAIT:=120}"          # seconds to wait for the lock
+# Replay state is boot-local; staging must be on the mirror's filesystem.
+: "${R2D_STATE_DIR:=/dev/shm/ram2disk}"
+: "${R2D_STAGING_DIR:=${DST_DISK_DIR}/.ram2disk/staging}"
+: "${R2D_REPLAY:=$(dirname "$(readlink -f "$0")")/ram2disk_replay.py}"
 
 # Disk cleanup kicks in once disk usage of the DST_DISK_DIR filesystem exceeds this
 # percentage
@@ -45,6 +62,31 @@ DISK_USED_MAX_PCT=80
 log_info()  { logger -p syslog.info -t "ram2disk" "$*" 2>/dev/null || printf 'ram2disk: %s\n' "$*" >&2; }
 log_err()   { logger -p syslog.err -t "ram2disk" "$*" 2>/dev/null || printf 'ram2disk: ERROR: %s\n' "$*" >&2; }
 
+
+# =============================================================================
+# Rotation lock
+#
+# One flock on R2D_LOCK serialises everything that renames log files, on tmpfs
+# or on the mirror: sync and pre-shutdown here, and logrotate through
+# its wrapper (flock on the same file around the real logrotate).
+#   r2d_lock    take it for the rest of this shell, waiting up to R2D_LOCK_WAIT s
+#   r2d_unlock  release it (exiting the shell releases it too)
+# =============================================================================
+r2d_lock() {
+    [ -z "${R2D_LOCK_FD:-}" ] || return 0
+    mkdir -p -- "${R2D_LOCK%/*}" && exec {R2D_LOCK_FD}>>"$R2D_LOCK" || return 1
+    flock -w "$R2D_LOCK_WAIT" "$R2D_LOCK_FD" && return 0
+    r2d_unlock
+    return 1
+}
+
+r2d_unlock() {
+    [ -n "${R2D_LOCK_FD:-}" ] || return 0
+    exec {R2D_LOCK_FD}>&-                    # closing the descriptor releases the flock
+    unset R2D_LOCK_FD
+}
+
+
 # =============================================================================
 # is_new_boot
 #
@@ -52,7 +94,7 @@ log_err()   { logger -p syslog.err -t "ram2disk" "$*" 2>/dev/null || printf 'ram
 # =============================================================================
 is_new_boot() {
     local current_boot_id stored_boot_id
-    current_boot_id=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)
+    current_boot_id=$(cat "$KERNEL_BOOT_ID" 2>/dev/null)
 
     if [ ! -f "$BOOT_ID_FILE" ]; then
         return 0
@@ -63,8 +105,9 @@ is_new_boot() {
 }
 
 save_boot_id() {
-    cat /proc/sys/kernel/random/boot_id > "$BOOT_ID_FILE"
+    cat "$KERNEL_BOOT_ID" > "$BOOT_ID_FILE"
 }
+
 
 # =============================================================================
 # archive_current_session
@@ -73,11 +116,14 @@ save_boot_id() {
 #
 # Uses .boot_id mtime as the session timestamp (represents when that boot
 # session started). Falls back to current time if unavailable.
-#
 # =============================================================================
 archive_current_session() {
     [ -d "$CURRENT_MIRROR_DIR" ] || return 0
 
+    # A replay interrupted by the reboot may have left mirror files in staging:
+    # file them with the session they belong to. On failure they stay in
+    # staging and the first sync of this boot files them instead.
+    recover_replay_staging || log_err "Cannot recover replay staging; continuing"
     # Use .boot_id mtime as session start timestamp
     local timestamp
     if [ -f "$BOOT_ID_FILE" ]; then
@@ -88,10 +134,13 @@ archive_current_session() {
 
     local session_dir="${DST_DISK_DIR}/session_${timestamp}"
 
-    mv "$CURRENT_MIRROR_DIR" "$session_dir"
+    mv "$CURRENT_MIRROR_DIR" "$session_dir" || return
+    # The inode-map describes the mirror that was just archived.
+    rm -f -- "$R2D_STATE_DIR/inode-map" "$R2D_STATE_DIR/inode-map.next" || return
 
     log_info "Archived previous session → $(basename "$session_dir")"
 }
+
 
 # =============================================================================
 # archive_legacy_files
@@ -108,7 +157,8 @@ archive_legacy_files() {
         stray+=("$entry")
     done < <(find "$DST_DISK_DIR" -mindepth 1 -maxdepth 1 \
                  ! -name current_session ! -name 'session_*' ! -name 'legacy_*' \
-                 ! -name lost+found ! -name "$(basename "$BOOT_ID_FILE")" -print0)
+                 ! -name lost+found ! -name "$(basename "$BOOT_ID_FILE")" \
+                 ! -name "$(basename "$(dirname "$R2D_STAGING_DIR")")" -print0)
 
     [ "${#stray[@]}" -gt 0 ] || return 0
 
@@ -116,6 +166,7 @@ archive_legacy_files() {
     mkdir -p "$legacy_dir" && mv -- "${stray[@]}" "$legacy_dir/"
     log_info "Moved ${#stray[@]} legacy top-level entries → $(basename "$legacy_dir")"
 }
+
 
 # =============================================================================
 # ensure_current_dir
@@ -128,97 +179,71 @@ ensure_current_dir() {
     fi
 }
 
+
 # =============================================================================
-# =============================================================================
-# replay_rotations
+# Rotation replay (ram2disk_replay.py, see its header for the details)
 #
-# Replays, on current_session/, every logrotate cycle that happened since the last run.
-#
-# The set of files to replay and their counts come entirely from
-# /dev/shm/logrotate/rotation_counts (maintained by the logrotate-wrapper). This script
-# consumes it with lrc_file_read_reset() while holding the operation synchronization
-# lock through rename replay and rsync. Logrotate process cannot rotate or update counters meanwhile.
+#   replay_rotations   before rsync: finish any interrupted replay, then make
+#                      current_session/ match tmpfs's names (renames, moves for
+#                      copytruncate, history for deleted generations).
+#   replay_commit      after a successful rsync: record what the mirror holds.
+#   recover_replay_staging  put staged mirror files back: finish the plan if
+#                      it still exists, else (plan lost in a reboot) keep them
+#                      under current_session/ram2disk-recovered~<time>/.
+# Any replay operation error leaves its plan in R2D_STATE_DIR and is retried
+# by the next call; rsync is skipped until replay succeeds.
 # =============================================================================
+run_replay_helper() {
+    python3 "$R2D_REPLAY" "$1" "$SRC_RAM_DIR" "$CURRENT_MIRROR_DIR" \
+            "$R2D_STATE_DIR" "$R2D_STAGING_DIR"
+}
+
 replay_rotations() {
-    local rotations
-    if ! rotations=$(lrc_file_read_reset); then
-        log_err "Cannot read/reset rotation counters"
+    local summary
+    if [ "$(stat -f -c %T -- "$SRC_RAM_DIR")" != tmpfs ]; then
+        log_err "$SRC_RAM_DIR is not tmpfs; refusing to sync"
         return 1
     fi
-
-    local path count base
-    while read -r path count; do
-        [ -n "$path" ] || continue
-        [[ "$count" =~ ^[0-9]+$ ]] || continue
-        [ "$count" -gt 0 ] || continue
-
-    # Only mirror files that live under ${SRC_RAM_DIR} (what current_session/ mirrors)
-	# Consider adding a warning later for files not under SRC_RAM_DIR to understand other files managed by logrotate
-	[[ "$path" == "${SRC_RAM_DIR}/"* ]] || continue
-	base="${path#"${SRC_RAM_DIR}/"}"
-
-        if ! mirror_renames "$base" "$count"; then
-            log_err "Cannot replay rotations for $path"
-            return 1
-        fi
-    done <<< "$rotations"
+    summary=$(run_replay_helper replay) || return
+    [ -z "$summary" ] || log_info "$summary"
 }
 
-# =============================================================================
-# mirror_renames <base> <shift>
-#
-# Performs the same rename chain on disk's current_session/ that logrotate did on tmpfs.
-# =============================================================================
-mirror_renames() {
-    local base="$1"
-    local shift="$2"
-    local dst_base="${CURRENT_MIRROR_DIR}/${base}"
-
-    [ "$shift" -eq 0 ] && return 0
-
-    log_info "${base}: mirroring ${shift} rotation(s) on disk"
-
-    # Find highest archive number in current_session/
-    local max_n=0
-    for f in "${dst_base}".*.gz; do
-        [ -f "$f" ] || continue
-        local n
-        n=$(echo "$f" | grep -oP '\.\K[0-9]+(?=\.gz$)')
-        [ -n "$n" ] && [ "$n" -gt "$max_n" ] && max_n=$n
-    done
-    [ -f "${dst_base}.1" ] && [ "$max_n" -lt 1 ] && max_n=1
-
-    # Start the rename shifting
-    for s in $(seq 1 "$shift"); do
-        # Shift .gz archives up by 1 (highest first to avoid collision)
-        for i in $(seq "$max_n" -1 2); do
-            if [ -f "${dst_base}.${i}.gz" ]; then
-                mv "${dst_base}.${i}.gz" "${dst_base}.$((i + 1)).gz" || return
-            fi
-        done
-        max_n=$((max_n + 1))
-
-        # delaycompress: .1 to .2.gz (one gzip write)
-        if [ -f "${dst_base}.1" ]; then
-            gzip -c "${dst_base}.1" > "${dst_base}.2.gz" || return
-            rm -f "${dst_base}.1" || return
-        fi
-
-        # active to .1
-        if [ "$s" -eq 1 ] && [ -f "${dst_base}" ]; then
-            mv "${dst_base}" "${dst_base}.1" || return
-        fi
-    done
-    return 0
+replay_commit() {
+    run_replay_helper commit
 }
+
+recover_replay_staging() {
+    run_replay_helper recover-staging
+}
+
+# Replay, rsync and commit; shared by periodic and shutdown syncs.
+sync_current_session() {
+    local rc
+    if ! replay_rotations; then
+        log_err "Cannot replay rotations; will resume on next sync"
+        return 1
+    fi
+    rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"
+    rc=$?
+    # 24: some source files vanished during the transfer, normal for logs.
+    if [ "$rc" -ne 0 ] && [ "$rc" -ne 24 ]; then
+        log_err "Sync failed (rsync exit $rc)"
+        return 1
+    fi
+    if ! replay_commit; then
+        log_err "Cannot record the replay inode-map"
+        return 1
+    fi
+}
+
 
 # =============================================================================
 # cleanup_disk
 #
 # Manages disk space based on actual filesystem usage of the DST_DISK_DIR mount. While
 # usage exceeds DISK_USED_MAX_PCT, it first removes the oldest session_*
-# directory, then falls back to removing individual archives from
-# current_session/ if needed.
+# directory, then falls back to removing the oldest individual file from
+# current_session/ (preserved history is oldest, so it goes first).
 # =============================================================================
 cleanup_disk() {
     local use_pct
@@ -238,13 +263,13 @@ cleanup_disk() {
             continue
         fi
 
-        # Fallback: remove oldest archive from current_session/
+        # Fallback: remove the oldest file from current_session/
         local oldest_archive
-        oldest_archive=$(find "$CURRENT_MIRROR_DIR" -type f -name '*.gz' -printf '%T+ %p\n' \
-                         | sort | awk 'NR==1 {print $2}')
+        oldest_archive=$(find "$CURRENT_MIRROR_DIR" -type f -printf '%T@\t%p\n' \
+                         | sort -n | head -n 1 | cut -f 2-)
 
         if [ -z "$oldest_archive" ]; then
-            log_info "No archives to delete — disk may fill up"
+            log_info "No files to delete — disk may fill up"
             break
         fi
 
@@ -254,78 +279,36 @@ cleanup_disk() {
     done
 }
 
+
+# =============================================================================
+# initialize_current_boot_session — Initialize this boot before periodic or shutdown sync
+# =============================================================================
+initialize_current_boot_session() {
+    if is_new_boot; then
+        archive_current_session || return
+        archive_legacy_files || return
+        ensure_current_dir || return
+        save_boot_id || return
+    fi
+
+    ensure_current_dir
+}
+
+
 # =============================================================================
 # do_sync — Periodic sync (default mode)
 # =============================================================================
 do_sync() {
-    # --- Step 1: Handle reboot if restore wasn't called ---
-    if is_new_boot; then
-        archive_current_session
-        archive_legacy_files
-        ensure_current_dir
-        save_boot_id
-    fi
-
-    ensure_current_dir
-
-    # --- Step 2: Replay logrotate rotations on current_session/ ---
-    replay_rotations || return
-
-    # --- Step 3: rsync into disk's current_session/ ---
-    if ! rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"; then
-        log_err "Sync failed"
+    if ! initialize_current_boot_session; then
+        log_err "Cannot initialize current session"
         return 1
     fi
 
-    # --- Step 4: Disk space management ---
     cleanup_disk
-
+    sync_current_session || return
     log_info "Sync complete"
 }
 
-# =============================================================================
-# do_restore — Boot-time: restore active logs from disk back to tmpfs,
-# then archive previous session
-#
-# Called early in boot before rsyslogd starts.
-# 1. Restores active log files from the previous boot's current_session/ to tmpfs
-# 2. Archives previous boot's current_session/ → session_<timestamp>/
-# 3. Creates fresh current_session/ for this boot
-#
-# Archives stay on disk only — tmpfs starts clean except for active files,
-# which are moved (not copied) to tmpfs so each log lives in exactly one place.
-# =============================================================================
-do_restore() {
-	log_info "Boot-time restore active logs to /var/log (tmpfs)"
-
-    if [ -d "$CURRENT_MIRROR_DIR" ]; then
-        log_info "Restoring active logs from current_session/"
-
-        if ! rsync -a --remove-source-files \
-            --exclude='*.[0-9]' \
-            --exclude='*.[0-9][0-9]' \
-            --exclude='*.[0-9][0-9][0-9]' \
-            --exclude='*.[0-9].gz' \
-            --exclude='*.[0-9][0-9].gz' \
-            --exclude='*.[0-9][0-9][0-9].gz' \
-            "${CURRENT_MIRROR_DIR}/" "${SRC_RAM_DIR}/"; then
-            log_err "Restore failed"
-            return 1
-        fi
-    else
-        log_info "No previous current_session/ to restore from"
-    fi
-
-    # Archive previous boot's data (mv current_session/ → session_<timestamp>/)
-    archive_current_session
-    archive_legacy_files
-
-    # Create fresh current_session/ for this boot
-    ensure_current_dir
-    save_boot_id
-
-    log_info "Restore complete"
-}
 
 # =============================================================================
 # do_pre_shutdown — Final sync before shutdown/reboot
@@ -336,46 +319,50 @@ do_restore() {
 do_pre_shutdown() {
     log_info "Pre-reboot: final sync"
 
-    ensure_current_dir
+    if ! initialize_current_boot_session; then
+        log_err "Cannot initialize current session for pre-reboot sync"
+        return 1
+    fi
 
-    # Replay logrotate rotations + rsync
-    replay_rotations || return
-
-    if ! rsync -a --inplace --no-whole-file "${SRC_RAM_DIR}/" "${CURRENT_MIRROR_DIR}/"; then
+    # Replay rotations + rsync + commit
+    if ! sync_current_session; then
         log_err "Pre-reboot sync failed"
         return 1
     fi
-    save_boot_id
     log_info "Pre-reboot sync complete"
 }
+
 
 # =============================================================================
 # Main
 # =============================================================================
+case "$MODE" in
+    sync|pre-shutdown) ;;
+    *)
+        echo "Usage: $0 {sync|pre-shutdown}"
+        exit 1 ;;
+esac
+
 # checking if DST_DISK_DIR is present or mounted
 if ! mountpoint -q "$DST_DISK_DIR" 2>/dev/null; then
     log_err "$DST_DISK_DIR is not mounted, skipping"
     exit 1
 fi
 
-# Import common logrotate counter helper functions
-if ! . "$COUNTER_FUNCS"; then
-    log_err "Cannot load $COUNTER_FUNCS"
-    exit 1
-fi
-
-# Acquire operation lock before proceeding with any actions
-if ! lrc_operation_lock; then
-    log_err "Cannot acquire rotation/sync lock"
-    exit 1
+if ! r2d_lock; then
+    if [ "$MODE" = sync ]; then
+        log_err "Rotation lock busy for ${R2D_LOCK_WAIT}s; skipping this sync"
+        exit 1
+    fi
+    # The final sync must not be skipped.
+    log_err "Rotation lock busy for ${R2D_LOCK_WAIT}s; continuing without it"
 fi
 
 case "$MODE" in
-    sync)       do_sync ;;
-    restore)    do_restore ;;
+    sync)         do_sync ;;
     pre-shutdown) do_pre_shutdown ;;
-    *)
-        echo "Usage: $0 {sync|restore|pre-shutdown}"
-        exit 1
-        ;;
 esac
+rc=$?
+r2d_unlock
+exit "$rc"
+
