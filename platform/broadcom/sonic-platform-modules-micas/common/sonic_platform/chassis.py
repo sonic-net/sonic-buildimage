@@ -75,7 +75,7 @@ class Chassis(ChassisBase):
             cpo_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.CPO_FILE)
         except (OSError, TypeError):
             cpo_file = None
-        if cpo_file and os.path.isfile(cpo_file):
+        if self._cpo_init_attempted or (cpo_file and os.path.isfile(cpo_file)):
             # The base class may already have attempted CPO construction.
             if not self._cpo_init_attempted:
                 self.construct_cpo_devices(device_info.get_cpo_data())
