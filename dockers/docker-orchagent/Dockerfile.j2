@@ -20,7 +20,8 @@ RUN apt-get update &&       \
         ndppd               \
         python3-protobuf    \
         pciutils            \
-        python3-netifaces
+        python3-netifaces   \
+        nftables
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Fix for gcc/python/iputils-ping not found in arm docker
