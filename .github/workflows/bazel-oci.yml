@@ -2227,7 +2227,7 @@ jobs:
           python3 -B tools/bazel/ci/p4rt_image.py prepare-owner --bazel "$BAZEL" \
             --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
             --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
-            --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+            --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL"
       - name: Check P4RT storage before image build
         run: df -h / "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
       - name: Build P4RT runtime and debug images
@@ -2250,7 +2250,7 @@ jobs:
             python3 -B tools/bazel/ci/p4rt_image.py "$phase" --bazel "$BAZEL" \
               --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
               --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
-              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL"
           done
       - name: Prepare reviewed P4RT public evidence
         id: p4rt_public
