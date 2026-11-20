@@ -1,0 +1,59 @@
+# Static Analysis Preparation Pipeline
+#
+# Publishes selected checkout/submodule trees and rendered Dockerfiles (see
+# stage exclusions below). No build or external-package fetching is performed.
+# For patched external sources, use the build-time ENABLE_SOURCE_ARCHIVE=y archive.
+
+trigger:
+  branches:
+    include:
+      - master
+      - 202*
+
+pr:
+  branches:
+    include:
+      - master
+      - 202*
+
+pool:
+  vmImage: 'ubuntu-26.04'
+
+steps:
+  - checkout: self
+    clean: true
+    submodules: recursive
+    fetchDepth: 1
+
+  - script: sudo apt-get update && sudo apt-get install -y -q python3-jinja2
+    displayName: 'Install dependencies'
+
+  - script: |
+      set -e
+      python3 .azure-pipelines/scripts/generate_j2_context.py
+      python3 .azure-pipelines/scripts/prepare_source.py --repo-root .
+    displayName: 'Generate j2 context and render Dockerfiles'
+
+  - script: |
+      set -e
+      DEST=$(Agent.TempDirectory)/sonic-buildimage-source
+      mkdir -p "$DEST"
+      rsync -a --delete \
+        --exclude='.git' \
+        --exclude='target/' \
+        --exclude='fsroot*' \
+        --exclude='dpkg/' \
+        --exclude='src/p4lang/' \
+        --exclude='src/sonic-linux-kernel/' \
+        --exclude='src/grub2/' \
+        --exclude='src/sonic-device-data/' \
+        ./ "$DEST"/
+      printf '%s\n' 'Scope: selected checkout/submodule trees plus rendered Dockerfiles (see pipeline rsync exclusions).' \
+        'External package sources and applied patches require a separate build-time ENABLE_SOURCE_ARCHIVE=y archive.' \
+        > "$DEST/SOURCE_SCOPE.txt"
+      echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+    displayName: 'Stage source tree for publish'
+
+  - publish: $(Agent.TempDirectory)/sonic-buildimage-source
+    artifact: sonic-buildimage-source
+    displayName: 'Publish source tree for analysis jobs'
