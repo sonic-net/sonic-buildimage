@@ -61,6 +61,7 @@ FILES = {
         ("yang-mgmt-wheel", "artifacts/config-engine/sonic_yang_mgmt-1.0-py3-none-any.whl", "binary"),
         ("containercfgd-wheel", "artifacts/config-engine/sonic_containercfgd-1.0-py3-none-any.whl", "binary"),
         ("supervisor-wheel", "artifacts/config-engine/sonic_supervisord_utilities-1.0-py3-none-any.whl", "binary"),
+        ("redis-wheel", "artifacts/config-engine/redis_dump_load-1.1-py3-none-any.whl", "binary"),
         ("wheel-hashes", "artifacts/config-engine/wheels-sha256.txt", "hashes"),
     ],
     "source": [
