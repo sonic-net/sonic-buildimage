@@ -1,7 +1,7 @@
 # Expose Make-generated inputs to Bazel.
 #
-# Make prepares the Scapy wheel, Debian package inputs and service manifests
-# under target/ before Bazel assembles the images and source-built bases. This
+# Make prepares service manifests under target/ before Bazel assembles the
+# images and source-built bases. This
 # file declares existing inputs; it does not generate them or invoke Make.
 #
 # target/ has no BUILD.bazel of its own, so its files belong to this root Bazel
@@ -17,7 +17,6 @@ exports_files(
             "target/bazel-manifests/*/manifest.json",
             "target/bazel-manifests/*/components.labels",
             "target/bazel-manifests/*/image.env",
-            "target/python-wheels/trixie/scapy-2.6.1.dev0-py3-none-any.whl",
         ],
         allow_empty = True,
     ),

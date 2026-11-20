@@ -8,7 +8,8 @@ inputs. SWSS is owned by `dockers/docker-orchagent/`; Syncd VS is owned by
 
 Tracked scripts, templates and Make metadata are exported by `BUILD.bazel` files
 in `files/scripts`, `files/build_templates` and `rules`. The root `BUILD.bazel`
-declares the Make-generated manifests and Scapy wheel. SWSS consumes the
+declares the Make-generated manifests. SWSS builds Scapy through `@scapy//:wheel`
+and consumes the
 source-built config-engine OCI target directly within the Bazel graph, inheriting
 Common's runtime and symbols instead of adding another copy of its runtime TAR.
 
