@@ -6,6 +6,7 @@ setup() {
     TEST_ROOT="${BATS_TEST_TMPDIR}"
     STUB_BIN="${TEST_ROOT}/bin"
     TEMPLATE_FILE="${TEST_ROOT}/telemetry_vars.j2"
+    BLACKLIST_FILE="${TEST_ROOT}/paths_blacklist.txt"
     export GNMI_LISTENER_MODE=config
 
     mkdir -p "${STUB_BIN}"
@@ -37,11 +38,13 @@ EOF
         test_script="${TEST_ROOT}/${image}.sh"
 
         [[ "$(grep -c '^TELEMETRY_VARS_FILE=' "${script}")" == 1 ]]
+        [[ "$(grep -c '^PATHS_BLACKLIST_FILE=' "${script}")" == 1 ]]
         # shellcheck disable=SC2016
         [[ "$(grep -c '^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$' "${script}")" == 1 ]]
         # shellcheck disable=SC2016
         sed \
             -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
+            -e "s|^PATHS_BLACKLIST_FILE=.*$|PATHS_BLACKLIST_FILE=${BLACKLIST_FILE}|" \
             -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|exec "${F050_TEST_TELEMETRY}" ${TELEMETRY_ARGS}|' \
             "${script}" > "${test_script}"
         chmod +x "${test_script}"

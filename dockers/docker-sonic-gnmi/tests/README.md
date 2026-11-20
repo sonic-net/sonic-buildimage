@@ -12,7 +12,8 @@ the Bats package used by `docker-sonic-mgmt`. Local execution needs no Docker,
 root access or sudo once these dependencies are installed.
 
 - `test_gnmi_native_user_auth.bats` checks secure defaults, explicit
-  authentication modes and management/default VRF fallback behavior.
+  authentication modes, management/default VRF fallback and optional
+  paths-blacklist forwarding.
 - `test_dialout_transport.bats` checks both images' TLS defaults, trust
   environment, argument isolation and client exit status.
 - `test_tls_fallbacks.bats` checks both launchers' configured/legacy
@@ -21,9 +22,11 @@ root access or sudo once these dependencies are installed.
 
 Bats owns a fresh temporary directory for each test and removes it afterward.
 The tests run temporary copies of the production scripts with only fixed
-template/executable paths redirected to fixtures. Guards fail if those paths
-change. ConfigDB and telemetry executables are stubs; the tests do not access
-devices, services or production paths.
+template/blacklist/executable paths redirected to fixtures. Guards fail if
+those paths change. ConfigDB and telemetry executables are stubs; the tests do
+not access devices, services or production paths.
 
 A failed assertion or fixture setup returns nonzero from Bats, which fails
-the pipeline step. There is no separate shell suite to run.
+the pipeline step. The telemetry transport shell suite at
+`dockers/docker-sonic-telemetry/tests/test_telemetry_transport.sh` runs separately
+with Bash; it is not included in this Bats job.

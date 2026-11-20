@@ -26,6 +26,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git apply ../0008-Extract-tacacs-support-functions-into-library.patch
 	git apply ../0009-Add-setting-flag-for-authorization-and-accounting.patch
 	git apply ../0010-handle-bad-password-set-by-sshd.patch
+	git apply ../0011-Add-traceid-authorization-config-flag.patch
 
 	# Apply optional local patches listed in ../series.local, if present.
 	# No-op upstream (no series.local is shipped); lets downstreams add local

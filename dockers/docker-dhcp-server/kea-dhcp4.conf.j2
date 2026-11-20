@@ -14,6 +14,9 @@
 {%- endif %}
         "hooks-libraries": [
             {
+                "library": "{{ hook_lib_path | replace('libdhcp_run_script.so', 'libdhcp_lease_cmds.so') }}"
+            },
+            {
                 "library": "{{ hook_lib_path }}",
                 "parameters": {
                     "name": "{{ lease_update_script_path }}",

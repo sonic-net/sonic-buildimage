@@ -51,6 +51,8 @@ MISSING_INVENTORY_MEMBER = (RedfishClient.ERR_CODE_OK, 'N/A')
 
 @mock.patch('sonic_platform.device_data.DeviceDataManager.is_platform_with_bmc',
             mock.MagicMock(return_value=True))
+@mock.patch('sonic_py_common.device_info.get_bmc_os',
+            mock.MagicMock(return_value='openbmc'))
 class TestBMC:
     # BMC is a singleton and caches the resolved firmware ID on the instance,
     # so drop it between tests to keep them independent.

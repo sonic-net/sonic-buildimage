@@ -1,0 +1,27 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{% if DEVICE_METADATA is defined and
+      ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter') or
+      ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR') %}
+{%- macro generate_pg_buffers_with_extra_lossy_pgs(port_names, port_names_require_no_extra_pg) %}
+    "BUFFER_PG": {
+{% for port in port_names.split(',') %}
+{# apply lossy profiles on uplink ports #}
+{% if port not in port_names_require_no_extra_pg.split(',') %}
+        "{{ port }}|2": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port }}|6": {
+            "profile" : "ingress_lossy_profile"
+        },
+{% endif %}
+        "{{ port }}|0": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+{% endmacro %}
+{% endif %}

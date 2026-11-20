@@ -7,20 +7,22 @@ setup() {
     TEST_SCRIPT="${TEST_ROOT}/gnmi-native.sh"
     STUB_BIN="${TEST_ROOT}/bin"
     TEMPLATE_FILE="${TEST_ROOT}/telemetry_vars.j2"
+    BLACKLIST_FILE="${TEST_ROOT}/paths_blacklist.txt"
     export GNMI_LISTENER_MODE=config
 
     mkdir -p "${STUB_BIN}"
     touch "${TEMPLATE_FILE}"
 
-    # Run the production launcher with only its fixed template and telemetry paths
-    # redirected to test fixtures. If either production line changes, these checks
-    # fail instead of silently testing a different implementation.
+    # Redirect only fixed template, blacklist and telemetry paths to fixtures.
+    # Fail if those production assignments or the telemetry invocation drift.
     [[ "$(grep -c '^TELEMETRY_VARS_FILE=' "${SCRIPT}")" == 1 ]]
+    [[ "$(grep -c '^PATHS_BLACKLIST_FILE=' "${SCRIPT}")" == 1 ]]
     # shellcheck disable=SC2016
     [[ "$(grep -c '^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$' "${SCRIPT}")" == 1 ]]
     # shellcheck disable=SC2016
     sed \
         -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
+        -e "s|^PATHS_BLACKLIST_FILE=.*$|PATHS_BLACKLIST_FILE=${BLACKLIST_FILE}|" \
         -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|printf "telemetry args:%s\\n" "${TELEMETRY_ARGS}"|' \
         "${SCRIPT}" > "${TEST_SCRIPT}"
     chmod +x "${TEST_SCRIPT}"
@@ -173,4 +175,17 @@ run_launcher_config() {
         "${args_output}" "--gnmi_vrf mgmt"
     assert_not_contains "TLS listener does not use plaintext fallback" \
         "${args_output}" "--noTLS"
+}
+
+@test "missing paths blacklist file is not passed" {
+    run_launcher
+    assert_not_contains "missing paths blacklist file is not passed" \
+        "${output}" "--paths_blacklist"
+}
+
+@test "installed paths blacklist file is passed" {
+    touch "${BLACKLIST_FILE}"
+    run_launcher
+    assert_contains_once "installed paths blacklist file is passed" \
+        "${output}" "--paths_blacklist ${BLACKLIST_FILE}"
 }
