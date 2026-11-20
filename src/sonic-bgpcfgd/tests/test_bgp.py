@@ -705,7 +705,7 @@ def test_add_peer_ipv6():
         res = m.set_handler("fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-EVPN_PEER = {'asn': '65200', 'name': 'TOR', 'address_family': 'evpn'}
+EVPN_PEER = {'asn': '65200', 'name': 'TOR', 'keepalive': '3', 'holdtime': '9', 'address_family': 'evpn'}
 VNET_PEER = {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'}
 EVPN_VNET = {'vxlan_tunnel': 'vtep', 'vni': '10000', 'evpn_enabled': 'true'}
 

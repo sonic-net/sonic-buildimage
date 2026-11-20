@@ -373,7 +373,7 @@ class BGPPeerMgrBase(Manager):
             'neighbor_addr': nbr,
             'is_interface_neighbor': interface_neighbor,
             'bgp_session': data,
-            'CONFIG_DB__VNET': {vrf: vnet_data} if vnet_data else {},
+            'vnet_data': vnet_data,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }

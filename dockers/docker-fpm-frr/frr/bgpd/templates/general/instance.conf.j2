@@ -47,7 +47,6 @@
 {% endif %}
 {% elif bgp_session.get('address_family') == 'evpn' %}
   neighbor {{ neighbor_addr }} update-source Loopback0
-  neighbor {{ neighbor_addr }} timers 3 9
 {% elif neighbor_addr | ipv4 %}
   address-family ipv4
 {% if is_confed_external %}

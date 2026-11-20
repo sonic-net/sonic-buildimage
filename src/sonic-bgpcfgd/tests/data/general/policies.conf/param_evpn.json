@@ -5,12 +5,11 @@
         "asn": "65200",
         "name": "remote_peer"
     },
-    "CONFIG_DB__VNET": {
-        "Vnet1": {
-            "vxlan_tunnel": "vtep",
-            "vni": "10000",
-            "evpn_enabled": "true"
-        }
+    "vrf": "Vnet1",
+    "vnet_data": {
+        "vxlan_tunnel": "vtep",
+        "vni": "10000",
+        "evpn_enabled": "true"
     },
     "constants": {
         "bgp": {
