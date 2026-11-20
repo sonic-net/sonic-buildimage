@@ -3,6 +3,7 @@
 {% if ptp_port_count == 0 %}
 {% set _ = 1/0 %}
 {% endif %}
+{% set ptp_global = (PTP | default({})).global | default({}) %}
 
 [global]
 #
@@ -13,7 +14,7 @@ clientOnly              0
 socket_priority         0
 priority1               128
 priority2               128
-domainNumber            {{ PTP.global.domain_number | default('0') }}
+domainNumber            {{ ptp_global.domain_number | default('0') }}
 #utc_offset             37
 clockClass              248
 clockAccuracy           0xFE
@@ -29,8 +30,8 @@ maxStepsRemoved         255
 #
 # Port Data Set
 #
-logAnnounceInterval     {{ PTP.global.announce_interval | default('1') }}
-logSyncInterval         {{ PTP.global.sync_interval | default('-3') }}
+logAnnounceInterval     {{ ptp_global.announce_interval | default('1') }}
+logSyncInterval         {{ ptp_global.sync_interval | default('-3') }}
 operLogSyncInterval     0
 logMinDelayReqInterval  0
 logMinPdelayReqInterval 0
