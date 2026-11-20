@@ -1,10 +1,13 @@
 
-SPATH       := $($(JUNIPER_QFX5210_PLATFORM_MODULE)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-juniper.mk platform/broadcom/platform-modules-juniper.dep   
+SPATH       := $($(JUNIPER_COMMON_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-juniper.mk platform/broadcom/platform-modules-juniper.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
+DEP_FILES   += $(filter device/juniper/%,$(SONIC_DEVICE_FILES_LIST))
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
-$(JUNIPER_QFX5210_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(JUNIPER_QFX5210_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(JUNIPER_QFX5210_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
+$(JUNIPER_COMMON_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(JUNIPER_COMMON_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(JUNIPER_COMMON_MODULE)_DEP_FILES   := $(DEP_FILES)
+$(JUNIPER_COMMON_MODULE)_SMDEP_FILES := $(SMDEP_FILES)
+$(JUNIPER_COMMON_MODULE)_SMDEP_PATHS := $(SPATH)
 
