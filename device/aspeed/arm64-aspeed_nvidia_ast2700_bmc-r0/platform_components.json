@@ -2,7 +2,11 @@
     "chassis": {
         "NVIDIA-AST2700-BMC": {
             "component": {
-                "BMC": { }
+                "BMC": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { }
             }
         }
     }

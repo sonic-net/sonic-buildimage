@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=meson
+
+# Default TGT_PLAT in upstream meson_options.txt is already OBMC_AST; pass it
+# explicitly so the SONiC BMC build does not depend on that default remaining.
+override_dh_auto_configure:
+	dh_auto_configure -- -DTGT_PLAT=OBMC_AST
