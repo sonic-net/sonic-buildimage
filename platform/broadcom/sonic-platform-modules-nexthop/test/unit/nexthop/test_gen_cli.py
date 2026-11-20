@@ -14,11 +14,10 @@ from click.testing import CliRunner
 
 
 @pytest.fixture(scope="function", autouse=True)
-def gen_cli_module(monkeypatch):
+def gen_cli_module():
     """Loads the module before each test. This is to let conftest.py inject deps first."""
-    from nexthop import gen_cli, nexthop_device_info
+    from nexthop import gen_cli
 
-    monkeypatch.setattr(nexthop_device_info, "get_device_version", lambda: 0)
     yield gen_cli
 
 
@@ -696,59 +695,3 @@ def test_generate_pcie_yaml_raises_when_user_input_vars_not_found(gen_cli_module
         # Then
         assert result.exit_code == click.BadParameter.exit_code
         assert not os.path.exists(output_path)
-
-
-@pytest.mark.parametrize("device_version, expected", [(0, "margin: low"), (1, "margin: none")])
-def test_generate_pcie_yaml_renders_device_version(gen_cli_module, monkeypatch, device_version, expected):
-    from nexthop import nexthop_device_info
-
-    monkeypatch.setattr(nexthop_device_info, "get_device_version", lambda: device_version)
-    runner = CliRunner()
-    with tempfile.TemporaryDirectory() as temp_dir:
-        vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
-        template_path = os.path.join(temp_dir, "pcie.yaml.j2")
-        output_path = os.path.join(temp_dir, "pcie.yaml")
-        with open(vars_path, "w") as f:
-            f.write('- name: "unused"\n  lookup_command: "echo 0"\n')
-        with open(template_path, "w") as f:
-            f.write("margin: {% if device_version == 0 %}low{% else %}none{% endif %}\n")
-
-        result = runner.invoke(
-            gen_cli_module.pcie_yaml,
-            [
-                f"--template_filepath={template_path}",
-                f"--vars_filepath={vars_path}",
-                f"--output_filepath={output_path}",
-            ],
-        )
-
-        assert result.exit_code == 0, result.output
-        with open(output_path) as f:
-            assert f.read() == f"{expected}\n"
-
-
-def _render_device_version(gen_cli_module, temp_dir):
-    template_path = os.path.join(temp_dir, "t.j2")
-    output_path = os.path.join(temp_dir, "out")
-    with open(template_path, "w") as f:
-        f.write("{{ device_version }}\n")
-    gen_cli_module.generate_file_from_jinja2_template(template_path, {}, output_path)
-    with open(output_path) as f:
-        return f.read()
-
-
-def test_unknown_device_version_renders_unprogrammed_and_warns(gen_cli_module, monkeypatch):
-    from unittest.mock import Mock
-
-    from nexthop import nexthop_device_info
-
-    def raise_error():
-        raise RuntimeError()
-
-    monkeypatch.setattr(nexthop_device_info, "get_device_version", raise_error)
-    syslog_mock = Mock()
-    monkeypatch.setattr(gen_cli_module.syslog, "syslog", syslog_mock)
-    with tempfile.TemporaryDirectory() as temp_dir:
-        assert _render_device_version(gen_cli_module, temp_dir) == f"{nexthop_device_info.UNPROGRAMMED_DEVICE_VERSION}\n"
-
-    assert any(c.args[0] == gen_cli_module.syslog.LOG_WARNING for c in syslog_mock.call_args_list)

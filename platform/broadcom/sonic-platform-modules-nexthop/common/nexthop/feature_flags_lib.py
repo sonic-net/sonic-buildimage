@@ -37,7 +37,7 @@ import operator
 import os
 import syslog
 
-from nexthop import fpga_lib
+from nexthop import fpga_lib, nexthop_device_info
 
 # Comparison name -> operator(read_value, threshold). Names match the
 # VersionComparison enum (with its VERSION_COMPARISON_ prefix stripped)
@@ -69,19 +69,29 @@ def evaluate_flag(flag: dict, bdf: str) -> bool:
     return _COMPARISONS[flag["comparison"]](masked, threshold)
 
 
+def _read_device_version() -> int:
+    """The CPU card Device Version, or UNPROGRAMMED_DEVICE_VERSION when it cannot be read."""
+    try:
+        return nexthop_device_info.get_device_version()
+    except Exception as e:  # noqa: BLE001
+        device_version = nexthop_device_info.UNPROGRAMMED_DEVICE_VERSION
+        syslog.syslog(
+            syslog.LOG_WARNING,
+            f"Couldn't determine device_version ({type(e).__name__}: {e}), using default value: {device_version}",
+        )
+        return device_version
+
+
 def get_feature_flag_variables(feature_flags_filepath: str, template_vars: dict) -> dict[str, bool]:
     """Return {flag_name: bool} for every flag in feature_flags_filepath,
     evaluated against live hardware.
 
-    `template_vars` holds the already-resolved pcie-variables.yaml mapping (var
-    name -> value, from pcie_lib.get_pcie_variables), where each flag's bdf_var
-    is looked up to avoid re-running the lookup commands, plus `device_version`
-    (gen_cli.get_device_version) for the flags that compare against it.
+    `template_vars` holds the resolved pcie-variables.yaml mapping (var name ->
+    value, from pcie_lib.get_pcie_variables), where each flag's bdf_var is
+    looked up.
 
-    Returns {} when the file is absent (a SKU declaring no flags). Raises on a
-    malformed entry, an unknown comparison, an unresolved bdf_var or
-    device_version, or an unreadable register, so the caller fails loudly rather
-    than rendering the wrong (else-branch) layout.
+    Returns {} when the file is absent. Raises on a malformed entry, an unknown
+    comparison, an unresolved bdf_var or an unreadable register.
     """
     if not os.path.isfile(feature_flags_filepath):
         return {}
@@ -109,9 +119,9 @@ def get_feature_flag_variables(feature_flags_filepath: str, template_vars: dict)
                 f"'{flag['comparison']}' (expected one of {sorted(_COMPARISONS)})"
             )
         if source == ONIE_DEVICE_VERSION_SOURCE:
-            device_version = template_vars.get(DEVICE_VERSION_VAR)
-            if device_version is None:
-                raise RuntimeError(f"{feature_flags_filepath}: feature flag '{name}' needs the device version")
+            if DEVICE_VERSION_VAR not in template_vars:
+                template_vars[DEVICE_VERSION_VAR] = _read_device_version()
+            device_version = template_vars[DEVICE_VERSION_VAR]
             value = _COMPARISONS[flag["comparison"]](device_version, int(flag["version"], 16))
             syslog.syslog(syslog.LOG_INFO, f"feature flag '{name}' = {value} (device_version={device_version})")
         elif source == FPGA_VERSION_SOURCE:

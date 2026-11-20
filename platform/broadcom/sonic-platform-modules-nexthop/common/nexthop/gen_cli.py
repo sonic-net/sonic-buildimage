@@ -11,7 +11,7 @@ import syslog
 
 from typing import Any
 
-from nexthop import feature_flags_lib, gen_lib, nexthop_device_info, pcie_lib
+from nexthop import feature_flags_lib, gen_lib, pcie_lib
 from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
@@ -38,25 +38,9 @@ def check_file_exists_if_not_default(filepath: str, default_filepath: str, param
     if filepath != default_filepath and not os.path.isfile(filepath):
         raise click.BadParameter(f"{filepath} does not exist.", param_hint=param_name)
 
-def get_device_version(output_filepath: str) -> int:
-    """The CPU card Device Version, or UNPROGRAMMED_DEVICE_VERSION when it cannot be read."""
-    try:
-        return nexthop_device_info.get_device_version()
-    except Exception as e:  # noqa: BLE001
-        device_version = nexthop_device_info.UNPROGRAMMED_DEVICE_VERSION
-        syslog.syslog(
-            syslog.LOG_WARNING,
-            f"Couldn't determine device_version ({type(e).__name__}: {e}), using default value: {device_version} "
-            f"for generation of {output_filepath}",
-        )
-        return device_version
-
-
 def generate_file_from_jinja2_template(
     template_filepath: str, variables: dict[str, Any], output_filepath: str
 ):
-    if "device_version" not in variables:
-        variables = {**variables, "device_version": get_device_version(output_filepath)}
     gen_lib.write_atomically(
         gen_lib.render(template_filepath, variables), output_filepath
     )
@@ -148,7 +132,6 @@ def pddf_device_json_base(template_filepath, vars_filepath, platform_json_filepa
         return
 
     vars["platform"] = platform
-    vars["device_version"] = get_device_version(output_filepath)
 
     # Evaluate the feature flags (if any) against live hardware and add them as
     # Jinja booleans. Fail loudly rather than render the wrong layout.
@@ -203,8 +186,6 @@ def pd_plugin_json(template_filepath, vars_filepath, feature_flags_filepath, out
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
         sys.exit(1)
-
-    vars["device_version"] = get_device_version(output_filepath)
 
     # Evaluate the feature flags (if any) against live hardware and add them as
     # Jinja booleans. Fail loudly rather than render the wrong layout.
