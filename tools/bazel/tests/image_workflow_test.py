@@ -342,7 +342,8 @@ class VerificationWorkflowTest(unittest.TestCase):
     def test_p4rt_build_and_installed_jobs_use_same_run_archives(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
         archive, installed = jobs["p4rt_native"], jobs["p4rt_runtime"]
-        self.assertEqual(archive["runs-on"], jobs["gearbox_archive"]["runs-on"])
+        self.assertEqual(archive["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
+        self.assertEqual(jobs["gearbox_archive"]["runs-on"], ["self-hosted", "linux", "bazel-x64"])
         self.assertEqual(archive["container"], jobs["gearbox_archive"]["container"])
         self.assertEqual(archive["if"], jobs["archive"]["if"])
         self.assertEqual(installed["runs-on"], "ubuntu-24.04")
@@ -417,7 +418,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         ])
         self.assertEqual(jobs["otel_runtime"]["needs"], "otel_archive")
         dash = jobs["dash_engine_archive"]
-        self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
+        self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64"])
         self.assertEqual(dash["timeout-minutes"], 360)
         self.assertEqual(shlex.split(dash["env"]["SONIC_CONTAINER_BAZEL_OPTIONS"]), [
             "--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache",

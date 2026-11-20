@@ -74,7 +74,7 @@ class SetupBazelCacheTest(unittest.TestCase):
                                 "otel_archive", "radv_native", "gearbox_archive", "dash_engine_archive",
                                 "gnmi_native", "mgmt_framework_native", "p4rt_native"})):
                         labels = ["self-hosted", "linux", "bazel-x64"]
-                        if name in {"gearbox_archive", "dash_engine_archive", "p4rt_native"}:
+                        if name == "p4rt_native":
                             labels.append("vs")
                         self.assertEqual(job["runs-on"], labels)
                         continue
