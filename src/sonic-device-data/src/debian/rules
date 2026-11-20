@@ -4,3 +4,10 @@ build:
 
 %:
 	dh $@
+
+# dh_auto_build already runs the checkers: test is src/Makefile's default goal.
+override_dh_auto_test:
+
+# The build only copies device files and writes VS lane maps, so there is no
+# build-time metadata to strip, and the scan forks file(1) for every file.
+override_dh_strip_nondeterminism:
