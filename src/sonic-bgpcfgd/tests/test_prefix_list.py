@@ -221,3 +221,22 @@ def test_dynamic_prefix_delete_empty_cache_uses_delete_by_name_fallback(mocked_l
     mocked_log_warn.assert_called_with(
         "PrefixListMgr:: Missing cached fields for delete of prefix list 'Vnet1001'; issued best-effort delete-by-name"
     )
+
+
+def test_pending_replacement_does_not_install_obsolete_prefix_sequence():
+    from bgpcfgd.manager import swsscommon as event_constants
+    manager = constructor()
+    assert not manager.batch_deps
+    manager.directory.remove('CONFIG_DB', swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, 'localhost')
+    manager.begin_batch()
+    key = 'REVIEW|198.51.100.0/24'
+    manager.handler(key, event_constants.SET_COMMAND, {'seq': '10', 'action': 'permit'})
+    manager.handler(key, event_constants.SET_COMMAND, {'seq': '20', 'action': 'deny'})
+    manager.cfg_mgr.push.assert_not_called()
+    manager.directory.put('CONFIG_DB', swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, 'localhost',
+                          {'type': 'ToRRouter', 'bgp_asn': '65100'})
+    # Replacing the queued SET must not change the immediate-retry contract for this manager.
+    manager.cfg_mgr.push.assert_called_once_with(
+        '\nip prefix-list REVIEW seq 20 deny 198.51.100.0/24')
+    manager.end_batch()
+    assert not manager.set_queue
