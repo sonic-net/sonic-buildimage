@@ -412,6 +412,10 @@ ENABLE_BOOTCHART = n
 INCLUDE_FIPS ?= y
 ENABLE_FIPS ?= n
 
+# Permit runtime-selected Redis write protection in the built image.
+# Runtime defaults to legacy; use n to disable enforcement for the image.
+ENABLE_REDIS_WRITE_PROTECTION ?= y
+
 # SONIC_SLAVE_DOCKER_DRIVER - set the sonic slave docker storage driver
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
