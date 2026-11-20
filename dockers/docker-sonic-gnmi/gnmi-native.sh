@@ -50,7 +50,7 @@ fi
 
 # Enable GRPC GO LOG
 export GRPC_GO_LOG_VERBOSITY_LEVEL=99
-export GRPC_GO_LOG_SEVERITY_LEVEL=info
+export GRPC_GO_LOG_SEVERITY_LEVEL=warning
 
 TELEMETRY_ARGS=" -logtostderr"
 NO_TLS_FALLBACK=false
