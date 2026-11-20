@@ -237,7 +237,8 @@ stages:
           --arg name "version_upgrade_pipeline_failure" \
           --arg branch "$BUILD_SOURCEBRANCH" \
           --arg pipeline "$BUILD_DEFINITIONNAME" \
-          '{name: $name, branch: $branch, pipeline: $pipeline}')
+          --arg url "${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECTID}/_build/results?buildId=${BUILD_BUILDID}" \
+          '{name: $name, branch: $branch, pipeline: $pipeline, url: $url}')
         response=$(curl --fail-with-body --silent --show-error \
           --connect-timeout 10 --max-time 60 \
           -H 'Content-Type: application/json' \
