@@ -1,0 +1,11 @@
+Source: sonic-platform-unipoe
+Section: main
+Priority: optional
+Maintainer: Unipoe
+Build-Depends: debhelper (>=9), python3, python3-setuptools, dh-python
+Standards-Version: 3.9.6
+
+Package: sonic-platform-s6500-32x
+Architecture: any
+Depends: ${misc:Depends}, python3
+Description: Provides kernel modules and platform monitoring files

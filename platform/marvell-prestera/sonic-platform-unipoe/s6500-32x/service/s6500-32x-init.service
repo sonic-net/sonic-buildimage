@@ -1,0 +1,11 @@
+[Unit]
+Description=Platform s6500-32x Service
+After=sysinit.target
+Before=pmon.target
+
+[Service]
+ExecStart=/usr/local/bin/s6500-32x-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
