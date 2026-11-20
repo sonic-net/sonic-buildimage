@@ -51,6 +51,15 @@ docker_try_rmi() {
 }
 
 sonic_get_version() {
+    # Detect if running in container (no .git in current dir)
+    # Skip git commands inside docker to avoid spurious "fatal: not a git repository" errors
+    if [ ! -d ".git" ]; then
+        # Container fallback: use BUILD_NUMBER as version
+        BUILD_NUMBER=${BUILD_NUMBER:-0}
+        echo "sonic.${BUILD_NUMBER}-container"
+        return 0
+    fi
+
     local describe=$(git describe --tags 2>/dev/null)
     local latest_tag=$(git describe --tags --abbrev=0 2>/dev/null)
     local branch_name=$(git rev-parse --abbrev-ref HEAD)
