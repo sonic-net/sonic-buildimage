@@ -47,7 +47,7 @@ TARGETS = {
     "debug.status": OWNER + "debug_installed_packages",
 }
 CI_IMAGE_VERSION = "bazel-ci"
-OPTIONS = [build.image_version_option(CI_IMAGE_VERSION), ]
+OPTIONS = [build.MAKE_METADATA_OPTION, build.image_version_option(CI_IMAGE_VERSION), ]
 CONFIGS = {
     "dockers/docker-database/docker-database-init.sh": ("usr/local/bin/docker-database-init.sh", 0o755),
     "dockers/docker-database/flush_unused_database": ("usr/local/bin/flush_unused_database", 0o755),

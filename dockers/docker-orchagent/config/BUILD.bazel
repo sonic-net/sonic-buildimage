@@ -8,10 +8,10 @@ package(default_visibility = ["//dockers/docker-orchagent:__pkg__"])
 
 exports_files(["requirements_lock.txt"])
 
-# Make owns manifest generation; each JSON file is a separate Bazel input.
+# Expose runtime and debug manifests to image validation targets.
 filegroup(
     name = "manifest.json",
-    srcs = ["//:target/bazel-manifests/docker-orchagent/manifest.json"],
+    srcs = ["//tools/bazel/image/vs/metadata:docker-orchagent.manifest"],
     visibility = [
         "//dockers/docker-orchagent:__pkg__",
         "//tools/bazel/tests:__pkg__",
@@ -20,7 +20,7 @@ filegroup(
 
 filegroup(
     name = "manifest-dbg.json",
-    srcs = ["//:target/bazel-manifests/docker-orchagent-dbg/manifest.json"],
+    srcs = ["//tools/bazel/image/vs/metadata:docker-orchagent-dbg.manifest"],
     visibility = [
         "//dockers/docker-orchagent:__pkg__",
         "//tools/bazel/tests:__pkg__",

@@ -95,7 +95,7 @@ oci_image(
     name = "docker-router-advertiser",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/bin/docker-init.sh"],
-    env = "//:target/bazel-manifests/docker-router-advertiser/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-router-advertiser.environment",
     labels = "//dockers/docker-router-advertiser/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

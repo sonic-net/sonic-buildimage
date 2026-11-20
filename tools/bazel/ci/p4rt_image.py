@@ -80,7 +80,7 @@ def root_options(*, make_build=False):
     check.require(all(value and not any(char in value for char in '\r\n\0') for value in extra),
                   'Bazel options must be nonempty single-line arguments')
     # Preserve cache/custom options, then enforce the recorded YANG/native profile.
-    return [*OPTIONS[:3], *extra, *OPTIONS[3:]]
+    return [*OPTIONS[:3], *extra, *OPTIONS[3:], build.MAKE_METADATA_OPTION]
 
 
 def write(path, value):

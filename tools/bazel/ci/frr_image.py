@@ -20,7 +20,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 OWNER = "//dockers/docker-fpm-frr:"
 IMAGES = ("docker-fpm-frr", "docker-fpm-frr-dbg")
 BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
-OPTIONS = ["--//src/sonic-frr:snmp=true", "--//src/sonic-frr:tcmalloc=true",
+OPTIONS = [build.MAKE_METADATA_OPTION, "--//src/sonic-frr:snmp=true", "--//src/sonic-frr:tcmalloc=true",
            "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 TARGETS = {

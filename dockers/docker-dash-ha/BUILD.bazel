@@ -56,7 +56,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-dash-ha" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-dash-ha" + suffix + ".manifest",
     )
     for suffix in [
         "",

@@ -56,7 +56,7 @@ tar(
 
 manifest_labels(
     name = "labels",
-    manifest = "//:target/bazel-manifests/docker-dash-engine/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-dash-engine.manifest",
 )
 
 apt_layer(

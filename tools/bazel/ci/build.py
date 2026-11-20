@@ -8,6 +8,9 @@ from tools.bazel.build_helpers import export_archive
 from tools.bazel.ci import artifact_validation, command_log
 
 
+MAKE_METADATA_OPTION = "--//tools/bazel/image/vs/metadata:use_make_metadata=true"
+
+
 def image_version_option(version):
     return "--//tools/bazel/oci:image_version=" + version
 

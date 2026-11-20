@@ -69,7 +69,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-sflow" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sflow" + suffix + ".manifest",
     )
     for suffix in [
         "",

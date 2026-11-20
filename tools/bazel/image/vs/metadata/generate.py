@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--component-receipt", type=Path)
     parser.add_argument("--component-package", action="append", default=[])
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--include-system-eventd", choices=("y", "n"))
     for name in ("manifest", "environment", "version"):
         parser.add_argument("--" + name, type=Path)
     args = parser.parse_args()
@@ -35,6 +36,8 @@ def main():
         args.manifest.write_text(component_labels(args.component_receipt.read_text(), args.component_package))
         return
     manifest, environment = render(json.loads(args.spec.read_text()), args.image, args.image_version, args.debug)
+    if args.include_system_eventd is not None:
+        environment = "DEBIAN_FRONTEND=noninteractive\nINCLUDE_SYSTEM_EVENTD=" + args.include_system_eventd + "\n"
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
     args.environment.write_text(environment)
     args.version.write_text(args.image_version + "\n")

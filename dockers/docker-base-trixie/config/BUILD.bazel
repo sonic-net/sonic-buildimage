@@ -167,5 +167,5 @@ alias(
 manifest_labels(
     name = "labels",
     out = "manifest.labels",
-    manifest = "//:target/bazel-manifests/docker-base-trixie/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-base-trixie.manifest",
 )

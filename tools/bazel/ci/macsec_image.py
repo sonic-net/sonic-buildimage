@@ -20,7 +20,7 @@ from tools.bazel.oci import image_validation, oci_layout, source_base_validation
 OWNER = "//dockers/docker-macsec:"
 IMAGES = ("docker-macsec", "docker-macsec-dbg")
 BASE = "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie"
-OPTIONS = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+OPTIONS = [build.MAKE_METADATA_OPTION, "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 TARGETS = {
     **{name + ".gz": OWNER + name + ".gz" for name in IMAGES},

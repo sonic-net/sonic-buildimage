@@ -119,7 +119,7 @@ oci_image(
     name = "docker-lldp",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/bin/docker-lldp-init.sh"],
-    env = "//:target/bazel-manifests/docker-lldp/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-lldp.environment",
     labels = "//dockers/docker-lldp/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

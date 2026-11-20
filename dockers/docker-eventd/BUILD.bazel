@@ -36,7 +36,7 @@ oci_image(
     name = "docker-eventd",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/local/bin/supervisord"],
-    env = "//:target/bazel-manifests/docker-eventd/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-eventd.environment",
     labels = "//dockers/docker-eventd/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = ["//dockers/docker-eventd/config:files"],

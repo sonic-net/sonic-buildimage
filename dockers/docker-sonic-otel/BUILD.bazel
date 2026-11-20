@@ -84,7 +84,7 @@ account_layer(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-sonic-otel" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sonic-otel" + suffix + ".manifest",
     )
     for suffix in [
         "",
@@ -173,7 +173,7 @@ oci_image(
     name = "docker-sonic-otel",
     base = _BASE,
     entrypoint = ["/usr/local/bin/supervisord"],
-    env = "//:target/bazel-manifests/docker-sonic-otel/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-sonic-otel.environment",
     labels = ":labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

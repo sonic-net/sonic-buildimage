@@ -9,12 +9,14 @@ def _metadata_impl(ctx):
     args = ctx.actions.args()
     args.add("--spec", ctx.file.spec)
     args.add("--image", ctx.attr.image)
-    args.add("--image-version", ctx.attr.image_version[BuildSettingInfo].value)
+    args.add("--image-version", ctx.attr._image_version_override[BuildSettingInfo].value or ctx.attr.image_version[BuildSettingInfo].value)
     args.add("--manifest", manifest)
     args.add("--environment", environment)
     args.add("--version", version)
     if ctx.attr.debug:
         args.add("--debug")
+    if ctx.attr.image == "docker-database":
+        args.add("--include-system-eventd", "y" if ctx.attr._include_system_eventd[BuildSettingInfo].value else "n")
     ctx.actions.run(
         executable = ctx.attr._tool[DefaultInfo].files_to_run,
         inputs = [ctx.file.spec],
@@ -34,6 +36,8 @@ container_metadata = rule(
         "image": attr.string(mandatory = True),
         "debug": attr.bool(default = False),
         "image_version": attr.label(default = Label(":version"), providers = [BuildSettingInfo]),
+        "_image_version_override": attr.label(default = Label("//tools/bazel/oci:image_version"), providers = [BuildSettingInfo]),
+        "_include_system_eventd": attr.label(default = Label(":include_system_eventd"), providers = [BuildSettingInfo]),
         "_tool": attr.label(default = Label(":generate"), executable = True, cfg = "exec"),
     },
 )

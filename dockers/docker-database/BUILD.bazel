@@ -128,7 +128,7 @@ oci_image(
     name = "docker-database",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/local/bin/docker-database-init.sh"],
-    env = "//:target/bazel-manifests/docker-database/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-database.environment",
     labels = "//dockers/docker-database/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

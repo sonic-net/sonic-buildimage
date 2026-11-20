@@ -1,4 +1,4 @@
-"""Syncd startup files and Make-owned image labels."""
+"""Syncd startup files and OCI image labels."""
 
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@tar.bzl", "tar")
@@ -11,12 +11,12 @@ package(default_visibility = [
 
 manifest_labels(
     name = "labels",
-    manifest = "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-syncd-vs.manifest",
 )
 
 manifest_labels(
     name = "debug_labels",
-    manifest = "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest",
 )
 
 # OpenSSH's ssh-agent uses the added _ssh group. Inherit all base accounts.

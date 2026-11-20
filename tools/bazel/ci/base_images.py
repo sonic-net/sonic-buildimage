@@ -201,7 +201,7 @@ def main():
                        "new config-engine acceptance is native AMD64 only")
     receipt = {"_generated": GENERATED_NOTICE, "status": "running", "architecture": args.architecture, "commands": []}
     execute = partial(command_log.execute, cwd=ROOT)
-    options = ["--platforms=@sonic_build_infra//platforms:" + machine + "_trixie",
+    options = [build.MAKE_METADATA_OPTION, "--platforms=@sonic_build_infra//platforms:" + machine + "_trixie",
                "--host_platform=@sonic_build_infra//platforms:" + machine + "_trixie"]
     try:
         receipt["revision"] = execute(["git", "rev-parse", "HEAD"], directory, receipt, "revision").strip()

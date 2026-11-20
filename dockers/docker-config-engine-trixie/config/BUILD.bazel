@@ -30,7 +30,7 @@ tar(
 manifest_labels(
     name = "labels",
     out = "manifest.labels",
-    manifest = "//:target/bazel-manifests/docker-config-engine-trixie/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-config-engine-trixie.manifest",
     package_receipt = "//dockers/docker-config-engine-trixie:runtime_package_metadata",
     # The config-engine Make packages with both _NAME and _VERSION.
     version_packages = [

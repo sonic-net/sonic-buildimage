@@ -111,7 +111,7 @@ oci_image(
     name = "docker-sonic-gnmi",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/local/bin/supervisord"],
-    env = "//:target/bazel-manifests/docker-sonic-gnmi/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-sonic-gnmi.environment",
     labels = "//dockers/docker-sonic-gnmi/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

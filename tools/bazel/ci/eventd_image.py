@@ -34,7 +34,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = []
+OPTIONS = [build.MAKE_METADATA_OPTION]
 CONFIGS = {"start.sh": "usr/bin/start.sh", "eventdb_wrapper.sh": "usr/bin/eventdb_wrapper.sh",
            "supervisord.conf": "etc/supervisor/conf.d/supervisord.conf",
            "critical_processes": "etc/supervisor/critical_processes"}

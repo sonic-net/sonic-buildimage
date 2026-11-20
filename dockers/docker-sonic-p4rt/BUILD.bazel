@@ -60,7 +60,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-sonic-p4rt" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sonic-p4rt" + suffix + ".manifest",
     )
     for suffix in [
         "",

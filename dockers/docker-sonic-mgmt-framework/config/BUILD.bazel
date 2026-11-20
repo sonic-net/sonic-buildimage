@@ -26,7 +26,7 @@ tar(
     manifest_labels(
         name = "labels" if suffix == "" else "debug_labels",
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-sonic-mgmt-framework" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sonic-mgmt-framework" + suffix + ".manifest",
     )
     for suffix in [
         "",

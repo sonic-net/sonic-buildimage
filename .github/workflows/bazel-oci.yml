@@ -1235,6 +1235,7 @@ jobs:
           chmod +x "$owner_bazel"
           python3 -B tools/bazel/ci/container.py --container //dockers/docker-orchagent \
             --artifacts artifacts/orchagent-owner --bazel "$owner_bazel" --reuse-build \
+            --bazel-arg=--//tools/bazel/image/vs/metadata:use_make_metadata=true \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:x86_64_trixie \
 
@@ -3822,6 +3823,7 @@ jobs:
           python3 -B tools/bazel/ci/container.py --reuse-build \
             --container //dockers/docker-orchagent --source-file rules/docker-orchagent.mk \
             --bazel "$BAZEL" --artifacts artifacts/swss \
+            --bazel-arg=--//tools/bazel/image/vs/metadata:use_make_metadata=true \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:x86_64_trixie \
             "${ci_options[@]}"
@@ -3875,6 +3877,7 @@ jobs:
           python3 -B tools/bazel/ci/container.py --reuse-build \
             --container //platform/vs/docker-syncd-vs --source-file platform/vs/docker-syncd-vs.mk \
             --bazel "$BAZEL" --artifacts artifacts/syncd-vs/bazel \
+            --bazel-arg=--//tools/bazel/image/vs/metadata:use_make_metadata=true \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:x86_64_trixie \
             --bazel-arg=--config=syncd-dash "${ci_options[@]}"

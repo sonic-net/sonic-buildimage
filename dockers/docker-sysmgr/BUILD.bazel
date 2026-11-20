@@ -78,7 +78,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-sysmgr" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-sysmgr" + suffix + ".manifest",
     )
     for suffix in [
         "",

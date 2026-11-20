@@ -23,7 +23,7 @@ from tools.bazel.oci import oci_layout
 OWNER = "//platform/vs/docker-dash-engine:"
 IMAGES = ("docker-dash-engine", "docker-dash-engine-dbg")
 BASE = "//dockers/docker-base-trixie:docker-base-trixie"
-OPTIONS = ["--platforms=@sonic_build_infra//platforms:x86_64_trixie",
+OPTIONS = [build.MAKE_METADATA_OPTION, "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
            "--host_platform=@sonic_build_infra//platforms:x86_64_trixie"]
 APT_LOCK = "@sonic_build_infra//apt:apt.lock.json"
 TARGETS = {

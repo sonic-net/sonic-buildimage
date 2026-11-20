@@ -41,7 +41,8 @@ class MetadataTest(unittest.TestCase):
 
     def test_version_environment_and_label_selection(self):
         version = INPUTS.version.read_text().strip()
-        self.assertEqual(INPUTS.environment.read_text(), "DEBIAN_FRONTEND=noninteractive\nIMAGE_VERSION=" + version + "\n")
+        # rules/config and docker-database/bazel/prepare_environment.py.
+        self.assertEqual(INPUTS.environment.read_text(), "DEBIAN_FRONTEND=noninteractive\nINCLUDE_SYSTEM_EVENTD=y\n")
         for path, expected in ((INPUTS.fallback_labels, version), (INPUTS.explicit_labels, "fixture-explicit")):
             labels = dict(line.split("=", 1) for line in path.read_text().splitlines())
             self.assertEqual(labels["Tag"], expected)

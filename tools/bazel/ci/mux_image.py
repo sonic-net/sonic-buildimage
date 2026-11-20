@@ -37,7 +37,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = []
+OPTIONS = [build.MAKE_METADATA_OPTION]
 CONFIGS = {
     "docker-init.sh": ("usr/bin/docker-init.sh", 0o755),
     "supervisord.conf": ("etc/supervisor/conf.d/supervisord.conf", 0o644),

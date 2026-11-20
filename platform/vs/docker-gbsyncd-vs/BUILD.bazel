@@ -150,7 +150,7 @@ oci_image(
     name = "docker-gbsyncd-vs",
     base = ":config_engine_base_layout",
     entrypoint = ["/usr/local/bin/supervisord"],
-    env = "//:target/bazel-manifests/docker-gbsyncd-vs/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-gbsyncd-vs.environment",
     labels = "//platform/vs/docker-gbsyncd-vs/config:labels",
     target_compatible_with = _COMPATIBLE_WITH,
     tars = [

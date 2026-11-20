@@ -40,7 +40,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = []
+OPTIONS = [build.MAKE_METADATA_OPTION]
 CONFIGS = {
     "start.sh": ("usr/bin/start.sh", 0o755),
     "docker-lldp-init.sh": ("usr/bin/docker-lldp-init.sh", 0o755),

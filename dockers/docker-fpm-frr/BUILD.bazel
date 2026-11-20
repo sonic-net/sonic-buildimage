@@ -116,7 +116,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-fpm-frr" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-fpm-frr" + suffix + ".manifest",
     )
     for suffix in [
         "",

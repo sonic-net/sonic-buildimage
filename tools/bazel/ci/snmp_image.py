@@ -47,7 +47,7 @@ def build_images(args, directory):
                "invocation": {"bazel": args.bazel,
                               "review_registry_revision": os.environ.get("SONIC_BAZEL_REGISTRY_REVISION")}}
     execute = partial(command_log.execute, cwd=ROOT)
-    options = [build.image_version_option(args.image_version)]
+    options = [build.MAKE_METADATA_OPTION, build.image_version_option(args.image_version)]
     try:
         receipt["revision"] = execute(["git", "rev-parse", "HEAD"], directory, receipt, "revision").strip()
         headers = subprocess.check_output(["git", "cat-file", "-p", "HEAD"], cwd=ROOT, text=True).split("\n\n", 1)[0]
@@ -166,7 +166,7 @@ def validate_images(directory):
 def incremental(args, directory):
     """Check no-op reuse, then edit/restore image and archive reproducibility."""
     baseline = json.loads((directory / 'build-receipt.json').read_text())
-    options = [build.image_version_option(baseline['image_version'])]
+    options = [build.MAKE_METADATA_OPTION, build.image_version_option(baseline['image_version'])]
     def output(label):
         value = subprocess.check_output([args.bazel, 'cquery', *options, '--output=files', label], cwd=ROOT, text=True).strip()
         return ROOT / value

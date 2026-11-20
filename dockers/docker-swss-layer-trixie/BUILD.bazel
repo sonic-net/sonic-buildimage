@@ -13,7 +13,7 @@ package(default_visibility = ["//visibility:public"])
 manifest_labels(
     name = "labels",
     out = "manifest.labels",
-    manifest = "//:target/bazel-manifests/docker-swss-layer-trixie/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-swss-layer-trixie.manifest",
 )
 
 # Source payload added over config-engine. Common (libswsscommon and its

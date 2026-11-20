@@ -45,7 +45,7 @@ CONFIGS = {
 
 
 def build_options(image_version):
-    return [build.image_version_option(image_version)]
+    return [build.MAKE_METADATA_OPTION, build.image_version_option(image_version)]
 
 
 def build_images(args, directory):

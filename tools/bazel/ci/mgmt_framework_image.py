@@ -41,7 +41,7 @@ TARGETS = {
     "debug-packages.json": OWNER + "debug_package_metadata",
     "debug.status": OWNER + "debug_installed_packages",
 }
-OPTIONS = []
+OPTIONS = [build.MAKE_METADATA_OPTION]
 
 
 def clean_source(directory):

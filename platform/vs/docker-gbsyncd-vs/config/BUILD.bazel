@@ -1,4 +1,4 @@
-"""Gearbox startup files and Make-owned image labels."""
+"""Gearbox startup files and OCI image labels."""
 
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@tar.bzl", "tar")
@@ -11,12 +11,12 @@ package(default_visibility = [
 
 manifest_labels(
     name = "labels",
-    manifest = "//:target/bazel-manifests/docker-gbsyncd-vs/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gbsyncd-vs.manifest",
 )
 
 manifest_labels(
     name = "debug_labels",
-    manifest = "//:target/bazel-manifests/docker-gbsyncd-vs-dbg/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-gbsyncd-vs-dbg.manifest",
 )
 
 # OpenSSH's ssh-agent uses the added _ssh group. Inherit all base accounts.

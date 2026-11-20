@@ -127,11 +127,10 @@ policies, package contracts and replacement restrictions.
 
 ## Render container manifests
 
-Make renders container manifests with the existing `generate_manifest` in
-`rules/functions`. Bazel consumes the resulting JSON as an explicit input and
-serializes it into the `com.azure.sonic.manifest` image label. Make remains
-responsible for computed variables, conditionals, service-template discovery,
-version suffixes and container-specific manifest overlays.
+Bazel generates container manifests by default from the declared AMD64 Trixie
+VS metadata in `//tools/bazel/image/vs/metadata`. The Make entry point selects
+the manifests rendered by `generate_manifest` in `rules/functions`, including
+Make's evaluated variables, service templates and container-specific overlays.
 
 ## Use Make's manifests
 
@@ -144,19 +143,19 @@ existing generator in a temporary directory, validates the JSON and publishes
 it atomically, preserving the previous file on failure and its timestamp when
 the bytes are unchanged.
 
-Export these generated source files from the root `BUILD.bazel`, as SWSS does,
-then declare one label action for each manifest in the container package:
+Use the metadata aliases when declaring each label action. They select the
+native action or the exported Make file according to `use_make_metadata`:
 
 ```starlark
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 
 manifest_labels(
     name = "labels",
-    manifest = "//:target/bazel-manifests/docker-example/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-example.manifest",
 )
 manifest_labels(
     name = "debug_labels",
-    manifest = "//:target/bazel-manifests/docker-example-dbg/manifest.json",
+    manifest = "//tools/bazel/image/vs/metadata:docker-example-dbg.manifest",
 )
 ```
 
@@ -168,6 +167,10 @@ from the shared `//tools/bazel/oci:image_version` setting. Make supplies its
 Direct Bazel callers can set `--//tools/bazel/oci:image_version=RELEASE`.
 With native metadata and no explicit override, `Tag` uses
 `//tools/bazel/image/vs/metadata:version`, which defaults to `local`.
+Images that declare `IMAGE_VERSION` use the same value in their native
+environment. For the native database image, set
+`--//tools/bazel/image/vs/metadata:include_system_eventd=false` to disable
+system Eventd, matching Make's `INCLUDE_SYSTEM_EVENTD=n`.
 Make selects `--//tools/bazel/image/vs/metadata:use_make_metadata=true`
 for individual and batched archives, so an empty Make release emits `Tag=`.
 Owners can also pass `package_receipt` from their installed package receipt and

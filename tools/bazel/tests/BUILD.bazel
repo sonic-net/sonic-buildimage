@@ -968,7 +968,7 @@ py_test(
     main = "integration/sonic_docker_archive_test.py",
 )
 
-# Validate SWSS startup and labels against the manifests prepared by Make.
+# Validate SWSS startup and labels against the selected manifests.
 py_test(
     name = "swss_render_test",
     srcs = ["integration/swss_render_test.py"],
@@ -1147,8 +1147,8 @@ py_test(
     srcs = ["integration/manifest_labels_action_test.py"],
     args = [
         "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
-        "--runtime-manifest=$(rootpath //:target/bazel-manifests/docker-syncd-vs/manifest.json)",
-        "--debug-manifest=$(rootpath //:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json)",
+        "--runtime-manifest=$(rootpath //tools/bazel/image/vs/metadata:docker-syncd-vs.manifest)",
+        "--debug-manifest=$(rootpath //tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest)",
         "--runtime-labels=$(rootpath //platform/vs/docker-syncd-vs/config:labels)",
         "--debug-labels=$(rootpath //platform/vs/docker-syncd-vs/config:debug_labels)",
         "--package-name=syncd",
@@ -1159,8 +1159,8 @@ py_test(
         "--manifest-version=1.0.0",
     ],
     data = [
-        "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
-        "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
+        "//tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest",
+        "//tools/bazel/image/vs/metadata:docker-syncd-vs.manifest",
         "//platform/vs/docker-syncd-vs/config:debug_labels",
         "//platform/vs/docker-syncd-vs/config:labels",
         "//tools/bazel/oci:manifest_labels",
@@ -1201,8 +1201,8 @@ _SYNCD_OWNER = "//platform/vs/docker-syncd-vs"
 _SYNCD_P4_IMAGE_INPUTS = {
     "runtime_path": _SYNCD_OWNER + ":docker-syncd-vs",
     "debug_path": _SYNCD_OWNER + ":docker-syncd-vs-dbg",
-    "runtime_manifest_path": "//:target/bazel-manifests/docker-syncd-vs/manifest.json",
-    "debug_manifest_path": "//:target/bazel-manifests/docker-syncd-vs-dbg/manifest.json",
+    "runtime_manifest_path": "//tools/bazel/image/vs/metadata:docker-syncd-vs.manifest",
+    "debug_manifest_path": "//tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest",
     "source_contract_path": _SYNCD_OWNER + ":source_contract",
     "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
     "dpkg_filter_path": "//dockers/docker-base-trixie:dpkg_01_drop",
@@ -1285,8 +1285,8 @@ _SWSS_OWNER = "//dockers/docker-orchagent"
 _SWSS_IMAGE_INPUTS = {
     "runtime_path": _SWSS_OWNER + ":docker-orchagent",
     "debug_path": _SWSS_OWNER + ":docker-orchagent-dbg",
-    "runtime_manifest_path": "//:target/bazel-manifests/docker-orchagent/manifest.json",
-    "debug_manifest_path": "//:target/bazel-manifests/docker-orchagent-dbg/manifest.json",
+    "runtime_manifest_path": "//tools/bazel/image/vs/metadata:docker-orchagent.manifest",
+    "debug_manifest_path": "//tools/bazel/image/vs/metadata:docker-orchagent-dbg.manifest",
     "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
     "debug_apt_lock_path": _SWSS_OWNER + "/bazel:debug_apt.lock.json",
     "base_path": _SWSS_OWNER + ":config_engine_base_layout",

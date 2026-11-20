@@ -89,9 +89,9 @@ tar(
 [
     manifest_labels(
         name = "labels" if suffix == "" else "debug_labels",
-        component_labels = "//:target/bazel-manifests/docker-database/components.labels" if not suffix else None,
+        component_labels = "//tools/bazel/image/vs/metadata:docker-database/components.labels" if not suffix else None,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-database" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-database" + suffix + ".manifest",
     )
     for suffix in [
         "",

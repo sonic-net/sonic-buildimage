@@ -62,7 +62,7 @@ tar(
     manifest_labels(
         name = "labels" + suffix,
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-teamd" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-teamd" + suffix + ".manifest",
     )
     for suffix in ["", "-dbg"]
 ]
