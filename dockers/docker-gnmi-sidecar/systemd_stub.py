@@ -5,6 +5,7 @@ Replaces systemd-managed gnmi container with K8s-managed one.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import random
@@ -12,11 +13,12 @@ import subprocess
 import time
 import argparse
 import traceback
-from typing import List
 
+from sonic_py_common import sidecar_common
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
+    db_hget, db_hgetall,
     sync_items, cleanup_native_container, SYNC_INTERVAL_S
 )
 
@@ -31,6 +33,47 @@ logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 CONTAINER_CHECKER_SYNC_ENABLED = get_bool_env_var("CONTAINER_CHECKER_SYNC_ENABLED", default=False)
 
 logger.log_notice(f"CONTAINER_CHECKER_SYNC_ENABLED={CONTAINER_CHECKER_SYNC_ENABLED}")
+
+
+def _parse_client_certs() -> list[dict[str, str | list[str]]]:
+    """
+    Parse GNMI_CLIENT_CERTS, a JSON array of {"cname": ..., "role": ...}.
+
+    Returns a list of {"cname": str, "role": list[str]}, or [] when the env
+    var is unset, empty or invalid.
+    """
+    raw = os.getenv("GNMI_CLIENT_CERTS", "").strip()
+    if not raw:
+        return []
+    try:
+        entries = json.loads(raw)
+        if not isinstance(entries, list):
+            raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
+        normalized: list[dict[str, str | list[str]]] = []
+        for e in entries:
+            if not isinstance(e, dict):
+                raise ValueError(f"Each entry must be an object: {e!r}")
+            if "cname" not in e or "role" not in e:
+                raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
+            cname = str(e.get("cname", "")).strip()
+            role_raw = e.get("role", "")
+            if isinstance(role_raw, list):
+                role = [str(r).strip() for r in role_raw if str(r).strip()]
+            else:
+                s = str(role_raw).strip()
+                role = [s] if s else []
+            if not cname or not role:
+                raise ValueError(f"'cname' and 'role' must be non-empty: {e}")
+            normalized.append({"cname": cname, "role": role})
+        return normalized
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.log_error(f"Bad GNMI_CLIENT_CERTS env var: {exc}; not reconciling client certs")
+        return []
+
+
+GNMI_CLIENT_CERTS: list[dict[str, str | list[str]]] = _parse_client_certs()
+
+logger.log_notice(f"GNMI_CLIENT_CERTS={GNMI_CLIENT_CERTS}")
 
 # Compile regex patterns once at module level to avoid repeated compilation
 _MASTER_PATTERN = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
@@ -150,7 +193,7 @@ logger.log_notice(f"gnmi source set to {_GNMI_SRC}")
 # thin wrapper that exec's k8s_pod_control.sh.  If gnmi.sh is synced first its
 # post-copy action (systemctl restart gnmi) would fail with "No such file or
 # directory".
-SYNC_ITEMS: List[SyncItem] = [
+SYNC_ITEMS: list[SyncItem] = [
     SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-gnmi-sidecar/k8s_pod_control.sh"),
     SyncItem(_GNMI_SRC, "/usr/local/bin/gnmi.sh"),
 ]
@@ -171,6 +214,135 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "restart", "gnmi"],
     ],
 }
+
+def _apply_config_patch(patch: list) -> bool:
+    """Apply an RFC 6902 JSON Patch to CONFIG_DB via 'config apply-patch'.
+
+    YANG-validated and atomic.  Returns True on success.
+    """
+    if not patch:
+        return True
+    patch_json = json.dumps(patch)
+    rc, out, err = run_nsenter(
+        ["sudo", "-n", "config", "apply-patch", "/dev/stdin"],
+        text=False,
+        input_bytes=patch_json.encode("utf-8"),
+    )
+    if rc != 0:
+        out_str = out.decode("utf-8", errors="replace").strip() if out else ""
+        err_str = err.decode("utf-8", errors="replace").strip() if err else ""
+        details = "; ".join(p for p in (f"stdout: {out_str}" if out_str else "",
+                                        f"stderr: {err_str}" if err_str else "") if p)
+        logger.log_error(f"config apply-patch failed (rc={rc}): {details}")
+        return False
+    logger.log_notice(f"config apply-patch succeeded ({len(patch)} op(s))")
+    return True
+
+
+def _get_table_keys(table: str) -> list[str]:
+    """Return the keys of a CONFIG_DB table, raising if the read fails.
+
+    sidecar_common.db_get_table_keys returns [] on error, which would make the
+    patch add the whole table and replace what is there.
+    """
+    db = sidecar_common._get_config_db()
+    if db is None:
+        raise RuntimeError(f"CONFIG_DB unavailable; cannot read {table}")
+    return list((db.get_table(table) or {}).keys())
+
+
+def _normalize_role(value) -> list[str]:
+    """Normalize a role value from CONFIG_DB into a canonical list[str].
+
+    Handles:
+      - list (correct format from ConfigDBConnector leaf-list) -> as-is
+      - plain string "admin" -> ["admin"]
+      - JSON-encoded string '["admin","readonly"]' -> ["admin", "readonly"]
+    """
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if not isinstance(value, str) or not value.strip():
+        return []
+    s = value.strip()
+    if s.startswith("["):
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return [s]
+
+
+def _build_enabled_patch() -> list:
+    """Build RFC 6902 JSON Patch ops for the desired enabled state.
+
+    Reads current CONFIG_DB to detect drift and returns a minimal patch
+    containing only the operations needed to converge.
+    Includes both GNMI|gnmi.user_auth and GNMI_CLIENT_CERT entries.
+    """
+    patch: list = []
+
+    # JSON Patch "add" needs the parent to exist, so create GNMI or GNMI|gnmi
+    # whole when missing rather than adding the leaf under an absent parent.
+    gnmi_keys = _get_table_keys("GNMI")
+    if not gnmi_keys:
+        patch.append({"op": "add", "path": "/GNMI", "value": {"gnmi": {"user_auth": "cert"}}})
+    elif "gnmi" not in gnmi_keys:
+        patch.append({"op": "add", "path": "/GNMI/gnmi", "value": {"user_auth": "cert"}})
+    else:
+        cur = db_hget("GNMI|gnmi", "user_auth")
+        if cur != "cert":
+            op = "add" if cur is None else "replace"
+            patch.append({"op": op, "path": "/GNMI/gnmi/user_auth", "value": "cert"})
+
+    existing_cnames = set(_get_table_keys("GNMI_CLIENT_CERT"))
+    entries_needed: list = []
+    for entry in GNMI_CLIENT_CERTS:
+        cname, role = entry["cname"], entry["role"]
+        if cname in existing_cnames:
+            stored = db_hgetall(f"GNMI_CLIENT_CERT|{cname}")
+            stored_role = stored.get("role") if stored else None
+            if isinstance(stored_role, list) and sorted(_normalize_role(stored_role)) == sorted(role):
+                continue
+        entries_needed.append(entry)
+
+    if entries_needed:
+        if not existing_cnames:
+            patch.append({
+                "op": "add",
+                "path": "/GNMI_CLIENT_CERT",
+                "value": {e["cname"]: {"role": e["role"]} for e in entries_needed},
+            })
+        else:
+            for e in entries_needed:
+                op = "replace" if e["cname"] in existing_cnames else "add"
+                patch.append({
+                    "op": op,
+                    "path": f"/GNMI_CLIENT_CERT/{e['cname']}",
+                    "value": {"role": e["role"]},
+                })
+
+    return patch
+
+
+def reconcile_config_db_once() -> None:
+    """
+    Idempotent drift-correction for CONFIG_DB:
+      - When GNMI_CLIENT_CERTS is unset, empty or invalid: do nothing
+      - Otherwise:
+          * Ensure GNMI|gnmi.user_auth=cert
+          * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
+
+    A CONFIG_DB read error raises, so the caller skips the cycle instead of
+    patching from a partial view.
+    """
+    if not GNMI_CLIENT_CERTS:
+        return
+    patch = _build_enabled_patch()
+    if patch:
+        _apply_config_patch(patch)
+
 
 # Previous sidecar versions overwrote /lib/systemd/system/gnmi.service
 # with a variant containing "User=root" (needed for kubectl).  Now that kubectl
@@ -222,10 +394,19 @@ def _cleanup_stale_service_unit() -> None:
     logger.log_notice("Restored gnmi.service and restarted")
 
 
+def _reconcile_config_db_logged() -> bool:
+    try:
+        reconcile_config_db_once()
+        return True
+    except Exception as e:
+        logger.log_error(f"CONFIG_DB reconcile failed: {e}. Will retry next cycle.")
+        return False
+
+
 def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     cleanup_native_container("gnmi", IS_V1_ENABLED)
-    items: List[SyncItem] = list(SYNC_ITEMS)
+    items: list[SyncItem] = list(SYNC_ITEMS)
     if CONTAINER_CHECKER_SYNC_ENABLED:
         branch_name = _resolve_branch(_get_branch_name())
         container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
@@ -260,7 +441,9 @@ def main() -> int:
         logger.log_info("Post-copy host actions DISABLED for this run")
 
     try:
-        ok = ensure_sync()
+        # Reconcile CONFIG_DB before any file sync so auth is correct ASAP
+        reconciled = _reconcile_config_db_logged()
+        ok = ensure_sync() and reconciled
         if not ok:
             logger.log_error("Initial sync failed.")
     except Exception as e:
@@ -274,6 +457,7 @@ def main() -> int:
         try:
             jitter = args.interval * random.uniform(-jitter_pct, jitter_pct)
             time.sleep(args.interval + jitter)
+            _reconcile_config_db_logged()
             ok = ensure_sync()
             if not ok:
                 logger.log_error("Sync failed. Will retry in next iteration.")
