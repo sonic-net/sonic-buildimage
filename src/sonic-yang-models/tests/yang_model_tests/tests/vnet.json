@@ -25,6 +25,10 @@
         "desc": "Missing Vxlan_TUNNEL configuration",
         "eStrKey" : "LeafRef"
     },
+    "VNET_INVALID_DECAP_TUNNEL": {
+        "desc": "decap_tunnel_list referencing a non-existent VXLAN_TUNNEL.",
+        "eStrKey" : "LeafRef"
+    },
     "VNET_ROUTE_VALID_TEST": {
         "desc": "Valid VNET Route Configuration."
     },

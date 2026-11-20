@@ -108,8 +108,10 @@ module sonic-vnet {
                 }
 
                 leaf decap_tunnel_list {
-                    description "List of additional VXLAN tunnels to decapsulate into this Vnet.";
-                    type string;
+                    description "Additional existing VXLAN tunnel to decapsulate into this Vnet.";
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
                 }
             }
             /* end of list VNET_LIST */
