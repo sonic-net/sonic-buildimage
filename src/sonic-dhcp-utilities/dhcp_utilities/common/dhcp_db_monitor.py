@@ -1,6 +1,7 @@
 import ipaddress
 import sys
 import syslog
+import time
 from abc import abstractmethod
 from swsscommon import swsscommon
 
@@ -319,6 +320,15 @@ class VlanIntfTableEventChecker(ConfigDbEventChecker):
         # For vlan doesn't have related dhcp entry, not need to refresh dhcrelay process
         if vlan_name in enabled_dhcp_interfaces and ip_address is not None and \
            ipaddress.ip_address(ip_address).version == 4:
+            # Secondary IPs do not define DHCP subnets; skip to avoid spurious Kea reloads
+            for field, value in entry:
+                if field == "secondary" and value == "true":
+                    return False
+            # Brief pause so that a rapid paired event (e.g. add-IP followed
+            # immediately by remove-IP) has time to arrive in the subscriber
+            # table before clear_event() drains it. This coalesces the two
+            # CONFIG_DB events into a single Kea SIGHUP reload instead of two.
+            time.sleep(0.5)
             self.clear_event()
             return True
         return False
