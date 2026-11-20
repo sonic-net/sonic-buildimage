@@ -1,5 +1,6 @@
-"""Exercise the two NAT archives exported by the native AMD64/Trixie VS build."""
+"""Exercise the NAT archives selected for the native AMD64/Trixie VS build."""
 
+import argparse
 from pathlib import Path
 import subprocess
 import sys
@@ -29,7 +30,16 @@ def verify(workspace, name):
         subprocess.run(["docker", "image", "rm", tag], capture_output=True, timeout=60)
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--debug-layer", choices=("n", "y"), default="y",
+                        help="also validate the debug archive when the build enables debug layers")
+    args = parser.parse_args(argv)
     workspace = Path.cwd()
-    for name in ("docker-nat", "docker-nat-dbg"):
-        verify(workspace, name)
+    verify(workspace, "docker-nat")
+    if args.debug_layer == "y":
+        verify(workspace, "docker-nat-dbg")
+
+
+if __name__ == "__main__":
+    main()

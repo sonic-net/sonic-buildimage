@@ -4253,13 +4253,13 @@ jobs:
           if grep -Eq 'not found|undefined symbol|symbol lookup error' artifacts/vs/tlm-teamd-linkage.txt; then
             exit 1
           fi
-          python3 -B tools/bazel/ci/verify_nat_archives.py
+          python3 -B tools/bazel/ci/verify_nat_archives.py --debug-layer "$1"
           SH
           make -f Makefile.work BLDENV=trixie sonic-slave-run \
             DOCKER_ROOT="$PWD/fsroot.docker.verify-images" \
             SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=n \
             SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL --cgroupns=private" \
-            SONIC_RUN_CMDS='bash artifacts/vs/verify-installed-images.sh'
+            SONIC_RUN_CMDS="bash artifacts/vs/verify-installed-images.sh $SONIC_ENABLE_DEBUG_LAYER"
 
       - name: Publish the installer and matching container archives
         id: vs_installer_upload

@@ -1103,8 +1103,9 @@ class VerificationWorkflowTest(unittest.TestCase):
             )
             linkage_call = directory / "linkage-call.json"
             linkage_report = directory / "artifacts/vs/tlm-teamd-linkage.txt"
-            for name, probe_exit, docker_exit, output, expected_status in cases:
-                with self.subTest(name=name):
+            modes = [("n", case) for case in cases] + [("y", cases[0])]
+            for debug_layer, (name, probe_exit, docker_exit, output, expected_status) in modes:
+                with self.subTest(name=name, debug_layer=debug_layer):
                     for path in (
                         directory / "validate_runtime.json",
                         directory / "verify_nat_archives.json",
@@ -1116,7 +1117,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                     result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", shell], cwd=directory,
                         env=dict(os.environ, PATH=str(directory) + os.pathsep + os.environ["PATH"],
                                  RUNNER_TEMP=str(directory), TEST_WORKSPACE=str(directory),
-                                 SONIC_CI_CONTAINER_LABEL="fixture-vs",
+                                 SONIC_CI_CONTAINER_LABEL="fixture-vs", SONIC_ENABLE_DEBUG_LAYER=debug_layer,
                                  PROBE_EXIT=str(probe_exit), DOCKER_EXIT=str(docker_exit),
                                  EXPECTED_DOCKER_ARGUMENTS=json.dumps(docker_arguments), LINKAGE_OUTPUT=output),
                         capture_output=True, text=True)
@@ -1131,7 +1132,7 @@ class VerificationWorkflowTest(unittest.TestCase):
                     self.assertEqual(nat_call.exists(), expected_status == 0)
                     if nat_call.exists():
                         self.assertEqual(json.loads(nat_call.read_text()), {
-                            "args": ["-B", "tools/bazel/ci/verify_nat_archives.py"],
+                            "args": ["-B", "tools/bazel/ci/verify_nat_archives.py", "--debug-layer", debug_layer],
                             "docker_host": "unix:///worker-private.sock",
                         })
                     if probe_exit:
