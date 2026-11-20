@@ -6,6 +6,7 @@ INVALID_LISTENER_MODE=3
 SOCKET_DIRECTORY_ERROR=4
 INVALID_TLS_CONFIGURATION=5
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
+PATHS_BLACKLIST_FILE=/etc/telemetry/paths_blacklist.txt
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
@@ -201,6 +202,11 @@ if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
         fi
     fi
+fi
+
+# Reject requests for paths listed in the blacklist, when one is installed
+if [ -f "$PATHS_BLACKLIST_FILE" ]; then
+    TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
 fi
 
 echo "gnmi args: $TELEMETRY_ARGS"

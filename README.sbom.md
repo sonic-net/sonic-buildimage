@@ -69,7 +69,7 @@ publishes the sibling files alongside it.
 | `SBOM_FORMAT` | `both` | `cyclonedx`, `spdx`, or `both`. SPDX is a downstream conversion via `cyclonedx-cli` (auto-fetched), so emitting both is essentially free — but the conversion carries **no dependency relationships** and no `formulation`, so the containment graph exists only in the CycloneDX document. |
 | `SBOM_SCAN_TOOL` | `syft` | Binary scanner for transitive deps: `syft` or `trivy`. |
 | `SBOM_INCLUDE_LICENSES` | `y` | Whether to harvest copyrights and resolve SPDX licenses. |
-| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, or the scanner binary — and also if the finished document fails schema validation or its dependency graph does not resolve. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
+| `SBOM_STRICT` | `y` | When `y`, the build fails if a critical SBOM input is missing — host rootfs (`fsroot-<machine>/`), any `.gz` in `SBOM_INSTALLER_DOCKERS`, the scanner binary, or the recipe fragment of any `.deb` the installer ships — and also if a recipe's fragment cannot be written, or the finished document fails schema validation or its dependency graph does not resolve. Set to `n` for debugging or one-off partial emits. Soft optional features (SPDX conversion, provenance, license resolution) always warn-and-continue regardless. |
 
 These variables are surfaced in the `Build Configuration` dump that
 SONiC prints at the start of every build, so you can confirm the state.
@@ -167,13 +167,17 @@ How each pattern is captured. Concrete CycloneDX shapes are visible in
 `target/.../*.cdx.json` after a build; one representative example is
 shown after this list.
 
-- **SONiC-native code** (sonic-net submodule). Primary PURL:
+- **SONiC-native code** (sonic-net submodule). Primary PURL of a
+  `.deb` built from the submodule's top directory:
   `pkg:github/sonic-net/<repo>@<commit>`. `externalReferences` records
   the submodule URL and pinned commit. No pedigree unless a sibling
   `src/<pkg>.patch/` exists. `sonic-linux-kernel` is the exception:
   it rebuilds Debian's `linux` source, so its `.deb`s take the
   `pkg:deb/sonic/<name>@<version>` identity instead. Being a submodule,
   it gets no Debian `.dsc` ancestor (see the kernel entry below).
+  A `.deb` built from a subdirectory of a submodule
+  (`src/dhcprelay/dhcp6relay`) keeps `pkg:deb/sonic/<name>@<version>`,
+  so two packages from one repository stay two components.
 
 - **Patched upstream Debian sources** (`dget` + sidecar patches in
   `src/<pkg>/patch/`). Primary: `pkg:deb/sonic/<name>@<version>`.
@@ -186,14 +190,22 @@ shown after this list.
   `src/sonic-frr/frr` is FRRouting upstream). Primary:
   `pkg:deb/sonic/frr@<version>`. Ancestor:
   `pkg:github/FRRouting/frr@<git-describe>`. Patches + aggregate
-  patch-set SHA-1 in pedigree. Same handling for sonic-p4rt,
-  sonic-sysmgr (gnoi), wpasupplicant.
+  patch-set SHA-1 in pedigree. Same handling for sonic-sysmgr (gnoi).
+  sonic-p4rt and wpasupplicant wrap a sonic-net submodule, which gets
+  a source repository component (below) instead of an ancestor.
 
 - **Direct upstream submodule with sidecar patches** (scapy, ptf,
   ptf-py3, supervisor, redis-dump-load). Primary derived from the
   artifact filename (PyPI for wheels, deb for debs). Ancestor:
   `pkg:github/<upstream-org>/<repo>@<git-describe>`. Patches from the
   sidecar directory.
+
+- **Source repositories.** Every other artifact built from a
+  submodule (a wheel, a subdirectory `.deb`, a wrapper such as
+  `src/wpasupplicant`) carries a `pkg:github/<owner>/<repo>@<commit>`
+  component tagged `sonic:fragment_kind=recipe-emit-source`, with a
+  `dependsOn` edge from the artifact. Artifacts from one submodule
+  share that component.
 
 - **Upstream apt/dpkg packages** (everything apt-installed into the
   rootfs or a container, ~1000+ debs). Captured by observation:
@@ -265,7 +277,9 @@ shown after this list.
   Every emitted component carries `sonic:source_deb=<deb filename>`.
   `build_sbom.py:build_dependency_graph()` reverses
   `sonic:source_deb` into `dependsOn` edges from the `.deb`'s
-  `bom-ref` to each language-dep component so a consumer can walk
+  `bom-ref` to each language-dep and source repository component
+  (multi-valued: a crate two `.deb`s ship hangs off both) so a
+  consumer can walk
   `swss_*.deb -> tokio@1.x` (Rust) or `sonic-gnmi_*.deb ->
   github.com/openconfig/gnmi@v0.10` (Go) directly without parsing
   properties.
@@ -847,7 +861,7 @@ Files that exist for this design.
 | `scripts/install_sbom_tool.sh` | Auto-fetches syft, grype, cyclonedx-cli with SHA-256 verify into `target/sbom-tools/`. |
 | `scripts/build_sbom.py` | Aggregator. Walks fragments, runs the scanner, parses lockfiles, resolves licenses, dedupes, builds and validates the CycloneDX `dependencies[]` graph (containment: image → the host filesystem and the containers it installs → packages; kernel-module → kernel-image edges; declared `.deb` build/runtime deps; recipe-emit-{rust,go,python} → owning `.deb` edges), and writes the SBOM + SPDX + provenance. |
 | `scripts/build_sbom.sh` | Thin shim that execs `build_sbom.py`. |
-| `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
+| `scripts/sbom_fragment.py` | Per-recipe fragment generator. Knows the four ancestor patterns, the source repository each artifact was built from, the vendor-supplier URL table, and the per-`.deb` language-dep harvesters (Rust via `rust-audit-info`, Go via `go version -m`, Python via `*.dist-info/METADATA` walk). |
 | `scripts/sbom_resolve_licenses.py` | DEP-5 parser + licensecheck fallback + SPDX translation. |
 | `scripts/sbom_license_map.json` | ~100 Debian License header strings mapped to SPDX. |
 | `scripts/sbom_parse_lockfiles.py` | Parses `go.sum`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock` from harvested archives. Also parses `Cargo.lock` defensively for legacy archives — but Rust attribution comes from `sbom_fragment.py`'s `.dep-v0` introspection, not from this parser. |
