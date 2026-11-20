@@ -78,6 +78,7 @@ def print_yang_files_validation_report(yang_files_list):
 # Specify only the file basenames here; directory prefixes will be added automatically.
 yang_files = [
     'sonic-acl.yang',
+    'sonic-ars.yang',
     'sonic-asic-sensors.yang',
     'sonic-auto_techsupport.yang',
     'sonic-banner.yang',
