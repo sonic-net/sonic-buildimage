@@ -6,8 +6,11 @@ import sys
 
 CONFIG_DB = 'CONFIG_DB'
 STATE_DB = 'STATE_DB'
-# STATE_DB table of every registered component's effective log setting; the
-# swss-common C++ logger publishes the same table and fields
+# STATE_DB table of every registered component's effective log setting. It is
+# shared with the swss-common C++ logger, which publishes LOGLEVEL and LOGOUTPUT
+# there; this module also publishes require_manual_refresh. The name must match
+# STATE_LOGGER_TABLE_NAME in swss-common's schema.h; it is not imported because
+# older swsscommon bindings do not export it.
 STATE_LOGGER_TABLE = 'LOGGER_TABLE'
 FIELD_LOG_LEVEL = 'LOGLEVEL'
 FIELD_LOG_OUTPUT = 'LOGOUTPUT'
@@ -47,7 +50,9 @@ class SysLogger:
         self.set_min_log_priority(log_level)
         
         if enable_runtime_config:
-            self.update_log_level()
+            ret, msg = self.update_log_level()
+            if not ret:
+                self.log_error(msg)
                             
     def update_log_level(self):
         """Refresh log level.
@@ -55,7 +60,9 @@ class SysLogger:
         The CONFIG_DB LOGGER row is operator intent and is only read: an absent
         row or LOGLEVEL field means the level this logger was created with. The
         effective level is published to STATE_DB, with require_manual_refresh
-        telling the CLI that a CONFIG_DB change applies on SIGHUP.
+        telling the CLI that this logger does not pick up CONFIG_DB changes on
+        its own. The level is applied even if the publish fails, so the
+        operator's CONFIG_DB setting still takes effect.
 
         Returns:
             tuple: (refresh result, fail reason)

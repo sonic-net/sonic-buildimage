@@ -128,3 +128,18 @@ class TestSysLogger:
         ret, msg = log.update_log_level()
         assert not ret
         assert msg
+
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector')
+    def test_runtime_config_publish_fails(self, mock_connector):
+        """A failed STATE_DB publish is reported and logged, and the configured level still applies."""
+        mock_db = mock.MagicMock()
+        mock_db.get = mock.MagicMock(return_value='DEBUG')
+        mock_db.hmset = mock.MagicMock(side_effect=Exception('STATE_DB unavailable'))
+        mock_connector.return_value = mock_db
+        with mock.patch.object(syslogger.SysLogger, 'log_error') as mock_log_error:
+            log = syslogger.SysLogger(log_identifier='log3', enable_runtime_config=True)
+            mock_log_error.assert_called_once_with('Failed to refresh log configuration - STATE_DB unavailable')
+        assert log.logger.level == logging.DEBUG
+
+        assert log.update_log_level() == (False, 'Failed to refresh log configuration - STATE_DB unavailable')
+        assert log.logger.level == logging.DEBUG
