@@ -3792,7 +3792,8 @@ jobs:
               python3 -B tools/bazel/ci/validate_runtime.py \
                 --images-policy artifacts/vs/swss-installed-images-policy.json \
                 --images-policy artifacts/vs/syncd-installed-images-policy.json --target target \
-                --output artifacts/vs/installed-images.json" \
+                --output artifacts/vs/installed-images.json && \
+              python3 -B tools/bazel/ci/bmp_loaded.py" \
             2>&1 | tee artifacts/vs/installed-images.log
 
       - name: Retain VS runtime and debug archive reuse evidence
@@ -4237,6 +4238,7 @@ jobs:
             --images-policy artifacts/vs/syncd-installed-images-policy.json --target target \
             --output artifacts/vs/installed-images.json \
             2>&1 | tee artifacts/vs/installed-images.log
+          python3 -B tools/bazel/ci/bmp_loaded.py
           # The SWSS linker permits indirect shared-library symbols. Resolve
           # every relocation in the installed image, including Common's libnl symbols.
           docker run --rm --network none --read-only --cap-drop ALL \

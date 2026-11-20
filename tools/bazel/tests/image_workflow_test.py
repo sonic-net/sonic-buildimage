@@ -1010,7 +1010,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             record = (f"#!{sys.executable}\nimport os, sys\nfrom pathlib import Path\n"
                       "name = Path(sys.argv[0]).name\n"
                       "stage = 'daemon' if name == 'make' else ('prepare' if any("
-                      "arg.endswith('/prepare_nested_docker.py') for arg in sys.argv) else 'probe')\n"
+                      "arg.endswith('/prepare_nested_docker.py') for arg in sys.argv) else ('bmp' if any(x.endswith('bmp_loaded.py') for x in sys.argv) else 'probe'))\n"
                       "with Path(os.environ['CALLS']).open('a') as output: output.write(stage + '\\n')\n"
                       "sys.exit(int(os.environ['PREPARE_EXIT']) if stage == 'prepare' else 0)\n")
             make.write_text(record)
@@ -1020,7 +1020,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             sudo = commands / "sudo"
             sudo.write_text('#!/bin/sh\nexec "$@"\n')
             sudo.chmod(0o755)
-            for failure, expected in (("0", ["prepare", "daemon", "probe"]), ("23", ["prepare"])):
+            for failure, expected in (("0", ["prepare", "daemon", "probe", "bmp"]), ("23", ["prepare"])):
                 calls.unlink(missing_ok=True)
                 result = subprocess.run(["bash", "-c", common["SONIC_RUN_CMDS"]], cwd=directory,
                                         env=dict(environment, CALLS=str(calls), PREPARE_EXIT=failure),
@@ -1105,8 +1105,13 @@ class VerificationWorkflowTest(unittest.TestCase):
             linkage_report = directory / "artifacts/vs/tlm-teamd-linkage.txt"
             for name, probe_exit, docker_exit, output, expected_status in cases:
                 with self.subTest(name=name):
-                    for path in (directory / "validate_runtime.json", directory / "verify_nat_archives.json",
-                                 linkage_call, linkage_report):
+                    for path in (
+                        directory / "validate_runtime.json",
+                        directory / "verify_nat_archives.json",
+                        directory / "bmp_loaded.json",
+                        linkage_call,
+                        linkage_report,
+                    ):
                         path.unlink(missing_ok=True)
                     result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", shell], cwd=directory,
                         env=dict(os.environ, PATH=str(directory) + os.pathsep + os.environ["PATH"],
@@ -1133,6 +1138,9 @@ class VerificationWorkflowTest(unittest.TestCase):
                         self.assertFalse(linkage_call.exists())
                         self.assertFalse(linkage_report.exists())
                     else:
+                        bmp = json.loads((directory / "bmp_loaded.json").read_text())
+                        self.assertEqual(bmp["docker_host"], "unix:///worker-private.sock")
+                        self.assertEqual(bmp["args"], ["-B", "tools/bazel/ci/bmp_loaded.py"])
                         linkage = json.loads(linkage_call.read_text())
                         self.assertEqual(linkage["args"], docker_arguments)
                         self.assertEqual(linkage["docker_host"], "unix:///worker-private.sock")

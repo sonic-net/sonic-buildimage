@@ -1,0 +1,32 @@
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+
+# Preserve setup.py's explicit bmpcfgd and tests packages (not tests/common).
+py_wheel(
+    name = "wheel",
+    author = "SONiC Team",
+    author_email = "linuxnetdev@microsoft.com",
+    distribution = "sonic-bmpcfgd-services",
+    entry_points = {"console_scripts": ["bmpcfgd = bmpcfgd.bmpcfgd:main"]},
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    license = "Apache 2.0",
+    python_tag = "py3",
+    requires = ["jinja2>=2.10", "netaddr==0.8.0", "pyyaml>=6.0.1"],
+    strip_path_prefixes = ["src/sonic-bmpcfgd/"],
+    summary = "Python services which run in the bmp container",
+    version = "1.0",
+    deps = [":wheel_sources"],
+)
+
+filegroup(
+    name = "wheel_sources",
+    srcs = glob(["bmpcfgd/*.py", "tests/*.py"]),
+)
+
+wheel_layer(
+    name = "runtime",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    headers = "/usr/local/include/python3.13",
+    wheels = [":wheel"],
+    visibility = ["//dockers/docker-sonic-bmp:__pkg__"],
+)
