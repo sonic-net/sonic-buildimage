@@ -35,6 +35,13 @@
     "BGP_NEIGHBOR_VNET_VALID": {
         "desc": "Configure BGP neighbor with a VNet name as vrf_name."
     },
+    "BGP_NEIGHBOR_VNET_LEGACY_FIELDS_VALID": {
+        "desc": "VNet-scoped BGP neighbor with bgpcfgd nhopself and rrclient."
+    },
+    "BGP_NEIGHBOR_VNET_NEG_NHOPSELF_RANGE": {
+        "desc": "VNet-scoped BGP neighbor with nhopself outside 0..1.",
+        "eStrKey": "Range"
+    },
     "BGP_NEIGHBOR_NEG_VNET_NOT_EXIST": {
         "desc": "BGP neighbor vrf_name references a non-existing VNet.",
         "eStrKey": "InvalidValue"

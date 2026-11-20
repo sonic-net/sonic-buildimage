@@ -136,6 +136,20 @@ module sonic-bgp-neighbor {
                     description "Peer group name";
                 }
 
+                leaf nhopself {
+                    type uint8 {
+                        range "0..1";
+                    }
+                    description "Nexthop is self, no nexthop calculation";
+                }
+
+                leaf rrclient {
+                    type uint8 {
+                        range "0..1";
+                    }
+                    description "Route reflector client";
+                }
+
                 uses bgpcmn:sonic-bgp-cmn;
             }
         }
