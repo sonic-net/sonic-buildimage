@@ -1,5 +1,13 @@
 {
     "GRPCCLIENT_CONFIG_CHANGE_VERBOSITY_LEVEL": {
         "desc": "Consume verbosity level config changes. "
+    },
+    "GRPCCLIENT_CONFIG_AUTH_LEVEL_MUTUAL": {
+        "desc": "Configure mutual TLS authentication."
+    },
+    "GRPCCLIENT_CONFIG_INVALID_AUTH_LEVEL": {
+        "desc": "Reject an auth_level outside the enumeration.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["auth_level"]
     }
 }
