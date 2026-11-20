@@ -1,0 +1,142 @@
+From 7cc629f07e3c82a02240ac1dad194d96c09fc22d Mon Sep 17 00:00:00 2001
+From: Yair Raviv <yraviv@nvidia.com>
+Date: Wed, 18 Nov 2026 13:43:51 +0200
+Subject: [PATCH] teamd: lacp: drive warm-reboot timeout by a per-process loop
+ timer
+
+The warm-reboot carrier timeout was a 3 second deadline armed by the
+first lacp_update_carrier() call and only checked on later calls. With
+a scaled LAG config, teammgrd adds members of many LAGs interleaved,
+so the last members of a LAG can arrive after the deadline. The LAG
+then leaves WR mode and those members negotiate LACP from scratch
+instead of restoring their saved state, causing traffic loss.
+
+Replace the deadline with one teamd loop timer per process, armed on
+the first carrier update and set to 10 seconds. WR mode still ends as
+soon as all saved LAG member ports are restored, so the timer is only
+a fallback for members that never come back.
+---
+ teamd/teamd_runner_lacp.c | 52 ++++++++++++++++++++++++++++++---------
+ 1 file changed, 41 insertions(+), 11 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index c6b532b..2033edf 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -191,7 +191,7 @@ struct lacp {
+ 	struct teamd_context *ctx;
+ 	struct lacp_port *selected_agg_lead; /* leading port of selected aggregator */
+ 	bool carrier_up;
+-	time_t warm_start_mode_timer;
++	bool warm_start_mode_timer_set;
+ 	time_t next_retry_count_change_time;
+ 	struct {
+ 		bool active;
+@@ -312,13 +312,16 @@ static void remove_file(struct teamd_context *ctx, const char *name) {
+ 	}
+ }
+ 
++#define LACP_WR_TIMEOUT_CB_NAME "lacp_wr_timeout"
++
+ static void stop_wr_mode(struct lacp *lacp) {
+ 	int i;
+ 
+ 	teamd_log_info("WR-mode. Stopping WR start mode");
+ 
+ 	lacp->ctx->warm_start_mode = false;
+-	lacp->warm_start_mode_timer = 0;
++	lacp->warm_start_mode_timer_set = false;
++	teamd_loop_callback_disable(lacp->ctx, LACP_WR_TIMEOUT_CB_NAME, lacp);
+ 
+ 	remove_file(lacp->ctx, lacp->ctx->team_devname);
+ 	for (i = 0; i < lacp->wr.nr_of_tdports; ++i) {
+@@ -765,7 +768,8 @@ static int lacp_set_carrier(struct lacp *lacp, bool carrier_up)
+ 
+ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu);
+ 
+-#define LACP_WARM_START_CARRIER_TIMEOUT 3
++/* Counted from the first carrier update, one timer per teamd process */
++#define LACP_WARM_START_CARRIER_TIMEOUT 10
+ 
+ static int lacp_update_carrier(struct lacp *lacp)
+ {
+@@ -833,14 +837,17 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		}
+ 	}
+ 
+-	if (lacp->ctx->warm_start_mode) {
+-		if (lacp->warm_start_mode_timer == 0) {
+-			lacp->warm_start_mode_timer = time(NULL) + LACP_WARM_START_CARRIER_TIMEOUT;
+-		} else if (time(NULL) >= lacp->warm_start_mode_timer) {
+-			teamd_log_err("WR-mode. Timeout occured. Can't start in WR mode in %d seconds",
+-					LACP_WARM_START_CARRIER_TIMEOUT);
+-			stop_wr_mode(lacp);
++	if (lacp->ctx->warm_start_mode && !lacp->warm_start_mode_timer_set) {
++		struct timespec ts = { .tv_sec = LACP_WARM_START_CARRIER_TIMEOUT };
++
++		err = teamd_loop_callback_timer_set(lacp->ctx, LACP_WR_TIMEOUT_CB_NAME,
++						    lacp, NULL, &ts);
++		if (err) {
++			teamd_log_err("WR-mode. Failed to set WR timeout timer.");
++			return err;
+ 		}
++		teamd_loop_callback_enable(lacp->ctx, LACP_WR_TIMEOUT_CB_NAME, lacp);
++		lacp->warm_start_mode_timer_set = true;
+ 	}
+ 
+ 	if (ports_enabled >= lacp->cfg.min_ports) {
+@@ -1766,6 +1773,20 @@ static int lacp_callback_retry_count_timeout(struct teamd_context *ctx, int even
+     return 0;
+ }
+ 
++static int lacp_callback_wr_timeout(struct teamd_context *ctx, int events,
++				    void *priv)
++{
++	struct lacp *lacp = priv;
++
++	teamd_loop_callback_disable(ctx, LACP_WR_TIMEOUT_CB_NAME, lacp);
++	if (!ctx->warm_start_mode)
++		return 0;
++	teamd_log_err("WR-mode. Timeout occured. Can't start in WR mode in %d seconds",
++			LACP_WARM_START_CARRIER_TIMEOUT);
++	stop_wr_mode(lacp);
++	return lacp_update_carrier(lacp);
++}
++
+ static int lacp_callback_periodic(struct teamd_context *ctx, int events,
+ 				  void *priv)
+ {
+@@ -2149,7 +2170,7 @@ static int lacp_carrier_init(struct teamd_context *ctx, struct lacp *lacp)
+ 		}
+ 		ctx->warm_start_mode = lacp->wr.carrier_up;
+ 		lacp->carrier_up = lacp->wr.carrier_up;
+-		lacp->warm_start_mode_timer = 0;
++		lacp->warm_start_mode_timer_set = false;
+ 	}
+ 
+ 	err = team_carrier_set(ctx->th, lacp->carrier_up);
+@@ -2850,8 +2871,16 @@ static int lacp_init(struct teamd_context *ctx, void *priv)
+ 		teamd_log_err("Failed to add retry count timeout callback timer");
+ 		goto balancer_fini;
+ 	}
++	err = teamd_loop_callback_timer_add(ctx, LACP_WR_TIMEOUT_CB_NAME,
++					    lacp, lacp_callback_wr_timeout);
++	if (err) {
++		teamd_log_err("Failed to add WR timeout callback timer");
++		goto retry_count_timer_del;
++	}
+ 	return 0;
+ 
++retry_count_timer_del:
++	teamd_loop_callback_del(ctx, LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
+ balancer_fini:
+ 	teamd_balancer_fini(lacp->tb);
+ event_watch_unregister:
+@@ -2865,6 +2894,7 @@ static void lacp_fini(struct teamd_context *ctx, void *priv)
+ 
+ 	if (ctx->lacp_directory)
+ 		lacp_state_save(ctx, lacp);
++	teamd_loop_callback_del(ctx, LACP_WR_TIMEOUT_CB_NAME, lacp);
+ 	teamd_loop_callback_del(ctx, LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
+ 	teamd_state_val_unregister(ctx, &lacp_state_vg, lacp);
+ 	teamd_balancer_fini(lacp->tb);
