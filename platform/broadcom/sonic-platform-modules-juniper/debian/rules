@@ -32,12 +32,16 @@ clean:
 	dh_testdir
 	dh_testroot
 	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+   	done)		
 
 build:
-	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
 	(for mod in $(MODULE_DIRS); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
-		$(PYTHON) setup.py build; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+		cd $(MOD_SRC_DIR); \
 	done)
 
 binary: binary-arch binary-indep
@@ -64,7 +68,6 @@ binary-indep:
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 	done)
 	# Resuming debhelper scripts
 	dh_testroot

@@ -1,0 +1,128 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '0154'
+  name: 'Host bridge: Intel Corporation 3rd Gen Core processor DRAM Controller (rev
+    09)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '0151'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: '0155'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: 0159
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '06'
+  fn: '0'
+  id: 015d
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: '2342'
+  name: 'PCI bridge: Intel Corporation DH89xxCC PCI Express Root Port #1 (rev 08)'
+- bus: '00'
+  dev: 1c
+  fn: '1'
+  id: '2344'
+  name: 'PCI bridge: Intel Corporation DH89xxCC PCI Express Root Port #2 (rev 08)'
+- bus: '00'
+  dev: 1c
+  fn: '2'
+  id: '2346'
+  name: 'PCI bridge: Intel Corporation DH89xxCC PCI Express Root Port #3 (rev 08)'
+- bus: '00'
+  dev: 1c
+  fn: '3'
+  id: '2348'
+  name: 'PCI bridge: Intel Corporation DH89xxCC PCI Express Root Port #4 (rev 08)'
+- bus: '00'
+  dev: 1d
+  fn: '0'
+  id: '2334'
+  name: 'USB controller: Intel Corporation DH89xxCC USB2 Enhanced Host Controller
+    #1 (rev 08)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: '2310'
+  name: 'ISA bridge: Intel Corporation DH89xxCC LPC Controller (rev 08)'
+- bus: '00'
+  dev: 1f
+  fn: '2'
+  id: '2323'
+  name: 'SATA controller: Intel Corporation DH89xxCC 4 Port SATA AHCI Controller (rev
+    08)'
+- bus: '00'
+  dev: 1f
+  fn: '3'
+  id: '2330'
+  name: 'SMBus: Intel Corporation DH89xxCC SMBus Controller (rev 08)'
+- bus: '00'
+  dev: 1f
+  fn: '7'
+  id: '2360'
+  name: 'System peripheral: Intel Corporation DH89xxCC Watchdog Timer (rev 08)'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: '0434'
+  name: 'Co-processor: Intel Corporation DH89XXCC Series QAT (rev 21)'
+- bus: 08
+  dev: '00'
+  fn: '1'
+  id: 043a
+  name: 'Ethernet controller: Intel Corporation DH8900CC Series Gigabit Fiber Network
+    Connection (rev 21)'
+- bus: 08
+  dev: '00'
+  fn: '2'
+  id: 043a
+  name: 'Ethernet controller: Intel Corporation DH8900CC Series Gigabit Fiber Network
+    Connection (rev 21)'
+- bus: 08
+  dev: '00'
+  fn: '3'
+  id: 043a
+  name: 'Ethernet controller: Intel Corporation DH8900CC Series Gigabit Fiber Network
+    Connection (rev 21)'
+- bus: 08
+  dev: '00'
+  fn: '4'
+  id: 0438
+  name: 'Ethernet controller: Intel Corporation DH8900CC Series Gigabit Network Connection
+    (rev 21)'
+- bus: 09
+  dev: '00'
+  fn: '0'
+  id: b960
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56960 Switch ASIC (rev
+    12)'
+- bus: 09
+  dev: '00'
+  fn: '1'
+  id: b960
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56960 Switch ASIC (rev
+    12)'
+- bus: 0f
+  dev: '00'
+  fn: '0'
+  id: 007b
+  name: 'Unassigned class [ff00]: Juniper Networks Device 007b (rev 01)'
+- bus: '15'
+  dev: '00'
+  fn: '0'
+  id: 007c
+  name: 'Unassigned class [ff00]: Juniper Networks Device 007c (rev 01)'
