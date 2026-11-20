@@ -8,6 +8,8 @@ from sonic_platform_pddf_base.pddfapi import PddfApi
 
 
 def load_environment():
+    # PddfApi creates the host platform link before loading its device data.
+    pddf = PddfApi()
     with open('/usr/share/sonic/platform/pddf/pd-plugin.json') as stream:
         plugin = json.load(stream)
-    return PddfApi(), plugin
+    return pddf, plugin

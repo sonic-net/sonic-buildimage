@@ -25,19 +25,28 @@ calls fail with EINVAL on the test image's Linux 6.12 kernel, removing their
 sysfs attributes. `hwmon_device_register_with_groups` supports this existing
 client-attribute layout without a chip-info table.
 
+## Host startup
+
+Initialize `PddfApi` before opening `pd-plugin.json`. Native AS5835 device
+initialization does not create `/usr/share/sonic/platform` on the host;
+the PDDF API creates that link to the canonical device directory. PMON has
+an existing platform directory. Both layouts use the same API mappings.
+
+This ordering makes EEPROM decoding available to ZTP, system health and
+watchdog startup without enabling generic PDDF device creation.
+
 ## Validation
 
-- 149 platform/PDDF tests pass, including native sysfs path resolution,
-  both PSUs, missing/malformed readings, fan faults, RPM and child inventory.
-- Read-only PDDF path checks on AS5835 hardware resolve both PSUs' electrical
-  measurements, hardware voltage limits, 400 W capacity, RPM and temperature,
-  plus all four board temperature/80 C threshold pairs.
-- Fan, PSU and CPLD modules compile and link against Debian Linux 6.12.117
-  headers in a disposable Linux container. They have not been loaded.
-- Live fan and PSU-presence validation is pending corrected modules compiled
-  for the exact SONiC kernel. The switch has no compiler or kernel headers.
-- Its older image also lacks the shared `pddf_psu_sensor` module; that module
-  is already included in the source branch this port is based on.
-
-A complete image or matching platform package is required before activating
-this migration. The changes have not been installed on the test switch.
+- Regression tests exercise missing/existing host platform links, the PMON
+  directory layout, initialization errors, native sysfs path resolution,
+  both PSUs, sensor units and unavailable/faulted readings.
+- The built Linux 6.12 image runs the corrected fan and PSU status drivers
+  on AS5835 hardware. All ten chassis rotors and both PSUs are present and
+  healthy; the original 40% fan policy is retained at normal temperatures.
+- Board, sparse CPU and PSU temperatures, output voltage/current and 400 W
+  PSU capacity are reported through the platform APIs.
+- The startup fix was applied live to the master-derived community image.
+  EEPROM serial/product/MAC decoding succeeds, and a provisioning request
+  with the ZTP identity headers receives HTTP 200 through the management VRF.
+- System-health and watchdog-control services start successfully. The wdat
+  watchdog passed an arm/disarm test at its configured 30-second timeout.
