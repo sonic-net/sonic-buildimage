@@ -49,7 +49,9 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     Returns:
       handle to the config_db for a namespace
     """
-    options = {"use_unix_socket_path": authenticate or use_local_redis_socket("CONFIG_DB", namespace)}
+    options = {}
+    if authenticate or use_local_redis_socket("CONFIG_DB", namespace):
+        options["use_unix_socket_path"] = True
     if authenticate:
         options["authenticate"] = True
     config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
@@ -77,7 +79,8 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     Returns:
         handle to all the dbs for a namespaces
     """
-    db_list = list(swsscommon.SonicDBConfig.getDbList(namespace or DEFAULT_NAMESPACE))
+    db = swsscommon.SonicV2Connector(namespace=namespace)
+    db_list = list(db.get_db_list())
     if not is_supervisor():
         try:
             db_list.remove('CHASSIS_APP_DB')
@@ -88,10 +91,11 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     # One connector uses one transport, so use sockets only when every selected
     # database admits this reader. Remote and restricted legacy endpoints keep TCP.
     use_socket = bool(db_list) and all(use_local_redis_socket(name, namespace) for name in db_list)
-    options = {'namespace': namespace, 'use_unix_socket_path': use_socket}
-    if authenticate and use_socket:
-        options['authenticate'] = True
-    db = swsscommon.SonicV2Connector(**options)
+    if use_socket:
+        options = {'namespace': namespace, 'use_unix_socket_path': True}
+        if authenticate:
+            options['authenticate'] = True
+        db = swsscommon.SonicV2Connector(**options)
     for db_id in db_list:
         db.connect(db_id)
     return db
