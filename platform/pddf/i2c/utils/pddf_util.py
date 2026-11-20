@@ -169,8 +169,11 @@ def config_pddf_utils():
     SONIC_PLATFORM_BSP_WHL_PKG = "/".join([device_path, 'sonic_platform-1.0-py3-none-any.whl'])
     SONIC_PLATFORM_PDDF_WHL_PKG = "/".join([device_path, 'pddf', 'sonic_platform-1.0-py3-none-any.whl'])
     SONIC_PLATFORM_BSP_WHL_PKG_BK = "/".join([device_path, 'sonic_platform-1.0-py3-none-any.whl.orig'])
-    status, output = log_os_system("pip3 show sonic-platform > /dev/null 2>&1")
-    if status:
+    SKIP_WHL_INSTALL = "/".join([device_path, 'pddf', 'skip_whl_install'])
+    if os.path.exists(SKIP_WHL_INSTALL):
+        # The platform installs sonic_platform on the host and for pmon itself
+        logger.info("%s exists, leaving the sonic_platform whl packages alone", SKIP_WHL_INSTALL)
+    elif log_os_system("pip3 show sonic-platform > /dev/null 2>&1")[0]:
         if os.path.exists(SONIC_PLATFORM_PDDF_WHL_PKG):
             # Platform API 2.0 is supported
             if os.path.exists(SONIC_PLATFORM_BSP_WHL_PKG):
@@ -267,9 +270,11 @@ def cleanup_pddf_utils():
     SONIC_PLATFORM_BSP_WHL_PKG = "/".join([device_path, 'sonic_platform-1.0-py3-none-any.whl'])
     SONIC_PLATFORM_PDDF_WHL_PKG = "/".join([device_path, 'pddf', 'sonic_platform-1.0-py3-none-any.whl'])
     SONIC_PLATFORM_BSP_WHL_PKG_BK = "/".join([device_path, 'sonic_platform-1.0-py3-none-any.whl.orig'])
+    SKIP_WHL_INSTALL = "/".join([device_path, 'pddf', 'skip_whl_install'])
     # ##########################################################################
-    status, output = log_os_system("pip3 show sonic-platform > /dev/null 2>&1")
-    if status:
+    if os.path.exists(SKIP_WHL_INSTALL):
+        logger.info("%s exists, leaving the sonic_platform whl packages alone", SKIP_WHL_INSTALL)
+    elif log_os_system("pip3 show sonic-platform > /dev/null 2>&1")[0]:
         # PDDF Platform API 2.0 is not supported but system is in PDDF mode, hence PDDF 1.0 plugins are present
         device_plugin_path = "/".join([device_path, "plugins"])
         backup_path = "/".join([device_plugin_path, "orig"])
