@@ -7,7 +7,7 @@ DASH profile. Component owners retain all compilation/install definitions.
 SOURCE_PACKAGES = {
     "p4lang-pi": "@p4lang_pi//:p4lang-pi.runtime",
     "p4lang-bmv2": "@p4lang_bmv2//:p4lang-bmv2.runtime",
-    "p4lang-p4c": "@p4c//:p4c_pkg",
+    "p4lang-p4c": "@p4c//:p4lang-p4c.runtime",
     "libsai": "@sonic_dash//:runtime",
     "libswsscommon": "@sonic_swss_common//dist:libswsscommon_pkg",
     "libsairedis": "@sonic_sairedis//lib:libsairedis_pkg",

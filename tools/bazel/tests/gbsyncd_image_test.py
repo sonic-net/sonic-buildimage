@@ -1,10 +1,14 @@
 """Reject account loss while retaining the declared gearbox OpenSSH group."""
 
 import ast
+import contextlib
+import io
 import copy
 import json
 import os
 import subprocess
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 import tempfile
 import unittest
@@ -135,6 +139,67 @@ class GearboxVimReceipt(unittest.TestCase):
         for code, stdout in ((0, "Tiny version"), (0, "Small version"), (0, ""), (1, "Huge version")):
             with self.subTest(code=code, stdout=stdout), self.assertRaises(AssertionError):
                 self.receipt({"returncode": code, "stdout": stdout})
+
+
+class GearboxBuildEvidenceTest(unittest.TestCase):
+    def test_exported_packages_and_archives_match_the_validated_layouts(self):
+        """Validation must inspect the same build's payload as the published archives."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "checkout"
+            workspace.mkdir()
+            directory = root / "artifacts"
+            directory.mkdir()
+            outputs = {target: "outputs/" + name for name, target in gbsyncd_image.TARGETS.items()}
+            layouts = [gbsyncd_image.BASE, *[gbsyncd_image.OWNER + name for name in gbsyncd_image.IMAGES]]
+            outputs.update({target: "outputs/layout-" + str(index) for index, target in enumerate(layouts)})
+            bazel = root / "bazel"
+            bazel.write_text("#!" + sys.executable + "\n" + f"outputs = {outputs!r}\n" + r"""
+from pathlib import Path
+import sys
+if sys.argv[1] == 'build':
+    counter = Path('generation')
+    generation = int(counter.read_text()) + 1 if counter.exists() else 1
+    counter.write_text(str(generation))
+    # Re-execution may change generated payloads even for unchanged sources.
+    # Image archives depend on their layouts, which are built transitively.
+    for output in outputs.values():
+        path = Path(output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('payload from build ' + str(generation))
+elif sys.argv[1] == 'cquery':
+    path = outputs[sys.argv[-1]]
+    if not Path(path).is_file():
+        raise SystemExit('output was not built')
+    print(path)
+else:
+    raise SystemExit('unexpected operation')
+""")
+            bazel.chmod(0o755)
+            execute = gbsyncd_image.command_log.execute
+
+            def command(argv, *args, **kwargs):
+                if argv[0] == "make":
+                    return ""
+                return execute(argv, *args, **kwargs)
+
+            with patch.object(gbsyncd_image, "ROOT", workspace), \
+                    patch.object(gbsyncd_image, "clean_source"), \
+                    patch.object(gbsyncd_image, "identity", return_value={"revision": "fixture"}), \
+                    patch.object(gbsyncd_image.platform, "machine", return_value="x86_64"), \
+                    patch.object(gbsyncd_image.platform, "freedesktop_os_release", return_value={"VERSION_CODENAME": "trixie"}), \
+                    patch.object(gbsyncd_image.command_log, "execute", side_effect=command), \
+                    patch.object(gbsyncd_image.bazel_commands, "audit_targets", return_value={}), \
+                    patch.object(gbsyncd_image.resolution, "collect", return_value={}), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                gbsyncd_image.build_images(SimpleNamespace(bazel=str(bazel), image_version="fixture"), directory)
+            receipt = json.loads((directory / "build-receipt.json").read_text())
+            source_payload = (directory / "source-runtime.tar").read_bytes()
+            for image in gbsyncd_image.IMAGES:
+                with self.subTest(image=image):
+                    self.assertEqual((directory / (image + ".gz")).read_bytes(), source_payload)
+                    self.assertEqual((workspace / receipt["layouts"][image]).read_bytes(), source_payload)
+            self.assertEqual((workspace / receipt["base_layout"]).read_bytes(), source_payload)
 
 
 class GearboxEvidenceTest(unittest.TestCase):

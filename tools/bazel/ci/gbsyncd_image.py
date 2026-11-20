@@ -110,8 +110,9 @@ def build_images(args, directory):
             workspace=ROOT, output=directory / "action-audit.json")
         # Retain completed independent source actions even if another target fails.
         build_options = [*options, "--keep_going"]
-        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=build_options)
-        execute([args.bazel, "build", *build_options, *layouts], directory, receipt, "layouts")
+        # Export archives and inspect layouts from the same build invocation.
+        build.collect_archives(ROOT, directory, receipt, TARGETS, bazel=args.bazel, options=build_options,
+                               additional_targets=layouts)
         receipt["layouts"] = {name: execute([args.bazel, "cquery", *options, "--output=files", OWNER + name],
             directory, receipt, name + ".layout").strip() for name in IMAGES}
         receipt["base_layout"] = execute([args.bazel, "cquery", *options, "--output=files", BASE], directory, receipt, "base.layout").strip()
