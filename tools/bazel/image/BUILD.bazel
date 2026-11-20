@@ -4,6 +4,7 @@ load(":tests.bzl", "image_assembly_test")
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
+    "boot_bundle.bzl",
     "defs.bzl",
     "initramfs.bzl",
     "tests.bzl",
@@ -61,12 +62,24 @@ py_binary(
     ],
 )
 
+py_binary(
+    name = "boot_bundle_action",
+    srcs = ["boot_bundle_action.py"],
+    deps = [":boot_image_bundle"],
+)
+
 py_test(
     name = "boot_image_bundle_test",
     srcs = ["boot_image_bundle_test.py"],
-    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
-    data = ["@sonic_build_infra//tools/build_tools:pigz"],
-    deps = [":boot_image_bundle"],
+    args = [
+        "--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)",
+        "--zstd=$(rootpath @sonic_build_infra//tools/build_tools:zstd)",
+    ],
+    data = [
+        "@sonic_build_infra//tools/build_tools:pigz",
+        "@sonic_build_infra//tools/build_tools:zstd",
+    ],
+    deps = [":boot_bundle_action"],
 )
 
 py_binary(

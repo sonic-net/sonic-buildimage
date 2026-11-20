@@ -147,6 +147,10 @@ else:
         result = self.run_script("build_vs.sh", DOCKER_LOAD_ON_BOOT="y")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "n", load_on_boot="y")
+        timed = self.run_script("build_vs.sh", DOCKER_LOAD_ON_BOOT="y", SONIC_VS_IMAGE_TIMINGS="1")
+        self.assertEqual(timed.returncode, 0, timed.stderr)
+        self.assertIn("-e SONIC_BOOT_BUNDLE_EVIDENCE_DIR=artifacts/vs/image-timings/boot-bundle",
+                      " ".join(self.calls()[-1]["args"]))
 
     def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")

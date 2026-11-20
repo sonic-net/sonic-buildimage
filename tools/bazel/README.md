@@ -110,6 +110,13 @@ image bundle. The default is `n`. The VS installer CI sets it to `y`.
 make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y DOCKER_LOAD_ON_BOOT=y
 ```
 
+With these options Bazel caches each verified layer and the complete offline
+archive, tag inventory and image labels. Rebuilding the same selection can
+restore all three files from the configured cache. Changing only a version tag
+reuses the prepared layers and rebuilds the archive and metadata. A clean
+builder still has to fetch the final archive. The VS pull request workflow can
+read the shared remote cache. Builds on `master` can populate it.
+
 The bundle carries the selected runtime images, package images and their tags.
 The installer places it in the version-specific Docker store. On first startup
 Docker imports the images before services start, verifies the tags and image

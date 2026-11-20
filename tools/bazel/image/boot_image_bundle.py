@@ -188,6 +188,69 @@ def compressed_layers(layer_by_diff, scratch, pigz, zstd):
         return dict(pool.map(compress, sorted(layer_by_diff.items(), key=lambda item: -item[1][0]["size"])))
 
 
+def checked_rootfs(config, source, platform, check_label):
+    if config["os"] + "/" + config["architecture"] != platform:
+        raise ValueError(f"{source}: image does not match platform {platform}")
+    if check_label:
+        value = (config["config"].get("Labels") or {}).get("com.azure.sonic.manifest")
+        parsed = json.loads(value) if value else None
+        if parsed is None or parsed is False:
+            raise ValueError(f"{source}: expected valid com.azure.sonic.manifest")
+    rootfs = config["rootfs"]
+    if rootfs["type"] != "layers":
+        raise ValueError(f"{source}: expected layered image")
+    return rootfs
+
+
+def register_tags(tags, image_id, references):
+    for tag in references:
+        if not tag or ":" not in tag.rsplit("/", 1)[-1] or "@" in tag:
+            raise ValueError("expected a tagged Docker reference: " + tag)
+        if tags.setdefault(tag, image_id) != image_id:
+            raise ValueError("multiple images claim tag " + tag)
+
+
+def write_bundle(blobs, images_by_config, tags, encoded_layers, output, inventory, labels, pigz, scratch):
+    for desc, path in encoded_layers.values():
+        blobs[desc["digest"]] = path
+
+    docker, index = [], []
+    for image_id, diffs in sorted(images_by_config.items()):
+        layers = [encoded_layers[diff][0] for diff in diffs]
+        repo_tags = sorted(tag for tag, config in tags.items() if config == image_id)
+        manifest = json_bytes({
+            "schemaVersion": 2, "mediaType": OCI + "manifest.v1+json",
+            "config": descriptor(OCI + "config.v1+json", image_id, len(blobs[image_id])),
+            "layers": layers,
+        })
+        digest = "sha256:" + hashlib.sha256(manifest).hexdigest()
+        blobs[digest] = manifest
+        item = descriptor(OCI + "manifest.v1+json", digest, len(manifest))
+        for tag in repo_tags:
+            name = qualified_tag(tag)
+            index.append({**item, "annotations": {"org.opencontainers.image.ref.name": name,
+                                                   "io.containerd.image.name": name}})
+        docker.append({"Config": blob_name(image_id), "RepoTags": repo_tags,
+                       "Layers": [blob_name(layer["digest"]) for layer in layers]})
+
+    pending = scratch / "bundle.tar.gz"
+    with compressed_output(pending, "gzip", None, pigz, gzip_level=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode="w|", format=tarfile.USTAR_FORMAT,
+                          bufsize=CHUNK, copybufsize=CHUNK) as archive:
+            emit(archive, "manifest.json", json_bytes(docker))
+            emit(archive, "oci-layout", json_bytes({"imageLayoutVersion": "1.0.0"}))
+            emit(archive, "index.json", json_bytes({"schemaVersion": 2, "mediaType": OCI + "index.v1+json",
+                                                    "manifests": index}))
+            for digest, content in sorted(blobs.items()):
+                emit(archive, blob_name(digest), content)
+    if labels:
+        labels.write_bytes(json_bytes({tag: json.loads(blobs[digest])["config"].get("Labels") or {}
+                                       for tag, digest in tags.items()}) + b"\n")
+    if inventory:
+        inventory.write_bytes(json_bytes(tags) + b"\n")
+    pending.replace(output)
+
+
 def build(images, platform, output, inventory, pigz, zstd, labels=None):
     blobs, images_by_config, tags, layer_by_diff = {}, {}, {}, {}
 
@@ -222,16 +285,7 @@ def build(images, platform, output, inventory, pigz, zstd, labels=None):
             config_data = config_path.read_bytes()
             config = json.loads(config_data)
             image_id = "sha256:" + hashlib.sha256(config_data).hexdigest()
-            if config["os"] + "/" + config["architecture"] != platform:
-                raise ValueError(f"{source}: image does not match platform {platform}")
-            if check_label:
-                value = (config["config"].get("Labels") or {}).get("com.azure.sonic.manifest")
-                parsed = json.loads(value) if value else None
-                if parsed is None or parsed is False:
-                    raise ValueError(f"{source}: expected valid com.azure.sonic.manifest")
-            rootfs = config["rootfs"]
-            if rootfs["type"] != "layers":
-                raise ValueError(f"{source}: expected layered image")
+            rootfs = checked_rootfs(config, source, platform, check_label)
             blobs[image_id] = config_data
             for diff, (desc, path) in zip(rootfs["diff_ids"], layers, strict=True):
                 encoded = desc["digest"]
@@ -244,51 +298,10 @@ def build(images, platform, output, inventory, pigz, zstd, labels=None):
                     if not known or (media == LAYER + "+gzip" and known[0]["mediaType"] != media):
                         layer_by_diff[diff] = (descriptor(media, encoded, path.stat().st_size), path)
             images_by_config[image_id] = rootfs["diff_ids"]
-            for tag in [*requested_tags, *original_tags]:
-                if not tag or ":" not in tag.rsplit("/", 1)[-1] or "@" in tag:
-                    raise ValueError("expected a tagged Docker reference: " + tag)
-                if tags.setdefault(tag, image_id) != image_id:
-                    raise ValueError("multiple images claim tag " + tag)
+            register_tags(tags, image_id, [*requested_tags, *original_tags])
 
         encoded_layers = compressed_layers(layer_by_diff, scratch, pigz, zstd)
-        for desc, path in encoded_layers.values():
-            blobs[desc["digest"]] = path
-
-        docker, index = [], []
-        for image_id, diffs in sorted(images_by_config.items()):
-            layers = [encoded_layers[diff][0] for diff in diffs]
-            repo_tags = sorted(tag for tag, config in tags.items() if config == image_id)
-            manifest = json_bytes({
-                "schemaVersion": 2, "mediaType": OCI + "manifest.v1+json",
-                "config": descriptor(OCI + "config.v1+json", image_id, len(blobs[image_id])),
-                "layers": layers,
-            })
-            digest = "sha256:" + hashlib.sha256(manifest).hexdigest()
-            blobs[digest] = manifest
-            item = descriptor(OCI + "manifest.v1+json", digest, len(manifest))
-            for tag in repo_tags:
-                name = qualified_tag(tag)
-                index.append({**item, "annotations": {"org.opencontainers.image.ref.name": name,
-                                                       "io.containerd.image.name": name}})
-            docker.append({"Config": blob_name(image_id), "RepoTags": repo_tags,
-                           "Layers": [blob_name(layer["digest"]) for layer in layers]})
-
-        pending = scratch / "bundle.tar.gz"
-        with compressed_output(pending, "gzip", None, pigz, gzip_level=0) as compressed:
-            with tarfile.open(fileobj=compressed, mode="w|", format=tarfile.USTAR_FORMAT,
-                              bufsize=CHUNK, copybufsize=CHUNK) as archive:
-                emit(archive, "manifest.json", json_bytes(docker))
-                emit(archive, "oci-layout", json_bytes({"imageLayoutVersion": "1.0.0"}))
-                emit(archive, "index.json", json_bytes({"schemaVersion": 2, "mediaType": OCI + "index.v1+json",
-                                                        "manifests": index}))
-                for digest, content in sorted(blobs.items()):
-                    emit(archive, blob_name(digest), content)
-        if labels:
-            labels.write_bytes(json_bytes({tag: json.loads(blobs[digest])["config"].get("Labels") or {}
-                                           for tag, digest in tags.items()}) + b"\n")
-        if inventory:
-            inventory.write_bytes(json_bytes(tags) + b"\n")
-        pending.replace(output)
+        write_bundle(blobs, images_by_config, tags, encoded_layers, output, inventory, labels, pigz, scratch)
 
 
 def main():

@@ -17,10 +17,10 @@ class OciLayout(NamedTuple):
     layers: tuple[Path, ...]
 
 
-def validate_layout(directory: Path, expected_platform: str, *, digest_file=None) -> OciLayout:
+def validate_layout(directory: Path, expected_platform: str, *, digest_file=None, verify_layer_digest=True) -> OciLayout:
     """Require one complete image and return its validated metadata and layers."""
     try:
-        return _validate_layout(directory, expected_platform, digest_file or _digest_file)
+        return _validate_layout(directory, expected_platform, digest_file or _digest_file, verify_layer_digest)
     except (AttributeError, KeyError, TypeError) as error:
         raise ValueError("invalid OCI layout metadata structure") from error
 
@@ -30,7 +30,7 @@ def _digest_file(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def _validate_layout(directory: Path, expected_platform: str, digest_file) -> OciLayout:
+def _validate_layout(directory: Path, expected_platform: str, digest_file, verify_layer_digest) -> OciLayout:
     if len(expected_platform.split("/")) != 2 or not all(expected_platform.split("/")):
         raise ValueError("expected platform must be os/architecture")
     marker = json.loads((directory / "oci-layout").read_bytes())
@@ -40,12 +40,12 @@ def _validate_layout(directory: Path, expected_platform: str, digest_file) -> Oc
     if index.get("schemaVersion") != 2 or len(index.get("manifests", [])) != 1:
         raise ValueError("expected a single OCI image for " + expected_platform)
 
-    def blob(descriptor):
+    def blob(descriptor, *, verify=True):
         digest = descriptor.get("digest", "")
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
             raise ValueError("invalid OCI SHA256 blob reference")
         path = directory / "blobs" / "sha256" / digest[7:]
-        if digest_file(path) != digest[7:] or path.stat().st_size != descriptor.get("size"):
+        if path.stat().st_size != descriptor.get("size") or (verify and digest_file(path) != digest[7:]):
             raise ValueError("OCI blob digest or size mismatch: " + digest)
         return path
 
@@ -65,7 +65,9 @@ def _validate_layout(directory: Path, expected_platform: str, digest_file) -> Oc
     rootfs = config.get("rootfs", {})
     if rootfs.get("type") != "layers" or len(rootfs.get("diff_ids", [])) != len(layers):
         raise ValueError("OCI layer count does not match image rootfs")
-    return OciLayout(descriptor, manifest, config, tuple(blob(layer) for layer in layers))
+    # Bazel may defer the digest checks to its per-layer actions. Metadata and
+    # references are validated here in both modes.
+    return OciLayout(descriptor, manifest, config, tuple(blob(layer, verify=verify_layer_digest) for layer in layers))
 
 
 def main() -> None:

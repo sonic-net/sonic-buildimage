@@ -1042,7 +1042,11 @@ if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
     boot_images+=(--package-image "{{path}}" "$package_repo:latest,$package_repo:${SONIC_IMAGE_VERSION}")
 {% endfor %}
     build_boot_bundle() {
-        python3 tools/bazel/image/boot_image_bundle.py --platform "linux/$CONFIGURED_ARCH" \
+        local packager=tools/bazel/image/boot_image_bundle.py
+        if [[ ${BUILD_WITH_BAZEL_WHEN_AVAILABLE:-n} == y ]]; then
+            packager=tools/bazel/image/build_boot_bundle.py
+        fi
+        python3 "$packager" --platform "linux/$CONFIGURED_ARCH" \
             --output "$FILESYSTEM_DOCKERFS" --inventory "$boot_work/inventory.json" \
             --labels "$boot_work/labels.json" "${boot_images[@]}"
     }

@@ -10,6 +10,9 @@ fi
 builder_args="--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
 if [[ ${SONIC_VS_IMAGE_TIMINGS:-} == 1 ]]; then
     builder_args+=" -e SONIC_VS_IMAGE_TIMINGS"
+    if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+        builder_args+=" -e SONIC_BOOT_BUNDLE_EVIDENCE_DIR=artifacts/vs/image-timings/boot-bundle"
+    fi
 fi
 if [[ ${SONIC_VS_REUSE_BAZEL_PRODUCERS:-} == 1 ]]; then
     builder_args+=" -e SONIC_VS_REUSE_BAZEL_PRODUCERS"

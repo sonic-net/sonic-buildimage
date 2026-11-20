@@ -10,6 +10,7 @@ on:
       - tools/bazel/ci/source_mirrors.py
       - tools/bazel/debian_mirrors.cfg
       - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
       - tools/bazel/image-assembly-design.md
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
@@ -23,6 +24,7 @@ on:
       - tools/bazel/ci/source_mirrors.py
       - tools/bazel/debian_mirrors.cfg
       - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
   workflow_dispatch:
@@ -44,7 +46,7 @@ jobs:
             runner: ubuntu-24.04-arm
             platform: aarch64_trixie
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.architecture == 'amd64' && 30 || 15 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,6 +119,9 @@ jobs:
           done
           test -s artifacts/image-rule-actions/action-receipt.json
           git diff --exit-code
+      - name: Verify offline bundle cache reuse across clean Bazel builds
+        if: matrix.architecture == 'amd64'
+        run: python3 tools/bazel/tests/integration/boot_bundle_cache.py --report artifacts/image-rule-actions/boot-bundle-cache.json
       - name: Retain public rule action evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

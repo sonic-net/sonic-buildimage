@@ -1684,6 +1684,11 @@ vs_boot_bundle_inputs := files/docker/docker files/docker/load-images.conf files
                         installer/install.sh onie-mk-demo.sh scripts/build_boot_packages.py \
                         tools/bazel/image/boot_image_bundle.py tools/bazel/image/image_config.py \
                         tools/bazel/oci/boot_layout.py tools/bazel/oci/oci_layout.py
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+vs_boot_bundle_inputs += tools/bazel/image/build_boot_bundle.py tools/bazel/image/boot_bundle.bzl \
+                         tools/bazel/image/boot_bundle_action.py tools/bazel/image/BUILD.bazel \
+                         tools/bazel/build_helpers.py tools/bazel/ci/build.py tools/bazel/ci/cache_reuse.py
+endif
 endif
 .PHONY: check-vs-boot-mode
 $(vs_boot_mode_stamp): check-vs-boot-mode
@@ -1784,6 +1789,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	    *) echo "DOCKER_LOAD_ON_BOOT must be y or n" >&2; exit 1 ;;
 	esac
 	export DOCKER_LOAD_ON_BOOT="$(DOCKER_LOAD_ON_BOOT)"
+	export BUILD_WITH_BAZEL_WHEN_AVAILABLE="$(BUILD_WITH_BAZEL_WHEN_AVAILABLE)"
 	# The receipt is private; only the completed summary bypasses the target log.
 	unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
 	if [[ "$@" = "target/sonic-vs.img.gz" || ( "$@" = "target/sonic-vs.bin" && "$${SONIC_VS_IMAGE_TIMINGS:-}" = 1 ) ]]; then

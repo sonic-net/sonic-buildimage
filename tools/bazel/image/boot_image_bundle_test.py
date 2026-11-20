@@ -7,12 +7,14 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from boot_bundle_action import archive_input, bundle_input, normalize_layer
 from boot_image_bundle import build, descriptor, emit, json_bytes, LAYER, OCI
 from boot_layout import publish_layout, layout_for_archive
 
@@ -107,6 +109,90 @@ class BootBundleTest(unittest.TestCase):
             self.bundle()
         self.assertEqual(self.output.read_bytes(), original)
 
+    def cached_layer(self, src, desc, diff, name):
+        receipt = self.work / (name + ".json")
+        normalized = (src if desc["mediaType"].endswith(("+gzip", ".gzip")) else self.work / (name + ".gz"))
+        normalize_layer(src, desc, diff, receipt, normalized, PIGZ, ZSTD)
+        return receipt, normalized
+
+    def test_cached_hybrid_preserves_every_byte_and_invalidates_tags(self):
+        # Two different encodings of the same DiffID: the existing gzip source
+        # must win, even when the raw layer was visited first.
+        self.bundle()
+        expected = [p.read_bytes() for p in (self.output, self.inventory, self.labels)]
+        extracted = self.work / "archive"
+        archive_info = self.work / "archive.json"
+        archive_input(self.legacy, None, None, extracted, archive_info, PIGZ)
+        archive = json.loads(archive_info.read_bytes())
+        self.assertFalse(archive["use_sidecar"])
+        self.assertEqual(archive["diff_ids"], [sha(self.layer)])
+        self.assertEqual(archive_info.read_bytes(), (extracted / "image.json").read_bytes())
+        native_desc = descriptor(LAYER, sha(self.layer), len(self.layer))
+        archive_desc, = archive["layers"]
+        raw_src = self.pool / sha(self.layer)[7:]
+        gzip_src = extracted / "layers" / archive_desc["digest"][7:]
+        configs = [self.pool / sha(self.config)[7:], extracted / "configs" / archive["config"][7:]]
+        layers = [self.cached_layer(raw_src, native_desc, sha(self.layer), "raw"),
+                  self.cached_layer(gzip_src, archive_desc, sha(self.layer), "gzip")]
+        images = [{"config": sha(self.config), "tags": self.images[0][1], "layers": [native_desc], "check_label": True},
+                  {**archive, "tags": self.images[1][1], "check_label": False}]
+        spec = self.work / "images.json"
+
+        def cached():
+            spec.write_bytes(json_bytes({"images": images}))
+            bundle_input(spec, configs, layers, "linux/amd64", self.output, self.inventory, self.labels, PIGZ)
+            return [p.read_bytes() for p in (self.output, self.inventory, self.labels)]
+
+        self.assertEqual(cached(), expected)
+        images[0]["tags"] = ["builtin:release"]
+        self.assertNotEqual(cached()[0], expected[0])
+        self.assertIn("builtin:release", json.loads(self.inventory.read_bytes()))
+        images[0]["tags"] = ["pkg:original"]
+        with self.assertRaisesRegex(ValueError, "multiple images claim tag"):
+            cached()
+        images[0]["tags"] = ["builtin:v1"]
+        images[1]["check_label"] = True
+        with self.assertRaisesRegex(ValueError, "valid com.azure.sonic.manifest"):
+            cached()
+
+    def test_cached_encoding_validation_and_zstd_normalization(self):
+        raw = self.pool / sha(self.layer)[7:]
+        zstd = self.work / "layer.zst"
+        with zstd.open("wb") as out:
+            subprocess.run([ZSTD, "-q", "-c", str(raw)], stdout=out, check=True)
+        data = zstd.read_bytes()
+        desc = descriptor(LAYER + "+zstd", sha(data), len(data))
+        _, normalized = self.cached_layer(zstd, desc, sha(self.layer), "zstd")
+        raw_desc = descriptor(LAYER, sha(self.layer), len(self.layer))
+        _, raw_normalized = self.cached_layer(raw, raw_desc, sha(self.layer), "raw")
+        self.assertEqual(normalized.read_bytes(), raw_normalized.read_bytes())
+        with self.assertRaisesRegex(ValueError, "incorrect source layer size"):
+            self.cached_layer(zstd, {**desc, "size": len(data) - 1}, sha(self.layer), "bad-size")
+        with self.assertRaisesRegex(ValueError, "incorrect source layer digest"):
+            self.cached_layer(zstd, {**desc, "digest": sha(b"wrong")}, sha(self.layer), "bad-encoded")
+        with self.assertRaisesRegex(ValueError, "incorrect uncompressed layer digest"):
+            self.cached_layer(zstd, desc, sha(b"wrong"), "bad-diff")
+        with self.assertRaisesRegex(ValueError, "encoding does not match"):
+            self.cached_layer(zstd, {**desc, "mediaType": LAYER}, sha(self.layer), "bad-media")
+
+    def test_cached_archive_route_verifies_receipt_and_falls_back(self):
+        publish_layout(self.layout, self.legacy, self.legacy)
+        store = self.legacy.parent / ".boot-image-layouts"
+        receipt = store / (self.legacy.name + ".json")
+        index = store / json.loads(receipt.read_bytes())["index"] / "index.json"
+
+        def route(name):
+            dest = self.work / name
+            info = self.work / (name + ".json")
+            archive_input(self.legacy, receipt, index, dest, info, PIGZ)
+            return json.loads(info.read_bytes())
+
+        self.assertEqual(route("matched"), {"use_sidecar": True})
+        receipt.write_bytes(json_bytes({"index": sha(index.read_bytes())[7:], "archive": sha(b"old")[7:]}))
+        self.assertEqual(route("stale")["config"], sha(self.package_cfg))
+        receipt.write_text("{}")
+        self.assertEqual(route("malformed")["original_tags"], ["pkg:original"])
+
     def test_matching_archive_uses_persisted_sidecar(self):
         with tarfile.open(self.legacy, "w:gz") as out:
             emit(out, "config.json", self.config)
@@ -128,6 +214,7 @@ class BootBundleTest(unittest.TestCase):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--pigz", default="pigz")
+    parser.add_argument("--zstd", default="zstd")
     args, remaining = parser.parse_known_args()
-    PIGZ = args.pigz
+    PIGZ, ZSTD = args.pigz, args.zstd
     unittest.main(argv=[sys.argv[0], *remaining])
