@@ -19,6 +19,24 @@
         "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to an invalid value",
         "eStr": "Invalid value \"invalid value\" in \"advertise-all-vni\" element."
     },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_L3VNI_NEIGH_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni and advertise-all-vni-l3vni-neigh set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_L3VNI_NEIGH_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni-l3vni-neigh set to false"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_L3VNI_NEIGH_NO_ADVERTISE_ALL_VNI": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni-l3vni-neigh set to true without advertise-all-vni",
+        "eStr": ["advertise-all-vni-l3vni-neigh requires advertise-all-vni on l2vpn_evpn"]
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_L3VNI_NEIGH_WRONG_AF": {
+        "desc": "BGP Address Family ipv4_unicast with advertise-all-vni-l3vni-neigh set to true",
+        "eStr": ["advertise-all-vni-l3vni-neigh requires advertise-all-vni on l2vpn_evpn"]
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_L3VNI_NEIGH_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni-l3vni-neigh set to an invalid value",
+        "eStrKey": "InvalidValue"
+    },
     "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_TRUE": {
         "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to true"
     },
