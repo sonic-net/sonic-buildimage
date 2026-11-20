@@ -16,10 +16,6 @@
       "optoe",
       "i2c-dev",
       "i2c-xiic",
-      "tmp464",
-      "adm1266",
-      "xdpe1a2g7b",
-      "isl68137",
       "spi-xilinx"
     ],
     "pddf_kos": [
@@ -42,7 +38,12 @@
       "pddf_multifpgapci_gpio_driver"
     ],
     "custom_kos": [
-      "pddf_custom_fpga_algo"
+      "pddf_custom_fpga_algo",
+      "nh_pmbus_core",
+      "nh_isl68137",
+      "nh_tda38740",
+      "nh_adm1266",
+      "nh_tmp464"
     ],
     "num_ports": 65,
     "nexthop_thermal_xcvr_setpoint_margin": 8,
@@ -2927,7 +2928,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "read_mgmt_switch_version.py"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "model",
@@ -12315,7 +12316,7 @@
       "topo_info": {
         "parent_bus": "0x5c",
         "dev_addr": "0x48",
-        "dev_type": "tmp464"
+        "dev_type": "nh_tmp464"
       },
       "attr_list": [
         {
@@ -12481,7 +12482,7 @@
       "topo_info": {
         "parent_bus": "0x5c",
         "dev_addr": "0x49",
-        "dev_type": "tmp464"
+        "dev_type": "nh_tmp464"
       },
       "attr_list": [
         {
@@ -12701,7 +12702,7 @@
       "topo_info": {
         "parent_bus": "0x8",
         "dev_addr": "0x41",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -13340,7 +13341,7 @@
       "topo_info": {
         "parent_bus": "0xa",
         "dev_addr": "0x41",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -13884,7 +13885,7 @@
       "topo_info": {
         "parent_bus": "0xa",
         "dev_addr": "0x43",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -14443,7 +14444,7 @@
       "topo_info": {
         "parent_bus": "0x5a",
         "dev_addr": "0x70",
-        "dev_type": "xdpe1a2g5b"
+        "dev_type": "nh_xdpe1a2g5b"
       }
     }
   },
@@ -14457,7 +14458,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 90 --address 0x70"
+        "get_cmd": "sudo xdpe_user_data_version --bus 90 --address 0x70"
       },
       {
         "attr_name": "model",
@@ -14491,23 +14492,23 @@
       "attr_list": [
         {
           "attr_name": "volt1_input",
-          "drv_attr_name": "in2_input"
+          "drv_attr_name": "in3_input"
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in2_max"
+          "drv_attr_name": "in3_max"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in2_min"
+          "drv_attr_name": "in3_min"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in2_crit"
+          "drv_attr_name": "in3_crit"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in2_lcrit"
+          "drv_attr_name": "in3_lcrit"
         }
       ]
     }
@@ -14577,7 +14578,7 @@
       "topo_info": {
         "parent_bus": "0x59",
         "dev_addr": "0x60",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -14591,7 +14592,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 89 --address 0x60"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0060/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -14765,7 +14766,7 @@
       "topo_info": {
         "parent_bus": "0x61",
         "dev_addr": "0x61",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -14779,7 +14780,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 97 --address 0x61"
+        "get_cmd": "cat /sys/bus/i2c/devices/97-0061/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -14953,7 +14954,7 @@
       "topo_info": {
         "parent_bus": "0x59",
         "dev_addr": "0x62",
-        "dev_type": "raa228236"
+        "dev_type": "nh_raa228236"
       }
     }
   },
@@ -14967,7 +14968,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 89 --address 0x62"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -14996,29 +14997,15 @@
     },
     "dev_attr": {
       "display_name": "POS3V3_WEST",
-      "scaling_factor": 1.2
+      "multi_factor": 1.2,
+      "crit_high_threshold": 3905,
+      "crit_low_threshold": 2717
     },
     "i2c": {
       "attr_list": [
         {
           "attr_name": "volt1_input",
           "drv_attr_name": "in3_input"
-        },
-        {
-          "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in3_max"
-        },
-        {
-          "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in3_min"
-        },
-        {
-          "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in3_crit"
-        },
-        {
-          "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in3_lcrit"
         }
       ]
     }
@@ -15142,7 +15129,7 @@
       "topo_info": {
         "parent_bus": "0x61",
         "dev_addr": "0x62",
-        "dev_type": "raa228236"
+        "dev_type": "nh_raa228236"
       }
     }
   },
@@ -15156,7 +15143,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 97 --address 0x62"
+        "get_cmd": "cat /sys/bus/i2c/devices/97-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -15185,29 +15172,15 @@
     },
     "dev_attr": {
       "display_name": "POS3V3_EAST",
-      "scaling_factor": 1.2
+      "multi_factor": 1.2,
+      "crit_high_threshold": 3905,
+      "crit_low_threshold": 2717
     },
     "i2c": {
       "attr_list": [
         {
           "attr_name": "volt1_input",
           "drv_attr_name": "in3_input"
-        },
-        {
-          "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in3_max"
-        },
-        {
-          "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in3_min"
-        },
-        {
-          "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in3_crit"
-        },
-        {
-          "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in3_lcrit"
         }
       ]
     }
@@ -15331,7 +15304,7 @@
       "topo_info": {
         "parent_bus": "0x59",
         "dev_addr": "0x63",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -15345,7 +15318,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 89 --address 0x63"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0063/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -15519,7 +15492,7 @@
       "topo_info": {
         "parent_bus": "0x59",
         "dev_addr": "0x72",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -15533,7 +15506,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 89 --address 0x72"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0072/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -15707,7 +15680,7 @@
       "topo_info": {
         "parent_bus": "0x61",
         "dev_addr": "0x63",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -15721,7 +15694,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 97 --address 0x63"
+        "get_cmd": "cat /sys/bus/i2c/devices/97-0063/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -15895,7 +15868,7 @@
       "topo_info": {
         "parent_bus": "0x61",
         "dev_addr": "0x72",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -15909,7 +15882,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 97 --address 0x72"
+        "get_cmd": "cat /sys/bus/i2c/devices/97-0072/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -16083,7 +16056,7 @@
       "topo_info": {
         "parent_bus": "0x59",
         "dev_addr": "0x74",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -16097,7 +16070,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 89 --address 0x74"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0074/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -16271,7 +16244,7 @@
       "topo_info": {
         "parent_bus": "0x61",
         "dev_addr": "0x75",
-        "dev_type": "raa228234"
+        "dev_type": "nh_raa228234"
       }
     }
   },
@@ -16285,7 +16258,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "sudo mfr_revision_major_minor --bus 97 --address 0x75"
+        "get_cmd": "cat /sys/bus/i2c/devices/97-0075/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
