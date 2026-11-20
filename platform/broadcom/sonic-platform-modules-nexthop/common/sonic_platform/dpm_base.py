@@ -11,7 +11,7 @@ import datetime
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Type, TypeVar
 
@@ -42,6 +42,8 @@ class RebootCause:
     chassis_reboot_cause_category: str
     # True for a symptom-level cause (e.g. a rail undervoltage) that any specific cause outranks.
     is_fallback: bool = False
+    # True for a reboot that leaves the DPM powered up.
+    no_powerup_event: bool = False
 
 
 def pick_power_fault_cause(causes: Iterable[RebootCause | None]) -> RebootCause | None:
@@ -164,6 +166,8 @@ class DpmPowerUpEntry:
     power_fault_cause: RebootCause | None
     # List of raw records from the DPM that relate to this powerup.
     dpm_records: list[DpmRecord]
+    # Causes of the reboots in this powerup that left the DPM powered, oldest first.
+    no_powerup_reboot_causes: list[RebootCause] = field(default_factory=list)
 
 
 _RecordT = TypeVar("_RecordT", bound="DpmRecord")
