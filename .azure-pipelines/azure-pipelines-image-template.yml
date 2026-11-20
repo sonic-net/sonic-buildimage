@@ -54,6 +54,10 @@ jobs:
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE }}
             fi
+            # A companion PR commit need not be in the gitlink checkout yet.
+            if ! git cat-file -e '${{ parameters.COMMIT_ID }}^{commit}' 2>/dev/null; then
+              git fetch origin ${{ parameters.COMMIT_ID }}
+            fi
             git checkout ${{ parameters.COMMIT_ID }}
           else
             echo "No specific commit id provided, checkout to latest commit"
