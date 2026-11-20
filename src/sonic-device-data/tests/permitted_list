@@ -334,6 +334,7 @@ sai_mdio_access_clause22
 cmic_dma_abort_in_cold_boot
 hybrid_pfc_deadlock_enable
 sai_pfc_dlr_init_capability
+sai_pfc_dldr_capability
 appl_param_nof_ports_per_modid
 sai_fdb_entry_l2_discard_src_enable
 svi_my_station_optimization

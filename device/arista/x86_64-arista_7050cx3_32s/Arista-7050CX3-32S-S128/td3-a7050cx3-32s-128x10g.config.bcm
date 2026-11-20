@@ -46,6 +46,7 @@ sai_adjust_acl_drop_in_rx_drop=1
 sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 sai_optimized_mmu=1
 sai_pfc_dlr_init_capability=1' -%}
+sai_pfc_dldr_capability=0
 sai_tunnel_support=1
 sai_tunnel_underlay_route_mode=1
 sai_verify_incoming_chksum=0
