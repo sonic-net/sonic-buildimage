@@ -267,15 +267,17 @@ persists the new JSON before the static site is deployed through the official
 Pages artifact/deployment actions. Publications are serialized through the end
 of deployment to prevent an older run from replacing a newer site.
 
-History is serialized as compact, deterministically ordered JSON; all collected
-records and the schema remain unchanged. Existing indented history is read
-normally and compacted on the next successful collection. The collector reports
-the output byte size and rejects files above 95 MiB before replacing the output,
-leaving headroom below GitHub's 100 MiB per-file limit. It does not silently prune
-older records to meet this budget. If compact history eventually reaches that
-budget, split storage and update the collector and dashboard readers together;
-retrying the same oversized output or enabling Git LFS alone does not fix the
-static JSON publication path.
+The published `data.json` is a small index. It contains the PR list and the
+paths and record counts of the files in `history/`. Each of those files holds
+complete workflow attempts. For example, a 101 MiB snapshot can now be published
+as an index and roughly thirteen files instead of crossing GitHub's per-file
+limit. The collector targets 8 MiB per file and keeps a large individual attempt
+together. Every published file must fit within 95 MiB.
+
+The first refresh reads the existing single-file snapshot. Later refreshes
+read the index and verify each file's SHA-256 and record count before updating
+the history. There is no age or count limit on retained attempts. Older snapshots
+remain accessible in the Git history of `build-metrics`.
 
 The publishing job always uses trusted `master` code. A `workflow_run` event
 never supplies executable PR code, artifacts, scripts, or cached executables.

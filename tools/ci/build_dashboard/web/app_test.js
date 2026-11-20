@@ -762,7 +762,7 @@ test("a selected master commit with a pending installer explains the missing dur
   assert.match(dated.nodes["trend-preview"].textContent, /Hover or focus a point/);
 });
 
-async function loadDashboard(points, pullRequests = []) {
+async function loadDashboard(points, pullRequests = [], fetchData) {
   const html = readFileSync(require.resolve("./index.html"), "utf8");
   const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new TestElement("div")]));
   for (const node of Object.values(nodes)) node.value = "all";
@@ -778,9 +778,9 @@ async function loadDashboard(points, pullRequests = []) {
       createElementNS: (_, tag) => new TestElement(tag), createTextNode: text => ({textContent: text})},
     getComputedStyle: () => ({paddingLeft: "17px", paddingRight: "17px"}),
     ResizeObserver: class { observe() {} },
-    setInterval() {}, URL, AbortSignal,
+    setInterval() {}, URL, AbortSignal, btoa,
     window: {location: {href: "https://example.test/"}},
-    fetch: async () => ({ok: true, json: async () => snapshot()}),
+    fetch: fetchData || (async () => ({ok: true, json: async () => snapshot()})),
   });
   vm.runInContext(readFileSync(require.resolve("./app.js"), "utf8"), context);
   await new Promise(resolve => setImmediate(resolve));
@@ -788,6 +788,64 @@ async function loadDashboard(points, pullRequests = []) {
   assert.equal(nodes.dashboard.hidden, false);
   return nodes;
 }
+
+test("a split snapshot loads all master and PR timings and keeps them if a refresh fails", async () => {
+  const runs = ["push", "pull_request"].map((event, index) => {
+    const point = datedPoint(index + 1, `2026-11-0${index + 1}T12:00:00Z`);
+    return {...point.run, event, pr_numbers: index ? [270] : [], jobs: [point.job]};
+  });
+  const parts = runs.map((run, index) => ({
+    path: `history/${String(index + 1).repeat(64)}.json`, count: 1,
+  }));
+  const index = {schema_version: 2, repository: "securely1g/sonic-buildimage",
+    generated_at: "2026-11-12T00:00:00Z", pull_requests: [{number: 270, title: "Build the VS installer"}],
+    comparisons: [], run_shards: parts};
+  let contents = index, fail = false;
+  const requests = [];
+  const nodes = await loadDashboard([], [], async (url, options) => {
+    requests.push(url.pathname);
+    if (url.pathname === "/data.json") {
+      assert.equal(options.cache, "no-store");
+      return {ok: true, json: async () => contents};
+    }
+    const position = parts.findIndex(part => "/" + part.path === url.pathname);
+    assert.ok(position >= 0);
+    assert.equal(url.origin, "https://example.test");
+    assert.equal(options.cache, "force-cache");
+    assert.equal(options.integrity, "sha256-" + Buffer.from(parts[position].path.slice(8, -5), "hex").toString("base64"));
+    if (fail && position === 1) return {ok: false, status: 404};
+    return {ok: true, json: async () => [runs[position]]};
+  });
+  assert.deepEqual(requests, ["/data.json", ...parts.map(part => "/" + part.path)]);
+  assert.equal(nodes["run-count"].textContent, "1 of 1");
+  nodes["source-filter"].value = "pr";
+  nodes["source-filter"].listeners.change();
+  nodes["pr-filter"].value = "270";
+  nodes["pr-filter"].listeners.change();
+  assert.equal(descendants(nodes.trend, el => el.attributes?.class === "chart-point").length, 1);
+  const detail = nodes.details.textContent;
+  assert.match(detail, /PR #270/);
+
+  fail = true;
+  await nodes.refresh.listeners.click();
+  assert.match(nodes["load-status"].textContent, /last loaded snapshot.*404/);
+  assert.equal(nodes.details.textContent, detail);
+  fail = false;
+  contents = {...index, run_shards: [{...parts[0], count: 2}]};
+  await nodes.refresh.listeners.click();
+  assert.match(nodes["load-status"].textContent, /last loaded snapshot.*incomplete/);
+  for (const bad of ["https://other.test/history/file.json", "../file.json", parts[0].path + "?next=1"]) {
+    requests.length = 0;
+    contents = {...index, run_shards: [parts[0], {...parts[1], path: bad}]};
+    await nodes.refresh.listeners.click();
+    assert.deepEqual(requests, ["/data.json"]);
+    assert.match(nodes["load-status"].textContent, /invalid file/);
+  }
+  contents = index;
+  await nodes.refresh.listeners.click();
+  assert.equal(nodes["load-status"].textContent, "");
+  assert.equal(nodes["pr-filter"].value, "270");
+});
 
 test("page startup wires chart-only filters without hiding retained workflow history", async () => {
   const points = [datedPoint(1, "2026-11-01T00:00:00Z"),

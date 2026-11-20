@@ -14,17 +14,22 @@ import re
 import selectors
 import subprocess
 import sys
-import tempfile
 import time
 from urllib.parse import quote
 
-# Load the reviewed sibling directly. PYTHONSAFEPATH deliberately excludes the
+# Load the reviewed siblings directly. PYTHONSAFEPATH deliberately excludes the
 # script directory, and falling back to a module from the working directory
 # could load unrelated code when this collector is launched elsewhere.
-_breakdown_spec = importlib.util.spec_from_file_location(
-    "build_dashboard_breakdown", Path(__file__).resolve().with_name("breakdown.py"))
-breakdown = importlib.util.module_from_spec(_breakdown_spec)
-_breakdown_spec.loader.exec_module(breakdown)
+def _load_sibling(name):
+    spec = importlib.util.spec_from_file_location(
+        f"build_dashboard_{name}", Path(__file__).resolve().with_name(f"{name}.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+breakdown = _load_sibling("breakdown")
+history_store = _load_sibling("history_store")
 
 WORKFLOWS = ("bazel-swss-oci.yml", "bazel-oci.yml", "bazel-vs-unprivileged.yml", "bazel.yml")
 PHASES = ("setup", "build", "validation", "upload", "other")
@@ -51,7 +56,6 @@ IMAGE_STEPS = {
 }
 MAX_LOG_JOBS = 20
 LOG_TIMEOUT_SECONDS = 45
-MAX_HISTORY_BYTES = 95 * 1024**2
 MAX_COMMIT_TITLE = 256
 
 
@@ -466,9 +470,9 @@ def load_history(path, repo):
     if path is None or not path.exists():
         return {"schema_version": 1, "repository": repo, "pull_requests": [], "runs": []}
     try:
-        history = json.loads(path.read_text())
+        history = history_store.read_snapshot(path)
     except (OSError, ValueError) as error:
-        raise CollectionError(f"Cannot read dashboard history: {path}") from error
+        raise CollectionError(f"Cannot read dashboard history {path}: {error}") from error
     if (not isinstance(history, dict) or history.get("schema_version") != 1
             or history.get("repository") != repo or not isinstance(history.get("runs"), list)
             or not isinstance(history.get("pull_requests"), list)):
@@ -756,25 +760,10 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
 
 
 def write_atomic(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, prefix=".history-", suffix=".json", delete=False) as handle:
-            temporary = Path(handle.name)
-            json.dump(data, handle, separators=(",", ":"), sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        size = temporary.stat().st_size
-        if size > MAX_HISTORY_BYTES:
-            raise CollectionError(
-                f"Timing history is {size:,} bytes, exceeding the {MAX_HISTORY_BYTES:,}-byte "
-                "publication budget below GitHub's 100 MiB file limit; split the history "
-                "before publishing. No records were discarded.")
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        history_store.write_snapshot(path, data)
+    except (OSError, ValueError) as error:
+        raise CollectionError(f"Cannot write dashboard history {path}: {error}") from error
 
 
 def main():
@@ -801,7 +790,7 @@ def main():
         print(f"Collection failed; published history was not replaced: {error}", file=sys.stderr)
         return 1
     print(f"Collected {len(result['runs'])} run attempts and {len(result['pull_requests'])} PRs "
-          f"into {args.output} ({args.output.stat().st_size:,} bytes)")
+          f"into run shards indexed by {args.output}")
     return 0
 
 
