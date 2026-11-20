@@ -1,0 +1,651 @@
+{
+    "PLATFORM": {
+        "num_psus": 2,
+        "num_fantrays": 5,
+        "num_fans_pertray": 2,
+        "num_ports": 54,
+        "num_temps": 4,
+        "num_components": 4
+    },
+    "SYSTEM": {
+        "dev_info": {
+            "device_type": "CPU",
+            "device_name": "SYSTEM",
+            "device_parent": null
+        },
+        "i2c": {
+            "CONTROLLERS": []
+        }
+    },
+    "SMBUS3": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS3",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0x3"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS11": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS11",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0xb"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS12": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS12",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0xc"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS18": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS18",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0x12"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS19": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS19",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0x13"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS20": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS20",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0x14"
+            },
+            "DEVICES": []
+        }
+    },
+    "SMBUS21": {
+        "dev_info": {
+            "device_type": "SMBUS",
+            "device_name": "SMBUS21",
+            "device_parent": "SYSTEM"
+        },
+        "i2c": {
+            "topo_info": {
+                "dev_addr": "0x15"
+            },
+            "DEVICES": []
+        }
+    },
+    "FAN-CTRL": {
+        "dev_info": {
+            "device_type": "FAN",
+            "device_name": "FAN-CTRL",
+            "device_parent": "SMBUS3"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x3",
+                "dev_addr": "0x63",
+                "dev_type": "as5835_54x_fan"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "fan1_present",
+                    "drv_attr_name": "fan1_present"
+                },
+                {
+                    "attr_name": "fan1_direction",
+                    "drv_attr_name": "fan1_direction"
+                },
+                {
+                    "attr_name": "fan1_fault",
+                    "drv_attr_name": "fan1_fault"
+                },
+                {
+                    "attr_name": "fan1_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan1_input",
+                    "drv_attr_name": "fan1_input"
+                },
+                {
+                    "attr_name": "fan2_present",
+                    "drv_attr_name": "fan1_present"
+                },
+                {
+                    "attr_name": "fan2_direction",
+                    "drv_attr_name": "fan1_direction"
+                },
+                {
+                    "attr_name": "fan2_fault",
+                    "drv_attr_name": "fan1_fault"
+                },
+                {
+                    "attr_name": "fan2_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan2_input",
+                    "drv_attr_name": "fan11_input"
+                },
+                {
+                    "attr_name": "fan3_present",
+                    "drv_attr_name": "fan2_present"
+                },
+                {
+                    "attr_name": "fan3_direction",
+                    "drv_attr_name": "fan2_direction"
+                },
+                {
+                    "attr_name": "fan3_fault",
+                    "drv_attr_name": "fan2_fault"
+                },
+                {
+                    "attr_name": "fan3_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan3_input",
+                    "drv_attr_name": "fan2_input"
+                },
+                {
+                    "attr_name": "fan4_present",
+                    "drv_attr_name": "fan2_present"
+                },
+                {
+                    "attr_name": "fan4_direction",
+                    "drv_attr_name": "fan2_direction"
+                },
+                {
+                    "attr_name": "fan4_fault",
+                    "drv_attr_name": "fan2_fault"
+                },
+                {
+                    "attr_name": "fan4_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan4_input",
+                    "drv_attr_name": "fan12_input"
+                },
+                {
+                    "attr_name": "fan5_present",
+                    "drv_attr_name": "fan3_present"
+                },
+                {
+                    "attr_name": "fan5_direction",
+                    "drv_attr_name": "fan3_direction"
+                },
+                {
+                    "attr_name": "fan5_fault",
+                    "drv_attr_name": "fan3_fault"
+                },
+                {
+                    "attr_name": "fan5_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan5_input",
+                    "drv_attr_name": "fan3_input"
+                },
+                {
+                    "attr_name": "fan6_present",
+                    "drv_attr_name": "fan3_present"
+                },
+                {
+                    "attr_name": "fan6_direction",
+                    "drv_attr_name": "fan3_direction"
+                },
+                {
+                    "attr_name": "fan6_fault",
+                    "drv_attr_name": "fan3_fault"
+                },
+                {
+                    "attr_name": "fan6_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan6_input",
+                    "drv_attr_name": "fan13_input"
+                },
+                {
+                    "attr_name": "fan7_present",
+                    "drv_attr_name": "fan4_present"
+                },
+                {
+                    "attr_name": "fan7_direction",
+                    "drv_attr_name": "fan4_direction"
+                },
+                {
+                    "attr_name": "fan7_fault",
+                    "drv_attr_name": "fan4_fault"
+                },
+                {
+                    "attr_name": "fan7_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan7_input",
+                    "drv_attr_name": "fan4_input"
+                },
+                {
+                    "attr_name": "fan8_present",
+                    "drv_attr_name": "fan4_present"
+                },
+                {
+                    "attr_name": "fan8_direction",
+                    "drv_attr_name": "fan4_direction"
+                },
+                {
+                    "attr_name": "fan8_fault",
+                    "drv_attr_name": "fan4_fault"
+                },
+                {
+                    "attr_name": "fan8_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan8_input",
+                    "drv_attr_name": "fan14_input"
+                },
+                {
+                    "attr_name": "fan9_present",
+                    "drv_attr_name": "fan5_present"
+                },
+                {
+                    "attr_name": "fan9_direction",
+                    "drv_attr_name": "fan5_direction"
+                },
+                {
+                    "attr_name": "fan9_fault",
+                    "drv_attr_name": "fan5_fault"
+                },
+                {
+                    "attr_name": "fan9_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan9_input",
+                    "drv_attr_name": "fan5_input"
+                },
+                {
+                    "attr_name": "fan10_present",
+                    "drv_attr_name": "fan5_present"
+                },
+                {
+                    "attr_name": "fan10_direction",
+                    "drv_attr_name": "fan5_direction"
+                },
+                {
+                    "attr_name": "fan10_fault",
+                    "drv_attr_name": "fan5_fault"
+                },
+                {
+                    "attr_name": "fan10_pwm",
+                    "drv_attr_name": "fan_duty_cycle_percentage"
+                },
+                {
+                    "attr_name": "fan10_input",
+                    "drv_attr_name": "fan15_input"
+                }
+            ]
+        }
+    },
+    "PSU1": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU1",
+            "device_parent": "SMBUS11"
+        },
+        "dev_attr": {
+            "dev_idx": "1",
+            "num_psu_fans": "1",
+            "num_psu_thermals": "1"
+        },
+        "i2c": {
+            "interface": [
+                {
+                    "dev": "PSU1-STATUS"
+                },
+                {
+                    "dev": "PSU1-PMBUS"
+                }
+            ]
+        }
+    },
+    "PSU1-STATUS": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU1-STATUS",
+            "device_parent": "SMBUS11",
+            "virt_parent": "PSU1"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0xb",
+                "dev_addr": "0x50",
+                "dev_type": "as5835_54x_psu1"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "psu_present",
+                    "drv_attr_name": "psu_present"
+                },
+                {
+                    "attr_name": "psu_power_good",
+                    "drv_attr_name": "psu_power_good"
+                },
+                {
+                    "attr_name": "psu_serial_num",
+                    "drv_attr_name": "psu_serial_numer"
+                }
+            ]
+        }
+    },
+    "PSU1-PMBUS": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU1-PMBUS",
+            "device_parent": "SMBUS11",
+            "virt_parent": "PSU1"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0xb",
+                "dev_addr": "0x58",
+                "dev_type": "ym2401"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "psu_model_name",
+                    "drv_attr_name": "psu_mfr_model"
+                },
+                {
+                    "attr_name": "psu_fan_dir",
+                    "drv_attr_name": "psu_fan_dir"
+                },
+                {
+                    "attr_name": "psu_v_out",
+                    "drv_attr_name": "psu_v_out"
+                },
+                {
+                    "attr_name": "psu_i_out",
+                    "drv_attr_name": "psu_i_out"
+                },
+                {
+                    "attr_name": "psu_p_out",
+                    "drv_attr_name": "psu_p_out"
+                },
+                {
+                    "attr_name": "psu_temp1_input",
+                    "drv_attr_name": "psu_temp1_input"
+                },
+                {
+                    "attr_name": "psu_fan1_speed_rpm",
+                    "drv_attr_name": "psu_fan1_speed_rpm"
+                },
+                {
+                    "attr_name": "psu_v_out_min",
+                    "drv_attr_name": "psu_mfr_vout_min"
+                },
+                {
+                    "attr_name": "psu_v_out_max",
+                    "drv_attr_name": "psu_mfr_vout_max"
+                },
+                {
+                    "attr_name": "psu_p_out_max",
+                    "drv_attr_name": "psu_mfr_pout_max"
+                }
+            ]
+        }
+    },
+    "PSU2": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU2",
+            "device_parent": "SMBUS12"
+        },
+        "dev_attr": {
+            "dev_idx": "2",
+            "num_psu_fans": "1",
+            "num_psu_thermals": "1"
+        },
+        "i2c": {
+            "interface": [
+                {
+                    "dev": "PSU2-STATUS"
+                },
+                {
+                    "dev": "PSU2-PMBUS"
+                }
+            ]
+        }
+    },
+    "PSU2-STATUS": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU2-STATUS",
+            "device_parent": "SMBUS12",
+            "virt_parent": "PSU2"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0xc",
+                "dev_addr": "0x53",
+                "dev_type": "as5835_54x_psu2"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "psu_present",
+                    "drv_attr_name": "psu_present"
+                },
+                {
+                    "attr_name": "psu_power_good",
+                    "drv_attr_name": "psu_power_good"
+                },
+                {
+                    "attr_name": "psu_serial_num",
+                    "drv_attr_name": "psu_serial_numer"
+                }
+            ]
+        }
+    },
+    "PSU2-PMBUS": {
+        "dev_info": {
+            "device_type": "PSU",
+            "device_name": "PSU2-PMBUS",
+            "device_parent": "SMBUS12",
+            "virt_parent": "PSU2"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0xc",
+                "dev_addr": "0x5b",
+                "dev_type": "ym2401"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "psu_model_name",
+                    "drv_attr_name": "psu_mfr_model"
+                },
+                {
+                    "attr_name": "psu_fan_dir",
+                    "drv_attr_name": "psu_fan_dir"
+                },
+                {
+                    "attr_name": "psu_v_out",
+                    "drv_attr_name": "psu_v_out"
+                },
+                {
+                    "attr_name": "psu_i_out",
+                    "drv_attr_name": "psu_i_out"
+                },
+                {
+                    "attr_name": "psu_p_out",
+                    "drv_attr_name": "psu_p_out"
+                },
+                {
+                    "attr_name": "psu_temp1_input",
+                    "drv_attr_name": "psu_temp1_input"
+                },
+                {
+                    "attr_name": "psu_fan1_speed_rpm",
+                    "drv_attr_name": "psu_fan1_speed_rpm"
+                },
+                {
+                    "attr_name": "psu_v_out_min",
+                    "drv_attr_name": "psu_mfr_vout_min"
+                },
+                {
+                    "attr_name": "psu_v_out_max",
+                    "drv_attr_name": "psu_mfr_vout_max"
+                },
+                {
+                    "attr_name": "psu_p_out_max",
+                    "drv_attr_name": "psu_mfr_pout_max"
+                }
+            ]
+        }
+    },
+    "TEMP1": {
+        "dev_info": {
+            "device_type": "TEMP_SENSOR",
+            "device_name": "TEMP1",
+            "device_parent": "SMBUS18"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x12",
+                "dev_addr": "0x4b",
+                "dev_type": "lm75"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "temp1_input",
+                    "drv_attr_name": "temp1_input"
+                },
+                {
+                    "attr_name": "temp1_high_threshold",
+                    "drv_attr_name": "temp1_max"
+                }
+            ]
+        },
+        "dev_attr": {
+            "display_name": "CB_temp"
+        }
+    },
+    "TEMP2": {
+        "dev_info": {
+            "device_type": "TEMP_SENSOR",
+            "device_name": "TEMP2",
+            "device_parent": "SMBUS19"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x13",
+                "dev_addr": "0x4c",
+                "dev_type": "lm75"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "temp1_input",
+                    "drv_attr_name": "temp1_input"
+                },
+                {
+                    "attr_name": "temp1_high_threshold",
+                    "drv_attr_name": "temp1_max"
+                }
+            ]
+        },
+        "dev_attr": {
+            "display_name": "MB_FrontMiddle_temp"
+        }
+    },
+    "TEMP3": {
+        "dev_info": {
+            "device_type": "TEMP_SENSOR",
+            "device_name": "TEMP3",
+            "device_parent": "SMBUS20"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x14",
+                "dev_addr": "0x49",
+                "dev_type": "lm75"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "temp1_input",
+                    "drv_attr_name": "temp1_input"
+                },
+                {
+                    "attr_name": "temp1_high_threshold",
+                    "drv_attr_name": "temp1_max"
+                }
+            ]
+        },
+        "dev_attr": {
+            "display_name": "MB_RearLeft_temp"
+        }
+    },
+    "TEMP4": {
+        "dev_info": {
+            "device_type": "TEMP_SENSOR",
+            "device_name": "TEMP4",
+            "device_parent": "SMBUS21"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x15",
+                "dev_addr": "0x4a",
+                "dev_type": "lm75"
+            },
+            "attr_list": [
+                {
+                    "attr_name": "temp1_input",
+                    "drv_attr_name": "temp1_input"
+                },
+                {
+                    "attr_name": "temp1_high_threshold",
+                    "drv_attr_name": "temp1_max"
+                }
+            ]
+        },
+        "dev_attr": {
+            "display_name": "MB_RearRight_temp"
+        }
+    }
+}

@@ -10,6 +10,10 @@ try:
     import sys
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
+    from sonic_platform.thermal import CpuThermal
+    from sonic_platform_pddf_base.pddf_psu_sensor import (
+        PsuVoltageSensor, PsuCurrentSensor,
+        PsuInputVoltageSensor, PsuInputCurrentSensor)
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -21,6 +25,14 @@ class Chassis(PddfChassis):
 
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
+        self._thermal_list.extend(CpuThermal.discover(len(self._thermal_list)))
+        for position, psu in enumerate(self._psu_list, 1):
+            self._voltage_sensor_list.append(PsuVoltageSensor(psu, position))
+            self._current_sensor_list.append(PsuCurrentSensor(psu, position))
+        # Append inputs after existing outputs to preserve output sensor indices.
+        for position, psu in enumerate(self._psu_list, 1):
+            self._voltage_sensor_list.append(PsuInputVoltageSensor(psu, position))
+            self._current_sensor_list.append(PsuInputCurrentSensor(psu, position))
 
     # Provide the functions/variables below for which implementation is to be overwritten
     sfp_change_event_data = {'valid': 0, 'last': 0, 'present': 0}
@@ -83,3 +95,13 @@ class Chassis(PddfChassis):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    # Keep the legacy spelling used by show/system_health.py.
+    def initizalize_system_led(self):
+        return True
+
+    def get_status_led(self):
+        return self.get_system_led("DIAG_LED")
+
+    def set_status_led(self, color):
+        return self.set_system_led("DIAG_LED", color)

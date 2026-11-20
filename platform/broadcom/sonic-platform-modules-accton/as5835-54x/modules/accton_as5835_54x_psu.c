@@ -176,8 +176,11 @@ static int as5835_54x_psu_probe(struct i2c_client *client)
 		goto exit_free;
 	}
 
-    data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "as5835_54x_psu",
-                                                      NULL, NULL, NULL);
+    /* Attributes live on the I2C client. The info API requires chip info
+     * on current kernels; use the legacy-group API for this layout.
+     */
+    data->hwmon_dev = hwmon_device_register_with_groups(&client->dev, "as5835_54x_psu",
+                                                      NULL, NULL);
 	if (IS_ERR(data->hwmon_dev)) {
 		status = PTR_ERR(data->hwmon_dev);
 		goto exit_remove;

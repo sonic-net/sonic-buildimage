@@ -170,6 +170,10 @@ class PddfFan(FanBase):
                 fault = False
             return fault
 
+    def _get_speed_from_pwm(self, pwm):
+        """Convert chassis PWM using the default nearest-percent rounding."""
+        return int(round(self._pwm_to_duty_cycle.convert(pwm)))
+
     def get_speed(self):
         """
         Retrieves the speed of fan as a percentage of full speed
@@ -228,7 +232,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
+            speed_percentage = self._get_speed_from_pwm(fpwm)
 
             return speed_percentage
 
@@ -297,7 +301,7 @@ class PddfFan(FanBase):
             else:
                 fpwm = int(float(output['status']))
 
-            speed_percentage = int(round(self._pwm_to_duty_cycle.convert(fpwm)))
+            speed_percentage = self._get_speed_from_pwm(fpwm)
             target_speed = speed_percentage
 
         return target_speed

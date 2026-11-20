@@ -5,6 +5,8 @@ After=pddf-platform-init.service
 DefaultDependencies=no
 
 [Service]
+Restart=on-failure
+RestartSec=5
 ExecStart=/usr/local/bin/accton_as7726_32x_pddf_monitor.py
 KillSignal=SIGKILL
 SuccessExitStatus=SIGKILL
