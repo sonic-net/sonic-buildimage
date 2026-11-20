@@ -162,6 +162,12 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% if 'network_import_check' in bgp_sess and bgp_sess['network_import_check'] == 'true' %}
  bgp network import-check
 {% endif %}
+{% if 'srv6_locator' in bgp_sess %}
+ segment-routing srv6
+  encap-behavior H_Encaps_Red
+  locator {{bgp_sess['srv6_locator']}}
+ exit
+{% endif %}
 {# -------globals end --------------------------- #}
 {# -------peer-group --------------------------- #}
 {% if BGP_PEER_GROUP is defined and BGP_PEER_GROUP|length > 0 %}
