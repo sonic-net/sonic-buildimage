@@ -205,7 +205,7 @@ stages:
   - Prepare
   - Build
   - UpgradeVersions
-  condition: failed()
+  condition: always() # Temporary: allow testing without an upstream failure
   pool: sonic-ubuntu-1c
   variables:
   - group: sonicbld
