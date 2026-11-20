@@ -4279,11 +4279,6 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0",
-                "low-threshold": false,
-                "low-crit-threshold": false
-            },
-            {
                 "name": "DCDC1",
                 "low-threshold": false,
                 "low-crit-threshold": false
