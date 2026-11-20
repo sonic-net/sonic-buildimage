@@ -60,13 +60,14 @@ During `make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y`,
 the Trixie builder issues one `bazel build` for the selected container archives.
 The same rule handles `sonic-vs.img.gz`. Make collects the installer containers,
 local container packages and Bazel archives loaded by legacy Docker recipes.
-By default it includes each selected container's registered runtime and debug variants.
+The ONIE installer builds only the archives it needs by default
+(`SONIC_ENABLE_DEBUG_LAYER=n`). The VM disk target keeps its runtime/debug pairs.
 Make prepares their prerequisites, then Bazel sees all container targets at once
 and can schedule independent actions in parallel.
 
-For the native AMD64 FIPS/DASH CI configuration, this produces
-`docker-orchagent.gz`, `docker-orchagent-dbg.gz`, `docker-syncd-vs.gz` and
-`docker-syncd-vs-dbg.gz` in the same build. Bazel builds the original targets
+For example, native AMD64 FIPS/DASH installer CI produces `docker-orchagent.gz`
+and `docker-syncd-vs.gz`. With `SONIC_ENABLE_DEBUG_LAYER=y`, the same command
+also produces `docker-orchagent-dbg.gz` and `docker-syncd-vs-dbg.gz`. Bazel builds the original targets
 in a common configuration so their shared base layers have identical bytes.
 Syncd and gearbox consume the DASH SDK. Orchagent uses Sairedis libraries
 that are independent of that selection. The bridge gets the archive paths
@@ -89,14 +90,15 @@ starts.
 To build a normal VS installer with just its required Bazel archives, run
 
 ```sh
-make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y SONIC_ENABLE_DEBUG_LAYER=n
+make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y
 ```
 
 For example, this requests `docker-syncd-vs.gz` and `docker-gbsyncd-vs.gz`.
 Their companion debug archives and shared debug-symbol layer are built only if
 another requested target needs them. An explicitly requested archive such as
-`target/docker-syncd-vs-dbg.gz` still builds. Use the default paired build for
-debug validation or when selecting a debug installer with `INSTALL_DEBUG_TOOLS=y`.
+`target/docker-syncd-vs-dbg.gz` still builds. Append `SONIC_ENABLE_DEBUG_LAYER=y`
+to build the companions for debug validation. To install debug containers,
+set both `INSTALL_DEBUG_TOOLS=y` and `SONIC_ENABLE_DEBUG_LAYER=y`.
 Standalone archive requests and unsupported Make configurations retain their
 existing behavior. A selected pair fails if either build/export fails or the
 owner declares different Bazel arguments for its two variants.
@@ -109,8 +111,7 @@ installed images. See [CI evidence and timing](ci/README.md).
 
 The `.bin` target produces the ONIE installer without KVM. The separate
 `target/sonic-vs.img.gz` target generates BIOS/UEFI VM disks and runs their boot
-checks; the installer CI does not exercise that VM path. Runtime/debug pairing
-also remains available when explicitly building the VM image.
+checks. The installer CI exercises the `.bin` path.
 
 ### Register container targets
 

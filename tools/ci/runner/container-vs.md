@@ -211,8 +211,8 @@ PREFER_DEBIAN_REPO=y make -f slave.mk target/sonic-vs.bin \
 ```
 
 This produces the ONIE installer. It does not create or boot BIOS/UEFI VM disks.
-The registered Bazel container pairs also produce matching debug archives;
-the normal installer continues to select the runtime archives. Packages without
+The default build selects runtime archives. Add `SONIC_ENABLE_DEBUG_LAYER=y`
+to produce their registered debug companions alongside the installer. Packages without
 Bazel support retain their existing Make producers.
 CI explicitly sets `PREFER_DEBIAN_REPO=y` for Monit and rasdaemon to fetch their
 pinned Debian source archives and packaging with SHA256 verification. The
@@ -321,10 +321,11 @@ that remote reads and writes are enabled and probes access before Make.
 If that check fails, the job stops; there is no local-cache fallback.
 
 The former `Make VS with Bazel SWSS (AMD64)` job is disabled in this workflow.
-After the new native build, CI verifies the installer container
-selection and both runtime/debug archive pairs, runs the P4/debug checks in the
-same slave, and publishes `sonic-vs-slave-amd64` with the installer, matching
-container archives, and SHA256 checksums. `sonic-vs-slave-evidence-amd64` retains
+After the native build, CI verifies the installer container selection and the
+installed runtime images. Selecting `enable_debug_layer` on a manual run also
+validates the Orchagent and Syncd archive pairs and runs the P4 debug checks.
+CI publishes `sonic-vs-slave-amd64` with the installer, selected container
+archives and SHA256 checksums. `sonic-vs-slave-evidence-amd64` retains
 the configuration and validation receipts.
 
 The VS job summary and build dashboard report Bazel timings for each profiled

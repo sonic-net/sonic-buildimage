@@ -27,7 +27,7 @@ on:
       enable_debug_layer:
         description: Build companion debug archives for the VS installer
         type: boolean
-        default: true
+        default: false
       skip_vs:
         description: Skip the full VS image build
         type: boolean
@@ -4015,7 +4015,7 @@ jobs:
       SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
       SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
       SONIC_BUILD_JOBS: "1"
-      SONIC_ENABLE_DEBUG_LAYER: ${{ (github.event_name != 'workflow_dispatch' || inputs.enable_debug_layer) && 'y' || 'n' }}
+      SONIC_ENABLE_DEBUG_LAYER: ${{ inputs.enable_debug_layer && 'y' || 'n' }}
       ENABLE_DOCKER_BASE_PULL: "y"
       REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
       ACR_REGISTRY_NAME: sonicdev

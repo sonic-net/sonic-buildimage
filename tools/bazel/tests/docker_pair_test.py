@@ -44,6 +44,7 @@ class VSContainerBatchTest(ArchiveRecipeFixture, unittest.TestCase):
     def setUp(self):
         super().setUp()
         (self.root / "platform").symlink_to(ROOT / "platform", target_is_directory=True)
+        (self.root / "rules").symlink_to(ROOT / "rules", target_is_directory=True)
         inputs = self.root / "inputs"
         inputs.mkdir()
         self.prerequisites = {}
@@ -52,6 +53,7 @@ class VSContainerBatchTest(ArchiveRecipeFixture, unittest.TestCase):
             self.prerequisites[name] = ["inputs/" + name + ".ready",
                                         "target/.container-build-method/" + name]
         self.makefile += """
+include rules/config
 CONFIGURED_PLATFORM ?= vs
 BLDENV ?= trixie
 DBG_IMAGE_MARK = dbg
@@ -130,12 +132,11 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         self.assert_success(result)
         self.assert_batch()
 
-    def test_runtime_only_onie_build_skips_debug_archives_and_prerequisites(self):
+    def test_default_onie_build_skips_debug_archives_and_prerequisites(self):
         for name in self.archives[1::2]:
             (self.root / "inputs" / (name + ".source")).unlink()
             (self.target / name).unlink()
-        result = self.run_make(goals=["target/sonic-vs.bin"], parallel=True,
-                               environment={"SONIC_ENABLE_DEBUG_LAYER": "n"})
+        result = self.run_make(goals=["target/sonic-vs.bin"], parallel=True)
         self.assert_success(result)
         self.assert_batch(self.archives[::2])
         self.assertEqual((self.root / "installed-containers").read_text().split(), list(self.archives[::2]))
@@ -157,11 +158,21 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
         self.assertIn("SONIC_ENABLE_DEBUG_LAYER=n requires INSTALL_DEBUG_TOOLS", result.stderr)
         self.assertFalse(self.recorded_calls())
 
+    def test_make_only_onie_installer_can_still_install_debug_images(self):
+        result = self.run_make(goals=["target/sonic-vs.bin"],
+                               environment={"SELECT_BAZEL": "n", "INSTALL_DEBUG_TOOLS": "y"})
+        self.assert_success(result)
+        self.assertEqual((self.root / "installed-containers").read_text().split(),
+                         list(self.archives[1::2]))
+        self.assertFalse(self.recorded_calls())
+        for name in self.archives[1::2]:
+            self.assertEqual((self.target / name).read_bytes(), ("legacy " + name).encode())
+
     def build_with_failures(self, failures, retry="1"):
         (self.root / "fixture-failures.json").write_text(json.dumps(failures))
         return self.run_make(goals=["target/sonic-vs.bin"], environment={
             "FAKE_BAZEL_MODE": "scripted_failures", "SONIC_VS_IMAGE_TIMINGS": "1",
-            "SONIC_VS_RETRY_GO_FETCH": retry,
+            "SONIC_VS_RETRY_GO_FETCH": retry, "SONIC_ENABLE_DEBUG_LAYER": "y",
         })
 
     def test_go_proxy_timeout_retries_once_and_keeps_profiles_and_membership(self):
@@ -224,7 +235,6 @@ $(addprefix target/,$(LEGACY_IMAGES)): target/%.gz:
 
     def test_source_flags_reach_one_build_of_the_original_image_targets(self):
         # Exercise real FRR/gNMI registrations, including a nondefault dial-out setting.
-        (self.root / "rules").symlink_to(ROOT / "rules", target_is_directory=True)
         frr = ("docker-fpm-frr.gz", "docker-fpm-frr-dbg.gz")
         gnmi = ("docker-sonic-gnmi.gz", "docker-sonic-gnmi-dbg.gz")
         make_metadata = "--//tools/bazel/image/vs/metadata:use_make_metadata=true"
@@ -356,6 +366,8 @@ include platform/vs/kvm-image.mk""")
                 with self.subTest(propagated=propagated, debug=debug):
                     self.calls.unlink(missing_ok=True)
                     environment = {"INSTALL_DEBUG_TOOLS": "y" if debug else "n"}
+                    if debug:
+                        environment["SONIC_ENABLE_DEBUG_LAYER"] = "y"
                     goal = "target/sonic-vs.bin"
                     if propagated:
                         environment["SONIC_BUILD_TARGET"] = goal
@@ -364,7 +376,7 @@ include platform/vs/kvm-image.mk""")
                     self.assert_success(result)
                     self.assertEqual((self.root / "installed-containers").read_text().split(),
                                      list(self.archives[1::2] if debug else self.archives[::2]))
-                    self.assert_batch()
+                    self.assert_batch(self.archives if debug else self.archives[::2])
 
     def test_parallel_installer_and_explicit_variants_run_one_build(self):
         cache = "--remote_cache=grpc://fixture:9092"

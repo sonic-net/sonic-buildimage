@@ -287,7 +287,7 @@ invocation. For example, Orchagent and Syncd build together from common base
 layers. The Syncd sources read the selected DASH settings. On the build dashboard, `vs-container-images`
 records that invocation and its profile. The container rows record their
 archive exports. The normal installer selects runtime containers, and
-`INSTALL_DEBUG_TOOLS=y` selects debug containers.
+a debug installer requires `INSTALL_DEBUG_TOOLS=y` and `SONIC_ENABLE_DEBUG_LAYER=y`.
 
 The active **VS installer in SONiC slave (AMD64)** job uses a host agent and
 the native Make wrapper to build `target/sonic-vs.bin`. After managed-identity
@@ -307,32 +307,33 @@ prune unused Docker images and build cache before checking free space, so their
 agents must not share a Docker daemon with concurrent jobs.
 It does not update image pins or create commits. See the
 [host-agent image policy](../../ci/runner/container-vs.md#slave-image-publication-and-selection).
-The installer job checks the installer version and retains runtime/debug archive
-identities across validation, using the shared `validate_runtime.py` validator.
+The installer job checks the installer version and verifies the installed images
+with the shared `validate_runtime.py` validator.
 
 The host wrapper [`build_vs.sh`](build_vs.sh) runs one
 `make target/sonic-vs.bin` request
 with the native AMD64 Trixie VS configuration, Bazel, FIPS and DASH enabled.
-The **Build the VS installer (.bin)** workflow step ends
-when Make finishes producing the ONIE installer and its runtime/debug archive pairs.
+The **Build sonic-vs.bin through the host Make wrapper** step ends when Make
+finishes producing the ONIE installer and its selected container archives.
 It does not request those archives again or run the post-build validators.
 This target does not require KVM. BIOS/UEFI VM disk generation and guest boot
 checks belong to `target/sonic-vs.img.gz` and are not exercised by this `.bin`
 CI path. The separate VM target retains those checks.
-The build records its starting Git revision; validation requires that revision
-before checks and again before writing its timing summary.
+The build records its starting Git revision. Validation checks it before running,
+and paired validation checks it again before writing its timing summary.
 
-For a runtime-only VS installer, choose the **Bazel OCI** manual workflow,
-leave `source_image=none`, clear `skip_vs`, and clear `enable_debug_layer`.
-The installer job passes `SONIC_ENABLE_DEBUG_LAYER=n` to Make. It verifies the
-installer and its runtime archives. The default paired run handles the debug
-archive and symbol checks. To compare the two modes, dispatch both from the
+The installer job uses `SONIC_ENABLE_DEBUG_LAYER=n` on push and pull request
+runs and by default on manual runs. It verifies the installer, runtime archives
+and installed images. To run the debug archive and symbol checks, dispatch
+**Bazel OCI** with `source_image=none`, clear `skip_vs`, and select
+`enable_debug_layer`. This passes `SONIC_ENABLE_DEBUG_LAYER=y` to Make.
+To compare the two modes, dispatch both from the
 same revision and compare the **Build sonic-vs.bin through the host Make wrapper**
 step. The `sonic-vs-bazel-timings-amd64` artifact includes the selected archive
 names, Bazel profile and export times for that step.
 
-[`validate_vs.sh`](validate_vs.sh) runs in the separate **Validate VS container
-pairs and P4 debug symbols** step after a successful build, using the same
+On a paired run, [`validate_vs.sh`](validate_vs.sh) runs in the separate
+**Validate the installer and retained container pairs** step, using the same
 checkout and configuration. It first checks
 both Orchagent and Syncd pairs before another builder can produce a missing
 archive. The checks cover Linux/AMD64 configuration, Make manifests, Bazel
@@ -383,7 +384,7 @@ Each container retains its owner's dependencies and Bazel options. Standalone
 archive requests and other configurations retain their existing rules.
 Validation stops on a failed prerequisite or check.
 
-[`verify_vs_oci.sh`](verify_vs_oci.sh) runs the uncached SWSS and P4 image tests and offline
+In paired mode, [`verify_vs_oci.sh`](verify_vs_oci.sh) runs the uncached SWSS and P4 image tests and offline
 split-debug package check before the validation builder exits. It preserves
 `artifacts/vs/swss-images/`, `swss-images.log`,
 `artifacts/vs/syncd-p4-images/`, `syncd-p4-images.log`,
@@ -409,7 +410,7 @@ final byte-integrity verification remains mandatory.
 P4 validation time, pair validation time and their total. It does not include
 the image build duration.
 The successful image artifact contains `target/sonic-vs.bin` and the
-Orchagent/Syncd runtime archives. The default paired run also includes their
+Orchagent/Syncd runtime archives. The opt-in paired run also includes their
 debug archives. The recorded installer selection is
 `target/sonic-vs.bin.dockers`.
 Do not parallelize top-level Make goals that share Docker state.

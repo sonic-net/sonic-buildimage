@@ -62,7 +62,7 @@ vs_required_bazel_images = $(foreach image,$(filter-out $(2),$(sort $(1))), \
 vs_installer_goals := $(filter $(addprefix $(TARGET_PATH)/,sonic-vs.bin sonic-vs.img.gz),$(SONIC_BUILD_TARGET) $(MAKECMDGOALS))
 SONIC_BAZEL_VS_BATCH_ARCHIVES :=
 ifeq ($(CONFIGURED_PLATFORM):$(BLDENV),vs:trixie)
-ifneq ($(strip $(vs_installer_goals)),)
+ifneq ($(and $(vs_installer_goals),$(bazel_docker_archives)),)
 vs_requested_images := $(foreach installer,$(notdir $(vs_installer_goals)),$($(installer)_DOCKERS)) \
     $(SONIC_PACKAGES_LOCAL) $(notdir $(filter $(TARGET_PATH)/docker-%.gz,$(MAKECMDGOALS)))
 vs_required_images := $(sort $(call vs_required_bazel_images,$(vs_requested_images)))

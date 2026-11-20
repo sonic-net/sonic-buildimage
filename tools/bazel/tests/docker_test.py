@@ -141,7 +141,8 @@ FOOTER = printf 'footer %s\n' '$@' >> publication-markers
         # Test fallback and unset-versus-empty behavior independently of the
         # developer's shell settings or a pre-existing GNU Make invocation.
         for name in ("BAZEL_CONTAINER_ARGS", "BAZEL_CONTAINER_CACHE_DIR",
-                     "BAZEL_SWSS_ARGS", "BAZEL_SWSS_CACHE_DIR", "MAKEFLAGS", "MFLAGS"):
+                     "BAZEL_SWSS_ARGS", "BAZEL_SWSS_CACHE_DIR", "MAKEFLAGS", "MFLAGS",
+                     "SONIC_ENABLE_DEBUG_LAYER", "INSTALL_DEBUG_TOOLS"):
             variables.pop(name, None)
         variables.update({
             "BAZEL": str(self.fake_bazel),

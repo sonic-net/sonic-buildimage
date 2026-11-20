@@ -340,15 +340,15 @@ elif name == "stat":
             (current.st_mode, current.st_uid, current.st_gid, current.st_mtime_ns),
             (original.st_mode, original.st_uid, original.st_gid, original.st_mtime_ns))
 
-    def test_vs_debug_layer_is_enabled_unless_disabled_on_manual_dispatch(self):
+    def test_vs_debug_layer_requires_manual_opt_in(self):
         workflow = yaml.safe_load(CONSUME.read_text())
         triggers = workflow.get("on", workflow.get(True))
         option = triggers["workflow_dispatch"]["inputs"]["enable_debug_layer"]
         self.assertEqual(option["type"], "boolean")
-        self.assertIs(option["default"], True)
+        self.assertIs(option["default"], False)
         self.assertEqual(
             self.consumer["env"]["SONIC_ENABLE_DEBUG_LAYER"],
-            "${{ (github.event_name != 'workflow_dispatch' || inputs.enable_debug_layer) && 'y' || 'n' }}")
+            "${{ inputs.enable_debug_layer && 'y' || 'n' }}")
 
     def test_vs_build_forwards_configured_make_jobs_and_runtime_only_mode_to_slave(self):
         jobs = self.consumer["env"]["SONIC_BUILD_JOBS"]

@@ -86,7 +86,7 @@ else:
         for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "MAKELEVEL", "FAIL_ACTION",
                      "FORBID_VALIDATION", "CHANGE_REVISION_ACTION", "NOBOOKWORM", "NOTRIXIE",
                      "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL",
-                     "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH"):
+                     "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH", "SONIC_ENABLE_DEBUG_LAYER"):
             self.environment.pop(name, None)
 
     def run_script(self, name, *args, **environment):
@@ -104,7 +104,7 @@ else:
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
     def prepare_build(self):
-        result = self.run_script("build_vs.sh", FORBID_VALIDATION="1")
+        result = self.run_script("build_vs.sh", FORBID_VALIDATION="1", SONIC_ENABLE_DEBUG_LAYER="y")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         (self.root / "calls.jsonl").unlink()
 
@@ -115,23 +115,27 @@ else:
             "SONIC_BUILDER_EXTRA_CMDLINE=--label vs-fixture-label -e BAZEL=fixture-bazel -e BAZEL_CONTAINER_ARGS",
         ]
 
-    def assert_profile(self, call, target):
-        self.assertEqual(call["args"], [target, *self.profile_options()])
+    def assert_profile(self, call, target, debug_layer):
+        self.assertEqual(call["args"], [target, *self.profile_options(), f"SONIC_ENABLE_DEBUG_LAYER={debug_layer}"])
         self.assertEqual(call["bazel_args"], self.environment["BAZEL_CONTAINER_ARGS"])
 
     def test_build_records_revision_before_one_make_without_validation_receipts(self):
         result = self.run_script("build_vs.sh", FORBID_VALIDATION="1")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual([call["action"] for call in self.calls()], ["make"])
-        self.assert_profile(self.calls()[0], "target/sonic-vs.bin")
+        self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "n")
         self.assertEqual(self.calls()[0]["build_revision"], "a" * 40)
         self.assertEqual([path.name for path in (self.root / "artifacts/vs").iterdir()], ["build-revision.txt"])
+
+    def test_explicit_debug_layer_reaches_installer_make(self):
+        result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="y")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "y")
 
     def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.calls()[0]["args"], ["target/sonic-vs.bin", *self.profile_options(),
-                                                  "SONIC_ENABLE_DEBUG_LAYER=n"])
+        self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "n")
         result = self.run_script("validate_vs.sh", "--runtime-only")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual([call["goal"] for call in self.calls()], ["target/sonic-vs.bin", "sonic-slave-run"])
