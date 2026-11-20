@@ -35,7 +35,15 @@ class LifecycleTest(unittest.TestCase):
         backend.chmod(0o755)
         self.args.owner_bazel = str(backend)
         endpoint = image.PRIVATE_CACHE_ENDPOINT
-        permitted = {'SONIC_BAZEL_REMOTE_CACHE': endpoint, 'SONIC_BAZEL_REMOTE_UPLOAD': 'y',
+        for policy, upload in (('y', 'true'), ('n', 'false')):
+            with self.subTest(upload=policy):
+                self.check_make_owner_cache_settings(endpoint, policy, upload)
+        self.assertEqual(list(self.root.glob('p4rt-owner-client-*')), [])
+
+    def check_make_owner_cache_settings(self, endpoint, policy, upload):
+        # The owner follows the image producers' upload policy: only builds that
+        # may write the selected cache (master pushes) upload owner results.
+        permitted = {'SONIC_BAZEL_REMOTE_CACHE': endpoint, 'SONIC_BAZEL_REMOTE_UPLOAD': policy,
                      'BAZEL_CONTAINER_ARGS': '--experimental_remote_downloader=' + endpoint +
                      ' --experimental_remote_downloader_local_fallback --remote_header=X=private --local_resources=cpu=2'}
         def execute(command, directory, receipt, name, **unused):
@@ -52,16 +60,15 @@ class LifecycleTest(unittest.TestCase):
                                         ['common', '--experimental_remote_downloader_local_fallback'],
                                         ['common', '--experimental_downloader_config=' +
                                          str(image.ROOT / 'src/sonic-p4rt/source_mirrors.cfg')],
-                                        ['build', '--remote_upload_local_results=false']])
+                                        ['build', '--remote_upload_local_results=' + upload]])
             return 'OK'
         with patch.dict(os.environ, permitted, clear=True), patch.object(image.command_log, 'execute', side_effect=execute) as call:
             self.assertEqual(image.run_owner(self.args, self.root, self.root, 'build',
                                              self.root, self.receipt, make_build=True), 'OK')
             self.assertEqual(call.call_count, 1)
             self.assertIn('--remote_cache=' + endpoint, image.root_options(make_build=True))
-            self.assertIn('--remote_upload_local_results=true', image.root_options(make_build=True))
+            self.assertIn('--remote_upload_local_results=' + upload, image.root_options(make_build=True))
             self.assertNotIn('--remote_cache=' + endpoint, image.root_options())
-        self.assertEqual(list(self.root.glob('p4rt-owner-client-*')), [])
 
     def test_make_with_no_selected_service_uses_the_local_owner_only(self):
         with patch.dict(os.environ, {'BAZEL_CONTAINER_ARGS': '--experimental_remote_downloader=' +

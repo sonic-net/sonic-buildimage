@@ -34,8 +34,12 @@ def setup_cache_settings(home, repository_only=False):
     return list(settings.values())
 
 
-def write_bazel6_owner_rc(path, home, downloader_config, *, private_remote_cache):
-    """Select only local caches and the approved pool services for an isolated Bazel 6 owner."""
+def write_bazel6_owner_rc(path, home, downloader_config, *, private_remote_cache, upload=False):
+    """Select only local caches and the approved pool services for an isolated Bazel 6 owner.
+
+    Like the image producers, the owner uploads only to the pool cache and only
+    when the caller allows writes (master pushes).
+    """
     if not downloader_config.is_absolute() or not downloader_config.is_file():
         raise ValueError("Expected the verified downloader configuration")
     selected = []
@@ -48,7 +52,7 @@ def write_bazel6_owner_rc(path, home, downloader_config, *, private_remote_cache
         selected.extend(PRIVATE_REMOTE_SETTINGS)
     selected.extend((
         "common " + shlex.quote("--experimental_downloader_config=" + str(downloader_config)),
-        "build --remote_upload_local_results=false",
+        "build --remote_upload_local_results=" + ("true" if private_remote_cache and upload else "false"),
     ))
     with path.open("x") as output:
         output.write("\n".join(selected) + "\n")

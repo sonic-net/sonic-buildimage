@@ -153,11 +153,13 @@ def make_owner_launcher(directory, bazel):
         if '--experimental_remote_downloader_local_fallback' in arguments:
             settings.append('--experimental_remote_downloader_local_fallback')
     settings.append('--experimental_downloader_config=' + str(ROOT / 'src/sonic-p4rt/source_mirrors.cfg'))
-    # Prevent rc-line injection and keep the owner cache read-only on every ref.
+    # Prevent rc-line injection. Follow the image producers' upload policy, so
+    # only builds that may write the selected cache (master pushes) upload.
     check.require(all(not any(c in option for c in '\n\r\0') for option in settings), 'Invalid owner cache option')
+    upload = 'true' if '--remote_upload_local_results=true' in settings else 'false'
     config.write_text(''.join('common ' + shlex.quote(option) + '\n' for option in settings
                               if not option.startswith('--remote_upload_local_results=')) +
-                      'build --remote_upload_local_results=false\n')
+                      'build --remote_upload_local_results=' + upload + '\n')
     launcher = directory / 'bazel'
     launcher.write_text('#!/bin/sh\nexec ' + shlex.join([bazel, '--bazelrc=' + str(config)]) + ' "$@"\n')
     launcher.chmod(0o755)

@@ -2090,6 +2090,8 @@ jobs:
     env:
       BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
       P4RT_TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      # Like the image producers, only master pushes write owner results.
+      P4RT_UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     defaults:
       run:
         shell: bash
@@ -2198,7 +2200,8 @@ jobs:
           directory.mkdir()
           owner_rc = directory.parent / "p4rt-owner.bazelrc"
           write_bazel6_owner_rc(owner_rc, Path.home(), Path(os.environ["RUNNER_TEMP"]) / "sonic-source-mirrors.cfg",
-                                private_remote_cache=os.environ["P4RT_TRUSTED_CACHE"] == "true")
+                                private_remote_cache=os.environ["P4RT_TRUSTED_CACHE"] == "true",
+                                upload=os.environ["P4RT_UPLOAD_CACHE"] == "true")
           for name, heap in (("bazel", "3g"), ("owner", "2g")):
               path = directory / name
               if name == "owner":
