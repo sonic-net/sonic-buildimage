@@ -1,0 +1,8 @@
+{
+    "ptp_mgmt_framework_config":
+        {% if "ptp_mgmt_framework_config" in DEVICE_METADATA["localhost"].keys() %}
+            "{{ DEVICE_METADATA["localhost"]["ptp_mgmt_framework_config"] }}"
+        {% else %}
+            ""
+        {% endif %}
+}
