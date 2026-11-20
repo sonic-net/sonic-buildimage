@@ -80,7 +80,7 @@
     },
     "MIRROR_SPAN_ENTRY_INVALID_DST_PORT": {
         "desc": "Configuring SPAN entry with invalid destination ports",
-        "eStrKey" : "InvalidValue"
+        "eStrKey": "InvalidValue"
     },
     "MIRROR_SPAN_ENTRY_INVALID_DST_PORT_TYPE": {
         "desc": "Configuring SPAN entry with invalid destination ports",
@@ -137,5 +137,27 @@
     "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
         "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
         "eStrKey": "When"
+    },
+    "MIRROR_SFLOW_ENTRY_WITH_VALID_VALUES": {
+        "desc": "Configuring SFLOW entry with valid values."
+    },
+    "MIRROR_SFLOW_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "desc": "Configuring SFLOW entry with valid IPv6 src and dst IP."
+    },
+    "MIRROR_SFLOW_ENTRY_WITH_GRE_TYPE": {
+        "desc": "Configuring SFLOW entry with gre_type (ERSPAN only).",
+        "eStrKey" : "When"
+    },
+    "MIRROR_SFLOW_ENTRY_WRONG_IP_VERSION_MISMATCH": {
+        "desc": "Configuring SFLOW entry with mismatched src_ip and dst_ip IP versions.",
+        "eStr" : "src_ip and dst_ip must have the same IP version."
+    },
+    "MIRROR_SFLOW_ENTRY_WRONG_UDP_DST_PORT": {
+        "desc": "Configuring SFLOW entry with a udp_dst_port above the allowed range.",
+        "eStr" : "out of type uint16 min/max bounds"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_UDP_DST_PORT": {
+        "desc": "Configuring ERSPAN entry with udp_dst_port (SFLOW only).",
+        "eStrKey" : "When"
     }
 }

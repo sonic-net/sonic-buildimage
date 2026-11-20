@@ -20,6 +20,11 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-10-08 {
+        description
+            "Add the SFLOW session type, with an optional udp_dst_port leaf.";
+    }
+
     revision 2026-04-14 {
         description
             "Add sample_rate and truncate_size leaves for sampled port mirroring
@@ -38,6 +43,9 @@ module sonic-mirror-session {
             }
             enum SPAN {
                 description "SPAN session";
+            }
+            enum SFLOW {
+                description "sFlow session";
             }
         }
     }
@@ -83,7 +91,7 @@ module sonic-mirror-session {
                 }
 
                 leaf src_ip {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     must "(contains(current(), ':') and contains(../dst_ip, ':')) or (not(contains(current(), ':')) and not(contains(../dst_ip, ':')))" {
                         error-message "src_ip and dst_ip must have the same IP version.";
                     }
@@ -94,7 +102,7 @@ module sonic-mirror-session {
                 }
 
                 leaf dst_ip {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     must "(contains(current(), ':') and contains(../src_ip, ':')) or (not(contains(current(), ':')) and not(contains(../src_ip, ':')))" {
                         error-message "src_ip and dst_ip must have the same IP version.";
                     }
@@ -119,7 +127,7 @@ module sonic-mirror-session {
                 }
 
                 leaf dscp {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     type uint8 {
                         range "0..63" {
                             error-message "Invalid dscp value";
@@ -131,7 +139,7 @@ module sonic-mirror-session {
                 }
 
                 leaf ttl {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     type uint8 {
                         range "0..255" {
                             error-message "Invalid TTL value";
@@ -140,6 +148,14 @@ module sonic-mirror-session {
                     }
                     description
                         "ERSPAN outer header TTL value. Mirrored frames will be sent with configured TTL value";
+                }
+
+                leaf udp_dst_port {
+                    when "current()/../type = 'SFLOW'";
+                    type inet:port-number;
+                    default 6343;
+                    description
+                        "UDP destination port of the sFlow datagram.";
                 }
 
                 leaf queue {
@@ -175,7 +191,7 @@ module sonic-mirror-session {
                     type session_direction;
                     default "BOTH";
                     description
-                        "Direction configuration for mirroring. Can be configured for both SPAN/ERSPAN.
+                        "Direction configuration for mirroring. Can be configured for SPAN/ERSPAN/SFLOW.
                         Supports rx/tx/both as direction config.
                            RX: Captures frames ingressing on source port.
                            TX: Captures frames egressing on source port.
@@ -191,7 +207,7 @@ module sonic-mirror-session {
                 }
 
                 leaf sample_rate {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     type uint32 {
                         range "2..max" {
                             error-message "Sample rate must be in range 2..max";
@@ -205,7 +221,7 @@ module sonic-mirror-session {
                 }
 
                 leaf truncate_size {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'SFLOW'";
                     type uint32 {
                         range "64..9216" {
                             error-message "Truncate size must be 64..9216";
