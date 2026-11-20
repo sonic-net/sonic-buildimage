@@ -180,8 +180,9 @@ stages:
             -H "thumbprint: $cert" \
             -X POST https://notice-center.azurewebsites.net/noti_center/notice \
             -d "$payload")
-          if ! printf '%s' "$response" | jq -e '.success == true'; then
+          if ! printf '%s' "$response" | jq -e '.success == true' >/dev/null; then
             echo "##vso[task.logissue type=error]Notice-center did not confirm the failure notification"
+            printf 'Notice-center response: %s\n' "$response" >&2
             exit 1
           fi
         displayName: Notify notice-center
