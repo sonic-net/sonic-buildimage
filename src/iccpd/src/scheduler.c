@@ -796,6 +796,7 @@ int scheduler_check_csm_config(struct CSM* csm)
             lif->is_peer_link = 1;
             csm->peer_link_if = lif;
             set_peerlink_learn_kernel(csm, 0, 2);
+            mlacp_peer_link_learning_disable(csm);
         }
     }
 
