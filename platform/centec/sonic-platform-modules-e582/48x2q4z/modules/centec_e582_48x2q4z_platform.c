@@ -607,7 +607,7 @@ static int e582_48x2q4z_init_psu(void)
 {
     int ret = 0;
     
-    psu_class = class_create(THIS_MODULE, "psu");
+    psu_class = class_create("psu");
     if (IS_INVALID_PTR(psu_class))
     {
         psu_class = NULL;
@@ -1303,7 +1303,7 @@ static int e582_48x2q4z_init_sfp(void)
     int ret = 0;
     int i = 0;
     
-    sfp_class = class_create(THIS_MODULE, "sfp");
+    sfp_class = class_create("sfp");
     if (IS_INVALID_PTR(sfp_class))
     {
         sfp_class = NULL;

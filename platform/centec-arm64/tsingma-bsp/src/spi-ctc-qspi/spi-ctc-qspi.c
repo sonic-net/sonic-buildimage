@@ -139,9 +139,9 @@ static int ctc_reg_write_mask(struct ctc_qspi *ctc_qspi, u32 reg, u32 value,
 
 static int ctc_qspi_setup(struct spi_device *spi)
 {
-	struct ctc_qspi *ctc_qspi = spi_master_get_devdata(spi->master);
+	struct ctc_qspi *ctc_qspi = spi_controller_get_devdata(spi->controller);
 
-	if (spi->master->busy)
+	if (spi->controller->busy)
 		return -EBUSY;
 
 	ctc_qspi->sout1def = 1;
@@ -492,17 +492,17 @@ static int ctc_transfer_for_PIO(struct ctc_qspi *ctc_qspi,
 	return msg_len;
 }
 
-static int ctc_qspi_start_transfer_one(struct spi_master *master,
+static int ctc_qspi_start_transfer_one(struct spi_controller *master,
 				       struct spi_message *msg)
 {
-	struct ctc_qspi *ctc_qspi = spi_master_get_devdata(master);
+	struct ctc_qspi *ctc_qspi = spi_controller_get_devdata(master);
 	struct spi_device *spi = msg->spi;
 	struct spi_transfer *t;
 	u8 xfer_num = 0;
 	struct spi_transfer *xfers[4];
 	u32 msg_len = 0;
 
-	ctc_qspi->cs_select = (0x1 << spi->chip_select);
+	ctc_qspi->cs_select = (0x1 << spi->chip_select[0]);
 	list_for_each_entry(t, &msg->transfers, transfer_list) {
 		xfers[xfer_num] = t;
 		xfer_num++;
@@ -554,7 +554,7 @@ static const struct spi_controller_mem_ops ctc_qspi_mem_ops = {
 static int ctc_qspi_probe(struct platform_device *pdev)
 {
 	int ret = 0, irq;
-	struct spi_master *master;
+	struct spi_controller *master;
 	struct ctc_qspi *ctc_qspi;
 	struct resource *res;
 	struct device_node *np = pdev->dev.of_node;
@@ -575,7 +575,7 @@ static int ctc_qspi_probe(struct platform_device *pdev)
 	if (!of_property_read_u32(np, "num-cs", &tmp))
 		master->num_chipselect = tmp;
 
-	ctc_qspi = spi_master_get_devdata(master);
+	ctc_qspi = spi_controller_get_devdata(master);
 	master->dev.of_node = pdev->dev.of_node;
 	platform_set_drvdata(pdev, master);
 
@@ -602,23 +602,22 @@ static int ctc_qspi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no irq resource?\n");
 		return irq;
 	}
-	ret = devm_spi_register_master(&pdev->dev, master);
+	ret = devm_spi_register_controller(&pdev->dev, master);
 	if (!ret)
 		return 0;
 	return 0;
 
 remove_master:
-	spi_master_put(master);
+	spi_controller_put(master);
 
 	return ret;
 }
 
-static int ctc_qspi_remove(struct platform_device *pdev)
+static void ctc_qspi_remove(struct platform_device *pdev)
 {
-	struct spi_master *master = platform_get_drvdata(pdev);
+	struct spi_controller *master = platform_get_drvdata(pdev);
 
-	spi_unregister_master(master);
-	return 0;
+	spi_unregister_controller(master);
 }
 
 static const struct of_device_id ctc_qspi_match[] = {

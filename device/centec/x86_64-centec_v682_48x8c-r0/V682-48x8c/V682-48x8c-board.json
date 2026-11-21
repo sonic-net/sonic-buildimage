@@ -1,13 +1,14 @@
 {
     "macleds" : {
         "polarity" : 1,
+        "brightness_file_update_led" : 0,
         "cpumode" : 1,
         "maps" : [
             {
                 "port_id" : 32,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port0/brightness"
             },
@@ -15,7 +16,7 @@
                 "port_id" : 33,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port1/brightness"
             },
@@ -23,7 +24,7 @@
                 "port_id" : 34,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port2/brightness"
             },
@@ -31,7 +32,7 @@
                 "port_id" : 35,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port3/brightness"
             },
@@ -39,7 +40,7 @@
                 "port_id" : 0,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port4/brightness"
             },
@@ -47,7 +48,7 @@
                 "port_id" : 4,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port5/brightness"
             },
@@ -55,7 +56,7 @@
                 "port_id" : 8,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port6/brightness"
             },
@@ -63,7 +64,7 @@
                 "port_id" : 12,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port7/brightness"
             },
@@ -71,7 +72,7 @@
                 "port_id" : 16,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port8/brightness"
             },
@@ -79,7 +80,7 @@
                 "port_id" : 20,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port9/brightness"
             },
@@ -87,7 +88,7 @@
                 "port_id" : 24,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port10/brightness"
             },
@@ -95,7 +96,7 @@
                 "port_id" : 28,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port11/brightness"
             },
@@ -103,7 +104,7 @@
                 "port_id" : 40,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port12/brightness"
             },
@@ -111,7 +112,7 @@
                 "port_id" : 44,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port13/brightness"
             },
@@ -119,7 +120,7 @@
                 "port_id" : 48,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port14/brightness"
             },
@@ -127,7 +128,7 @@
                 "port_id" : 52,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port15/brightness"
             },
@@ -135,7 +136,7 @@
                 "port_id" : 56,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port16/brightness"
             },
@@ -143,7 +144,7 @@
                 "port_id" : 60,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port17/brightness"
             },
@@ -151,7 +152,7 @@
                 "port_id" : 64,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port18/brightness"
             },
@@ -159,7 +160,7 @@
                 "port_id" : 68,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port19/brightness"
             },
@@ -167,7 +168,7 @@
                 "port_id" : 72,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port20/brightness"
             },
@@ -175,7 +176,7 @@
                 "port_id" : 73,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port21/brightness"
             },
@@ -183,7 +184,7 @@
                 "port_id" : 74,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port22/brightness"
             },
@@ -191,7 +192,7 @@
                 "port_id" : 75,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port23/brightness"
             },
@@ -200,7 +201,7 @@
                 "port_id" : 120,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port48/brightness"
             },
@@ -208,7 +209,7 @@
                 "port_id" : 124,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port49/brightness"
             },
@@ -216,7 +217,7 @@
                 "port_id" : 80,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port50/brightness"
             },
@@ -224,7 +225,7 @@
                 "port_id" : 84,
                 "lchip"   : 0,
                 "ctl_id"  : 0,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port51/brightness"
             },
@@ -233,7 +234,7 @@
                 "port_id" : 232,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port24/brightness"
             },
@@ -241,7 +242,7 @@
                 "port_id" : 233,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port25/brightness"
             },
@@ -249,7 +250,7 @@
                 "port_id" : 234,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port26/brightness"
             },
@@ -257,7 +258,7 @@
                 "port_id" : 235,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port27/brightness"
             },
@@ -265,7 +266,7 @@
                 "port_id" : 200,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port28/brightness"
             },
@@ -273,7 +274,7 @@
                 "port_id" : 204,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port29/brightness"
             },
@@ -281,7 +282,7 @@
                 "port_id" : 208,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port30/brightness"
             },
@@ -289,7 +290,7 @@
                 "port_id" : 212,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port31/brightness"
             },
@@ -297,7 +298,7 @@
                 "port_id" : 216,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port32/brightness"
             },
@@ -305,7 +306,7 @@
                 "port_id" : 220,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port33/brightness"
             },
@@ -313,7 +314,7 @@
                 "port_id" : 224,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port34/brightness"
             },
@@ -321,7 +322,7 @@
                 "port_id" : 228,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port35/brightness"
             },
@@ -329,7 +330,7 @@
                 "port_id" : 160,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port36/brightness"
             },
@@ -337,7 +338,7 @@
                 "port_id" : 164,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port37/brightness"
             },
@@ -345,7 +346,7 @@
                 "port_id" : 168,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port38/brightness"
             },
@@ -353,7 +354,7 @@
                 "port_id" : 172,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port39/brightness"
             },
@@ -361,7 +362,7 @@
                 "port_id" : 176,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port40/brightness"
             },
@@ -369,7 +370,7 @@
                 "port_id" : 180,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port41/brightness"
             },
@@ -377,7 +378,7 @@
                 "port_id" : 184,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port42/brightness"
             },
@@ -385,7 +386,7 @@
                 "port_id" : 188,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port43/brightness"
             },
@@ -393,7 +394,7 @@
                 "port_id" : 192,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port44/brightness"
             },
@@ -401,7 +402,7 @@
                 "port_id" : 193,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port45/brightness"
             },
@@ -409,7 +410,7 @@
                 "port_id" : 194,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port46/brightness"
             },
@@ -417,7 +418,7 @@
                 "port_id" : 195,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port47/brightness"
             },
@@ -426,7 +427,7 @@
                 "port_id" : 240,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 0,
                 "sysfs_path" : "/sys/class/leds/port52/brightness"
             },
@@ -434,7 +435,7 @@
                 "port_id" : 244,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 1,
                 "sysfs_path" : "/sys/class/leds/port53/brightness"
             },
@@ -442,7 +443,7 @@
                 "port_id" : 280,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 1,
                 "sysfs_path" : "/sys/class/leds/port54/brightness"
             },
@@ -450,7 +451,7 @@
                 "port_id" : 284,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "mode"    : "LED_MODE_2_OFF_RXLNKBIACT",
                 "fixed"   : 1,
                 "sysfs_path" : "/sys/class/leds/port55/brightness"
             },
@@ -459,28 +460,28 @@
                 "port_id" : 161,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_1_FORCE_OFF",
+                "mode"    : "LED_MODE_1_FORCE_ON",
                 "fixed"   : 0
             },
             {
                 "port_id" : 162,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_1_FORCE_OFF",
+                "mode"    : "LED_MODE_1_FORCE_ON",
                 "fixed"   : 0
             },
             {
                 "port_id" : 165,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_1_FORCE_OFF",
+                "mode"    : "LED_MODE_1_FORCE_ON",
                 "fixed"   : 0
             },
             {
                 "port_id" : 166,
                 "lchip"   : 0,
                 "ctl_id"  : 1,
-                "mode"    : "LED_MODE_1_FORCE_OFF",
+                "mode"    : "LED_MODE_1_FORCE_ON",
                 "fixed"   : 0
             }
         ]
