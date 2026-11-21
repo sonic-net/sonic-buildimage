@@ -1165,6 +1165,124 @@
                 }]
             }
         }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.100.0/24",
+                                        "nexthop": "10.10.10.1"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_DISTANCE": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.101.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "distance": "5"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_BLACKHOLE": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.102.0/24",
+                                        "nexthop": "0.0.0.0",
+                                        "blackhole": "true"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_NEXTHOP_VRF": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.103.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "nexthop-vrf": "default"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_WITH_TAG": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.105.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "tag": "1234"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_TAG": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_LIST": [
+                                {
+                                        "vrf_name": "default",
+                                        "prefix": "100.100.106.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "tag": "1234"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_DISTANCE_INVALID": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.107.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "distance": "300"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_TAG_INVALID": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_TEMPLATE_LIST": [
+                                {
+                                        "prefix": "100.100.108.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "tag": "99999999999"
+                                }
+                        ]
+                }
+        }
+    },
+    "STATIC_ROUTE_TEST_TAG_INVALID": {
+        "sonic-static-route:sonic-static-route": {
+                "sonic-static-route:STATIC_ROUTE": {
+                        "STATIC_ROUTE_LIST": [
+                                {
+                                        "vrf_name": "default",
+                                        "prefix": "100.100.109.0/24",
+                                        "nexthop": "10.10.10.1",
+                                        "tag": "99999999999"
+                                }
+                        ]
+                }
+        }
     }
 
 }
