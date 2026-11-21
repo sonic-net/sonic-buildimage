@@ -11,7 +11,7 @@ Homepage: https://nexthop.ai
 
 Package: sonic-platform-nexthop-common
 Architecture: amd64
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, ${kernel:Depends}
 Description: Common modules required on all Nexthop platforms
 
 Package: sonic-platform-nexthop-komodo
