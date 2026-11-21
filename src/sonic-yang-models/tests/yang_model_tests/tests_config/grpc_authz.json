@@ -1,0 +1,362 @@
+{
+    "GRPC_AUTHZ_POLICY_WITH_VALID_CONFIG": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "allow-gnmi-get",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "allow"
+                    },
+                    {
+                        "name": "deny-gnmi-get",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "deny"
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "allow-interface-read",
+                        "role": "reader",
+                        "target": "default",
+                        "origin": "openconfig",
+                        "path": "/interfaces/interface[name=*]",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    },
+                    {
+                        "name": "deny-system-write",
+                        "principal": "client.example.com",
+                        "path": "/interfaces/interface[name=Ethernet1/2/3]",
+                        "mode": "WRITE",
+                        "action": "DENY"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_PRINCIPAL_WITH_MISSING_ROLES": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_UNKNOWN_ROLE": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "unknown-role",
+                        "roles": [
+                            "administrator"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "deny"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_INVALID_RPC": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "invalid-method",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "gnmi.gNMI.Get",
+                        "effect": "allow"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_PRIORITY": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "priority-override",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "effect": "allow",
+                        "priority": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_ROLE": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "unknown-role",
+                        "role": "administrator",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "DENY"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_UNKNOWN_PRINCIPAL": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "unknown-principal",
+                        "principal": "unknown.example.com",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "DENY"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_INVALID_PATH": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "invalid-path",
+                        "role": "reader",
+                        "path": "interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_MODE": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-mode",
+                        "role": "reader",
+                        "path": "/interfaces",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_PATH": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-path",
+                        "role": "reader",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MISSING_SUBJECT": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "missing-subject",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_MULTIPLE_SUBJECTS": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "multiple-subjects",
+                        "principal": "client.example.com",
+                        "role": "reader",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    },
+    "GRPC_AUTHZ_RULE_WITH_PATH_FIELD": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GRPC_AUTHZ_RULE": {
+                "GRPC_AUTHZ_RULE_LIST": [
+                    {
+                        "name": "path-in-method-rule",
+                        "roles": [
+                            "reader"
+                        ],
+                        "rpc": "/gnmi.gNMI/Get",
+                        "path": "/interfaces",
+                        "effect": "allow"
+                    }
+                ]
+            }
+        }
+    },
+    "GNMI_PATHZ_RULE_WITH_RPC_FIELD": {
+        "sonic-grpc-authz:sonic-grpc-authz": {
+            "sonic-grpc-authz:GRPC_AUTHZ_PRINCIPAL": {
+                "GRPC_AUTHZ_PRINCIPAL_LIST": [
+                    {
+                        "name": "client.example.com",
+                        "roles": [
+                            "reader"
+                        ]
+                    }
+                ]
+            },
+            "sonic-grpc-authz:GNMI_PATHZ_RULE": {
+                "GNMI_PATHZ_RULE_LIST": [
+                    {
+                        "name": "method-in-path-rule",
+                        "role": "reader",
+                        "rpc": "/gnmi.gNMI/Get",
+                        "path": "/interfaces",
+                        "mode": "READ",
+                        "action": "PERMIT"
+                    }
+                ]
+            }
+        }
+    }
+}

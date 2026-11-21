@@ -253,6 +253,26 @@ def test_sync_missing_src_returns_false(ss):
     assert ok is False
 
 
+def test_sync_installs_grpc_authz_yang(ss):
+    ss, container_fs, host_fs, commands = ss
+    schema_path = "/usr/local/yang-models/sonic-grpc-authz.yang"
+
+    for item in ss.SYNC_ITEMS:
+        container_fs[item.src_in_container] = b"current"
+        host_fs[item.dst_on_host] = b"current"
+    container_fs[schema_path] = b"new schema"
+    host_fs[schema_path] = b"old schema"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"chk"
+    host_fs["/bin/container_checker"] = b"chk"
+
+    assert ss.ensure_sync() is True
+    assert host_fs[schema_path] == b"new schema"
+
+    schema_item = next(item for item in ss.SYNC_ITEMS if item.dst_on_host == schema_path)
+    assert schema_item.src_in_container == schema_path
+    assert schema_item.mode == 0o644
+
+
 def test_main_once_exits_zero_and_disables_post_actions(monkeypatch):
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
