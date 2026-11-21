@@ -17,31 +17,35 @@
 #   which is how server and client certificates are rotated under one CA.
 #
 # How the redfish container consumes them:
-#   The certificates are delivered to /etc/sonic/credentials/redfish on the
-#   BMC host, which the container mounts, and REDFISH|certs in CONFIG_DB names
-#   their paths.
+#   The certificates are delivered to the REST API certificate paths in
+#   /etc/sonic/credentials on the BMC host, which the container mounts, and
+#   REDFISH|certs in CONFIG_DB names their paths. Existing files at those
+#   paths are replaced.
 #   stage-credentials.sh stages them into what bmcweb reads and restarts it.
 #   bmcweb keeps its default auth configuration (mTLS on, TLSStrict off), so
 #   the service root stays reachable without a certificate.
 #
-#   REDFISH|certs   server_crt        /etc/sonic/credentials/redfish/server-cert.pem
-#   REDFISH|certs   server_key        /etc/sonic/credentials/redfish/server-key.pem
-#   REDFISH|certs   ca_crt            /etc/sonic/credentials/redfish/CA-cert.pem
+#   REDFISH|certs   server_crt        /etc/sonic/credentials/restapiserver.crt
+#   REDFISH|certs   server_key        /etc/sonic/credentials/restapiserver.key
+#   REDFISH|certs   ca_crt            /etc/sonic/credentials/restapica.crt
 #   REDFISH|certs   client_crt_cname  client certificate CN (sonic-dbus-bridge
 #                                     reads it on every request)
 #
 # Usage:
 #   Generate:
-#     ./generate_certificates.sh -c <CN> -i <IP> [options]
+#     ./generate_certificates.sh -c <CN> [-i <IP>] [options]
+#     ./generate_certificates.sh -i <IP> [-c <CN>] [options]
 #
 #   Install:
 #     ./generate_certificates.sh --install --bmc-ip <IP> --bmc-pass <PASS> [--push-config] [options]
 #
-# Required for generate:
-#   -i, --ip IP              Server IP address for SAN
-#
-# Optional for generate:
-#   -c, --common-name CN     Server Common Name (default: bmc.example.com)
+# Generate needs at least one of -c and -i, so that the certificate names
+# the BMC by something a client can connect to:
+#   -c, --common-name CN     Server Common Name, also added to the SAN as a DNS
+#                            name (default: bmc.example.com)
+#   -i, --ip IP              Server IP address to add to the SAN. Without it the
+#                            certificate carries the DNS name only, so a client
+#                            that verifies the server must connect by that name.
 #
 # Required for install:
 #       --bmc-ip IP          BMC IP address
@@ -74,6 +78,7 @@ set -e
 # Default values
 WORK_DIR="$(pwd)"
 SERVER_CN="bmc.example.com"
+SERVER_CN_SET=false
 SERVER_IP=""
 COUNTRY="IN"
 STATE="Karnataka"
@@ -88,7 +93,7 @@ BMC_IP=""
 BMC_USER="admin"
 BMC_PASS="YourPaSsWoRd"
 CONTAINER="redfish"
-REMOTE_DIR="/etc/sonic/credentials/redfish"
+REMOTE_DIR="/etc/sonic/credentials"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -99,6 +104,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--common-name)
             SERVER_CN="$2"
+            SERVER_CN_SET=true
             shift 2
             ;;
         -i|--ip)
@@ -231,9 +237,9 @@ if $INSTALL; then
         exit 1
     fi
 
-    SERVER_CRT_PATH="${REMOTE_DIR}/server-cert.pem"
-    SERVER_KEY_PATH="${REMOTE_DIR}/server-key.pem"
-    CA_CRT_PATH="${REMOTE_DIR}/CA-cert.pem"
+    SERVER_CRT_PATH="${REMOTE_DIR}/restapiserver.crt"
+    SERVER_KEY_PATH="${REMOTE_DIR}/restapiserver.key"
+    CA_CRT_PATH="${REMOTE_DIR}/restapica.crt"
     DB_SET="sudo sonic-db-cli CONFIG_DB HSET 'REDFISH|certs' server_crt '${SERVER_CRT_PATH}' server_key '${SERVER_KEY_PATH}' ca_crt '${CA_CRT_PATH}' client_crt_cname '${CLIENT_CN}'"
 
     echo "==========================================================="
@@ -328,27 +334,41 @@ if $INSTALL; then
     openssl s_client -connect "${BMC_IP}:443" -showcerts < /dev/null 2>/dev/null | \
         openssl x509 -text -noout | grep -E "Subject:|Issuer:|DNS:|IP:" || true
 
+    # Connect by a name the server certificate carries. A certificate made
+    # without -i has no IP in its SAN, so a request to https://<bmc-ip>/ fails
+    # verification on a good install; use its DNS name, routed to the BMC.
+    VERIFY_HOST="$BMC_IP"
+    CONNECT_TO=()
+    san="$(openssl x509 -in server-cert.pem -noout -ext subjectAltName 2>/dev/null | tr ',' '\n' | sed 's/^ *//')"
+    if ! echo "$san" | grep -qxF -e "IP Address:${BMC_IP}" -e "DNS:${BMC_IP}"; then
+        dns_name="$(echo "$san" | sed -n 's/^DNS://p' | grep -v '\*' | head -n 1)"
+        if [ -n "$dns_name" ]; then
+            VERIFY_HOST="$dns_name"
+            CONNECT_TO=(--connect-to "${dns_name}:443:${BMC_IP}:443")
+        fi
+    fi
+
     # TLSStrict stays off: the service root must answer without a certificate.
     # Access is decided per request from the client CN, so a privileged path
     # is what shows the client certificate being accepted.
     echo ""
     echo -n "  Service root without a client certificate (expect 200): "
-    curl -s -o /dev/null -w '%{http_code}\n' --noproxy "${BMC_IP}" \
-        --cacert CA-cert.pem "https://${BMC_IP}/redfish/v1/" || echo "request failed"
+    curl -s -o /dev/null -w '%{http_code}\n' --noproxy '*' "${CONNECT_TO[@]}" \
+        --cacert CA-cert.pem "https://${VERIFY_HOST}/redfish/v1/" || echo "request failed"
 
     if [ -f client-cert.pem ] && [ -f client-key.pem ]; then
         echo -n "  /redfish/v1/Managers with the client certificate (expect 200): "
-        curl -s -o /dev/null -w '%{http_code}\n' --noproxy "${BMC_IP}" \
+        curl -s -o /dev/null -w '%{http_code}\n' --noproxy '*' "${CONNECT_TO[@]}" \
             --cert client-cert.pem --key client-key.pem --cacert CA-cert.pem \
-            "https://${BMC_IP}/redfish/v1/Managers" || echo "request failed"
+            "https://${VERIFY_HOST}/redfish/v1/Managers" || echo "request failed"
     fi
 
     echo ""
     echo "  Test mTLS with:"
     echo ""
-    echo "    curl --noproxy ${BMC_IP} --cert $WORK_DIR/client-cert.pem --key $WORK_DIR/client-key.pem \\"
+    echo "    curl --noproxy '*' ${CONNECT_TO[*]:+${CONNECT_TO[*]} }--cert $WORK_DIR/client-cert.pem --key $WORK_DIR/client-key.pem \\"
     echo "         --cacert $WORK_DIR/CA-cert.pem \\"
-    echo "         https://${BMC_IP}/redfish/v1/Managers"
+    echo "         https://${VERIFY_HOST}/redfish/v1/Managers"
     echo ""
 
     echo "=== Installation Complete! ==="
@@ -359,18 +379,10 @@ fi
 # GENERATE MODE
 # =========================================================================
 
-# Validate required options for generate
-MISSING=""
-[ -z "$SERVER_IP" ] && MISSING="$MISSING -i"
-if [ -n "$MISSING" ]; then
-    echo "ERROR: Missing required options:$MISSING"
-    echo ""
-    echo "Usage: $0 -i <IP> [options]"
-    echo ""
-    echo "Example:"
-    echo "  $0 -i <BMC_IP> -c <BMC_HOSTNAME> --client-cn bmcweb"
-    echo ""
-    echo "Run with -h for full usage."
+if ! $SERVER_CN_SET && [ -z "$SERVER_IP" ]; then
+    echo "ERROR: give at least one of -c <CN> and -i <IP>"
+    echo "Usage: $0 -c <CN> [-i <IP>] [options]"
+    echo "Use -h or --help for usage information"
     exit 1
 fi
 
