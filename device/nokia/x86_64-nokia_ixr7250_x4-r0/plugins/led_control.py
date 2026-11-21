@@ -63,7 +63,7 @@ class LedControl(LedControlBase):
 
         for namespace in namespaces:
             # Open a handle to the Application database, in all namespaces
-            appl_db[namespace] = daemon_base.db_connect("APPL_DB", namespace=namespace)
+            appl_db[namespace] = daemon_base.db_connect("APPL_DB", namespace=namespace, use_tcp=False)
             self.sst[namespace] = swsscommon.SubscriberStateTable(appl_db[namespace], swsscommon.APP_PORT_TABLE_NAME)
             self.sel.addSelectable(self.sst[namespace])
 

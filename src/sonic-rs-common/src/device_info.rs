@@ -21,7 +21,7 @@ pub struct StateDBConnector {
 
 impl StateDBConnector {
     pub fn new() -> std::result::Result<Self, swss_common::Exception> {
-        let db = DbConnector::new_named("STATE_DB", true, 0)?;
+        let db = DbConnector::new_named("STATE_DB", false, 0)?;
         Ok(StateDBConnector { db })
     }
 
