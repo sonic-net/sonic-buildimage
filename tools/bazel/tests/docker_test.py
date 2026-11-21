@@ -49,7 +49,11 @@ with pathlib.Path(os.environ['FAKE_BAZEL_CALLS']).open('a') as output:
 if not record['prerequisites_ready']:
     raise SystemExit('Make prerequisites were not prepared before Bazel')
 mode = os.environ.get('FAKE_BAZEL_MODE', '')
-if operation == 'build':
+boot_layouts = json.loads(os.environ.get('FAKE_BAZEL_BOOT_LAYOUTS', '{}'))
+if operation == 'query':
+    for label in boot_layouts:
+        print(label)
+elif operation == 'build':
     if mode == 'scripted_failures':
         import gzip
         failures_path = pathlib.Path('fixture-failures.json')
@@ -90,7 +94,16 @@ if operation == 'build':
                 event = {'id': {'targetCompleted': {'label': label}}, 'completed': {
                     'success': True, 'outputGroup': [{'name': 'default', 'inlineFiles': outputs}]}}
                 print(json.dumps(event), file=stream)
+            for label in boot_layouts.keys() & set(arguments):
+                source = pathlib.Path(boot_layouts[label])
+                event = {'id': {'targetCompleted': {'label': label}}, 'completed': {
+                    'success': True, 'outputGroup': [{'name': 'default', 'inlineFiles': [
+                        {'name': source.name + '/oci-layout', 'uri': (source / 'oci-layout').as_uri()}]}]}}
+                print(json.dumps(event), file=stream)
 elif operation == 'cquery':
+    if arguments[-1] in boot_layouts:
+        print(boot_layouts[arguments[-1]])
+        raise SystemExit(0)
     source = pathlib.Path('bazel-bin/archive outputs') / labels[arguments[-1]]
     print('INFO: fixture query diagnostic', file=sys.stderr)
     if mode == 'query_failure':

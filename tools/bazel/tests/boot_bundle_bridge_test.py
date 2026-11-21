@@ -14,6 +14,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
+from tools.bazel.build_helpers import export_image
 from tools.bazel.image import build_boot_bundle as bridge
 from tools.bazel.image.build_boot_bundle import BundlePackage, Image, write_archive_package
 from tools.bazel.oci.boot_layout import publish_layout
@@ -56,6 +57,39 @@ class BootBundleBridgeTest(unittest.TestCase):
         self.assertIsNone(selected.layout)
         self.assertTrue((stage / "inputs" / selected.archive / "archive").samefile(archive))
         self.assertNotIn("receipt =", (stage / "BUILD.bazel").read_text())
+
+    def test_current_producer_layout_skips_staging_only_its_selected_archive(self):
+        original = self.work / "producer.gz"
+        docker_save(original, self.config, self.layers)
+        archive = self.work / "target/docker-config-engine-trixie.gz"
+        with mock.patch.dict(os.environ, {"SONIC_VS_BOOT_HANDOFF": "current"}):
+            export_image(original, archive, self.layout)
+        extra = self.work / "extra.tar"
+        docker_save(extra, self.config, self.layers)
+        selected = [Image(archive, ["docker-config-engine-trixie:latest"], True),
+                    Image(archive, ["docker-config-engine-trixie:new"], False),
+                    Image(extra, ["extra:latest"], False)]
+        stage = self.work / "current"
+        self.assertTrue(write_archive_package(stage, selected, PLATFORM, "current"))
+        self.assertEqual([im.archive for im in selected[:2]], ["", ""])
+        self.assertEqual(selected[0].layout, selected[1].layout)
+        self.assertTrue((selected[0].layout / "index.json").is_file())
+        fallback, = (stage / "inputs").rglob("archive")
+        self.assertTrue(fallback.samefile(extra))
+        self.assertEqual((stage / "BUILD.bazel").read_text().count("boot_archive("), 1)
+
+        # The same filename can be supplied by another build or have a missing
+        # layer. In either case the original archive must remain authoritative.
+        for name, handoff in (("previous", "old"), ("pruned", "current")):
+            with self.subTest(name=name):
+                if name == "pruned":
+                    (selected[0].layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
+                image = Image(archive, ["docker-config-engine-trixie:latest"], True)
+                stage = self.work / name
+                self.assertTrue(write_archive_package(stage, [image], PLATFORM, handoff))
+                self.assertIsNone(image.layout)
+                staged, = (stage / "inputs").rglob("archive")
+                self.assertTrue(staged.samefile(archive))
 
     def test_injected_repository_is_private_and_visible_from_the_checkout(self):
         workspace = self.work / "checkout"

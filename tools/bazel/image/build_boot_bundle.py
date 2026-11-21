@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 from tools.bazel.build_helpers import cache_options, export_archive, remote_cache_options
 from tools.bazel.ci.build import execution_root_from_bep, resolve_output
 from tools.bazel.ci.cache_reuse import json_records
+from tools.bazel.oci.boot_layout import direct_layout_for_archive
 from tools.bazel.oci.oci_layout import validate_layout
 from tools.bazel.image.boot_image_bundle import DIGEST, blob_name, json_bytes
 
@@ -67,6 +68,16 @@ def link_input(directory, name, source):
     return name
 
 
+def complete_layout(directory, platform):
+    # Detect missing metadata or pruned blobs before deciding to skip the archive.
+    # The Bazel layer actions check the blob digest and the uncompressed DiffID.
+    try:
+        validate_layout(directory, platform, verify_layer_digest=False)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def sidecar_for_archive(source, platform):
     # Make may symlink its archive into target/. Receipts live alongside that
     # logical filename, even when the archive itself is held in another cache.
@@ -78,16 +89,14 @@ def sidecar_for_archive(source, platform):
             index = record["index"]
             if DIGEST.fullmatch("sha256:" + index):
                 candidate = store / index
-                # A pruned sidecar must still build from the authoritative archive.
-                # Check its small metadata and presence of all the referenced blobs.
-                validate_layout(candidate, platform, verify_layer_digest=False)
-                return receipt, candidate
+                if complete_layout(candidate, platform):
+                    return receipt, candidate
         except (OSError, ValueError, KeyError, TypeError):
             pass
     return None, None
 
 
-def write_archive_package(package, images, platform):
+def write_archive_package(package, images, platform, handoff=None):
     package.mkdir()
     rules = [f'load("{RULES}", "boot_archive")', 'package(default_visibility=["//visibility:public"])']
     sources = {}
@@ -101,6 +110,12 @@ def write_archive_package(package, images, platform):
         if logical_path in sources:
             image.archive, image.layout = sources[logical_path]
             continue
+        if handoff:
+            layout = direct_layout_for_archive(image.source, handoff)
+            if layout is not None and complete_layout(layout, platform):
+                image.layout = layout
+                sources[logical_path] = ("", layout)
+                continue
         # Stable target and exec paths preserve each archive's action across tag
         # changes, optional images, checkout locations and different CI runners.
         key = hashlib.sha256(image.source.name.encode()).hexdigest()
@@ -283,7 +298,8 @@ def build(images, platform, output, inventory, labels, evidence_dir=None):
         repo = Path(tmp).resolve() / "inputs"
         repo.mkdir()
         (repo / "MODULE.bazel").write_text(f'module(name="{REPO}")\n')
-        archives = write_archive_package(repo / "archives", images, platform)
+        archives = write_archive_package(repo / "archives", images, platform,
+                                         os.environ.get("SONIC_VS_BOOT_HANDOFF"))
         if archives:
             expected = {im.archive + "/image.json" for im in images if im.archive}
             results = build_target(repo, "archives", "metadata", expected, evidence, options)
@@ -303,6 +319,11 @@ def build(images, platform, output, inventory, labels, evidence_dir=None):
                 export_archive(result["boot/" + name], dest)
         if evidence is not None:
             evidence["bundle"]["publish_seconds"] = time.monotonic() - publish_start
+            evidence["bundle"]["inputs"] = {
+                "direct_oci": sum(not im.archive for im in images),
+                "verified_sidecar": sum(bool(im.archive) and im.layout is not None for im in images),
+                "archive_only": sum(im.layout is None for im in images),
+            }
     if evidence is not None:
         evidence_dir.mkdir(exist_ok=True, parents=True)
         with tempfile.NamedTemporaryFile(mode="w", dir=evidence_dir, prefix="boot-", suffix=".json", delete=False) as receipt:

@@ -15,7 +15,11 @@ def sha256(path):
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def publish_layout(source, archive_source, archive_destination):
+def archive_identity(status):
+    return [status.st_dev, status.st_ino, status.st_size, status.st_mtime_ns, status.st_ctime_ns]
+
+
+def publish_layout(source, archive_source, archive_destination, *, handoff=None, published=None):
     """Make the OCI sidecar available even to a later build slave with a new Bazel output base."""
     store = archive_destination.parent / ".boot-image-layouts"
     pool = store / "blobs/sha256"
@@ -57,8 +61,38 @@ def publish_layout(source, archive_source, archive_destination):
                 if error.errno not in (errno.EEXIST, errno.ENOTEMPTY) or not generation.is_dir():
                     raise
         receipt = staging / "receipt"
-        receipt.write_text(json.dumps({"archive": sha256(archive_source), "index": index_id}) + "\n")
-        receipt.replace(store / (archive_destination.name + ".json"))
+        if handoff and published is not None:
+            # A current Make invocation owns the paired configured outputs. Record
+            # the inode from export_archive's open descriptor, never a later stat
+            # of the path, which may already name another producer's archive.
+            item = {"handoff": handoff, "name": archive_destination.name,
+                    "identity": archive_identity(published), "index": index_id}
+            suffix = ".direct.json"
+        else:
+            item = {"archive": sha256(archive_source), "index": index_id}
+            suffix = ".json"
+        receipt.write_text(json.dumps(item) + "\n")
+        receipt.replace(store / (archive_destination.name + suffix))
+
+
+def direct_layout_for_archive(archive, handoff):
+    """Accept only the exact Make-selected output from this producer invocation."""
+    if not handoff:
+        return None
+    store = archive.parent / ".boot-image-layouts"
+    try:
+        item = json.loads((store / (archive.name + ".direct.json")).read_bytes())
+        if (item["handoff"] != handoff or item["name"] != archive.name
+                or item["identity"] != archive_identity(archive.stat())):
+            return None
+        digest = item["index"]
+        if re.fullmatch("[0-9a-f]{64}", digest):
+            layout = store / digest
+            if sha256(layout / "index.json") == digest:
+                return layout
+    except (OSError, KeyError, TypeError, ValueError):
+        pass
+    return None
 
 
 def layout_for_archive(archive):

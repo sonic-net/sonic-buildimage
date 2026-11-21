@@ -59,20 +59,57 @@ def boot_layout_labels(bazel, labels):
     return candidates.intersection(result.stdout.splitlines())
 
 
-def export_archive(source, destination):
-    """Leave the previous image intact if copying a new archive fails."""
-    if destination.is_file() and filecmp.cmp(source, destination, shallow=False):
+def matching_archive(source, destination):
+    """Identify the already exported file by its open descriptor during comparison."""
+    try:
+        current = destination.open("rb")
+    except FileNotFoundError:
+        return None
+    with current, source.open("rb") as incoming:
+        original = os.fstat(current.fileno())
+        if original.st_size == os.fstat(incoming.fileno()).st_size:
+            while chunk := incoming.read(1024 * 1024):
+                if chunk != current.read(len(chunk)):
+                    return None
+            # A replacement cannot bind another inode to our layout. An in-place
+            # write invalidates this pre-comparison ctime.
+            return original
+    return None
+
+
+def export_archive(source, destination, *, bind_identity=False):
+    """Atomically publish an archive, optionally identifying the exact file exported."""
+    if bind_identity:
+        original = matching_archive(source, destination)
+        if original is not None:
+            return original
+    elif destination.is_file() and filecmp.cmp(source, destination, shallow=False):
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=destination.name + ".",
                                      delete=False) as output:
         temporary = Path(output.name)
-    try:
-        shutil.copyfile(source, temporary)
-        temporary.chmod(0o644)
-        temporary.replace(destination)
-    finally:
-        temporary.unlink(missing_ok=True)
+        try:
+            shutil.copyfile(source, temporary)
+            temporary.chmod(0o644)
+            if bind_identity:
+                before = os.fstat(output.fileno())
+            temporary.replace(destination)
+            if bind_identity:
+                published = os.fstat(output.fileno())
+                if (published.st_size, published.st_mtime_ns) == (before.st_size, before.st_mtime_ns):
+                    return published
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def export_image(source, destination, layout=None):
+    """Export Make's archive and hand off only its matching configured OCI output."""
+    handoff = os.environ.get("SONIC_VS_BOOT_HANDOFF") if layout is not None else None
+    published = export_archive(source, destination, bind_identity=bool(handoff))
+    if layout is not None:
+        from tools.bazel.oci.boot_layout import publish_layout
+        publish_layout(layout, source, destination, handoff=handoff, published=published)
 
 
 def main():
@@ -116,10 +153,7 @@ def main():
             source = args.execution_root / source
         if not source.is_file() or not source.stat().st_size:
             parser.error("Bazel did not produce a nonempty archive")
-        export_archive(source, args.output)
-        if args.layout_query_output:
-            from tools.bazel.oci.boot_layout import publish_layout
-            publish_layout(args.layout_query_output, source, args.output)
+        export_image(source, args.output, args.layout_query_output)
 
 
 if __name__ == "__main__":

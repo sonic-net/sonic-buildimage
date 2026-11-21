@@ -240,10 +240,8 @@ def build(args):
         for name, label in labels.items():
             with time_vs_image.time_phase(export_timings[name], "export-" + name):
                 destination = args.target_path / name
-                build_helpers.export_archive(outputs[label], destination)
-                if name in layout_labels:
-                    from tools.bazel.oci.boot_layout import publish_layout
-                    publish_layout(outputs[layout_labels[name]], outputs[label], destination)
+                layout = outputs[layout_labels[name]] if name in layout_labels else None
+                build_helpers.export_image(outputs[label], destination, layout)
         if validation_labels:
             paths = validation.configured_outputs(settings.get("BAZEL", "bazel"), options, validation_labels, events)
             validation.write_bundles(args, families, paths, shared)

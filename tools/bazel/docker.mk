@@ -60,6 +60,7 @@ vs_required_bazel_images = $(foreach image,$(filter-out $(2),$(sort $(1))), \
         $(call vs_required_bazel_images,$(call vs_legacy_image_inputs,$(image)),$(2) $(image))))
 
 vs_installer_goals := $(filter $(addprefix $(TARGET_PATH)/,sonic-vs.bin sonic-vs.img.gz),$(SONIC_BUILD_TARGET) $(MAKECMDGOALS))
+unexport SONIC_VS_BOOT_HANDOFF
 SONIC_BAZEL_VS_BATCH_ARCHIVES :=
 ifeq ($(CONFIGURED_PLATFORM):$(BLDENV),vs:trixie)
 ifneq ($(and $(vs_installer_goals),$(bazel_docker_archives)),)
@@ -98,6 +99,13 @@ $(foreach image,$(vs_pairs),$(eval $(call vs_classify_image,$(image),$(image:.gz
 $(foreach image,$(filter-out $(vs_pairs) $(vs_paired_debug),$(vs_required_images)),$(eval $(call vs_classify_image,$(image))))
 SONIC_BAZEL_VS_BATCH_ARCHIVES := $(sort $(SONIC_BAZEL_VS_BATCH_ARCHIVES))
 vs_private_pair_archives := $(vs_private_pairs) $(vs_private_pairs:%.gz=%-$(DBG_IMAGE_MARK).gz)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(DOCKER_LOAD_ON_BOOT),y:y)
+# Only outputs checked by the producers in this Make invocation may skip the
+# archive checks in the VS boot bundle. Other archives keep their verified path.
+vs_boot_handoff := $(shell cat /proc/sys/kernel/random/uuid)
+vs_handoff_archives := $(sort $(filter-out $(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(vs_required_images) $(vs_private_pair_archives)))
+$(sort $(vs_installer_goals)) $(TARGET_PATH)/vs-container-images $(addprefix $(TARGET_PATH)/,$(vs_handoff_archives)): private override export SONIC_VS_BOOT_HANDOFF := $(vs_boot_handoff)
+endif
 endif
 endif
 

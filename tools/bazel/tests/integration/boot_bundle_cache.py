@@ -13,9 +13,11 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.build_helpers import export_image
 from tools.bazel.image.boot_image_bundle import LAYER, OCI, descriptor, emit, json_bytes
 from tools.bazel.oci.boot_layout import publish_layout
 
@@ -37,10 +39,10 @@ def config_bytes(layers):
     return json_bytes(config)
 
 
-def docker_export(destination, layers):
+def docker_export(destination, layers, original_tag="embedded:latest"):
     data = config_bytes(layers)
     members = [f"{i}/layer.tar" for i in range(len(layers))]
-    manifest = [{"Config": "config.json", "Layers": members, "RepoTags": ["embedded:latest"]}]
+    manifest = [{"Config": "config.json", "Layers": members, "RepoTags": [original_tag]}]
     with tarfile.open(destination, "w") as archive:
         emit(archive, "config.json", data)
         emit(archive, "manifest.json", json_bytes(manifest))
@@ -72,18 +74,24 @@ def action_counts(evidence):
 
 
 def hidden_tmp_inputs(case, environment):
-    # All three physical source forms live under the directory Bazel replaces
+    # All physical source forms live under the directory Bazel replaces
     # in a Linux action. The workspace and Bazel output base stay visible.
     with tempfile.TemporaryDirectory(prefix="sonic-hidden-boot-", dir="/tmp") as directory:
         tmp = Path(directory)
         image_ids = {}
         args = []
-        for name in ("archive", "sidecar", "direct"):
+        handoff = "hidden-input-fixture"
+        for name in ("archive", "sidecar", "direct", "handoff"):
             payload = layer(name.encode())
             config = config_bytes([payload])
             image_ids[name + ":requested"] = digest(config)
             archive = tmp / (name + ".tar")
-            if name != "direct":
+            tags = [name + ":requested"]
+            if name == "handoff":
+                tags.append(name + ":latest")
+                image_ids[tags[-1]] = digest(config)
+                docker_export(archive, [payload], original_tag=tags[-1])
+            elif name != "direct":
                 docker_export(archive, [payload])
             if name == "archive":
                 image_ids["embedded:latest"] = digest(config)
@@ -104,13 +112,33 @@ def hidden_tmp_inputs(case, environment):
                     "manifests": [blob(OCI + "manifest.v1+json", manifest)]}))
                 if name == "sidecar":
                     publish_layout(layout, archive, archive)
-            args.extend(["--package-image", str(layout if name == "direct" else archive), name + ":requested"])
+                elif name == "handoff":
+                    exported = tmp / "target/handoff.gz"
+                    with patch.dict(os.environ, {"SONIC_VS_BOOT_HANDOFF": handoff}):
+                        export_image(archive, exported, layout)
+                    # Give the comparison path its usual checksum-verified sidecar.
+                    publish_layout(layout, archive, exported)
+                    archive = exported
+            args.extend(["--package-image", str(layout if name == "direct" else archive), ",".join(tags)])
         result = case / "hidden"
         result.mkdir()
-        subprocess.run([sys.executable, str(ROOT / "tools/bazel/image/build_boot_bundle.py"),
-                        "--platform", "linux/amd64", "--output", str(result / "bundle.tar.gz"),
-                        "--inventory", str(result / "inventory.json"), "--labels", str(result / "labels.json"),
-                        *args], cwd=ROOT, env=dict(environment, SONIC_BOOT_BUNDLE_EVIDENCE_DIR=str(result)), check=True)
+        control = case / "verified-sidecar"
+        control.mkdir()
+        # Stage the fresh producer binding first. The control hard-links the
+        # archive into its Bazel inputs, which changes the archive inode's ctime.
+        for dest, token in ((result, handoff), (control, "")):
+            subprocess.run([sys.executable, str(ROOT / "tools/bazel/image/build_boot_bundle.py"),
+                            "--platform", "linux/amd64", "--output", str(dest / "bundle.tar.gz"),
+                            "--inventory", str(dest / "inventory.json"), "--labels", str(dest / "labels.json"),
+                            *args], cwd=ROOT, env=dict(environment, SONIC_BOOT_BUNDLE_EVIDENCE_DIR=str(dest),
+                                                      SONIC_VS_BOOT_HANDOFF=token), check=True)
+            evidence, = dest.glob("boot-*.json")
+            inputs = json.loads(evidence.read_bytes())["bundle"]["inputs"]
+            if inputs != {"archive_only": 1, "verified_sidecar": 1 if token else 2, "direct_oci": 2 if token else 1}:
+                raise ValueError(f"unexpected boot bundle inputs: {inputs}")
+        for output in ("bundle.tar.gz", "inventory.json", "labels.json"):
+            if (control / output).read_bytes() != (result / output).read_bytes():
+                raise ValueError(f"OCI handoff changed installer output {output}")
         if json.loads((result / "inventory.json").read_bytes()) != image_ids:
             raise ValueError("the Linux sandbox lost or misrouted an image from /tmp")
         actual = {}

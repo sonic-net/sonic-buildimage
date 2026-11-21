@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import sys
 from pathlib import Path
 import tarfile
@@ -15,9 +16,43 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci import vs_validation_bundles as bundles
 from tools.bazel.ci.vs_container_validation import PMON, static_i386_files, verify_amd64_files
+from tools.bazel.build_helpers import export_image
+from tools.bazel.tests.oci_base_fixture import image_fixture, oci_files, write_layout
 
 
 class BundleSelectionTest(unittest.TestCase):
+    def test_ci_validation_keeps_direct_handoff_and_checks_make_selected_bytes(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / "bazel.gz"
+            archive.write_bytes(b"producer")
+            layout = root / "native"
+            write_layout(layout, oci_files(*image_fixture()))
+            selected = root / "target/docker-a.gz"
+            output = root / "validation.gz"
+            with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF="build"):
+                export_image(archive, selected, layout)
+            digest = bundles.stage_archive(selected, output, archive, "build")
+            self.assertEqual(digest, bundles.sha(selected))
+            self.assertTrue(output.samefile(archive))
+            self.assertTrue(bundles.direct_layout_for_archive(selected, "build"))
+
+            replacement = root / "replacement"
+            replacement.write_bytes(b"replacement")
+            original_sha = bundles.sha
+
+            def replace_during_hash(path):
+                if path == selected:
+                    replacement.replace(selected)
+                return original_sha(path)
+
+            output.unlink()
+            with patch.object(bundles, "sha", side_effect=replace_during_hash):
+                digest = bundles.stage_archive(selected, output, archive, "build")
+            self.assertEqual(digest, bundles.sha(selected))
+            self.assertTrue(output.samefile(selected))
+            self.assertIsNone(bundles.direct_layout_for_archive(selected, "build"))
+
     def test_feature_evidence_uses_the_selected_bazel_flags(self):
         for image, flag, field in (
             (PMON, "//dockers/docker-platform-monitor:pddf", "pddf_enabled"),

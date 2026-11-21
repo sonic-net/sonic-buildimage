@@ -110,12 +110,18 @@ image bundle. The default is `n`. The VS installer CI sets it to `y`.
 make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y DOCKER_LOAD_ON_BOOT=y
 ```
 
-With these options Bazel caches each verified layer and the complete offline
-archive, tag inventory and image labels. Rebuilding the same selection can
-restore all three files from the configured cache. Changing only a version tag
-reuses the prepared layers and rebuilds the archive and metadata. A clean
-builder still has to fetch the final archive. The VS pull request workflow can
-read the shared remote cache. Builds on `master` can populate it.
+For selected images with a Bazel `.boot-oci` output, the VS producer hands its
+OCI layout to the installer. A receipt ties the layout to the archive exported
+by the same Make invocation. The packager reads that layout directly and
+verifies its config, manifest, layer digests and uncompressed layer IDs. An
+archive without a matching, complete layout follows the existing archive path.
+
+Bazel caches each verified layer and the complete offline archive, tag inventory
+and image labels. Rebuilding the same selection can restore all three files.
+Changing the SONiC version rebuilds the bundle with the new release tags and
+reuses the prepared layers whose contents stayed identical. A clean builder
+still has to fetch or write the final archive. VS pull requests read the shared
+remote cache. Builds on `master` populate it.
 
 The bundle carries the selected runtime images, package images and their tags.
 The installer places it in the version-specific Docker store. On first startup

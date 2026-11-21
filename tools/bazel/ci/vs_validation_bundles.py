@@ -22,6 +22,7 @@ from tools.bazel.ci.build import execution_root_from_bep
 from tools.bazel.ci.artifact_validation import require, sha
 from tools.bazel.ci.vs_container_validation import PMON, static_i386_files
 from tools.bazel.oci import oci_inventory
+from tools.bazel.oci.boot_layout import direct_layout_for_archive
 from tools.bazel.oci.package_state import file_bytes
 
 BASE = "docker-base-trixie"
@@ -181,6 +182,24 @@ def copy_output(source, output):
         if exc.errno not in (errno.EXDEV, errno.EACCES, errno.EPERM, errno.EMLINK):
             raise
         shutil.copyfile(source, output)
+
+
+def stage_archive(selected, output, producer, handoff):
+    """Keep the installer archive's identity intact when publishing validation artifacts."""
+    if handoff and direct_layout_for_archive(selected, handoff):
+        # Linking target/<archive> here changes ctime and invalidates the current
+        # boot handoff. Its producer output was copied or compared byte for byte.
+        if selected.samefile(producer):
+            shutil.copyfile(selected, output)
+        else:
+            copy_output(producer, output)
+        digest = sha(selected)
+        if direct_layout_for_archive(selected, handoff):
+            return digest
+        # A concurrent publisher replaced the selected file while staging it.
+        output.unlink()
+    copy_output(selected, output)
+    return sha(output)
 
 
 def layout_metadata(directory):
@@ -359,9 +378,10 @@ def write_bundles(args, families, paths, build_settings):
                 # Use the actual target/ file when Make selected this member.
                 # Auxiliary parents come from the same completed batch build.
                 source = args.target_path / archive if archive in args.archive else paths[label]
-                copy_output(source, bundle / archive)
+                digest = stage_archive(source, bundle / archive, paths[label],
+                                       os.environ.get("SONIC_VS_BOOT_HANDOFF") if archive in args.archive else None)
                 archive_specs[variant] = {
-                    "file": archive, "sha256": sha(bundle / archive),
+                    "file": archive, "sha256": digest,
                     "config_digest": manifest["config"]["digest"],
                     "layers": manifest["layers"], "rootfs": config["rootfs"],
                 }
