@@ -623,6 +623,37 @@ static int iccp_netlink_set_portchannel_iff_flag(
     return ret_rv;
 }
 
+static bool local_vlan_if_has_custom_mac(struct CSM *csm,
+                                         struct LocalInterface *lif_vlan,
+                                         const uint8_t *remote_mac)
+{
+    static const uint8_t null_mac[ETHER_ADDR_LEN] = { 0 };
+
+    if (!csm || !lif_vlan || lif_vlan->type != IF_T_VLAN)
+        return false;
+
+    if (memcmp(lif_vlan->mac_addr, null_mac, ETHER_ADDR_LEN) == 0)
+        return false;
+
+    if (memcmp(lif_vlan->mac_addr, MLACP(csm).system_id, ETHER_ADDR_LEN) == 0)
+        return false;
+
+    if (memcmp(MLACP(csm).remote_system.system_id, null_mac, ETHER_ADDR_LEN) != 0 &&
+        memcmp(lif_vlan->mac_addr, MLACP(csm).remote_system.system_id, ETHER_ADDR_LEN) == 0)
+        return false;
+
+    if (remote_mac &&
+        memcmp(remote_mac, null_mac, ETHER_ADDR_LEN) != 0 &&
+        memcmp(lif_vlan->mac_addr, remote_mac, ETHER_ADDR_LEN) == 0)
+        return false;
+
+    if (memcmp(lif_vlan->l3_mac_addr, null_mac, ETHER_ADDR_LEN) != 0 &&
+        memcmp(lif_vlan->mac_addr, lif_vlan->l3_mac_addr, ETHER_ADDR_LEN) == 0)
+        return false;
+
+    return true;
+}
+
 void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
 {
     struct CSM* csm;
@@ -711,7 +742,8 @@ void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
                         vlan->vlan_itf->is_l3_proto_enabled, dir);
 
                 if ((memcmp(vlan->vlan_itf->l3_mac_addr, MLACP(csm).remote_system.system_id, ETHER_ADDR_LEN) != 0)
-                        && (vlan->vlan_itf->is_l3_proto_enabled == false))
+                        && (vlan->vlan_itf->is_l3_proto_enabled == false)
+                        && !local_vlan_if_has_custom_mac(csm, vlan->vlan_itf, NULL))
                 {
                     ret = iccp_netlink_if_hwaddr_set(vlan->vlan_itf->ifindex, MLACP(csm).remote_system.system_id, ETHER_ADDR_LEN);
                     if (ret != 0)
@@ -799,7 +831,8 @@ void recover_if_ipmac_on_standby(struct LocalInterface *lif_po, int dir)
                 continue;
 
             /*If the po is under a vlan, update vlan mac*/
-            if (local_if_is_l3_mode(vlan->vlan_itf) && (vlan->vlan_itf->is_l3_proto_enabled == false))
+            if (local_if_is_l3_mode(vlan->vlan_itf) && (vlan->vlan_itf->is_l3_proto_enabled == false)
+                    && !local_vlan_if_has_custom_mac(csm, vlan->vlan_itf, NULL))
             {
                 ret = iccp_netlink_if_hwaddr_set(vlan->vlan_itf->ifindex, MLACP(csm).system_id, ETHER_ADDR_LEN);
                 if (ret != 0)
@@ -2359,7 +2392,7 @@ void update_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir)
             lif_vlan->mac_addr[3], lif_vlan->mac_addr[4], lif_vlan->mac_addr[5],
             system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5], dir);
 
-    if (local_if_is_l3_mode(lif_vlan))
+    if (local_if_is_l3_mode(lif_vlan) && !local_vlan_if_has_custom_mac(csm, lif_vlan, NULL))
     {
         if (memcmp(lif_vlan->l3_mac_addr, system_mac, ETHER_ADDR_LEN) != 0)
         {
@@ -2453,7 +2486,7 @@ void recover_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir, ui
             lif_vlan->l3_mac_addr[3], lif_vlan->l3_mac_addr[4], lif_vlan->l3_mac_addr[5],
             system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5], dir);
 
-    if (local_if_is_l3_mode(lif_vlan))
+    if (local_if_is_l3_mode(lif_vlan) && !local_vlan_if_has_custom_mac(csm, lif_vlan, remote_system_mac))
     {
         if (memcmp(lif_vlan->l3_mac_addr, system_mac, ETHER_ADDR_LEN) != 0)
         {
