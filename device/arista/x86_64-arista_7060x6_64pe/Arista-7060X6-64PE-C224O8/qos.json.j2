@@ -3,45 +3,45 @@
         "AZURE": {
             "0" : "0",
             "1" : "1",
-            "2" : "2",
-            "3" : "3",
-            "4" : "4",
-            "5" : "4",
-            "6" : "4",
+            "2" : "1",
+            "3" : "2",
+            "4" : "2",
+            "5" : "3",
+            "6" : "3",
             "7" : "0",
             "8" : "0",
             "9" : "0",
-            "10": "5",
-            "11": "0",
-            "12": "0",
-            "13": "0",
-            "14": "0",
-            "15": "0",
-            "16": "0",
-            "17": "0",
-            "18": "0",
-            "19": "0",
-            "20": "0",
-            "21": "0",
-            "22": "0",
-            "23": "0",
-            "24": "0",
-            "25": "0",
-            "26": "0",
-            "27": "0",
-            "28": "0",
-            "29": "0",
-            "30": "0",
-            "31": "0",
-            "32": "0",
-            "33": "0",
-            "34": "0",
-            "35": "0",
-            "36": "0",
-            "37": "0",
-            "38": "0",
-            "39": "0",
-            "40": "0",
+            "10": "0",
+            "11": "4",
+            "12": "4",
+            "13": "4",
+            "14": "4",
+            "15": "4",
+            "16": "4",
+            "17": "4",
+            "18": "4",
+            "19": "4",
+            "20": "4",
+            "21": "4",
+            "22": "4",
+            "23": "4",
+            "24": "4",
+            "25": "4",
+            "26": "4",
+            "27": "4",
+            "28": "4",
+            "29": "4",
+            "30": "4",
+            "31": "5",
+            "32": "5",
+            "33": "5",
+            "34": "5",
+            "35": "5",
+            "36": "5",
+            "37": "5",
+            "38": "5",
+            "39": "5",
+            "40": "5",
             "41": "0",
             "42": "0",
             "43": "0",
@@ -88,56 +88,109 @@
 
 {%- macro generate_scheduler_per_sku() -%}
     "SCHEDULER": {
-        "scheduler.0": {
+        "scheduler.4": {
             "type"  : "DWRR",
-            "weight": "1"
+            "weight": "4"
         },
-        "scheduler.1": {
+        "scheduler.8": {
             "type"  : "DWRR",
-            "weight": "10"
+            "weight": "8"
         },
-        "scheduler.2": {
+        "scheduler.18": {
             "type"  : "DWRR",
-            "weight": "20"
+            "weight": "18"
         },
-        "scheduler.3": {
+        "scheduler.22": {
             "type"  : "DWRR",
-            "weight": "30"
+            "weight": "22"
         }
     },
 {%- endmacro -%}
 
+{%- macro generate_wred_profiles() %}
+    "WRED_PROFILE": {
+        "AZURE_LOSSY_Q1" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_Q2" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_Q3" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        }
+    },
+{%- endmacro %}
 {%- macro generate_single_queue_per_sku(port) -%}
         "{{ port }}|0": {
-            "scheduler": "scheduler.0"
+            "scheduler": "scheduler.4"
         },
         "{{ port }}|1": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.8",
+            "wred_profile": "AZURE_LOSSY_Q1"
         },
         "{{ port }}|2": {
-            "scheduler": "scheduler.2"
+            "scheduler": "scheduler.18",
+            "wred_profile": "AZURE_LOSSY_Q2"
         },
         "{{ port }}|3": {
-            "scheduler": "scheduler.3"
+            "scheduler": "scheduler.22",
+            "wred_profile": "AZURE_LOSSY_Q3"
         },
         "{{ port }}|4": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.22"
         },
         "{{ port }}|5": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.22"
         },
         "{{ port }}|6": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.4"
         },
         "{{ port }}|7": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.4"
         },
         "{{ port }}|8": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.4"
         },
         "{{ port }}|9": {
-            "scheduler": "scheduler.1"
+            "scheduler": "scheduler.4"
         }
 {%- endmacro -%}
+
 
 {%- include 'qos_config.j2' %}
