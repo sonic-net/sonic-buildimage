@@ -1,0 +1,21 @@
+{# Update BGP SRv6 SID advertisement for a single unicast address family. #}
+router bgp {{ bgp_asn }}
+ address-family {{ address_family }} unicast
+  no sid export auto behavior {{ behavior }}
+ exit-address-family
+exit
+{% if cleanup_route_map %}
+no route-map {{ route_map }}
+{% endif %}
+{% if advertise and prefix_list %}
+route-map {{ route_map }} permit 10
+ match {{ 'ip' if address_family == 'ipv4' else 'ipv6' }} address prefix-list {{ prefix_list }}
+exit
+{% endif %}
+{% if advertise %}
+router bgp {{ bgp_asn }}
+ address-family {{ address_family }} unicast
+  sid export auto behavior {{ behavior }}{% if prefix_list %} route-map {{ route_map }}{% endif %}
+ exit-address-family
+exit
+{% endif %}
