@@ -103,6 +103,16 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(output.strip(), 'Force10-Z9100')
 
+    def test_minigraph_bgp_router_id(self):
+        argument = ['-v', "DEVICE_METADATA['localhost']['bgp_router_id']", '-m', self.sample_graph, '-p', self.port_config]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), '11.22.33.44')
+
+    def test_minigraph_empty_bgp_router_id(self):
+        argument = ['-v', "DEVICE_METADATA['localhost'].get('bgp_router_id', '')", '-m', self.sample_graph_simple, '-p', self.port_config]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), '')
+
     def test_minigraph_region(self):
         argument = ['-v', "DEVICE_METADATA[\'localhost\'][\'region\']", '-m', self.sample_graph_metadata, '-p', self.port_config]
         output = self.run_script(argument)
@@ -1169,5 +1179,3 @@ class TestCfgGen(TestCase):
         config_json = utils.to_dict(output.strip())
         os.environ["PLATFORM"] = ""
         self.assertEqual(config_json['ASIC_SENSORS'], utils.to_dict("{'ASIC_SENSORS_POLLER_INTERVAL': {'interval': '10'}, 'ASIC_SENSORS_POLLER_STATUS': {'admin_status': 'enable'}}"))
-
-
