@@ -159,8 +159,7 @@ def runtime_report(directory, bundle):
         inventory = common.read_oci(directory, variant)
         files = inventory["files"]
         verify_service_installation(image, variant, directory, inventory["config"]["config"], files)
-        check.require(all(item.get("elf_machine") == 62 for item in files.values() if item.get("elf_type") in (2, 3)),
-                      "OCI image contains a non-AMD64 executable or shared library: " + name)
+        common.verify_amd64_files(image, files)
         owners = json.loads((directory / (variant + ".owners.json")).read_text())
         vs_package_stages.verify(directory, bundle, variant, inventory, owners)
         if image in policy.FAMILIES:

@@ -1,0 +1,257 @@
+"""Native VS pmon runtime and debug images."""
+
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "lm-sensors.sh",
+    "docker-pmon.supervisord.conf.j2",
+    "docker_init.j2",
+    "critical_processes",
+    "etc/rsyslog.conf",
+    "ssd_tools/iSmart",
+    "ssd_tools/SmartCmd",
+    "base_image_files/cmd_wrapper",
+])
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# rules/config enables the PDDF platform API in the standard VS installer.
+bool_flag(
+    name = "pddf",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "pddf_enabled",
+    flag_values = {":pddf": "true"},
+)
+
+# Native source installations retain producer debug symbols.
+sonic_layer(
+    name = "source_runtime",
+    tars = [
+        "@lm_sensors//:libsensors5.runtime",
+        "@lm_sensors//:libsensors-config.runtime",
+        "@lm_sensors//:lm-sensors.runtime",
+        "@lm_sensors//:fancontrol.runtime",
+        "@lm_sensors//:sensord.runtime",
+        "//dockers/docker-platform-monitor/bazel/python:runtime",
+    ] + select({
+        ":pddf_enabled": ["//dockers/docker-platform-monitor/bazel/pddf:runtime"],
+        "//conditions:default": [],
+    }),
+)
+
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "pmon_runtime_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["pmon_runtime_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-platform-monitor",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+    },
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "runtime_debian_files",
+    tars = [":debian_runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in APT_INPUTS["pmon_runtime_debian"]["amd64"].values()],
+    owner_metadata = ["@lm_sensors//:runtime_packages.json"],
+    source_modules = {"lm-sensors": "@image_source_modules//:lm-sensors.MODULE.bazel"},
+    source_spec = "//dockers/docker-platform-monitor/bazel:source_paths.json",
+    sources = {
+        "libsensors5": "@lm_sensors//:libsensors5.runtime",
+        "libsensors-config": "@lm_sensors//:libsensors-config.runtime",
+        "lm-sensors": "@lm_sensors//:lm-sensors.runtime",
+        "fancontrol": "@lm_sensors//:fancontrol.runtime",
+        "sensord": "@lm_sensors//:sensord.runtime",
+    },
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "runtime_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/pmon-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-platform-monitor",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/bin/docker_init.sh"],
+    env = "//tools/bazel/image/vs/metadata:docker-platform-monitor.environment",
+    labels = "//dockers/docker-platform-monitor/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":runtime_debian_files",
+        ":source_runtime",
+        "//dockers/docker-platform-monitor/config:files",
+        ":runtime_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-platform-monitor.debug_symbols",
+    image = ":docker-platform-monitor",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-platform-monitor",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = {
+        "schema": 1,
+        "image": "docker-platform-monitor",
+        "architecture": "amd64",
+        "distribution": "trixie",
+        "retained_source": "none",
+        "features": {},
+        # Original Dockerfile.j2:113; VS kernel CONFIG_IA32_EMULATION=y.
+        "static_i386": {"usr/bin/SmartCmd": "3103da68ce0ee210bff2f645ca2df6725d8009ea0813c18947cd8e27535fe869"},
+    },
+    variant = "debug",
+)
+
+# Replace the parent's vim.tiny hardlink with the full debug Vim selection.
+tar(
+    name = "debug_vim_link",
+    mtree = ["usr/bin/vim uid=0 gid=0 mode=0777 time=0 type=link link=/etc/alternatives/vim"],
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+        ":debug_vim_link",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-platform-monitor",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-platform-monitor/bazel:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/pmon-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-platform-monitor-dbg",
+    base = ":docker-platform-monitor",
+    labels = "//dockers/docker-platform-monitor/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-platform-monitor.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-platform-monitor/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-platform-monitor" + suffix + ".gz",
+        image = ":docker-platform-monitor" + suffix,
+    )
+    for suffix in [
+        "",
+        "-dbg",
+    ]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-platform-monitor.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)

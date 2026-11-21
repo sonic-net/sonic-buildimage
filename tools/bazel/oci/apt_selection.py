@@ -3,7 +3,7 @@
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import tarfile
 
@@ -17,9 +17,9 @@ from tools.bazel.oci.package_contract import identity, receipt_records, source_i
 def read_policy(path):
     """Reject incomplete policies rather than silently weakening package checks."""
     policy = json.loads(path.read_bytes())
-    require(isinstance(policy, dict) and set(policy) == {
-        "schema", "image", "architecture", "distribution", "retained_source",
-        "features"}, "invalid APT policy fields")
+    fields = {"schema", "image", "architecture", "distribution", "retained_source", "features"}
+    require(isinstance(policy, dict) and fields <= set(policy) <= fields | {"static_i386"},
+            "invalid APT policy fields")
     require(type(policy["schema"]) is int and policy["schema"] == 1 and
             all(isinstance(policy[key], str) and policy[key]
                 for key in ("image", "architecture", "distribution")) and
@@ -29,6 +29,14 @@ def read_policy(path):
                 for key, value in policy["features"].items()), "invalid APT policy features")
     require(policy["retained_source"] == "make" or not policy["features"],
             "Make policy requires retained_source=make")
+    compatibility = policy.get("static_i386", {})
+    require(isinstance(compatibility, dict) and all(
+        isinstance(name, str) and not PurePosixPath(name).is_absolute() and
+        ".." not in PurePosixPath(name).parts and str(PurePosixPath(name)) == name and
+        isinstance(value, str) and re.fullmatch("[0-9a-f]{64}", value)
+        for name, value in compatibility.items()), "invalid static i386 compatibility policy")
+    require(not compatibility or policy["architecture"] == "amd64",
+            "static i386 compatibility requires target amd64")
     return policy
 
 
@@ -141,7 +149,7 @@ def select(base, lock, policy_path, mapping, *, variant, retained_manifest=None,
         require(source["base_manifest_digest"] == layout.descriptor["digest"], "source receipt uses a different OCI base")
     files = {}
     for layer in layout.layers:
-        apply_layer(layer, files)
+        apply_layer(layer, files, static_i386=policy.get("static_i386"))
 
     def inspect_payload(path):
         entries = {}

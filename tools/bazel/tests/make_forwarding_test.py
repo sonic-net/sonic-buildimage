@@ -25,6 +25,8 @@ ARTIFACTS = (
     "target/docker-router-advertiser-dbg.gz",
     "target/docker-lldp.gz",
     "target/docker-lldp-dbg.gz",
+    "target/docker-platform-monitor.gz",
+    "target/docker-platform-monitor-dbg.gz",
     "target/docker-mux.gz",
     "target/docker-mux-dbg.gz",
     "target/docker-gbsyncd-vs.gz",

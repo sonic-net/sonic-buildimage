@@ -20,7 +20,8 @@ platform/nexthop-common
 platform/nokia-vs
 platform/nvidia-bluefield
 platform/p4
-platform/pddf
+# PMON builds the Platform Development Driver Framework (PDDF) Python package.
+platform/pddf/i2c
 platform/pensando
 platform/s3ip-sysfs
 platform/template

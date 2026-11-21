@@ -10,6 +10,7 @@ import uuid
 
 from tools.bazel.ci import artifact_validation, base_images, bmp_loaded, frr_image, swss_layer, teamd_image, vs_container_validation
 from tools.bazel.ci.artifact_validation import require, sha
+from tools.bazel.ci.vs_container_validation import PMON
 
 ROOT = Path(__file__).resolve().parents[3]
 OCI = ROOT / "tools/bazel/oci"
@@ -23,7 +24,7 @@ NAT = "docker-nat"
 BMP = "docker-sonic-bmp"
 SUPERVISED = {"docker-gnmi-sidecar", "docker-restapi-sidecar", "docker-gnmi-watchdog", "docker-bmp-watchdog"}
 WATCHDOGS = {"docker-gnmi-watchdog": "gnmi_watchdog", "docker-bmp-watchdog": "bmp_watchdog"}
-STANDALONE_IMAGES = {BASE, CONFIG, SWSS, SYNCD, TEAM, FRR, NAT, BMP} | SUPERVISED
+STANDALONE_IMAGES = {BASE, CONFIG, SWSS, SYNCD, TEAM, FRR, NAT, BMP, PMON} | SUPERVISED
 
 
 def extra_standalone_targets(image, debug_selected):
@@ -45,6 +46,16 @@ def extra_standalone_targets(image, debug_selected):
     if image == SWSS:
         targets.update({name: swss_layer.TARGETS[name] for name in
                         ("source-runtime.tar", "packages.json", "installed.status", "apt-selection.json")})
+    if image == PMON:
+        package = "//dockers/docker-platform-monitor:"
+        targets.update({"source-runtime.tar": "@lm_sensors//:lm-sensors.runtime",
+                        "libsensors.source.tar": "@lm_sensors//:libsensors5.runtime",
+                        "sensord.source.tar": "@lm_sensors//:sensord.runtime",
+                        "pmon.packages.json": package + "runtime_package_metadata",
+                        "pmon.status": package + "installed_packages"})
+        if debug_selected:
+            targets.update({"pmon-debug.packages.json": package + "debug_package_metadata",
+                            "pmon-debug.status": package + "debug_installed_packages"})
     if image == SYNCD:
         package = "//platform/vs/docker-syncd-vs:"
         targets.update({"syncd.source.tar": package + "source_runtime_payloads",
@@ -290,6 +301,14 @@ def standalone(image, directory, bundle, report):
                     run(tag, "/bin/sh", ["-s", "--", name], stdin=script)
                 elif image == BMP:
                     run(tag, "/bin/sh", ["-ec", bmp_loaded.PROBE_SCRIPT],
+                        options=["--env", "PYTHONDONTWRITEBYTECODE=1"])
+                elif image == PMON:
+                    inventory = vs_container_validation.read_oci(directory, variant)
+                    verify_parent(directory, bundle, variant, inventory, [])
+                    require("usr/bin/sensors" in summary["native"], "Missing lm-sensors owner executable")
+                    require(type(bundle.get("pddf_enabled")) is bool, "Missing Make-selected PMON PDDF mode")
+                    pddf = "y" if bundle["pddf_enabled"] else "n"
+                    run(tag, "/bin/sh", ["-s", "--", variant, pddf], stdin=Path(__file__).with_name("pmon_installed.sh").read_text(),
                         options=["--env", "PYTHONDONTWRITEBYTECODE=1"])
                 elif image in (BASE, CONFIG):
                     validate_base(directory, variant, image, summary)

@@ -17,6 +17,7 @@ from tools.bazel.oci.image_validation import docker_archive
 # These are the installed service entrypoints from the final Make Dockerfile stages.
 # Probes override --entrypoint to inspect the image and cannot check its normal startup this way.
 SUPERVISORD = "/usr/local/bin/supervisord"
+PMON = "docker-platform-monitor"
 ENTRYPOINTS = {
     "docker-base-trixie": None, "docker-config-engine-trixie": None,
     "docker-dash-engine": "/usr/bin/start.sh", "docker-dash-ha": SUPERVISORD,
@@ -24,7 +25,8 @@ ENTRYPOINTS = {
     "docker-fpm-frr": "/usr/bin/docker_init.sh", "docker-gbsyncd-vs": SUPERVISORD,
     "docker-lldp": "/usr/bin/docker-lldp-init.sh", "docker-macsec": SUPERVISORD,
     "docker-mux": "/usr/bin/docker-init.sh", "docker-nat": SUPERVISORD,
-    "docker-orchagent": "/usr/bin/docker-init.sh", "docker-router-advertiser": "/usr/bin/docker-init.sh",
+    "docker-orchagent": "/usr/bin/docker-init.sh", PMON: "/usr/bin/docker_init.sh",
+    "docker-router-advertiser": "/usr/bin/docker-init.sh",
     "docker-sflow": SUPERVISORD, "docker-snmp": "/usr/bin/docker-snmp-init.sh",
     "docker-sonic-bmp": SUPERVISORD, "docker-sonic-gnmi": SUPERVISORD,
     "docker-sonic-mgmt-framework": SUPERVISORD, "docker-sonic-otel": SUPERVISORD,
@@ -41,6 +43,26 @@ INHERITED_PORTS = {
     "docker-dash-ha", "docker-fpm-frr", "docker-macsec", "docker-sflow", "docker-snmp",
     "docker-sonic-otel", "docker-sysmgr", "docker-teamd",
 }
+
+
+def static_i386_files(image):
+    if image != PMON:
+        return {}
+    vendor = Path(__file__).resolve().parents[3] / "dockers" / PMON / "ssd_tools/SmartCmd"
+    return {"usr/bin/SmartCmd": sha(vendor)}
+
+
+def verify_amd64_files(image, files):
+    """PMON additionally ships the unmodified, statically linked i386 SmartCmd."""
+    exceptions = static_i386_files(image)
+    for path, digest in exceptions.items():
+        installed = files.get(path, {})
+        require(installed.get("sha256") == digest and installed.get("elf_machine") == 3
+                and installed.get("elf_type") == 2 and installed.get("kind") == "file",
+                "Missing or changed PMON compatibility executable: " + path)
+    for path, item in files.items():
+        if item.get("elf_type") in (2, 3) and path not in exceptions:
+            require(item.get("elf_machine") == 62, image + " contains a non-AMD64 executable or shared library: " + path)
 
 
 def verify_startup(image, settings):

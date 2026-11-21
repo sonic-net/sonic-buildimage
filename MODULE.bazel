@@ -77,8 +77,14 @@ register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.40-e3d21fce8c3e06f3635bbddd92f1807b3f66d3c1",
+    version = "0.0.40-6c9cd9477816ad129bf8d4501c9259504f3f85ca",
     repo_name = "sonic_build_infra",
+)
+# PINS requests an older 0.0.40 snapshot whose commit hash sorts higher.
+# Select the release that exposes dependency metadata from installed wheels.
+single_version_override(
+    module_name = "sonic-build-infra",
+    version = "0.0.40-6c9cd9477816ad129bf8d4501c9259504f3f85ca",
 )
 bazel_dep(name = "grub", version = "2.12.sonic.1")
 bazel_dep(
@@ -389,6 +395,7 @@ source_modules = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "so
 source_modules(
     name = "image_source_modules",
     modules = {
+        "@lm_sensors//:MODULE.bazel": "lm-sensors",
         "@otelcol_contrib//:MODULE.bazel": "otelcol-contrib",
         "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
         "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
@@ -733,3 +740,27 @@ apt_inputs(
     name = "p4rt_apt_inputs",
     lock = "@sonic_build_infra//apt:apt.lock.json",
 )
+
+# Platform Daemons supplies the PMON service wheels. lm-sensors supplies the
+# native payloads and package metadata used by the installer and debug image.
+bazel_dep(name = "lm-sensors", version = "3.6.0.sonic.3", repo_name = "lm_sensors")
+bazel_dep(
+    name = "sonic-platform-daemons",
+    version = "1.0.0-2f8dea4661691ce7e6bfa3322576c8ab5591730f",
+    repo_name = "sonic_platform_daemons",
+)
+use_repo(apt, "pmon_runtime_debian")
+pip.parse(
+    hub_name = "pmon_runtime_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-platform-monitor/bazel/python:requirements_lock.txt",
+)
+use_repo(pip, "pmon_runtime_pip")
+
+pip.parse(
+    hub_name = "pmon_pddf_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-platform-monitor/bazel/pddf:requirements_lock.txt",
+    download_only = True,
+)
+use_repo(pip, "pmon_pddf_pip")

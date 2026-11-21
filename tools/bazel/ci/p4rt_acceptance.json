@@ -58,7 +58,7 @@
     "@@sonic-pins+//p4rt_app:runtime_package_test"
   ],
   "selected_modules": {
-    "sonic-build-infra": "0.0.40-e3d21fce8c3e06f3635bbddd92f1807b3f66d3c1",
+    "sonic-build-infra": "0.0.40-6c9cd9477816ad129bf8d4501c9259504f3f85ca",
     "rules_distroless": "0.9.4.sonic.25",
     "sonic-swss-common": "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61",
     "sonic-fips": "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177",

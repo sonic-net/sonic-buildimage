@@ -1,0 +1,26 @@
+# Generated from source Requires-Dist for this target environment.
+Jinja2>=2.10
+PyYAML
+bitarray==2.8.1
+blkinfo==0.2.0
+enum34
+grpcio-tools==1.71.0
+grpcio==1.71.0
+grpcio>=1.71.0
+ijson>=3.2.3
+jsondiff>=1.2.0
+jsonpointer>=1.9
+libpci
+lxml>=4.9.1
+natsort
+netaddr==0.8.0
+protobuf<6,>=5.29.6
+protobuf<8,>=5.29.6
+psutil
+python-dateutil==2.9.0.post0
+pyyaml
+pyyaml>=6.0.1
+requests
+smbus2
+tabulate==0.9.0
+thrift

@@ -242,6 +242,34 @@ class VSContainerValidationTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     vs_container_probe.runtime_report(self.directory, self.validate(True))
 
+    def test_pmon_probes_the_selected_installer_archives_and_checks_their_ancestry(self):
+        image = validate.PMON
+        (self.directory / "parent.json").write_text(json.dumps({
+            "image": "docker-config-engine-trixie", "diff_ids": ["parent"], "files": {},
+        }))
+        archives = {}
+        images = {}
+        for variant, suffix, layers in (("runtime", "", ["parent", "pmon"]),
+                                        ("debug", "-dbg", ["parent", "pmon", "debug-tools"])):
+            name = image + suffix
+            archives[variant] = {"file": name + ".gz"}
+            images[name] = {"native": {"usr/bin/sensors": {}}}
+            inventory = {"config": {"rootfs": {"diff_ids": layers}}, "files": {}}
+            (self.directory / (variant + ".oci.json.gz")).write_bytes(gzip.compress(json.dumps(inventory).encode()))
+            for enabled, arg in ((True, "y"), (False, "n")):
+                bundle = {"image": image, "architecture": "amd64", "archives": archives, "pddf_enabled": enabled}
+                with patch.object(validate, "loaded_image", side_effect=lambda *args: nullcontext("fixture-tag")), \
+                        patch.object(vs_standalone_probes, "run") as run:
+                    vs_standalone_probes.standalone(image, self.directory, bundle, {"images": images, "runtime_native": {}})
+                    self.assertEqual([call.args[2][-2:] for call in run.call_args_list], [[v, arg] for v in archives])
+                    self.assertIn("sonic-cfggen", run.call_args.kwargs["stdin"])
+        (self.directory / "parent.json").write_text(json.dumps({
+            "image": "docker-config-engine-trixie", "diff_ids": ["wrong-parent"], "files": {},
+        }))
+        with patch.object(validate, "loaded_image", side_effect=lambda *args: nullcontext("fixture-tag")), \
+                self.assertRaisesRegex(ValueError, "did not inherit"):
+            vs_standalone_probes.standalone(image, self.directory, bundle, {"images": images, "runtime_native": {}})
+
     def test_supervised_probes_follow_the_selected_runtime_and_debug_archives(self):
         """A normal installer job never tries to load or inspect an unselected debug companion."""
         for image in vs_standalone_probes.SUPERVISED:

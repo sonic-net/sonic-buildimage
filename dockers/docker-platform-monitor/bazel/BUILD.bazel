@@ -1,0 +1,153 @@
+"""Container-owned Python closure from actual source Requires-Dist."""
+
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@sonic_build_infra//python:runtime_lock.bzl", "python_runtime_plan")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("//tools/bazel/image/vs/python:apt_metadata.bzl", "apt_python_metadata")
+
+package(default_visibility = ["//visibility:public"])
+
+# Inspect the exact source wheels selected by docker-config-engine-trixie.
+# Their files are already present in PMON's base image.
+wheel_layer(
+    name = "parent_source_wheels",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [
+        "//src/sonic-config-engine:sonic_config_engine_wheel",
+        "//src/sonic-py-common:sonic_py_common_wheel",
+        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        "@redis_dump_load//:wheel",
+    ],
+)
+
+_INHERITED_SOURCES = [
+    ":parent_source_wheels",
+    "@sonic_yang_models//:yang_models_pkg",
+]
+
+_SOURCES = [
+    "//tools/bazel/image/vs/python:platform_common_runtime",
+    "@sonic_platform_daemons//:daemons.runtime",
+]
+
+_SOURCE_NAMES = [
+    "redis-dump-load",
+    "sonic-py-common",
+    "sonic-config-engine",
+    "sonic-yang-mgmt",
+    "sonic-yang-models",
+    "sonic-platform-common",
+    "sonic-ledd",
+    "sonic-pcied",
+    "sonic-psud",
+    "sonic-syseepromd",
+    "sonic-thermalctld",
+    "sonic-sensormond",
+    "sonic-xcvrd",
+    "sonic-ycabled",
+    "sonic-chassisd",
+    "sonic-stormond",
+    "sonic-bmcctld",
+]
+
+apt_python_metadata(
+    name = "apt_cffi",
+    archive = "@config_engine_debian//python3-cffi:data",
+    distribution = "cffi",
+)
+
+apt_python_metadata(
+    name = "apt_pycparser",
+    archive = "@config_engine_debian//python3-pycparser:data",
+    distribution = "pycparser",
+)
+
+apt_python_metadata(
+    name = "apt_redis",
+    archive = "@config_engine_debian//python3-redis:data",
+    distribution = "redis",
+)
+
+apt_python_metadata(
+    name = "apt_setuptools",
+    archive = "@base_debian//python3-setuptools:data",
+    distribution = "setuptools",
+)
+
+_APT_SOURCES = [
+    ":apt_setuptools",
+    ":apt_cffi",
+    ":apt_pycparser",
+    ":apt_redis",
+]
+
+_APT_NAMES = [
+    "setuptools",
+    "cffi",
+    "pycparser",
+    "redis",
+]
+
+py_binary(
+    name = "constraints_tool",
+    srcs = ["prepare_constraints.py"],
+    main = "prepare_constraints.py",
+    python_version = "3.11",
+    deps = ["@sonic_build_infra//python:runtime_lock_lib"],
+)
+
+genrule(
+    name = "parent_constraints",
+    srcs = ["//src/sonic-config-engine:requirements_lock.txt"],
+    outs = ["parent_compatible_constraints.txt"],
+    cmd = "$(location :constraints_tool) $< $@",
+    tools = [":constraints_tool"],
+)
+
+python_runtime_plan(
+    name = "python_plan",
+    constraints = [":parent_constraints"],
+    packages = _INHERITED_SOURCES + _SOURCES + _APT_SOURCES,
+    python_platform = "x86_64-unknown-linux-gnu",
+    python_version = "3.13",
+    roots = _SOURCE_NAMES + _APT_NAMES + [
+        "grpcio==1.71.0",
+        "grpcio-tools==1.71.0",
+        "thrift",
+        "requests",
+        "python-dateutil==2.9.0.post0",
+        "libpci",
+        "psutil",
+        "blkinfo==0.2.0",
+        "smbus2",
+    ],
+    site_packages = [
+        "/usr/local/lib/python3.13/dist-packages",
+        "/usr/lib/python3/dist-packages",
+    ],
+    source_distributions = _SOURCE_NAMES + _APT_NAMES,
+    uv_version = "0.11.0",
+)
+
+exports_files([
+    "source_paths.json",
+    "debug_source_paths.json",
+])
+
+py_test(
+    name = "smartcmd_compatibility_test",
+    srcs = ["smartcmd_compatibility_test.py"],
+    args = [
+        "--smartcmd=$(rootpath //dockers/docker-platform-monitor:ssd_tools/SmartCmd)",
+        "--policy=$(rootpath //dockers/docker-platform-monitor:debian_debug_policy)",
+    ],
+    data = [
+        "//dockers/docker-platform-monitor:debian_debug_policy",
+        "//dockers/docker-platform-monitor:ssd_tools/SmartCmd",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:apt_selection",
+    ],
+)

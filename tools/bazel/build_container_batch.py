@@ -246,8 +246,7 @@ def build(args):
                     publish_layout(outputs[layout_labels[name]], outputs[label], destination)
         if validation_labels:
             paths = validation.configured_outputs(settings.get("BAZEL", "bazel"), options, validation_labels, events)
-            validation.write_bundles(args, families, paths, shared["//tools/bazel/oci:image_version"],
-                                     dialout=shared.get(validation.GNMI_DIALOUT))
+            validation.write_bundles(args, families, paths, shared)
 
 
 def main():

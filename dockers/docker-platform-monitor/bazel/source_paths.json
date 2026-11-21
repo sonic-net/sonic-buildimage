@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "packages": {
+    "libsensors5": {
+      "required_paths": [
+        "usr/lib/x86_64-linux-gnu/libsensors.so.5.0.0",
+        "usr/lib/x86_64-linux-gnu/libsensors.so.5"
+      ]
+    },
+    "libsensors-config": {
+      "required_paths": [
+        "etc/sensors3.conf"
+      ]
+    },
+    "lm-sensors": {
+      "required_paths": [
+        "usr/bin/sensors",
+        "usr/sbin/sensors-detect"
+      ]
+    },
+    "fancontrol": {
+      "required_paths": [
+        "usr/sbin/fancontrol",
+        "usr/sbin/pwmconfig"
+      ]
+    },
+    "sensord": {
+      "required_paths": [
+        "usr/sbin/sensord"
+      ]
+    }
+  }
+}

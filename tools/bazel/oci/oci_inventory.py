@@ -63,14 +63,15 @@ def assert_overlay_paths(entries, files):
                     "added OCI layer path crosses a non-directory: " + name + " via " + parent)
 
 
-def apply_layer(path, files, *, checked_overlay=False, normalize_member=None):
+def apply_layer(path, files, *, checked_overlay=False, normalize_member=None, static_i386=None):
     """Apply tar metadata, contents and OCI whiteouts to an in-memory inventory.
 
     Owners may normalize known legacy paths before inspection. Added package
     layers may not contain whiteouts or cross inherited directory symlinks.
     """
     entries, whiteouts = cached_inventory(
-        path, ("oci_layer", normalize_member), lambda: _layer_entries(path, normalize_member))
+        path, ("oci_layer", normalize_member, tuple(sorted((static_i386 or {}).items()))),
+        lambda: _layer_entries(path, normalize_member, static_i386))
     if checked_overlay:
         require(not whiteouts, "added OCI layer contains a whiteout")
         assert_overlay_paths(entries, files)
@@ -83,7 +84,7 @@ def apply_layer(path, files, *, checked_overlay=False, normalize_member=None):
     return entries
 
 
-def _layer_entries(path, normalize_member):
+def _layer_entries(path, normalize_member, static_i386=None):
     entries, whiteouts = {}, []
     with tarfile.open(path, "r:*") as archive:
         for member in archive:
@@ -107,6 +108,6 @@ def _layer_entries(path, normalize_member):
                 item["mode"] = 0o777
             if member.isfile():
                 with archive.extractfile(member) as stream:
-                    item.update(file_metadata(stream, name))
+                    item.update(file_metadata(stream, name, static_i386=static_i386))
             entries[name] = item
     return entries, whiteouts

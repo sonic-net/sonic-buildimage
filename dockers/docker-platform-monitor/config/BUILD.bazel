@@ -1,0 +1,50 @@
+"""Original PMON resources and the Make-configured VS startup script."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-platform-monitor:__pkg__"])
+
+genrule(
+    name = "docker_init",
+    srcs = ["//dockers/docker-platform-monitor:docker_init.j2"],
+    outs = ["docker_init.sh"],
+    cmd = "$(location //src/sonic-config-engine:sonic_cfggen) -a '{\"CONFIGURED_PLATFORM\":\"vs\"}' -t $(location //dockers/docker-platform-monitor:docker_init.j2) > $@",
+    tools = ["//src/sonic-config-engine:sonic_cfggen"],
+)
+
+_FILES = {
+    "//dockers/docker-platform-monitor:lm-sensors.sh": ("usr/bin/lm-sensors.sh", "0755"),
+    "//dockers/docker-platform-monitor:docker-pmon.supervisord.conf.j2": ("usr/share/sonic/templates/docker-pmon.supervisord.conf.j2", "0644"),
+    "//dockers/docker-platform-monitor:critical_processes": ("etc/supervisor/critical_processes", "0644"),
+    "//dockers/docker-platform-monitor:etc/rsyslog.conf": ("etc/rsyslog.conf", "0644"),
+    "//dockers/docker-platform-monitor:ssd_tools/iSmart": ("usr/bin/iSmart", "0755"),
+    "//dockers/docker-platform-monitor:ssd_tools/SmartCmd": ("usr/bin/SmartCmd", "0755"),
+    ":docker_init": ("usr/bin/docker_init.sh", "0755"),
+}
+
+tar(
+    name = "files",
+    srcs = _FILES.keys(),
+    mtree = [destination[0] + " uid=0 gid=0 mode=" + destination[1] + " time=0 type=file content=$(location " + source + ")" for source, destination in _FILES.items()] + ["usr/share/stormond uid=0 gid=0 mode=0755 time=0 type=dir"],
+)
+
+[manifest_labels(
+    name = "labels" if suffix == "" else "debug_labels",
+    manifest = "//tools/bazel/image/vs/metadata:docker-platform-monitor" + suffix + ".manifest",
+) for suffix in [
+    "",
+    "-dbg",
+]]
+
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-platform-monitor:docker-platform-monitor",
+    groups = [{
+        "name": "_ssh",
+        "password": "x",
+        "gid": 104,
+    }],
+)

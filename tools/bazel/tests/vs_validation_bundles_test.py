@@ -13,9 +13,47 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci import vs_validation_bundles as bundles
+from tools.bazel.ci.vs_container_validation import PMON, static_i386_files, verify_amd64_files
 
 
 class BundleSelectionTest(unittest.TestCase):
+    def test_feature_evidence_uses_the_selected_bazel_flags(self):
+        for image, flag, field in (
+            (PMON, "//dockers/docker-platform-monitor:pddf", "pddf_enabled"),
+            ("docker-sonic-gnmi", "@sonic_gnmi//tools/bazel:enable_dialout", "dialout_enabled"),
+        ):
+            for value, expected in (("true", True), ("false", False)):
+                self.assertEqual(bundles.make_features(image, {flag: value}), {field: expected})
+            for invalid in ({}, {flag: "unknown"}):
+                with self.assertRaisesRegex(ValueError, "missing Make-selected"):
+                    bundles.make_features(image, invalid)
+
+    def test_only_pmon_can_ship_the_original_static_smartcmd(self):
+        path = "usr/bin/SmartCmd"
+        source = Path(__file__).resolve().parents[3] / "dockers" / PMON / "ssd_tools/SmartCmd"
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            layer = root / "layer.tar"
+            with tarfile.open(layer, "w") as archive:
+                archive.add(source, arcname=path)
+            descriptor = {"digest": "sha256:" + bundles.sha(layer), "size": layer.stat().st_size}
+            manifest = {"config": descriptor, "layers": [descriptor]}
+            with patch.object(bundles, "layout_metadata", return_value=(descriptor, manifest, {}, [layer])):
+                inventory, *_ = bundles.write_inventory(root, "runtime", root, {}, account_layers={},
+                                                        static_i386=static_i386_files(PMON))
+                files = json.loads(gzip.decompress(inventory.read_bytes()))["files"]
+                with self.assertRaisesRegex(ValueError, "expected little-endian ELF64"):
+                    bundles.write_inventory(root, "runtime", root, {}, account_layers={})
+        verify_amd64_files(PMON, files)
+        with self.assertRaisesRegex(ValueError, "non-AMD64"):
+            verify_amd64_files("docker-nat", files)
+        with self.assertRaisesRegex(ValueError, "non-AMD64"):
+            verify_amd64_files(PMON, {**files, "usr/bin/unrelated": files[path]})
+        for replacement in ({}, {path: {**files[path], "sha256": "0" * 64}},
+                            {path: {**files[path], "elf_machine": 62}}):
+            with self.subTest(replacement=replacement), self.assertRaisesRegex(ValueError, "Missing or changed PMON"):
+                verify_amd64_files(PMON, replacement)
+
     def test_private_owner_fixture_uses_its_exact_module_mapping(self):
         """A private target is selected directly and matched to its owner's canonical output."""
         label = "@sonic_sysmgr//tests:reboot_dbus_mock"

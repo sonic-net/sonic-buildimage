@@ -243,6 +243,8 @@ jobs:
           mapfile -t hsflowd_tests < artifacts/owners/hsflowd-targets.txt
           test "${#hsflowd_tests[@]}" -eq 22
           targets=(
+            //dockers/docker-platform-monitor/bazel:smartcmd_compatibility_test
+            //platform/pddf/platform-api-pddf-base:wheel_contract_test
             //tools/bazel/tests:swss_package_contract_test //tools/bazel/tests:swss_manifest_labels_test
             //tools/bazel/tests:oci_apt_overlay_test //tools/bazel/tests:oci_image_test
             //tools/bazel/tests:oci_inventory_test //tools/bazel/tests:oci_native_packages_test
@@ -1047,6 +1049,16 @@ jobs:
         with:
           name: ${{ steps.bundles.outputs.prefix }}-docker-orchagent
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-orchagent/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-platform-monitor for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-platform-monitor')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-platform-monitor
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-platform-monitor/
           if-no-files-found: error
           compression-level: 0
           retention-days: 3
