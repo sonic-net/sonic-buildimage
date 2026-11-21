@@ -322,6 +322,22 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv4') + ['{}import vrf Vrf_test']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'Vrf_red|ipv6_unicast', {'import_vrf_route_map': 'test_map'},
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv4_unicast', {'install_backup_path': 'pic'},
+                       conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}install backup-path']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'install_backup_path': 'pic-ecmp'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}install backup-path ecmp'],
+                       neg_cmd=conf_bgp_af_cmd('default', 100, 'ipv6') + ['no install backup-path']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'Vrf_red|ipv6_unicast', {'install_backup_path': 'pic-tunnel-only'},
+                       conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}install backup-path tunnel-only'],
+                       neg_cmd=conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['no install backup-path']),
+        CmdMapTestInfo('BGP_GLOBALS', 'Vrf_blue', {'local_asn': 400},
+                       conf_bgp_dft_cmd('Vrf_blue', 400), False, conf_no_bgp_cmd('Vrf_blue', 400), None, None, None),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'Vrf_blue|ipv4_unicast', {'install_backup_path': 'pic-ecmp-tunnel-only'},
+                       conf_bgp_af_cmd('Vrf_blue', 400, 'ipv4') + ['{}install backup-path ecmp tunnel-only'],
+                       neg_cmd=conf_bgp_af_cmd('Vrf_blue', 400, 'ipv4') + ['no install backup-path']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'Vrf_red|ipv4_unicast', {'install_backup_path': 'disabled'},
+                       conf_bgp_af_cmd('Vrf_red', 200, 'ipv4') + ['no install backup-path'],
+                       no_del=True),
 ]
 
 # Add admin status test cases for BGP_NEIGHBOR_AF and BGP_PEER_GROUP_AF

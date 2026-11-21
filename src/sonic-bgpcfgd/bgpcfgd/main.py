@@ -26,6 +26,7 @@ from .managers_setsrc import ZebraSetSrc
 from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
+from .managers_device_global_af import DeviceGlobalAfMgr, BGP_DEVICE_GLOBAL_AF_TABLE
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_vrf import VRFMgr
@@ -116,6 +117,8 @@ def do_work():
         RouteMapMgr(common_objs, "APPL_DB", swsscommon.APP_BGP_PROFILE_TABLE_NAME),
         # Device Global Manager
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
+        # Device-global PIC backup-path Manager (default VRF, per AFI)
+        DeviceGlobalAfMgr(common_objs, "CONFIG_DB", BGP_DEVICE_GLOBAL_AF_TABLE),
         # Bgp Aggregate Address Manager
         AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
         # VRF Manager
