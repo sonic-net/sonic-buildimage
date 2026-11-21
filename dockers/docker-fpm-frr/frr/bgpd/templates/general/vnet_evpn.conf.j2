@@ -1,0 +1,19 @@
+!
+! template: bgpd/templates/general/vnet_evpn.conf.j2
+!
+vrf {{ vrf }}
+ vni {{ vnet_data['vni'] }}
+exit-vrf
+!
+router bgp {{ bgp_asn }} vrf {{ vrf }}
+ bgp router-id {{ loopback0_ipv4 | ip }}
+ address-family l2vpn evpn
+  advertise ipv4 unicast
+  rd {{ bgp_asn }}:{{ vnet_data['vni'] }}
+  route-target import 65000:{{ vnet_data['vni'] }}
+  route-target export 65000:{{ vnet_data['vni'] }}
+ exit-address-family
+exit
+!
+! end of template: bgpd/templates/general/vnet_evpn.conf.j2
+!

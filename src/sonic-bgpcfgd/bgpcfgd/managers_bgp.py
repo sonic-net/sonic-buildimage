@@ -198,6 +198,9 @@ class BGPPeerMgrBase(Manager):
 
         self.peers = self.load_peers()
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
+        if self.peer_type == 'general':
+            # Handle the scenario if evpn neighbor arrives before evpn enabled vnet.
+            self.directory.subscribe([("CONFIG_DB", "VNET", "")], self.on_deps_change)
         return
 
     def _has_invalid_dynamic_peer_name(self, data):
@@ -320,6 +323,18 @@ class BGPPeerMgrBase(Manager):
                 log_warn(loopback + " ipv4 address is not presented yet and bgp_router_id not configured")
                 return False
 
+        vnet_data = None
+        if vrf.startswith("Vnet"):
+            vnet_data = self.directory.get_slot("CONFIG_DB", "VNET").get(vrf)
+            if vnet_data is None:
+                log_info("Peer '(%s|%s)' will wait for VNET '%s'" % (vrf, nbr, vrf))
+                return False
+            if vnet_data.get("evpn_enabled") != "true":
+                vnet_data = None
+        if (data.get("address_family") == "evpn" or vnet_data) and self.get_lo_ipv4("Loopback0|") is None:
+            log_info("EVPN peer '(%s|%s)' will wait for the Loopback0 ipv4 address" % (vrf, nbr))
+            return False
+
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
@@ -358,6 +373,7 @@ class BGPPeerMgrBase(Manager):
             'neighbor_addr': nbr,
             'is_interface_neighbor': interface_neighbor,
             'bgp_session': data,
+            'vnet_data': vnet_data,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
