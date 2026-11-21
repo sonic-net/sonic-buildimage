@@ -5,6 +5,11 @@ import os
 import time
 import argparse
 from http import HTTPStatus
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'tools', 'bazel'))
+from generate_downloader_config import mirror_filename
+
 try:
     import requests
 except ImportError:
@@ -114,7 +119,8 @@ def generate_output_file(resources, dest_url_valid, dest_url, output_file_name):
 
     return RET_CODE_SUCCESS
 
-def upload_resource_to_server(resource_path, resource_name, user, key, server_url):
+def upload_resource_to_server(resource_path, resource_name, user, key, server_url,
+                              checksum=None):
     url_full_path = server_url + "/" + resource_name
 
     try:
@@ -135,7 +141,10 @@ def upload_resource_to_server(resource_path, resource_name, user, key, server_ur
 
     # JSON response empty only when status code is 204
     reported_md5 = response.json().get('checksums', {}).get('md5')
-    file_md5 = resource_name.split(HASH_SEPARATOR)[-1]
+    file_md5 = (
+        checksum if checksum is not None
+        else resource_name.split(HASH_SEPARATOR)[-1]
+    )
 
     # Check if server reports checksum, if so compare reported sum and the one
     # specified in filename
@@ -143,6 +152,18 @@ def upload_resource_to_server(resource_path, resource_name, user, key, server_ur
         print_msg(PRINT_LEVEL_WARN, f"Server reported file's chsum {reported_md5}, expected {file_md5}")
 
 
+    return RET_CODE_SUCCESS
+
+def publish_resource(resource_path, resource, user, key, server_url):
+    names = [resource.get_unique_name()]
+    alias = mirror_filename(resource.name, resource.hash)
+    if alias != names[0]:
+        names.append(alias)
+    for name in names:
+        result = upload_resource_to_server(
+            resource_path, name, user, key, server_url, checksum=resource.hash)
+        if result != RET_CODE_SUCCESS:
+            return result
     return RET_CODE_SUCCESS
 
 def download_external_resouce(resource, cache_path):
@@ -271,7 +292,8 @@ def main():
 
         if True == upload_files_to_server:
             #upload content to web server
-            ret_val = upload_resource_to_server(file_in_cache, unique_name, args.user, args.key, args.dest)
+            ret_val = publish_resource(
+                file_in_cache, resource, args.user, args.key, args.dest)
             if ret_val != RET_CODE_SUCCESS:
                 return ret_val
 

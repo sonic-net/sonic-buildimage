@@ -1,0 +1,3 @@
+# Only mounted when the host cache directory is writable.
+common --repository_cache=/bazel_cache/repository_cache
+common --disk_cache=/bazel_cache/disk_cache
