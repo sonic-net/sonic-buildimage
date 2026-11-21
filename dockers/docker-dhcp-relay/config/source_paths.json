@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "packages": {
+    "isc-dhcp-relay": {"required_paths": ["usr/sbin/dhcrelay", "etc/init.d/isc-dhcp-relay"]},
+    "sonic-dhcp4relay": {"required_paths": ["usr/sbin/dhcp4relay"]},
+    "sonic-dhcp6relay": {"required_paths": ["usr/sbin/dhcp6relay"]},
+    "sonic-dhcpmon": {"required_paths": ["usr/sbin/dhcpmon"]}
+  }
+}

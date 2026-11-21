@@ -57,3 +57,33 @@ $(DOCKER_DHCP_RELAY)_CLI_CONFIG_PLUGIN = /cli/config/plugins/dhcp_relay.py
 $(DOCKER_DHCP_RELAY)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_dhcp_relay.py
 $(DOCKER_DHCP_RELAY)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_dhcp_relay.py
 
+# Native source TARs, a source-owned utility wheel and the config-engine parent
+# provide the supported VS image. Other profiles retain their Make producers.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_DHCP_RELAY) $(DOCKER_DHCP_RELAY_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_DHCP_RELAY)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_DHCP_RELAY_DBG)
+$(DOCKER_DHCP_RELAY)_BAZEL_TARGET = //dockers/docker-dhcp-relay:$(DOCKER_DHCP_RELAY)
+$(DOCKER_DHCP_RELAY_DBG)_PATH = $($(DOCKER_DHCP_RELAY)_PATH)
+$(DOCKER_DHCP_RELAY_DBG)_BAZEL_TARGET = //dockers/docker-dhcp-relay:$(DOCKER_DHCP_RELAY_DBG)
+SONIC_BAZEL_MANIFESTS += docker-dhcp-relay docker-dhcp-relay-dbg
+docker-dhcp-relay_MANIFEST_IMAGE = $(DOCKER_DHCP_RELAY)
+docker-dhcp-relay-dbg_MANIFEST_IMAGE = $(DOCKER_DHCP_RELAY)
+docker-dhcp-relay-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_DHCP_RELAY)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-dhcp-relay/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-dhcp-relay/image.env
+$(DOCKER_DHCP_RELAY_DBG)_BAZEL_DEPENDS = $($(DOCKER_DHCP_RELAY)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-dhcp-relay-dbg/manifest.json
+
+# Pass the exact Make setting as data. Unchanged values keep their timestamps,
+# and an invalid value cannot replace a previously prepared input.
+export SONIC_IMAGE_VERSION
+$(TARGET_PATH)/bazel-manifests/docker-dhcp-relay/image.env: tools/bazel/oci/prepare_image_version.py bazel-manifests-force
+	python3 -B tools/bazel/oci/prepare_image_version.py --output "$@"
+endif
+endif
+endif

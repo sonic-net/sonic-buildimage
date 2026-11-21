@@ -1,0 +1,146 @@
+load("@config_engine_pip//:requirements.bzl", config_requirement = "requirement")
+load("@dhcp_utilities_test_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("//tools/bazel/tests:runtime.bzl", "common_runtime_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "setup.py",
+    "requirements.in",
+    "requirements_lock.txt",
+])
+
+_PACKAGE_FILES = glob([
+    "dhcp_utilities/common/*.py",
+    "dhcp_utilities/dhcprelayd/*.py",
+    "dhcp_utilities/dhcpservd/*.py",
+    "dhcp_utilities/dhcpservd/*.csv",
+])
+
+filegroup(
+    name = "wheel_payload",
+    srcs = _PACKAGE_FILES,
+)
+
+# Keep package selection, data, metadata and both entry points identical to
+# setup.py. Building this wheel does not resolve image runtime dependencies.
+py_wheel(
+    name = "sonic_dhcp_utilities_wheel",
+    author = "SONiC Team",
+    author_email = "yaqiangzhu@microsoft.com",
+    classifiers = [
+        "Intended Audience :: Developers",
+        "Operating System :: Linux",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
+    distribution = "sonic-dhcp-utilities",
+    entry_points = {"console_scripts": [
+        "dhcprelayd = dhcp_utilities.dhcprelayd.dhcprelayd:main",
+        "dhcpservd = dhcp_utilities.dhcpservd.dhcpservd:main",
+    ]},
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    python_tag = "py3",
+    requires = [
+        "psutil",
+        "freezegun",
+    ],
+    strip_path_prefixes = ["src/sonic-dhcp-utilities/"],
+    summary = "Module of SONiC built-in dhcp_utilities",
+    version = "1.0",
+    deps = [":wheel_payload"],
+)
+
+py_library(
+    name = "dhcp_utilities",
+    srcs = glob(["dhcp_utilities/*/*.py"]),
+    data = ["dhcp_utilities/dhcpservd/dhcp_option.csv"],
+    imports = ["."],
+    deps = [
+        "@sonic_swss_common//pyext:swsscommon",
+        config_requirement("jinja2"),
+        requirement("psutil"),
+    ],
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = _PACKAGE_FILES + glob(
+        ["tests/**"],
+        exclude = [
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ) + [
+        "setup.cfg",
+        "setup.py",
+    ],
+)
+
+py_binary(
+    name = "upstream_test_runner",
+    testonly = True,
+    srcs = ["//tools/bazel/tests:integration/component_pytest_runner.py"],
+    data = [
+        ":setup.py",
+        ":test_sources",
+    ],
+    legacy_create_init = False,
+    main = "//tools/bazel/tests:integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        ":dhcp_utilities",
+        requirement("pytest"),
+        requirement("pytest-cov"),
+        requirement("freezegun"),
+    ],
+)
+
+common_runtime_test(
+    name = "upstream_tests",
+    size = "large",
+    env = {"PYTEST_ADDOPTS": "-p pytest_cov --cov=dhcp_utilities --cov-fail-under=80"},
+    binary = ":upstream_test_runner",
+    data = [":setup.py"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    test_args = ["--component-setup=$(rootpath :setup.py)"],
+)
+
+py_binary(
+    name = "installed_wheel_probe",
+    testonly = True,
+    srcs = ["tests/bazel_installed_wheel_probe.py"],
+    data = [
+        ":setup.py",
+        ":sonic_dhcp_utilities_wheel",
+        ":wheel_payload",
+    ],
+    legacy_create_init = False,
+    main = "tests/bazel_installed_wheel_probe.py",
+    python_version = "3.13",
+    deps = [
+        ":dhcp_utilities",
+        "//tools/bazel/tests:wheel_test_helpers",
+        requirement("freezegun"),
+    ],
+)
+
+common_runtime_test(
+    name = "installed_wheel_test",
+    binary = ":installed_wheel_probe",
+    data = [
+        ":setup.py",
+        ":sonic_dhcp_utilities_wheel",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    test_args = [
+        "$(rootpath :sonic_dhcp_utilities_wheel)",
+        "$(rootpath :setup.py)",
+    ],
+)

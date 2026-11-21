@@ -1,0 +1,68 @@
+"""The complete existing DHCP CLI suite, with declared test dependencies."""
+
+load("@config_engine_pip//:requirements.bzl", config_requirement = "requirement")
+load("@dhcp_relay_cli_test_pip//:requirements.bzl", "requirement")
+load("@dhcp_utilities_test_pip//:requirements.bzl", dhcp_requirement = "requirement")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("//tools/bazel/tests:runtime.bzl", "common_runtime_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["requirements.in", "requirements_lock.txt"])
+
+filegroup(
+    name = "fixtures",
+    srcs = glob(["*.py"], exclude = ["bazel_cli_tests.py"]) + [
+        "pytest.ini",
+        "//dockers/docker-dhcp-relay:cli/config/plugins/dhcp_relay.py",
+        "//dockers/docker-dhcp-relay:cli/show/plugins/show_dhcp_relay.py",
+        "//dockers/docker-dhcp-relay:cli/clear/plugins/clear_dhcp_relay.py",
+    ],
+)
+
+py_binary(
+    name = "suite_runner",
+    testonly = True,
+    srcs = ["bazel_cli_tests.py"],
+    data = [":fixtures", "@sonic_utilities//:sonic_utilities_wheel"],
+    legacy_create_init = False,
+    main = "bazel_cli_tests.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        "//tools/bazel/tests:wheel_test_helpers",
+        "@sonic_swss_common//pyext:swsscommon",
+        # Reuse Make's exact SDK source pin and existing fixture dependencies.
+        config_requirement("swsssdk"),
+        config_requirement("mockredispy"),
+        config_requirement("redis"),
+        config_requirement("netaddr"),
+        config_requirement("natsort"),
+        config_requirement("tabulate"),
+        dhcp_requirement("psutil"),
+        dhcp_requirement("pytest"),
+        dhcp_requirement("pytest-cov"),
+        requirement("click"),
+        requirement("lazy-object-proxy"),
+        requirement("netifaces"),
+        requirement("parameterized"),
+        requirement("pyfakefs"),
+    ],
+)
+
+common_runtime_test(
+    name = "upstream_tests",
+    size = "large",
+    binary = ":suite_runner",
+    data = [
+        "pytest.ini",
+        "@sonic_utilities//:sonic_utilities_wheel",
+        "@dhcp_relay_host_services_test_fixture//file",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    test_args = [
+        "$(rootpath pytest.ini)",
+        "$(rootpath @sonic_utilities//:sonic_utilities_wheel)",
+        "$(rootpath @dhcp_relay_host_services_test_fixture//file)",
+    ],
+)

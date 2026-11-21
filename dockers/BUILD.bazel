@@ -2,9 +2,8 @@
 filegroup(
     name = "config_engine_test_data",
     testonly = True,
-    srcs = glob([
-        "docker-dhcp-relay/*.j2",
-    ]) + [
+    srcs = [
+        "//dockers/docker-dhcp-relay:config_engine_test_data",
         "//dockers/docker-fpm-frr:config_engine_test_data",
         "//dockers/docker-orchagent:ipinip.json.j2",
         "//dockers/docker-orchagent:ports.json.j2",

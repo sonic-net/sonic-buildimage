@@ -1,0 +1,65 @@
+"""Original DHCP relay startup files, CLI plugins and Make metadata."""
+
+load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
+load("@tar.bzl", "tar")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-dhcp-relay:__pkg__"])
+
+exports_files([
+    "source_paths.json",
+    "debug_source_paths.json",
+])
+
+_FILES = {
+    "docker_init.sh": "usr/bin/docker_init.sh",
+    "start.sh": "usr/bin/start.sh",
+    "docker-dhcp-relay.supervisord.conf.j2": "usr/share/sonic/templates/docker-dhcp-relay.supervisord.conf.j2",
+    "port-name-alias-map.txt.j2": "usr/share/sonic/templates/port-name-alias-map.txt.j2",
+    "wait_for_intf.sh.j2": "usr/share/sonic/templates/wait_for_intf.sh.j2",
+    "dhcp-relay.programs.j2": "usr/share/sonic/templates/dhcp-relay.programs.j2",
+    "dhcpv4-relay.agents.j2": "usr/share/sonic/templates/dhcpv4-relay.agents.j2",
+    "dhcpv4-sonic-relay.agents.j2": "usr/share/sonic/templates/dhcpv4-sonic-relay.agents.j2",
+    "dhcpv6-relay.agents.j2": "usr/share/sonic/templates/dhcpv6-relay.agents.j2",
+    "dhcp-relay.monitors.j2": "usr/share/sonic/templates/dhcp-relay.monitors.j2",
+    "critical_processes": "etc/supervisor/critical_processes",
+    "cli/config/plugins/dhcp_relay.py": "cli/config/plugins/dhcp_relay.py",
+    "cli/show/plugins/show_dhcp_relay.py": "cli/show/plugins/show_dhcp_relay.py",
+    "cli/clear/plugins/clear_dhcp_relay.py": "cli/clear/plugins/clear_dhcp_relay.py",
+}
+
+tar(
+    name = "files",
+    srcs = ["isc-dhcp-relay.default"] + ["//dockers/docker-dhcp-relay:" + name for name in _FILES],
+    mtree = [destination + " uid=0 gid=0 mode=" + ("0755" if destination.startswith("usr/bin/") else "0644") + " time=0 type=file content=$(location //dockers/docker-dhcp-relay:" + name + ")" for name, destination in _FILES.items()] + [
+        "etc/default/isc-dhcp-relay uid=0 gid=0 mode=0644 time=0 type=file content=$(location isc-dhcp-relay.default)",
+    ] + [
+        # Preserve update-rc.d's install effects from the Make-built image.
+        "etc/rc" + level + ".d/" + action + "01isc-dhcp-relay uid=0 gid=0 mode=0777 time=0 type=link link=../init.d/isc-dhcp-relay"
+        for level, action in [("0", "K"), ("1", "K"), ("2", "S"), ("3", "S"), ("4", "S"), ("5", "S"), ("6", "K")]
+    ],
+)
+
+[
+    manifest_labels(
+        name = "labels" if suffix == "" else "debug_labels",
+        out = "manifest" + suffix + ".labels",
+        manifest = "//:target/bazel-manifests/docker-dhcp-relay" + suffix + "/manifest.json",
+        package_receipt = "//dockers/docker-dhcp-relay:runtime_package_metadata",
+        # Match Make's cross-image component contract. Relay-owned programs
+        # are not components supplied by the database package dependency.
+        version_packages = [
+            "libswsscommon",
+            "sonic-supervisord-utilities-rs",
+        ],
+    )
+    for suffix in ["", "-dbg"]
+]
+
+# Preserve the FIPS source client's fixed setgid ssh-agent owner contract.
+account_layer(
+    name = "debug_accounts",
+    architecture = "amd64",
+    base = "//dockers/docker-dhcp-relay:docker-dhcp-relay",
+    groups = [{"name": "_ssh", "password": "x", "gid": 104}],
+)

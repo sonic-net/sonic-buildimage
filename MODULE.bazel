@@ -180,6 +180,15 @@ pip.parse(
     python_version = "3.13",
     requirements_lock = "//src/sonic-config-engine:requirements_lock.txt",
 )
+# Build/test imports for the DHCP utilities producer. Image runtime resolution
+# is owned separately by the consuming Docker target.
+pip.parse(
+    hub_name = "dhcp_utilities_test_pip",
+    python_version = "3.13",
+    requirements_lock = "//src/sonic-dhcp-utilities:requirements_lock.txt",
+)
+use_repo(pip, "dhcp_utilities_test_pip")
+
 pip.parse(
     hub_name = "swss_config_pip",
     python_version = "3.13",
@@ -397,6 +406,9 @@ source_modules(
     modules = {
         "@lm_sensors//:MODULE.bazel": "lm-sensors",
         "@otelcol_contrib//:MODULE.bazel": "otelcol-contrib",
+        "@isc_dhcp//:MODULE.bazel": "isc-dhcp",
+        "@sonic_dhcpmon//:MODULE.bazel": "sonic-dhcpmon",
+        "@sonic_dhcp_relay//:MODULE.bazel": "sonic-dhcp-relay",
         "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
         "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
         "@sonic_bmp//:MODULE.bazel": "sonic-bmp",
@@ -726,6 +738,45 @@ source_modules(
         "@nnpy//:MODULE.bazel": "nnpy",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
     },
+)
+
+# DHCP relay consumes native owner TARs and the shared locked runtime inputs.
+bazel_dep(name = "isc-dhcp", version = "4.4.3.sonic.1", repo_name = "isc_dhcp")
+bazel_dep(name = "sonic-dhcpmon", version = "0.1.0-b824589b2ba49a8ba59142289bfb04bb3ca68875", repo_name = "sonic_dhcpmon")
+bazel_dep(name = "sonic-dhcp-relay", version = "0.1.0-1bbc612265bfc8e7582cb699dc44326f62595739", repo_name = "sonic_dhcp_relay")
+use_repo(apt, "dhcp_relay_runtime_debian", "dhcp_relay_test_debian")
+
+apt_inputs(
+    name = "dhcp_relay_apt_inputs",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+)
+
+pip.parse(
+    hub_name = "dhcp_relay_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-dhcp-relay/python:requirements_lock.txt",
+)
+use_repo(pip, "dhcp_relay_pip")
+
+# Existing DHCP CLI tests use the published utilities wheel and Make-pinned
+# SDK from config_engine_pip; this hub supplies only additional test imports.
+bazel_dep(name = "sonic-utilities", version = "1.2.0-331e19551e1d345e86b59f73be573487893d5af1", repo_name = "sonic_utilities")
+pip.parse(
+    hub_name = "dhcp_relay_cli_test_pip",
+    python_version = "3.13",
+    requirements_lock = "//dockers/docker-dhcp-relay/cli-plugin-tests:requirements_lock.txt",
+    environment = {"CC": "gcc", "CXX": "g++"},
+)
+use_repo(pip, "dhcp_relay_cli_test_pip")
+
+# Reuse the original cross-repository CLI test fixture at Make's gitlink.
+# This is test data only, not a host-services build or image dependency.
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+http_file(
+    name = "dhcp_relay_host_services_test_fixture",
+    urls = ["https://raw.githubusercontent.com/securely1g/sonic-host-services/b9cbca03cd08313438b742f3eff87a9416e70d14/tests/common/mock_configdb.py"],
+    sha256 = "08b4b525ead991783fd49c270c10a94aa7e07cfab0c3effb93940767aad38cd8",
+    downloaded_file_path = "mock_configdb.py",
 )
 
 bazel_dep(

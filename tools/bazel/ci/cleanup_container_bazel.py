@@ -29,7 +29,7 @@ MIGRATED_JOBS = {
     "bazel-libteam.yml": {"native"},
     "bazel-sysmgr.yml": {"native"},
     "bazel-make-cache.yml": {"checks"},
-    "bazel-oci.yml": {"checks"},
+    "bazel-oci.yml": {"checks", "dhcp_relay_runtime"},
     "build-dashboard.yml": {"checks", "publish"},
     "runner-manager.yml": {"tests"},
     "runtime-image-validation.yml": {"native-tests"},

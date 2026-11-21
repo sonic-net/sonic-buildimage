@@ -53,7 +53,7 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
-      - name: Align retained submodule checkouts
+      - name: Align populated submodule checkouts
         run: bash tools/bazel/ci/prepare_image_submodules.sh --populated-only
       - name: Verify native architecture
         run: |

@@ -167,13 +167,10 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual([step["if"] for step in matrix_steps[restore + 1:]
                           if "git submodule update" in step.get("run", "")],
                          ["matrix.image == 'docker-sonic-p4rt'", "matrix.image == 'docker-sysmgr'"])
-        restore_populated = []
-        for filename, name in (("bazel-frr-python.yml", "packages"),):
-            restore_populated.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
-        for job in restore_populated:
-            steps = job["steps"]
-            register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
-            self.assertEqual(steps[register + 1].get("run"), f"bash {script} --populated-only")
+        python_frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr-python.yml").read_text())["jobs"]["packages"]
+        steps = python_frr["steps"]
+        register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
+        restore_python_frr = steps[register + 1]["run"]
 
         frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr.yml").read_text())["jobs"]["native"]
         self.assertIn(f"bash {script} --populated-only", [step.get("run") for step in frr["steps"]])
@@ -191,6 +188,10 @@ class VerificationWorkflowTest(unittest.TestCase):
             source, parent, checkout = (root / name for name in ("source", "parent", "checkout"))
             git(root, "init", "-q", str(source))
             git(root, "init", "-q", str(parent))
+            helper = parent / script
+            helper.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / script, helper)
+            git(parent, "add", str(script))
             (source / "input").write_text("old\n")
             git(source, "add", "input")
             git(source, "commit", "-qm", "old")
@@ -260,11 +261,13 @@ class VerificationWorkflowTest(unittest.TestCase):
             prepare("--kernel-only")
             self.assertEqual(git(retained_kernel, "rev-parse", "HEAD"), next_kernel)
 
-            # Source checks restore retained PINS without cloning unused modules.
+            # Run the real FRR Python workflow step on a stale retained PINS worktree.
             git(checkout, "submodule", "update", "--init", "--", pins)
             git(checkout / pins, "checkout", "-q", old)
             git(checkout, "config", "--remove-section", f"submodule.{pins}")
-            prepare("--populated-only", protocol="")
+            subprocess.run(["bash", "-e", "-o", "pipefail", "-c", restore_python_frr],
+                           cwd=checkout, env=dict(env, GITHUB_WORKSPACE=str(checkout), GIT_ALLOW_PROTOCOL=""),
+                           check=True, capture_output=True, text=True)
             self.assertEqual(git(checkout / pins, "rev-parse", "HEAD"), pinned)
             self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
             self.assertFalse((checkout / gnoi / ".git").exists())

@@ -1,0 +1,7 @@
+# Imports missing from the already locked config-engine/DHCP test environments.
+# Match the published SONiC utilities installed-wheel test's Click version.
+click==8.1.8
+lazy-object-proxy
+netifaces
+parameterized
+pyfakefs

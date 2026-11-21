@@ -13,6 +13,9 @@ on:
       - tools/bazel/tests/image_workflow_test.py
       - tools/bazel/ci/verify_vs_oci.sh
       - tools/bazel/private_server.sh
+      - tools/bazel/tests/dhcp_relay_make_test.py
+      - tools/bazel/ci/verify_dhcp_relay.py
+      - rules/docker-dhcp-relay.mk
       - tools/bazel/tests/vs_oci_session_test.py
       - tools/bazel/oci/oci_inventory.py
       - tools/bazel/tests/integration/oci_inventory_test.py
@@ -36,6 +39,9 @@ on:
       - tools/bazel/tests/image_workflow_test.py
       - tools/bazel/ci/verify_vs_oci.sh
       - tools/bazel/private_server.sh
+      - tools/bazel/tests/dhcp_relay_make_test.py
+      - tools/bazel/ci/verify_dhcp_relay.py
+      - rules/docker-dhcp-relay.mk
       - tools/bazel/tests/vs_oci_session_test.py
       - tools/bazel/oci/oci_inventory.py
       - tools/bazel/tests/integration/oci_inventory_test.py
@@ -123,6 +129,7 @@ jobs:
             tools.bazel.oci.tests.runtime_smoke_test \
             tools.bazel.tests.runtime_validation_test \
             tools.bazel.tests.installed_images_test \
+            tools.bazel.tests.dhcp_relay_make_test \
             tools.bazel.tests.vs_oci_session_test \
             tools.bazel.tests.integration.oci_inventory_test \
             tools.bazel.tests.integration.oci_image_test \

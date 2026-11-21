@@ -18,12 +18,12 @@ class PublicEvidenceTest(unittest.TestCase):
         expected_audit = [*p4rt_image.TARGETS.values(), p4rt_image.BASE,
                           *[p4rt_image.OWNER + name for name in p4rt_image.IMAGES]]
         self.assertEqual(contract['audit_labels'], expected_audit)
-    def test_resolved_graph_must_contain_each_accepted_version_without_a_conflicting_version(self):
-        """The shared CI graph must preserve the dependency pins of the standalone P4RT build."""
+    def test_resolved_graph_requires_dependencies_but_allows_version_upgrades(self):
+        """Bazel owns version selection; acceptance rejects missing or ambiguous evidence."""
         script = Path(__file__).with_name('p4rt_acceptance.py')
-        pins = json.loads(script.with_suffix('.json').read_bytes())['selected_modules']
-        self.assertEqual(set(pins), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips', 'p4c', 'sonic-pins'})
-        nodes = [{'name': name, 'version': version} for name, version in pins.items()]
+        required = json.loads(script.with_suffix('.json').read_bytes())['required_modules']
+        self.assertEqual(set(required), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips', 'p4c', 'sonic-pins'})
+        nodes = [{'name': name, 'version': '1.0'} for name in required]
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / 'module-graph.json'
 
@@ -32,15 +32,18 @@ class PublicEvidenceTest(unittest.TestCase):
                 return subprocess.run([sys.executable, str(script), '--module-graph', str(path)],
                                       capture_output=True, text=True)
 
-            accepted = check_graph(nodes)
-            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            for dependencies in (nodes, [dict(node, version='2.0') for node in nodes],
+                                 [*nodes, {'dependencies': nodes}]):
+                accepted = check_graph(dependencies)
+                self.assertEqual(accepted.returncode, 0, accepted.stderr)
             for node in nodes:
                 for dependencies in ([n for n in nodes if n != node],
-                                     [*nodes, {'dependencies': [dict(node, version='different')]}]):
-                    with self.subTest(module=node['name'], missing=node not in dependencies):
+                                     [dict(n, version='') if n == node else n for n in nodes],
+                                     [*nodes, {'dependencies': [dict(node, version='2.0')]}]):
+                    with self.subTest(module=node['name'], dependencies=dependencies):
                         rejected = check_graph(dependencies)
                         self.assertNotEqual(rejected.returncode, 0)
-                        self.assertIn(node['name'] + '@' + node['version'], rejected.stderr)
+                        self.assertIn(node['name'], rejected.stderr)
 
     def test_selects_only_hashed_artifact_and_safe_receipt_fields(self):
         with tempfile.TemporaryDirectory() as temporary:

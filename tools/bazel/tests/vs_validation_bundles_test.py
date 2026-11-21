@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import tarfile
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -146,6 +147,32 @@ class BundleSelectionTest(unittest.TestCase):
                     self.assertEqual(plain["sources"]["libteam-source-receipt.json"], package + "libteam_source_receipt")
                 if image == "docker-dash-engine":
                     self.assertEqual(plain["apt_lock"], bundles.DASH_LOCK)
+
+    def test_service_only_installer_stages_shared_parents_in_dependency_order(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = PMON + ".gz"
+            with tarfile.open(root / archive, "w:gz"):
+                pass
+            installer = {archive: f"//dockers/{PMON}:{archive}"}
+            args = SimpleNamespace(target_path=root, archive=installer, validation_directory=root / "bundles",
+                                   architecture="amd64", validation_debug="n", registered_debug=[], validation_only_debug=[])
+            with patch("tools.bazel.ci.vs_probe_policy.preparation_targets", return_value={}):
+                families = bundles.validation_targets(installer, set(), False)
+            targets = {label: root / archive for label in bundles.extra_targets(families)}
+            layer = {"digest": "sha256:" + bundles.sha(root / archive), "size": (root / archive).stat().st_size}
+            config = {"rootfs": {"type": "layers", "diff_ids": [layer["digest"]]}}
+            metadata = (layer, {"config": layer, "layers": [layer]}, config, [root / archive])
+            with patch.object(bundles, "layout_metadata", return_value=metadata):
+                bundles.write_bundles(args, families, targets, {"//tools/bazel/oci:image_version": "test",
+                                                               "//dockers/docker-platform-monitor:pddf": "false"})
+
+            selection = json.loads((args.validation_directory / "selection.json").read_bytes())
+            self.assertEqual(selection["installer_archives"], [archive])
+            self.assertEqual(selection["auxiliary_parents"], [bundles.BASE, bundles.CONFIG, bundles.SWSS])
+            for child, parent in ((bundles.CONFIG, bundles.BASE), (bundles.SWSS, bundles.CONFIG), (PMON, bundles.CONFIG)):
+                staged = json.loads((args.validation_directory / child / "parent.json").read_bytes())
+                self.assertEqual(staged["image"], parent)
 
     def test_registered_companion_only_requested_when_debug_is_enabled(self):
         runtime = {"docker-unit.gz": "//unit:docker-unit.gz"}

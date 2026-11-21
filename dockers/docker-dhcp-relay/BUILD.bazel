@@ -1,0 +1,255 @@
+"""AMD64 DHCP relay images from native source owners and config-engine."""
+
+load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
+load("@dhcp_relay_apt_inputs//:apt_inputs.bzl", RUNTIME_INPUTS = "APT_INPUTS")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
+load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@tar.bzl", "tar")
+load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
+load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+alias(
+    name = "image_version",
+    actual = "//tools/bazel/oci:image_version",
+)
+
+exports_files(glob([
+    "*.j2",
+    "*.sh",
+    "cli/**/*.py",
+    "critical_processes",
+]))
+
+# Keep parent config-engine tests complete across the new package boundary.
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = glob(["*.j2"]),
+    visibility = ["//dockers:__pkg__"],
+)
+
+_COMPATIBLE = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+_SOURCE_TARS = {
+    "isc-dhcp-relay": "@isc_dhcp//:isc-dhcp-relay.runtime",
+    "sonic-dhcp4relay": "@sonic_dhcp_relay//dhcp4relay:runtime",
+    "sonic-dhcp6relay": "@sonic_dhcp_relay//dhcp6relay:runtime",
+    "sonic-dhcpmon": "@sonic_dhcpmon//:runtime",
+}
+
+_POLICY = {
+    "schema": 1,
+    "image": "docker-dhcp-relay",
+    "architecture": "amd64",
+    "distribution": "trixie",
+    "retained_source": "none",
+    "features": {},
+}
+
+# Common, its Python bindings, config-engine and supervisors are inherited.
+# The shared lock retains the remaining original Dockerfile/package inputs.
+apt_layer(
+    name = "debian_runtime",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    dependency_set = "dhcp_relay_runtime_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = RUNTIME_INPUTS["dhcp_relay_runtime_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+sonic_layer(
+    name = "debian_runtime_filtered",
+    tars = [":debian_runtime"],
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":debian_runtime"],
+    output_group = "selection",
+)
+
+sonic_layer(
+    name = "source_runtime",
+    tars = _SOURCE_TARS.values(),
+)
+
+# Keep the checked installation as a prerequisite. Its merged package TAR can
+# repeat shared directories; an OCI layer must contain each path only once.
+flatten(
+    name = "python_runtime",
+    deduplicate = True,
+    tars = ["//dockers/docker-dhcp-relay/python:runtime"],
+)
+
+installed_packages(
+    name = "installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    controls = [label + ":control" for label in RUNTIME_INPUTS["dhcp_relay_runtime_debian"]["amd64"].values()],
+    owner_metadata = [
+        "@isc_dhcp//:runtime_packages.json",
+        "@sonic_dhcp_relay//:dhcp4_metadata",
+        "@sonic_dhcp_relay//:dhcp6_metadata",
+        "@sonic_dhcpmon//:monitor_metadata",
+    ],
+    source_modules = {
+        "isc-dhcp": "@image_source_modules//:isc-dhcp.MODULE.bazel",
+        "sonic-dhcp-relay": "@image_source_modules//:sonic-dhcp-relay.MODULE.bazel",
+        "sonic-dhcpmon": "@image_source_modules//:sonic-dhcpmon.MODULE.bazel",
+    },
+    source_spec = "//dockers/docker-dhcp-relay/config:source_paths.json",
+    sources = _SOURCE_TARS,
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "installed_package_state",
+    srcs = [
+        ":installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :installed_packages)",
+        "usr/share/sonic/bazel/dhcp-relay-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-dhcp-relay",
+    base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
+    entrypoint = ["/usr/bin/docker_init.sh"],
+    env = "//:target/bazel-manifests/docker-dhcp-relay/image.env",
+    labels = "//dockers/docker-dhcp-relay/config:labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debian_runtime_filtered",
+        ":source_runtime",
+        ":python_runtime",
+        "//dockers/docker-dhcp-relay/config:files",
+        ":installed_package_state",
+    ],
+)
+
+debug_symbols_layer(
+    name = "docker-dhcp-relay.debug_symbols",
+    image = ":docker-dhcp-relay",
+)
+
+apt_layer(
+    name = "debian_debug",
+    base = ":docker-dhcp-relay",
+    dependency_set = "sysmgr_debug_debian",
+    lock = "@sonic_build_infra//apt:apt.lock.json",
+    packages = APT_INPUTS["sysmgr_debug_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "debug",
+)
+
+sonic_layer(
+    name = "debug_tools",
+    tars = [
+        ":debian_debug",
+        "@sonic_build_infra//deps/vim:vim_alternatives_pkg",
+    ],
+)
+
+sonic_layer(
+    name = "debug_client",
+    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+)
+
+debug_symbols_layer(
+    name = "debug_client_symbols",
+    image = ":debug_client",
+)
+
+filegroup(
+    name = "debug_apt_selection",
+    srcs = [":debian_debug"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "debug_installed_packages",
+    apt_receipt = ":debug_apt_selection",
+    architecture = "amd64",
+    base = ":docker-dhcp-relay",
+    controls = [label + ":control" for label in APT_INPUTS["sysmgr_debug_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
+    source_spec = "//dockers/docker-dhcp-relay/config:debug_source_paths.json",
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+)
+
+filegroup(
+    name = "debug_package_metadata",
+    srcs = [":debug_installed_packages"],
+    output_group = "metadata",
+)
+
+tar(
+    name = "debug_package_state",
+    srcs = [
+        ":debug_installed_packages",
+        ":debug_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_installed_packages)",
+        "usr/share/sonic/bazel/dhcp-relay-debug-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :debug_package_metadata)",
+    ],
+)
+
+oci_image(
+    name = "docker-dhcp-relay-dbg",
+    base = ":docker-dhcp-relay",
+    labels = "//dockers/docker-dhcp-relay/config:debug_labels",
+    target_compatible_with = _COMPATIBLE,
+    tars = [
+        ":debug_tools",
+        ":docker-dhcp-relay.debug_symbols",
+        ":debug_client",
+        ":debug_client_symbols",
+        "//dockers/docker-dhcp-relay/config:debug_accounts",
+        ":debug_package_state",
+    ],
+)
+
+[
+    sonic_docker_archive(
+        name = "docker-dhcp-relay" + suffix + ".gz",
+        image = ":docker-dhcp-relay" + suffix,
+    )
+    for suffix in ["", "-dbg"]
+]
+
+flatten(
+    name = "all_debug_symbols",
+    deduplicate = True,
+    tars = [
+        ":docker-dhcp-relay.debug_symbols",
+        ":debug_client_symbols",
+    ],
+)
+
+# The database is a private test fixture and never installed in this image.
+flatten(
+    name = "test_redis",
+    testonly = True,
+    tars = ["@sysmgr_test_debian//redis-server"],
+)

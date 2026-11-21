@@ -1,0 +1,13 @@
+# Build/test imports only; the wheel retains setup.py's unbounded requirements.
+# Reuse the versions already selected by SONiC's config-engine tests.
+jinja2==3.1.6
+pytest==8.4.2
+psutil
+freezegun
+# Keep the test runtime compatible with the already selected image closure.
+python-dateutil==2.9.0.post0
+markupsafe==3.0.3
+six==1.17.0
+
+# Preserve the existing setup.cfg coverage gate.
+pytest-cov==7.0.0

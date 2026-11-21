@@ -28,8 +28,8 @@ BASE = "docker-base-trixie"
 CONFIG = "docker-config-engine-trixie"
 SWSS = "docker-swss-layer-trixie"
 P4RT = "docker-sonic-p4rt"
-# Standalone parent probes also run on the original parents used by this build.
-PARENTS = (BASE, SWSS)
+# Each shared image needs its parent's inventory before its own probe can be staged.
+PARENTS = (BASE, CONFIG, SWSS)
 MAKE_FEATURES = {
     "docker-sonic-gnmi": ("dialout_enabled", "@sonic_gnmi//tools/bazel:enable_dialout"),
     PMON: ("pddf_enabled", "//dockers/docker-platform-monitor:pddf"),
@@ -323,8 +323,7 @@ def write_bundles(args, families, paths, build_settings):
         staged = Path(work) / "containers"
         staged.mkdir()
         prefixes, references, account_layers = {}, {}, {}
-        parents = ["docker-base-trixie", "docker-config-engine-trixie", "docker-swss-layer-trixie"]
-        for image in [name for name in parents if name in families] + sorted(families.keys() - set(parents)):
+        for image in [name for name in PARENTS if name in families] + sorted(families.keys() - set(PARENTS)):
             entry = families[image]
             bundle = staged / image
             bundle.mkdir()
@@ -342,7 +341,7 @@ def write_bundles(args, families, paths, build_settings):
             for variant in sorted(entry["members"], key=lambda name: name == "debug"):
                 archive, label, layout_label = entry["members"][variant]
                 layout_path = paths[layout_label]
-                parent = image in parents and variant == "runtime"
+                parent = image in PARENTS and variant == "runtime"
                 if variant == "debug" and "symbols_layout" in entry:
                     symbols, *_ = write_inventory(paths[entry["symbols_layout"]], "symbols", bundle, image_prefixes,
                                                   account_layers=account_layers, retain=True)

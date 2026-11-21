@@ -23,7 +23,7 @@ from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summ
 from tools.bazel.ci.source_worker_preflight import cpu_limit, measure, select_build_profile
 from tools.bazel.gzip.source_archive import SOURCES
 
-DRIVERS = {"dash-ha": "dash_ha", "sysmgr": "sysmgr", "orchagent": "orchagent", "sflow": "sflow", "otel": "otel", "syncd": "syncd", "gearbox": "gbsyncd", "dash-engine": "dash_engine", "gnmi": "gnmi", "gnmi-no-dialout": "gnmi", "teamd": "teamd"}
+DRIVERS = {"dash-ha": "dash_ha", "sysmgr": "sysmgr", "orchagent": "orchagent", "sflow": "sflow", "otel": "otel", "syncd": "syncd", "gearbox": "gbsyncd", "dash-engine": "dash_engine", "gnmi": "gnmi", "gnmi-no-dialout": "gnmi", "teamd": "teamd", "dhcp-relay": "dhcp_relay"}
 WRAPPERS = {name: "libteam_draft_bazel.sh" for name in DRIVERS}
 WRAPPERS["sysmgr"] = "review_bazel.sh"
 WRAPPERS["otel"] = "review_bazel.sh"
@@ -265,7 +265,8 @@ def prepare_execution_network(artifacts):
 
 def prepare_validation_tools(artifacts):
     """Install only missing execution tools in the disposable slave container."""
-    packages = {"bsdtar": "libarchive-tools", "gdb": "gdb", "readelf": "binutils", "objcopy": "binutils"}
+    packages = {"bsdtar": "libarchive-tools", "gdb": "gdb", "readelf": "binutils",
+                "objcopy": "binutils", "file": "file", "j2": "j2cli"}
     missing = sorted({package for tool, package in packages.items() if shutil.which(tool) is None})
     if missing:
         prepare_execution_network(artifacts)

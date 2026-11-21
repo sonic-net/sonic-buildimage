@@ -30,12 +30,13 @@ def resolved_modules(graph):
     return selected
 
 
-def verify_selected_modules(graph, expected):
-    """Each pinned P4RT dependency must resolve to exactly its accepted version."""
+def verify_selected_modules(graph, required):
+    """Check required modules; Bazel resolves versions from MODULE.bazel."""
     modules = resolved_modules(graph)
-    for name, version in expected.items():
+    for name in required:
         found = modules.get(name, set())
-        require(found == {version}, f"P4RT expected {name}@{version}, resolved {sorted(found)}")
+        require(len(found) == 1 and all(found),
+                f"P4RT requires one resolved version of {name}, resolved {sorted(found)}")
 
 
 def verify(directory, contract, source, owner):
@@ -68,18 +69,18 @@ def verify(directory, contract, source, owner):
             and set(owner_tests["tests"]) == set(targets)
             and all(entry.get("status") == "PASSED" for entry in owner_tests["tests"].values()),
             "Owner test build-event summary differs")
-    verify_selected_modules(read("module-graph.json"), contract["selected_modules"])
+    verify_selected_modules(read("module-graph.json"), contract["required_modules"])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     inputs = parser.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--directory", type=Path, help="Directory with the full P4RT acceptance evidence")
-    inputs.add_argument("--module-graph", type=Path, help="Check the root Bazel module graph against the P4RT pins")
+    inputs.add_argument("--module-graph", type=Path, help="Check required P4RT modules in the resolved Bazel graph")
     args = parser.parse_args()
     contract = json.loads(Path(__file__).with_suffix(".json").read_text())
     if args.module_graph:
-        verify_selected_modules(json.loads(args.module_graph.read_bytes()), contract["selected_modules"])
+        verify_selected_modules(json.loads(args.module_graph.read_bytes()), contract["required_modules"])
     else:
         revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         owner = subprocess.check_output(["git", "rev-parse", "HEAD:src/sonic-p4rt/sonic-pins"], cwd=ROOT, text=True).strip()

@@ -1,0 +1,62 @@
+"""Wheel-derived DHCP runtime with checked dependencies and inherited inputs."""
+
+load("@config_engine_pip//:requirements.bzl", inherited_wheel = "whl_requirement")
+load("@dhcp_relay_pip//:requirements.bzl", "whl_requirement")
+load("@sonic_build_infra//python:runtime_lock.bzl", "checked_python_runtime", "python_runtime_plan")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "constraints.txt",
+    "requirements.in",
+    "requirements_lock.txt",
+    "requirements_lock.inputs.json",
+])
+
+wheel_layer(
+    name = "owner",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = ["//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel"],
+)
+
+wheel_layer(
+    name = "dependencies",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [whl_requirement(name) for name in ["freezegun", "psutil", "python-dateutil"]],
+)
+
+# These exact wheels already belong to config-engine/base. They are checked
+# against the installed parent image by the image validator, not installed twice.
+wheel_layer(
+    name = "inherited_dependencies",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [inherited_wheel(name) for name in ["jinja2", "markupsafe", "six"]],
+)
+
+python_runtime_plan(
+    name = "plan",
+    constraints = ["constraints.txt"],
+    packages = [":owner"],
+    python_platform = "x86_64-unknown-linux-gnu",
+    python_version = "3.13",
+    roots = ["sonic-dhcp-utilities", "jinja2"],
+    site_packages = ["/usr/local/lib/python3.13/dist-packages"],
+    source_distributions = ["sonic-dhcp-utilities"],
+    uv_version = "0.12.18",
+)
+
+checked_python_runtime(
+    name = "runtime",
+    plan = ":plan",
+    requirements = "requirements.in",
+    lock = "requirements_lock.txt",
+    inputs = "requirements_lock.inputs.json",
+    sources = [":owner"],
+    third_party = [":dependencies"],
+    inherited_third_party = [":inherited_dependencies"],
+    update_command = "python3 dockers/docker-dhcp-relay/python/update_lock.py --bazel bazel --uv uv",
+)

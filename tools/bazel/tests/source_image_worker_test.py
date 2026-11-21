@@ -17,6 +17,7 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
+import yaml
 from contextlib import ExitStack
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -26,6 +27,42 @@ SPEC.loader.exec_module(worker)
 
 
 class ImageWorkerTest(unittest.TestCase):
+    def test_dhcp_dispatch_selects_only_its_image_and_runtime_jobs(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/bazel-oci.yml').read_text())
+        jobs = workflow['jobs']
+        selected = {}
+        github = SimpleNamespace(event_name='workflow_dispatch')
+        inputs = SimpleNamespace(source_image='dhcp-relay', source_inputs_run='', skip_vs=True)
+        pending = dict(jobs)
+        while pending:
+            before = len(pending)
+            for name, job in list(pending.items()):
+                dependencies = job.get('needs', [])
+                dependencies = [dependencies] if isinstance(dependencies, str) else dependencies
+                if any(key not in selected for key in dependencies):
+                    continue
+                needs = SimpleNamespace(**{key: SimpleNamespace(result='success' if selected[key] else 'skipped')
+                                           for key in dependencies})
+                del pending[name]
+                if any(not selected[key] for key in dependencies) and 'always()' not in job.get('if', ''):
+                    selected[name] = False
+                    continue
+                expression = job.get('if', '')
+                if not expression:
+                    selected[name] = all(selected[key] for key in dependencies)
+                    continue
+                expression = expression.replace('${{', '').replace('}}', '').strip()
+                expression = ' '.join(expression.split()).replace('&&', ' and ').replace('||', ' or ')
+                expression = re.sub(r'!(?!=)', 'not ', expression)
+                selected[name] = bool(eval(expression, {'__builtins__': {}}, {
+                    'github': github, 'inputs': inputs, 'needs': needs, 'false': False,
+                    'always': lambda: True, 'cancelled': lambda: False,
+                    'contains': lambda values, value: value in values, 'fromJSON': json.loads,
+                }))
+            self.assertLess(len(pending), before, "workflow dependency cycle")
+        self.assertEqual({name for name, runs in selected.items() if runs},
+                         {'dhcp_relay_source_image', 'dhcp_relay_runtime'})
+
     def test_normal_ci_has_no_branch_specific_exceptions(self):
         workflow = (ROOT / '.github/workflows/bazel-oci.yml').read_text()
         self.assertNotIn('SOURCE_ONLY_NO_DEBS', workflow)
@@ -50,7 +87,7 @@ class ImageWorkerTest(unittest.TestCase):
             github = SimpleNamespace(event_name=event, head_ref=branch, repository='securely1g/sonic-buildimage',
                 ref='refs/heads/master', event=SimpleNamespace(pull_request=SimpleNamespace(
                     head=SimpleNamespace(repo=SimpleNamespace(full_name='securely1g/sonic-buildimage' if same_repo else 'other/sonic-buildimage')))))
-            inputs = SimpleNamespace(skip_vs=skip)
+            inputs = SimpleNamespace(skip_vs=skip, source_image='none')
             def evaluate(expression):
                 expression = ' '.join(expression.split()).replace('&&', ' and ').replace('||', ' or ')
                 return bool(eval(re.sub(r'!(?!=)', 'not ', expression), {'__builtins__': {}},

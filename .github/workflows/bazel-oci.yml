@@ -6,6 +6,19 @@ on:
     branches: [master]
   workflow_dispatch:
     inputs:
+      source_image:
+        description: Dedicated source-image worker task
+        type: choice
+        options: [none, dhcp-relay]
+        default: none
+      source_revision:
+        description: Reviewed 40-character source commit for an image task
+        type: string
+        default: ''
+      source_inputs_run:
+        description: Optional successful source-download run in this repository
+        type: string
+        default: ''
       enable_debug_layer:
         description: Build companion debug archives for the VS installer
         type: boolean
@@ -27,7 +40,211 @@ env:
   BAZEL: bazel
 
 jobs:
+  dhcp_relay_source_image:
+    name: DHCP relay source image (AMD64, K3s)
+    if: github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay'
+    runs-on: [self-hosted, Linux, X64, sonic-slave-container-k3s]
+    timeout-minutes: 360
+    env:
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      BAZELISK_GITHUB_TOKEN: ""
+      SOURCE_INPUTS_RUN: ${{ inputs.source_inputs_run }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Validate the requested source revision
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          assert re.fullmatch(r'[0-9a-f]{40}', os.environ['SOURCE_REVISION']), 'Use a full reviewed source SHA'
+          assert not os.environ['SOURCE_INPUTS_RUN'], 'K3s uses the remote cache, not source-input artifacts'
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_revision }}
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$SOURCE_REVISION" --event-name workflow_dispatch \
+            --github-output "$GITHUB_OUTPUT"
+      # The ephemeral K3s worker lifecycle owns job-local state cleanup.
+      # The shared remote cache is managed by the worker, not this workflow.
+      - name: Prepare existing image inspection and template tools
+        id: dhcp_tools
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from tools.bazel.ci.source_image_worker import prepare_validation_tools
+          artifacts = Path('artifacts/dhcp-relay')
+          artifacts.mkdir(parents=True, exist_ok=True)
+          prepare_validation_tools(artifacts)
+          PY
+      - name: Verify native AMD64 Trixie tools and remote-only cache
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(. /etc/os-release; echo "$VERSION_CODENAME")" = trixie
+          for tool in bazel git make python3 readelf objcopy bsdtar j2 file; do
+            command -v "$tool"
+          done
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+          python3 -B tools/bazel/ci/resources.py --configure
+          python3 -B tools/bazel/ci/configure_runner_cache.py --remote-only \
+            --output artifacts/dhcp-relay/cache-configuration.json
+          # The shared wrapper disables the home RC. Import only the verified
+          # worker-managed cache settings into its ignored job-local RC.
+          python3 - <<'PY'
+          import os
+          import hashlib
+          import json
+          from pathlib import Path
+          import shlex
+          managed = os.environ['SONIC_BAZEL_REMOTE_ONLY_RC']
+          assert '\n' not in managed and '\r' not in managed
+          trust = Path(os.environ['SONIC_BAZEL_JAVA_TRUST_STORE'])
+          assert trust.is_absolute() and trust.is_file() and os.access(trust, os.R_OK)
+          assert '\n' not in str(trust) and '\r' not in str(trust)
+          with Path('.bazelrc.user').open('a') as output:
+              output.write('import ' + shlex.quote(managed) + '\n')
+              output.write('startup ' + shlex.quote('--host_jvm_args=-Djavax.net.ssl.trustStore=' + str(trust)) + '\n')
+          Path('artifacts/dhcp-relay/worker-java-trust.validation.json').write_text(json.dumps({
+              'status': 'passed', 'java_trust_store_sha256': hashlib.sha256(trust.read_bytes()).hexdigest(),
+              'certificate_verification': True,
+          }, indent=2) + '\n')
+          PY
+      - name: Configure verified source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py --prefer-debian-snapshot --output "$RUNNER_TEMP/dhcp-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/dhcp-source-mirrors.cfg" >> .bazelrc.user
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Check DHCP utilities and CLI tests without DEB generation
+        id: dhcp_utility_tests
+        run: &dhcp_utility_tests |
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
+            --output artifacts/dhcp-relay/utility-action.validation.json \
+            //src/sonic-dhcp-utilities:upstream_tests //src/sonic-dhcp-utilities:installed_wheel_test \
+            //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests
+          "$BAZEL" test //src/sonic-dhcp-utilities:upstream_tests \
+            //src/sonic-dhcp-utilities:installed_wheel_test \
+            //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests --nocache_test_results \
+            --build_event_json_file="$PWD/artifacts/dhcp-relay/utility-test-events.json"
+      - name: Build DHCP relay runtime and debug images from source owners
+        id: dhcp_relay_build
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py build --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+      - name: Validate DHCP relay image contents and source symbols
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py validate --artifacts artifacts/dhcp-relay
+      - name: Check DHCP relay incremental rebuild and restored image digests
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+          git diff --exit-code
+      - name: Prepare reviewed DHCP relay evidence
+        id: dhcp_relay_public
+        if: always() && (steps.dhcp_tools.outcome == 'failure' || steps.dhcp_utility_tests.outcome == 'failure' || steps.dhcp_relay_build.outcome == 'success' || steps.dhcp_relay_build.outcome == 'failure')
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from types import SimpleNamespace
+          from tools.bazel.ci.source_image_worker import publish
+          publish(SimpleNamespace(artifacts=Path('artifacts/dhcp-relay'), image='dhcp-relay'))
+          PY
+      - name: Retain DHCP relay images and reviewed build evidence
+        id: bazel_upload_dhcp_relay_public
+        if: always() && steps.dhcp_relay_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dhcp-relay-image-amd64
+          path: artifacts/dhcp-relay/public/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+  dhcp_relay_runtime:
+    name: Run installed DHCP relay images (AMD64)
+    needs: [archive, dhcp_relay_source_image]
+    if: >-
+      always() && !cancelled() &&
+      ((needs.archive.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')) ||
+       (needs.dhcp_relay_source_image.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay'))
+    env:
+      TESTED_REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay' && inputs.source_revision || github.sha }}
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 25
+    steps:
+      - name: Restore workspace access before checkout
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: "set -euo pipefail\nrepository=\"${GITHUB_REPOSITORY##*/}\"\npipeline_workspace=\"${RUNNER_PIPELINE_WORKSPACE%/}\"\nexpected=\"$pipeline_workspace/$repository\"\nif [[ \"$GITHUB_WORKSPACE\" != \"$expected\" ]]; then\n  printf 'Refusing permission repair: expected workspace %s, got %s.\\n' \\\n    \"$expected\" \"$GITHUB_WORKSPACE\" >&2\n  exit 1\nfi\nif [[ ! -e \"$expected\" && ! -L \"$expected\" ]]; then\n  echo 'No existing workspace to repair.'\n  exit 0\nfi\nwork_root=\"$(realpath -e -- \"$pipeline_workspace/..\")\"\nphysical_workspace=\"$work_root/$repository/$repository\"\nif [[ ! -d \"$expected\" || \"$(realpath -e -- \"$expected\")\" != \"$physical_workspace\" ]]; then\n  echo 'Refusing permission repair on a redirected workspace.' >&2\n  exit 1\nfi\nexpected=\"$physical_workspace\"\nowner=\"$(id -u):$(id -g)\"\nsudo -n find -P \"$expected\" -xdev -type d \\\n  -exec chown --no-dereference -- \"$owner\" {} +\nsudo -n find -P \"$expected\" -xdev -type d \\\n  -exec chmod u+rwx\
+          \ -- {} +\nsudo -n find -P \"$expected\" -xdev -type f -links 1 \\\n  -exec chown --no-dereference -- \"$owner\" {} +\n"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.TESTED_REVISION }}
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Align retained kernel checkout
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --kernel-only
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$TESTED_REVISION" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dhcp-relay-image-amd64
+          path: artifacts/dhcp-relay
+      - name: Exercise installed DHCPv4, DHCPv6 and monitor services
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$TESTED_REVISION" python3 -B tools/bazel/ci/dhcp_relay_loaded.py --artifacts artifacts/dhcp-relay
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: runner_cleanup_upload_0
+        if: always()
+        with:
+          name: dhcp-relay-runtime-amd64
+          path: |
+            artifacts/dhcp-relay/*.runtime.json
+            artifacts/dhcp-relay/loaded-validation.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
   archive:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
     name: ${{ matrix.architecture == 'arm64' && 'Container archive (ARM64)' || 'Container package tests (AMD64)' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.architecture == 'amd64' && 360 || 60 }}
@@ -136,6 +353,93 @@ jobs:
               'tested_head': os.environ['GITHUB_SHA'], 'architecture': os.environ['ARCHITECTURE']
           }) + '\n')
           PYTHON
+
+      - name: Check DHCP utilities and CLI tests without DEB generation
+        if: matrix.architecture == 'amd64'
+        run: *dhcp_utility_tests
+      - name: Build DHCP relay runtime and debug images from source owners
+        id: dhcp_relay_build
+        if: matrix.architecture == 'amd64'
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(uname -m)" = x86_64
+          test "$(. /etc/os-release; echo "$VERSION_CODENAME")" = trixie
+          python3 -B tools/bazel/ci/dhcp_relay_image.py build --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+      - name: Validate DHCP relay image contents and source symbols
+        if: matrix.architecture == 'amd64'
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: python3 -B tools/bazel/ci/dhcp_relay_image.py validate --artifacts artifacts/dhcp-relay
+      - name: Check DHCP relay incremental rebuild and restored image digests
+        if: matrix.architecture == 'amd64'
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          python3 -B tools/bazel/ci/dhcp_relay_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+          git diff --exit-code
+      - name: Prepare reviewed DHCP relay evidence
+        id: dhcp_relay_public
+        if: always() && matrix.architecture == 'amd64' && (steps.dhcp_relay_build.outcome == 'success' || steps.dhcp_relay_build.outcome == 'failure')
+        run: |
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summary
+          root = Path('artifacts/dhcp-relay')
+          if (root / 'build-receipt.json').exists():
+              receipt = json.loads((root / 'build-receipt.json').read_text())
+              public = {key: receipt[key] for key in ('status', 'architecture', 'revision', 'tested_revision_parents', 'artifacts') if key in receipt}
+              safe_json(public)
+              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
+          names = ['validation.json', 'action-audit.json', 'incremental.json']
+          names += [path.name for path in root.glob('*.validation.json')]
+          names += [path.name for path in root.glob('*packages.json')]
+          for name in names:
+              path = root / name
+              if path.exists():
+                  safe_json(json.loads(path.read_text()))
+          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
+              path = root / name
+              if path.exists():
+                  dependency_json(json.loads(path.read_text()), kind)
+          summary = {str(path.relative_to(root)): bep_summary(path.read_text().splitlines(), partial=True)
+                     for path in root.rglob('*events.json*')}
+          safe_json(summary)
+          (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          PYCODE
+      - name: Retain images and reviewed build evidence
+        id: bazel_upload_dhcp_relay_public
+        if: always() && steps.dhcp_relay_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dhcp-relay-image-amd64
+          path: |
+            artifacts/dhcp-relay/*.gz
+            artifacts/dhcp-relay/*.tar
+            artifacts/dhcp-relay/*.status
+            artifacts/dhcp-relay/*packages.json
+            artifacts/dhcp-relay/*.validation.json
+            artifacts/dhcp-relay/validation.json
+            artifacts/dhcp-relay/public-receipt.json
+            artifacts/dhcp-relay/action-audit.json
+            artifacts/dhcp-relay/incremental.json
+            artifacts/dhcp-relay/build-summary.json
+            artifacts/dhcp-relay/MODULE.bazel.lock
+            artifacts/dhcp-relay/module-graph.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+      - name: Release published DHCP relay payload copies
+        if: steps.bazel_upload_dhcp_relay_public.outcome == 'success' && steps.bazel_upload_dhcp_relay_public.outputs.artifact-id != ''
+        run: python3 -B tools/bazel/ci/release_image_payloads.py dhcp-relay
 
       - name: Test archive rules against synthetic OCI fixtures
         run: |
@@ -338,6 +642,7 @@ jobs:
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
   checks:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
     name: OCI regression checks (AMD64)
     runs-on: [self-hosted, Linux, X64, ubuntu-x64]
     outputs:
@@ -567,7 +872,7 @@ jobs:
       ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'workflow_dispatch' && !inputs.skip_vs))
+      (github.event_name == 'workflow_dispatch' && inputs.source_image == 'none' && !inputs.skip_vs))
     runs-on: [self-hosted, linux, bazel-x64, vs]
     timeout-minutes: 720
     defaults:
@@ -978,6 +1283,16 @@ jobs:
         with:
           name: ${{ steps.bundles.outputs.prefix }}-docker-database
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-database/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-dhcp-relay for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-dhcp-relay')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-dhcp-relay
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-dhcp-relay/
           if-no-files-found: error
           compression-level: 0
           retention-days: 3

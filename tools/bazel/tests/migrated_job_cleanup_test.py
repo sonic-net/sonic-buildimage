@@ -250,7 +250,7 @@ class MigratedCleanupTest(unittest.TestCase):
                 subject.main()
             prepare.assert_not_called()
 
-    def test_host_cli_runs_the_complete_lifecycle(self):
+    def run_host_lifecycle(self):
         with mock.patch.object(subject.Path, "is_file", return_value=False):
             with mock.patch.object(sys, "argv", ["cleanup", "--migrated-job", "--prepare"]), \
                     contextlib.redirect_stdout(io.StringIO()) as output:
@@ -273,9 +273,22 @@ class MigratedCleanupTest(unittest.TestCase):
         self.assertTrue(self.cache.exists())
 
 
+    def test_host_cli_runs_the_complete_lifecycle(self):
+        self.run_host_lifecycle()
+
+    def test_dhcp_runtime_publication_cleanup_preserves_shared_cache(self):
+        with mock.patch.dict(os.environ, {
+                "GITHUB_JOB": "dhcp_relay_runtime",
+                "GITHUB_WORKFLOW_REF":
+                    "securely1g/project/.github/workflows/bazel-oci.yml@refs/heads/test",
+                "BAZEL_CLEANUP_UPLOAD_STEPS": '["runner_cleanup_upload_0"]'}):
+            self.steps = {"runner_cleanup_upload_0": {"outcome": "success"}}
+            self.run_host_lifecycle()
+
+
 class MigratedWorkflowCleanupTest(unittest.TestCase):
     def test_every_stateful_migrated_job_registers_before_cache_setup(self):
-        self.assertEqual(subject.MIGRATED_JOBS["bazel-oci.yml"], {"checks"})
+        self.assertEqual(subject.MIGRATED_JOBS["bazel-oci.yml"], {"checks", "dhcp_relay_runtime"})
         for filename, names in subject.MIGRATED_JOBS.items():
             value = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
             actual = {name for name, job in value["jobs"].items()
