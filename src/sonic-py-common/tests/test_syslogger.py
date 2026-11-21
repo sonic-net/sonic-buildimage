@@ -78,6 +78,45 @@ class TestSysLogger:
         ret, msg = log.update_log_level()
         assert ret
         assert not msg
+        assert log.logger.level == logging.ERROR
+        mock_db.hmset.assert_called_with('STATE_DB', 'LOGGER_TABLE|log1', {
+            'LOGLEVEL': 'ERROR',
+            'LOGOUTPUT': 'SYSLOG',
+            'require_manual_refresh': 'true'
+        })
+        for call in mock_db.hmset.call_args_list + mock_db.set.call_args_list + mock_db.hset.call_args_list:
+            assert call.args[0] != 'CONFIG_DB'
+
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector')
+    def test_runtime_config_absent_row_is_default(self, mock_connector):
+        """An absent CONFIG_DB row means the logger's own default; CONFIG_DB is never written."""
+        mock_db = mock.MagicMock()
+        mock_db.get = mock.MagicMock(return_value=None)
+        mock_connector.return_value = mock_db
+        log = syslogger.SysLogger(log_identifier='log2', enable_runtime_config=True, log_level=logging.INFO)
+        assert log.logger.level == logging.INFO
+        mock_db.hmset.assert_called_once_with('STATE_DB', 'LOGGER_TABLE|log2', {
+            'LOGLEVEL': 'INFO',
+            'LOGOUTPUT': 'SYSLOG',
+            'require_manual_refresh': 'true'
+        })
+
+        # A configured level applies, and removing it again reverts to the default
+        mock_db.get.return_value = 'DEBUG'
+        assert log.update_log_level() == (True, '')
+        assert log.logger.level == logging.DEBUG
+
+        mock_db.get.return_value = None
+        assert log.update_log_level() == (True, '')
+        assert log.logger.level == logging.INFO
+        assert mock_db.hmset.call_args.args == ('STATE_DB', 'LOGGER_TABLE|log2', {
+            'LOGLEVEL': 'INFO',
+            'LOGOUTPUT': 'SYSLOG',
+            'require_manual_refresh': 'true'
+        })
+        for call in mock_db.method_calls:
+            if call[0] in ('hmset', 'set', 'hset', 'delete', 'hdel'):
+                assert call.args[0] != 'CONFIG_DB', call
 
     @mock.patch('swsscommon.swsscommon.SonicV2Connector')
     def test_runtime_config_negative(self, mock_connector):
@@ -89,3 +128,18 @@ class TestSysLogger:
         ret, msg = log.update_log_level()
         assert not ret
         assert msg
+
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector')
+    def test_runtime_config_publish_fails(self, mock_connector):
+        """A failed STATE_DB publish is reported and logged, and the configured level still applies."""
+        mock_db = mock.MagicMock()
+        mock_db.get = mock.MagicMock(return_value='DEBUG')
+        mock_db.hmset = mock.MagicMock(side_effect=Exception('STATE_DB unavailable'))
+        mock_connector.return_value = mock_db
+        with mock.patch.object(syslogger.SysLogger, 'log_error') as mock_log_error:
+            log = syslogger.SysLogger(log_identifier='log3', enable_runtime_config=True)
+            mock_log_error.assert_called_once_with('Failed to refresh log configuration - STATE_DB unavailable')
+        assert log.logger.level == logging.DEBUG
+
+        assert log.update_log_level() == (False, 'Failed to refresh log configuration - STATE_DB unavailable')
+        assert log.logger.level == logging.DEBUG
