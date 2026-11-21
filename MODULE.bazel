@@ -24,10 +24,10 @@ bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "redis-dump-load", version = "1.1.sonic.2", repo_name = "redis_dump_load")
 
-# PI, P4C and DASH export their native Bazel outputs as installation TARs.
+# PI, BMv2, P4C and DASH export their native Bazel outputs as installation TARs.
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.7", repo_name = "p4lang_pi")
-bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.5", repo_name = "p4lang_bmv2")
-bazel_dep(name = "p4c", version = "1.2.4.2.sonic.6")
+bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.6", repo_name = "p4lang_bmv2")
+bazel_dep(name = "p4c", version = "1.2.4.2.sonic.7")
 bazel_dep(name = "sonic-dash", version = "0.0.1-d5c003dd7774c2b43f275c0233acc73a0ea28d2f", repo_name = "sonic_dash")
 
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.

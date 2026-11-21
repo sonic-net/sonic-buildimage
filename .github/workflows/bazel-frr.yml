@@ -60,8 +60,8 @@ jobs:
         uses: ./.github/actions/bazel-post-job-cleanup
         with:
           migrated-job: 'true'
-      - name: Align retained kernel checkout
-        run: bash tools/bazel/ci/prepare_image_submodules.sh --kernel-only
+      - name: Align retained submodule checkouts
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --populated-only
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
           bazelisk-version: 1.29.0
