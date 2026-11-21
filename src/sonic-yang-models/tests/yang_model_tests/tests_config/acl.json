@@ -592,6 +592,52 @@
             }
         }
     },
+    "ACL_RULE_VALID_ECN_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "ECN_TABLE",
+                        "ECN_ACTION": 3,
+                        "IP_PROTOCOL": 17,
+                        "L4_SRC_PORT": 5000,
+                        "PRIORITY": 999,
+                        "RULE_NAME": "ECN_RULE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "ECN_TABLE",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_INVALID_ECN_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "ECN_TABLE",
+                        "ECN_ACTION": 4,
+                        "PRIORITY": 999,
+                        "RULE_NAME": "ECN_RULE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "ECN_TABLE",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
     "ACL_RULE_VALID_L4_DST_PORT_RANGE": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
