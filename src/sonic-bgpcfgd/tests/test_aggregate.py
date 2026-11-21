@@ -31,7 +31,7 @@ class MockAddressTable(object):
         return list(self.addresses.keys())
 
     def get(self, key):
-        return (True, self.addresses.get(key))
+        return (key in self.addresses, self.addresses.get(key, {}))
 
     def delete(self, key):
         self.addresses.pop(key, None)
@@ -665,6 +665,62 @@ def test_inactive_entry_skips_frr_removal(bad_prefix):
 
     # STATE_DB entry should be cleaned up
     assert bad_prefix not in mgr.address_table.getKeys()
+
+
+@pytest.mark.parametrize("prefix", ["10.1.0.0/16", "2001:db8::/32"])
+@pytest.mark.parametrize("bbr_status", [BGP_BBR_STATUS_DISABLED, ""])
+def test_bbr_required_update_removes_old_active_config(prefix, bbr_status):
+    mgr = constructor(bbr_status=bbr_status)
+    old_data = {
+        "bbr-required": "false",
+        "aggregate-address-prefix-list": "OLD_AGG",
+        "contributing-address-prefix-list": "OLD_CON",
+    }
+    mgr.set_handler(prefix, old_data)
+    mgr.cfg_mgr.push_list.reset_mock()
+
+    new_data = {
+        "bbr-required": "true",
+        "aggregate-address-prefix-list": "NEW_AGG",
+        "contributing-address-prefix-list": "NEW_CON",
+    }
+    assert mgr.set_handler(prefix, new_data)
+
+    is_v4 = ipaddress.ip_network(prefix).version == 4
+    family = "ipv4" if is_v4 else "ipv6"
+    ip_command = "ip" if is_v4 else "ipv6"
+    mgr.cfg_mgr.push_list.assert_called_once_with([
+        "router bgp 65001",
+        "address-family " + family,
+        "no aggregate-address " + prefix,
+        "exit-address-family",
+        "exit",
+        "no %s prefix-list OLD_AGG permit %s" % (ip_command, prefix),
+        "no %s prefix-list OLD_CON permit %s le %s" % (
+            ip_command, prefix, "32" if is_v4 else "128"),
+    ])
+    saved = mgr.address_table.get(prefix)[1]
+    assert saved["state"] == "inactive"
+    assert all(saved[key] == value for key, value in new_data.items())
+
+
+def test_bbr_required_update_preserves_old_state_when_removal_fails():
+    prefix = "10.1.0.0/16"
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
+    old_data = {
+        "bbr-required": "false",
+        "aggregate-address-prefix-list": "OLD_AGG",
+    }
+    mgr.set_handler(prefix, old_data)
+    saved_old_data = dict(mgr.address_table.get(prefix)[1])
+    mgr.address_del_handler = MagicMock(return_value=False)
+
+    assert not mgr.set_handler(prefix, {
+        "bbr-required": "true",
+        "aggregate-address-prefix-list": "NEW_AGG",
+    })
+    mgr.address_del_handler.assert_called_once_with(prefix, saved_old_data)
+    assert mgr.address_table.get(prefix)[1] == saved_old_data
 
 
 def _is_ipv4(value):
