@@ -293,7 +293,10 @@ download_packages()
 
 run_pip_command()
 {
-    declare -a parameters=("--default-timeout" "$PIP_HTTP_TIMEOUT" "$@")
+    # uv rejects --default-timeout and takes the timeout from UV_HTTP_TIMEOUT instead
+    declare -a parameters=()
+    [ "$PIP_TIMEOUT_UNSUPPORTED" != "y" ] && parameters+=("--default-timeout" "$PIP_HTTP_TIMEOUT")
+    parameters+=("$@")
     PIP_CACHE_PATH=${PKG_CACHE_PATH}/pip
     PKG_CACHE_OPTION="--cache-dir=${PIP_CACHE_PATH}"
 
