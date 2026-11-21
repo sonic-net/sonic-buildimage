@@ -47,10 +47,21 @@
 #define REG_PORT0_AN     0xF2132E0CULL
 #define REG_PORT1_TYPE   0xF2130E00ULL
 #define REG_PORT0_TYPE   0xF2132E00ULL
+#define REG_PORT1_STATUS 0xF2130E10ULL
+#define REG_PORT0_STATUS 0xF2132E10ULL
 
-#define AN_BYPASS_BIT    3
-#define PORT_TYPE_BIT    1
-#define AN_VAL_UNSET     (-1)
+#define AN_FORCE_DOWN_BIT 0
+#define AN_FORCE_UP_BIT   1
+#define AN_INBAND_EN_BIT  2
+#define AN_BYPASS_BIT     3
+#define AN_RESTART_BIT    4
+#define PORT_TYPE_BIT     1
+#define AN_VAL_UNSET      (-1)
+
+/* GMAC port status register bits */
+#define ST_LINK_BIT       0
+#define ST_AN_DONE_BIT    11
+#define ST_SYNC_OK_BIT    14
 
 static const struct {
     u64 phys;
@@ -73,9 +84,10 @@ static int bypass_an_val[2] = { AN_VAL_UNSET, AN_VAL_UNSET };
 static const struct {
     u64 an_reg;
     u64 type_reg;
+    u64 status_reg;
 } port_regs[2] = {
-    { REG_PORT0_AN, REG_PORT0_TYPE },
-    { REG_PORT1_AN, REG_PORT1_TYPE },
+    { REG_PORT0_AN, REG_PORT0_TYPE, REG_PORT0_STATUS },
+    { REG_PORT1_AN, REG_PORT1_TYPE, REG_PORT1_STATUS },
 };
 
 static int mmio_read32(u64 phys, u32 *val)
@@ -127,6 +139,27 @@ static void set_bit_in_reg(u64 reg, int bit, int val)
     mmio_write32(reg, regval);
 }
 
+static void restart_an_if_stuck(int port)
+{
+    u64 an_reg = port_regs[port].an_reg;
+    u32 an, st;
+
+    if (mmio_read32(an_reg, &an) ||
+        mmio_read32(port_regs[port].status_reg, &st))
+        return;
+    if (!(an & BIT(AN_INBAND_EN_BIT)) || !(an & BIT(AN_BYPASS_BIT)) ||
+        (an & (BIT(AN_FORCE_DOWN_BIT) | BIT(AN_FORCE_UP_BIT))))
+        return;
+    if ((st & BIT(ST_LINK_BIT)) || !(st & BIT(ST_SYNC_OK_BIT)) ||
+        (st & BIT(ST_AN_DONE_BIT)))
+        return;
+
+    pr_info_ratelimited(DRV_NAME ": port%d AN stuck (an=0x%04X st=0x%04X), restarting AN\n",
+                        port, an, st);
+    mmio_write32(an_reg, an | BIT(AN_RESTART_BIT));
+    mmio_write32(an_reg, an & ~BIT(AN_RESTART_BIT));
+}
+
 /* --- poll thread: enforce AN bypass every second --- */
 
 static int cn9130_poll_fn(void *data)
@@ -166,6 +199,7 @@ static int cn9130_poll_fn(void *data)
                                    AN_BYPASS_BIT, type_bit);
                 }
             }
+            restart_an_if_stuck(i);
         }
 
         ssleep(1);
