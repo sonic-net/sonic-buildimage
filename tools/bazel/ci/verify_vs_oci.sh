@@ -56,13 +56,18 @@ for flag in CROSS_BUILD_ENVIRON MULTIARCH_QEMU_ENVIRON ENABLE_ASAN ENABLE_SYNCD_
     fi
 done
 for image in docker-orchagent docker-syncd-vs; do
-    if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" $image.gz "* ||
-          " ${config[SONIC_BAZEL_DBG_DOCKER_IMAGES]} " != *" $image-dbg.gz "* ]]; then
-        echo 'VS validation requires both runtime/debug pairs to select Bazel producers' >&2
+    if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" $image.gz "* ]]; then
+        echo "Missing Bazel runtime producer: $image.gz" >&2
+        exit 1
+    fi
+    if ! "$runtime_only" && [[ " ${config[SONIC_BAZEL_DBG_DOCKER_IMAGES]} " != *" $image-dbg.gz "* ]]; then
+        echo "Missing Bazel debug producer: $image-dbg.gz" >&2
         exit 1
     fi
 done
-for key in DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE SONIC_IMAGE_VERSION; do
+required_settings=(TARGET_PATH DOCKER_CONFIG_ENGINE_TRIXIE SONIC_IMAGE_VERSION)
+if ! "$runtime_only"; then required_settings+=(DEBS_PATH SONIC_P4RT SONIC_P4RT_DBG); fi
+for key in "${required_settings[@]}"; do
     [[ -n ${config[$key]} ]] || { echo "Missing Make package setting: $key" >&2; exit 1; }
 done
 if [[ " ${config[SONIC_BAZEL_DOCKER_IMAGES]} " != *" ${config[DOCKER_CONFIG_ENGINE_TRIXIE]} "* ]]; then

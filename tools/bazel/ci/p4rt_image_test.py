@@ -288,6 +288,17 @@ class RuntimeTest(unittest.TestCase):
         self.assertEqual([value for value in options if value.startswith('--jobs=')][-1], '--jobs=1')
         self.assertEqual([value for value in options if value.startswith('--platforms=')][-1], image.OPTIONS[-2])
 
+    def test_root_and_owner_builds_leave_job_scheduling_to_bazel(self):
+        with patch.dict(os.environ, {}, clear=True):
+            options = image.root_options()
+        self.assertEqual([value for value in options if value.startswith(('--jobs=', '--local_resources='))], [])
+        argv = ['p4rt_image.py', 'build', '--directory', str(self.root), '--owner-source', str(self.root),
+                '--owner-revision', 'a' * 40, '--owner-output-base', str(self.root / 'output')]
+        with patch('sys.argv', argv), patch.object(image.os, 'sched_getaffinity', return_value={0, 1, 2, 3, 4, 5}), \
+                patch.object(image, 'build_images') as build:
+            image.main()
+        self.assertEqual(build.call_args.args[0].jobs, 6)
+
     def test_make_legacy_fallback_and_empty_container_override(self):
         with patch.dict(os.environ, {'BAZEL_SWSS_ARGS': '--jobs=3'}, clear=True):
             self.assertIn('--jobs=3', image.root_options())

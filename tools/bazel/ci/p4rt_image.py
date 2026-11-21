@@ -30,8 +30,7 @@ IMAGES = ('docker-sonic-p4rt', 'docker-sonic-p4rt-dbg')
 BASE = '//dockers/docker-config-engine-trixie:docker-config-engine-trixie'
 RUNTIME_INPUTS = ('owner-test-runtime.tar',)
 COMMON_REVISION = '334389eae54afd1f4f5ee69f89c3a7ad2062ee61'
-OPTIONS = ['--jobs=2', '--local_resources=cpu=2', '--local_resources=memory=8000',
-           '--@sonic_swss_common//tools/bazel:yang_modules=True',
+OPTIONS = ['--@sonic_swss_common//tools/bazel:yang_modules=True',
            '--platforms=@sonic_build_infra//platforms:x86_64_trixie',
            '--host_platform=@sonic_build_infra//platforms:x86_64_trixie']
 PREPARATION_TARGETS = {
@@ -79,8 +78,9 @@ def root_options(*, make_build=False):
         extra += remote_cache_options()
     check.require(all(value and not any(char in value for char in '\r\n\0') for value in extra),
                   'Bazel options must be nonempty single-line arguments')
-    # Preserve cache/custom options, then enforce the recorded YANG/native profile.
-    return [*OPTIONS[:3], *extra, *OPTIONS[3:], build.MAKE_METADATA_OPTION]
+    # Like the other image producers, leave job and CPU scheduling to Bazel. Preserve
+    # cache/custom options, then enforce the recorded YANG/native profile.
+    return [*extra, *OPTIONS, build.MAKE_METADATA_OPTION]
 
 
 def write(path, value):
@@ -442,7 +442,8 @@ def main():
     parser.add_argument('--owner-source', required=True, type=Path)
     parser.add_argument('--owner-revision', required=True)
     parser.add_argument('--owner-output-base', required=True, type=Path)
-    parser.add_argument('--jobs', type=int, default=1)
+    # Bazel's own default: one job per available CPU.
+    parser.add_argument('--jobs', type=int, default=len(os.sched_getaffinity(0)))
     args = parser.parse_args()
     check.require(args.jobs > 0, 'Owner jobs must be positive')
     actions = {'prepare-owner': prepare_owner, 'prepare-make-owner': partial(prepare_owner, make_build=True),

@@ -42,7 +42,7 @@ for phase in prepare-owner build; do
   python3 -B tools/bazel/ci/p4rt_image.py "$phase" \
     --directory artifacts/p4rt --bazel "$BAZEL" \
     --owner-source src/sonic-p4rt/sonic-pins --owner-revision "$owner_revision" \
-    --owner-output-base "$HOME/.cache/sonic-p4rt-owner/manual" --jobs 2
+    --owner-output-base "$HOME/.cache/sonic-p4rt-owner/manual"
 done
 ```
 
@@ -57,7 +57,10 @@ mounts, shutdown order and excluded-profile producers are preserved.
 
 `BAZEL_CONTAINER_CACHE_DIR` and `BAZEL_CONTAINER_ARGS` also apply to the root SDK
 build. `P4RT_BAZEL`, `P4RT_BAZEL_OUTPUT_BASE` and `P4RT_BAZEL_JOBS` select the
-separate owner client. Keep each output base private to one active client and
+separate owner client. Like Bazel, the owner runs one job per available CPU
+unless `P4RT_BAZEL_JOBS` (or `--jobs`) caps it. Bazel 6 still bounds local
+actions by its default CPU and RAM budgets, and remote cache hits download in
+parallel. Keep each output base private to one active client and
 retain it for later builds; no clean is needed between image changes.
 In dedicated CI the helper stops its idle image Bazel server before the owner
 build and test phases. Make can run other producers concurrently, so it keeps

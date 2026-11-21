@@ -13,6 +13,7 @@ policy does not add a toolchain or establish image validation for every tuple.
 Bazel builds the project runtime packages from source, starting with the
 `docker-base-trixie` and `docker-config-engine-trixie` images. PI, BMv2, P4C and
 DASH SAI use native Bazel compilation and produce runtime/debug TARs directly.
+Existing Make package recipes remain available and unchanged.
 
 Autoconf, Automake, Libtool, Make, M4 and pkg-config are pinned Debian execution
 tools supplied by `sonic-build-infra`. The foreign builds use its declared GCC

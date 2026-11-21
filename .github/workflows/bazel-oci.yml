@@ -2227,7 +2227,7 @@ jobs:
           python3 -B tools/bazel/ci/p4rt_image.py prepare-owner --bazel "$BAZEL" \
             --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
             --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
-            --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+            --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL"
       - name: Check P4RT storage before image build
         run: df -h / "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
       - name: Build P4RT runtime and debug images
@@ -2250,7 +2250,7 @@ jobs:
             python3 -B tools/bazel/ci/p4rt_image.py "$phase" --bazel "$BAZEL" \
               --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
               --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
-              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL" --jobs 2
+              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL"
           done
       - name: Prepare reviewed P4RT public evidence
         id: p4rt_public
@@ -2361,6 +2361,12 @@ jobs:
         run: |
           printf '\nbuild --remote_upload_local_results=%s\n' \
             "$UPLOAD_CACHE" >> .bazelrc.user
+          # Master pushes upload the 6-9 GB Syncd debug layer and Gearbox debug
+          # archive. The cache does not resume interrupted writes, so allow
+          # each upload call 10 minutes instead of Bazel's 60 s default.
+          if [[ $UPLOAD_CACHE == true ]]; then
+            printf 'build --remote_timeout=600s\n' >> .bazelrc.user
+          fi
 
       - name: Check native architecture and generated dependency state
         run: |
@@ -4247,13 +4253,13 @@ jobs:
           if grep -Eq 'not found|undefined symbol|symbol lookup error' artifacts/vs/tlm-teamd-linkage.txt; then
             exit 1
           fi
-          python3 -B tools/bazel/ci/verify_nat_archives.py
+          python3 -B tools/bazel/ci/verify_nat_archives.py --debug-layer "$1"
           SH
           make -f Makefile.work BLDENV=trixie sonic-slave-run \
             DOCKER_ROOT="$PWD/fsroot.docker.verify-images" \
             SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=n \
             SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL --cgroupns=private" \
-            SONIC_RUN_CMDS='bash artifacts/vs/verify-installed-images.sh'
+            SONIC_RUN_CMDS="bash artifacts/vs/verify-installed-images.sh $SONIC_ENABLE_DEBUG_LAYER"
 
       - name: Publish the installer and matching container archives
         id: vs_installer_upload

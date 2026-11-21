@@ -55,7 +55,8 @@ docker-sonic-p4rt-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_P4RT)
 docker-sonic-p4rt-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
 
 P4RT_BAZEL ?= bazel
-P4RT_BAZEL_JOBS ?= 1
+# Empty uses one owner job per available CPU, like Bazel; set it to cap the owner.
+P4RT_BAZEL_JOBS ?=
 P4RT_BAZEL_OUTPUT_BASE ?= $(HOME)/.cache/sonic-p4rt-owner/$(notdir $(CURDIR))
 P4RT_BAZEL_ARTIFACTS ?= artifacts/p4rt
 P4RT_BAZEL_SOURCE = src/sonic-p4rt/sonic-pins
@@ -71,7 +72,7 @@ bazel-p4rt-owner: $(P4RT_BAZEL_PARENT_MANIFESTS)
 		--directory "$(P4RT_BAZEL_ARTIFACTS)" --bazel "$${BAZEL:-bazel}" \
 		--owner-source "$(P4RT_BAZEL_SOURCE)" --owner-revision "$(P4RT_BAZEL_REVISION)" \
 		--owner-bazel "$(P4RT_BAZEL)" --owner-output-base "$(P4RT_BAZEL_OUTPUT_BASE)" \
-		--jobs "$(P4RT_BAZEL_JOBS)"
+		$(if $(P4RT_BAZEL_JOBS),--jobs "$(P4RT_BAZEL_JOBS)")
 
 $(DOCKER_P4RT)_BAZEL_DEPENDS = $(P4RT_BAZEL_PARENT_MANIFESTS) \
     $(TARGET_PATH)/bazel-manifests/docker-sonic-p4rt/manifest.json bazel-p4rt-owner

@@ -1439,15 +1439,45 @@ function render() {
   renderFilters(); renderMetrics();
   applyBuildSource();
 }
+async function fetchSnapshotJson(url, options) {
+  const response = await fetch(url, {credentials: "omit", signal: AbortSignal.timeout(30000), ...options});
+  if (!response.ok) throw new Error(`Snapshot request failed (HTTP ${response.status}).`);
+  return response.json();
+}
+async function loadSnapshot(url) {
+  const index = await fetchSnapshotJson(url, {cache: "no-store"});
+  if (index?.schema_version !== 2) return validateSnapshot(index);
+  const {run_shards: shards, ...metadata} = index;
+  const snapshot = validateSnapshot({...metadata, schema_version: 1, runs: []});
+  if (!Array.isArray(shards)) throw new Error("The published run history index is incomplete.");
+  const paths = new Set();
+  const files = shards.map(shard => {
+    const match = typeof shard?.path === "string" && /^history\/([0-9a-f]{64})\.json$/.exec(shard.path);
+    if (!match || paths.has(shard.path) || !Number.isSafeInteger(shard.count) || shard.count < 1) {
+      throw new Error("The published run history index contains an invalid file.");
+    }
+    paths.add(shard.path);
+    // Fetch verifies the response bytes against the SHA-256 in the immutable filename.
+    const digest = btoa(String.fromCharCode(...match[1].match(/../g).map(byte => parseInt(byte, 16))));
+    return {url: new URL(shard.path, url), integrity: `sha256-${digest}`, count: shard.count};
+  });
+  for (let start = 0; start < files.length; start += 4) {
+    const parts = await Promise.all(files.slice(start, start + 4).map(async file => {
+      const runs = await fetchSnapshotJson(file.url, {cache: "force-cache", redirect: "error", integrity: file.integrity});
+      if (!Array.isArray(runs) || runs.length !== file.count) throw new Error("A published run history file is incomplete.");
+      return runs;
+    }));
+    for (const part of parts) for (const run of part) snapshot.runs.push(run);
+  }
+  return validateSnapshot(snapshot);
+}
 async function refresh() {
   if (state.loading) return;
   state.loading = true; byId("refresh").disabled = true;
   const status = byId("load-status"); status.className = ""; status.textContent = state.data ? "Checking for a newer published snapshot…" : "Loading CI history…";
   try {
     const url = new URL("data.json", window.location.href); url.searchParams.set("t", String(Date.now()));
-    const response = await fetch(url, {cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(30000)});
-    if (!response.ok) throw new Error(`Snapshot request failed (HTTP ${response.status}).`);
-    state.data = validateSnapshot(await response.json());
+    state.data = await loadSnapshot(url);
     render(); status.textContent = "";
   } catch (error) {
     status.className = "error";

@@ -588,31 +588,37 @@ class IOTests(unittest.TestCase):
         history["pull_requests"][0]["title"] = "Build timings: \u6d4b\u8bd5"
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "history.json"
+            path.write_text(json.dumps(history, indent=2))
+            self.assertEqual(collector.load_history(path, REPO), history)
             collector.write_atomic(path, history)
             encoded = path.read_bytes()
-            self.assertEqual(json.loads(encoded), history)
+            index = json.loads(encoded)
+            self.assertEqual(index["schema_version"], 2)
             self.assertEqual(collector.load_history(path, REPO), history)
             self.assertEqual(encoded, (
-                json.dumps(history, separators=(",", ":"), sort_keys=True, allow_nan=False) + "\n"
+                json.dumps(index, separators=(",", ":"), sort_keys=True, allow_nan=False) + "\n"
             ).encode())
-            self.assertLess(len(encoded), len(json.dumps(history, indent=2).encode()))
+            shard = (path.parent / index["run_shards"][0]["path"]).read_bytes()
+            self.assertEqual(json.loads(shard), history["runs"])
+            self.assertLess(len(encoded) + len(shard), len(json.dumps(history, indent=2).encode()))
             collector.write_atomic(path, history)
             self.assertEqual(path.read_bytes(), encoded)
 
-    def test_history_size_budget_checks_exact_output_bytes_before_replacement(self):
+    def test_index_size_budget_checks_exact_output_bytes_before_replacement(self):
         history = empty()
-        encoded = (json.dumps(history, separators=(",", ":"), sort_keys=True) + "\n").encode()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "history.json"
-            with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded)):
+            collector.write_atomic(path, history)
+            encoded = path.read_bytes()
+            with mock.patch.object(collector.history_store, "MAX_FILE_BYTES", len(encoded)):
                 collector.write_atomic(path, history)
             self.assertEqual(path.read_bytes(), encoded)
             for existing in (True, False):
                 with self.subTest(existing=existing):
                     if not existing:
                         path.unlink()
-                    with mock.patch.object(collector, "MAX_HISTORY_BYTES", len(encoded) - 1):
-                        with self.assertRaisesRegex(collector.CollectionError, "publication budget"):
+                    with mock.patch.object(collector.history_store, "MAX_FILE_BYTES", len(encoded) - 1):
+                        with self.assertRaisesRegex(collector.CollectionError, "publication limit"):
                             collector.write_atomic(path, history)
                     self.assertEqual(path.exists(), existing)
                     if existing:
@@ -622,7 +628,8 @@ class IOTests(unittest.TestCase):
     def test_cli_loads_reviewed_sibling_with_safe_path_outside_source_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             # A same-name module in the caller's directory must not be loaded.
-            Path(directory, "breakdown.py").write_text("raise RuntimeError('untrusted caller module')\n")
+            for name in ("breakdown.py", "history_store.py"):
+                Path(directory, name).write_text("raise RuntimeError('untrusted caller module')\n")
             result = subprocess.run(
                 [sys.executable, "-B", str(Path(collector.__file__).resolve()), "--help"],
                 cwd=directory, env=dict(os.environ, PYTHONSAFEPATH="1"),
@@ -684,9 +691,9 @@ class IOTests(unittest.TestCase):
             collector.write_atomic(path, empty())
             self.assertEqual(collector.load_history(path, REPO), empty())
             with mock.patch.object(collector.os, "replace", side_effect=OSError("disk failure")):
-                with self.assertRaises(OSError):
-                    collector.write_atomic(path, {"new": True})
-            self.assertEqual(json.loads(path.read_text()), empty())
+                with self.assertRaisesRegex(collector.CollectionError, "disk failure"):
+                    collector.write_atomic(path, dict(empty(), generated_at="2026-11-20T00:00:00Z"))
+            self.assertEqual(collector.load_history(path, REPO), empty())
             self.assertEqual(list(Path(directory).glob(".history-*")), [])
             path.write_text('{"schema_version": 99}')
             with self.assertRaises(collector.CollectionError):

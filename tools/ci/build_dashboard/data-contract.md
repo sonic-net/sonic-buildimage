@@ -1,15 +1,26 @@
-# Build dashboard data (schema 1)
+# Build dashboard data
 
-`collect.py` produces one JSON document, also used as its durable history. It
-reads public GitHub Actions metadata and bounded timing markers from selected
-public job logs. Raw logs, artifacts, machine names, workflow inputs, environment
-variables and credentials are never retained in the public document. Collection
-does not execute a build or execute any content from a log.
+`collect.py` reads public GitHub Actions metadata and bounded timing markers
+from selected public job logs. The dashboard retains the resulting timing
+records. It excludes raw logs, artifacts, machine names, workflow inputs,
+environment variables and credentials.
 
-The document uses compact JSON with sorted object keys and a trailing newline.
-Whitespace is not part of the schema; readers also accept previously published
-indented history. Publication is capped at 95 MiB, measured on the serialized
-file, without dropping records or replacing the previous output on overflow.
+## Published files
+
+New snapshots use schema version 2. The entry point, `data.json`, contains
+`repository`, `generated_at`, `comparisons`, `pull_requests`, and an ordered
+`run_shards` list. Each list entry contains a `path` of the form
+`history/<sha256>.json` and a `count` of complete run attempts. The SHA-256
+covers the exact file bytes, including the trailing newline. Each file holds a
+JSON array. Concatenating those arrays in index order yields the original
+newest-first `runs` list. An empty run history has an empty `run_shards` list.
+
+The collector packs attempts from the oldest end so new attempts can reuse
+older files. It targets 8 MiB per shard and enforces a 95 MiB limit per file.
+It writes the index after every referenced file is in place. Both the collector
+and dashboard can also read the original version 1 single-file snapshots.
+
+## Snapshot fields after loading
 
 - `schema_version`: `1`.
 - `repository`: validated `owner/repository`.

@@ -76,14 +76,22 @@ class P4rtMakeTest(unittest.TestCase):
                       'release: $(docker-sonic-p4rt.gz_BAZEL_DEPENDS)\n'
                       'debug: $(docker-sonic-p4rt-dbg.gz_BAZEL_DEPENDS)\n')
             values = {**VALUES, 'TARGET_PATH': str(manifests), 'P4RT_BAZEL': '/owner/bazel6',
-                      'P4RT_BAZEL_OUTPUT_BASE': str(root / 'owner-output'), 'P4RT_BAZEL_JOBS': '2'}
-            subprocess.run(['make', '--no-print-directory', '-j2', '-f', '-', 'all',
-                *[key + '=' + value for key, value in values.items()]], input=recipe, cwd=ROOT, text=True,
-                env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'], 'P4RT_TEST_CALLS': str(calls),
-                     'BAZEL': '/image/bazel8'}, check=True, capture_output=True)
-            invocations = [json.loads(line) for line in calls.read_text().splitlines()]
-            self.assertEqual(len(invocations), 1)
-            args = invocations[0]
+                      'P4RT_BAZEL_OUTPUT_BASE': str(root / 'owner-output')}
+            for jobs in ('', '2'):
+                with self.subTest(jobs=jobs):
+                    calls.unlink(missing_ok=True)
+                    subprocess.run(['make', '--no-print-directory', '-j2', '-f', '-', 'all', 'P4RT_BAZEL_JOBS=' + jobs,
+                        *[key + '=' + value for key, value in values.items()]], input=recipe, cwd=ROOT, text=True,
+                        env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'], 'P4RT_TEST_CALLS': str(calls),
+                             'BAZEL': '/image/bazel8'}, check=True, capture_output=True)
+                    invocations = [json.loads(line) for line in calls.read_text().splitlines()]
+                    self.assertEqual(len(invocations), 1)
+                    args = invocations[0]
+                    if jobs:
+                        self.assertEqual(args[args.index('--jobs') + 1], jobs)
+                    else:
+                        # Without a cap the helper keeps Bazel's one-job-per-CPU default.
+                        self.assertNotIn('--jobs', args)
             self.assertEqual(args[:3], ['-B', 'tools/bazel/ci/p4rt_image.py', 'prepare-make-owner'])
             for key, value in (('--directory', 'artifacts/p4rt'), ('--owner-bazel', '/owner/bazel6'),
                                ('--bazel', '/image/bazel8'), ('--owner-source', 'src/sonic-p4rt/sonic-pins')):

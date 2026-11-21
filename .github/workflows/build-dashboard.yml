@@ -195,7 +195,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p site
+          mkdir -p site/history
           args=()
           if test "$BACKFILL" = true; then args+=(--backfill); fi
           python3 -B tools/ci/build_dashboard/collect.py \
@@ -209,10 +209,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Commit the same index and shards that Pages will serve.
+          git -C history rm -qr --ignore-unmatch -- history/
+          cp -R site/history history/
           cp site/data.json history/data.json
           git -C history config user.name 'Guohan Lu'
           git -C history config user.email securely1g@gmail.com
-          git -C history add data.json
+          git -C history add -A -- .
           if ! git -C history diff --cached --quiet; then
             git -C history commit -m 'Update build timing history'
             git -C history -c credential.helper= \
