@@ -4,6 +4,8 @@ import subprocess
 
 from swsscommon import swsscommon
 
+from ._redis_transport import use_local_redis_socket
+
 from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
 from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
@@ -33,7 +35,7 @@ CHASSIS_FABRIC_ASIC_INFO_TABLE='CHASSIS_FABRIC_ASIC_TABLE'
 # to prevent duplicate connections from being opened
 config_db_handle = {}
 
-def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the config DB for a given namespace and
     returns the handle
@@ -42,15 +44,22 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     In case of multi ASIC, the default namespace is the database
     instance running the on the host
 
+    authenticate requests writer login through the configured Unix socket.
+
     Returns:
       handle to the config_db for a namespace
     """
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
+    options = {}
+    if authenticate or use_local_redis_socket("CONFIG_DB", namespace):
+        options["use_unix_socket_path"] = True
+    if authenticate:
+        options["authenticate"] = True
+    config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
     config_db.connect()
     return config_db
 
 
-def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, authenticate=False):
     """
     The function connects to the DBs for a given namespace and
     returns the handle
@@ -64,6 +73,9 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     database instance running the on the host
     In case of single ASIC, the namespace has to be DEFAULT_NAMESPACE
 
+    authenticate requests writer login on socket connections. A selected set
+    containing remote or inaccessible legacy sockets retains its TCP transport.
+
     Returns:
         handle to all the dbs for a namespaces
     """
@@ -76,6 +88,14 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
         except Exception:
             pass
 
+    # One connector uses one transport, so use sockets only when every selected
+    # database admits this reader. Remote and restricted legacy endpoints keep TCP.
+    use_socket = bool(db_list) and all(use_local_redis_socket(name, namespace) for name in db_list)
+    if use_socket:
+        options = {'namespace': namespace, 'use_unix_socket_path': True}
+        if authenticate:
+            options['authenticate'] = True
+        db = swsscommon.SonicV2Connector(**options)
     for db_id in db_list:
         db.connect(db_id)
     return db
@@ -340,7 +360,7 @@ def mod_entry(table, key, value, namespace=None, modIfExists=False):
 
     for ns in ns_list:
         if not modIfExists or get_table_entry_for_asic(table, key, ns):
-            config_db = connect_config_db_for_ns(ns)
+            config_db = connect_config_db_for_ns(ns, authenticate=True)
             config_db.mod_entry(table, key, value)
 
 
