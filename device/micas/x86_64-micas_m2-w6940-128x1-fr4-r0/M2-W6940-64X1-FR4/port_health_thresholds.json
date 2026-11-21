@@ -1,0 +1,11 @@
+{
+  "comment": "portmonitor thresholds",
+
+  "fdr": { 
+      "critical_bin": 7 
+   },
+  "fiber": {
+    "rx_low_dbm": -40.0,
+    "rx_weak_dbm": -20.0
+  }
+}
