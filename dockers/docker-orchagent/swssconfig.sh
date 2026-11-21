@@ -48,8 +48,8 @@ fast_reboot
 # read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
-HWSKU=${HWSKU:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['hwsku']"`}
-sonic_asic_type=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v asic_type)
+HWSKU=${HWSKU:-`sonic-cfggen-lite-rs -d -v "DEVICE_METADATA['localhost']['hwsku']"`}
+sonic_asic_type=$(sonic-cfggen-lite-rs -y /etc/sonic/sonic_version.yml -v asic_type)
 
 # Apply only TUNNEL_DECAP_TABLE entries
 apply_ipinip_subset() {

@@ -1,0 +1,14 @@
+Source: sonic-cfggen-lite-rs
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: sonic-cfggen-lite-rs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Rust SONiC configuration data reader and writer
+ Provides a Rust implementation of common sonic-cfggen data-access operations
+ while the full Python sonic-cfggen remains available for all other features.
