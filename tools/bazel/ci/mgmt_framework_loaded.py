@@ -12,20 +12,14 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import install_redis_config
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import mgmt_framework_image, validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
 
 
 def copy_database_fixture(directory, report, fixture):
-    archive_path = directory / "config-engine-source.tar"
-    check.require(check.sha(archive_path) == report["artifacts"][archive_path.name]["sha256"],
-                  "Config-engine source TAR changed")
-    with tarfile.open(archive_path) as archive:
-        members = [member for member in archive.getmembers()
-                   if str(Path(member.name)) == "run/redis/sonic-db/database_config.json"]
-        check.require(len(members) == 1 and members[0].isfile(), "missing or duplicate declared database configuration")
-        (fixture / "database_config.json").write_bytes(archive.extractfile(members[0]).read())
+    install_redis_config(directory, report, fixture, "config-engine-source.tar")
 
 
 def probe_command(tag, name, probe, report_path, fixture):

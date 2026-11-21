@@ -21,6 +21,17 @@ def sha(path):
     return sha256(path)
 
 
+def verify_apt_binding(selection, base_digest, *, metadata=None, selection_sha=None):
+    """Require APT and installed-package records from the same completed OCI base."""
+    records = (selection,) if metadata is None else (selection, metadata)
+    for record in records:
+        require(record.get("base_manifest_digest") == base_digest, "package stage uses a different completed OCI base")
+        require(record.get("dependency_check", {}).get("status") == "satisfied", "unsatisfied stage package dependencies")
+    if metadata is not None:
+        require(selection_sha and metadata.get("apt_selection_sha256") == selection_sha,
+                "package state does not bind the checked APT selection")
+
+
 def verify_make_archives(inputs):
     for variant in ("runtime", "debug"):
         archive = inputs[f"make_{variant}_archive"]
@@ -72,6 +83,24 @@ def file_metadata(stream, name):
         hasher.update(chunk)
         size += len(chunk)
     return {"sha256": hasher.hexdigest(), "size": size, **elf_header(prefix, name)}
+
+
+def verify_swss_component_labels(labels, packages):
+    """Verify the version labels inherited from the installed SONiC base packages."""
+    for name in ("libswsscommon", "sonic-supervisord-utilities-rs"):
+        require(labels.get("com.azure.sonic.versions." + name) == packages[name]["Version"],
+                "Inherited component label differs: " + name)
+
+
+def verify_inherited_files(parent, installed, replacements, mutable, image):
+    """Verify all parent files, matching permitted replacements to independent owner TAR metadata."""
+    for path, original in parent.items():
+        if original["kind"] == "directory" or path in mutable:
+            continue
+        expected = replacements.get(path, original)
+        actual = installed.get(path, {})
+        require(all(actual.get(key) == value for key, value in expected.items()),
+                image + " changed inherited payload: " + path)
 
 
 def payload(path, require_root=True):

@@ -30,6 +30,14 @@ def resolved_modules(graph):
     return selected
 
 
+def verify_selected_modules(graph, expected):
+    """Each pinned P4RT dependency must resolve to exactly its accepted version."""
+    modules = resolved_modules(graph)
+    for name, version in expected.items():
+        found = modules.get(name, set())
+        require(found == {version}, f"P4RT expected {name}@{version}, resolved {sorted(found)}")
+
+
 def verify(directory, contract, source, owner):
     require(__debug__, "P4RT acceptance requires assertions enabled")
     require(owner == contract["owner"], "Selected PINS gitlink changed")
@@ -57,15 +65,19 @@ def verify(directory, contract, source, owner):
     names = {label.replace("@@sonic-sairedis+//", "@sonic_sairedis//", 1) for label in build["targets"]}
     require(len(build["targets"]) == 27 and set(build["targets"].values()) == {True}
             and names == set(contract["outputs"].values()), "Image build output inventory changed")
-    modules = resolved_modules(read("module-graph.json"))
-    require(all(modules.get(name) == {version} for name, version in contract["selected_modules"].items()),
-            "Resolved dependency selection changed")
+    verify_selected_modules(read("module-graph.json"), contract["selected_modules"])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--directory", type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--directory", type=Path, help="Directory with the full P4RT acceptance evidence")
+    inputs.add_argument("--module-graph", type=Path, help="Check the root Bazel module graph against the P4RT pins")
     args = parser.parse_args()
-    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    owner = subprocess.check_output(["git", "rev-parse", "HEAD:src/sonic-p4rt/sonic-pins"], cwd=ROOT, text=True).strip()
-    verify(args.directory, json.loads(Path(__file__).with_suffix(".json").read_text()), revision, owner)
+    contract = json.loads(Path(__file__).with_suffix(".json").read_text())
+    if args.module_graph:
+        verify_selected_modules(json.loads(args.module_graph.read_bytes()), contract["selected_modules"])
+    else:
+        revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        owner = subprocess.check_output(["git", "rev-parse", "HEAD:src/sonic-p4rt/sonic-pins"], cwd=ROOT, text=True).strip()
+        verify(args.directory, contract, revision, owner)

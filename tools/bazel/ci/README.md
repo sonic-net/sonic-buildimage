@@ -7,14 +7,12 @@ The [native event services](../../../.github/workflows/bazel-eventd.yml),
 [YANG model distribution](../../../.github/workflows/bazel-yang-models.yml) jobs
 use `[self-hosted, linux, bazel-x64]` for AMD64 and
 `[self-hosted, linux, bazel-arm64]` for ARM64, matching the cache-reachable agent
-pools used by the archive, base-image, and kernel jobs. The agents, including
+pools used by package and kernel jobs. The agents, including
 their job containers where applicable, need network access to
 `grpc://172.16.0.4:9092`; public GitHub-hosted runners cannot reach that private
 endpoint.
 
-Private remote services are not workspace defaults. Only the five
-cache-reachable archive, source-base, event-services, Rust-listener and YANG
-jobs opt in with:
+The package, event-services, Rust-listener and YANG jobs opt into private remote services with
 
 ```sh
 python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
@@ -39,36 +37,11 @@ actions. Keep both services out of default rc files. On opted-in jobs, a caller
 that intentionally disables or replaces the gRPC cache must also disable or
 replace its remote downloader.
 
-The [source base-image workflow](../../../.github/workflows/bazel-base-images.yml)
-and [OCI archive jobs](../../../.github/workflows/bazel-oci.yml) use these
-persistent agents. Neither mounts or deletes host Android, .NET or GHC SDK
-directories to reclaim space, nor runs a GitHub-hosted-only cleanup guard; that
-cleanup was specific to disposable GitHub-hosted runners. Provision sufficient
-build storage and manage host Docker/cache retention outside the job without
-deleting active builds.
-
-Base-image producers export separate AMD64/ARM64 artifact-ID job outputs.
-Each matrix leg sets only its own output, so completion order cannot replace
-the other architecture's identity. Runtime validation downloads the exact
-producer artifact ID into the existing flat artifact directory, not an artifact
-selected by name. This avoids failed-build evidence with the same name from an
-earlier run attempt. Failed producers still upload diagnostic evidence but do
-not export a successful handoff. Runtime-only reruns reuse the successful
-producer's ID; receipt, revision, architecture and checksum checks still apply.
-
-AMD64 archive jobs upload generic evidence before Sysmgr acceptance, Sysmgr
-evidence before SWSS layer acceptance, and SWSS layer evidence before Orchagent
-acceptance. Each step preserves its completed artifacts outside the checkout in
-a unique private directory under `SONIC_BAZEL_JOB_TEMP`, prefixed with
-`pre-sysmgr-artifacts.`, `pre-swss-layer-artifacts.`,
-`pre-orchagent-artifacts.`, `pre-macsec-artifacts.`, or `pre-dash-ha-artifacts.`.
-This keeps the source-only fence
-intact without colliding with or deleting prior jobs' evidence. The preserved
-path is logged. The registered post-job hook removes these job-owned copies only
-after their publication steps and artifact uploads succeed. Incomplete uploads
-leave the evidence available for agent maintenance.
-Sysmgr public evidence is collected only after its build was attempted,
-including failed builds, not when an earlier step prevented it from running.
+The [Bazel OCI workflow](../../../.github/workflows/bazel-oci.yml) publishes
+the AMD64 VS build once. The container validation jobs consume its artifacts on
+host agents labeled `bazel-x64`. They require Docker and access to GitHub
+Actions artifacts. The Teamd probe also uses the host team kernel module.
+Component package tests run natively on AMD64 and ARM64.
 
 The event-services container reports its identity, cache-directory permissions,
 UID/GID mappings and security context before probing Bazel startup. It creates
@@ -77,7 +50,7 @@ and removes only a temporary directory in the cache parent, then checks
 Failures stop the job with diagnostics; the probe does not change host
 permissions, relocate caches or delete retained build state.
 
-YANG and base-image runtime host jobs restore checkout-directory access before
+YANG host jobs restore checkout-directory access before
 `actions/checkout`, using the kernel workflow's guarded repair for artifacts
 left by container jobs. The repair requires passwordless `sudo`, validates the
 expected physical workspace, stays on its filesystem and skips symlinks and
@@ -259,18 +232,14 @@ These helpers validate buildimage artifacts and preserve build evidence. The
 shared container runner discovers the selected owner's Bazel CI targets;
 package expectations remain in the owner declarations and tests.
 
-[`.github/workflows/bazel-oci.yml`](../../../.github/workflows/bazel-oci.yml) is
-the shared entrypoint for Bazel OCI container CI. It runs common AMD64/ARM64
-archive checks, lightweight OCI regressions and the full VS integration
-job. The active `vs_container` job builds inside a privileged SONiC slave,
-then runs shared SWSS/Syncd static image checks and Docker-load validation in
-that same worker. Build and validation share its Bazel server and caches.
-The older `vs` job is disabled; its post-Make source-package suites and
-cache-action reports remain in that legacy path and are not run by the active
-job. Add checks for future
-OCI containers in this workflow, keeping their target lists and package contracts with each container.
-Keep checks that compile image inputs in the full build job so they can reuse
-its action outputs.
+The [Bazel OCI workflow](../../../.github/workflows/bazel-oci.yml) builds the
+VS installer and its configured OCI archives in the `vs_container` job. Each
+container has a separate validation job. That job downloads its runtime archive,
+owner fixtures and recorded OCI metadata, checks the archive and runs the service
+probe against those exact bytes. When Make enables debug images, a container
+with a registered debug target also gets its debug archive checked in the
+same job.
+
 The owning BUILD files sit beside the original container inputs:
 [`dockers/docker-orchagent/BUILD.bazel`](../../../dockers/docker-orchagent/BUILD.bazel)
 and [`platform/vs/docker-syncd-vs/BUILD.bazel`](../../../platform/vs/docker-syncd-vs/BUILD.bazel).
@@ -278,13 +247,12 @@ The shared runner accepts either package path; it does not require owners to
 live under `dockers/`.
 Manual runs default to `skip_vs=true`; same-repository PRs retain the full VS
 job after OCI regressions and dependency resolution pass. Fork PRs and
-manual `skip_vs=true` runs omit source-package/full-image validation; regression
-success alone does not establish those results.
+manual `skip_vs=true` runs omit the installer and its dependent validation jobs.
 
 SWSS compilation, package contents and component tests are validated in the
 [SWSS source repository](https://github.com/securely1g/sonic-swss). Buildimage
 consumes those targets and validates the assembled OCI images, including their
-installed behavior and image-cache invalidation.
+installed behavior.
 
 The native VS Make build submits all selected Bazel container archives in one
 invocation. For example, Orchagent and Syncd build together from common base
@@ -311,8 +279,7 @@ prune unused Docker images and build cache before checking free space, so their
 agents must not share a Docker daemon with concurrent jobs.
 It does not update image pins or create commits. See the
 [host-agent image policy](../../ci/runner/container-vs.md#slave-image-publication-and-selection).
-The installer job checks the installer version and verifies the installed images
-with the shared `validate_runtime.py` validator.
+The downstream installer verification job extracts the release and commit from the packaged filesystem.
 
 The host wrapper [`build_vs.sh`](build_vs.sh) runs one
 `make target/sonic-vs.bin` request
@@ -323,111 +290,24 @@ It does not request those archives again or run the post-build validators.
 This target does not require KVM. BIOS/UEFI VM disk generation and guest boot
 checks belong to `target/sonic-vs.img.gz` and are not exercised by this `.bin`
 CI path. The separate VM target retains those checks.
-The build records its starting Git revision. Validation checks it before running,
-and paired validation checks it again before writing its timing summary.
+The build publishes the installer, its Make image list and one Actions artifact
+per selected OCI family. Each family includes the OCI configuration, ordered
+layer and archive digests, and the inputs needed by its installed probe. It
+also publishes the base and shared SWSS layer for their own runtime checks.
+Each consumer verifies the producer revision and the release extracted from
+the installer. Common checks cover the exported archive, loaded platform,
+configuration and filesystem layers. Container owners retain their service
+checks, such as a real Teamd control transaction or a Config Engine YANG render.
 
-The installer job uses `SONIC_ENABLE_DEBUG_LAYER=n` on push and pull request
-runs and by default on manual runs. It verifies the installer, runtime archives
-and installed images. To run the debug archive and symbol checks, dispatch
-**Bazel OCI** with `source_image=none`, clear `skip_vs`, and select
-`enable_debug_layer`. This passes `SONIC_ENABLE_DEBUG_LAYER=y` to Make.
-To compare the two modes, dispatch both from the
-same revision and compare the **Build sonic-vs.bin through the host Make wrapper**
-step. The `sonic-vs-bazel-timings-amd64` artifact includes the selected archive
-names, Bazel profile and export times for that step.
+To exercise runtime containers, dispatch **Bazel OCI** with `skip_vs=false`.
+Set `enable_debug_layer=true` to publish and validate registered debug
+companions. Pull requests and master pushes use the runtime-only setting.
+`sonic-vs-bazel-timings-amd64` records the Make/Bazel build. The per-container
+job logs and `validated-*` artifacts report validation separately.
+ARM64 source/package tests run independently. The VS installer publishes
+AMD64 service images.
 
-On a paired run, [`validate_vs.sh`](validate_vs.sh) runs in the separate
-**Validate the installer and retained container pairs** step, using the same
-checkout and configuration. It first checks
-both Orchagent and Syncd pairs before another builder can produce a missing
-archive. The checks cover Linux/AMD64 configuration, Make manifests, Bazel
-producer stamps and each debug image's runtime layers. They also check that
-`target/sonic-vs.bin.dockers`, emitted from the installer's actual inputs,
-selects runtime Orchagent and Syncd rather than debug archives for this normal
-VS configuration. Installed-container validation remains a separate check of
-the resulting container images.
-
-For a separate `.img.gz` build, `vs_archive_reuse.py capture-pairs` accepts
-`--installer sonic-vs.img.gz`; verification follows the image recorded in the
-receipt. Older receipts without an image name retain their `.img.gz` meaning.
-
-The validator prepares Bookworm through `Makefile.work` unless `NOBOOKWORM=1`,
-then uses its existing `sonic-slave-run` entrypoint to run `verify_vs_oci.sh`
-in Trixie. Make expands
-`SONIC_BUILD_INSTRUCTION` for that command so it retains the selected build
-configuration. The verifier queries Make for the resolved profile and existing
-P4RT runtime/debug package names rather than hardcoding package versions.
-It requires native AMD64/Trixie VS with Bazel, FIPS and DASH enabled, without
-ASAN, Syncd RPC or cross/emulated execution, and checks that both runtime/debug
-container pairs select their Bazel producers.
-
-The shared verifier resolves both P4RT packages through Make. Native CI uses
-the config-engine archive already produced for the installer. Image builds
-and validation use the workspace's normal Bazel server and output links,
-without per-image output bases or shutdown hooks. SWSS and Syncd checks run
-sequentially on that shared server, selecting DASH only for Syncd. Standalone
-validation can request the config-engine archive through Make. The offline
-P4RT split-debug-symbol check runs in the same Trixie builder.
-It does not request the Orchagent or Syncd Make archives again or add a package
-definition. The legacy wrapper's Bookworm builder cleanup
-is retained. The final pair check requires all four archives and their manifests
-to remain unchanged. Missing, changed or incompatible outputs fail validation;
-failures are not hidden by rebuilding an archive.
-
-The P4 image test still declares the native Syncd OCI images and Bazel archive
-outputs as inputs and compares them with the retained Make archives. Bazel may
-restore those inputs or rebuild them on a cache miss in the validation builder.
-The native build and validation steps share persistent action/download caches.
-P4RT and kernel workspaces keep their separate launchers.
-Splitting the workflow steps does not remove this work or
-claim a speedup. The active image checks do not replace the source-package
-suites retained in the disabled legacy job. Neither path's installer checks
-establish BIOS/UEFI VM boot success.
-
-Each container retains its owner's dependencies and Bazel options. Standalone
-archive requests and other configurations retain their existing rules.
-Validation stops on a failed prerequisite or check.
-
-In paired mode, [`verify_vs_oci.sh`](verify_vs_oci.sh) runs the uncached SWSS and P4 image tests and offline
-split-debug package check before the validation builder exits. It preserves
-`artifacts/vs/swss-images/`, `swss-images.log`,
-`artifacts/vs/syncd-p4-images/`, `syncd-p4-images.log`,
-`p4rt-debug-verification.log` and `p4rt-debug-verification.json`. The archive
-checker retains `runtime-debug-pairs.json` and `orchagent-reuse.json`; these
-are validation receipts, not inputs needed to assemble the image.
-Each family's test logs, XML and static receipt are copied before switching
-Bazel configurations. The generated `*-installed-images-policy.json` files
-bind the Docker checks to those outputs; `installed-images.json` records the
-shared Docker-load result. The active workflow publishes these files in
-`sonic-vs-image-validation-amd64`.
-The Syncd `validation.json` includes additive `performance` evidence:
-`phase_seconds` separates input identity, image/archive validation, native
-packages/symbols, inherited base/symbols, and final input-integrity verification.
-`validation_seconds` excludes Bazel dependency preparation. Progress and timings
-are printed in the test log. Scoped cache statistics count hash reads/hits and
-bytes, inventory hits/misses, evictions and size/file-limit bypasses, plus
-separate final-integrity reads, bytes and duration.
-Successful duplicate-path checks for identical OCI layer bytes are reused only
-within the immutable-input cache scope. Invalid layers are never cached, and
-final byte-integrity verification remains mandatory.
-`runtime-debug-pairs-timing.json` (schema 2) records the revision and profile,
-P4 validation time, pair validation time and their total. It does not include
-the image build duration.
-The successful image artifact contains `target/sonic-vs.bin` and the
-Orchagent/Syncd runtime archives. The opt-in paired run also includes their
-debug archives. The recorded installer selection is
-`target/sonic-vs.bin.dockers`.
-Do not parallelize top-level Make goals that share Docker state.
-
-GitHub Actions reports build and validation as separate step durations. Compare
-the complete job, including later source checks and artifact uploads, when
-measuring an improvement. Moving validation out of the build step changes the
-timing boundary, not the total work. The `.bin` installer step also has a distinct
-dashboard measurement from historical `.img.gz` builds: omitting VM generation
-and boot checks is a change in scope, not a same-scope build speedup.
-Helper tests exercise dispatch, ordering, configuration and failure behavior
-without Docker; full VS CI is needed to
-validate the resulting image and measure end-to-end time.
+For local investigation, the individual build and rebuild tools remain available.
 
 - `container.py` runs an owner's `:ci_tests` test suite and builds its
   `:ci_artifacts` filegroup. Tests and exported files are declared in the

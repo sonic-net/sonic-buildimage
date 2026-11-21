@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -12,6 +13,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import install_redis_config, selected_images
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -58,14 +60,8 @@ def main():
                 executable.write_bytes(source.extractfile(server).read())
                 executable.chmod(0o755)
         fixture.chmod(0o755)
-        owner = directory / "config-engine.source.tar"
-        check.require(check.sha(owner) == report["artifacts"][owner.name]["sha256"], "database fixture owner changed")
-        with tarfile.open(owner) as archive:
-            members = [member for member in archive.getmembers()
-                       if str(Path(member.name)) == "run/redis/sonic-db/database_config.json"]
-            check.require(len(members) == 1 and members[0].isfile(), "missing owner database fixture")
-            (fixture / "database_config.json").write_bytes(archive.extractfile(members[0]).read())
-        for name in ("docker-orchagent", "docker-orchagent-dbg"):
+        install_redis_config(directory, report, fixture, "config-engine.source.tar")
+        for name in selected_images(directory, ("docker-orchagent", "docker-orchagent-dbg")):
             expected = json.loads((directory / (name + ".validation.json")).read_text())
             check.require(expected["status"] == "passed", "missing accepted OCI validation")
             archive = directory / (name + ".gz")
@@ -78,6 +74,18 @@ def main():
                 validate_runtime.verify_loaded_image(loaded, config, expected["config_digest"])
                 check.require(loaded["Os"] == "linux" and loaded["Architecture"] == "amd64", "loaded platform differs")
                 check.require(config["rootfs"] == expected["rootfs"], "loaded layers differ from validated OCI")
+                if (directory / "bundle.json").is_file():
+                    from tools.bazel.ci.vs_standalone_probes import verify_installed_declaration
+                    bundle = json.loads((directory / "bundle.json").read_text())
+                    variant = "debug" if name.endswith("-dbg") else "runtime"
+                    verify_installed_declaration(directory, bundle, variant, tag)
+                    linked = subprocess.run(["docker", "run", "--rm", "--network=none", "--read-only",
+                                             "--cap-drop=ALL", "--security-opt=no-new-privileges",
+                                             "--env", "LD_BIND_NOW=1", "--entrypoint", "/usr/bin/ldd",
+                                             tag, "-r", "/usr/bin/tlm_teamd"], stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT, timeout=90, text=True, check=True)
+                    check.require(not re.search(r"not found|undefined symbol|symbol lookup error", linked.stdout),
+                                  "tlm_teamd relocations failed: " + linked.stdout)
                 command = ["docker", "run", "--rm", "--name", container_name, "--network=none", "--cap-drop=ALL",
                            "--security-opt=no-new-privileges",
                            "--read-only", "--user=0:0", "--pids-limit=128", "--memory=4g", "--cpus=2",

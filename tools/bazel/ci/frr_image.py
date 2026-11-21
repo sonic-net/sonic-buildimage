@@ -81,6 +81,14 @@ def build_images(args, directory):
         (directory / "build-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
 
 
+def verify_parent_files(parent, installed, configuration, python, debug_tools):
+    # Both legacy setup.py packages install the same tests package initializer.
+    initializer = "usr/local/lib/python3.13/dist-packages/tests/__init__.py"
+    replacements = {initializer: python[initializer]} if initializer in parent else {}
+    check.verify_inherited_files(parent, installed, replacements | configuration | debug_tools,
+                                 {"etc/passwd", "etc/group", "var/lib/dpkg/status"}, "FRR")
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["revision"] == source_identity()["revision"], "checkout differs from the image build")
@@ -109,25 +117,7 @@ def validate_images(directory):
                 item = debug_tools.get(path, item)
             check.require(all(files.get(path, {}).get(key) == value for key, value in item.items()),
                           "installed APT, source or configuration payload changed: " + path)
-        for path, item in inherited.items():
-            if item["kind"] == "directory" or path in ("etc/passwd", "etc/group", "var/lib/dpkg/status"):
-                continue
-            # Docker-owned COPY/template paths may intentionally replace an
-            # inherited file; preserve every other parent byte and metadata.
-            # Both legacy setup.py files use find_packages(), including their
-            # top-level tests package. Installing those wheels replaces this
-            # one inherited package initializer, just as pip does in Make's
-            # Dockerfile. Require the exact owner TAR bytes checked above;
-            # no other Python or parent-file replacement is permitted.
-            if path == "usr/local/lib/python3.13/dist-packages/tests/__init__.py":
-                expected_item = python[path]
-            else:
-                expected_item = item
-            expected_item = configuration.get(path, expected_item)
-            if name.endswith("-dbg"):
-                expected_item = debug_tools.get(path, expected_item)
-            check.require(all(files.get(path, {}).get(key) == value for key, value in expected_item.items()),
-                          "FRR changed inherited SWSS/base payload: " + path)
+        verify_parent_files(inherited, files, configuration, python, debug_tools if name.endswith("-dbg") else {})
         if name.endswith("-dbg"):
             for path, item in debug_tools.items():
                 if item["kind"] != "directory":
@@ -146,9 +136,7 @@ def validate_images(directory):
                       "FRR unexpectedly changed inherited exposed ports")
         labels = config["Labels"]
         check.require(labels.get("Tag") == receipt["image_version"], "Make image version label differs: " + name)
-        for component in ("libswsscommon", "sonic-supervisord-utilities-rs"):
-            check.require(labels.get("com.azure.sonic.versions." + component) == parent_packages[component]["Version"],
-                          "inherited component label differs: " + component)
+        check.verify_swss_component_labels(labels, parent_packages)
         manifest = json.loads(labels["com.azure.sonic.manifest"])
         check.require(manifest == json.loads((ROOT / "target/bazel-manifests" / name / "manifest.json").read_text()),
                       "FRR Make metadata label differs")

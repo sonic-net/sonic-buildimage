@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tarfile
@@ -101,8 +102,15 @@ def main():
         data = (read_installer_version(args.version_file, args.expect_boot_bundle) if args.installer
                 else yaml.safe_load(args.version_file.read_text()))
         validate_version(data, args.secure_upgrade_mode)
-        if args.expected_commit_id is not None and data["commit_id"] != args.expected_commit_id:
-            raise ValueError("sonic_version.yml commit_id does not match the build checkout")
+        if args.expected_commit_id is not None:
+            recorded = data["commit_id"]
+            # Make stores git rev-parse --short. Its length depends on the
+            # producer's object database, which can differ on the validator.
+            matches_full_checkout = (re.fullmatch(r"[0-9a-f]{40}", args.expected_commit_id)
+                                     and re.fullmatch(r"[0-9a-f]{7,40}", recorded)
+                                     and args.expected_commit_id.startswith(recorded))
+            if recorded != args.expected_commit_id and not matches_full_checkout:
+                raise ValueError("sonic_version.yml commit_id does not match the build checkout")
         if args.json_output:
             args.json_output.write_text(json.dumps(data, indent=2) + "\n")
     except (OSError, yaml.YAMLError, ValueError, KeyError, tarfile.TarError,

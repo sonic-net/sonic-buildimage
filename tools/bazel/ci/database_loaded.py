@@ -11,6 +11,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import selected_images
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import database_image, validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -26,9 +27,9 @@ def verify_inputs(directory):
     check.require(report.get("revision") == source["revision"] and
                   report.get("tested_revision_parents") == source["tested_revision_parents"],
                   "runtime checkout differs from built source")
-    check.require(set(report.get("images", {})) == set(database_image.IMAGES),
-                  "Database acceptance requires both runtime and debug images")
-    for name in database_image.IMAGES:
+    check.require(set(report.get("images", {})) == set(selected_images(directory, database_image.IMAGES)),
+                  "Database acceptance requires every selected variant (standalone requires both runtime and debug)")
+    for name in selected_images(directory, database_image.IMAGES):
         archive = directory / (name + ".gz")
         check.require(check.sha(archive) == report["artifacts"][archive.name]["sha256"],
                       "archive changed: " + archive.name)

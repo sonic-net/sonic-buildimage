@@ -122,8 +122,7 @@ def validate_images(directory):
         check.require(check.sha(directory / name) == artifact["sha256"], "artifact changed: " + name)
     parent = oci_layout.validate_layout(ROOT / receipt["base_layout"], "linux/amd64")
     inherited = base_images.installed_inventory(parent)
-    check.require(selection["base_manifest_digest"] == parent.descriptor["digest"] and
-                  selection["dependency_check"]["status"] == "satisfied", "OTEL APT parent/dependencies differ")
+    check.verify_apt_binding(selection, parent.descriptor["digest"])
     parent_selected, parent_origins = source_base_validation.inventory(parent)
     with tempfile.TemporaryDirectory(prefix="otel-parent-accounts-") as temporary:
         root = Path(temporary)

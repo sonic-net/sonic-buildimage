@@ -32,6 +32,8 @@ def digest(path):
 def source_debug_pairs(report, native, debug):
     common = {path for path in native if path.startswith("usr/lib/x86_64-linux-gnu/libswsscommon.so.")}
     require(len(common) == 1, "expected the inherited Common library")
+    if not debug and report.get("debug_enabled") is False:
+        return []
     selected = common
     if debug:
         sai = {"usr/lib/x86_64-linux-gnu/" + name for name in
@@ -96,8 +98,13 @@ def main():
             require(not missing["found"], "GDB found missing DWP information: " + name)
             (work / (name + ".dwp")).symlink_to(symbols)
             found = owner.debug_lookup(copied, work)
-            require(found.get("found") and all(found.get(key) == expected[key]
-                    for key in ("file", "line", "parameters")),
+            if "source" in expected:
+                owner_match = (found.get("file", "").replace("\\", "/").endswith(expected["source"])
+                               and expected["first_line"] <= found.get("line", 0) <= expected["last_line"]
+                               and found.get("parameters") == expected["parameters"])
+            else:
+                owner_match = all(found.get(key) == expected[key] for key in ("file", "line", "parameters"))
+            require(found.get("found") and owner_match,
                     "GDB did not resolve the installed owner's DWP: " + name)
             split_debug[name] = {"without_dwp": missing, "with_dwp": found}
 

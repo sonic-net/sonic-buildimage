@@ -137,9 +137,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             for name, job in yaml.safe_load(path.read_text())["jobs"].items():
                 for index, step in enumerate(job.get("steps", [])):
                     command = step.get("run", "")
-                    expected = (prepare.replace("bash ", "bash target/ci-bazel-cleanup-controller/")
-                                if path.name == "bazel-base-images.yml" else prepare)
-                    if command != expected:
+                    if command != prepare:
                         continue
                     with self.subTest(workflow=path.name, job=name):
                         self.assertTrue(any(
@@ -153,9 +151,9 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
                         selected.add((path.name, name))
         self.assertEqual(selected, {
             ("bazel-oci.yml", name) for name in
-            ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "checks", "mgmt_framework_native", "radv_native")
+            ("archive", "checks")
         } | {
-            ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+            ("bazel-eventd.yml", "native"),
             ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),
             ("bazel-libteam.yml", "native"), ("bazel-sysmgr.yml", "native"),
         })

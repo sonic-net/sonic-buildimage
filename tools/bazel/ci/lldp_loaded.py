@@ -12,6 +12,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import install_redis_config, selected_images
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import lldp_image, validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -27,9 +28,9 @@ def verify_inputs(directory):
     check.require(report.get("revision") == source["revision"] and
                   report.get("tested_revision_parents") == source["tested_revision_parents"],
                   "runtime checkout differs from built source")
-    check.require(set(report.get("images", {})) == set(lldp_image.IMAGES),
-                  "LLDP acceptance requires both runtime and debug images")
-    for name in lldp_image.IMAGES:
+    check.require(set(report.get("images", {})) == set(selected_images(directory, lldp_image.IMAGES)),
+                  "LLDP acceptance requires every selected variant (standalone requires both runtime and debug)")
+    for name in selected_images(directory, lldp_image.IMAGES):
         archive = directory / (name + ".gz")
         check.require(check.sha(archive) == report["artifacts"][archive.name]["sha256"],
                       "archive changed: " + archive.name)
@@ -54,13 +55,7 @@ def main():
             source.extractall(fixture, filter="data")
         # The extracted fixture must be readable inside the isolated image.
         fixture.chmod(0o755)
-        owner = directory / "config-engine-source.tar"
-        check.require(check.sha(owner) == report["artifacts"][owner.name]["sha256"], "database fixture owner changed")
-        with tarfile.open(owner) as archive:
-            members = [member for member in archive.getmembers()
-                       if str(Path(member.name)) == "run/redis/sonic-db/database_config.json"]
-            check.require(len(members) == 1 and members[0].isfile(), "missing owner database fixture")
-            (fixture / "database_config.json").write_bytes(archive.extractfile(members[0]).read())
+        install_redis_config(directory, report, fixture, "config-engine-source.tar")
         for name, expected in report["images"].items():
             archive = directory / (name + ".gz")
             check.require(check.sha(archive) == report["artifacts"][archive.name]["sha256"], "archive changed")

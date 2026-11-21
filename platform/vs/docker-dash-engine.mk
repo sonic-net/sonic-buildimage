@@ -20,6 +20,8 @@ SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_DASH_ENGINE)
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(INCLUDE_FIPS):$(INCLUDE_VS_DASH_SAI),y:y:y)
 ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN) $(ENABLE_SYNCD_RPC)),)
 SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_DASH_ENGINE)
+# The VS validation producer exports this existing OCI companion only for a debug profile.
+SONIC_BAZEL_VALIDATION_ONLY_DBG_IMAGES += $(DOCKER_DASH_ENGINE:.gz=-$(DBG_IMAGE_MARK).gz)
 SONIC_BAZEL_MANIFESTS += docker-dash-engine
 docker-dash-engine_MANIFEST_IMAGE = $(DOCKER_DASH_ENGINE)
 $(DOCKER_DASH_ENGINE)_BAZEL_TARGET = //platform/vs/docker-dash-engine:docker-dash-engine.gz

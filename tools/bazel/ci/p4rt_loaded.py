@@ -12,13 +12,14 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import selected_images, selected_artifacts
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import p4rt_handoff, p4rt_image, validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
 
 
 def verify_download(directory, artifacts, release_inputs):
-    check.require(set(artifacts) == set(p4rt_image.TARGETS), 'Incomplete downloaded P4RT artifacts')
+    check.require(set(artifacts) == selected_artifacts(directory, p4rt_image.TARGETS), 'Incomplete downloaded P4RT artifacts')
     for name, record in artifacts.items():
         source = directory / name
         check.require(not source.is_symlink() and check.sha(source) == record['sha256'],
@@ -63,7 +64,7 @@ def main():
             check.require(len(members) == 1 and members[0].isfile(),
                           'Missing source-owned database configuration')
             (fixture / 'database_config.json').write_bytes(archive.extractfile(members[0]).read())
-        for name in p4rt_image.IMAGES:
+        for name in selected_images(directory, p4rt_image.IMAGES):
             expected = json.loads((directory / (name + '.validation.json')).read_text())
             check.require(expected.get('status') == 'passed', 'Missing accepted OCI validation')
             archive = directory / (name + '.gz')

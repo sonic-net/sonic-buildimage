@@ -1,11 +1,9 @@
 """Run the real image-verification workflow shell against recording commands."""
 
-import itertools
 import json
 import os
 from pathlib import Path
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -15,53 +13,121 @@ import unittest
 
 import yaml
 
+from tools.bazel.ci.vs_probe_policy import FAMILIES
+from tools.bazel.ci.vs_standalone_probes import STANDALONE_IMAGES
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
 class VerificationWorkflowTest(unittest.TestCase):
-    def test_self_hosted_image_runtime_jobs_prune_before_downloading_artifacts(self):
-        workflows = {
-            filename: yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
-            for filename in ("bazel-oci.yml", "bazel-base-images.yml", "sonic-slave-images.yml")
-        }
-        name = "Reclaim unused images and build cache"
-        publisher = next(step for job in workflows["sonic-slave-images.yml"]["jobs"].values()
-                         for step in job["steps"] if step.get("name") == name)
-        expected = {
-            "dash_ha_runtime", "macsec_runtime", "database_runtime", "lldp_runtime",
-            "mux_runtime", "gearbox_runtime", "eventd_runtime", "swss_layer_runtime",
-            "snmp_runtime", "sysmgr_runtime", "frr_runtime", "teamd_runtime",
-            "gnmi_runtime", "mgmt_framework_runtime", "radv_runtime",
-        }
-        jobs = workflows["bazel-oci.yml"]["jobs"]
-        selected = {
-            job_name for job_name, job in jobs.items()
-            if job_name.endswith("_runtime") and
-            any(step.get("name") == name for step in job["steps"])
-        }
-        self.assertEqual(selected, expected)
-        for job_name in sorted(expected) + ["runtime"]:
-            with self.subTest(job=job_name):
-                job = (workflows["bazel-base-images.yml"]["jobs"]["runtime"]
-                       if job_name == "runtime" else jobs[job_name])
-                self.assertNotIn("container", job)
-                self.assertIn("self-hosted", job["runs-on"])
-                steps = job["steps"]
-                cleanups = [(i, step) for i, step in enumerate(steps) if step.get("name") == name]
-                self.assertEqual(len(cleanups), 1)
-                index, cleanup = cleanups[0]
-                self.assertEqual(cleanup["run"], publisher["run"])
-                self.assertEqual(cleanup["if"], "runner.environment == 'self-hosted'")
-                download = next(i for i, step in enumerate(steps)
-                                if "download-artifact@" in step.get("uses", ""))
-                self.assertLess(index, download)
-        for job in jobs.values():
-            if "container" in job:
-                self.assertFalse(any(step.get("name") == name for step in job["steps"]))
+    def test_container_matrix_uses_only_artifacts_from_the_current_installer(self):
+        """Every selected image gets its own runner and downloads the archive for that matrix row."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        producer, validation = jobs["vs_container"], jobs["validate_container"]
+        self.assertEqual(validation["strategy"]["matrix"], "${{ fromJSON(needs.vs_container.outputs.containers) }}")
+        self.assertFalse(validation["strategy"]["fail-fast"])
+        self.assertEqual(validation["runs-on"], ["self-hosted", "linux", "bazel-x64"])
+        self.assertEqual(set(validation["needs"]), {"vs_container", "installer_validation"})
+        self.assertEqual(producer["outputs"]["containers"], "${{ steps.bundles.outputs.matrix }}")
+        uploads = {}
+        for step in producer["steps"]:
+            artifact = step.get("with", {}).get("name", "")
+            if artifact.startswith("${{ steps.bundles.outputs.prefix }}-"):
+                image = artifact.split("}}-", 1)[1]
+                self.assertNotIn(image, uploads)
+                self.assertEqual(step["if"], f"contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, '{image}')")
+                self.assertTrue(step["with"]["path"].rstrip("/").endswith("/containers/" + image))
+                self.assertEqual(step["with"]["if-no-files-found"], "error")
+                uploads[image] = artifact
+        # The publisher has one conditional upload per service family plus both parents.
+        self.assertEqual(set(uploads), set(FAMILIES) | STANDALONE_IMAGES)
+        download, = [step["with"] for step in validation["steps"] if "download-artifact@" in step.get("uses", "")]
+        self.assertEqual(download["name"], "${{ needs.vs_container.outputs.artifact_prefix }}-${{ matrix.image }}")
+        self.assertNotIn("run-id", download)
+        probe, = [step for step in validation["steps"] if "vs_container_probe.py" in step.get("run", "")]
+        self.assertEqual(probe["env"]["BUILD_VERSION"], "${{ needs.installer_validation.outputs.build_version }}")
+        self.assertEqual(probe["env"]["DEBUG_LAYER"], "${{ needs.vs_container.outputs.debug_layer }}")
+        self.assertIn('--debug-layer "$DEBUG_LAYER"', probe["run"])
+        self.assertIn('--build-version "$BUILD_VERSION"', probe["run"])
+        self.assertIn('--revision "$GITHUB_SHA"', probe["run"])
+        for job in (validation, jobs["installer_validation"]):
+            for step in job["steps"]:
+                self.assertNotIn("setup-bazel@", step.get("uses", ""))
+                self.assertNotRegex(step.get("run", ""), r"(?m)^\s*(?:make|bazel(?:isk)?)\s")
+
+    def test_container_artifacts_are_isolated_on_reused_runners_and_removed_after_upload(self):
+        """Two jobs sharing RUNNER_TEMP must never read, upload or remove another family's files."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        steps = jobs["validate_container"]["steps"]
+        allocate, = [step for step in steps if step.get("id") == "bundle"]
+        download, = [step for step in steps if "download-artifact@" in step.get("uses", "")]
+        probe, = [step for step in steps if "vs_container_probe.py" in step.get("run", "")]
+        publish, = [step for step in steps if "upload-artifact@" in step.get("uses", "")]
+        cleanup = steps[-1]
+        selected = "${{ steps.bundle.outputs.directory }}"
+        self.assertEqual(download["with"]["path"], selected)
+        self.assertEqual(probe["env"]["BUNDLE_DIR"], selected)
+        self.assertIn('--artifacts "$BUNDLE_DIR"', probe["run"])
+        self.assertEqual(publish["with"]["path"].splitlines(),
+                         [selected + "/vs-validation.json", selected + "/*.runtime.json"])
+        self.assertEqual(cleanup["env"]["BUNDLE_DIR"], selected)
+        self.assertEqual(cleanup["if"], "always() && steps.bundle.outcome == 'success'")
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "output"
+            env = dict(os.environ, RUNNER_TEMP=temporary, GITHUB_OUTPUT=str(output))
+            def run_allocation():
+                subprocess.run(["bash", "-eu", "-c", allocate["run"]], env=env, check=True)
+                return Path(output.read_text().splitlines()[-1].removeprefix("directory="))
+            previous = run_allocation()
+            (previous / "runtime.make.image.env").write_text("IMAGE_VERSION=previous-job\n")
+            current = run_allocation()
+            self.assertEqual(list(current.iterdir()), [])
+            subprocess.run(["bash", "-eu", "-c", cleanup["run"]], env=env | {"BUNDLE_DIR": str(current)}, check=True)
+            self.assertFalse(current.exists())
+            self.assertTrue((previous / "runtime.make.image.env").is_file())
+
+    def test_installer_validation_reads_the_published_binary_before_container_checks(self):
+        """Get the release from the shipped installer so a stale container bundle cannot choose its own version."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        producer, inspection = jobs["vs_container"], jobs["installer_validation"]
+        self.assertEqual(inspection["needs"], "vs_container")
+        upload, = [step for step in producer["steps"] if step.get("id") == "vs_installer_upload"]
+        fetch, = [step for step in inspection["steps"] if "download-artifact@" in step.get("uses", "")]
+        self.assertEqual(upload["with"]["name"], "sonic-vs-slave-amd64")
+        self.assertEqual(producer["outputs"]["installer_artifact_id"], "${{ steps.vs_installer_upload.outputs.artifact-id }}")
+        self.assertEqual(fetch["with"]["artifact-ids"], "${{ needs.vs_container.outputs.installer_artifact_id }}")
+        self.assertTrue(fetch["with"]["merge-multiple"])
+        self.assertIn("/target/sonic-vs.bin", upload["with"]["path"].splitlines()[0])
+        validate, = [step for step in inspection["steps"] if step.get("id") == "installer"]
+        self.assertLess(inspection["steps"].index(fetch), inspection["steps"].index(validate))
+        self.assertIn("sha256sum --check", validate["run"])
+        self.assertIn("--expected-commit-id", validate["run"])
+        self.assertIn("verify_vs_selection", validate["run"])
+        self.assertEqual(inspection["outputs"]["build_version"], "${{ steps.installer.outputs.build_version }}")
+        producer_commands = "\n".join(step.get("run", "") for step in producer["steps"])
+        for tool in ("validate_vs.sh", "verify_vs_selection", "vs_container_probe.py"):
+            self.assertNotIn(tool, producer_commands)
+
+    def test_required_archive_status_propagates_each_validation_failure(self):
+        """A bad installer, an incomplete production job or any failed image row must block acceptance."""
+        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive_acceptance"]
+        self.assertEqual(job["name"], "Container archive (AMD64)")
+        self.assertEqual(set(job["needs"]), {
+            "archive", "p4rt_owner", "vs_container", "installer_validation", "validate_container",
+        })
+        gate, = job["steps"]
+        self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
+        success = dict.fromkeys(gate["env"], "success")
+        self.assertEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=success).returncode, 0)
+        for dependency in success:
+            for outcome in ("failure", "skipped", "cancelled"):
+                with self.subTest(dependency=dependency, outcome=outcome):
+                    env = dict(success, **{dependency: outcome})
+                    self.assertNotEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=env).returncode, 0)
 
     def test_runtime_pruning_commands_stop_on_errors_without_using_a_real_daemon(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        cleanup = next(step for step in workflow["jobs"]["dash_ha_runtime"]["steps"]
+        cleanup = next(step for step in workflow["jobs"]["vs_container"]["steps"]
                        if step.get("name") == "Reclaim unused images and build cache")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -90,87 +156,18 @@ class VerificationWorkflowTest(unittest.TestCase):
                     self.assertEqual([json.loads(line) for line in calls.read_text().splitlines()],
                                      expected)
 
-    def test_gearbox_runtime_uses_the_bazel_x64_pool_with_post_job_cleanup(self):
-        workflow = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        job = workflow["jobs"]["gearbox_runtime"]
-        self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
-        self.assertEqual(job["needs"], "gearbox_archive")
-        self.assertNotIn("container", job)
-        self.assertTrue(any(step.get("uses") == "./.github/actions/bazel-post-job-cleanup"
-                            for step in job["steps"]))
-        self.assertTrue(any(step.get("run") ==
-                            "python3 -B tools/bazel/ci/gbsyncd_loaded.py --artifacts artifacts/gbsyncd"
-                            for step in job["steps"]))
-
-    def test_base_runtime_downloads_the_exact_architecture_producer_artifact(self):
-        workflow = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-base-images.yml").read_text())
-        native = workflow["jobs"]["native"]
-        runtime = workflow["jobs"]["runtime"]
-        export = next(step for step in native["steps"] if step.get("id") == "artifact_identity")
-        upload = next(i for i, step in enumerate(native["steps"])
-                      if step.get("id") == "bazel_upload_base_images_build")
-        self.assertGreater(native["steps"].index(export), upload)
-        self.assertNotIn("if", export)
-        self.assertEqual(export["env"]["ARTIFACT_ID"],
-                         "${{ steps.bazel_upload_base_images_build.outputs.artifact-id }}")
-        self.assertEqual(set(native["outputs"]), {"amd64_artifact_id", "arm64_artifact_id"})
-        for architecture in ("amd64", "arm64"):
-            self.assertEqual(native["outputs"][architecture + "_artifact_id"],
-                             "${{ steps.artifact_identity.outputs." + architecture + "_artifact_id }}")
-        steps = runtime["steps"]
-        download = next(step for step in steps if "download-artifact@" in step.get("uses", ""))
-        identity = "${{ needs.native.outputs[format('{0}_artifact_id', matrix.architecture)] }}"
-        self.assertEqual(runtime["needs"], "native")
-        self.assertEqual(download["with"], {
-            "artifact-ids": identity, "merge-multiple": True, "path": "artifacts/base-images",
-        })
-        guard = steps[steps.index(download) - 1]
-        self.assertEqual(guard["env"]["ARTIFACT_ID"], identity)
-        verify = next(step for step in steps if step.get("name") == "Load only this run's verified image")
-        for check in ("receipt['status'] == 'passed'", "receipt['architecture']",
-                      "receipt['revision']", "receipt['artifacts'][name]['sha256']"):
-            self.assertIn(check, verify["run"])
-        with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary) / "output"
-            for architecture, artifact in (("amd64", "200"), ("arm64", "300")):
-                output.write_text("")
-                environment = dict(os.environ, ARCHITECTURE=architecture, ARTIFACT_ID=artifact,
-                                   GITHUB_OUTPUT=str(output))
-                result = subprocess.run(["bash", "-c", export["run"]], env=environment,
-                                        capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(output.read_text(), f"{architecture}_artifact_id={artifact}\n")
-                result = subprocess.run(["bash", "-c", guard["run"]], env=environment,
-                                        capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0, result.stderr)
-            for architecture, artifact in (("amd64", ""), ("amd64", "0"),
-                                           ("amd64", "123\nother=456"), ("other", "200")):
-                output.write_text("")
-                environment = dict(os.environ, ARCHITECTURE=architecture, ARTIFACT_ID=artifact,
-                                   GITHUB_OUTPUT=str(output))
-                result = subprocess.run(["bash", "-c", export["run"]], env=environment,
-                                        capture_output=True, text=True)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertEqual(output.read_text(), "")
-                if architecture == "amd64":
-                    result = subprocess.run(["bash", "-c", guard["run"]], env=environment,
-                                            capture_output=True, text=True)
-                    self.assertNotEqual(result.returncode, 0)
-
     def test_image_jobs_restore_populated_submodules_on_reused_checkouts(self):
         script = Path("tools/bazel/ci/prepare_image_submodules.sh")
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        for job in ("archive", "gearbox_archive", "dash_engine_archive", "otel_archive"):
-            self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"][job]["steps"]])
-        kernel_only = [
-            workflow["jobs"][name] for name in (
-                "dash_ha_runtime", "macsec_runtime", "database_runtime", "lldp_runtime",
-                "mux_runtime", "swss_layer_runtime", "sysmgr_runtime", "gnmi_native",
-                "gnmi_runtime", "mgmt_framework_runtime",
-            )
-        ]
+        self.assertIn(f"bash {script}", [step.get("run") for step in workflow["jobs"]["archive"]["steps"]])
+        matrix_steps = workflow["jobs"]["validate_container"]["steps"]
+        restore = next(i for i, step in enumerate(matrix_steps) if step.get("run") == f"bash {script} --populated-only")
+        self.assertTrue(matrix_steps[restore - 1].get("uses", "").startswith("actions/checkout@"))
+        self.assertNotIn("if", matrix_steps[restore])
+        self.assertEqual([step["if"] for step in matrix_steps[restore + 1:]
+                          if "git submodule update" in step.get("run", "")],
+                         ["matrix.image == 'docker-sonic-p4rt'", "matrix.image == 'docker-sysmgr'"])
+        kernel_only = []
         for filename, name in (("bazel-frr-python.yml", "packages"), ("bazel-frr.yml", "native")):
             kernel_only.append(yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][name])
         for job in kernel_only:
@@ -221,6 +218,10 @@ class VerificationWorkflowTest(unittest.TestCase):
                                       env=dict(env, GITHUB_WORKSPACE=str(checkout), GIT_ALLOW_PROTOCOL=protocol),
                                       capture_output=True, text=True, check=check)
 
+            # A fresh artifact validator needs no unrelated clones, even with all transports disabled.
+            prepare("--populated-only", protocol="")
+            for submodule in (kernel, pins, gnoi, unused):
+                self.assertFalse((checkout / submodule / ".git").exists())
             prepare("--kernel-only", protocol="")
             self.assertFalse((checkout / kernel / ".git").exists())
             self.assertFalse((checkout / gnoi / ".git").exists())
@@ -267,7 +268,7 @@ class VerificationWorkflowTest(unittest.TestCase):
             self.assertIn(pins, git(checkout, "diff", "--name-only", "--ignore-submodules=none", "HEAD"))
             # A populated worktree can also lose its local registration.
             git(checkout, "config", "--remove-section", f"submodule.{pins}")
-            prepare()
+            prepare("--populated-only", protocol="")
             self.assertEqual(git(checkout / pins, "rev-parse", "HEAD"), pinned)
             self.assertEqual(git(checkout, "diff", "--ignore-submodules=none", "HEAD"), "")
             self.assertFalse((checkout / unused / ".git").exists())
@@ -288,496 +289,6 @@ class VerificationWorkflowTest(unittest.TestCase):
             (checkout / pins / "input").write_text("conflicting edit\n")
             self.assertNotEqual(prepare(check=False).returncode, 0)
             self.assertEqual((checkout / pins / "input").read_text(), "conflicting edit\n")
-
-    def run_sysmgr_public_evidence(self, directory):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        step = next(step for step in workflow["jobs"]["archive"]["steps"]
-                    if step.get("name") == "Prepare reviewed public evidence")
-        # The existing guard owns when the step runs. Exercise its Python
-        # publication boundary after an attempted build, including early failure.
-        script = step["run"].split("python3 - <<'PYCODE'\n", 1)[1].split("\nPYCODE", 1)[0]
-        previous = Path.cwd()
-        sys.path.insert(0, str(ROOT))
-        try:
-            os.chdir(directory)
-            exec(compile(script, "<sysmgr-public-evidence>", "exec"), {})
-        finally:
-            os.chdir(previous)
-            sys.path.pop(0)
-
-    def test_sysmgr_public_evidence_handles_failure_before_build_directory_exists(self):
-        with tempfile.TemporaryDirectory(prefix="sysmgr early failure ") as temporary:
-            directory = Path(temporary)
-            self.run_sysmgr_public_evidence(directory)
-            root = directory / "artifacts/sysmgr"
-            self.assertEqual(json.loads((root / "build-summary.json").read_text()), {})
-            self.assertEqual([path.name for path in root.iterdir()], ["build-summary.json"])
-
-    def test_sysmgr_public_evidence_preserves_failed_receipt_without_private_commands(self):
-        with tempfile.TemporaryDirectory(prefix="sysmgr failed receipt ") as temporary:
-            directory = Path(temporary)
-            root = directory / "artifacts/sysmgr"
-            root.mkdir(parents=True)
-            receipt = {"status": "failed", "architecture": "amd64", "revision": "a" * 40,
-                       "artifacts": {}, "commands": [["private diagnostic"]]}
-            (root / "build-receipt.json").write_text(json.dumps(receipt))
-            self.run_sysmgr_public_evidence(directory)
-            self.assertEqual(json.loads((root / "public-receipt.json").read_text()),
-                             {key: value for key, value in receipt.items() if key != "commands"})
-            self.assertEqual(json.loads((root / "build-summary.json").read_text()), {})
-
-    def test_sysmgr_public_evidence_rejects_malformed_or_private_present_evidence(self):
-        for name, contents in (("validation.json", "{malformed"),
-                               ("validation.json", '{"environment": {"PRIVATE": "value"}}'),
-                               ("build-receipt.json", "{malformed")):
-            with self.subTest(name=name, contents=contents):
-                with tempfile.TemporaryDirectory(prefix="sysmgr rejected evidence ") as temporary:
-                    directory = Path(temporary)
-                    root = directory / "artifacts/sysmgr"
-                    root.mkdir(parents=True)
-                    (root / name).write_text(contents)
-                    with self.assertRaises(ValueError):
-                        self.run_sysmgr_public_evidence(directory)
-                    self.assertFalse((root / "build-summary.json").exists())
-
-    def test_p4rt_build_and_installed_jobs_use_same_run_archives(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
-        archive, installed = jobs["p4rt_native"], jobs["p4rt_runtime"]
-        self.assertEqual(archive["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
-        self.assertEqual(jobs["gearbox_archive"]["runs-on"], ["self-hosted", "linux", "bazel-x64"])
-        self.assertEqual(archive["container"], jobs["gearbox_archive"]["container"])
-        self.assertEqual(archive["if"], jobs["archive"]["if"])
-        self.assertEqual(installed["runs-on"], "ubuntu-24.04")
-        self.assertEqual(installed["needs"], "p4rt_native")
-        self.assertIn("p4rt_runtime", jobs["eventd_runtime"]["needs"])
-        download = next(step["with"] for step in installed["steps"] if "download-artifact@" in step.get("uses", ""))
-        upload = next(step["with"] for step in archive["steps"] if "upload-artifact@" in step.get("uses", ""))
-        self.assertEqual(set(download), {"name", "path"})
-        self.assertEqual(upload["name"], download["name"])
-        self.assertIn("github.sha", download["name"])
-        for job in (archive, installed):
-            self.assertTrue(any("checkout_identity.py" in step.get("run", "") for step in job["steps"]))
-        build = "\n".join(step.get("run", "") for step in archive["steps"])
-        for phase in ("prepare-owner", "build", "validate", "incremental", "prepare-owner-runtime", "owner-tests"):
-            self.assertIn(phase, build)
-        probe = "\n".join(step.get("run", "") for step in installed["steps"])
-        self.assertIn("p4rt_loaded.py", probe)
-        self.assertIn("p4rt_acceptance.py", probe)
-
-    def test_p4rt_launchers_bound_each_bazel_to_its_own_job_workspace(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
-        step = next(step for step in jobs["p4rt_native"]["steps"] if "PYLAUNCH" in step.get("run", ""))
-        launcher = step["run"].split("<<'PYLAUNCH'\n", 1)[1].split("\nPYLAUNCH", 1)[0]
-        trust = jobs["p4rt_native"]["env"]["P4RT_TRUSTED_CACHE"]
-        self.assertIn("github.event.pull_request.head.repo.full_name == github.repository", trust)
-        self.assertEqual(jobs["p4rt_native"]["env"]["P4RT_UPLOAD_CACHE"],
-                         "${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}")
-        for trusted, upload in itertools.product(("true", "false"), repeat=2):
-            with self.subTest(trusted=trusted, upload=upload), \
-                    tempfile.TemporaryDirectory(prefix="P4RT launch ") as name:
-                directory = Path(name)
-                (directory / "bazel").write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
-                (directory / "bazel").chmod(0o755)
-                (directory / ".bazelrc").write_text(
-                    "common --repository_cache=/repo # private comment\nbuild --disk_cache=/disk\n"
-                    "build --remote_upload_local_results=true\ncommon --remote_header=X=private\n")
-                mirror = directory / "sonic-source-mirrors.cfg"
-                mirror.touch()
-                environment = dict(os.environ, PATH=name + os.pathsep + os.environ["PATH"],
-                                   HOME=name, PYTHONPATH=str(ROOT), RUNNER_TEMP=name, P4RT_SCRATCH=name,
-                                   P4RT_TRUSTED_CACHE=trusted, P4RT_UPLOAD_CACHE=upload,
-                                   GITHUB_ENV=str(directory / "env"),
-                                   GITHUB_PATH=str(directory / "path"))
-                subprocess.run([sys.executable, "-c", launcher], env=environment, check=True)
-                wrappers = Path((directory / "path").read_text().strip())
-                root = subprocess.check_output([wrappers / "bazel", "query", "//..."], text=True).splitlines()
-                self.assertEqual(root, ["--output_base=" + str(directory / "root-output-base"),
-                                        "--host_jvm_args=-Xmx3g", "query", "//..."])
-                owner = Path((directory / "env").read_text().strip().split("=", 1)[1])
-                owner_base = "--output_base=" + str(directory / "owner-output-base")
-                rc = directory / "p4rt-owner.bazelrc"
-                self.assertEqual(subprocess.check_output([owner, owner_base, "test", "//..."], text=True).splitlines(),
-                                 ["--nosystem_rc", "--nohome_rc", "--bazelrc=" + str(rc), "--host_jvm_args=-Xmx2g",
-                                  owner_base, "test", "//..."])
-                settings = [shlex.split(line) for line in rc.read_text().splitlines()]
-                expected = [["common", "--repository_cache=/repo"], ["build", "--disk_cache=/disk"],
-                            ["common", "--experimental_downloader_config=" + str(mirror)],
-                            # Only trusted master pushes write owner results to the pool cache.
-                            ["build", "--remote_upload_local_results=" +
-                             ("true" if trusted == upload == "true" else "false")]]
-                if trusted == "true":
-                    expected.extend([["common", "--remote_cache=grpc://172.16.0.4:9092"],
-                                     ["common", "--experimental_remote_downloader=grpc://172.16.0.4:9092"],
-                                     ["common", "--experimental_remote_downloader_local_fallback"]])
-                self.assertCountEqual(settings, expected)
-                self.assertNotIn("private", rc.read_text())
-                self.assertEqual(subprocess.check_output([wrappers / "bazel", "--version"], text=True), "--version\n")
-
-    def test_required_amd64_archive_check_runs_installed_eventd(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
-        archive = jobs["archive"]
-        gate = jobs["eventd_runtime"]
-        self.assertEqual(gate["name"], "Container archive (AMD64)")
-        self.assertEqual(gate["needs"], [
-            "archive", "database_acceptance", "frr_runtime", "teamd_runtime",
-            "radv_acceptance", "lldp_runtime", "mux_runtime", "gearbox_runtime", "macsec_runtime",
-            "otel_runtime", "dash_engine_runtime", "p4rt_native", "p4rt_runtime",
-        ])
-        self.assertEqual(jobs["otel_runtime"]["needs"], "otel_archive")
-        dash = jobs["dash_engine_archive"]
-        self.assertEqual(dash["runs-on"], ["self-hosted", "linux", "bazel-x64"])
-        self.assertEqual(dash["timeout-minutes"], 360)
-        self.assertEqual(shlex.split(dash["env"]["SONIC_CONTAINER_BAZEL_OPTIONS"]), [
-            "--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache",
-            "--experimental_build_event_upload_strategy=local",
-        ])
-        self.assertNotIn("needs", dash)
-        self.assertEqual(jobs["dash_engine_runtime"]["needs"], "dash_engine_archive")
-        self.assertEqual(jobs["dash_engine_runtime"]["runs-on"], "ubuntu-24.04")
-        self.assertTrue(any("dash_engine_loaded.py" in step.get("run", "")
-                            for step in jobs["dash_engine_runtime"]["steps"]))
-        self.assertEqual(jobs["macsec_runtime"]["needs"], "archive")
-        self.assertTrue(any("macsec_loaded.py" in step.get("run", "")
-                            for step in jobs["macsec_runtime"]["steps"]))
-        self.assertEqual(gate["if"], "always() && (" + archive["if"] + ")")
-        build = next(step for step in archive["steps"] if step.get("id") == "eventd_build")
-        self.assertEqual(build["if"], "matrix.architecture == 'amd64'")
-        producer_names = {archive["name"].replace("${{ matrix.name }}", row["name"])
-                          for row in archive["strategy"]["matrix"]["include"]}
-        self.assertNotIn(gate["name"], producer_names)
-        self.assertIn("Container archive (ARM64)", producer_names)
-        upload = next(step for step in archive["steps"]
-                      if "eventd/public/*.gz" in step.get("with", {}).get("path", ""))
-        download = next(step for step in gate["steps"] if "download-artifact@" in step.get("uses", ""))
-        # Paths within the checkout resolve the same way for container shell
-        # steps and upload-artifact. Downloaded files must share one flat root.
-        patterns = upload["with"]["path"].splitlines()
-        root = Path("artifacts/eventd/public")
-        self.assertEqual({Path(pattern).parent for pattern in patterns}, {root})
-        for name in ("docker-eventd.gz", "docker-eventd-dbg.gz", "validation.json",
-                     "test-redis.tar", "config-engine-source.tar", "eventd-runtime.tar"):
-            self.assertTrue(any((root / name).match(pattern) for pattern in patterns), name)
-        self.assertEqual(upload["with"]["name"], download["with"]["name"])
-        self.assertTrue(any("eventd_loaded.py" in step.get("run", "") for step in gate["steps"]))
-        guard = gate["steps"][0]
-        self.assertEqual(guard["env"]["JOB_RESULTS"], "${{ toJSON(needs.*.result) }}")
-        self.assertNotIn("continue-on-error", guard)
-        self.assertNotIn("if", guard)
-        for malformed_or_empty in ("[]", "null", "not-json"):
-            with self.subTest(results=malformed_or_empty):
-                result = subprocess.run(["bash", "-ec", guard["run"]], capture_output=True,
-                                        env=dict(os.environ, JOB_RESULTS=malformed_or_empty))
-                self.assertNotEqual(result.returncode, 0)
-        for position in range(len(gate["needs"])):
-            for status in ("success", "failure", "skipped", "cancelled"):
-                with self.subTest(job=gate["needs"][position], status=status):
-                    results = ["success"] * len(gate["needs"])
-                    results[position] = status
-                    result = subprocess.run(["bash", "-ec", guard["run"]], capture_output=True,
-                                            env=dict(os.environ, JOB_RESULTS=json.dumps(results)))
-                    self.assertEqual(result.returncode == 0, status == "success")
-
-    def test_archive_evidence_preservation_is_unique_and_keeps_previous_runs(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["archive"]["steps"]
-        preserve = next(
-            step for step in steps
-            if step.get("name") == "Preserve completed archive evidence before Sysmgr acceptance"
-        )
-        upload = next(step for step in steps if step.get("name") == "Upload public archive evidence")
-        build = next(step for step in steps if step.get("name") == "Build Sysmgr runtime and debug images")
-        self.assertLess(steps.index(upload), steps.index(preserve))
-        self.assertLess(steps.index(preserve), steps.index(build))
-        self.assertEqual(preserve["if"], "matrix.architecture == 'amd64'")
-        with tempfile.TemporaryDirectory(prefix="archive evidence ") as temporary:
-            root = Path(temporary)
-            scratch = root / "scratch"
-            scratch.mkdir()
-            old = scratch / "pre-sysmgr-artifacts"
-            old.mkdir()
-            (old / "receipt").write_text("retained")
-            destinations = []
-            for index in range(2):
-                artifacts = root / "artifacts"
-                artifacts.mkdir()
-                (artifacts / "receipt").write_text(str(index))
-                result = subprocess.run(
-                    ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                    cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
-                )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(artifacts.exists())
-                candidates = set(scratch.glob("pre-sysmgr-artifacts.*")) - set(destinations)
-                self.assertEqual(len(candidates), 1)
-                destination = candidates.pop()
-                self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
-                self.assertEqual((destination / "artifacts/receipt").read_text(), str(index))
-                destinations.append(destination)
-            self.assertNotEqual(*destinations)
-            self.assertEqual((old / "receipt").read_text(), "retained")
-            result = subprocess.run(
-                ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
-            )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(set(scratch.glob("pre-sysmgr-artifacts.*")), set(destinations))
-            artifacts = root / "artifacts"
-            artifacts.mkdir()
-            (artifacts / "receipt").write_text("keep on failure")
-            result = subprocess.run(
-                ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
-                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
-
-    def test_sysmgr_evidence_preserves_previous_and_repeated_runs(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        preserve = next(
-            step for step in workflow["jobs"]["archive"]["steps"]
-            if step.get("name") == "Preserve completed Sysmgr evidence before SWSS layer acceptance"
-        )
-        with tempfile.TemporaryDirectory(prefix="sysmgr evidence ") as temporary:
-            root = Path(temporary)
-            scratch = root / "scratch"
-            old = scratch / "pre-swss-layer-artifacts"
-            old.mkdir(parents=True)
-            (old / "receipt").write_text("previous")
-
-            def run(directory=scratch):
-                return subprocess.run(
-                    ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                    cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
-                )
-
-            for value in ("first", "second"):
-                artifacts = root / "artifacts"
-                artifacts.mkdir()
-                (artifacts / "receipt").write_text(value)
-                result = run()
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(artifacts.exists())
-            receipts = {p: p.read_text() for p in scratch.rglob("receipt")}
-            self.assertCountEqual(receipts.values(), ["previous", "first", "second"])
-            self.assertEqual((old / "receipt").read_text(), "previous")
-            result = run()
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual({p: p.read_text() for p in scratch.rglob("receipt")}, receipts)
-            artifacts.mkdir()
-            (artifacts / "receipt").write_text("keep on failure")
-            result = run(root / "missing")
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
-
-    def test_sflow_evidence_preserves_previous_and_repeated_runs(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["archive"]["steps"]
-        upload = next(step for step in steps if step.get("name") == "Retain sFlow archives and source evidence")
-        preserve = next(
-            step for step in steps
-            if step.get("name") == "Preserve completed sFlow evidence before Orchagent acceptance"
-        )
-        build = next(step for step in steps if step.get("name") == "Build Orchagent variants from source owners")
-        self.assertLess(steps.index(upload), steps.index(preserve))
-        self.assertLess(steps.index(preserve), steps.index(build))
-        self.assertEqual(preserve["if"], "matrix.architecture == 'amd64'")
-        with tempfile.TemporaryDirectory(prefix="sflow evidence ") as temporary:
-            root = Path(temporary)
-            scratch = root / "scratch"
-            old = scratch / "pre-orchagent-artifacts"
-            old.mkdir(parents=True)
-            (old / "receipt").write_text("previous")
-
-            def run(directory=scratch):
-                return subprocess.run(
-                    ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                    cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(directory), SONIC_BAZEL_JOB_TEMP=str(directory)),
-                )
-
-            destinations = []
-            for value in ("first", "second"):
-                artifacts = root / "artifacts"
-                artifacts.mkdir()
-                (artifacts / "receipt").write_text(value)
-                result = run()
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(artifacts.exists())
-                candidates = set(scratch.glob("pre-orchagent-artifacts.*")) - set(destinations)
-                self.assertEqual(len(candidates), 1)
-                destination = candidates.pop()
-                self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
-                destinations.append(destination)
-            receipts = {p: p.read_text() for p in scratch.rglob("receipt")}
-            self.assertCountEqual(receipts.values(), ["previous", "first", "second"])
-            self.assertEqual((old / "receipt").read_text(), "previous")
-            result = run()
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual({p: p.read_text() for p in scratch.rglob("receipt")}, receipts)
-            artifacts.mkdir()
-            (artifacts / "receipt").write_text("keep on failure")
-            result = run(root / "missing")
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
-
-    def test_sysmgr_evidence_requires_a_build_attempt_but_retains_failure_evidence(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["archive"]["steps"]
-        build = next(step for step in steps if step.get("name") == "Build Sysmgr runtime and debug images")
-        public = next(step for step in steps if step.get("name") == "Prepare reviewed public evidence")
-        self.assertEqual(build["id"], "sysmgr_build")
-        self.assertEqual(
-            public["if"],
-            "always() && matrix.architecture == 'amd64' && "
-            "(steps.sysmgr_build.outcome == 'success' || steps.sysmgr_build.outcome == 'failure')",
-        )
-
-    def test_swss_layer_evidence_preservation_is_unique_and_keeps_previous_runs(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["archive"]["steps"]
-        upload = next(step for step in steps if step.get("name") == "Retain reviewed artifacts and receipts")
-        preserve = next(
-            step for step in steps
-            if step.get("name") == "Preserve completed SWSS layer evidence before sFlow acceptance"
-        )
-        build = next(step for step in steps if step.get("name") == "Build sFlow runtime and debug images from source owners")
-        self.assertLess(steps.index(upload), steps.index(preserve))
-        self.assertLess(steps.index(preserve), steps.index(build))
-        self.assertEqual(preserve["if"], "matrix.architecture == 'amd64'")
-        with tempfile.TemporaryDirectory(prefix="swss layer evidence ") as temporary:
-            root = Path(temporary)
-            scratch = root / "scratch"
-            scratch.mkdir()
-            old = scratch / "pre-sflow-artifacts"
-            old.mkdir()
-            (old / "receipt").write_text("retained")
-            destinations = []
-            for index in range(2):
-                artifacts = root / "artifacts"
-                artifacts.mkdir()
-                (artifacts / "receipt").write_text(str(index))
-                result = subprocess.run(
-                    ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                    cwd=root, capture_output=True, text=True,
-                    env=dict(os.environ, RUNNER_TEMP=str(scratch), SONIC_BAZEL_JOB_TEMP=str(scratch)),
-                )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(artifacts.exists())
-                candidates = set(scratch.glob("pre-sflow-artifacts.*")) - set(destinations)
-                self.assertEqual(len(candidates), 1)
-                destination = candidates.pop()
-                self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
-                self.assertEqual((destination / "artifacts/receipt").read_text(), str(index))
-                destinations.append(destination)
-            self.assertNotEqual(*destinations)
-            self.assertEqual((old / "receipt").read_text(), "retained")
-            artifacts = root / "artifacts"
-            artifacts.mkdir()
-            (artifacts / "receipt").write_text("keep on failure")
-            result = subprocess.run(
-                ["bash", "-e", "-o", "pipefail", "-c", preserve["run"]],
-                cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(root / "missing"),
-                         SONIC_BAZEL_JOB_TEMP=str(root / "missing")),
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual((artifacts / "receipt").read_text(), "keep on failure")
-
-    def test_sflow_evidence_handles_early_failure_and_binds_checkout_identity(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        archive_steps = workflow["jobs"]["archive"]["steps"]
-        build = next(step for step in archive_steps if step.get("name") == "Build sFlow runtime and debug images from source owners")
-        validate = next(step for step in archive_steps if step.get("name") == "Validate sFlow installed payloads and matching symbols")
-        incremental = next(step for step in archive_steps if step.get("name") == "Verify sFlow no-op, Python source edit and restored archives")
-        public = next(step for step in archive_steps if step.get("name") == "Review public sFlow evidence")
-        self.assertEqual(build["id"], "sflow_build")
-        self.assertEqual(
-            public["if"],
-            "always() && matrix.architecture == 'amd64' && "
-            "(steps.sflow_build.outcome == 'success' || steps.sflow_build.outcome == 'failure')",
-        )
-        for step in (build, validate, incremental):
-            self.assertEqual(step["env"]["CI_HEAD_SHA"], "${{ steps.checkout_identity.outputs.head_sha }}")
-            self.assertEqual(step["env"]["CI_BASE_SHA"], "${{ steps.checkout_identity.outputs.base_sha }}")
-        runtime_steps = workflow["jobs"]["swss_layer_runtime"]["steps"]
-        identity = next(step for step in runtime_steps if step.get("name") == "Bind the tested checkout identity")
-        retain_swss = next(step for step in runtime_steps if step.get("name") == "Retain installed-image evidence")
-        preserve_runtime = next(
-            step for step in runtime_steps
-            if step.get("name") == "Preserve completed SWSS runtime evidence before sFlow acceptance"
-        )
-        download_sflow = next(
-            step for step in runtime_steps
-            if (step.get("with") or {}).get("name") == "sflow-source-amd64"
-        )
-        loaded = next(step for step in runtime_steps if step.get("name") == "Exercise installed sFlow manager, mapper and exporter variants")
-        self.assertEqual(identity["id"], "checkout_identity")
-        self.assertLess(runtime_steps.index(identity), runtime_steps.index(loaded))
-        self.assertLess(runtime_steps.index(retain_swss), runtime_steps.index(preserve_runtime))
-        self.assertLess(runtime_steps.index(preserve_runtime), runtime_steps.index(download_sflow))
-        self.assertLess(runtime_steps.index(download_sflow), runtime_steps.index(loaded))
-        self.assertEqual(loaded["env"]["CI_HEAD_SHA"], "${{ steps.checkout_identity.outputs.head_sha }}")
-        self.assertEqual(loaded["env"]["CI_BASE_SHA"], "${{ steps.checkout_identity.outputs.base_sha }}")
-        with tempfile.TemporaryDirectory(prefix="swss runtime evidence ") as temporary:
-            root = Path(temporary)
-            scratch = root / "scratch"
-            scratch.mkdir()
-            artifacts = root / "artifacts"
-            (artifacts / "swss-layer").mkdir(parents=True)
-            (artifacts / "swss-layer/runtime-smoke.json").write_text('{"status": "passed"}\n')
-            result = subprocess.run(
-                ["bash", "-e", "-o", "pipefail", "-c", preserve_runtime["run"]],
-                cwd=root, capture_output=True, text=True,
-                env=dict(os.environ, RUNNER_TEMP=str(scratch)),
-            )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertFalse(artifacts.exists())
-            candidates = list(scratch.glob("pre-sflow-runtime-artifacts.*"))
-            self.assertEqual(len(candidates), 1)
-            destination = candidates[0]
-            self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
-            self.assertEqual(
-                (destination / "artifacts/swss-layer/runtime-smoke.json").read_text(),
-                '{"status": "passed"}\n',
-            )
-        script = public["run"].split("python3 - <<'PYCODE'\n", 1)[1].split("\nPYCODE", 1)[0]
-        with tempfile.TemporaryDirectory(prefix="sflow early failure ") as temporary:
-            directory = Path(temporary)
-            previous = Path.cwd()
-            sys.path.insert(0, str(ROOT))
-            try:
-                os.chdir(directory)
-                exec(compile(script, "<sflow-public-evidence>", "exec"), {})
-            finally:
-                os.chdir(previous)
-                sys.path.pop(0)
-            root = directory / "artifacts/sflow"
-            self.assertEqual(json.loads((root / "build-summary.json").read_text()), {})
-            self.assertEqual([path.name for path in root.iterdir()], ["build-summary.json"])
-
-    def test_base_image_runtime_uses_guarded_kernel_workspace_repair(self):
-        workflow = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-base-images.yml").read_text()
-        )
-        kernel = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-kernel-bundle.yml").read_text()
-        )
-        repair = next(
-            step for step in kernel["jobs"]["kernel-bundle"]["steps"]
-            if step.get("name") == "Restore workspace access before checkout"
-        )
-        runtime = workflow["jobs"]["runtime"]
-        self.assertNotIn("container", runtime)
-        self.assertEqual(runtime["steps"][0], repair)
-        self.assertTrue(runtime["steps"][1]["uses"].startswith("actions/checkout@"))
-        self.assertTrue(
-            runtime["steps"][4]["uses"].startswith("actions/download-artifact@")
-        )
 
     def test_eventd_startup_diagnostics_probe_writes_and_preserve_bazel_failure(self):
         workflow = yaml.safe_load(
@@ -821,30 +332,6 @@ class VerificationWorkflowTest(unittest.TestCase):
                 self.assertIn(str(cache), result.stdout)
                 self.assertEqual(list(cache.iterdir()), [retained])
                 self.assertEqual(retained.read_text(), "keep")
-
-    def test_self_hosted_base_images_do_not_delete_host_sdks(self):
-        workflow = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-base-images.yml").read_text()
-        )
-        for name in ("native", "runtime"):
-            with self.subTest(job=name):
-                job = workflow["jobs"][name]
-                matrix = job["strategy"]["matrix"]
-                self.assertEqual(matrix["architecture"], ["amd64", "arm64"])
-                self.assertEqual(matrix["selection"], ["${{ inputs.architecture || 'all' }}"])
-                self.assertEqual(matrix["exclude"], [{"architecture": "arm64", "selection": "amd64"}])
-                self.assertEqual(job["runs-on"], [
-                    "self-hosted", "linux",
-                    "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}",
-                ])
-        native = workflow["jobs"]["native"]
-        self.assertFalse(native["container"].get("volumes"))
-        self.assertNotIn(
-            "Allocate source-build space on this disposable runner",
-            [step.get("name") for step in native["steps"]],
-        )
-        for step in native["steps"]:
-            self.assertNotIn("/runner-unused/", step.get("run", ""))
 
     def test_archive_container_reaps_child_processes_and_preserves_host_sdks(self):
         workflow = yaml.safe_load(
@@ -974,184 +461,6 @@ class VerificationWorkflowTest(unittest.TestCase):
             self.assertEqual(receipt.is_file(), status == 0)
             if not status:
                 self.assertEqual(json.loads(receipt.read_text()), expected)
-
-    def test_private_verification_keeps_build_store_and_prepares_cgroups_first(self):
-        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
-        with tempfile.TemporaryDirectory(prefix="swss workflow ") as temporary:
-            directory = Path(temporary)
-            (directory / "artifacts/vs").mkdir(parents=True)
-            commands = directory / "commands"
-            commands.mkdir()
-            captured = directory / "arguments.json"
-            make = commands / "make"
-            make.write_text(f"#!{sys.executable}\nimport json, os, sys\n"
-                            "from pathlib import Path\n"
-                            "Path(os.environ['CAPTURE']).write_text(json.dumps(sys.argv[1:]))\n")
-            make.chmod(0o755)
-            environment = dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"],
-                               CAPTURE=str(captured), SONIC_CI_CONTAINER_LABEL="test-job=swss")
-            block = workflow.split("      - name: Verify installed base, SWSS and Syncd images\n", 1)[1].split(
-                "\n      - ", 1)[0]
-            script = textwrap.dedent(block.split("        run: |\n", 1)[1])
-            subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
-                           cwd=directory, env=environment, check=True, capture_output=True)
-            arguments = json.loads(captured.read_text())
-            self.assertIn("sonic-slave-run", arguments)
-            common = dict(argument.split("=", 1) for argument in arguments if "=" in argument)
-            root = Path(common["DOCKER_ROOT"])
-            self.assertEqual(root.parent, directory)
-            self.assertNotEqual(root.name, "fsroot.docker.trixie")
-            self.assertIn("--cgroupns=private", shlex.split(common["SONIC_BUILDER_EXTRA_CMDLINE"]))
-            self.assertEqual(common["SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD"], "n")
-
-            # Execute the actual nested shell chain with recording commands. A
-            # failed cgroup setup must prevent both daemon startup and probing.
-            calls = directory / "calls"
-            record = (f"#!{sys.executable}\nimport os, sys\nfrom pathlib import Path\n"
-                      "name = Path(sys.argv[0]).name\n"
-                      "stage = 'daemon' if name == 'make' else ('prepare' if any("
-                      "arg.endswith('/prepare_nested_docker.py') for arg in sys.argv) else ('bmp' if any(x.endswith('bmp_loaded.py') for x in sys.argv) else 'probe'))\n"
-                      "with Path(os.environ['CALLS']).open('a') as output: output.write(stage + '\\n')\n"
-                      "sys.exit(int(os.environ['PREPARE_EXIT']) if stage == 'prepare' else 0)\n")
-            make.write_text(record)
-            python = commands / "python3"
-            python.write_text(record)
-            python.chmod(0o755)
-            sudo = commands / "sudo"
-            sudo.write_text('#!/bin/sh\nexec "$@"\n')
-            sudo.chmod(0o755)
-            for failure, expected in (("0", ["prepare", "daemon", "probe", "bmp"]), ("23", ["prepare"])):
-                calls.unlink(missing_ok=True)
-                result = subprocess.run(["bash", "-c", common["SONIC_RUN_CMDS"]], cwd=directory,
-                                        env=dict(environment, CALLS=str(calls), PREPARE_EXIT=failure),
-                                        capture_output=True, text=True)
-                self.assertEqual(result.returncode, int(failure), result.stderr)
-                self.assertEqual(calls.read_text().splitlines(), expected)
-
-    def test_active_slave_runs_shared_validation_and_retains_both_static_results(self):
-        """Use the private daemon and reject failed probes or unresolved runtime libraries."""
-        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
-        legacy, active = workflow.split("\n  vs_container:\n", 1)
-        self.assertIn("if: ${{ false }}", legacy.split("\n  vs:\n", 1)[1])
-        self.assertIn("runs-on: [self-hosted, linux, bazel-x64, vs]", active)
-        names = [line.split(": ", 1)[1] for line in active.splitlines()
-                 if line.startswith("      - name: ")]
-        self.assertLess(names.index("Validate the installer and retained container pairs"),
-                        names.index("Verify installed base, SWSS and Syncd images"))
-        self.assertLess(names.index("Verify installed base, SWSS and Syncd images"),
-                        names.index("Publish the installer and matching container archives"))
-        self.assertIn("bash tools/bazel/ci/validate_vs.sh", active)
-        installed = active.split("      - name: Verify installed base, SWSS and Syncd images\n", 1)[1].split(
-            "\n      - ", 1)[0]
-        script = textwrap.dedent(installed.split("        run: |\n", 1)[1])
-        self.assertIn("sonic-slave-run", script)
-        self.assertIn("SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=n", script)
-        self.assertIn('--cgroupns=private', script)
-        with tempfile.TemporaryDirectory(prefix="active-image-validation-") as temporary:
-            directory = Path(temporary)
-            (directory / "artifacts/vs").mkdir(parents=True)
-            make = directory / "make"
-            make.write_text(f"#!{sys.executable}\n" + textwrap.dedent('''\
-                import os, subprocess, sys
-                args = sys.argv[1:]
-                if "sonic-slave-run" in args:
-                    command = next(arg.split("=", 1)[1] for arg in args
-                                   if arg.startswith("SONIC_RUN_CMDS="))
-                    environment = dict(os.environ, DOCKER_HOST="unix:///worker-private.sock")
-                    sys.exit(subprocess.run(["bash", "-c", command], env=environment).returncode)
-                assert "docker-start" in args, args
-                '''))
-            make.chmod(0o755)
-            sudo = directory / "sudo"
-            sudo.write_text("#!/bin/sh\nexit 0\n")
-            sudo.chmod(0o755)
-            python = directory / "python3"
-            python.write_text(f"#!{sys.executable}\nimport json, os, sys\nfrom pathlib import Path\n"
-                              "Path(Path(sys.argv[2]).stem + '.json').write_text(json.dumps({'args': sys.argv[1:], "
-                              "'docker_host': os.environ.get('DOCKER_HOST')}))\n"
-                              "sys.exit(int(os.environ['PROBE_EXIT']))\n")
-            python.chmod(0o755)
-            docker_arguments = [
-                "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
-                "--security-opt", "no-new-privileges", "--env", "LD_BIND_NOW=1",
-                "--entrypoint", "/usr/bin/ldd", "docker-orchagent:latest",
-                "-r", "/usr/bin/tlm_teamd",
-            ]
-            docker = directory / "docker"
-            docker.write_text(f"#!{sys.executable}\n" + textwrap.dedent('''\
-                import json, os, sys
-                from pathlib import Path
-                args = sys.argv[1:]
-                if args != json.loads(os.environ['EXPECTED_DOCKER_ARGUMENTS']):
-                    print('Unexpected Docker invocation', file=sys.stderr)
-                    sys.exit(125)
-                Path('linkage-call.json').write_text(json.dumps({
-                    'args': args, 'docker_host': os.environ.get('DOCKER_HOST')}))
-                sys.stdout.write(os.environ['LINKAGE_OUTPUT'])
-                sys.exit(int(os.environ['DOCKER_EXIT']))
-                '''))
-            docker.chmod(0o755)
-            shell = script
-            cases = (
-                ("resolved", 0, 0, "libnl-3.so.200 => /usr/lib/libnl-3.so.200\n", 0),
-                ("probe failed", 19, 0, "", 19),
-                ("docker failed", 0, 23, "Docker launch failed\n", 23),
-                ("missing library", 0, 0, "libnl-3.so.200 => not found\n", 1),
-                ("unresolved symbol", 0, 0,
-                 "undefined symbol: nl_msg_parse, version libnl_3 (/usr/lib/libswsscommon.so.0)\n", 1),
-                ("loader failed", 0, 0, "symbol lookup error: /usr/bin/tlm_teamd\n", 1),
-            )
-            linkage_call = directory / "linkage-call.json"
-            linkage_report = directory / "artifacts/vs/tlm-teamd-linkage.txt"
-            modes = [("n", case) for case in cases] + [("y", cases[0])]
-            for debug_layer, (name, probe_exit, docker_exit, output, expected_status) in modes:
-                with self.subTest(name=name, debug_layer=debug_layer):
-                    for path in (
-                        directory / "validate_runtime.json",
-                        directory / "verify_nat_archives.json",
-                        directory / "bmp_loaded.json",
-                        linkage_call,
-                        linkage_report,
-                    ):
-                        path.unlink(missing_ok=True)
-                    result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", shell], cwd=directory,
-                        env=dict(os.environ, PATH=str(directory) + os.pathsep + os.environ["PATH"],
-                                 RUNNER_TEMP=str(directory), TEST_WORKSPACE=str(directory),
-                                 SONIC_CI_CONTAINER_LABEL="fixture-vs", SONIC_ENABLE_DEBUG_LAYER=debug_layer,
-                                 PROBE_EXIT=str(probe_exit), DOCKER_EXIT=str(docker_exit),
-                                 EXPECTED_DOCKER_ARGUMENTS=json.dumps(docker_arguments), LINKAGE_OUTPUT=output),
-                        capture_output=True, text=True)
-                    self.assertEqual(result.returncode, expected_status, result.stdout + result.stderr)
-                    called = json.loads((directory / "validate_runtime.json").read_text())
-                    self.assertEqual(called["docker_host"], "unix:///worker-private.sock")
-                    self.assertEqual(called["args"], ["-B", "tools/bazel/ci/validate_runtime.py",
-                        "--images-policy", "artifacts/vs/swss-installed-images-policy.json",
-                        "--images-policy", "artifacts/vs/syncd-installed-images-policy.json", "--target", "target",
-                        "--output", "artifacts/vs/installed-images.json"])
-                    nat_call = directory / "verify_nat_archives.json"
-                    self.assertEqual(nat_call.exists(), expected_status == 0)
-                    if nat_call.exists():
-                        self.assertEqual(json.loads(nat_call.read_text()), {
-                            "args": ["-B", "tools/bazel/ci/verify_nat_archives.py", "--debug-layer", debug_layer],
-                            "docker_host": "unix:///worker-private.sock",
-                        })
-                    if probe_exit:
-                        self.assertFalse(linkage_call.exists())
-                        self.assertFalse(linkage_report.exists())
-                    else:
-                        bmp = json.loads((directory / "bmp_loaded.json").read_text())
-                        self.assertEqual(bmp["docker_host"], "unix:///worker-private.sock")
-                        self.assertEqual(bmp["args"], ["-B", "tools/bazel/ci/bmp_loaded.py"])
-                        linkage = json.loads(linkage_call.read_text())
-                        self.assertEqual(linkage["args"], docker_arguments)
-                        self.assertEqual(linkage["docker_host"], "unix:///worker-private.sock")
-                        self.assertEqual(linkage_report.read_text(), output)
-        retained = active.split("      - name: Retain shared image validation evidence\n", 1)[1].split(
-            "\n      - ", 1)[0]
-        self.assertIn("if: always()", retained)
-        for path in ("artifacts/vs/swss-images/", "artifacts/vs/syncd-p4-images/",
-                     "artifacts/vs/*-installed-images-policy.json", "artifacts/vs/installed-images.json"):
-            self.assertIn(path, retained)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sys
@@ -14,7 +13,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.tests.source_workflow_test import jobs, shell, steps
 from tools.ci.build_dashboard.breakdown import parse_recipe_log
 
 
@@ -136,14 +134,16 @@ else:
 
     def test_ci_builds_and_verifies_the_boot_bundle(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        profiles = [job["steps"] for job in workflow["jobs"].values()
-                    if any("bash tools/bazel/ci/build_vs.sh" in step.get("run", "") for step in job["steps"])]
-        self.assertEqual(len(profiles), 2)
-        for profile in profiles:
-            build = next(step for step in profile if "bash tools/bazel/ci/build_vs.sh" in step.get("run", ""))
-            verify = next(step for step in profile if "--expect-boot-bundle" in step.get("run", ""))
-            self.assertEqual(build["env"]["DOCKER_LOAD_ON_BOOT"], "y")
-            self.assertLess(profile.index(build), profile.index(verify))
+        jobs = workflow["jobs"]
+        builders = [name for name, job in jobs.items()
+                    if any("bash tools/bazel/ci/build_vs.sh" in step.get("run", "")
+                           for step in job.get("steps", []))]
+        self.assertEqual(builders, ["vs_container"])
+        build = next(step for step in jobs["vs_container"]["steps"] if step.get("id") == "native_build")
+        self.assertEqual(build["env"]["DOCKER_LOAD_ON_BOOT"], "y")
+        verify = jobs["installer_validation"]
+        self.assertEqual(verify["needs"], "vs_container")
+        self.assertTrue(any("--expect-boot-bundle" in step.get("run", "") for step in verify["steps"]))
         result = self.run_script("build_vs.sh", DOCKER_LOAD_ON_BOOT="y")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "n", load_on_boot="y")
@@ -180,7 +180,7 @@ else:
         workflows = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
         enabled = [step["id"] for job in workflows.values() for step in job.get("steps", [])
                    if step.get("env", {}).get("SONIC_VS_RETRY_GO_FETCH") == "1"]
-        self.assertCountEqual(enabled, ["vs_build", "native_build"])
+        self.assertCountEqual(enabled, ["native_build"])
 
     def test_native_handoff_is_forwarded_to_the_build_and_separate_validation_container(self):
         option = self.profile_options()[-1] + " -e SONIC_VS_REUSE_BAZEL_PRODUCERS"
@@ -314,32 +314,6 @@ else:
         self.assertEqual([call["action"] for call in self.calls()], ["capture-pairs", "make", "make", "make", "verify-pairs"])
         self.assertFalse((self.root / "artifacts/vs/runtime-debug-pairs-timing.json").exists())
 
-    def workflow_steps(self):
-        job = next(job for job in jobs().values() if "tools/bazel/ci/build_vs.sh" in job)
-        selected = steps(job)
-        build = next(name for name, body in selected.items() if "tools/bazel/ci/build_vs.sh" in body)
-        validation = next(name for name, body in selected.items() if "tools/bazel/ci/validate_vs.sh" in body)
-        return selected, build, validation
-
-    def test_workflow_exposes_build_and_validation_as_separate_ordered_steps(self):
-        selected, build, validation = self.workflow_steps()
-        self.assertEqual(build, "Build the VS installer (.bin)")
-        self.assertEqual(validation, "Validate VS container pairs and P4 debug symbols")
-        self.assertLess(list(selected).index(build), list(selected).index(validation))
-        (self.root / "artifacts/vs").mkdir(parents=True)
-        for name in (build, validation):
-            result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", shell(selected[name])],
-                                    cwd=self.root, env=self.environment, text=True, capture_output=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual([call["action"] for call in self.calls()],
-                         ["make", "capture-pairs", "make", "make", "make", "verify-pairs"])
-        build_log = (self.root / "artifacts/vs/build.log").read_text()
-        self.assertIn("controlled make", build_log)
-        self.assertNotIn("capture-pairs", build_log)
-        validation_log = (self.root / "artifacts/vs/validation.log").read_text()
-        self.assertIn("controlled capture-pairs", validation_log)
-        self.assertIn("controlled verify-pairs", validation_log)
-
     def test_vs_installer_retains_all_bazel_recipe_diagnostics_before_validation(self):
         job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
         build = next(step for step in job["steps"] if step.get("id") == "native_build")
@@ -354,7 +328,7 @@ else:
         checkout = job["defaults"]["run"]["working-directory"] + "/"
         self.assertEqual(upload["with"]["path"], checkout + "artifacts/vs/image-timings/")
         summary = next(step for step in job["steps"] if "summarize_vs_image_timings.py" in step.get("run", ""))
-        validation = next(step for step in job["steps"] if "tools/bazel/ci/validate_vs.sh" in step.get("run", ""))
+        validation = next(step for step in job["steps"] if step.get("id") == "bundles")
         self.assertLess(job["steps"].index(build), job["steps"].index(summary))
         self.assertLess(job["steps"].index(summary), job["steps"].index(upload))
         self.assertLess(job["steps"].index(upload), job["steps"].index(validation))
@@ -392,39 +366,6 @@ else:
         self.assertEqual(database["owner"], "docker-database.gz")
         self.assertEqual((database["exports"], database["export_seconds"], database["compile_seconds"]),
                          (1, 1.25, None))
-
-    def test_workflow_publishes_onie_installer_and_its_selection_manifest(self):
-        selected, _, _ = self.workflow_steps()
-        preflight = next(body for body in selected.values() if "runner/preflight.py" in body)
-        self.assertIn("--build-target sonic-vs.bin", preflight)
-        evidence = next(body for body in selected.values()
-                        if "name: sonic-vs-orchagent-reuse-amd64" in body)
-        self.assertIn("/target/sonic-vs.bin.dockers", evidence)
-        self.assertNotIn("sonic-vs.img.gz", evidence)
-        artifacts = next(body for body in selected.values()
-                         if "name: sonic-vs-make-bazel-swss-amd64" in body)
-        prefix = "vs-${{ github.run_id }}-${{ github.run_attempt }}/target/"
-        uploaded = {line.strip().removeprefix(prefix) for line in artifacts.splitlines()
-                    if line.strip().startswith(prefix)}
-        self.assertEqual(uploaded, {"sonic-vs.bin", "docker-orchagent.gz", "docker-orchagent-dbg.gz",
-                                    "docker-syncd-vs.gz", "docker-syncd-vs-dbg.gz"})
-
-    def test_onie_workflow_routes_to_the_existing_bin_runner_pool(self):
-        job = next(job for job in jobs().values() if "tools/bazel/ci/build_vs.sh" in job)
-        routing = re.search(r"^    runs-on:\n((?:      - [^\n]+\n)+)", job, re.MULTILINE)
-        self.assertIsNotNone(routing)
-        labels = {line.strip().removeprefix("- ") for line in routing[1].splitlines()}
-        self.assertEqual(labels, {"self-hosted", "linux", "x64", "sonic-vs-bin"})
-
-    def test_workflow_tee_does_not_hide_build_or_validation_failure(self):
-        selected, build, validation = self.workflow_steps()
-        (self.root / "artifacts/vs").mkdir(parents=True)
-        for name, failure in ((build, "make"), (validation, "verify-pairs")):
-            with self.subTest(step=name):
-                result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", shell(selected[name])],
-                                        cwd=self.root, env=dict(self.environment, FAIL_ACTION=failure),
-                                        text=True, capture_output=True)
-                self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

@@ -139,6 +139,19 @@ def verify_config(config, parent, manifest, image_version, *, runtime):
                   "undeclared inherited OCI configuration change")
 
 
+def verify_dialout(files, enabled):
+    """Use the Make profile to check both the original launcher and its native client."""
+    check.require(type(enabled) is bool, "missing Make gNMI dialout selection")
+    launcher = "usr/bin/dialout.sh"
+    check.require((launcher in files) == enabled and ("usr/sbin/dialout_client_cli" in files) == enabled,
+                  "dialout runtime selection differs from Make")
+    if enabled:
+        expected = {"kind": "file", "uid": 0, "gid": 0, "mode": 0o755,
+                    "sha256": check.sha(ROOT / "dockers/docker-sonic-gnmi/dialout.sh")}
+        check.require(all(files[launcher].get(key) == value for key, value in expected.items()),
+                      "gNMI dialout launcher differs from source")
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "image build did not complete")
@@ -206,9 +219,7 @@ def validate_images(directory):
             check.require(item.get("sha256") == hashlib.sha256(content).hexdigest()
                           and (item.get("uid"), item.get("gid"), item.get("mode")) == (0, 0, expected_mode),
                           "startup bytes or metadata changed: " + destination)
-        check.require(("usr/bin/dialout.sh" in files) == receipt["dialout_enabled"]
-                      and ("usr/sbin/dialout_client_cli" in files) == receipt["dialout_enabled"],
-                      "dialout runtime selection differs")
+        verify_dialout(files, receipt["dialout_enabled"])
         debug = name.endswith("-dbg")
         status, metadata = (("debug.status", "debug-packages.json") if debug else ("installed.status", "packages.json"))
         installed_metadata = "usr/share/sonic/bazel/gnmi" + ("-debug" if debug else "") + "-packages.json"
@@ -223,12 +234,8 @@ def validate_images(directory):
         selection_path = directory / ("debug-apt.json" if debug else "runtime-apt.json")
         selection = json.loads(selection_path.read_text())
         package_state = json.loads((directory / metadata).read_text())
-        check.require(selection["base_manifest_digest"] == package_state["base_manifest_digest"] ==
-                      base_layout.descriptor["digest"], "APT/package state uses a different completed OCI base")
-        check.require(package_state["apt_selection_sha256"] == check.sha(selection_path),
-                      "package state does not bind the checked APT selection")
-        for record in (selection, package_state):
-            check.require(record["dependency_check"]["status"] == "satisfied", "unsatisfied image dependencies")
+        check.verify_apt_binding(selection, base_layout.descriptor["digest"], metadata=package_state,
+                                 selection_sha=check.sha(selection_path))
         archive = image_validation.docker_archive(directory / (name + ".gz"), name + ":latest",
                                                   layout.manifest["config"]["digest"], layout.manifest["layers"])
         # Retain only public verification values, never a serialized environment.

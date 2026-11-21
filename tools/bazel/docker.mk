@@ -183,6 +183,7 @@ ifeq ($(SONIC_VS_IMAGE_TIMINGS),1)
 	trap 'if [[ -f "$@.log" && ! -L "$@.log" ]]; then cp -- "$@.log" "$$SONIC_VS_CONTAINER_BATCH_TIMING_DIR/make.log"; fi' EXIT
 endif
 	python3 -B tools/bazel/build_container_batch.py --target-path="$(TARGET_PATH)" --architecture="$(CONFIGURED_ARCH)" \
+		$(if $(filter 1,$(SONIC_VS_VALIDATION_BUNDLES)),--validation-directory="artifacts/vs/containers" --validation-debug="$(SONIC_ENABLE_DEBUG_LAYER)" $(foreach image,$(SONIC_BAZEL_VALIDATION_ONLY_DBG_IMAGES),--validation-only-debug="$(image)") $(foreach image,$(SONIC_BAZEL_DBG_DOCKER_IMAGES),--registered-debug="$(image)")) \
 		--debug-image-mark="$(DBG_IMAGE_MARK)" $(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),--boot-layouts) \
 		--shared-args=$(call bazel_quote_argument,$(bazel_make_image_options)) \
 		$(foreach image,$(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(if $($(image)_BAZEL_SHARED_ARGS),--shared-args=$(call bazel_quote_argument,$($(image)_BAZEL_SHARED_ARGS)))) \

@@ -98,13 +98,7 @@ def verify(layout, parent, paths, source):
     runtime, native = verify_source_runtime(files, paths["source-runtime.tar"])
     # A child must preserve parent configuration, accounts and libraries. The
     # source TAR does not repeat inherited Common files.
-    changed_parent = []
-    for name, item in inherited.items():
-        if item["kind"] == "directory" or name == "var/lib/dpkg/status":
-            continue
-        if files.get(name) != item:
-            changed_parent.append(name)
-    checks.require(not changed_parent, "SWSS layer changed inherited payload: " + repr(changed_parent))
+    checks.verify_inherited_files(inherited, files, {}, {"var/lib/dpkg/status"}, "SWSS layer")
     for installed, generated in (("var/lib/dpkg/status", "installed.status"),
                                  ("usr/share/sonic/bazel/swss-layer-packages.json", "packages.json")):
         checks.require(files.get(installed, {}).get("sha256") == checks.sha(paths[generated]),

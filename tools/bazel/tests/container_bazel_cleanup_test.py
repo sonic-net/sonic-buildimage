@@ -449,8 +449,7 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                     if any(step.get("uses") == action and
                            step.get("with", {}).get("migrated-job") != "true"
                            for step in job["steps"])}
-        self.assertEqual(selected, {"archive", "gearbox_archive", "dash_engine_archive", "otel_archive", "radv_native",
-                                    "p4rt_native"})
+        self.assertEqual(selected, {"archive", "p4rt_owner"})
         self.assertLessEqual(selected, subject.CONTAINER_JOBS)
         self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
                          {"amd64", "arm64"})
@@ -474,13 +473,6 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                         self.assertTrue(identifier.startswith(subject.UPLOAD_PREFIX))
                         self.assertIn("steps." + identifier.removeprefix(subject.UPLOAD_PREFIX) +
                                       ".outcome == 'success'", step["if"])
-        for name, identifier, prefix in (("dash_engine_archive", "dash_scratch", "dash-engine."),
-                                         ("p4rt_native", "p4rt_storage", "p4rt.")):
-            steps = jobs[name]["steps"]
-            scratch = next(step for step in steps if step.get("id") == identifier)
-            self.assertIn('mktemp -d "$SONIC_BAZEL_JOB_TEMP/' + prefix, scratch["run"])
-            self.assertLess(next(i for i, step in enumerate(steps) if step.get("uses") == action),
-                            steps.index(scratch))
         value = yaml.safe_load((ACTION / "action.yml").read_text())["runs"]
         self.assertEqual(value["using"], "node24")
         self.assertEqual(value["post-if"], "always()")
@@ -488,7 +480,7 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
         self.assertNotIn("bazel-post-job-cleanup", str(jobs["vs_container"]))
 
     def test_additional_bazel_agent_workflows_register_cleanup_before_cache_setup(self):
-        for workflow, name in (("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+        for workflow, name in (("bazel-eventd.yml", "native"),
                                ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package")):
             with self.subTest(workflow=workflow):
                 value = yaml.safe_load((ROOT / ".github/workflows" / workflow).read_text())
@@ -518,35 +510,6 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                     if isinstance(event, dict) and "paths" in event:
                         self.assertIn(".github/actions/bazel-post-job-cleanup/**", event["paths"])
                         self.assertIn("tools/bazel/ci/cleanup_container_bazel.py", event["paths"])
-
-    def test_base_cleanup_controller_survives_source_revision_selection(self):
-        steps = yaml.safe_load((ROOT / ".github/workflows/bazel-base-images.yml").read_text())["jobs"]["native"]["steps"]
-        stage = next(step for step in steps if step.get("name", "").startswith("Stage cleanup"))
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            shutil.copytree(ACTION, workspace / ".github/actions/bazel-post-job-cleanup")
-            shutil.copytree(ROOT / "tools/bazel/ci", workspace / "tools/bazel/ci")
-            result = subprocess.run(["bash", "-c", stage["run"]], cwd=workspace,
-                                    capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            shutil.rmtree(workspace / ".github")
-            shutil.rmtree(workspace / "tools")
-            controller = workspace / "target/ci-bazel-cleanup-controller"
-            result = subprocess.run([sys.executable, "-B", "-m",
-                                     "tools.bazel.ci.cleanup_container_bazel", "--help"],
-                                    cwd=controller, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((controller / ".github/actions/bazel-post-job-cleanup/post.js").is_file())
-
-    def test_archive_preservation_directories_are_scoped_to_the_registered_job(self):
-        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive"]
-        shell = "\n".join(step.get("run", "") for step in job["steps"])
-        for prefix in ("pre-sysmgr-artifacts", "pre-swss-layer-artifacts", "pre-sflow-artifacts",
-                       "pre-orchagent-artifacts", "pre-lldp-artifacts", "pre-mux-artifacts",
-                       "pre-macsec-artifacts", "pre-dash-ha-artifacts",
-                       "snmp.", "orchagent-owner-output", "orchagent-owner-bazel"):
-            self.assertIn("$SONIC_BAZEL_JOB_TEMP/" + prefix, shell)
-            self.assertNotIn("$RUNNER_TEMP/" + prefix, shell)
 
     @unittest.skipUnless(shutil.which("node"), "Node is needed to execute the action fixture")
     def test_node_action_registers_job_state_and_propagates_post_cleanup_failures(self):

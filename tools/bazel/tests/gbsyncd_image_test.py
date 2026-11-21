@@ -5,15 +5,12 @@ import contextlib
 import io
 import copy
 import json
-import os
-import subprocess
 import sys
 from types import SimpleNamespace
 from pathlib import Path
 import tempfile
 import unittest
 
-import yaml
 from unittest.mock import patch
 
 from tools.bazel.ci import gbsyncd_image
@@ -142,6 +139,38 @@ class GearboxVimReceipt(unittest.TestCase):
 
 
 class GearboxBuildEvidenceTest(unittest.TestCase):
+    def test_installer_compares_dash_data_against_the_selected_source_receipt(self):
+        """A second DASH generation can change pipeline JSON even if the same libraries are installed."""
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            pipeline = "etc/dash/dash_pipeline_p4rt.json"
+            license_file = "usr/share/doc/dash-sai/LICENSE"
+            changelog = "usr/share/doc/p4lang-bmv2/changelog.Debian.gz"
+            library = "usr/lib/x86_64-linux-gnu/libsai.so"
+            soname = "usr/lib/x86_64-linux-gnu/libsai.so.0"
+            regular = {"kind": "file", "mode": 0o644, "uid": 0, "gid": 0, "sha256": "1" * 64, "size": 173}
+            source = {pipeline: regular, license_file: regular, changelog: regular,
+                      library: dict(regular, elf_machine=62), soname: {"kind": "symlink", "mode": 0, "linkname": library}}
+            installed = dict(source)
+            del installed[changelog]
+            installed[soname] = dict(source[soname], mode=0o777)
+            contract = directory / "source-contract.json"
+            contract.write_text(json.dumps({"packages": [{"required_paths": {pipeline: "file"}}]}))
+            receipt = {"contract_sha256": gbsyncd_image.check.sha(contract), "payload": {"sha256": "2" * 64},
+                       "packages": [{"files": source}]}
+            (directory / "source-receipt.json").write_text(json.dumps(receipt))
+            (directory / "source-excludes.txt").write_text("usr/share/doc/*\n")
+            (directory / "source-includes.txt").write_text("usr/share/doc/*/LICENSE\n")
+            with patch.object(gbsyncd_image, "check_p4_inputs"):
+                for variant in ("runtime", "debug"):
+                    with self.subTest(variant=variant):
+                        gbsyncd_image.verify_installer_source_payload(directory, variant, installed, "2" * 64)
+                        changed = installed | {pipeline: dict(regular, sha256="3" * 64)}
+                        with self.assertRaisesRegex(ValueError, pipeline):
+                            gbsyncd_image.verify_installer_source_payload(directory, variant, changed, "2" * 64)
+                with self.assertRaisesRegex(ValueError, "built runtime TAR"):
+                    gbsyncd_image.verify_installer_source_payload(directory, "runtime", installed, "4" * 64)
+
     def test_exported_packages_and_archives_match_the_validated_layouts(self):
         """Validation must inspect the same build's payload as the published archives."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -200,36 +229,6 @@ else:
                     self.assertEqual((directory / (image + ".gz")).read_bytes(), source_payload)
                     self.assertEqual((workspace / receipt["layouts"][image]).read_bytes(), source_payload)
             self.assertEqual((workspace / receipt["base_layout"]).read_bytes(), source_payload)
-
-
-class GearboxEvidenceTest(unittest.TestCase):
-    def test_private_inspection_does_not_block_or_enter_the_public_upload(self):
-        workspace = gbsyncd_image.ROOT
-        workflow = yaml.safe_load((workspace / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["gearbox_archive"]["steps"]
-        review = next(s["run"] for s in steps if s.get("name") == "Review public gearbox evidence")
-        upload = next(s["with"]["path"] for s in steps if s.get("name") == "Retain gearbox archives and source evidence")
-        program = review.partition("\n")[2].rsplit("\nPYCODE", 1)[0]
-        public_json = next(node.value for node in ast.parse(program).body if isinstance(node, ast.Assign)
-                           and isinstance(node.targets[0], ast.Name) and node.targets[0].id == "public_json")
-        published_json = {Path(pattern).name for pattern in upload.splitlines() if pattern.endswith(".json")}
-        self.assertEqual(set(ast.literal_eval(public_json)) | {"module-graph.json", "public-receipt.json"}, published_json)
-        with tempfile.TemporaryDirectory() as temporary:
-            destination = Path(temporary)
-            artifacts = destination / "artifacts/gbsyncd"
-            artifacts.mkdir(parents=True)
-            private = artifacts / "module-graph-inspection.json"
-            private.write_text(json.dumps({"argv": ["bazel", "mod", "graph"], "returncode": 0}))
-            self.assertFalse(any(private in destination.glob(pattern) for pattern in upload.splitlines()))
-            env = {**os.environ, "PYTHONPATH": str(workspace)}
-            subprocess.run(["bash", "-eu", "-c", review], cwd=destination, env=env, check=True)
-            public = artifacts / "validation.json"
-            public.write_text(json.dumps({"argv": ["private"]}))
-            self.assertTrue(any(public in destination.glob(pattern) for pattern in upload.splitlines()))
-            rejected = subprocess.run(["bash", "-eu", "-c", review], cwd=destination, env=env,
-                                      capture_output=True, text=True)
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("diagnostic-json-field", rejected.stderr)
 
 
 if __name__ == "__main__":

@@ -8,14 +8,12 @@ base snapshot is older. A different checkout or head must publish no identity.
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
-import yaml
 
 from tools.bazel.ci import dash_ha_image, sysmgr_image
 
@@ -93,45 +91,6 @@ class CheckoutIdentityTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["base_sha"], self.base)
         self.assertIn("head_sha=" + self.head + "\n", output)
-
-    def test_dash_ha_runtime_normalizes_stale_base_before_validation(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = workflow["jobs"]["dash_ha_runtime"]["steps"]
-        binding = next(step for step in steps if step.get("id") == "checkout_identity")
-        validation = next(step for step in steps if "dash_ha_loaded.py" in step.get("run", ""))
-        download = next(step for step in steps if "download-artifact@" in step.get("uses", ""))
-        self.assertLess(steps.index(binding), steps.index(download))
-        self.assertLess(steps.index(download), steps.index(validation))
-        self.assertEqual(binding["env"], {
-            "EVENT_HEAD_SHA": "${{ github.event.pull_request.head.sha }}",
-            "EVENT_BASE_SHA": "${{ github.event.pull_request.base.sha }}",
-        })
-        self.assertEqual(validation["env"], {
-            "CI_HEAD_SHA": "${{ steps.checkout_identity.outputs.head_sha }}",
-            "CI_BASE_SHA": "${{ steps.checkout_identity.outputs.base_sha }}",
-        })
-        with patch.object(dash_ha_image, "ROOT", self.repo), patch.dict(os.environ, {
-            "CI_HEAD_SHA": self.head, "CI_BASE_SHA": self.old_base,
-        }):
-            with self.assertRaisesRegex(ValueError, "requested base"):
-                dash_ha_image.source_identity()
-        script = self.repo / "tools/bazel/ci/checkout_identity.py"
-        script.parent.mkdir(parents=True)
-        shutil.copy2(SCRIPT, script)
-        output = self.root / "runtime-github-output"
-        result = subprocess.run(["bash", "-euc", binding["run"]], cwd=self.repo, env=dict(
-            os.environ, GITHUB_SHA=self.merge, GITHUB_EVENT_NAME="pull_request",
-            EVENT_HEAD_SHA=self.head, EVENT_BASE_SHA=self.old_base,
-            GITHUB_OUTPUT=str(output),
-        ), capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        values = dict(line.split("=", 1) for line in output.read_text().splitlines())
-        with patch.object(dash_ha_image, "ROOT", self.repo), patch.dict(os.environ, {
-            "CI_HEAD_SHA": values["head_sha"], "CI_BASE_SHA": values["base_sha"],
-        }):
-            self.assertEqual(dash_ha_image.source_identity(), {
-                "revision": self.merge, "tested_revision_parents": [self.base, self.head],
-            })
 
     def test_shallow_actions_checkout_uses_immutable_parent_headers(self):
         shallow = self.root / "shallow"

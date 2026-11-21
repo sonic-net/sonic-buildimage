@@ -20,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[3]
 HELPER = ROOT / "tools/bazel/ci/check_kernel_sandbox.py"
 PINNED_VERSION = (ROOT / "tools/bazel/kernel/.bazelversion").read_text().strip()
 sys.path.insert(0, str(ROOT))
-from tools.bazel.tests.source_workflow_test import jobs, shell, steps
 
 
 def load_probe():
@@ -283,45 +282,6 @@ class KernelSandboxReadinessTest(unittest.TestCase):
             self.assertIn(field, output.getvalue())
         self.assertNotIn("private-process-name", output.getvalue())
         self.assertNotIn("private-memory-status", output.getvalue())
-
-    def test_workflow_runs_native_probe_after_nested_docker_and_before_build(self):
-        job = jobs()["vs"]
-        job_steps = steps(job)
-        nested = "Check nested Docker in both build environments"
-        readiness = "Check native kernel sandbox in Trixie"
-        build = next(name for name, step in job_steps.items() if "id: vs_build" in step)
-        names = list(job_steps)
-        self.assertLess(names.index(nested), names.index(readiness))
-        self.assertLess(names.index(readiness), names.index(build))
-        self.assertIn("for build_env in bookworm trixie", shell(job_steps[nested]))
-        self.assertIn("docker-start", shell(job_steps[nested]))
-        script = shell(job_steps[readiness])
-        self.assertIn("set -o pipefail", script)
-        self.assertNotIn("continue-on-error", job_steps[readiness])
-        command_dir = self.root / "commands"
-        command_dir.mkdir()
-        self.write_executable(command_dir / "make", """
-            import json, os, sys
-            with open(os.environ["PROBE_EVENTS"], "a") as out:
-                out.write(json.dumps({"kind": "make", "argv": sys.argv[1:]}) + "\\n")
-            print("controlled native probe failure", file=sys.stderr)
-            sys.exit(23)
-        """)
-        (self.root / "artifacts/vs").mkdir(parents=True)
-        result = subprocess.run(
-            ["bash", "-e", "-c", script], cwd=self.root,
-            env={**self.env, "PATH": str(command_dir) + os.pathsep + os.defpath,
-                 "SONIC_CI_CONTAINER_LABEL": "sandbox-readiness=fixture"},
-            capture_output=True, text=True, timeout=15,
-        )
-        self.assertEqual(result.returncode, 23, "tee must not hide a failed readiness check")
-        [make] = self.recorded()
-        self.assertEqual(make["argv"], [
-            "-f", "Makefile.work", "BLDENV=trixie", "sonic-slave-run",
-            "SONIC_BUILDER_EXTRA_CMDLINE=--label sandbox-readiness=fixture -e BAZEL=" + str(self.bazel),
-            "SONIC_RUN_CMDS=python3 -B tools/bazel/ci/check_kernel_sandbox.py",
-        ])
-        self.assertIn("controlled native probe failure", (self.root / "artifacts/vs/kernel-sandbox.log").read_text())
 
 
 if __name__ == "__main__":

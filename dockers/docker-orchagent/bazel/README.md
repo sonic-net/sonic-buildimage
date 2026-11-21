@@ -122,12 +122,10 @@ the declarative `apt_layer` policy input API. The root `MODULE.bazel` now select
 published shared infrastructure through registry `main`; the policy argument
 remains a generated build input.
 
-Native AMD64/ARM64 archive checks and AMD64 source-layer checks are configured
-for PR updates. Full VS/P4RT builds also run automatically for PR branches in
-this repository after the source checks pass. External-fork PRs keep hosted
-checks only. Manual `Bazel OCI` dispatch defaults to `skip_vs=true`; select
-`skip_vs=false` to include the full image job. A push to `master` runs archive
-and source checks without an automatic full VS build.
+Same-repository PRs and master pushes build the VS installer and run its OCI
+validation jobs. For a manual `Bazel OCI` run, select `skip_vs=false` to
+include them. Select `enable_debug_layer=true` to check debug companions.
+Native AMD64 and ARM64 package tests also run independently.
 
 Generated Bazel files carry an `AUTO-GENERATED. DO NOT EDIT MANUALLY.` header
 that names their generator. The package lock and generated JSON inputs/receipts
@@ -325,77 +323,18 @@ Outside the VS workflow, Make's package cache remains opt-in.
 
 ## Validation
 
-The independent `Container archive (AMD64)` and `Container archive (ARM64)` checks
-exercise the Make OCI producer, Bazel base consumer and archive macro with tiny
-images. They verify unchanged base bytes, platform checks, reproducible gzip
-headers and bytes, Docker-save contents and the expected image tag without
-building Debian packages or needing Make outputs. Artifacts retain the fixture
-tar and gzip files, hashes, summarized test results, generated module lock and
-resolved module graph. A separate cache regression builds the archive in two
-fresh checkouts with separate Bazel output bases and one new local disk cache. It
-checks cache hits and identical bytes, then changes a source input and requires
-a rebuild. Its public result retains action names, cache status and archive
-hashes. See the [archive guide](../../../tools/bazel/oci/README.md#reproducible-docker-archives).
+The VS installer job calls Make to build the installer and its selected OCI
+archives in one Bazel batch. The per-container jobs run on `bazel-x64`.
+The Orchagent job downloads its own VS archive and build fixtures and exercises
+the loaded image, including native library relocation in `tlm_teamd`, Scapy,
+configuration files and the installed SWSS services. With debug enabled the
+same job checks the companion image, including inherited Common symbols.
 
-The `SWSS source layers (AMD64)` PR check runs in native Debian Trixie. It checks
-the Make manifest handoff, legacy OCI import helpers, configuration rendering and package
-validator. A native Make regression also checks package-cache reuse across fresh
-checkouts and invalidation when source or architecture changes. The job then builds SWSS, its runtime dependencies, configuration and matching
-debug-symbol tar layers. It also runs SWSS's Common Rust API and Serde consumer
-test and checks the Debian path-filter rules. CI prepares manifests with Make
-before running the shared label actions and orchagent contract tests under Bazel.
-It verifies the source install
-inventory, installed bytes and modes, AMD64 ELF files, build IDs, DWARF and debug links. Its artifact
-includes the five tar files, hashes, summarized test and debug validation,
-generated module lock and resolved module graph. CI starts without a module lock
-and rejects tracked input changes.
-
-The native base-image CI also builds SWSS's `runtime_apt_selection` on AMD64.
-It requires the selection receipt to name the exact config-engine OCI manifest
-just validated and to report satisfied runtime dependencies. This exercises the
-source-built base dependency without a Scapy wheel or a complete SWSS build.
-
-The shared [`public_artifacts.py`](../../../tools/bazel/ci/public_artifacts.py)
-step prepares each public upload. Bazel event records can include client
-environment values, so uploads use extracted status fields and explicit output
-paths. Raw command, event, execution and test logs/XML stay in the job workspace.
-Successful jobs retain validated outputs and dependency records. A failed job
-may retain only a partial status summary. Artifact preparation fails if a required
-successful output is missing or a selected record fails validation. The VS
-summary retains P4RT package/debug hashes, lookup counts and output sizes; the
-separate VS image and SWSS archive upload keeps its existing files.
-
-The `Make VS with Bazel SWSS (AMD64)` job builds the complete OCI
-archives and final VS image after the SWSS source-layer and Syncd contract checks
-succeed. It runs automatically for same-repository pull requests, and on manual workflow dispatch
-with `skip_vs=false`. It uses the shared pool with labels `self-hosted`, `linux`,
-`x64` and `sonic-vs-source-master`. The pool label does not select the checkout:
-PR jobs still build their event's merge revision and consume artifacts from
-that same workflow run. The host needs Docker, KVM, `j2`
-and at least 100 GiB free for the workspace plus room for Docker storage.
-The [runner setup and recovery guide](../../../tools/ci/runner/README.md) provides checked
-provisioning, host preflight and one-job rearming, including PR #9 examples.
-When no matching runner is available, this job remains queued; the
-source-layer check alone does not validate the complete image.
-
-After the build, the shared OCI validators check the complete SWSS and Syncd
-images against their owner-declared inputs. A fresh Trixie slave then uses
-`tools/bazel/ci/validate_runtime.py` to load that run's config-engine, SWSS and
-Syncd runtime/debug archives into its private Docker daemon. The image owners
-supply the expected files, directory aliases, parent images and symbol pairs;
-there is no separate SWSS verifier.
-
-Read-only, network-disabled probes verify inherited Common bytes and metadata,
-parent layer order, `/var/run -> /run` and root-owned `0644` database configuration.
-The shared ELF verifier checks build IDs, DWARF and debuglink CRC against files
-copied from the actual runtime/debug containers. The check writes
-`artifacts/vs/installed-images.json`; CI retains it with the static validation
-receipts. It does not boot SONiC services.
-
-The slave uses a private cgroup namespace and prepares its delegated controllers
-before starting nested Docker. Static-image, Docker-load and P4RT verification
-use separate Docker storage directories so Make's cleanup does not remove the
-completed build's store.
+A separate job verifies the release and Git commit from the packaged installer.
+It passes that release to every container job so each one can verify its image's
+release label. AMD64 and ARM64 also run native package and synthetic archive
+tests. The required `Container archive (AMD64)` status reports the outcome of
+the installer and its dependent checks. See the [shared CI guide](../../../tools/bazel/ci/README.md#shared-helpers).
 
 Each push, manual dispatch and explicit retry runs independently, including
 on the same commit. Automatic checks for the same PR and revision share a

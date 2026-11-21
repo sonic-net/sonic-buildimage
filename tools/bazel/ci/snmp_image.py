@@ -91,6 +91,13 @@ def wheel_payload(files, path):
     return {"wheel_sha256": check.sha(path), "verified_files": count}
 
 
+def verify_state_directory(files):
+    """The Debian-snmp service account must own its persistent state directory."""
+    state = files.get("var/lib/snmp", {})
+    check.require((state.get("kind"), state.get("uid"), state.get("gid"), state.get("mode")) ==
+                  ("directory", 101, 102, 0o755), "snmpd state ownership changed")
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "build did not complete")
@@ -115,9 +122,7 @@ def validate_images(directory):
         labels = config.get("Labels", {})
         check.require(labels.get("Tag") == receipt["image_version"], "Make image version label differs: " + name)
         config_packages = reports[1]["dependency_check"]["packages"]
-        for component in ("libswsscommon", "sonic-supervisord-utilities-rs"):
-            check.require(labels.get("com.azure.sonic.versions." + component) == config_packages[component]["Version"],
-                          "missing or incorrect inherited component label: " + component)
+        check.verify_swss_component_labels(labels, config_packages)
         manifest = json.loads(labels["com.azure.sonic.manifest"])
         expected = json.loads((ROOT / "target/bazel-manifests" / name / "manifest.json").read_text())
         check.require(manifest == expected, "Make manifest labels changed")
@@ -134,7 +139,7 @@ def validate_images(directory):
             **{path.name: "usr/share/sonic/templates/" + path.name for path in (ROOT / "dockers/docker-snmp").glob("*.j2")},
         }.items():
             check.require(files[destination]["sha256"] == check.sha(ROOT / "dockers/docker-snmp" / source), "startup input changed: " + source)
-        check.require(all(files['var/lib/snmp'][k] == v for k, v in {'uid':101,'gid':102,'mode':0o755}.items()), "snmpd state ownership changed")
+        verify_state_directory(files)
         selected, origins = source_base_validation.inventory(layout)
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

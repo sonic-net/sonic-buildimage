@@ -8,6 +8,9 @@ if (( $# )); then
 fi
 
 builder_args="--label ${SONIC_CI_CONTAINER_LABEL:?} -e BAZEL=${BAZEL:?} -e BAZEL_CONTAINER_ARGS"
+if [[ ${SONIC_VS_VALIDATION_BUNDLES:-} == 1 ]]; then
+    builder_args+=" -e SONIC_VS_VALIDATION_BUNDLES"
+fi
 if [[ ${SONIC_VS_IMAGE_TIMINGS:-} == 1 ]]; then
     builder_args+=" -e SONIC_VS_IMAGE_TIMINGS"
     if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then

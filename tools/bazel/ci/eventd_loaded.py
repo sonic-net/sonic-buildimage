@@ -12,6 +12,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import install_redis_config
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -39,17 +40,13 @@ def main():
         fixture.chmod(0o755)
         # Copy only the accepted owner's database/profile files for private
         # writable mounts. Production image files remain unchanged.
-        for archive_name, member_name, destination in (
-            ("config-engine-source.tar", "run/redis/sonic-db/database_config.json", "database_config.json"),
-            ("eventd-runtime.tar", "etc/evprofile/default.json", "default.json"),
-        ):
-            archive_path = directory / archive_name
-            check.require(check.sha(archive_path) == report["artifacts"][archive_name]["sha256"], "fixture owner changed")
-            with tarfile.open(archive_path) as archive:
-                members = [member for member in archive.getmembers()
-                           if str(Path(member.name)) == member_name]
-                check.require(len(members) == 1 and members[0].isfile(), "missing private fixture source")
-                (fixture / destination).write_bytes(archive.extractfile(members[0]).read())
+        install_redis_config(directory, report, fixture, "config-engine-source.tar")
+        with tarfile.open(directory / "eventd-runtime.tar") as archive:
+            check.require(check.sha(directory / "eventd-runtime.tar") == report["artifacts"]["eventd-runtime.tar"]["sha256"],
+                          "Eventd profile owner changed")
+            entries = [member for member in archive if str(Path(member.name)) == "etc/evprofile/default.json"]
+            check.require(len(entries) == 1 and entries[0].isfile(), "missing Eventd profile fixture")
+            (fixture / "default.json").write_bytes(archive.extractfile(entries[0]).read())
         source = fixture / "source"
         source.mkdir()
         for event in ("host", "bgp", "dhcp_relay", "swss", "syncd"):

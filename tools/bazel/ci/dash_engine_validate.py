@@ -69,24 +69,24 @@ def read_groups(layout):
         return (root / "etc/group").read_text().splitlines()
 
 
-def verify_package_binding(report, selection, parent, apt_path, variant, lock_sha256):
+def verify_package_binding(report, selection, base_digest, apt_path, variant, lock_sha256):
     check.require(selection["schema"] == 1 and selection["image"] == "docker-dash-engine" and
                   selection["group"] == variant and selection["apt_lock_sha256"] == lock_sha256,
                   "APT lock/image/stage binding differs")
-    check.require(selection["base_manifest_digest"] == parent.descriptor["digest"] and
-                  selection["dependency_check"]["status"] == "satisfied", "APT base/dependency binding differs")
-    check.require(report["base_manifest_digest"] == parent.descriptor["digest"] and
-                  report["apt_selection_sha256"] == check.sha(apt_path) and
-                  report["dependency_check"]["status"] == "satisfied", "installed package binding differs")
+    check.verify_apt_binding(selection, base_digest, metadata=report, selection_sha=check.sha(apt_path))
     check.require(all(item["package"] != "nnpy" for item in report["source_packages"]),
                   "nnpy must retain Python metadata, not an invented Debian package")
 
 
-def verify_layer_binding(layout, parent, path):
-    added = layout.manifest["layers"][len(parent.layers):]
-    check.require(added and added[0]["digest"] == "sha256:" + check.sha(path) and
-                  added[0]["size"] == path.stat().st_size,
+def verify_added_layer(layers, parent_count, expected):
+    added = layers[parent_count:]
+    check.require(added and all(added[0][key] == expected[key] for key in ("digest", "size")),
                   "exported package payload differs from the first declared stage layer")
+
+
+def verify_layer_binding(layout, parent, path):
+    verify_added_layer(layout.manifest["layers"], len(parent.layers),
+                       {"digest": "sha256:" + check.sha(path), "size": path.stat().st_size})
 
 
 def verify_parent_payload(parent, installed, payload, selection, owned=None):
@@ -192,7 +192,7 @@ def validate(directory):
         report = json.loads((directory / (prefix + ".packages.json")).read_text())
         apt_path = directory / ("debug-apt.json" if debug else "runtime-apt.json")
         selection = json.loads(apt_path.read_text())
-        verify_package_binding(report, selection, base, apt_path, "debug" if debug else "runtime",
+        verify_package_binding(report, selection, base.descriptor["digest"], apt_path, "debug" if debug else "runtime",
                                receipt["apt_lock_sha256"])
         payload = debug_tools if debug else runtime_apt
         verify_layer_binding(layout, base, directory / ("engine.debug-tools.tar" if debug else "engine.runtime-apt.tar"))

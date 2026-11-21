@@ -94,12 +94,24 @@ def verify_inherited_accounts(inherited, installed, inherited_groups, groups, *,
         check.require(installed.get(path) == inherited.get(path), "changed inherited account state: " + path)
 
 
+def verify_parent_runtime_packages(directory):
+    """Teamd inherits all external runtime packages from the SWSS layer."""
+    selection = json.loads((directory / "runtime-apt.json").read_text())
+    check.require(not selection["selected"], "Teamd unexpectedly adds external libraries already owned by its parent")
+
+
+def verify_parent_files(parent, installed, configuration, debug_tools, *, debug):
+    mutable = {"var/lib/dpkg/status"}
+    if debug:
+        mutable.add("etc/group")  # The account checker verifies the permitted _ssh row.
+    check.verify_inherited_files(parent, installed, configuration | (debug_tools if debug else {}), mutable, "Teamd")
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["revision"] == source_identity()["revision"], "checkout differs from the image build")
     check.require(receipt["status"] == "built", "Teamd image build did not finish")
-    selection = json.loads((directory / "runtime-apt.json").read_text())
-    check.require(not selection["selected"], "Teamd unexpectedly adds external libraries already owned by its parent")
+    verify_parent_runtime_packages(directory)
     for name, artifact in receipt["artifacts"].items():
         check.require(check.sha(directory / name) == artifact["sha256"], "artifact changed: " + name)
     parent = oci_layout.validate_layout(ROOT / receipt["base_layout"], "linux/amd64")
@@ -125,20 +137,7 @@ def validate_images(directory):
                 continue
             check.require(all(files.get(path, {}).get(key) == value for key, value in item.items()),
                           "installed source/configuration payload changed: " + path)
-        for path, item in inherited.items():
-            if item["kind"] == "directory" or path in ("var/lib/dpkg/status",):
-                continue
-            # Docker-owned COPY/template paths may intentionally replace an
-            # inherited file; preserve every other parent byte and metadata.
-            if name.endswith("-dbg") and path == "etc/group":
-                # The account merge is checked against every inherited row
-                # and the original file metadata below.
-                continue
-            expected_item = configuration.get(path, item)
-            if name.endswith("-dbg"):
-                expected_item = debug_tools.get(path, expected_item)
-            check.require(all(files.get(path, {}).get(key) == value for key, value in expected_item.items()),
-                          "Teamd changed inherited SWSS/base payload: " + path)
+        verify_parent_files(inherited, files, configuration, debug_tools, debug=name.endswith("-dbg"))
         if name.endswith("-dbg"):
             for path, item in debug_tools.items():
                 if item["kind"] != "directory":
@@ -157,9 +156,7 @@ def validate_images(directory):
                       "Teamd unexpectedly changed inherited exposed ports")
         labels = config["Labels"]
         check.require(labels.get("Tag") == receipt["image_version"], "Make image version label differs: " + name)
-        for component in ("libswsscommon", "sonic-supervisord-utilities-rs"):
-            check.require(labels.get("com.azure.sonic.versions." + component) == parent_packages[component]["Version"],
-                          "inherited component label differs: " + component)
+        check.verify_swss_component_labels(labels, parent_packages)
         manifest = json.loads(labels["com.azure.sonic.manifest"])
         check.require(manifest == json.loads((ROOT / "target/bazel-manifests" / name / "manifest.json").read_text()),
                       "Teamd Make metadata label differs")

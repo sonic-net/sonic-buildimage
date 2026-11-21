@@ -12,6 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import install_redis_config, selected_images
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -39,14 +40,8 @@ def main():
         with tarfile.open(test_redis) as archive:
             archive.extractall(fixture, filter="data")
         fixture.chmod(0o755)
-        owner = directory / "config-engine.source.tar"
-        check.require(check.sha(owner) == report["artifacts"][owner.name]["sha256"], "database fixture owner changed")
-        with tarfile.open(owner) as archive:
-            members = [member for member in archive.getmembers()
-                       if str(Path(member.name)) == "run/redis/sonic-db/database_config.json"]
-            check.require(len(members) == 1 and members[0].isfile(), "missing owner database fixture")
-            (fixture / "database_config.json").write_bytes(archive.extractfile(members[0]).read())
-        for name in ("docker-sonic-otel", "docker-sonic-otel-dbg"):
+        install_redis_config(directory, report, fixture, "config-engine.source.tar")
+        for name in selected_images(directory, ("docker-sonic-otel", "docker-sonic-otel-dbg")):
             expected = json.loads((directory / (name + ".validation.json")).read_text())
             check.require(expected["status"] == "passed", "missing accepted OCI validation")
             archive = directory / (name + ".gz")

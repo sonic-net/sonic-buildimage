@@ -76,6 +76,13 @@ class VSInstallerMetadataTest(unittest.TestCase):
             capture_output=True, text=True, timeout=30,
         )
 
+    def test_full_checkout_sha_accepts_the_producers_abbreviation(self):
+        self.package(yaml.safe_dump(METADATA))
+        full_revision = "123456789" + "a" * 31
+        result = self.validate(full_revision)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(self.validate("b" + full_revision[1:]).returncode, 0)
+
     def test_reads_actual_packaged_metadata_and_ignores_trailing_signature_bytes(self):
         self.package(yaml.safe_dump(METADATA))
         with self.installer.open("ab") as stream:

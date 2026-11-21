@@ -11,13 +11,14 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import selected_images, selected_artifacts
 from tools.bazel.ci import artifact_validation as check, validate_runtime
 from tools.bazel.ci.dash_engine_image import IMAGES, TARGETS, clean_source, source_identity
 from tools.bazel.ci.public_artifacts import safe_json
 
 
 def verify_artifacts(directory, report):
-    check.require(set(report["artifacts"]) == set(TARGETS), "incomplete static artifact inventory")
+    check.require(set(report["artifacts"]) == selected_artifacts(directory, TARGETS), "incomplete static artifact inventory")
     for name, expected in report["artifacts"].items():
         path = directory / name
         check.require(path.is_file() and path.stat().st_size == expected["bytes"]
@@ -97,7 +98,7 @@ def main():
                   and report["revision"] == identity["revision"], "runtime checkout differs from validated source")
     verify_artifacts(directory, report)
     results = {}
-    for name in IMAGES:
+    for name in selected_images(directory, IMAGES):
         expected_path = directory / (name + ".validation.json")
         expected_hash = check.sha(expected_path)
         expected = json.loads(expected_path.read_text())

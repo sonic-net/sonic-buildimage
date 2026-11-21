@@ -122,14 +122,8 @@ def stage_binding(stage, selection, metadata, *, base_digest, apt_sha, contract_
     check.require(selection.get('image') == 'docker-sonic-p4rt' and
                   selection.get('group') == ('runtime' if stage == 'runtime' else 'debug'),
                   'wrong APT image/stage: ' + stage)
-    for record in (selection, metadata):
-        check.require(record.get('base_manifest_digest') == base_digest,
-                      'stage uses a different completed OCI base: ' + stage)
-        check.require(record.get('dependency_check', {}).get('status') == 'satisfied',
-                      'unsatisfied stage package dependencies: ' + stage)
-    check.require(metadata.get('architecture') == 'amd64' and
-                  metadata.get('apt_selection_sha256') == apt_sha,
-                  'package state does not bind the checked APT selection: ' + stage)
+    check.verify_apt_binding(selection, base_digest, metadata=metadata, selection_sha=apt_sha)
+    check.require(metadata.get('architecture') == 'amd64', 'wrong stage package architecture: ' + stage)
     if contract_sha is not None:
         check.require(metadata.get('source_contract_sha256') == contract_sha and
                       not metadata.get('source_modules'),
