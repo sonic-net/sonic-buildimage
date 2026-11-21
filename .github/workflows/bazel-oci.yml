@@ -360,7 +360,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl \
-            gdb git j2cli jq libarchive-tools libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-yaml redis-server squashfs-tools tar unzip zstd
+            gdb git j2cli jq libarchive-tools libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-pip python3-yaml redis-server squashfs-tools tar unzip zstd
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -382,6 +382,12 @@ jobs:
 
       - name: Check hosted storage
         run: df -h "$GITHUB_WORKSPACE" "$HOME"
+
+      - name: Test kernel CAS transport with the Trixie build slave's gRPC versions
+        run: |
+          client="$RUNNER_TEMP/kernel-transport"
+          python3 -m pip install --target "$client" --only-binary=:all: grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6
+          PYTHONPATH="$client" python3 -B tools/bazel/tests/kernel_cache_transport_test.py
 
       - name: Prepare pinned source submodules
         run: bash tools/bazel/ci/prepare_image_submodules.sh
@@ -755,6 +761,29 @@ jobs:
           python3 -B tools/bazel/ci/vs_host_base_transfer.py restore \
             "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer/download
 
+      - name: Find the VS kernel index from a master push
+        id: kernel_index_source
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf -- artifacts/vs/kernel-cache-download
+          python3 -B -m tools.bazel.ci.vs_kernel_cache_snapshot
+
+      - name: Download the trusted VS kernel index
+        id: kernel_index_download
+        if: steps.kernel_index_source.outputs.artifact_id != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.kernel_index_source.outputs.run_id }}
+          artifact-ids: ${{ steps.kernel_index_source.outputs.artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-cache-download
+
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
         env:
@@ -763,10 +792,18 @@ jobs:
           DOCKER_LOAD_ON_BOOT: "y"
           SONIC_VS_IMAGE_TIMINGS: "1"
           SONIC_VS_RETRY_GO_FETCH: "1"
+          SONIC_VS_KERNEL_REMOTE_REUSE: "1"
+          KERNEL_INDEX_DOWNLOAD: ${{ steps.kernel_index_download.outcome }}
           HOST_BASE_DIR: ${{ steps.host_base_dir.outcome }}
           TERM: dumb
         run: |
           set -euo pipefail
+          # Accept only the index downloaded for this attempt, even if the checkout contains one.
+          rm -rf -- artifacts/vs/kernel-cache-input artifacts/vs/kernel-cache-output
+          index=artifacts/vs/kernel-cache-download/index.json
+          if [[ "${KERNEL_INDEX_DOWNLOAD:-}" == success && -f "$index" && ! -L "$index" ]]; then
+            install -D -m 0644 -- "$index" artifacts/vs/kernel-cache-input/index.json
+          fi
           if [[ ${HOST_BASE_DIR:-} == success ]]; then
             export SONIC_HOSTBASE_CACHE_SOURCE="$GITHUB_WORKSPACE/.sonic-vs-host-base-cache"
           fi
@@ -775,6 +812,18 @@ jobs:
           test -s target/sonic-vs.bin
           test -s target/sonic-vs.bin.dockers
           test "$(git rev-parse HEAD)" = "$(cat artifacts/vs/build-revision.txt)"
+
+      - name: Retain the validated VS kernel index on master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.native_build.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-kernel-cache-index-amd64-v1
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-cache-output/index.json
+          retention-days: 14
+          overwrite: true
+          if-no-files-found: ignore
 
       - name: Package the newly built VS host base
         id: host_base_publish

@@ -23,6 +23,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci import resolution, time_vs_image, resources
+from tools.bazel.kernel import remote_bundle
 
 MANIFEST = "kernel-packages.json"
 PROVENANCE = "kernel-provenance.json"
@@ -564,23 +565,29 @@ def stage_outputs(workdir, destination, workspace, source, selected):
                       "target": TARGET, "resolution": selected}
         (incoming / PROVENANCE).write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
         result = verify(incoming, workspace, source=source, architecture=architecture)
-        require(source_state(workspace, architecture, source["kernel_config"]) == source, "kernel handoff source changed during publication")
-        changed = []
-        for name in sorted(expected) + [PROVENANCE]:
-            old = destination / name
-            require(not old.is_symlink() and (not old.exists() or old.is_file()),
-                    "kernel destination must be a regular file: " + str(old))
-            if not old.exists() or sha256(old) != sha256(incoming / name):
-                changed.append(name)
-        if changed:
-            # This receipt is the completion marker. A failed/partial publication
-            # cannot masquerade as the previous successfully verified package set.
-            (destination / PROVENANCE).unlink(missing_ok=True)
-            for name in changed:
-                if name != PROVENANCE:
-                    (incoming / name).replace(destination / name)
-            (incoming / PROVENANCE).replace(destination / PROVENANCE)
+        install_verified(incoming, destination, workspace, source, expected)
         return result
+
+
+def install_verified(incoming, destination, workspace, source, expected):
+    """Install into Make's DEB directory under the package lock, with provenance last."""
+    architecture = source["launcher"]["architecture"]
+    require(source_state(workspace, architecture, source["kernel_config"]) == source, "kernel handoff source changed during publication")
+    changed = []
+    for name in sorted(expected) + [PROVENANCE]:
+        old = destination / name
+        require(not old.is_symlink() and (not old.exists() or old.is_file()),
+                "kernel destination must be a regular file: " + str(old))
+        if not old.exists() or sha256(old) != sha256(incoming / name):
+            changed.append(name)
+    if changed:
+        # This receipt is the completion marker. A failed/partial publication
+        # cannot masquerade as the previous successfully verified package set.
+        (destination / PROVENANCE).unlink(missing_ok=True)
+        for name in changed:
+            if name != PROVENANCE:
+                (incoming / name).replace(destination / name)
+        (incoming / PROVENANCE).replace(destination / PROVENANCE)
 
 
 def plan(workspace, state, remote_cache, upload, *, architecture=None, kernel_config=None, ca_bundle=None, java_trust_store=None, distdir=None, cache_directory=None, debs_directory=None):
@@ -772,6 +779,8 @@ def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cach
         source = source_state(workspace, architecture, kernel_config)
         architecture = source["launcher"]["architecture"]
         destination = debs_path(workspace, debs_directory)
+        remote_reuse_requested = remote_cache and os.environ.get("SONIC_VS_KERNEL_REMOTE_REUSE") == "1"
+        use_remote_bundle = remote_reuse_requested and not any((distdir, ca_bundle, java_trust_store))
         provenance = destination / PROVENANCE
         if provenance.exists() or provenance.is_symlink():
             recorded = json.loads(regular(provenance).read_text())
@@ -786,24 +795,47 @@ def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cach
                     result = verify(destination, workspace, source=source, architecture=architecture)
                     require(source_state(workspace, architecture, source["kernel_config"]) == source,
                             "kernel source changed during retained-package verification")
-                    return {"schema": 1, "reused": True, "debs_directory": str(destination), "result": result}
-                # Make clean may remove one or all DEBs. Rematerialize them using
-                # Bazel's cache, while still refusing corrupted retained bytes.
-                manifest = json.loads(regular(destination / MANIFEST).read_text())
-                require(sha256(destination / MANIFEST) == recorded.get("manifest_sha256"),
-                        "retained kernel manifest differs from its provenance")
-                for item in manifest["packages"]:
-                    name = item["name"]
-                    require(name in expected, "unexpected retained kernel package")
-                    if name not in missing:
-                        path = regular(destination / name)
-                        require(sha256(path) == item["sha256"] and path.stat().st_size == item["size"],
-                                "kernel artifact failed size/SHA256 verification: " + name)
+                    if not remote_reuse_requested:
+                        return {"schema": 1, "reused": True, "debs_directory": str(destination), "result": result}
+                    # CI validates the current resolution even if an earlier Make step staged the DEBs.
+                else:
+                    # Make clean may remove one or all DEBs. Rematerialize them using
+                    # Bazel's cache, while still refusing corrupted retained bytes.
+                    manifest = json.loads(regular(destination / MANIFEST).read_text())
+                    require(sha256(destination / MANIFEST) == recorded.get("manifest_sha256"),
+                            "retained kernel manifest differs from its provenance")
+                    for item in manifest["packages"]:
+                        name = item["name"]
+                        require(name in expected, "unexpected retained kernel package")
+                        if name not in missing:
+                            path = regular(destination / name)
+                            require(sha256(path) == item["sha256"] and path.stat().st_size == item["size"],
+                                    "kernel artifact failed size/SHA256 verification: " + name)
         else:
             owned = set(contract(workspace, architecture, source["kernel_config"])[1]) | {MANIFEST}
             require(not any((destination / name).exists() or (destination / name).is_symlink() for name in owned),
                     "kernel package publication is incomplete: missing provenance; rerun prepare.py build "
                     "with a new --state-dir and the same --debs-directory")
+        registry = selected_registry()
+        if use_remote_bundle and (workspace / remote_bundle.INPUT_INDEX).is_file():
+            destination.mkdir(parents=True, exist_ok=True)
+            expected = set(contract(workspace, architecture, source["kernel_config"])[1]) | {MANIFEST}
+            with tempfile.TemporaryDirectory(prefix=".kernel-restore-", dir=destination) as temporary:
+                incoming = Path(temporary)
+                try:
+                    index = remote_bundle.restore(workspace, incoming, expected - {MANIFEST}, source, registry, remote_cache)
+                    result = verify(incoming, workspace, source=source, architecture=architecture)
+                except remote_bundle.RESTORE_ERRORS as error:
+                    print(f"Kernel remote bundle unavailable; using Bazel: {error}", file=sys.stderr)
+                else:
+                    install_verified(incoming, destination, workspace, source, expected)
+                    if upload:
+                        try:
+                            remote_bundle.save_index(workspace, index)
+                        except OSError as error:
+                            print(f"Kernel remote index publication skipped: {error}", file=sys.stderr)
+                    return {"schema": 1, "reused": True, "reuse_source": "remote",
+                            "debs_directory": str(destination), "result": result}
         temporary_state = state is None
         if temporary_state:
             states = workspace / "target/bazel-kernel-state"
@@ -820,6 +852,13 @@ def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cach
                                  debs_directory=destination)
         require(source_state(workspace, architecture, source["kernel_config"]) == source, "kernel source changed during automatic build")
         result = verify(destination, workspace, source=source, architecture=architecture)
+        if use_remote_bundle and upload:
+            try:
+                index = remote_bundle.publish(workspace, destination, state / "consumer/MODULE.bazel.lock",
+                                              result, source, registry, remote_cache)
+                remote_bundle.save_index(workspace, index)
+            except remote_bundle.RESTORE_ERRORS as error:
+                print(f"Kernel remote bundle publication skipped: {error}", file=sys.stderr)
         if temporary_state:
             # Bazel's persistent caches own reusable compilation results. Keep
             # lightweight resolution/build evidence, not another full kernel tree.

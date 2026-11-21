@@ -26,6 +26,7 @@ def environment(auth):
     result.pop("SONIC_BAZEL_REMOTE_UPLOAD", None)
     result.pop("SONIC_BAZEL_KERNEL_REMOTE_CACHE", None)
     result.pop("SONIC_BAZEL_KERNEL_REMOTE_UPLOAD", None)
+    result.pop("SONIC_VS_KERNEL_REMOTE_REUSE", None)
     if auth is not None:
         result["BAZEL_REMOTE_AUTH"] = auth
     return result
@@ -159,6 +160,7 @@ class RemoteCacheTest(unittest.TestCase):
                         "-e", "SONIC_BAZEL_REMOTE_UPLOAD=",
                         "-e", "SONIC_BAZEL_KERNEL_REMOTE_CACHE=",
                         "-e", "SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=",
+                        "-e", "SONIC_VS_KERNEL_REMOTE_REUSE=",
                         "builder-image"])
                     self.assertEqual(record["auth_present"], auth is not None)
                     self.assert_no_credentials(result.stdout + result.stderr)

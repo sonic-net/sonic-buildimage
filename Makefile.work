@@ -525,7 +525,8 @@ DOCKER_RUN += -e BAZEL_REMOTE_AUTH
 DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_CACHE))' \
 	-e 'SONIC_BAZEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_UPLOAD))'
 DOCKER_RUN += -e 'SONIC_BAZEL_KERNEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))' \
-	-e 'SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))'
+	-e 'SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))' \
+	-e 'SONIC_VS_KERNEL_REMOTE_REUSE=$(subst ','"'"',$(SONIC_VS_KERNEL_REMOTE_REUSE))'
 
 # Use the same immutable Docker image for the host-base key and the running
 # slave. A caller can opt in by supplying a private cache directory on the host.

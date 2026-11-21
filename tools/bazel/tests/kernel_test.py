@@ -822,6 +822,112 @@ class KernelBundleTest(unittest.TestCase):
             self.assertTrue(kernel.ensure(self.root)["reused"])
         self.assertEqual(before, {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.bundle.iterdir()})
 
+    def remote_cache_fixture(self):
+        """Publish a trusted index using the real bundle verifier and fixture CAS."""
+        from tools.bazel.tests.kernel_cache_identity_test import fixture_policy, resolution_fixture
+
+        bundle = kernel.remote_bundle
+        lock, registry_files = resolution_fixture(kernel.DEFAULT_REGISTRY, self.state)
+        self.provenance["resolution"]["lock_sha256"] = hashlib.sha256(lock).hexdigest()
+        self.write_manifest()
+        # The five DEBs are already CAS outputs of the real Bazel action.
+        blobs = {(item["sha256"], item["size"]): (self.bundle / item["name"]).read_bytes()
+                 for item in self.manifest["packages"]}
+        downloads = []
+
+        class FixtureCAS:
+            def __init__(self, endpoint):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                pass
+
+            def missing(self, descriptors):
+                return set(descriptors) - set(blobs)
+
+            def upload(self, digest, size, source):
+                blobs[digest, size] = source.read_bytes()
+
+            def download(self, digest, size, destination):
+                downloads.append(destination.name)
+                destination.write_bytes(blobs[digest, size])
+
+        fixture_authorization = fixture_policy(self.state, lock)
+        self.addCleanup(fixture_authorization.close)
+        overrides = [patch.object(bundle.cache_transport, "BlobCache", FixtureCAS),
+                     patch.object(bundle.cache_identity, "_fetch", side_effect=registry_files.__getitem__),
+                     patch.dict(os.environ, {"SONIC_VS_KERNEL_REMOTE_REUSE": "1", "PYTHONPATH": "",
+                                             "SONIC_HOSTBASE_BUILDER_ID": "sha256:" + "a" * 64})]
+        for override in overrides:
+            override.start()
+            self.addCleanup(override.stop)
+        producer = self.root / "producer-debs"
+        self.bundle.rename(producer)
+
+        def build_kernel(workspace, state, remote, upload, **options):
+            self.assertTrue(upload)
+            consumer = state / "consumer"
+            consumer.mkdir(parents=True)
+            (consumer / "MODULE.bazel.lock").write_bytes(lock)
+            producer.rename(options["debs_directory"])
+            return {"plan": {}}
+
+        master = kernel.ensure(self.root, remote_cache="grpc://fixture:9092", upload=True, builder=build_kernel)
+        self.assertFalse(master["reused"])
+        # A fresh job receives only the trusted master's tiny index.
+        trusted = self.root / bundle.INPUT_INDEX
+        trusted.parent.mkdir(parents=True)
+        (self.root / bundle.OUTPUT_INDEX).rename(trusted)
+        shutil.rmtree(self.bundle)
+        return registry_files, blobs, downloads
+
+    def test_empty_job_restores_kernel_without_bazel(self):
+        _, _, downloads = self.remote_cache_fixture()
+        result = kernel.ensure(self.root, remote_cache="grpc://fixture:9092",
+                               builder=Mock(side_effect=AssertionError("launcher should be skipped")))
+        self.assertEqual(result["reuse_source"], "remote")
+        self.assertEqual(set(self.packages), set(downloads) & self.packages.keys())
+        self.assertEqual(kernel.verify(self.bundle, self.root)["provenance"], self.provenance)
+        self.assertFalse((self.root / kernel.remote_bundle.OUTPUT_INDEX).exists())
+
+    def test_changed_transitive_dependency_calls_bazel_in_a_fresh_job(self):
+        registry, _, downloads = self.remote_cache_fixture()
+        # Both direct module pins, the kernel revision, and the trusted index are identical.
+        transitive = next(url for url in registry if "/patchelf/" in url and url.endswith("/source.json")
+                          and registry[url] is not None)
+        changed = json.loads(registry[transitive])
+        changed["integrity"] = "sha256-" + base64.b64encode(b"x" * 32).decode()
+        registry[transitive] = json.dumps(changed).encode()
+        builder = Mock(side_effect=RuntimeError("normal kernel build"))
+        with self.assertRaisesRegex(RuntimeError, "normal kernel build"):
+            kernel.ensure(self.root, remote_cache="grpc://fixture:9092", builder=builder)
+        builder.assert_called_once()
+        self.assertFalse(any(name.endswith(".deb") for name in downloads))
+        self.assertFalse((self.bundle / kernel.PROVENANCE).exists())
+
+    def test_evicted_kernel_blob_falls_back_without_publishing_partial_packages(self):
+        _, blobs, _ = self.remote_cache_fixture()
+        package = self.manifest["packages"][0]
+        del blobs[package["sha256"], package["size"]]
+        builder = Mock(side_effect=RuntimeError("normal kernel build"))
+        with self.assertRaisesRegex(RuntimeError, "normal kernel build"):
+            kernel.ensure(self.root, remote_cache="grpc://fixture:9092", builder=builder)
+        builder.assert_called_once()
+        self.assertEqual(list(self.bundle.iterdir()), [])
+
+    def test_malformed_trusted_index_falls_back_before_fetching_any_blobs(self):
+        _, _, downloads = self.remote_cache_fixture()
+        (self.root / kernel.remote_bundle.INPUT_INDEX).write_text('{"schema": 1}')
+        builder = Mock(side_effect=RuntimeError("normal kernel build"))
+        with self.assertRaisesRegex(RuntimeError, "normal kernel build"):
+            kernel.ensure(self.root, remote_cache="grpc://fixture:9092", builder=builder)
+        builder.assert_called_once()
+        self.assertEqual(downloads, [])
+        self.assertEqual(list(self.bundle.iterdir()), [])
+
     def test_ensure_builds_once_for_parallel_requests_and_preserves_shared_cache(self):
         saved = self.root / "saved-bundle"
         self.bundle.rename(saved)

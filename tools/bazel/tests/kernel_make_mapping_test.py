@@ -46,7 +46,8 @@ class KernelMakeMappingTest(unittest.TestCase):
     def run_make(self, makefile, *targets, cwd=None, **variables):
         environment = os.environ.copy()
         for name in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL",
-                     "SONIC_BAZEL_KERNEL_REMOTE_CACHE", "SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"):
+                     "SONIC_BAZEL_KERNEL_REMOTE_CACHE", "SONIC_BAZEL_KERNEL_REMOTE_UPLOAD",
+                     "SONIC_VS_KERNEL_REMOTE_REUSE"):
             environment.pop(name, None)
         return subprocess.run(
             ["make", "--no-print-directory", "--no-builtin-rules", "-f", str(makefile),
@@ -55,7 +56,7 @@ class KernelMakeMappingTest(unittest.TestCase):
         )
 
     def docker_arguments(self, workspace=None, cache=None, native=True, enabled=True,
-                         remote_cache="", upload="n"):
+                         remote_cache="", upload="n", remote_reuse=""):
         workspace = workspace or self.workspace
         work = (ROOT / "Makefile.work").read_text()
         git_mounts = between(work, "# Empty by default; only set when building from a git worktree", "# Consider removing the --ulimit")
@@ -75,6 +76,7 @@ class KernelMakeMappingTest(unittest.TestCase):
             + f"SONIC_BAZEL_REMOTE_UPLOAD := {upload}\n"
             + f"SONIC_BAZEL_KERNEL_REMOTE_CACHE := {remote_cache}\n"
             + f"SONIC_BAZEL_KERNEL_REMOTE_UPLOAD := {upload}\n"
+            + f"SONIC_VS_KERNEL_REMOTE_REUSE := {remote_reuse}\n"
             + git_mounts
             + "\nDOCKER_RUN := " + shlex.join([sys.executable, str(recorder), str(capture)])
             + ' -v "$(PWD):/sonic" $(GIT_WORKTREE_MOUNTS)\n'
@@ -114,6 +116,7 @@ class KernelMakeMappingTest(unittest.TestCase):
                 self.assertNotIn(self.workspace, mounts)
                 self.assertNotIn(cache, mounts)
                 self.assertFalse(any(name.startswith("_SONIC_BAZEL_HOST_") for name in environment))
+                self.assertEqual(environment["SONIC_VS_KERNEL_REMOTE_REUSE"], "")
 
     def test_isolated_kernel_remote_policy_reaches_slave_without_requiring_local_cache(self):
         endpoint = "grpc://cache.example:9092/owner's"
@@ -121,11 +124,12 @@ class KernelMakeMappingTest(unittest.TestCase):
             for upload in ("n", "y"):
                 with self.subTest(cache=cache, upload=upload):
                     mounts, environment = self.docker_arguments(
-                        cache=cache, remote_cache=endpoint, upload=upload)
+                        cache=cache, remote_cache=endpoint, upload=upload, remote_reuse="1")
                     self.assertEqual(environment["SONIC_BAZEL_REMOTE_CACHE"], endpoint)
                     self.assertEqual(environment["SONIC_BAZEL_REMOTE_UPLOAD"], upload)
                     self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_CACHE"], endpoint)
                     self.assertEqual(environment["SONIC_BAZEL_KERNEL_REMOTE_UPLOAD"], upload)
+                    self.assertEqual(environment["SONIC_VS_KERNEL_REMOTE_REUSE"], "1")
                     self.assertEqual(Path("/bazel_cache") in mounts, cache is not None)
 
     def submodule_fixture(self):

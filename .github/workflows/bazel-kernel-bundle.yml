@@ -82,6 +82,7 @@ jobs:
         run: |
           python3 -B tools/bazel/tests/kernel_test.py
           python3 -B tools/bazel/tests/kernel_make_mapping_test.py
+          python3 -B -m unittest discover -s tools/bazel/tests -p 'kernel_cache_*_test.py'
           python3 -B tools/bazel/tests/kernel_sbom_test.py
           python3 -B tools/bazel/tests/public_artifacts_test.py
           python3 -B tools/bazel/tests/kernel_artifacts_test.py

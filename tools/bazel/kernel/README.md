@@ -158,6 +158,24 @@ endpoint does not guarantee a cache hit: the kernel action inputs must match.
 The retained kernel plan records `remote_cache` and `upload_local_results`;
 the launcher invocation records the effective remote policy.
 
+Fresh dedicated VS jobs set `SONIC_VS_KERNEL_REMOTE_REUSE=1`. After a
+successful master build, GitHub Actions retains a small index that identifies
+the package manifest, original provenance and compressed Bazel lock in the
+same remote cache as the five kernel DEBs. A fresh job reads an index only
+from this repository's master-push workflow.
+
+Before fetching any DEBs, the job checks the kernel revision and configuration,
+builder image, tracked build inputs and dependency resolution. This includes
+transitive registry files, previously absent entries and yanked versions. Each
+package must pass its size, SHA-256 and Debian control checks before Make can
+use it. A missing index or blob, changed dependency, unsupported input or
+failed verification sends the job through the normal Bazel launcher. The
+first master build with an eligible configuration seeds the index. When the
+kernel or build-infra revision changes, review its extension implementations,
+generated repositories and external release inputs before updating the audited
+producer pair and fingerprints in `cache_identity.py` and `cache_facts.py`.
+Until then, CI builds that revision with Bazel.
+
 ## Package contract
 
 The normal DEB directory contains these five kernel DEBs and two metadata
