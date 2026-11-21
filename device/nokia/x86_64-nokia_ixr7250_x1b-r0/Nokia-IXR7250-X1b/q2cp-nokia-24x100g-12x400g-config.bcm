@@ -1673,7 +1673,7 @@ serdes_tx_taps_445=pam4:-20:148:0:0:0:0
 serdes_tx_taps_446=pam4:-20:148:0:0:0:0
 serdes_tx_taps_447=pam4:-20:148:0:0:0:0
 
-rif_id_max=24576
+rif_id_max=20480
 dpp_db_path=/usr/share/bcm/db
 udh_exists=1
 
