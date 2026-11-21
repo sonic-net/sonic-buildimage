@@ -139,7 +139,7 @@
   ],
   "owner_test_helper_sha256": "8c071eb7044f0520672c8fae5ea270ef6c2f0d30b38114d9ffc3d2d2f8f5ac69",
   "selected_modules": {
-    "sonic-build-infra": "0.0.39-81476192bf2cdb70bb646e85935c5d698b6de8a0",
+    "sonic-build-infra": "0.0.40-e3d21fce8c3e06f3635bbddd92f1807b3f66d3c1",
     "rules_distroless": "0.9.4.sonic.25",
     "sonic-swss-common": "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61",
     "sonic-fips": "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177"
