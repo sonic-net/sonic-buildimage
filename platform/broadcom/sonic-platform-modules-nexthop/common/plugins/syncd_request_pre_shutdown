@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""Prepare SAI for fast reboot from syncd.sh's container pre-shutdown hook."""
+
+import argparse
+import subprocess
+import sys
+import syslog
+import time
+from pathlib import Path
+
+FAST_RESTART_KEY = "FAST_RESTART_ENABLE_TABLE|system"
+SHUTDOWN_KEY = "WARM_RESTART_TABLE|warm-shutdown"
+REQUESTING_STATE = "requesting"
+SUCCEEDED_STATE = "pre-shutdown-succeeded"
+COMMAND_TIMEOUT_SECONDS = 5
+PRE_SHUTDOWN_TIMEOUT_SECONDS = 60
+KEXEC_LOADED = Path("/sys/kernel/kexec_loaded")
+
+
+def run(*command: str, timeout: float = COMMAND_TIMEOUT_SECONDS) -> str:
+    return subprocess.run(
+        command, check=True, capture_output=True, text=True, timeout=timeout
+    ).stdout.strip()
+
+
+def state_db(*args: str, timeout: float = COMMAND_TIMEOUT_SECONDS) -> str:
+    # Each syncd container is already configured for its own ASIC's database.
+    return run("sonic-db-cli", "STATE_DB", *args, timeout=timeout)
+
+
+def log(message: str, priority: int = syslog.LOG_INFO) -> None:
+    syslog.syslog(priority, message)
+
+
+def wait_for_completion() -> str | None:
+    deadline = time.monotonic() + PRE_SHUTDOWN_TIMEOUT_SECONDS
+    observed_state: str | None = None
+    while (remaining := deadline - time.monotonic()) > 0:
+        observed_state = state_db("hget", SHUTDOWN_KEY, "state",
+                                  timeout=min(COMMAND_TIMEOUT_SECONDS, remaining))
+        if observed_state != REQUESTING_STATE:
+            break
+        time.sleep(min(0.1, remaining))
+    return observed_state
+
+
+def pre_shutdown(shutdown_type: str) -> None:
+    if shutdown_type == "cold":
+        return
+    # The outgoing reboot's flag distinguishes fast from cold/warm/service restarts.
+    # fast-reboot sets both FAST and WARM flags, so syncd.sh passes --warm.
+    if state_db("hget", FAST_RESTART_KEY, "enable") != "true":
+        return
+    if KEXEC_LOADED.read_text().strip() != "1":
+        return
+
+    state_db("hsetnx", SHUTDOWN_KEY, "restore_count", "0")
+    state_db("hset", SHUTDOWN_KEY, "state", REQUESTING_STATE)
+    # The command only publishes a Redis notification; syncd reports completion later.
+    run("/usr/bin/syncd_request_shutdown", "--pre")
+    state = wait_for_completion()
+    if state == SUCCEEDED_STATE:
+        log("SAI pre-shutdown succeeded")
+    else:
+        log(f"SAI pre-shutdown failed or timed out: {state}", syslog.LOG_ERR)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    shutdown_type = parser.add_mutually_exclusive_group(required=True)
+    for mode in ("cold", "warm", "fast"):
+        shutdown_type.add_argument(f"--{mode}", action="store_const", const=mode, dest="shutdown_type")
+    args = parser.parse_args(argv)
+    syslog.openlog("syncd_request_pre_shutdown")
+    try:
+        pre_shutdown(args.shutdown_type)
+    except (OSError, subprocess.SubprocessError) as error:
+        # Failures must still allow syncd.sh to request the final shutdown.
+        log(f"SAI pre-shutdown command failed: {error}", syslog.LOG_ERR)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
