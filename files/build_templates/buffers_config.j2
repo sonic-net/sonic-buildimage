@@ -61,6 +61,7 @@ def
             'upperspinerouter_lowerspinerouter' : '30m',
             'spinerouter_leafrouter' : '300m',
             'lowerspinerouter_leafrouter' : '500m',
+            'leafrouter_lowerspinerouter_fallback' : '300m',
             'fabricspinerouter_lowerspinerouter' : '5m',
             'fabricregionalhub_lowerregionalhub' : '5m',
             'lowerregionalhub_upperregionalhub' : '50m',
@@ -77,6 +78,16 @@ def
 {%- set _ = ports2cable.update(buffer_config_extensions.ports2cable) %}
 
 {%- if cable_length is not defined %}
+{%- set pg_profile_lookup %}
+    {%- include 'pg_profile_lookup.ini' ignore missing %}
+{%- endset %}
+{%- set pg_profiles = [] %}
+{%- for line in pg_profile_lookup.splitlines() %}
+    {%- set fields = line.partition('#')[0].split() %}
+    {%- if fields | length >= 6 and fields[0].isdigit() %}
+        {%- set _ = pg_profiles.append((fields[0], fields[1])) %}
+    {%- endif %}
+{%- endfor %}
 {%- macro cable_length(port_name) %}
     {%- set cable_len = [] %}
     {%- for local_port in DEVICE_NEIGHBOR %}
@@ -100,10 +111,16 @@ def
                          {%- set roles1 = roles1.replace('backend', '') %}
                          {%- set roles2 = roles2.replace('backend', '') %}
                 {%- endif %}
-                {%- if roles1 in ports2cable %}
-                    {%- if cable_len.append(ports2cable[roles1]) %}{% endif %}
-                {%- elif roles2 in ports2cable %}
-                    {%- if cable_len.append(ports2cable[roles2]) %}{% endif %}
+                {%- set cable = ports2cable[roles1] if roles1 in ports2cable
+                                else ports2cable.get(roles2) %}
+                {%- set fallback = ports2cable.get(roles1 + '_fallback') %}
+                {%- set speed = (PORT | default({})).get(port_name, {}).get('speed', '') | string %}
+                {%- if cable == '500m' and fallback and speed and pg_profiles and
+                       (speed, cable) not in pg_profiles and (speed, fallback) in pg_profiles %}
+                    {%- set cable = fallback %}
+                {%- endif %}
+                {%- if cable is not none %}
+                    {%- set _ = cable_len.append(cable) %}
                 {%- endif %}
             {%- endif %}
         {%- endif %}
