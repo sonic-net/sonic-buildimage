@@ -14,11 +14,9 @@ module sonic-sflow{
     import sonic-port {
         prefix port;
     }
-    /*
     import sonic-vlan {
         prefix vlan;
     }
-    */
     import sonic-portchannel {
         prefix lag;
     }
@@ -34,6 +32,14 @@ module sonic-sflow{
 
 
     description "SFLOW yang Module for SONiC OS";
+
+    revision 2026-11-19 {
+        description
+            "SFLOW global agent_id names a VLAN by leafref to VLAN, so it cannot name a VLAN
+             that does not exist and the VLAN's removal finds the sFlow configuration that
+             uses it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2023-04-11 {
         description "Add direction command to support egress sflow";
@@ -182,6 +188,9 @@ module sonic-sflow{
                 }
 
                 leaf agent_id {
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type union {
                         type leafref {
                             path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
@@ -195,13 +204,8 @@ module sonic-sflow{
                         type leafref {
                             path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
                         }
-                        /*
                         type leafref {
                             path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                        }
-                        */
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
                         }
                     }
                     description "Interface whose IP address is used as the sFlow agent ID.";

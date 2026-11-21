@@ -19,11 +19,9 @@ module sonic-system-tacacs {
         prefix lag;
     }
 
-    /*
     import sonic-vlan {
         prefix vlan;
     }
-    */
 
     import sonic-loopback-interface {
         prefix loopback;
@@ -34,6 +32,13 @@ module sonic-system-tacacs {
     }
 
     description "Terminal Access Controller Access-Control System Plus (TACACS+) YANG module for SONiC OS.";
+
+    revision 2026-11-19 {
+        description
+            "TACPLUS global src_intf names a VLAN by leafref to VLAN, so it cannot name a VLAN
+             that does not exist and the VLAN's removal finds the TACACS+ source that uses it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2021-04-15 {
         description "Initial revision.";
@@ -165,6 +170,9 @@ module sonic-system-tacacs {
                 }
 
                 leaf src_intf {
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type union {
                         type leafref {
                             path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
@@ -172,13 +180,8 @@ module sonic-system-tacacs {
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
-                        /*
                         type leafref {
                             path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                        }
-                        */
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
                         }
                         type leafref {
                             path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";

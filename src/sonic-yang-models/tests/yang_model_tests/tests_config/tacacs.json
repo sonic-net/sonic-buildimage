@@ -175,6 +175,60 @@
                 ]
             }
         }
-    }
+    },
 
+    "TACPLUS_SRC_INTF_VLAN_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100
+                    }
+                ]
+            }
+        },
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "src_intf": "Vlan100"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_SRC_INTF_VLAN_MISSING_TEST": {
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "src_intf": "Vlan100"
+                }
+            }
+        }
+    },
+
+    "TACPLUS_SRC_INTF_VLAN_4095_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "src_intf": "Vlan4095"
+                }
+            }
+        }
+    }
 }
