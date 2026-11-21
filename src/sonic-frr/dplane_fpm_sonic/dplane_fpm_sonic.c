@@ -233,6 +233,7 @@ struct fpm_nl_ctx {
 	struct event *t_rmacreset;
 	struct event *t_rmacwalk;
 	struct event *t_pinwalk;	/* MAC pin replay, see fpm_pin_replay() */
+	struct event *t_remmacwalk;	/* see fpm_rem_mac_replay() */
 
 	/* Statistic counters. */
 	struct {
@@ -680,6 +681,7 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	event_cancel_async(zrouter.master, &fnc->t_rmacreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_rmacwalk, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_pinwalk, NULL);
+	event_cancel_async(zrouter.master, &fnc->t_remmacwalk, NULL);
 
 	/*
 	 * Grab the lock to empty the streams (data plane might try to
@@ -1059,8 +1061,9 @@ static struct zebra_mac *fpm_pin_zebra_mac(const struct fpm_pin *p)
 }
 
 /*
- * zebra sends the MAC to SONiC as remote: a remote MAC, or a local one it
- * reaches over the network port while the Ethernet Segment is down.
+ * zebra sends the MAC to SONiC as remote: a remote MAC, or a static local one
+ * it installs over the network port while the Ethernet Segment is down
+ * (zebra_evpn_sync_mac_dp_install()), which needs an active ES nexthop group.
  */
 static bool fpm_mac_sent_remote(struct zebra_mac *zmac)
 {
@@ -1071,7 +1074,9 @@ static bool fpm_mac_sent_remote(struct zebra_mac *zmac)
 		return true;
 
 	return CHECK_FLAG(zmac->flags, ZEBRA_MAC_LOCAL) && zmac->es &&
-	       zebra_evpn_es_local_mac_via_network_port(zmac->es);
+	       zebra_evpn_es_local_mac_via_network_port(zmac->es) &&
+	       zebra_evpn_mac_is_static(zmac) &&
+	       CHECK_FLAG(zmac->es->flags, ZEBRA_EVPNES_NHG_ACTIVE);
 }
 
 /* The remote write zebra makes for the MAC stands for the pin in SONiC. */
@@ -4099,6 +4104,149 @@ static void fpm_enqueue_l3vni_table(struct hash_bucket *bucket, void *arg)
 	hash_iterate(zl3vni->rmac_table, fpm_enqueue_rmac_table, fra);
 }
 
+struct fpm_rem_mac_walk {
+	struct fpm_nl_ctx *fnc;
+	struct zebra_vrf *zvrf;
+	struct zebra_dplane_ctx *ctx;
+	bool complete;
+};
+
+/*
+ * fpm_process_queue() takes a context once DPLANE_FPM_NL_BUF_SIZE bytes are
+ * free and writes it without the lock held in between: leave it that room,
+ * on top of this MAC's message.
+ */
+static bool fpm_rem_mac_obuf_room(struct fpm_nl_ctx *fnc)
+{
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+
+	return STREAM_WRITEABLE(fnc->obuf) >= 2 * DPLANE_FPM_NL_BUF_SIZE;
+}
+
+/*
+ * Send a MAC zebra installs as remote the way zebra_evpn_rem_mac_install()
+ * writes it. A frozen remote duplicate is skipped as zebra skips it on a
+ * remote add; zebra can still have one installed from before the freeze.
+ */
+static void fpm_rem_mac_replay_mac(struct hash_bucket *bucket, void *arg)
+{
+	struct fpm_rem_mac_walk *walk = arg;
+	struct zebra_mac *zmac = bucket->data;
+	struct zebra_evpn *zevpn = zmac->zevpn;
+	const struct zebra_if *zif, *br_zif;
+	struct zebra_vxlan_vni *vni;
+	struct ipaddr vtep_ip = {};
+	uint32_t nhg_id = 0;
+	vlanid_t vid = 0;
+	bool sticky;
+
+	if (!walk->complete || !fpm_mac_sent_remote(zmac) ||
+	    CHECK_FLAG(zmac->flags, ZEBRA_MAC_FPM_SENT) || !zevpn->vxlan_if)
+		return;
+
+	if (CHECK_FLAG(zmac->flags, ZEBRA_MAC_REMOTE) && walk->zvrf->dad_freeze &&
+	    CHECK_FLAG(zmac->flags, ZEBRA_MAC_DUPLICATE))
+		return;
+
+	zif = zevpn->vxlan_if->info;
+	if (!zif || !zif->brslave_info.br_if)
+		return;
+
+	vni = zebra_vxlan_if_vni_find(zif, zevpn->vni);
+	if (!vni)
+		return;
+
+	if (zmac->es) {
+		if (!CHECK_FLAG(zmac->es->flags, ZEBRA_EVPNES_NHG_ACTIVE))
+			return;
+		nhg_id = zmac->es->nhg_id;
+		SET_IPADDR_NONE(&vtep_ip);
+	} else {
+		vtep_ip = zmac->fwd_info.r_vtep_ip;
+	}
+
+	br_zif = zif->brslave_info.br_if->info;
+	if (IS_ZEBRA_IF_BRIDGE_VLAN_AWARE(br_zif))
+		vid = vni->access_vlan;
+	sticky = !!CHECK_FLAG(zmac->flags,
+			      (ZEBRA_MAC_STICKY | ZEBRA_MAC_REMOTE_DEF_GW));
+
+	dplane_ctx_reset(walk->ctx);
+	dplane_ctx_set_op(walk->ctx, DPLANE_OP_MAC_INSTALL);
+	dplane_mac_init(walk->ctx, zevpn->vxlan_if, zif->brslave_info.br_if,
+			vid, &zmac->macaddr, vni->vni, &vtep_ip, sticky, nhg_id,
+			DPLANE_MAC_REMOTE);
+	if (!fpm_rem_mac_obuf_room(walk->fnc) ||
+	    fpm_nl_enqueue(walk->fnc, walk->ctx) == -1)
+		walk->complete = false;
+	else
+		SET_FLAG(zmac->flags, ZEBRA_MAC_FPM_SENT);
+}
+
+static void fpm_rem_mac_replay_evpn(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn *zevpn = bucket->data;
+
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_rem_mac_replay_mac, arg);
+}
+
+static void fpm_rem_mac_unmark(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_mac *zmac = bucket->data;
+
+	UNSET_FLAG(zmac->flags, ZEBRA_MAC_FPM_SENT);
+}
+
+static void fpm_rem_mac_unmark_evpn(struct hash_bucket *bucket, void *arg)
+{
+	struct zebra_evpn *zevpn = bucket->data;
+
+	if (zevpn->mac_table)
+		hash_iterate(zevpn->mac_table, fpm_rem_mac_unmark, NULL);
+}
+
+/*
+ * Every FPM connect, after the router MACs, sends the remote MACs zebra holds:
+ * zebra's writes while the session was down were not sent. A full output
+ * buffer resumes the walk a second later; ZEBRA_MAC_FPM_SENT marks the MACs
+ * already sent. Without mac-ext-learn mode, fpmsyncd leaves the remote MACs
+ * to fdbsyncd.
+ */
+static void fpm_rem_mac_replay(struct event *t)
+{
+	struct fpm_rem_mac_walk walk = { .fnc = EVENT_ARG(t),
+					 .zvrf = zebra_vrf_get_evpn(),
+					 .complete = true };
+
+	if (!walk.zvrf || !walk.zvrf->evpn_table)
+		return;
+
+	walk.ctx = dplane_ctx_alloc();
+	hash_iterate(walk.zvrf->evpn_table, fpm_rem_mac_replay_evpn, &walk);
+	dplane_ctx_fini(&walk.ctx);
+
+	if (!walk.complete)
+		event_add_timer(zrouter.master, fpm_rem_mac_replay, walk.fnc, 1,
+				&walk.fnc->t_remmacwalk);
+	else
+		hash_iterate(walk.zvrf->evpn_table, fpm_rem_mac_unmark_evpn,
+			     NULL);
+}
+
+static void fpm_rem_mac_replay_start(struct event *t)
+{
+	struct zebra_vrf *zvrf = zebra_vrf_get_evpn();
+
+	if (!zebra_mac_ext_learn_mode())
+		return;
+
+	/* A walk cut short by a disconnect leaves marks behind. */
+	if (zvrf && zvrf->evpn_table)
+		hash_iterate(zvrf->evpn_table, fpm_rem_mac_unmark_evpn, NULL);
+	fpm_rem_mac_replay(t);
+}
+
 static void fpm_rmac_send(struct event *t)
 {
 	struct fpm_rmac_arg fra;
@@ -4116,6 +4264,9 @@ static void fpm_rmac_send(struct event *t)
 		event_cancel(&fra.fnc->t_pinwalk);
 		event_add_event(zrouter.master, fpm_pin_replay, fra.fnc, 0,
 				&fra.fnc->t_pinwalk);
+		event_cancel(&fra.fnc->t_remmacwalk);
+		event_add_event(zrouter.master, fpm_rem_mac_replay_start,
+				fra.fnc, 0, &fra.fnc->t_remmacwalk);
 	}
 }
 
@@ -4407,6 +4558,7 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 	event_cancel(&fnc->t_rmacreset);
 	event_cancel(&fnc->t_rmacwalk);
 	event_cancel(&fnc->t_pinwalk);
+	event_cancel(&fnc->t_remmacwalk);
 	event_cancel(&fnc->t_event);
 	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
