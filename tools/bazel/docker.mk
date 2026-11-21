@@ -135,10 +135,19 @@ define build_bazel_docker_images
 		bazel_options+=($(bazel_make_image_options)
 			"--platforms=@sonic_build_infra//platforms:$$bazel_platform"
 			"--host_platform=@sonic_build_infra//platforms:$$bazel_platform")
-		$(call vs_time_phase,build) "$${BAZEL:-bazel}" build "$${bazel_options[@]}" $(foreach image,$(1),"$($(image)_BAZEL_TARGET)")
+		boot_layouts=()
+		$(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),boot_targets="$$(python3 tools/bazel/build_helpers.py boot-layouts --bazel="$${BAZEL:-bazel}" $(foreach image,$(1),--label="$($(image)_BAZEL_TARGET)"))"
+		if [[ -n "$$boot_targets" ]]; then mapfile -t boot_layouts <<< "$$boot_targets"; fi)
+		$(call vs_time_phase,build) "$${BAZEL:-bazel}" build "$${bazel_options[@]}" $(foreach image,$(1),"$($(image)_BAZEL_TARGET)") "$${boot_layouts[@]}"
 		$(foreach image,$(1),
 		bazel_output="$$($(call vs_time_phase,cquery-$(image)) "$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET)")"
-		$(call vs_time_phase,export-$(image)) python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$(TARGET_PATH)/$(image)"
+		layout_option=()
+		$(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),if grep -Fxq -- "$($(image)_BAZEL_TARGET).boot-oci" <<< "$$boot_targets"; then
+			layout="$$("$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET).boot-oci")"
+			[[ -d "$$layout" ]] || { echo "Missing native boot OCI layout for $(image)" >&2; exit 1; }
+			layout_option=(--layout-query-output="$$layout")
+		fi)
+		$(call vs_time_phase,export-$(image)) python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$(TARGET_PATH)/$(image)" "$${layout_option[@]}"
 		)
 	} $(LOG)
 	$(foreach image,$(1),$(call sbom_emit_fragment,$(TARGET_PATH)/$(image),DOCKER_IMAGE,$($(image)_PATH),,,,)
@@ -174,7 +183,8 @@ ifeq ($(SONIC_VS_IMAGE_TIMINGS),1)
 	trap 'if [[ -f "$@.log" && ! -L "$@.log" ]]; then cp -- "$@.log" "$$SONIC_VS_CONTAINER_BATCH_TIMING_DIR/make.log"; fi' EXIT
 endif
 	python3 -B tools/bazel/build_container_batch.py --target-path="$(TARGET_PATH)" --architecture="$(CONFIGURED_ARCH)" \
-		--debug-image-mark="$(DBG_IMAGE_MARK)" \
+		$(if $(filter 1,$(SONIC_VS_VALIDATION_BUNDLES)),--validation-directory="artifacts/vs/containers" --validation-debug="$(SONIC_ENABLE_DEBUG_LAYER)" $(foreach image,$(SONIC_BAZEL_VALIDATION_ONLY_DBG_IMAGES),--validation-only-debug="$(image)") $(foreach image,$(SONIC_BAZEL_DBG_DOCKER_IMAGES),--registered-debug="$(image)")) \
+		--debug-image-mark="$(DBG_IMAGE_MARK)" $(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),--boot-layouts) \
 		--shared-args=$(call bazel_quote_argument,$(bazel_make_image_options)) \
 		$(foreach image,$(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(if $($(image)_BAZEL_SHARED_ARGS),--shared-args=$(call bazel_quote_argument,$($(image)_BAZEL_SHARED_ARGS)))) \
 		$(foreach image,$(SONIC_BAZEL_VS_BATCH_ARCHIVES),--archive="$(image)" --label="$($(image)_BAZEL_TARGET)" --owner-args=$(call bazel_quote_argument,$($(image)_BAZEL_ARGS))) $(LOG)

@@ -196,6 +196,14 @@ def oci_filtered(files, excludes_path, includes_path):
             if not matches(name, item, excludes) or matches(name, item, includes)}
 
 
+def filtered_source_runtime(files, contract, excludes_path, includes_path):
+    filtered = oci_filtered(files, excludes_path, includes_path)
+    required = {name for record in contract["packages"] for name in record["required_paths"]}
+    required.update(name for name, item in files.items() if "elf_machine" in item)
+    require(required <= filtered.keys(), "OCI filter removes a required source path or ELF")
+    return filtered
+
+
 def expected_state(path):
     contract = json.loads(path.read_bytes())
     require(contract.get("schema") == 1, "invalid runtime package state contract")
@@ -361,11 +369,7 @@ def validate_images(runtime_path, debug_path, runtime_handoff, debug_handoff,
         require(all(path is not None for path in filter_inputs),
                 "direct receipted runtime requires its declared OCI filter policy")
     if has_source and all(path is not None for path in filter_inputs):
-        filtered_runtime = oci_filtered(expected_source_runtime, *filter_inputs)
-        required = {name for record in source_contract["packages"] for name in record["required_paths"]}
-        required.update(name for name, item in expected_source_runtime.items() if "elf_machine" in item)
-        require(required <= filtered_runtime.keys(), "OCI filter removes a required source path or ELF")
-        expected_source_runtime = filtered_runtime
+        expected_source_runtime = filtered_source_runtime(expected_source_runtime, source_contract, *filter_inputs)
     if direct_layers:
         declared_runtime, declared_debug = {}, {}
         for path in runtime_payload_layers:

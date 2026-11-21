@@ -142,6 +142,23 @@ def declared_image_policy(policy, image_version, environment_file):
     return {**policy, "image_validation": {**settings, "environment": expected}}
 
 
+def verify_installer_source_payload(directory, variant, files, source_sha256):
+    """Compare the selected installer image with every retained source-package member."""
+    contract = directory / "source-contract.json"
+    receipt_path = directory / "source-receipt.json"
+    check_p4_inputs(contract, receipt_path)
+    receipt = json.loads(receipt_path.read_bytes())
+    check.require(receipt["contract_sha256"] == check.sha(contract) and receipt["payload"]["sha256"] == source_sha256,
+                  "Gearbox receipt differs from the source contract or built runtime TAR")
+    expected = {path: item for package in receipt["packages"] for path, item in package["files"].items()}
+    expected = image_validation.filtered_source_runtime(expected, json.loads(contract.read_bytes()),
+                                                         directory / "source-excludes.txt", directory / "source-includes.txt")
+    # Match apply_layer's Linux symlink mode, including packages whose TAR headers store 0000.
+    expected = {path: dict(item, mode=0o777) if item["kind"] == "symlink" else item for path, item in expected.items()
+                if variant == "runtime" or item["kind"] != "directory"}
+    image_validation.assert_payload(expected, files, variant + " source package payload")
+
+
 def validate_images(directory):
     clean_source(directory)
     receipt = json.loads((directory / "build-receipt.json").read_text())

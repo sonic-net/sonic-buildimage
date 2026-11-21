@@ -10,6 +10,7 @@ on:
       - tools/bazel/ci/source_mirrors.py
       - tools/bazel/debian_mirrors.cfg
       - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
       - tools/bazel/image-assembly-design.md
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
@@ -23,6 +24,7 @@ on:
       - tools/bazel/ci/source_mirrors.py
       - tools/bazel/debian_mirrors.cfg
       - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
   workflow_dispatch:
@@ -44,7 +46,7 @@ jobs:
             runner: ubuntu-24.04-arm
             platform: aarch64_trixie
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.architecture == 'amd64' && 30 || 15 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -76,6 +78,7 @@ jobs:
             disk_targets=(//tools/bazel/image/action_test:disk_action_test)
           fi
           bazel test //tools/bazel/image:assembly_formats_test \
+            //tools/bazel/image:boot_image_bundle_test \
             //tools/bazel/image:mkinitramfs_test \
             //tools/bazel/image:kernel_deb_test \
             //tools/bazel/image/tar_split_json:format_test \
@@ -95,7 +98,7 @@ jobs:
           retained = resolution.collect(Path.cwd(), directory)
           (directory / 'resolution.json').write_text(json.dumps(retained, indent=2) + '\n')
           PY
-          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
             directory="artifacts/image-rule-actions/${target%%/*}"
             mkdir -p "$directory"
             cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
@@ -110,12 +113,21 @@ jobs:
           test -s artifacts/image-rule-actions/module-graph.json
           test -s artifacts/image-rule-actions/module-graph-inspection.json
           test -s artifacts/image-rule-actions/resolution.json
-          for target in assembly_formats_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
             test -s "artifacts/image-rule-actions/$target/test.log"
             test -s "artifacts/image-rule-actions/$target/test.xml"
           done
           test -s artifacts/image-rule-actions/action-receipt.json
           git diff --exit-code
+      - name: Verify offline bundle cache reuse across clean Bazel builds
+        if: matrix.architecture == 'amd64'
+        run: |
+          sandbox_args=()
+          if unshare --user --map-root-user --mount true; then
+            sandbox_args+=(--require-linux-sandbox)
+          fi
+          python3 tools/bazel/tests/integration/boot_bundle_cache.py "${sandbox_args[@]}" \
+            --report artifacts/image-rule-actions/boot-bundle-cache.json
       - name: Retain public rule action evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

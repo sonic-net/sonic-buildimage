@@ -88,7 +88,9 @@ Shared package-cache writes remain enabled with the computed build environment.
 
 Both jobs install Azure CLI if missing and authenticate using
 `az login --identity`, explicitly select the ACR subscription, then obtain an ACR
-token with `az acr login --name sonicdev --expose-token`. The helper passes the
+token with `az acr login --name sonicdev --suffix microsoft --expose-token`.
+The tenant suffix selects the configured login server when a runner has image
+pull access and Azure Resource Manager cannot resolve the registry. The helper passes the
 token through `docker login --password-stdin` using the exact
 `REGISTRY_SERVER:REGISTRY_PORT` endpoint used by Make and publication, currently
 `sonicdev-microsoft.azurecr.io:443`. This avoids storing credentials only for the

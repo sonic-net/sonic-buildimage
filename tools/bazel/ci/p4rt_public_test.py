@@ -2,6 +2,8 @@
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -10,6 +12,30 @@ from tools.bazel.ci import p4rt_public
 
 
 class PublicEvidenceTest(unittest.TestCase):
+    def test_resolved_graph_must_contain_each_accepted_version_without_a_conflicting_version(self):
+        """The shared CI graph must preserve the dependency pins of the standalone P4RT build."""
+        script = Path(__file__).with_name('p4rt_acceptance.py')
+        pins = json.loads(script.with_suffix('.json').read_bytes())['selected_modules']
+        self.assertEqual(set(pins), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips'})
+        nodes = [{'name': name, 'version': version} for name, version in pins.items()]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'module-graph.json'
+
+            def check_graph(dependencies):
+                path.write_text(json.dumps({'key': '<root>', 'dependencies': dependencies}))
+                return subprocess.run([sys.executable, str(script), '--module-graph', str(path)],
+                                      capture_output=True, text=True)
+
+            accepted = check_graph(nodes)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            for node in nodes:
+                for dependencies in ([n for n in nodes if n != node],
+                                     [*nodes, {'dependencies': [dict(node, version='different')]}]):
+                    with self.subTest(module=node['name'], missing=node not in dependencies):
+                        rejected = check_graph(dependencies)
+                        self.assertNotEqual(rejected.returncode, 0)
+                        self.assertIn(node['name'] + '@' + node['version'], rejected.stderr)
+
     def test_selects_only_hashed_artifact_and_safe_receipt_fields(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -53,7 +53,7 @@ class MuxValidationTest(unittest.TestCase):
                     with mock.patch.object(sys, "argv", ["mux_loaded.py", "--artifacts", directory]), \
                             mock.patch.object(mux_image, "clean_source"), \
                             mock.patch.object(mux_image, "source_identity", return_value={"revision": "test-revision", "tested_revision_parents": []}):
-                        with self.assertRaisesRegex(ValueError, "MUX acceptance requires both runtime and debug images"):
+                        with self.assertRaisesRegex(ValueError, "MUX acceptance requires every selected variant"):
                             mux_loaded.main()
 
 

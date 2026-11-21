@@ -275,7 +275,7 @@ class MigratedCleanupTest(unittest.TestCase):
 
 class MigratedWorkflowCleanupTest(unittest.TestCase):
     def test_every_stateful_migrated_job_registers_before_cache_setup(self):
-        self.assertEqual(sum(map(len, subject.MIGRATED_JOBS.values())), 28)
+        self.assertEqual(subject.MIGRATED_JOBS["bazel-oci.yml"], {"checks"})
         for filename, names in subject.MIGRATED_JOBS.items():
             value = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
             actual = {name for name, job in value["jobs"].items()
@@ -316,7 +316,7 @@ class MigratedWorkflowCleanupTest(unittest.TestCase):
                     self.assertIn("tools/bazel/ci/cleanup_container_bazel.py", event["paths"])
                     self.assertIn("tools/bazel/tests/migrated_job_cleanup_test.py", event["paths"])
 
-    def test_only_the_five_stateless_migrated_jobs_need_no_workspace_hook(self):
+    def test_only_stateless_migrated_jobs_need_no_workspace_hook(self):
         stateless = set()
         for filename, stateful in subject.MIGRATED_JOBS.items():
             jobs = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"]
@@ -329,8 +329,6 @@ class MigratedWorkflowCleanupTest(unittest.TestCase):
                     self.assertNotIn("setup-bazel@", step.get("uses", ""))
                     self.assertNotIn("upload-artifact@", step.get("uses", ""))
         self.assertEqual(stateless, {
-            ("bazel-oci.yml", "database_acceptance"), ("bazel-oci.yml", "gnmi_acceptance"),
-            ("bazel-oci.yml", "mgmt_framework_acceptance"), ("bazel-oci.yml", "radv_acceptance"),
             ("build-dashboard.yml", "deploy"),
         })
         validator = yaml.safe_load(

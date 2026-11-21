@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import bazel_commands, build, command_log, p4rt_handoff, resolution, time_vs_image
 from tools.bazel.p4rt_common_sdk import prepare_repository
-from tools.bazel.build_helpers import cache_options, remote_cache_options
+from tools.bazel.build_helpers import cache_options, export_archive, remote_cache_options
 from tools.bazel.ci.preserve_setup_bazel_cache import PRIVATE_CACHE_ENDPOINT
 from tools.bazel.oci.oci_inventory import resolve_path
 
@@ -207,6 +207,21 @@ def prepare_manifests(execute, directory, receipt):
              'DOCKERS_PATH=dockers'], directory, receipt, 'manifests')
 
 
+def stage_vs_parent(directory, revision, preparation, receipt):
+    """Reuse the selected parent's normalized source TAR from the VS installer build."""
+    name = 'config-engine.source.tar'
+    bundle = json.loads((directory / 'bundle.json').read_bytes())
+    check.require(bundle['image'] == 'docker-sonic-p4rt' and bundle['architecture'] == 'amd64' and
+                  bundle['revision'] == revision, 'The VS parent input belongs to a different P4RT build')
+    source = directory / name
+    actual = check.sha(source)
+    check.require(bundle['fixtures'][name] == actual, 'The downloaded VS parent source TAR changed')
+    destination = preparation / name
+    export_archive(source, destination)
+    receipt['artifacts'][name] = {'target': PREPARATION_TARGETS[name], 'bytes': destination.stat().st_size,
+                                  'sha256': actual}
+
+
 def prepare_owner(args, *, make_build=False):
     native()
     directory, preparation, sdk, output = locations(args)
@@ -234,7 +249,14 @@ def prepare_owner(args, *, make_build=False):
             receipt['action_audit'] = bazel_commands.audit_targets(args.bazel, options, list(PREPARATION_TARGETS.values()),
                 workspace=ROOT, output=preparation / 'action-audit.json')
         with phase('p4rt-sdk'):
-            build.collect_archives(ROOT, preparation, receipt, PREPARATION_TARGETS, bazel=args.bazel, options=options, use_execution_root=True)
+            targets = PREPARATION_TARGETS.copy()
+            vs_parent = getattr(args, 'vs_parent', None)
+            if vs_parent:
+                del targets['config-engine.source.tar']
+            build.collect_archives(ROOT, preparation, receipt, targets, bazel=args.bazel,
+                                   options=options, use_execution_root=True)
+            if vs_parent:
+                stage_vs_parent(vs_parent, revision, preparation, receipt)
             module = (preparation / 'common.MODULE.bazel').read_text()
             check.require(re.search(r'version\s*=\s*[\"\']0\.0\.9-' + COMMON_REVISION + r'[\"\']', module),
                           'The fetched Common owner differs from the selected image parent')
@@ -439,6 +461,7 @@ def main():
     parser.add_argument('--directory', required=True, type=Path)
     parser.add_argument('--bazel', default='bazel', help='Root image/Common Bazel 8.5.1 launcher')
     parser.add_argument('--owner-bazel', default='bazel', help='Separate owner Bazelisk or Bazel 6.4.0 launcher')
+    parser.add_argument('--vs-parent', type=Path, help='P4RT validation bundle from the matching VS run')
     parser.add_argument('--owner-source', required=True, type=Path)
     parser.add_argument('--owner-revision', required=True)
     parser.add_argument('--owner-output-base', required=True, type=Path)

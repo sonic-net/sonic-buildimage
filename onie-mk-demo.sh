@@ -108,6 +108,14 @@ cp -r $onie_installer_payload $tmp_installdir || clean_up 1
 echo -n "."
 ## A dockerfs of 4GiB or more is shipped next to the payload rather than inside it
 . ./onie-image.conf
+if [ "${DOCKER_LOAD_ON_BOOT:-n}" = y ]; then
+    FILESYSTEM_DOCKERFS=sonic-images.tar.gz
+    # The installer sources generic and then optional architecture-specific settings.
+    printf '\nFILESYSTEM_DOCKERFS=%s\n' "$FILESYSTEM_DOCKERFS" >> "$tmp_installdir/onie-image.conf"
+    if [ -f "$tmp_installdir/onie-image-$arch.conf" ]; then
+        printf '\nFILESYSTEM_DOCKERFS=%s\n' "$FILESYSTEM_DOCKERFS" >> "$tmp_installdir/onie-image-$arch.conf"
+    fi
+fi
 if ! unzip -l $onie_installer_payload $FILESYSTEM_DOCKERFS > /dev/null 2>&1; then
     cp $FILESYSTEM_DOCKERFS $tmp_installdir || clean_up 1
 fi

@@ -145,6 +145,14 @@ def verify_database_packages(status, source_packages):
                       "installed status differs from the source owner: " + name)
 
 
+def verify_redis_permissions(files):
+    """Preserve Debian postinst ownership and setgid bits in the installed image."""
+    for path, uid, gid, mode in (("etc/redis", 100, 101, 0o2770), ("etc/redis/redis.conf", 100, 101, 0o640),
+                                ("var/lib/redis", 100, 101, 0o750), ("var/log/redis", 100, 4, 0o2750)):
+        check.require(tuple(files.get(path, {}).get(k) for k in ("uid", "gid", "mode")) == (uid, gid, mode),
+                      "Redis installation permissions differ: " + path)
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "image build did not complete")
@@ -202,10 +210,7 @@ def validate_images(directory):
             check.require(item.get("sha256") == check.sha(ROOT / source_file) and
                           (item.get("uid"), item.get("gid"), item.get("mode")) == (0, 0, mode),
                           "original database file differs: " + destination)
-        for path, uid, gid, mode in (("etc/redis", 100, 101, 0o2770), ("etc/redis/redis.conf", 100, 101, 0o640),
-                                    ("var/lib/redis", 100, 101, 0o750), ("var/log/redis", 100, 4, 0o2750)):
-            check.require(tuple(files.get(path, {}).get(k) for k in ("uid", "gid", "mode")) == (uid, gid, mode),
-                          "Redis installation permissions differ: " + path)
+        verify_redis_permissions(files)
         check.require(files["usr/share/sonic/bazel/database-packages.json"]["sha256"] == check.sha(directory / "runtime-packages.json"),
                       "runtime imported package records differ")
         status_name = "debug.status" if debug else "runtime.status"
@@ -223,9 +228,7 @@ def validate_images(directory):
         check.require(actual_components == expected_components, f"{name} component labels differ from Make")
         package_file = "debug-packages.json" if debug else "runtime-packages.json"
         installed = json.loads((directory / package_file).read_text())["dependency_check"]["packages"]
-        for component in ("libswsscommon", "sonic-supervisord-utilities-rs"):
-            check.require(labels.get("com.azure.sonic.versions." + component) == installed[component]["Version"],
-                          f"{name} does not advertise the installed {component} version")
+        check.verify_swss_component_labels(labels, installed)
         archive = image_validation.docker_archive(directory / (name + ".gz"), name + ":latest",
                                                   layout.manifest["config"]["digest"], layout.manifest["layers"])
         reports[name] = {"manifest_digest": layout.descriptor["digest"], "config_digest": layout.manifest["config"]["digest"],

@@ -23,7 +23,15 @@ fi
 az version --output none
 az login --identity --output none
 az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-registry_token=$(az acr login --name "$1" --expose-token --query accessToken --output tsv)
+# A pull-only identity can reach the registry without permission to discover
+# its login server through Azure Resource Manager. Give the CLI the same
+# tenant suffix that Docker uses when it falls back to the public ACR domain.
+login_args=(--name "$1")
+hostname_label=${REGISTRY_SERVER%%.*}
+if [[ $REGISTRY_SERVER == "$hostname_label.azurecr.io" && $hostname_label == "$1-"?* ]]; then
+    login_args+=(--suffix "${hostname_label#"$1-"}")
+fi
+registry_token=$(az acr login "${login_args[@]}" --expose-token --query accessToken --output tsv)
 if [[ -z "$registry_token" ]]; then
     echo 'ACR returned an empty access token' >&2
     exit 1

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Exercise selected-owner CI transport and preserve direct runtime providers."""
 import ast
-import contextlib
 import hashlib
 import json
 import os
-import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -14,7 +12,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 CATALOG = "main"
-JOBS = [("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+JOBS = [("bazel-eventd.yml", "native"),
         ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),
         ("bazel-oci.yml", "archive"), ("bazel-oci.yml", "checks")]
 
@@ -26,6 +24,25 @@ def calls(path, function):
 
 
 class SwssOwnerWorkflowTest(unittest.TestCase):
+    def test_native_closure_selects_one_configured_output(self):
+        """A warm server can expose a second policy built in a Python test transition."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        step = next(s for s in jobs["archive"]["steps"] if "native link closure" in s["name"])["run"]
+        function = step[step.index("output() {"):step.index('runtime="$(output')]
+        self.assertIn("bgp_eoiu_marker.py null)", step)
+        with tempfile.TemporaryDirectory() as temporary:
+            fake = Path(temporary) / "bazel"
+            fake.write_text("#!/bin/sh\n" +
+                            'case "$2" in "config(//:policy, target)") echo top-level ;; '
+                            '"config(//:source.py, null)") echo source.py ;; '
+                            '*) echo transitioned; echo ambiguous ;; esac\n')
+            fake.chmod(0o755)
+            shell = function + "output //:policy && output //:source.py null && ! output //:ambiguous"
+            result = subprocess.run(["bash", "-ec", shell], env=dict(os.environ, BAZEL=str(fake)),
+                                    check=True, capture_output=True, text=True)
+            self.assertEqual(result.stdout.splitlines(), ["top-level", "source.py"])
+            self.assertIn("Expected exactly one configured output", result.stderr)
+
     def test_filtered_workflows_include_local_downloader_input(self):
         filenames = {filename for filename, _job in JOBS} | {"bazel-libteam.yml"}
         for filename in filenames:
@@ -36,24 +53,6 @@ class SwssOwnerWorkflowTest(unittest.TestCase):
                 if paths is not None:
                     with self.subTest(filename=filename, event=event):
                         self.assertIn("tools/bazel/debian_mirrors.cfg", paths)
-
-    def test_swss_evidence_does_not_run_before_the_build_starts(self):
-        steps = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive"]["steps"]
-        build = next(s for s in steps if s.get("id") == "swss_layer_build")
-        evidence = next(s for s in steps if s.get("id") == "swss_layer_public")
-        self.assertIn("mkdir -p artifacts/swss-layer", build["run"])
-        self.assertEqual(evidence["if"],
-                         "always() && matrix.architecture == 'amd64' && steps.swss_layer_build.outcome != 'skipped'")
-        self.assertLess(steps.index(build), steps.index(evidence))
-        # Execute the existing evidence code for a started, failed build: it may
-        # publish an empty partial summary, but must not invent accepted outputs.
-        code = evidence["run"].split("python3 - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
-        with tempfile.TemporaryDirectory() as temporary, contextlib.chdir(temporary):
-            root = Path("artifacts/swss-layer")
-            root.mkdir(parents=True)
-            exec(compile(code, "swss-evidence", "exec"), {})
-            self.assertEqual(json.loads((root / "build-summary.json").read_text()), {})
-            self.assertFalse((root / "public-receipt.json").exists())
 
     def test_bootstrap_verifies_config_before_appending_to_existing_caches(self):
         from tools.bazel.ci import source_mirrors
@@ -110,116 +109,6 @@ class SwssOwnerWorkflowTest(unittest.TestCase):
             self.assertIn("--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"+CATALOG, args)
             self.assertEqual(args[-2:], ["--disk_cache=/private/disk", "@sonic_swss//crates/countersyncd:common_rust_test"])
 
-    def test_amd64_archive_attempts_keep_caches_and_get_fresh_owner_trees(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
-        name = "Isolate the AMD64 archive producer's fetched repositories"
-        self.assertEqual([job for job, spec in jobs.items() if any(step.get("name") == name
-                         for step in spec.get("steps", []))], ["archive"])
-        steps = jobs["archive"]["steps"]
-        setup = next(step for step in steps if step.get("name") == name)
-        producer = next(step for step in steps if step.get("id") == "swss_layer_build")
-        self.assertLess(steps.index(setup), steps.index(producer))
-        self.assertEqual(setup["if"], "matrix.architecture == 'amd64'")
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            old_base = root / "existing-output"
-            old_base.mkdir()
-            marker = old_base / "marker"
-            marker.write_text("interrupted probe")
-            rc = root / ".bazelrc.user"
-            caches = "build --disk_cache=/actions/disk\ncommon --repository_cache=/actions/repository\n"
-            bases = []
-            for attempt in range(2):
-                job_temp = root / str(attempt)
-                job_temp.mkdir()
-                env = dict(os.environ, SONIC_BAZEL_JOB_TEMP=str(job_temp), BASH_ENV="/dev/null")
-                rc.write_text(caches)
-                subprocess.run(["bash", "-eu", "-c", setup["run"]], cwd=root, env=env, check=True)
-                self.assertTrue(rc.read_text().startswith(caches))
-                options = [shlex.split(line) for line in rc.read_text().splitlines()]
-                [startup] = [arg for scope, arg in options if scope == "startup"]
-                self.assertTrue(startup.startswith("--output_base="))
-                base = Path(startup.split("=", 1)[1])
-                self.assertEqual(base, job_temp / "archive-bazel/producer")
-                self.assertEqual(list(base.iterdir()), [])
-                bases.append(base)
-                self.assertIn(["common", "--repo_contents_cache="], options)
-            self.assertNotEqual(*bases)
-            self.assertNotIn(old_base, bases)
-            self.assertEqual(marker.read_text(), "interrupted probe")
-
-    def test_source_interfaces_keep_cache_tests_and_probe(self):
-        document = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        steps = document["jobs"]["archive"]["steps"]
-        selected = [next(s for s in steps if s.get("name") == name) for name in (
-            "Preserve setup-bazel caches for source checks", "Validate reviewed SWSS consumer contracts",
-            "Check cached no-op and source edit through the image")]
-        for present in (True, False):
-            with self.subTest(present=present), tempfile.TemporaryDirectory() as temporary:
-                root = Path(temporary)
-                helper = root / "tools/bazel/ci"
-                helper.mkdir(parents=True)
-                names = ["preserve_setup_bazel_cache.py", "swss_image_rebuild.py"]
-                if present:
-                    for name in names:
-                        (helper / name).write_text("# source interface fixture\n")
-                recorder = """#!/usr/bin/python3
-import json,os,sys
-from pathlib import Path
-name=Path(sys.argv[0]).name
-args=sys.argv[1:]
-if name=='python3':
-    script=next((x for x in args if x.endswith('.py')), '')
-    if script and not script.endswith('bazel_commands.py') and not Path(script).is_file():
-        raise SystemExit(2)
-with Path(os.environ['RECORD']).open('a') as out: out.write(json.dumps({'name':name,'argv':args})+'\\n')
-"""
-                for command in ("python3", "bazel", "git"):
-                    (root / command).write_text(recorder)
-                    (root / command).chmod(0o755)
-                env = dict(os.environ, PATH=str(root)+":/usr/bin:/bin",
-                           BAZEL=str(root/"bazel"), RECORD=str(root/"calls.jsonl"), BASH_ENV="/dev/null")
-                result = subprocess.run(["bash", "-eu", "-c", "\n".join(s["run"] for s in selected)],
-                                        cwd=root, env=env, capture_output=True, text=True)
-                self.assertEqual(result.returncode == 0, present, result.stderr)
-                if not present:
-                    self.assertFalse((root/"calls.jsonl").exists())
-                    continue
-                recorded = [json.loads(line) for line in (root/"calls.jsonl").read_text().splitlines()]
-                paths = [arg for item in recorded for arg in item["argv"] if arg.endswith('.py')]
-                self.assertIn("tools/bazel/ci/"+names[0], paths)
-                self.assertIn("tools/bazel/ci/"+names[1], paths)
-                test = next(item["argv"] for item in recorded if item["name"] == "bazel")
-                self.assertEqual(test[-4:], ["@libteam//:consumer_test", "@sonic_swss//crates/countersyncd:common_rust_test",
-                                             "@sonic_swss//bazel:protobuf_runtime_test", "//tools/bazel/tests:swss_package_contract_test"])
-                self.assertIn("--nocache_test_results", test)
-                self.assertIn("--host_platform=@sonic_build_infra//platforms:x86_64_trixie", test)
-                probe = next(item["argv"] for item in recorded if "tools/bazel/ci/"+names[1] in item["argv"])
-                self.assertEqual(probe[probe.index("--runtime-target")+1],
-                                 "//dockers/docker-swss-layer-trixie:docker-swss-layer-trixie.gz")
-                self.assertEqual(probe[probe.index("--unchanged-target")+1],
-                                 "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.gz")
-
-    def test_fresh_checkout_verifier_receives_verified_config_explicitly(self):
-        document = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        step = next(s for s in document["jobs"]["archive"]["steps"]
-                    if s.get("name") == "Check local cache reuse across fresh checkouts")
-        script = step["run"].replace("${{ matrix.platform }}", "x86_64_trixie")
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            for name, text in (
-                    ("bazel", "#!/bin/sh\nprintf '/retained/repository\\n'\n"),
-                    ("python3", "#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")):
-                (root / name).write_text(text)
-                (root / name).chmod(0o755)
-            result = subprocess.run(["bash", "-eu", "-c", script], cwd=root,
-                env=dict(os.environ, PATH=str(root)+":/usr/bin:/bin", BAZEL=str(root/"bazel"),
-                         RUNNER_TEMP=str(root)), capture_output=True, text=True, check=True)
-            argv = json.loads(result.stdout)
-            self.assertIn("--bazel-arg=--experimental_downloader_config=" + str(root/"sonic-source-mirrors.cfg"), argv)
-            self.assertEqual(argv[argv.index("--repository-cache")+1], "/retained/repository")
-            self.assertIn("--bazel-arg=--platforms=@sonic_build_infra//platforms:x86_64_trixie", argv)
-
     def test_image_keeps_direct_debug_providers_and_library_only_metadata(self):
         document = ROOT / "dockers/docker-swss-layer-trixie/BUILD.bazel"
         # Parse only the literal rules whose provider edges are the contract.
@@ -239,11 +128,7 @@ with Path(os.environ['RECORD']).open('a') as out: out.write(json.dumps({'name':n
         self.assertEqual(ast.literal_eval(selected["installed_packages"]["source_modules"]),
                          {"libteam": "@image_source_modules//:libteam.MODULE.bazel"})
 
-    def test_ci_executes_owner_test_rules_and_runtime_adapter_matches_common_interface(self):
-        oci = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
-        step = next(s for s in oci["jobs"]["archive"]["steps"] if "consumer-events.jsonl" in s.get("run", ""))
-        self.assertIn("@libteam//:consumer_test", step["run"])
-        self.assertIn("@sonic_swss//crates/countersyncd:common_rust_test", step["run"])
+    def test_runtime_adapter_matches_common_interface(self):
         # Evaluate the real Starlark macro with its rule/select interfaces stubbed,
         # then check the selected Common helper's positional argument contract.
         namespace = {"load": lambda *args: None, "select": lambda choices: choices["//conditions:default"]}

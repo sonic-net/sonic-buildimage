@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -46,6 +47,18 @@ def remote_cache_options():
     ]
 
 
+def boot_layout_labels(bazel, labels):
+    """Archive owners can opt into the native layout handoff; legacy aliases still export archives."""
+    candidates = {label + ".boot-oci" for label in labels if label.startswith("//") and ":" in label}
+    if not candidates:
+        return set()
+    packages = sorted({label.rsplit(":", 1)[0] + ":all" for label in candidates})
+    expression = 'filter("[.]boot-oci$", set(' + " ".join(packages) + "))"
+    result = subprocess.run([bazel, "query", "--output=label", expression], check=True,
+                            stdout=subprocess.PIPE, text=True)
+    return candidates.intersection(result.stdout.splitlines())
+
+
 def export_archive(source, destination):
     """Leave the previous image intact if copying a new archive fails."""
     if destination.is_file() and filecmp.cmp(source, destination, shallow=False):
@@ -65,6 +78,9 @@ def export_archive(source, destination):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    layouts = commands.add_parser("boot-layouts", help="Print available OCI layout targets for archive labels")
+    layouts.add_argument("--bazel", required=True)
+    layouts.add_argument("--label", action="append", required=True)
     options = commands.add_parser("options", help="Print one Bazel option per line")
     options.add_argument("--cache-directory")
     options.add_argument("--arguments", default="", help="Additional shell-quoted Bazel options")
@@ -72,8 +88,12 @@ def main():
     export.add_argument("--query-output", required=True)
     export.add_argument("--output", type=Path, required=True)
     export.add_argument("--execution-root", type=Path)
+    export.add_argument("--layout-query-output", type=Path)
     args = parser.parse_args()
-    if args.command == "options":
+    if args.command == "boot-layouts":
+        for label in sorted(boot_layout_labels(args.bazel, args.label)):
+            print(label)
+    elif args.command == "options":
         arguments = cache_options(args.cache_directory) + shlex.split(args.arguments)
         try:
             # Apply the shared cache policy after caller options so Make image
@@ -97,6 +117,9 @@ def main():
         if not source.is_file() or not source.stat().st_size:
             parser.error("Bazel did not produce a nonempty archive")
         export_archive(source, args.output)
+        if args.layout_query_output:
+            from tools.bazel.oci.boot_layout import publish_layout
+            publish_layout(args.layout_query_output, source, args.output)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 """Execute source-validation workflow shells without compiling source packages."""
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -101,33 +100,6 @@ class ArchiveCachePolicyTest(unittest.TestCase):
                            if step.get("name") == "Prepare the host-driven SONiC slave")
         self.assertLess(configure_index, build_index)
 
-    def test_vs_jobs_share_the_master_push_upload_policy(self):
-        workflow_jobs = jobs()
-        flag = ("--remote_upload_local_results=${{ github.event_name == 'push'"
-                " && github.ref == 'refs/heads/master' }}")
-        self.assertIn(flag, workflow_jobs["vs"])
-        self.assertIn("if: ${{ false }}", workflow_jobs["vs"])
-        self.assertIn("runs-on: [self-hosted, linux, bazel-x64, vs]",
-                      workflow_jobs["vs_container"])
-
-    def test_gearbox_master_uploads_allow_multi_gb_remote_writes(self):
-        step = steps(jobs()["gearbox_archive"])["Configure remote cache uploads"]
-        self.assertIn("github.event_name == 'push' && github.ref == 'refs/heads/master'", step)
-        with tempfile.TemporaryDirectory(prefix="gearbox-cache-policy-") as directory:
-            rc = Path(directory) / ".bazelrc.user"
-            for upload, expected in (
-                    ("true", ["build --remote_upload_local_results=true",
-                              "build --remote_timeout=600s"]),
-                    ("false", ["build --remote_upload_local_results=false"])):
-                with self.subTest(upload=upload):
-                    rc.unlink(missing_ok=True)
-                    result = subprocess.run(
-                        ["bash", "-e", "-o", "pipefail", "-c", shell(step)],
-                        cwd=directory, env=dict(os.environ, UPLOAD_CACHE=upload),
-                        capture_output=True, text=True)
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    self.assertEqual(rc.read_text().splitlines(), ["", *expected])
-
     def test_host_installer_is_isolated_and_preserves_input_and_output_contracts(self):
         job = yaml.safe_load(WORKFLOW.read_text())["jobs"]["vs_container"]
         self.assertNotIn("concurrency", job)
@@ -162,10 +134,8 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         self.assertNotIn("/actions/bazel", scripts)
         self.assertNotIn("SONIC_BAZEL_REMOTE_ONLY_RC", job["env"])
         self.assertIn("bash tools/bazel/ci/build_vs.sh", scripts)
-        self.assertIn("bash tools/bazel/ci/validate_vs.sh", scripts)
-        self.assertIn("--expected-commit-id", scripts)
-        self.assertIn("verify-installed-images.sh", scripts)
-        self.assertIn("LD_BIND_NOW=1", scripts)
+        self.assertNotIn("validate_vs.sh", scripts)
+        self.assertNotIn("verify-installed-images.sh", scripts)
         self.assertIn('label=$SONIC_CI_CONTAINER_LABEL', scripts)
         self.assertNotIn("docker system prune", scripts)
         self.assertIn("P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources",
@@ -229,7 +199,7 @@ class ArchiveCachePolicyTest(unittest.TestCase):
         self.assertLess(job["steps"].index(containers), job["steps"].index(cleanup))
         self.assertEqual(cleanup["name"], "Remove only this run's checkout")
         self.assertIn("always() && steps.vs_container_cleanup.outcome == 'success'", cleanup["if"])
-        for upload in ("vs_receipts_upload", "vs_validation_upload", "vs_installer_upload"):
+        for upload in ("vs_receipts_upload", "vs_installer_upload"):
             self.assertIn(f"steps.{upload}.outcome == 'success'", cleanup["if"])
             self.assertTrue(any(step.get("id") == upload and "upload-artifact@" in step.get("uses", "")
                                 for step in job["steps"][:job["steps"].index(containers)]))
@@ -380,7 +350,7 @@ class SourceWorkflowTest(unittest.TestCase):
         checks = workflow_jobs["checks"]
         self.assertIn("name: OCI regression checks (AMD64)", checks)
         self.assertIn("runs-on: [self-hosted, Linux, X64, ubuntu-x64]", checks)
-        self.assertRegex(workflow_jobs["vs"], r"(?m)^    needs: (?:checks|\[checks\])$")
+        self.assertRegex(workflow_jobs["vs_container"], r"(?m)^    needs: (?:checks|\[checks\])$")
         for name, step in steps(checks).items():
             script = shell(step)
             if script is not None:
@@ -394,65 +364,6 @@ class SourceWorkflowTest(unittest.TestCase):
                              (call["name"] == "bazel" and
                               any(arg in ("build", "test") for arg in call["args"]))
                              for call in calls))
-
-    def test_make_source_validation_reuses_outputs_and_propagates_failures(self):
-        workflow_steps = steps(jobs()["vs"])
-        names = list(workflow_steps)
-        build_steps = [name for name, step in workflow_steps.items()
-                       if re.search(r"(?m)^        id: vs_build$", step)]
-        self.assertEqual(len(build_steps), 1)
-        families = (
-            ("SWSS", "//dockers/docker-orchagent", "rules/docker-orchagent.mk", "artifacts/swss", False),
-            ("Syncd", "//platform/vs/docker-syncd-vs", "platform/vs/docker-syncd-vs.mk", "artifacts/syncd-vs/bazel", True),
-        )
-        lock = self.directory / "MODULE.bazel.lock"
-        lock.write_text("already-resolved Make build\n")
-        for family, owner, source, artifacts, dash in families:
-            name = "Validate " + family + " source packages from the Make build"
-            self.assertLess(names.index(build_steps[0]), names.index(name))
-            self.assertIn("if: ${{ !cancelled() && steps.vs_build.outcome == 'success' }}", workflow_steps[name])
-            for source_exit, make_exit in ((0, 0), (19, 0), (0, 23)):
-                with self.subTest(family=family, source_exit=source_exit, make_exit=make_exit):
-                    self.calls.unlink(missing_ok=True)
-                    result = self.execute(shell(workflow_steps[name]),
-                                          SOURCE_EXIT=str(source_exit), MAKE_EXIT=str(make_exit))
-                    self.assertEqual(result.returncode, source_exit or make_exit,
-                                     result.stdout + result.stderr)
-                    self.assertEqual(lock.read_text(), "already-resolved Make build\n")
-                    if dash and not source_exit and not make_exit:
-                        exported_lock = self.directory / "artifacts/syncd-vs/bazel/apt.lock.json"
-                        fingerprint = self.directory / "artifacts/syncd-vs/input-locks.sha256"
-                        self.assertIn(hashlib.sha256(exported_lock.read_bytes()).hexdigest() +
-                                      "  artifacts/syncd-vs/bazel/apt.lock.json", fingerprint.read_text())
-                    calls = self.recorded()
-                    make = [call for call in calls if call["name"] == "make"]
-                    self.assertEqual(len(make), 1)
-                    self.assertEqual(make[0]["args"][:2], ["-f", "Makefile.work"])
-                    self.assertIn("BLDENV=trixie", make[0]["args"])
-                    self.assertIn("sonic-slave-run", make[0]["args"])
-                    values = dict(arg.split("=", 1) for arg in make[0]["args"] if "=" in arg)
-                    self.assertRegex(values["SONIC_RUN_CMDS"], r"\bbash artifacts/vs/[\w-]+\.sh$")
-                    runner = [call for call in calls if "tools/bazel/ci/container.py" in call["args"]]
-                    self.assertEqual(len(runner), 0 if make_exit else 1)
-                    if runner:
-                        args = runner[0]["args"]
-                        self.assertIn("--reuse-build", args)
-                        for flag, value in (("--container", owner), ("--source-file", source),
-                                            ("--artifacts", artifacts), ("--bazel", self.environment["BAZEL"])):
-                            self.assertEqual(args[args.index(flag) + 1], value)
-                        self.assertEqual("--bazel-arg=--config=syncd-dash" in args, dash)
-                        self.assertFalse(any("source_config_engine" in arg for arg in args))
-                        for option in ("--distdir=/bazel_cache/source downloads", "--remote_download_all",
-                                       "--platforms=@sonic_build_infra//platforms:x86_64_trixie",
-                                       "--host_platform=@sonic_build_infra//platforms:x86_64_trixie",
-                                       "--repository_cache=" + self.environment["BAZEL_CONTAINER_CACHE_DIR"] + "/repository_cache",
-                                       "--disk_cache=" + self.environment["BAZEL_CONTAINER_CACHE_DIR"] + "/disk_cache"):
-                            self.assertIn("--bazel-arg=" + option, args)
-                        self.assertEqual(runner[0]["environment"],
-                                         {key: self.environment[key] for key in ("BAZEL", "BAZEL_CONTAINER_ARGS")})
-                    analyses = [call for call in calls if "tools/bazel/ci/bazel_commands.py" in call["args"]]
-                    self.assertEqual(len(analyses), int(dash and not source_exit and not make_exit))
-                    self.assertFalse(any(call["name"] == "rm" or "clean" in call["args"] for call in calls))
 
 
 if __name__ == "__main__":

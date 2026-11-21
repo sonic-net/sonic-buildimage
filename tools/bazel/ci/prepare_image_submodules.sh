@@ -4,8 +4,8 @@ set -euo pipefail
 workspace=${GITHUB_WORKSPACE:-$PWD}
 kernel=src/sonic-linux-kernel
 case "${1:-}" in
-    ''|--kernel-only|--retained-only) ;;
-    *) echo "Usage: $0 [--kernel-only|--retained-only]" >&2; exit 2 ;;
+    ''|--kernel-only|--populated-only) ;;
+    *) echo "Usage: $0 [--kernel-only|--populated-only]" >&2; exit 2 ;;
 esac
 
 # A nonrecursive checkout can leave a previous job's kernel at its old commit.
@@ -34,10 +34,8 @@ fi
 git -c safe.directory="$workspace" submodule foreach --recursive \
     'git -c safe.directory="$toplevel" -c safe.directory="$toplevel/$sm_path" --literal-pathspecs -C "$toplevel" submodule update --init --checkout -- "$sm_path"'
 
-# Source checks only need existing worktrees aligned; keep fresh runners sparse.
-if [[ "${1:-}" == --retained-only ]]; then
-    exit 0
+# Package CI also needs gNOI. Artifact consumers initialize only the owner
+# required by their own service after restoring the populated worktrees.
+if [[ "${1:-}" != --populated-only ]]; then
+    git -c safe.directory="$workspace" submodule update --init --checkout -- src/sonic-sysmgr/gnoi
 fi
-
-# Only gNOI is required on a fresh runner.
-git -c safe.directory="$workspace" submodule update --init --checkout -- src/sonic-sysmgr/gnoi

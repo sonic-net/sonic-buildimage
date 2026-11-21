@@ -127,9 +127,7 @@ def validate_images(directory):
         labels = config["Labels"]
         check.require(json.loads(labels["com.azure.sonic.manifest"]) == expected, "Make labels differ")
         check.require(labels.get("Tag") == receipt["image_version"], name + " Make image Tag differs")
-        for component in ("libswsscommon", "sonic-supervisord-utilities-rs"):
-            check.require(labels.get("com.azure.sonic.versions." + component) == parent_packages[component]["Version"],
-                          name + " inherited component label differs: " + component)
+        check.verify_swss_component_labels(labels, parent_packages)
         archive = image_validation.docker_archive(directory / (name + ".gz"), name + ":latest",
                                                   layout.manifest["config"]["digest"], layout.manifest["layers"])
         reports[name] = {"manifest_digest": layout.descriptor["digest"],

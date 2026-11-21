@@ -125,7 +125,7 @@ def build_labels(workspace, archives):
     return labels
 
 
-def archive_outputs(events, labels):
+def archive_outputs(events, labels, layout_labels=()):
     """Resolve only the successful top-level targets' single declared file."""
     outputs = {}
     with events.open() as stream:
@@ -140,6 +140,10 @@ def archive_outputs(events, labels):
                 raise ValueError("Unsuccessful or duplicate Bazel target: " + label)
             files = [item for group in completed.get("outputGroup", []) if group["name"] == "default"
                      for item in group.get("inlineFiles", [])]
+            is_layout = label in layout_labels
+            if is_layout:
+                # TreeArtifacts expand to their members in inline BEP output groups.
+                files = [item for item in files if item["name"].endswith("/oci-layout")]
             if len(files) != 1:
                 raise ValueError("Expected exactly one Bazel archive output for " + label)
             uri = urlsplit(files[0].get("uri", ""))
@@ -148,7 +152,7 @@ def archive_outputs(events, labels):
                 raise ValueError("Expected a local Bazel archive URI for " + label)
             if not path.is_file() or not path.stat().st_size:
                 raise ValueError("Bazel did not materialize a nonempty local archive for " + label)
-            outputs[label] = path
+            outputs[label] = path.parent if is_layout else path
     missing = labels - outputs.keys()
     if missing:
         raise ValueError("Missing Bazel archive outputs: " + ", ".join(sorted(missing)))
@@ -176,7 +180,19 @@ def build(args):
         owner = name.removesuffix(debug_suffix) + ".gz" if name.endswith(debug_suffix) else name
         owners[owner].append(name)
     labels = build_labels(workspace, archives)
+    validation_labels = []
+    if args.validation_directory:
+        from tools.bazel.ci import vs_validation_bundles as validation
+        families = validation.validation_targets(archives, set(args.registered_debug), args.validation_debug == "y",
+                                                 args.validation_only_debug)
+        # Top-level requests can select each owner's private test fixtures.
+        validation_labels = validation.extra_targets(families)
     settings = os.environ
+    layout_labels = {}
+    if args.boot_layouts:
+        native = build_helpers.boot_layout_labels(settings.get("BAZEL", "bazel"), archives.values())
+        layout_labels = {name: label + ".boot-oci" for name, label in archives.items()
+                         if label + ".boot-oci" in native}
     cache_directory = settings.get("BAZEL_CONTAINER_CACHE_DIR", settings.get("BAZEL_SWSS_CACHE_DIR"))
     global_args = settings.get("BAZEL_CONTAINER_ARGS", settings.get("BAZEL_SWSS_ARGS", ""))
     options = build_helpers.cache_options(cache_directory) + shlex.split(global_args)
@@ -204,7 +220,7 @@ def build(args):
             "--build_event_json_file=" + str(events),
             "--nobuild_event_json_file_path_conversion",
             "--experimental_build_event_output_group_mode=default=inline_only",
-            *dict.fromkeys(labels.values()),
+            *dict.fromkeys([*labels.values(), *layout_labels.values(), *validation_labels]),
         ]
         try:
             time_vs_image.run_phase(build_timing, "build", command)
@@ -220,17 +236,30 @@ def build(args):
                 shutil.copyfile(build_timing / "batch-targets.json", retry / "batch-targets.json")
                 build_timing = retry
             time_vs_image.run_phase(build_timing, "build", command)
-        outputs = archive_outputs(events, set(labels.values()))
+        outputs = archive_outputs(events, set(labels.values()) | set(layout_labels.values()), set(layout_labels.values()))
         for name, label in labels.items():
             with time_vs_image.time_phase(export_timings[name], "export-" + name):
-                build_helpers.export_archive(outputs[label], args.target_path / name)
+                destination = args.target_path / name
+                build_helpers.export_archive(outputs[label], destination)
+                if name in layout_labels:
+                    from tools.bazel.oci.boot_layout import publish_layout
+                    publish_layout(outputs[layout_labels[name]], outputs[label], destination)
+        if validation_labels:
+            paths = validation.configured_outputs(settings.get("BAZEL", "bazel"), options, validation_labels, events)
+            validation.write_bundles(args, families, paths, shared["//tools/bazel/oci:image_version"],
+                                     dialout=shared.get(validation.GNMI_DIALOUT))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target-path", type=Path, required=True)
+    parser.add_argument("--boot-layouts", action="store_true")
     parser.add_argument("--architecture", choices=("amd64", "arm64"), required=True)
     parser.add_argument("--debug-image-mark", default="dbg")
+    parser.add_argument("--validation-directory", type=Path, help="Publish per-image runtime-test artifacts")
+    parser.add_argument("--validation-debug", choices=("y", "n"), default="n")
+    parser.add_argument("--registered-debug", action="append", default=[])
+    parser.add_argument("--validation-only-debug", action="append", default=[])
     parser.add_argument("--shared-args", action="append", default=[],
                         help="Owner-declared Starlark build settings safe for the entire batch")
     for option in ("--archive", "--label", "--owner-args"):

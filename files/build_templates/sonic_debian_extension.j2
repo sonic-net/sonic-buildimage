@@ -1000,12 +1000,24 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker info
 if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
     python3 ./scripts/image_timing.py switch assembly docker-load 2>/dev/null || true
 fi
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    boot_work=$(mktemp -d)
+    trap_push 'rm -rf "$boot_work"'
+    boot_images=()
+fi
 {% for docker_installation_target in installer_images.strip().split() -%}
 {% set pkgname, docker_build_path, machine, image = docker_installation_target.split('|') %}
 {% set imagefilepath = image.split(':')|first -%}
 {% set imagefilename = imagefilepath.split('/')|last -%}
 {% set imagename = imagefilename.split('.')|first -%}
 if [[ -z "{{machine}}" || -n "{{machine}}" && $TARGET_MACHINE == "{{machine}}" ]]; then
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    tags="{{imagename}}:latest,{{imagename}}:${SONIC_IMAGE_VERSION}"
+{% if imagename.endswith('-dbg') %}
+    tags+=",{{imagename[:-4]}}:latest,{{imagename[:-4]}}:${SONIC_IMAGE_VERSION}"
+{% endif %}
+    boot_images+=(--image "{{imagefilepath}}" "$tags")
+else
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker load -i {{imagefilepath}}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag {{imagename}}:latest {{imagename}}:"${SONIC_IMAGE_VERSION}"
 # Check if manifest exists for {{imagename}} and it is a valid JSON
@@ -1021,7 +1033,28 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag {{imag
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag {{imagename}}:latest {{imagebasename}}:latest
 {% endif %}
 fi
+fi
 {% endfor %}
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+{% for package in sonic_local_packages.strip().split() -%}
+{% set name, path, set_owner, enabled = package.split('|') -%}
+    package_repo=$(basename "{{name}}" .gz)
+    boot_images+=(--package-image "{{path}}" "$package_repo:latest,$package_repo:${SONIC_IMAGE_VERSION}")
+{% endfor %}
+    build_boot_bundle() {
+        local packager=tools/bazel/image/boot_image_bundle.py
+        if [[ ${BUILD_WITH_BAZEL_WHEN_AVAILABLE:-n} == y ]]; then
+            packager=tools/bazel/image/build_boot_bundle.py
+        fi
+        python3 "$packager" --platform "linux/$CONFIGURED_ARCH" \
+            --output "$FILESYSTEM_DOCKERFS" --inventory "$boot_work/inventory.json" \
+            --labels "$boot_work/labels.json" "${boot_images[@]}"
+    }
+    build_boot_bundle
+    sudo install -m 0644 "$boot_work/labels.json" "$FILESYSTEM_ROOT/tmp/sonic-image-labels.json"
+    sudo install -m 0644 scripts/build_boot_packages.py "$FILESYSTEM_ROOT/tmp/build_boot_packages.py"
+    boot_package_manager=(python3 /tmp/build_boot_packages.py /tmp/sonic-image-labels.json)
+fi
 if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
     python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
 fi
@@ -1052,7 +1085,13 @@ sudo mkdir -p $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/manifests
 sudo cp $BUILD_TEMPLATES/docker_image_ctl.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/docker_image_ctl.j2
 
 # Generate shutdown order
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT /usr/local/bin/generate_shutdown_order.py
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot "$FILESYSTEM_ROOT" "${boot_package_manager[@]}" shutdown-order
+    package_install=("${boot_package_manager[@]}" install)
+else
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT /usr/local/bin/generate_shutdown_order.py
+    package_install=(sonic-package-manager install -y -v DEBUG)
+fi
 
 {% if include_kubernetes == "y" %}
 ## Pull in kubernetes docker images
@@ -1117,7 +1156,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable kubernetes_master_entrance.
 {% endif %}
 
 {% macro get_install_options(set_owner, enabled) -%}
-{% set args = ["-y", "-v", "DEBUG"] -%}
+{% set args = [] -%}
 {% if set_owner -%}
 {% set args = args + ["--set-owner", set_owner] -%}
 {% endif -%}
@@ -1130,12 +1169,17 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable kubernetes_master_entrance.
 {% for package in sonic_packages.strip().split() -%}
 {% set name, repo, version, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager repository add {{ name }} {{ repo }}
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install {{ name }}=={{ version }} {{ get_install_options(set_owner, enabled) }}
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    package_ref=(--expression "{{ name }}=={{ version }}")
+else
+    package_ref=("{{ name }}=={{ version }}")
+fi
+sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT "${package_install[@]}" "${package_ref[@]}" {{ get_install_options(set_owner, enabled) }}
 {% endfor -%}
 
 {% for package in sonic_local_packages.strip().split() -%}
 {% set name, path, set_owner, enabled = package.split('|') -%}
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
+sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT "${package_install[@]}" --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
 name_repo=$(basename {{name}} .gz)
 image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
 if echo "$image_tags" | grep -q "latest"; then
@@ -1151,6 +1195,26 @@ else
 fi
 {% endfor -%}
 
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    # Preserve any extra tags and images pulled by optional packages or Kubernetes.
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot "$FILESYSTEM_ROOT" docker image ls --no-trunc \
+        --format '{% raw %}{{.Repository}}:{{.Tag}} {{.ID}}{% endraw %}' > "$boot_work/daemon-images"
+    extras=0
+    while read -r tag id; do
+        [[ -n $tag && $tag != *'<none>'* ]] || continue
+        if jq -e --arg tag "$tag" --arg id "$id" '.[$tag] == $id' "$boot_work/inventory.json" > /dev/null; then
+            continue
+        fi
+        extras=$((extras + 1))
+        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot "$FILESYSTEM_ROOT" docker save "$tag" > "$boot_work/$extras.tar"
+        boot_images+=(--package-image "$boot_work/$extras.tar" "$tag")
+    done < "$boot_work/daemon-images"
+    if (( extras )); then build_boot_bundle; fi
+    sudo install -m 0644 "$boot_work/inventory.json" "$FILESYSTEM_ROOT/usr/share/sonic/docker-image-inventory.json"
+    sudo install -D -m 0755 files/docker/sonic-load-images "$FILESYSTEM_ROOT/usr/lib/docker/sonic-load-images"
+    sudo install -D -m 0644 files/docker/load-images.conf "$FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/load-images.conf"
+    sudo rm -f "$FILESYSTEM_ROOT/tmp/sonic-image-labels.json" "$FILESYSTEM_ROOT/tmp/build_boot_packages.py"
+fi
 sudo umount $FILESYSTEM_ROOT/target
 sudo rm -r $FILESYSTEM_ROOT/target
 if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then

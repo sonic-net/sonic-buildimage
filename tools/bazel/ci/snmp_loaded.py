@@ -12,6 +12,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci.vs_probe_policy import selected_images
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -24,7 +25,7 @@ def run_loaded(directory):
     receipt = json.loads(report.read_text())
     check.require(receipt["status"] == "passed" and receipt["architecture"] == "amd64",
                   "SNMP static validation did not pass on AMD64")
-    check.require(receipt["images"] == list(IMAGES), "expected both SNMP runtime and debug variants")
+    check.require(set(receipt["images"]) == set(selected_images(directory, IMAGES)), "expected every selected SNMP variant")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     check.require(receipt["revision"] == revision, "SNMP archives were built from a different revision")
     # Read the same version lists as the Make image, including its inherited YAML.
@@ -41,7 +42,7 @@ def run_loaded(directory):
             data.extractall(fixture, filter="data")
         # The installed account runs as UID 101, outside the fixture owner's UID.
         fixture.chmod(0o755)
-        for name in IMAGES:
+        for name in selected_images(directory, IMAGES):
             expected = json.loads((directory / (name + ".validation.json")).read_text())
             check.require(expected["status"] == "passed", "missing OCI contents validation for " + name)
             archive = directory / (name + ".gz")

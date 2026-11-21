@@ -484,11 +484,11 @@ class DashEngineImageTest(unittest.TestCase):
             report = {'base_manifest_digest': 'parent', 'apt_selection_sha256': validate.check.sha(apt),
                       'dependency_check': {'status': 'satisfied'}, 'source_packages': []}
             with mock.patch.object(validate, 'ROOT', root):
-                validate.verify_package_binding(report, selection, base, apt, 'runtime', validate.check.sha(lock))
+                validate.verify_package_binding(report, selection, base.descriptor["digest"], apt, 'runtime', validate.check.sha(lock))
                 for key, value in [('group', 'debug'), ('image', 'other'), ('schema', 2),
                                    ('apt_lock_sha256', 'wrong'), ('base_manifest_digest', 'other')]:
                     with self.subTest(key=key), self.assertRaises(ValueError):
-                        validate.verify_package_binding(report, {**selection, key: value}, base, apt, 'runtime', validate.check.sha(lock))
+                        validate.verify_package_binding(report, {**selection, key: value}, base.descriptor["digest"], apt, 'runtime', validate.check.sha(lock))
 
     def test_source_fence_allows_prior_ci_receipts_but_rejects_source_changes(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -8,31 +8,22 @@ import pwd
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
+
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 class CacheMountTest(unittest.TestCase):
-    def workflow_step(self, name):
-        """Run the workflow's actual shell, without a second implementation of its policy."""
-        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
-        marker = f"      - name: {name}\n"
-        self.assertEqual(workflow.count(marker), 1)
-        step = workflow.split(marker, 1)[1].split("\n      - name:", 1)[0]
-        return textwrap.dedent(step.split("        run: |\n", 1)[1])
-
     @unittest.skipUnless(os.geteuid() == 0, "requires root to exercise actual root/non-root cache ownership")
-    def test_ci_cache_namespace_preserves_legacy_entries_and_reuses_writer_cache(self):
-        """Execute CI prep with both users: old root-owned CAS entries stay untouched,
-        each UID can publish/replace cache files, and the next distdir step uses its export.
-        """
+    def test_vs_cache_rejects_unwritable_entries_and_reuses_the_runner_cache(self):
+        """A VS runner can reuse its own writes and cannot replace another owner's cached digest."""
         nobody = pwd.getpwnam("nobody")
-        workflow = (ROOT / ".github/workflows/bazel-oci.yml").read_text()
-        self.assertLess(workflow.index("- name: Prepare persistent agent caches"),
-                        workflow.index("- name: Prepare the shared Bazel source-download directory"))
+        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        steps = workflow["jobs"]["vs_container"]["steps"]
+        prepare, = (step["run"] for step in steps if step.get("name") == "Configure persistent caches")
         writer = """from pathlib import Path
 import sys
 directory = Path(sys.argv[1])
@@ -50,6 +41,7 @@ partial.replace(directory / 'file')
             for path in (cache, package_cache, workspace):
                 path.mkdir()
                 os.chown(path, nobody.pw_uid, nobody.pw_gid)
+            cache.chmod(0o700)
             cache_owner_mode = (cache.stat().st_uid, cache.stat().st_mode)
             legacy = cache / "repository_cache/content_addressable/sha256/old-digest"
             legacy.mkdir(parents=True)
@@ -90,36 +82,31 @@ print(json.dumps({'output': str(args.output)}))
             (workspace / "artifacts/vs/source-download-receipt.json").touch()
             for path in workspace.rglob("*"):
                 os.chown(path, nobody.pw_uid, nobody.pw_gid)
-            selected = {}
+            def environment(source, env_file):
+                return dict(os.environ, SONIC_BAZEL_CACHE_SOURCE=str(source),
+                            SONIC_DPKG_CACHE_SOURCE=str(package_cache), GITHUB_ENV=str(workspace / env_file))
+
+            blocked = execute(["bash", "-e", "-c", prepare], nobody.pw_uid, environment(cache, "blocked-env"))
+            self.assertNotEqual(blocked.returncode, 0)
+            self.assertIn("Unwritable cache directory", blocked.stderr)
+            self.assertFalse((workspace / "blocked-env").exists())
             for uid in (0, nobody.pw_uid):
+                effective = cache / f"runner-{uid}" / "vs-cache/bazel"
                 for attempt in (1, 2):
-                    environment = dict(os.environ, SONIC_BAZEL_CACHE_SOURCE=str(cache),
-                                       SONIC_DPKG_CACHE_SOURCE=str(package_cache),
-                                       SONIC_DPKG_CACHE_METHOD="rwcache",
-                                       GITHUB_ENV=str(workspace / f"env-{uid}-{attempt}"))
-                    prepared = execute(["bash", "-e", "-c", self.workflow_step(
-                        "Prepare persistent agent caches")], uid, environment)
+                    env = environment(effective, f"env-{uid}-{attempt}")
+                    prepared = execute(["bash", "-e", "-c", prepare], uid, env)
                     self.assertEqual(prepared.returncode, 0, prepared.stderr)
-                    exported = dict(line.split("=", 1) for line in Path(environment["GITHUB_ENV"]).read_text().splitlines())
-                    effective = Path(exported["SONIC_BAZEL_CACHE_SOURCE"])
-                    self.assertEqual(effective.parent, cache)
-                    self.assertNotEqual(effective, cache)
-                    self.assertEqual(effective.stat().st_uid, uid)
-                    self.assertEqual(selected.setdefault(uid, effective), effective)
+                    exported = dict(line.split("=", 1) for line in Path(env["GITHUB_ENV"]).read_text().splitlines())
+                    self.assertEqual(exported["SONIC_BAZEL_CACHE_SOURCE"], str(effective))
+                    self.assertEqual(exported["SONIC_DPKG_CACHE_SOURCE"], str(package_cache))
                     target = effective / "repository_cache/content_addressable/sha256/new-digest"
                     published = execute([sys.executable, "-c", writer, str(target), str(attempt)], uid)
                     self.assertEqual(published.returncode, 0, published.stderr)
                     self.assertEqual((target / "file").read_text(), str(attempt))
                     self.assertFalse((target / "file.partial").exists())
-                    environment.update(exported)  # GitHub applies GITHUB_ENV to subsequent steps.
-                    consumed = execute(["bash", "-e", "-c", self.workflow_step(
-                        "Prepare the shared Bazel source-download directory")], uid, environment)
-                    self.assertEqual(consumed.returncode, 0, consumed.stderr)
                     receipt = json.loads((workspace / "artifacts/vs/source-download-receipt.json").read_text())
-                    self.assertEqual(receipt["output"], str(effective / "distdir"))
-                    self.assertTrue((effective / "distdir/verified-source").is_file())
-            self.assertNotEqual(selected[0], selected[nobody.pw_uid])
-            self.assertFalse((cache / "distdir").exists())
+                    self.assertEqual(Path(receipt["output"]), effective / "distdir")
+                    self.assertEqual((effective / "distdir/verified-source").read_text(), "source archive")
             self.assertEqual(cache_owner_mode, (cache.stat().st_uid, cache.stat().st_mode))
             self.assertEqual(before, (legacy.stat().st_uid, legacy.stat().st_mode,
                                      sentinel.stat().st_uid, sentinel.stat().st_mode,

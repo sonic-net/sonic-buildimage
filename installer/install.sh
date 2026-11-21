@@ -220,18 +220,39 @@ fi
 
 # Decompress the file for the file system directly to the partition
 # A dockerfs of 4GiB or more does not fit in the zip payload and is shipped next to it
-if [ x"$docker_inram" = x"on" ]; then
-    # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
-    unzip -o $INSTALLER_PAYLOAD -x "platform.tar.gz" -d $demo_mnt/$image_dir
-    [ -f $FILESYSTEM_DOCKERFS ] && cp $FILESYSTEM_DOCKERFS $demo_mnt/$image_dir/
-else
-    unzip -o $INSTALLER_PAYLOAD -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $demo_mnt/$image_dir
-
+if [ x"$docker_inram" != x"on" ]; then
     if [ "$install_env" = "onie" ]; then
         TAR_EXTRA_OPTION="--numeric-owner"
     else
         TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
     fi
+fi
+
+if [ "$FILESYSTEM_DOCKERFS" = sonic-images.tar.gz ]; then
+    unzip -o "$INSTALLER_PAYLOAD" -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d "$demo_mnt/$image_dir"
+    bundle_dir="$demo_mnt/$image_dir"
+    if [ x"$docker_inram" != x"on" ]; then
+        # Also visible in the new image's upgrade chroot before package migration.
+        bundle_dir="$bundle_dir/$DOCKERFS_DIR"
+        mkdir -p "$bundle_dir"
+    fi
+    bundle="$bundle_dir/$FILESYSTEM_DOCKERFS"
+    if [ -f "$FILESYSTEM_DOCKERFS" ]; then
+        cp "$FILESYSTEM_DOCKERFS" "$bundle.partial"
+    else
+        unzip -op "$INSTALLER_PAYLOAD" "$FILESYSTEM_DOCKERFS" > "$bundle.partial"
+    fi
+    test -s "$bundle.partial"
+    mv "$bundle.partial" "$bundle"
+    # ONIE BusyBox also supports sync without operands. Persist the payload
+    # and its directory before making this image bootable.
+    sync
+elif [ x"$docker_inram" = x"on" ]; then
+    # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
+    unzip -o $INSTALLER_PAYLOAD -x "platform.tar.gz" -d $demo_mnt/$image_dir
+    [ -f $FILESYSTEM_DOCKERFS ] && cp $FILESYSTEM_DOCKERFS $demo_mnt/$image_dir/
+else
+    unzip -o $INSTALLER_PAYLOAD -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $demo_mnt/$image_dir
     mkdir -p $demo_mnt/$image_dir/$DOCKERFS_DIR
     if [ -f $FILESYSTEM_DOCKERFS ]; then
         tar xz $TAR_EXTRA_OPTION -f $FILESYSTEM_DOCKERFS -C $demo_mnt/$image_dir/$DOCKERFS_DIR

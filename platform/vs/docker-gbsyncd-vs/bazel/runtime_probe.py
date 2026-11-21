@@ -62,7 +62,8 @@ def main():
         path = Path("/") / name
         require(hashlib.sha256(path.read_bytes()).hexdigest() == report["native"][name]["sha256"], "native bytes differ: " + name)
         run = runtime_smoke.command(["/lib64/ld-linux-x86-64.so.2", "--list", str(path)])
-        pair = next(item for item in report["source_debug_pairs"] if item["path"] == name)
+        loader_inputs = report.get("elfs", report["source_debug_pairs"])
+        pair = next(item for item in loader_inputs if item["path"] == name)
         require(runtime_smoke.loader_result(run, pair.get("needed", [])), "installed loader failed: " + name + repr(run))
     debug_checks = []
     vim = None

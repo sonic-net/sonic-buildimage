@@ -59,6 +59,9 @@ TRUSTED_GPG_DIR=$BUILD_TOOL_PATH/trusted.gpg.d
 
 ## Read ONIE image related config file
 . ./onie-image.conf
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    export FILESYSTEM_DOCKERFS=sonic-images.tar.gz
+fi
 [ -n "$ONIE_IMAGE_PART_SIZE" ] || {
     echo "Error: Invalid ONIE_IMAGE_PART_SIZE in onie image config file"
     exit 1
@@ -1012,7 +1015,10 @@ if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
         python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
     fi
 fi
-if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
+    # The extension already assembled the tagged image bundle before packing the rootfs.
+    test -s "$FILESYSTEM_DOCKERFS"
+elif [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
     pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
 else
     pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd

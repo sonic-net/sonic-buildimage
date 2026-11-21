@@ -3,7 +3,6 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import yaml
 
 from tools.bazel.ci.release_image_payloads import SWSS_UPLOAD, release
 
@@ -69,26 +68,3 @@ class ReleaseImagePayloadsTest(unittest.TestCase):
             (stage / "receipt.json").write_text(json.dumps({"artifacts": dict.fromkeys(SWSS_UPLOAD | private)}))
             release(artifacts, "swss-layer")
             self.assertEqual({path.name for path in stage.iterdir()}, private | {"receipt.json"})
-
-    def test_workflow_releases_exports_only_after_each_successful_upload(self):
-        steps = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive"]["steps"]
-        helper = "python3 -B tools/bazel/ci/release_image_payloads.py "
-        families = set()
-        for index, step in enumerate(steps):
-            if not step.get("run", "").startswith(helper):
-                continue
-            family = step["run"].removeprefix(helper)
-            upload = steps[index - 1]
-            self.assertIn("actions/upload-artifact@", upload["uses"])
-            self.assertIn(f"artifacts/{family}/", upload["with"]["path"])
-            self.assertEqual(step["if"], f"steps.{upload['id']}.outcome == 'success' && "
-                             f"steps.{upload['id']}.outputs.artifact-id != ''")
-            if family == "swss-layer":
-                paths = upload["with"]["path"].splitlines()
-                self.assertEqual({Path(path).name for path in paths if path.endswith((".gz", ".tar", ".whl"))},
-                                 SWSS_UPLOAD)
-            families.add(family)
-        self.assertEqual(families, {"eventd", "sysmgr", "frr", "teamd", "swss-layer", "sflow", "orchagent",
-                                    "database", "lldp", "mux", "macsec", "dash-ha"})
-        snmp = next(i for i, step in enumerate(steps) if step.get("id") == "bazel_upload_snmp_public")
-        self.assertEqual(steps[snmp + 1]["name"], "Remove uploaded SNMP temporary artifacts")

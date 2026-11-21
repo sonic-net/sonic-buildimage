@@ -17,18 +17,15 @@ ROOT = Path(__file__).resolve().parents[3]
 HELPER = "tools/bazel/ci/preserve_setup_bazel_cache.py"
 OWNER = "frr" if (ROOT / "tools/bazel/ci/frr_draft_bazel.sh").is_file() else "libteam"
 WRAPPER = "tools/bazel/ci/" + OWNER + "_draft_bazel.sh"
-JOBS = [("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+JOBS = [("bazel-eventd.yml", "native"),
         ("bazel-" + OWNER + ".yml", "native"), ("bazel-oci.yml", "archive"),
         ("bazel-oci.yml", "checks"), ("bazel-supervisor-rust.yml", "native"),
         ("bazel-yang-models.yml", "package")]
 PRIVATE_CACHE_JOBS = {
-    ("bazel-oci.yml", "otel_archive"), ("bazel-oci.yml", "p4rt_native"),
-    ("bazel-oci.yml", "radv_native"),
-    ("bazel-oci.yml", "gearbox_archive"), ("bazel-oci.yml", "dash_engine_archive"),
-    ("bazel-base-images.yml", "native"), ("bazel-eventd.yml", "native"),
+    ("bazel-oci.yml", "p4rt_owner"),
+    ("bazel-eventd.yml", "native"),
     ("bazel-libteam.yml", "native"),
     ("bazel-frr.yml", "native"), ("bazel-frr-python.yml", "packages"),
-    ("bazel-oci.yml", "gnmi_native"), ("bazel-oci.yml", "mgmt_framework_native"),
     ("bazel-sysmgr.yml", "native"),
     ("bazel-oci.yml", "archive"), ("bazel-supervisor-rust.yml", "native"),
     ("bazel-yang-models.yml", "package"),
@@ -69,21 +66,11 @@ class SetupBazelCacheTest(unittest.TestCase):
                 with self.subTest(workflow=path.name, job=name):
                     enabled.add((path.name, name))
                     self.assertEqual(calls, ["python3 " + HELPER + " --private-remote-cache"])
-                    if (path.name == "bazel-sysmgr.yml" or
-                            (path.name == "bazel-oci.yml" and name in {
-                                "otel_archive", "radv_native", "gearbox_archive", "dash_engine_archive",
-                                "gnmi_native", "mgmt_framework_native", "p4rt_native"})):
-                        labels = ["self-hosted", "linux", "bazel-x64"]
-                        if name == "p4rt_native":
-                            labels.append("vs")
-                        self.assertEqual(job["runs-on"], labels)
+                    if (path.name, name) == ("bazel-oci.yml", "p4rt_owner"):
+                        self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
                         continue
-                    if path.name == "bazel-base-images.yml":
-                        self.assertEqual(job["strategy"]["matrix"]["architecture"], ["amd64", "arm64"])
-                        self.assertEqual(job["runs-on"], [
-                            "self-hosted", "linux",
-                            "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}",
-                        ])
+                    if path.name == "bazel-sysmgr.yml":
+                        self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
                         continue
                     self.assertEqual(job["runs-on"], "${{ matrix.runner }}")
                     matrix = job["strategy"]["matrix"]["include"]
@@ -162,7 +149,6 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
 
     def test_container_jobs_repair_default_startup_state_and_keep_cache_handoff(self):
         jobs = [
-            ("bazel-base-images.yml", "native", "architecture"),
             ("bazel-eventd.yml", "native", "architecture"),
             ("bazel-supervisor-rust.yml", "native", "arch"),
             ("bazel-oci.yml", "archive", "architecture"),
@@ -174,8 +160,7 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
                 job = document["jobs"][name]
                 self.assertIn("container", job)
                 matrix = job["strategy"]["matrix"]
-                self.assertEqual(len(matrix["architecture"] if filename == "bazel-base-images.yml"
-                                     else matrix["include"]), 2)
+                self.assertEqual(len(matrix["include"]), 2)
                 self.assertNotIn("BAZEL_OUTPUT_USER_ROOT", str(job))
                 self.assertNotIn("--output_user_root=", str(job))
                 handoff = next(step for step in job["steps"] if HELPER in step.get("run", ""))
@@ -184,7 +169,7 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
                 self.assertEqual(repairs[0]["run"], "python3 " + repair_helper)
                 self.assertEqual(handoff["run"], "python3 " + HELPER + " --private-remote-cache")
                 self.assertEqual(job["steps"].index(repairs[0]), job["steps"].index(handoff) + 1)
-                if filename not in ("bazel-base-images.yml", "bazel-oci.yml"):
+                if filename != "bazel-oci.yml":
                     events = document.get("on", document.get(True))
                     for event in ("pull_request", "push"):
                         self.assertIn(repair_helper, events[event]["paths"])
@@ -238,7 +223,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'user': Path('.b
                     RECORD=str(root / "record.json"), BASH_ENV="/dev/null",
                     RUNNER_TEMP=str(root), CI_CPU="x86_64", CI_DISTRIBUTION="trixie")
 
-    def test_all_seven_workflow_calls_reach_isolated_wrapper_and_direct_native(self):
+    def test_workflow_calls_reach_isolated_wrapper_and_direct_native(self):
         for filename, job_name in JOBS:
             with self.subTest(workflow=filename, job=job_name), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -256,7 +241,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'user': Path('.b
                                  (" --repository-only" if repository_only else "") +
                                  (" --private-remote-cache" if private_cache else ""))
                 self.assertTrue(setup["with"]["repository-cache"])
-                if filename not in ("bazel-base-images.yml", "bazel-oci.yml"):
+                if filename != "bazel-oci.yml":
                     events = document.get("on", document.get(True))
                     for event in ("pull_request", "push"):
                         if event in events:

@@ -362,6 +362,30 @@ class RuntimeTest(unittest.TestCase):
         self.assertEqual(prepare.call_args.kwargs['parent_archive'], preparation / 'config-engine.source.tar')
         owner.assert_not_called()
 
+    def test_owner_tests_reuse_only_the_parent_tar_from_the_matching_vs_artifact(self):
+        """Bind the normalized common-library source to the producer's revision and bytes."""
+        bundle = self.root / 'download'
+        bundle.mkdir()
+        name = 'config-engine.source.tar'
+        source = bundle / name
+        source.write_bytes(b'normalized VS parent bytes')
+        revision = 'b' * 40
+        metadata = {'image': 'docker-sonic-p4rt', 'architecture': 'amd64', 'revision': revision,
+                    'fixtures': {name: image.check.sha(source)}}
+        (bundle / 'bundle.json').write_text(json.dumps(metadata))
+        receipt = {'artifacts': {}}
+        target = self.root / 'preparation'
+        image.stage_vs_parent(bundle, revision, target, receipt)
+        self.assertEqual((target / name).read_bytes(), source.read_bytes())
+        self.assertEqual(receipt['artifacts'][name], {'target': image.PREPARATION_TARGETS[name],
+                         'sha256': metadata['fixtures'][name], 'bytes': source.stat().st_size})
+        with self.assertRaisesRegex(ValueError, 'different P4RT build'):
+            image.stage_vs_parent(bundle, 'a' * 40, target, receipt)
+        source.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError, 'source TAR changed'):
+            image.stage_vs_parent(bundle, revision, target, receipt)
+        self.assertEqual((target / name).read_bytes(), b'normalized VS parent bytes')
+
     def test_runtime_link_cannot_escape_private_root(self):
         outside = self.root.parent / (self.root.name + '-outside.so')
         outside.write_bytes(b'\x7fELFoutside library')
