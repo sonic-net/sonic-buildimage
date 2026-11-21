@@ -28,7 +28,7 @@ from . import utils
 from .device_data import DeviceDataManager, DpuInterfaceEnum
 from .vpd_parser import VpdParser
 from .dpu_vpd_parser import DpuVpdParser
-from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
+from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, SonicV2Connector
 
 # Global logger class instance
 logger = SysLogger()
@@ -130,7 +130,13 @@ class Module(ModuleBase):
         # pull in the redis package (saves ~20MB RSS in psud).
         if cls.redis_client is None:
             import redis
-            cls.redis_client = redis.Redis(db=cls.STATE_DB)
+            db_name = 'STATE_DB'
+            port = SonicDBConfig.getDbPort(db_name)
+            if port == 0:
+                endpoint = {'unix_socket_path': SonicDBConfig.getDbSock(db_name)}
+            else:
+                endpoint = {'host': SonicDBConfig.getDbHostname(db_name), 'port': port}
+            cls.redis_client = redis.Redis(db=SonicDBConfig.getDbId(db_name), **endpoint)
         return cls.redis_client
 
     def _get_seq_no(self):
