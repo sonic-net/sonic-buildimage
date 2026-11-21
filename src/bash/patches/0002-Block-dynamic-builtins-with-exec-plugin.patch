@@ -1,0 +1,31 @@
+Description: Block dynamic Bash builtins when exec authorization is enabled
+ A disabled enable builtin is still callable through `builtin enable`.
+ Deny both explicit `enable -f` and the implicit load attempted by
+ `enable NAME` when NAME is not already a builtin.
+
+--- a/bash-5.2.37/builtins/enable.def
++++ b/bash-5.2.37/builtins/enable.def
+@@ -163,5 +163,14 @@ enable_builtin (list)
+   list = loptend;
+ 
++#if defined (BASH_SHELL_EXECVE_PLUGIN)
++  /* Dynamic builtins execute in-process, bypassing the execve hook. */
++  if (flags & FFLAG)
++    {
++      builtin_error (_("dynamic builtin loading disabled while exec authorization is enabled"));
++      return (EXECUTION_FAILURE);
++    }
++#endif
++
+ #if defined (RESTRICTED_SHELL)
+   /* Restricted shells cannot load new builtins. */
+   if (restricted && (flags & (FFLAG|DFLAG)))
+@@ -219,7 +228,7 @@ enable_builtin (list)
+ 	  opt = enable_shell_command (list->word->word, flags & NFLAG);
+ 	  next = list->next;
+ 
+-#if defined (HAVE_DLOPEN) && defined (HAVE_DLSYM)
++#if defined (HAVE_DLOPEN) && defined (HAVE_DLSYM) && !defined (BASH_SHELL_EXECVE_PLUGIN)
+ 	  /* If we try to enable a non-existent builtin, and we have dynamic
+ 	     loading, try the equivalent of `enable -f name name'. */
+ 	  if (opt == EX_NOTFOUND)
