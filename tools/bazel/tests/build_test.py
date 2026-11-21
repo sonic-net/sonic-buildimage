@@ -38,6 +38,10 @@ args = sys.argv[1:]
 mode = pathlib.Path('mode').read_text()
 labels = {self.targets!r}
 if args[0] == 'build':
+    if mode == 'transient_fetch' and not pathlib.Path('fetch-retried').exists():
+        pathlib.Path('fetch-retried').touch()
+        print('fetch_repo: module: Get "https://proxy.example/module": EOF', file=sys.stderr)
+        raise SystemExit(1)
     if mode == 'build_failure':
         raise SystemExit('fixture build failed')
     output = pathlib.Path('bazel-bin/archive outputs')
@@ -121,6 +125,17 @@ else:
         self.assertEqual(len(self.receipt['commands']), 1)
         self.assertEqual(self.receipt['commands'][0]['returncode'], 1)
         self.assertIn('fixture build failed', (self.directory / 'build.log').read_text())
+
+    def test_transient_fetch_recovers_before_archive_publication(self):
+        """The shared archive collector opts into fetch retry without repeating exports."""
+        self.mode.write_text("transient_fetch")
+        with mock.patch("tools.bazel.ci.command_log.time.sleep") as sleep:
+            paths = self.collect()
+        self.assertEqual(set(paths), set(self.targets))
+        sleep.assert_called_once_with(10)
+        self.assertEqual([attempt["returncode"] for attempt in
+                          self.receipt["commands"][0]["attempts"]], [1, 0])
+        self.assertEqual(len(self.receipt["commands"]), 3)
 
     def test_failed_copy_keeps_prior_archive_and_no_completed_export_receipt(self):
         """Preserve the published archive and remove temporary output when copying fails."""

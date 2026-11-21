@@ -1,7 +1,12 @@
 """Audit Bazel action graphs before package-producing execution."""
 import hashlib
 import json
+from pathlib import Path
 import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.bazel.ci import command_log
 
 
 def invoked_command(arguments):
@@ -48,18 +53,20 @@ def inspect_actions(path):
 
 def audit_targets(bazel, options, targets, *, workspace, output, startup_options=()):
     """Reject package-producing actions before executing the selected targets."""
-    import subprocess
     import tempfile
-    from pathlib import Path
-
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     # Action graphs may contain command environments; retain only this summary.
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as graph:
-        subprocess.run([bazel, *startup_options, "aquery", *options, "--output=jsonproto",
-                        "deps(set(" + " ".join(targets) + "))"],
-                       cwd=workspace, stdout=graph, check=True)
-        graph.flush()
+        receipt = {"commands": []}
+        try:
+            command_log.execute(
+                [bazel, *startup_options, "aquery", *options, "--output=jsonproto",
+                 "deps(set(" + " ".join(targets) + "))"],
+                output.parent, receipt, output.stem + ".query", cwd=workspace,
+                output_path=Path(graph.name), retry_fetch=True)
+        finally:
+            output.with_suffix(".query.json").write_text(json.dumps(receipt, indent=2) + "\n")
         report = inspect_actions(Path(graph.name))
     report["targets"] = list(targets)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")

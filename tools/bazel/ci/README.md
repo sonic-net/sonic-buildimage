@@ -1,5 +1,30 @@
 # Shared Bazel CI helpers
 
+## Transient repository fetch retries
+
+The shared action-audit query, archive/filegroup collectors and container
+action query opt into `command_log.execute(..., retry_fetch=True)`.
+They retry explicit Go `fetch_repo` or Bazel `Error downloading` transport
+failures (including EOF, reset connections and timeouts), and temporary HTTP
+429/500/502/503/504 failures. There are at most three attempts, with 10s and
+30s backoff, using the same command, working directory and Bazel caches.
+This covers dependency fetching during `aquery`, not just the later build.
+
+Only exit code 1 with recognized fetch diagnostics is eligible. Unrelated
+error diagnostics, checksum/certificate failures, unknown versions, missing
+packages and cancellation are not retried. Ordinary commands remain
+single-attempt unless a Bazel caller explicitly opts in. Successful queries
+return only the final attempt's stdout, and private action graphs are truncated
+before each attempt and never printed or logged.
+
+The normal command receipt still has one entry and the final `<name>.log`.
+Retried entries additionally record every attempt's exit status, elapsed time,
+log and backoff; failed attempts use `<name>.attempt-N.log`. Total command
+wall time includes all attempts and waits. Standalone action audits retain a
+neighboring `<audit-name>.query.json` command receipt even on fetch failure.
+The action-graph policy check still runs after a successful query; retries
+cannot bypass the no-DEB/package-wrapper gate.
+
 ## Remote cache uploads
 
 The [native event services](../../../.github/workflows/bazel-eventd.yml),

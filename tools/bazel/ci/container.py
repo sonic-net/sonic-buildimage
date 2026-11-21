@@ -179,7 +179,8 @@ def run(container, *, workspace, artifacts, bazel, options, source_files=(), reu
         actions.touch(mode=0o600, exist_ok=False)
         try:
             execute([bazel, "aquery", *options, "deps(set(" + " ".join(targets) + "))",
-                     "--output=jsonproto"], artifacts, receipt, "actions", output_path=actions)
+                     "--output=jsonproto"], artifacts, receipt, "actions", output_path=actions,
+                    retry_fetch=True)
             audit = inspect_actions(actions)
         finally:
             actions.unlink(missing_ok=True)
