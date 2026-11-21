@@ -845,6 +845,14 @@ tbody tr:hover {
   .command-receipts th,.command-receipts td { white-space: nowrap; overflow-wrap: normal; }
 }
 
+.kernel-timings table { table-layout: auto; }
+.kernel-timings th, .kernel-timings td {
+  padding: 6px 8px;
+  white-space: nowrap;
+  text-align: right;
+}
+.kernel-timings :is(th, td):first-child { text-align: left; }
+
 .container-members {
   margin: 0 0 16px 20px;
 }

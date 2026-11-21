@@ -347,24 +347,26 @@ class AssociationTests(unittest.TestCase):
 
 
 class CollectionTests(unittest.TestCase):
-    def test_master_commit_title_uses_verified_commit_subject(self):
+    def test_commit_title_uses_verified_source_subject_for_master_and_pull_requests(self):
         master = run(event="push", head_branch="master", display_title="Workflow title")
         first = dict(master, head_commit={"id": SHA, "message": "  Fix\timage  export\r\n\r\nCommit body."})
+        pr_run = run(run_id=12, head_sha="c" * 40, display_title="A public change",
+                     head_commit={"id": "c" * 40, "message": "Fix the VS installer\n\nDetails."})
         missing = [dict(master, id=11, head_sha=OTHER_SHA, head_commit={"id": SHA, "message": "Wrong revision"}),
-                   dict(master, id=12, event="pull_request", head_commit={"id": SHA, "message": "PR head"}),
-                   dict(master, id=13, head_sha="c" * 40, head_commit=None)]
-        snapshot = collector.collect(FakeAPI(latest=[first, *missing]), REPO, empty(), log_jobs=0)
+                   dict(pr_run, id=13, head_sha="d" * 40, head_commit=None)]
+        snapshot = collector.collect(FakeAPI(latest=[first, pr_run, *missing]), REPO, empty(), log_jobs=0)
         titles = {item["run_id"]: item.get("source_commit_title") for item in snapshot["runs"]}
-        self.assertEqual(titles, {10: "Fix image export", 11: None, 12: None, 13: None})
+        self.assertEqual(titles, {10: "Fix image export", 11: None, 12: "Fix the VS installer", 13: None})
         self.assertNotIn("Commit body.", json.dumps(snapshot))
         self.assertIsNone(collector.commit_title("\n\nDetails only."))
         self.assertEqual(collector.commit_title("Before\u202eafter"), "Before after")
         self.assertEqual(collector.commit_title("A" * 1000), "A" * (collector.MAX_COMMIT_TITLE - 1) + "…")
 
-    def test_refresh_populates_older_master_titles_without_extra_api_requests(self):
-        master = run(event="schedule", head_branch="master")
-        initial = collector.collect(FakeAPI(latest=[master, dict(master, id=11)]), REPO, empty(), log_jobs=0)
-        api = FakeAPI(latest=[dict(master, head_commit={"id": SHA, "message": "Build the VS installer"})])
+    def test_refresh_populates_cached_titles_by_revision_without_extra_api_requests(self):
+        pr_run = run()
+        master = run(run_id=11, event="schedule", head_branch="master")
+        initial = collector.collect(FakeAPI(latest=[pr_run, master]), REPO, empty(), log_jobs=0)
+        api = FakeAPI(latest=[dict(pr_run, head_commit={"id": SHA, "message": "Build the VS installer"})])
         enriched = collector.collect(api, REPO, initial, log_jobs=0)
         for entry in enriched["runs"]:  # Includes expired run 11 at the same source SHA.
             self.assertEqual(entry["source_commit_title"], "Build the VS installer")
@@ -377,7 +379,7 @@ class CollectionTests(unittest.TestCase):
             path = Path(directory, "history.json")
             collector.write_atomic(path, enriched)
             self.assertEqual(collector.load_history(path, REPO), enriched)
-            enriched["runs"][0]["event"] = "pull_request_target"
+            enriched["runs"][0]["source_sha"] = "invalid-sha"
             collector.write_atomic(path, enriched)
             with self.assertRaisesRegex(collector.CollectionError, "invalid source commit title"):
                 collector.load_history(path, REPO)

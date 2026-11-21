@@ -1,6 +1,7 @@
 "use strict";
 
 // Public CI metadata only. Text is rendered through DOM textContent, never HTML.
+const FULL_COMMIT_SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i;
 const IMAGE_KINDS = new Set(["make-vs", "bazel-vs"]);
 const PENDING_JOB_TEXT = {
   queued: "is queued for a runner", in_progress: "is running", requested: "has been requested",
@@ -535,7 +536,7 @@ function renderFilters() {
   allCommits.value = "all";
   commits.replaceChildren(allCommits);
   const masterRuns = state.data.runs.filter(run => buildSource(run) === "master" &&
-    /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(run.source_sha)).sort(latestRunFirst);
+    FULL_COMMIT_SHA.test(run.source_sha)).sort(latestRunFirst);
   const revisions = new Map(), prefixCounts = new Map();
   for (const run of masterRuns) {
     const sha = run.source_sha;
@@ -653,8 +654,11 @@ function renderTrend() {
     const build = BUILD_SOURCES[buildSource(item.run)];
     const prs = prNumbers(item.run).map(number => `PR #${number}`).join(", ");
     const context = [build.label, prs || (item.run.branch === "master" ? "" : item.run.branch)].filter(Boolean).join(" · ");
-    const source = String(item.run.source_sha || "unknown").slice(0, 12), breakdown = imageBreakdownLabel(item.job);
-    const label = `${context} · ${imageSeries(item.job).label} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · Source ${source} · ${breakdown} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
+    const sha = item.run.source_sha;
+    const commit = `Commit ${String(sha || "unknown").slice(0, 12)}`;
+    const subject = item.run.source_commit_title || "Commit message unavailable";
+    const breakdown = imageBreakdownLabel(item.job);
+    const label = `${commit} · ${subject}\n${context} · ${imageSeries(item.job).label} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · ${breakdown} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
     const point = svgEl("g", {class: "chart-point", tabindex: "0", role: "button", "aria-label": label});
     point.append(svgEl("title", {}, label));
     point.append(svgEl("circle", {cx: x(item), cy: y(item), r: 17, fill: "transparent", "pointer-events": "all"}));
@@ -662,8 +666,11 @@ function renderTrend() {
     const inspect = () => {
       const heading = el("div", "chart-preview-heading");
       heading.append(el("strong", "", duration(item.job.image_build_seconds)), el("span", "", imageSeries(item.job).label));
-      preview.replaceChildren(heading,
-        el("p", "", `${item.run.workflow_name || "Workflow"} · ${context} · ${source} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`),
+      const revision = el("p");
+      const commitId = FULL_COMMIT_SHA.test(sha) ? link(commit, `https://github.com/${state.data.repository}/commit/${sha}`) : el("span", "", commit);
+      revision.append(commitId, document.createTextNode(` · ${subject}`));
+      preview.replaceChildren(heading, revision,
+        el("p", "", `${item.run.workflow_name || "Workflow"} · ${context} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`),
         el("p", "", `${imageMeasurement(item.job).label}. ${breakdown}.`));
     };
     point.addEventListener("mouseenter", inspect);
@@ -815,6 +822,11 @@ function intervalTaskList(spans, start, end, reportUncovered) {
   return body;
 }
 
+function onlyHostBuild(job, step) {
+  return job?.kind === "make-vs" && step?.name === HOST_VS_BUILD_STEP && step.conclusion === "success" &&
+    Array.isArray(job.steps) && job.steps.includes(step) && job.steps.filter(item => item.name === HOST_VS_BUILD_STEP).length === 1;
+}
+
 function renderInstallerIntervals(breakdown, job, step) {
   const [section] = breakdown.sections;
   if (breakdown.sections.length !== 1 || section.kind !== "vs-image" || section.offset_seconds !== 0 ||
@@ -838,16 +850,25 @@ function renderInstallerIntervals(breakdown, job, step) {
     ["Assemble the final ONIE installer", installer.offset_seconds, installerEnd, installer],
     ["Finish the Make invocation", installerEnd, section.duration_seconds],
   ];
-  for (const [label, start, end, marker] of intervals) {
+  const kernelTasks = section.tasks.filter(task => task.kind === "kernel-prep");
+  let kernelStage, containerStage;
+  for (const [index, [label, start, end, marker]] of intervals.entries()) {
     const disclosure = el("details", "installer-interval"), summary = el("summary", "timing-row");
     const name = el("span", "timing-name", label);
     name.append(el("span", "timing-hint", `+${duration(start, true)} to +${duration(end, true)} from build start`));
     summary.append(name, el("span", "timing-duration", duration(end - start, true))); disclosure.append(summary);
+    if (index === 0 && kernelTasks.length === 1 && onlyHostBuild(job, step)) {
+      const [kernel] = kernelTasks;
+      if (kernel.outcome === "finished" && kernel.offset_seconds + kernel.duration_seconds <= end) {
+        kernelStage = {section: disclosure, elapsed: kernel.duration_seconds};
+      }
+    }
     if (marker === installer) {
       disclosure.append(renderPhaseBreakdown(installer.phase_breakdown));
     } else if (marker === batch) {
       const batch = containerBatchMeasurements(job, step);
       if (batch) {
+        containerStage = disclosure;
         const list = el("dl", "interval-receipts");
         const add = (target, label, elapsed) => {
           const pair = el("div", "interval-task");
@@ -870,7 +891,7 @@ function renderInstallerIntervals(breakdown, job, step) {
     if (!marker || spans.length) disclosure.append(intervalTaskList(spans, start, end, !marker));
     overview.append(disclosure);
   }
-  return overview;
+  return {overview, containerStage, kernelStage};
 }
 
 function hostInstallerStep(step) {
@@ -934,7 +955,7 @@ function renderStep(step, timelineShown = false) {
   row.append(name, timing);
   if (breakdown) {
     const timeline = hostInstallerStep(step) && breakdown.status === "available" && renderInstallerIntervals(breakdown);
-    const details = el("details", "step-breakdown"); details.append(row, timeline || renderBreakdown(breakdown)); item.append(details);
+    const details = el("details", "step-breakdown"); details.append(row, timeline?.overview || renderBreakdown(breakdown)); item.append(details);
   } else item.append(row);
   return item;
 }
@@ -1186,9 +1207,7 @@ function containerMembers(rows, detail) {
 }
 
 function containerBatchMeasurements(job, step) {
-  if (job?.kind !== "make-vs" || step?.name !== HOST_VS_BUILD_STEP || step.conclusion !== "success" ||
-      !Array.isArray(job.steps) || !job.steps.includes(step) ||
-      job.steps.filter(item => item.name === HOST_VS_BUILD_STEP).length !== 1) return null;
+  if (!onlyHostBuild(job, step)) return null;
   const receipts = job.image_recipe_timings;
   if (receipts?.version !== 2) return null;
   const rows = recipeRows(receipts);
@@ -1267,22 +1286,37 @@ function renderContainerMembers({profile, members}, wallSeconds) {
   return box;
 }
 
-function renderRecipeRows(rows, legacy, detail) {
+function recipeMetricText(row, metric, count, expected) {
+  if (!row[expected]) return "N/A";
+  const samples = row[count] < row[expected] ? ` (${row[count]}/${row[expected]})` : "";
+  return recipeSeconds(row[metric]) + samples;
+}
+
+function renderKernelTimings(row, elapsed) {
+  const columns = ["Target", "Total elapsed", "Recorded command time", "Bazel launcher", "Lock wait",
+    "Compile time", "Nested build", "Cache fetch", "Stage DEBs"];
+  const partial = row.bazel_phases < row.bazel_expected || row.exports < row.exports_expected;
+  const recorded = recipeSeconds(row.recorded) + (partial && row.recorded !== null ? " (partial)" : "");
+  const values = [row.owner, recipeSeconds(elapsed), recorded,
+    ...RECIPE_METRICS.map(([metric, , count, expected]) => recipeMetricText(row, metric, count, expected))];
+  const section = evidenceTable("Kernel Bazel breakdown", columns, [values]);
+  section.className += " kernel-timings";
+  section.append(el("p", "stage-note", "Total elapsed covers the kernel preparation task. Recorded command time is the sum of the launcher and Debian package staging times. Lock wait, compilation, nested Make and cache fetch can overlap within the launcher."));
+  return section;
+}
+
+function renderRecipeRows(rows, title, group, batch) {
   const box = el("section", "recipe-list");
-  box.append(el("h3", "", legacy ? "Bazel timings for four image recipes" : "Bazel build breakdown"));
+  box.append(el("h3", "", title));
   if (!rows.length) {
     box.append(el("p", "stage-note", "No Bazel activity was recorded during this build."));
     return box;
   }
-  box.append(el("p", "stage-note", "Recipes are ordered by recorded Bazel and export command time. Expand a recipe for its breakdown."));
-  const list = el("ol"), group = rows.find(row => row.owner === "vs-container-images");
-  const batch = group && containerMembers(rows, detail);
-  const exportsInBatch = new Set(batch?.members.filter(({recipe}) =>
-    recipe.bazel_expected === 0 && recipe.profiles_expected === 0).map(({recipe}) => recipe.owner));
-  const topRows = rows.filter(row => !exportsInBatch.has(row.owner));
-  for (const row of topRows) {
+  if (rows.length > 1) box.append(el("p", "stage-note", "Recipes are ordered by recorded Bazel and export command time. Expand a recipe for its breakdown."));
+  const list = el("ol");
+  for (const row of rows) {
     const item = el("li"), details = el("details");
-    details.open = row === topRows[0];
+    details.open = row === rows[0];
     const summary = el("summary", "timing-row");
     const name = el("span", "timing-name", row.owner);
     if (row.failed) name.append(el("small", "recipe-failed", "Command failed"));
@@ -1310,12 +1344,25 @@ function renderRecipeRows(rows, legacy, detail) {
   return box;
 }
 
-function renderRecipeTimings(job, repository) {
+function renderRecipeTimings(job, repository, timeline) {
   if (job.kind !== "make-vs" || !job.steps.some(step => step.name === HOST_VS_BUILD_STEP)) return null;
   const value = job.image_recipe_timings, rows = recipeRows(value);
   const box = el("div", "recipe-timings");
   if (rows) {
-    box.append(renderRecipeRows(rows, value.version === 1, value.container_breakdown));
+    const group = rows.find(row => row.owner === "vs-container-images");
+    const batch = group && containerMembers(rows, value.container_breakdown);
+    const exportsInBatch = new Set(batch?.members.filter(({recipe}) =>
+      recipe.bazel_expected === 0 && recipe.profiles_expected === 0).map(({recipe}) => recipe.owner));
+    const nestedGroup = timeline?.containerStage && group;
+    if (nestedGroup) timeline.containerStage.append(renderRecipeRows([group], "Bazel container breakdown", group, batch));
+    const kernel = timeline?.kernelStage && rows.find(row => row.owner === "linux-kernel" && !row.failed &&
+      row.bazel_expected === 1 && row.exports_expected <= 1);
+    if (kernel) timeline.kernelStage.section.append(renderKernelTimings(kernel, timeline.kernelStage.elapsed));
+    const standalone = rows.filter(row => !exportsInBatch.has(row.owner) && row !== nestedGroup && row !== kernel);
+    if (standalone.length || !rows.length) {
+      const title = value.version === 1 ? "Bazel timings for four image recipes" : "Bazel build breakdown";
+      box.append(renderRecipeRows(standalone, title, group, batch));
+    }
   } else {
     let reason = value === undefined ? "not-recorded" : "invalid-timing";
     if ((value?.version === 1 || value?.version === 2) && value.status === "unavailable" &&
@@ -1385,7 +1432,7 @@ function renderDetails() {
   const hostStep = job.steps.find(hostInstallerStep);
   const hostBreakdown = hostStep && normalizeBreakdown(hostStep.breakdown);
   const timeline = hostBreakdown?.status === "available" && renderInstallerIntervals(hostBreakdown, job, hostStep);
-  if (timeline) box.append(timeline);
+  if (timeline) box.append(timeline.overview);
   const phases = job.phases || {};
   const total = PHASES.reduce((sum, phase) => sum + (seconds(phases[phase]) || 0), 0);
   const bar = el("div", "stage-bar"); bar.setAttribute("aria-label", "Recorded step time by phase");
@@ -1396,8 +1443,8 @@ function renderDetails() {
     const item = el("span"); item.append(el("i", `stage-${phase}`), document.createTextNode(phase[0].toUpperCase() + phase.slice(1)), el("b", "", duration(value))); legend.append(item);
   }
   box.append(bar, legend, el("p", "stage-note", "Stage totals sum recorded step durations. They may not equal job elapsed time, and the build phase can include more work than the image build step. Step times exclude queue time. Total elapsed can include waiting for a runner when a job never starts. Cache state and runner comparability are unknown."));
-  const recipes = renderRecipeTimings(job, state.data.repository);
-  if (recipes) box.append(recipes);
+  const recipes = renderRecipeTimings(job, state.data.repository, timeline);
+  if (recipes?.children.length) box.append(recipes);
   const targetRows = recipes && recipeRows(job.image_recipe_timings);
   if (analysis && targetRows?.length) {
     analysis.append(renderBuildExplanations(targetRows, `Run ${run.run_id} · ${job.name}`));

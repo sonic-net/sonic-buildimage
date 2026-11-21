@@ -699,13 +699,38 @@ test("chart overview is scatter-only with a visible-series legend and keyboard p
   const point = descendants(nodes.trend, node => node.attributes?.class === "chart-point")[0];
   assert.equal(point.attributes.tabindex, "0");
   point.listeners.focus();
-  assert.match(nodes["trend-preview"].textContent, /2m 0s.*Outer Make .bin.*Bazel OCI.*abcdef012345.*VM generation and boot checks excluded.*Breakdown not recorded/);
+  assert.match(nodes["trend-preview"].textContent, /2m 0s.*Outer Make .bin.*abcdef012345.*Bazel OCI.*VM generation and boot checks excluded.*Breakdown not recorded/);
   nodes["series-filter"].value = imageSeries(points[0].job).key;
   render();
   assert.equal(descendants(nodes.trend, node => node.tagName === "polyline").length, 1);
   assert.equal(nodes["history-legend"].children.length, 1);
   assert.doesNotMatch(nodes["history-legend"].textContent, /Direct slave/);
   assert.match(nodes["trend-note"].textContent, /Showing all 2.*one build source/);
+});
+
+test("the hover tooltip and keyboard preview identify the commit used for each build", () => {
+  const master = datedPoint(1, "2026-11-10T00:00:00Z"), pr = datedPoint(2, "2026-11-11T00:00:00Z");
+  Object.assign(master.run, {source_sha: "a".repeat(40), source_commit_title: "Build <installer> from source"});
+  Object.assign(pr.run, {event: "pull_request", pr_numbers: [270], source_sha: "b".repeat(40),
+    source_commit_title: "Require debug producers only for paired VS verification"});
+  const {nodes, render} = chartFixture([master, pr]);
+  nodes["source-filter"].value = "combined";
+  render();
+  const dots = descendants(nodes.trend, node => node.attributes?.class === "chart-point");
+  assert.equal(dots.length, 2);
+  for (const [index, {run}] of [master, pr].entries()) {
+    const dot = dots[index], expected = `Commit ${run.source_sha.slice(0, 12)} · ${run.source_commit_title}`;
+    assert.equal(dot.children[0].tagName, "title");
+    assert.equal(dot.children[0].textContent.split("\n")[0], expected);
+    assert.equal(dot.attributes["aria-label"], dot.children[0].textContent);
+    for (const event of ["mouseenter", "focus"]) {
+      dot.listeners[event]();
+      const preview = nodes["trend-preview"];
+      assert.ok(preview.textContent.includes(expected));
+      assert.equal(descendants(preview, node => node.tagName === "a")[0].href,
+        `https://github.com/securely1g/sonic-buildimage/commit/${run.source_sha}`);
+    }
+  }
 });
 
 test("unknown boundaries never gain trend lines and empty filters clear stale chart details", () => {
@@ -859,7 +884,7 @@ test("page startup wires chart-only filters without hiding retained workflow his
   nodes["series-filter"].value = imageSeries(points[1].job).key;
   nodes["series-filter"].listeners.change();
   const point = descendants(nodes.trend, node => node.attributes?.class === "chart-point")[0];
-  assert.match(point.attributes["aria-label"], /Source abcdef012345.*Breakdown not recorded/);
+  assert.match(point.attributes["aria-label"], /Commit abcdef012345 · Commit message unavailable.*Breakdown not recorded/s);
   point.listeners.mouseenter();
   assert.match(nodes["trend-preview"].textContent, /Direct slave .bin/);
   let activated = false;
@@ -1371,9 +1396,11 @@ test("historical native installer boundaries account for all five intervals with
   assert.doesNotMatch(view.textContent, /Collect build-version metadata|P4RT source build|Compress the intermediate squashfs/);
 }));
 
-test("Run details exposes the five wall-clock stages before the separate Bazel breakdown", async () => {
+test("the container stage owns its recipe and table while independent recipes stay at job level", async () => {
   const point = installerPoint(nativeInstallerStep());
-  point.job.image_recipe_timings = sharedContainerJob().image_recipe_timings;
+  const receipt = sharedContainerJob().image_recipe_timings;
+  point.job.image_recipe_timings = receipt;
+  receipt.recipes.push({...receipt.recipes[0], owner: "linux-kernel"});
   const {details} = await loadDashboard([point]);
   const overview = details.children.find(section => section.children.some(node =>
     /^h[1-6]$/.test(node.tagName) && node.textContent === "Image build steps"));
@@ -1383,10 +1410,63 @@ test("Run details exposes the five wall-clock stages before the separate Bazel b
   assert.equal(installerStages(details).length, 5, "the raw CI steps should not repeat the same five stages");
   assert.match(stages[1].textContent, /Shared Bazel command/);
   assert.match(stages[1].textContent, /Export docker-sflow\.gz/);
-  const bazel = details.children.find(section => descendants(section, node =>
-    /^h[1-6]$/.test(node.tagName) && node.textContent === "Bazel build breakdown").length);
-  assert.ok(details.children.indexOf(bazel) > details.children.indexOf(overview));
-  assert.match(bazel.textContent, /docker-sflow\.gz/);
+  const tables = view => descendants(view, node => node.attributes?.["aria-label"] === "Container timings");
+  assert.equal(tables(details).length, 1);
+  assert.equal(tables(stages[1]).length, 1);
+  assert.match(stages[1].textContent, /vs-container-images200s.*Containers \(1\)/);
+  assert.doesNotMatch(stages[1].textContent, /linux-kernel/);
+  const bazel = details.children.find(section => section.className === "recipe-timings");
+  assert.match(bazel.textContent, /Bazel build breakdown.*linux-kernel/);
+  assert.doesNotMatch(bazel.textContent, /vs-container-images|docker-sflow/);
+});
+
+test("kernel preparation shows measured wall time and partial Bazel receipts in separate columns", async () => {
+  const step = nativeInstallerStep();
+  step.breakdown.sections[0].tasks.push({id: "kernel-prep-1", offset_seconds: 20, duration_seconds: 153.118, outcome: "finished"});
+  const point = installerPoint(step), receipt = sharedContainerJob().image_recipe_timings;
+  receipt.recipes.push({...receipt.recipes[0], owner: "linux-kernel", bazel_seconds: 135.521, exports: 1,
+    exports_expected: 1, export_seconds: 4.836, profiles: 1, profiles_expected: 3, compile_seconds: 0,
+    lock_seconds: 0, foreign_seconds: 0, fetch_seconds: 30.704});
+  point.job.image_recipe_timings = receipt;
+  const {details} = await loadDashboard([point]);
+  const [preparation, containers] = installerStages(details);
+  const matches = node => node.attributes?.["aria-label"] === "Kernel Bazel breakdown";
+  assert.equal(descendants(details, matches).length, 1);
+  const [table] = descendants(preparation, matches);
+  assert.equal(table.tabIndex, 0);
+  const [header, data] = descendants(table, node => node.tagName === "tr");
+  assert.deepEqual(header.children.map(c => c.textContent), ["Target", "Total elapsed", "Recorded command time",
+    "Bazel launcher", "Lock wait", "Compile time", "Nested build", "Cache fetch", "Stage DEBs"]);
+  assert.deepEqual(data.children.map(c => c.textContent), ["linux-kernel", "153.118s", "140.357s",
+    "135.521s", "0s (1/3)", "0s (1/3)", "0s (1/3)", "30.704s (1/3)", "4.836s"]);
+  assert.doesNotMatch(containers.textContent, /linux-kernel/);
+  assert.doesNotMatch(details.textContent, /Bazel build breakdown/);
+});
+
+test("ambiguous kernel preparation or repeated commands keep their timings at job level", async () => {
+  const task = {id: "kernel-prep-1", offset_seconds: 1, duration_seconds: 120, outcome: "finished"};
+  for (const [tasks, launches] of [
+    [[], 1], [[task, {...task, id: "kernel-prep-2"}], 1],
+    [[{...task, offset_seconds: 2020}], 1], [[{...task, outcome: "cached"}], 1], [[task], 2],
+  ]) {
+    const step = nativeInstallerStep();
+    step.breakdown.sections[0].tasks.push(...tasks);
+    const point = installerPoint(step), receipt = sharedContainerJob().image_recipe_timings;
+    receipt.recipes.push({...receipt.recipes[0], owner: "linux-kernel", bazel_expected: launches});
+    point.job.image_recipe_timings = receipt;
+    const {details} = await loadDashboard([point]);
+    assert.doesNotMatch(installerStages(details)[0].textContent, /Kernel Bazel breakdown/);
+    assert.match(details.textContent, /Bazel build breakdown.*linux-kernel/);
+  }
+});
+
+test("a batch that cannot be matched to one stage keeps its job-level container table", async () => {
+  const step = nativeInstallerStep(), point = installerPoint(step);
+  point.job.image_recipe_timings = sharedContainerJob().image_recipe_timings;
+  point.job.image_recipe_timings.recipes[0].bazel_expected = 2;
+  const {details} = await loadDashboard([point]);
+  assert.doesNotMatch(installerStages(details)[1].textContent, /Containers \(1\)/);
+  assert.match(details.textContent, /Bazel build breakdown.*Containers \(1\)/);
 });
 
 test("Run details keeps raw CI evidence for an untimed legacy build and a failed installer step", async () => {
