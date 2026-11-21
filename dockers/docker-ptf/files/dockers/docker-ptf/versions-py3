@@ -38,7 +38,7 @@ pycparser==3.12
 pygments==2.21.0
 pynacl==1.6.2
 pynng==0.9.0
-pyrasite==2.0
+pyrasite==2.3.0
 pyro4==4.82
 pysubnettree==0.38.1
 python-libpcap==0.5.4
