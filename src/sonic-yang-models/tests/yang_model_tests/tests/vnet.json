@@ -5,6 +5,26 @@
     "VNET_VALID_TEST2": {
         "desc": "Valid VNET Configuration."
     },
+    "VNET_VALID_VXLAN_TUNNEL_LIST": {
+        "desc": "Valid VNET configurations with comma-separated IPv4 and IPv6 tunnel names in either order."
+    },
+    "VNET_VALID_VXLAN_TUNNEL_LIST_SINGLE": {
+        "desc": "Valid VNET configuration with a single tunnel in vxlan_tunnel_list."
+    },
+    "VNET_VALID_VXLAN_TUNNEL_AND_TUNNEL_LIST": {
+        "desc": "Valid VNET configuration with both vxlan_tunnel and vxlan_tunnel_list."
+    },
+    "VNET_VALID_VXLAN_TUNNEL_EMPTY_LIST": {
+        "desc": "Valid VNET configuration with vxlan_tunnel and an empty vxlan_tunnel_list."
+    },
+    "VNET_INVALID_MISSING_VXLAN_TUNNEL": {
+        "desc": "VNET configuration must specify vxlan_tunnel or a non-empty vxlan_tunnel_list.",
+        "eStr": ["Either vxlan_tunnel or a non-empty vxlan_tunnel_list must be configured."]
+    },
+    "VNET_INVALID_EMPTY_VXLAN_TUNNEL_LIST": {
+        "desc": "An empty vxlan_tunnel_list without vxlan_tunnel is rejected.",
+        "eStr": ["Either vxlan_tunnel or a non-empty vxlan_tunnel_list must be configured."]
+    },
     "VNET_INVALID_VALUE_TEST1": {
         "desc": "Invalid values in parameters.",
         "eStr": "Invalid VRF name"
