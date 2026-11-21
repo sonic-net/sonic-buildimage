@@ -90,7 +90,7 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
-{# BGPD_GRACEFUL_RESTART_ARG is exported by docker_init.sh before supervisord starts. #}
+{# BGPD_GRACEFUL_RESTART_ARG is exported by the FRR startup initializer before supervisord starts. #}
 {% if FEATURE is defined and
       ((FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
        (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled")) %}
