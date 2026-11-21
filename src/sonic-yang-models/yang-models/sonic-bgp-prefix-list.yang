@@ -16,6 +16,10 @@ module sonic-bgp-prefix-list {
 
     description "SONIC Device-specfifc BGP prefix lists data";
 
+    revision 2026-09-17 {
+        description "Generate address-family-specific FRR names from the prefix-list base name";
+    }
+
     revision 2026-07-15 {
         description "Restrict prefix_type to safe identifier characters to prevent command injection via vtysh";
     }
@@ -47,9 +51,9 @@ module sonic-bgp-prefix-list {
                 leaf prefix_type {
                     type string {
                         length "1..255";
-                        pattern '[A-Za-z0-9_.:\-]+';
+                        pattern '[A-Za-z0-9][A-Za-z0-9_.:\-]*';
                     }
-                    description "Prefix type (restricted to alphanumeric and `_.:-` to prevent command injection)";
+                    description "Prefix-list base name. The generated FRR name has an address-family suffix.";
                 }
 
                 leaf ip-prefix {
