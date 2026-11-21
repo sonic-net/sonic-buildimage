@@ -22,6 +22,12 @@ override_dh_auto_install:
 	install -d $(CURDIR)/debian/aspeed-platform-services/lib/systemd/system
 	install -m 0644 $(CURDIR)/systemd/*.service $(CURDIR)/debian/aspeed-platform-services/lib/systemd/system/
 
+	# Install initramfs hook and local-bottom script that create machine.conf before systemd starts
+	install -d $(CURDIR)/debian/aspeed-platform-services/usr/share/initramfs-tools/hooks
+	install -m 0755 $(CURDIR)/initramfs/hooks/* $(CURDIR)/debian/aspeed-platform-services/usr/share/initramfs-tools/hooks/
+	install -d $(CURDIR)/debian/aspeed-platform-services/usr/share/initramfs-tools/scripts/local-bottom
+	install -m 0755 $(CURDIR)/initramfs/scripts/local-bottom/* $(CURDIR)/debian/aspeed-platform-services/usr/share/initramfs-tools/scripts/local-bottom/
+
 	# Install rsyslog drop-in (routes hw-watchdog-mgrd logs to a dedicated file)
 	install -d $(CURDIR)/debian/aspeed-platform-services/etc/rsyslog.d
 	install -m 0644 $(CURDIR)/rsyslog/*.conf $(CURDIR)/debian/aspeed-platform-services/etc/rsyslog.d/
