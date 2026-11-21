@@ -2330,6 +2330,14 @@ check_inline_recipe_env_vars() {
         rfs_inline_flags+=$'\nIMAGE_TYPE'
     fi
 
+    local rfs_file_inputs=""
+    if ! rfs_file_inputs=$(python3 "$SCRIPT_DIR/cache_key_rfs_files.py" \
+            "$MAKEFILE_CACHE" "$consumer" "$rfs_inline_flags" "$sm" \
+            "$REPO_ROOT/Makefile.work"); then
+        log_verbose "  RFS file-input analysis unavailable; retaining inline findings"
+        rfs_file_inputs=""
+    fi
+
     local v reason
     for v in $(printf '%s\n' "${!CAND[@]}" | sort); do
         if echo "$COMMON_FLAGS_LIST_CACHE" | grep -qx "$v"; then
@@ -2337,6 +2345,9 @@ check_inline_recipe_env_vars() {
         fi
         if echo "$rfs_inline_flags" | grep -qx "$v"; then
             log_verbose "  $v — in RFS target DEP_FLAGS (OK)"; continue
+        fi
+        if echo "$rfs_file_inputs" | grep -qx "$v"; then
+            log_verbose "  $v — staged file content and enable state in RFS key (OK)"; continue
         fi
         # Exported elsewhere -> Check 10 already models it; don't double-report.
         if flag_is_exported "$v"; then
