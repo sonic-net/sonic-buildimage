@@ -34,6 +34,17 @@
         "eStrKey" : "Pattern",
         "eStr": ["false|true|False|True"]
     },
+    "PORT_CHANNEL_VALID_FALLBACK_TIMEOUT": {
+        "desc": "Configure PortChannel with a valid LACP fallback_timeout."
+    },
+    "PORT_CHANNEL_OUT_OF_RANGE_FALLBACK_TIMEOUT": {
+        "desc": "Configure PortChannel with out-of-range LACP fallback_timeout.",
+        "eStrKey": "Range"
+    },
+    "PORT_CHANNEL_FALLBACK_TIMEOUT_WITH_FALLBACK_DISABLED": {
+        "desc": "Configure fallback_timeout when LACP fallback is disabled.",
+        "eStrKey": "When"
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "desc": "Configure IP address on PORTCHANNEL_INTERFACE table."
     },

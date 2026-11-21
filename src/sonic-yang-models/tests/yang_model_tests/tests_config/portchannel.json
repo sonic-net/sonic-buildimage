@@ -171,6 +171,53 @@
             }
         }
     },
+    "PORT_CHANNEL_VALID_FALLBACK_TIMEOUT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "fallback": "true",
+                        "fallback_timeout": "90",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_OUT_OF_RANGE_FALLBACK_TIMEOUT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "fallback": "true",
+                        "fallback_timeout": "301",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_FALLBACK_TIMEOUT_WITH_FALLBACK_DISABLED": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "name": "PortChannel0001",
+                        "fallback": "false",
+                        "fallback_timeout": "90",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        }
+    },
     "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
         "sonic-portchannel:sonic-portchannel": {
             "sonic-portchannel:PORTCHANNEL": {

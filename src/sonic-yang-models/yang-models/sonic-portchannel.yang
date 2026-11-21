@@ -129,6 +129,14 @@ module sonic-portchannel {
                     description "Enable LACP fallback feature";
                     type stypes:boolean_type;
                 }
+                leaf fallback_timeout {
+                    when "current()/../fallback = 'true' or current()/../fallback = 'True'";
+                    description "LACP fallback timeout in seconds; applies only when fallback is enabled.";
+                    type uint16 {
+                        range 1..300;
+                    }
+                    default 90;
+                }
                 leaf fast_rate {
                     description "Enable LACP fast rate";
                     type stypes:boolean_type;
