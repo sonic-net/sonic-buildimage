@@ -1,4 +1,8 @@
-FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+{% from "dockers/dockerfile-macros.j2" import rsync_from_builder_stage %}
+# Based on docker-sonic-gnmi so the watchdog can probe the gNMI server with gnmi_get.
+ARG BASE=docker-sonic-gnmi-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS builder
 
 # Update apt's cache of available packages
 RUN apt-get update && apt-get install -y \
@@ -18,7 +22,7 @@ COPY watchdog/ ./
 # Build from within /watchdog
 RUN cargo build --release
 
-FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -35,5 +39,18 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 # Copy the compiled Rust binary from the builder stage
 COPY --from=builder /watchdog/target/release/watchdog /usr/bin/gnmi_watchdog
 RUN chmod +x /usr/bin/gnmi_watchdog
+COPY --from=builder /watchdog/src/cmd_list.json /cmd_list.json
+
+FROM $BASE
+
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
