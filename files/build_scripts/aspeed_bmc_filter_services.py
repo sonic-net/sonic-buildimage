@@ -29,6 +29,7 @@ BMC_EXCLUDED_SERVICES = {
     'copp-config.service',           # Control Plane Policing - no ASIC on BMC
     'dhcp_dos_logger.service',       # DHCP DoS detection - no switch ports on BMC
     'warmboot-finalizer.service',    # Warm boot reconciliation - no SWSS/BGP on BMC
+    'switch-platform-init.service',  # Switch platform STATE_DB init - no swss or DMI on BMC, fails every boot
 
     # Route counter for SNMP MIB - no FRR/vtysh and SNMP disabled on BMC
     'route-counter.service',
