@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/src
+PLATFORM_SRC_PATH ?= $(if $(wildcard $(PLATFORM_PATH)/src/rules.mk),$(PLATFORM_PATH)/src,$(PLATFORM_PATH)/embedded)
 
 include $(PLATFORM_SRC_PATH)/rules.dep
 include $(PLATFORM_PATH)/docker-platform-monitor.dep
