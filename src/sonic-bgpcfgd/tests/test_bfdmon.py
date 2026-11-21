@@ -13,7 +13,7 @@ from bfdmon.bfdmon import BfdFrrMon
 def bfd_mon(mock_conn, mock_db, mock_tbl):
     #mock_conn.return_value.get_db_list.return_value = ['STATE_DB']
     m = BfdFrrMon()
-    mock_db.assert_called_once_with("STATE_DB", 0, False)
+    mock_db.assert_called_once_with("STATE_DB", 0, False, "", True)
     return m
 
 
@@ -24,7 +24,7 @@ def test_dpu_keeps_only_remote_state_db_on_tcp(mock_db, mock_table, mock_device_
     BfdFrrMon()
 
     assert mock_db.call_args_list == [
-        call("STATE_DB", 0, False),
+        call("STATE_DB", 0, False, "", True),
         call("DPU_STATE_DB", 0, True),
     ]
 

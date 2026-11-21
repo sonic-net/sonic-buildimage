@@ -2,8 +2,10 @@ class MockConnector(object):
     STATE_DB = None
     data = {}
 
-    def __init__(self, host):
-        pass
+    def __init__(self, host, *, use_unix_socket_path=False, authenticate=False):
+        self.host = host
+        self.use_unix_socket_path = use_unix_socket_path
+        self.authenticate = authenticate
 
     def connect(self, db_id):
         pass
@@ -29,7 +31,7 @@ class MockConnector(object):
         return MockConnector.data[key]
 
     def delete(self, db_id, key):
-        return MockConnector.data.delete(key)
+        return MockConnector.data.pop(key, None)
 
     def delete_all_by_pattern(self, db_id, pattern):
         keys = self.keys(db_id, pattern)

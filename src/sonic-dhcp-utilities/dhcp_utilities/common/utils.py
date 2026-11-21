@@ -1,4 +1,5 @@
 import ipaddress
+import os
 import psutil
 import string
 from swsscommon import swsscommon
@@ -9,11 +10,17 @@ SUPPORT_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16"
 
 
 class DhcpDbConnector(object):
-    def __init__(self, redis_host=DEFAULT_REDIS_HOST, redis_port=DEFAULT_REDIS_PORT, redis_sock=None):
+    def __init__(self, redis_host=DEFAULT_REDIS_HOST, redis_port=DEFAULT_REDIS_PORT, redis_sock=None,
+                 authenticate=False):
+        if authenticate and (redis_sock is None or
+                             os.path.realpath(redis_sock) != os.path.realpath(
+                                 swsscommon.SonicDBConfig.getDbSock("STATE_DB"))):
+            raise ValueError("Writer authentication requires the configured local STATE_DB socket")
         if redis_sock is not None:
             self.redis_sock = redis_sock
             self.config_db = swsscommon.DBConnector(swsscommon.CONFIG_DB, redis_sock, 0)
-            self.state_db = swsscommon.DBConnector(swsscommon.STATE_DB, redis_sock, 0)
+            self.state_db = (swsscommon.DBConnector("STATE_DB", 0, False, "", True) if authenticate
+                             else swsscommon.DBConnector(swsscommon.STATE_DB, redis_sock, 0))
         else:
             self.config_db = swsscommon.DBConnector(swsscommon.CONFIG_DB, redis_host, redis_port, 0)
             self.state_db = swsscommon.DBConnector(swsscommon.STATE_DB, redis_host, redis_port, 0)

@@ -43,6 +43,13 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data = {}
         self.test_data['BMP'] = {}
         self.test_data['BMP']['table'] = {'bgp_neighbor_table': 'false', 'bgp_rib_in_table': 'false', 'bgp_rib_out_table': 'false'}
+        self.retained_state = {'BMP_STATS|retained': {'value': 'keep'}}
+        MockConnector.data = {
+            **self.retained_state,
+            'BGP_NEIGHBOR|stale': {'value': 'remove'},
+            'BGP_RIB_IN_TABLE|stale': {'value': 'remove'},
+            'BGP_RIB_OUT_TABLE|stale': {'value': 'remove'},
+        }
 
     @mock.patch('subprocess.call')
     @mock.patch('bmpcfgd.BMPCfg.log_info')
@@ -50,8 +57,13 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP']['table']['bgp_neighbor_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
+        self.assertTrue(bmp_config_daemon.state_db_conn.use_unix_socket_path)
+        self.assertTrue(bmp_config_daemon.state_db_conn.authenticate)
+        self.assertTrue(bmp_config_daemon.config_db.use_unix_socket_path)
+        self.assertFalse(bmp_config_daemon.config_db.authenticate)
         bmp_config_daemon.register_callbacks()
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
+        self.assertEqual(MockConnector.data, self.retained_state)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "openbmpd"]),
             mock.call(["supervisorctl", "start", "openbmpd"])
@@ -64,7 +76,12 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP']['table']['bgp_rib_in_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
+        self.assertTrue(bmp_config_daemon.state_db_conn.use_unix_socket_path)
+        self.assertTrue(bmp_config_daemon.state_db_conn.authenticate)
+        self.assertTrue(bmp_config_daemon.config_db.use_unix_socket_path)
+        self.assertFalse(bmp_config_daemon.config_db.authenticate)
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
+        self.assertEqual(MockConnector.data, self.retained_state)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "openbmpd"]),
             mock.call(["supervisorctl", "start", "openbmpd"])
@@ -77,7 +94,12 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP']['table']['bgp_rib_out_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
+        self.assertTrue(bmp_config_daemon.state_db_conn.use_unix_socket_path)
+        self.assertTrue(bmp_config_daemon.state_db_conn.authenticate)
+        self.assertTrue(bmp_config_daemon.config_db.use_unix_socket_path)
+        self.assertFalse(bmp_config_daemon.config_db.authenticate)
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
+        self.assertEqual(MockConnector.data, self.retained_state)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "openbmpd"]),
             mock.call(["supervisorctl", "start", "openbmpd"])
