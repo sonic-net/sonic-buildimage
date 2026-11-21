@@ -748,6 +748,7 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$platform" "shearwater" "redstart"; then
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio,amd_sfh
+        cmdline_add pcie_ports=native
         if [ -f /tmp/.switch-prefdl ]; then
             read_switch_eeprom
         else
