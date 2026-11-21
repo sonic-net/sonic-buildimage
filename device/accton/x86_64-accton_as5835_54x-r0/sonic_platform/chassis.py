@@ -46,6 +46,8 @@ class Chassis(ChassisBase):
         self._api_helper = APIHelper()
         self.is_host = self._api_helper.is_host()
         
+        from .pddf_context import load_environment
+        self.pddf_obj, self.plugin_data = load_environment()
         self.config_data = {}
         
         self.__initialize_fan()
@@ -66,21 +68,25 @@ class Chassis(ChassisBase):
     def __initialize_fan(self):
        from sonic_platform.fan_drawer import FanDrawer
        for fant_index in range(NUM_FAN_TRAY):
-           fandrawer = FanDrawer(fant_index)
+           fandrawer = FanDrawer(fant_index, self.pddf_obj, self.plugin_data)
            self._fan_drawer_list.append(fandrawer)
            self._fan_list.extend(fandrawer._fan_list)
 
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
+        from sonic_platform.psu_sensor import PsuVoltageSensor, PsuCurrentSensor
         for index in range(0, NUM_PSU):
-            psu = Psu(index)
+            psu = Psu(index, self.pddf_obj, self.plugin_data)
             self._psu_list.append(psu)
+            self._voltage_sensor_list.append(PsuVoltageSensor(psu, index + 1))
+            self._current_sensor_list.append(PsuCurrentSensor(psu, index + 1))
     
     def __initialize_thermals(self):
-        from sonic_platform.thermal import Thermal
+        from sonic_platform.thermal import Thermal, CpuThermal
         for index in range(0, NUM_THERMAL):
-            thermal = Thermal(index)
+            thermal = Thermal(index, self.pddf_obj, self.plugin_data)
             self._thermal_list.append(thermal)
+        self._thermal_list.extend(CpuThermal.discover(len(self._thermal_list)))
     
     def __initialize_eeprom(self):
         from sonic_platform.eeprom import Tlv
@@ -251,4 +257,10 @@ class Chassis(ChassisBase):
             return False
         else:
             return self._api_helper.write_txt_file(SYSLED_FNODE, mode)
-            
+
+
+    def get_watchdog(self):
+        if self._watchdog is None:
+            from sonic_platform.watchdog import Watchdog
+            self._watchdog = Watchdog()
+        return self._watchdog

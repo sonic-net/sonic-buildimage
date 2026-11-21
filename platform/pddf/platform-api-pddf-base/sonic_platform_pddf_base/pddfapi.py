@@ -73,7 +73,9 @@ class PddfApi():
     def get_paths(self, target, attr):
         aa = target + attr
 
-        if aa in cache:
+        # A missing hwmon path may become available after driver startup.
+        # Retain positive lookups, but never let a negative lookup persist.
+        if cache.get(aa):
             return cache[aa]
 
         strings = []
@@ -89,7 +91,10 @@ class PddfApi():
                 if paths:
                     strings.extend(paths)
 
-        cache[aa] = strings
+        if strings:
+            cache[aa] = strings
+        else:
+            cache.pop(aa, None)
         return strings
 
     def get_path(self, target, attr):

@@ -17,3 +17,11 @@ class Fan(PddfFan):
     # Provide the functions/variables below for which implementation is to be overwritten
     # Since AS4630 psu_fan airflow direction cant be read from sysfs, it is fixed as 'F2B' or 'intake'
 
+
+    def _get_speed_from_pwm(self, pwm):
+        """Preserve the AS7326 profile's original integer-division result.
+
+        In particular, PWM 15 is 100%, not round(100.75) == 101%.
+        The same conversion must be used for measured and target speed.
+        """
+        return int(self._pwm_to_duty_cycle.convert(pwm))

@@ -152,8 +152,8 @@ static SENSOR_DEVICE_ATTR(psu_mfr_revision,    S_IRUGO, show_ascii, NULL, PSU_MF
 static SENSOR_DEVICE_ATTR(psu_mfr_serial,     S_IRUGO, show_ascii,  NULL, PSU_MFR_SERIAL);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_min,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MIN);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_max,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MAX);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MIN);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MAX);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MIN);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IIN_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_PIN_MAX);

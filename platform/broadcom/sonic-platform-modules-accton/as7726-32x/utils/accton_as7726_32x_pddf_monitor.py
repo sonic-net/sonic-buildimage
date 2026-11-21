@@ -25,6 +25,7 @@
 
 try:
     import sys
+    import math
     import getopt
     import logging
     import subprocess
@@ -60,6 +61,19 @@ platform_chassis = None
 #  sensor_LM75_CPU == sensor_LM75_4B
  
      
+
+def read_temperature_milli(index):
+    """Return a finite sensor reading, or None while unavailable."""
+    try:
+        value = platform_chassis.get_thermal(index).get_temperature()
+        if isinstance(value, bool) or value is None:
+            return None
+        value = float(value)
+        return value * 1000 if math.isfinite(value) else None
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
 class switch(object):
     def __init__(self, value):
         self.value = value
@@ -162,7 +176,12 @@ class device_monitor(object):
         }
         
         fan_dir= platform_chassis.get_fan(0).get_direction()
-        if fan_dir == 'EXHAUST':
+        fan_dir = str(fan_dir).lower()
+        if fan_dir not in ('exhaust', 'intake'):
+            platform_chassis.get_fan(0).set_speed(100)
+            logging.error("Unknown airflow direction; keeping fans at 100%")
+            return False
+        if fan_dir == 'exhaust':
             fan_policy = fan_policy_f2b
         else:
             fan_policy = fan_policy_b2f
@@ -171,8 +190,12 @@ class device_monitor(object):
         #ori_perc=fan.get_fan_duty_cycle()
         logging.debug('fan_dir=%s, ori_perc=%d, test_temp=%d', fan_dir, ori_perc, test_temp)
         if test_temp==0:
-            temp4 = platform_chassis.get_thermal(3).get_temperature()*1000
-            temp5 = platform_chassis.get_thermal(4).get_temperature()*1000
+            temp4 = read_temperature_milli(3)
+            temp5 = read_temperature_milli(4)
+            if temp4 is None or temp5 is None:
+                platform_chassis.get_fan(0).set_speed(100)
+                logging.error("Temperature unavailable; keeping fans at 100% and retrying")
+                return False
         else:
             temp4 = test_temp_list[3]
             temp5 = test_temp_list[4]            
