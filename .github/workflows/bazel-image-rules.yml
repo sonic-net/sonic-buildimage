@@ -121,7 +121,13 @@ jobs:
           git diff --exit-code
       - name: Verify offline bundle cache reuse across clean Bazel builds
         if: matrix.architecture == 'amd64'
-        run: python3 tools/bazel/tests/integration/boot_bundle_cache.py --report artifacts/image-rule-actions/boot-bundle-cache.json
+        run: |
+          sandbox_args=()
+          if unshare --user --map-root-user --mount true; then
+            sandbox_args+=(--require-linux-sandbox)
+          fi
+          python3 tools/bazel/tests/integration/boot_bundle_cache.py "${sandbox_args[@]}" \
+            --report artifacts/image-rule-actions/boot-bundle-cache.json
       - name: Retain public rule action evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

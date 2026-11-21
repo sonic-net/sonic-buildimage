@@ -4,12 +4,14 @@ import argparse
 from collections import Counter, defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
+import errno
 import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,7 +48,22 @@ def starlark_call(rule, **kwargs):
 def link_input(directory, name, source):
     destination = directory / name
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.symlink_to(source.resolve(strict=True))
+    # The Linux action sandbox mounts a private /tmp. Keep the bytes themselves
+    # in the injected repository, including inputs originally reached by symlink.
+    source = source.resolve(strict=True)
+    try:
+        os.link(source, destination)
+    except OSError as error:
+        if error.errno not in (errno.EXDEV, errno.EPERM, errno.EACCES, errno.EOPNOTSUPP, errno.EMLINK):
+            raise
+        fd, tmp = tempfile.mkstemp(dir=destination.parent)
+        partial = Path(tmp)
+        try:
+            with os.fdopen(fd, "wb") as staged, source.open("rb") as stream:
+                shutil.copyfileobj(stream, staged, length=1024 * 1024)
+            partial.replace(destination)
+        finally:
+            partial.unlink(missing_ok=True)
     return name
 
 
@@ -258,7 +275,11 @@ def build(images, platform, output, inventory, labels, evidence_dir=None):
                + shlex.split(os.environ.get("BAZEL_CONTAINER_ARGS", ""))
                + remote_cache_options())
     evidence = {} if evidence_dir else None
-    with lock_checkout(), tempfile.TemporaryDirectory(prefix="sonic-boot-inputs-") as tmp:
+    # Source aliases in the Linux sandbox point back through this repository.
+    # Put it in the checkout so it remains visible even with a hermetic /tmp.
+    target = Path.cwd() / "target"
+    target.mkdir(exist_ok=True)
+    with lock_checkout(), tempfile.TemporaryDirectory(dir=target, prefix=".sonic-boot-inputs-") as tmp:
         repo = Path(tmp).resolve() / "inputs"
         repo.mkdir()
         (repo / "MODULE.bazel").write_text(f'module(name="{REPO}")\n')

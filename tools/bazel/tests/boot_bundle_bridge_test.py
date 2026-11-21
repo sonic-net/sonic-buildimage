@@ -1,15 +1,20 @@
 """Test the installer-selected input graph of the Bazel boot bundle."""
+from contextlib import chdir
+import errno
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
+from tools.bazel.image import build_boot_bundle as bridge
 from tools.bazel.image.build_boot_bundle import BundlePackage, Image, write_archive_package
 from tools.bazel.oci.boot_layout import publish_layout
 from tools.bazel.oci.oci_layout import validate_layout
@@ -39,17 +44,72 @@ class BootBundleBridgeTest(unittest.TestCase):
         stage = self.work / "first"
         write_archive_package(stage, [selected], PLATFORM)
         inputs = stage / "inputs" / selected.archive
-        self.assertEqual((inputs / "archive").resolve(), archive)
-        self.assertEqual((inputs / "receipt").resolve(), target / ".boot-image-layouts/docker-a.gz.json")
-        self.assertEqual((inputs / "index").resolve(), selected.layout / "index.json")
+        self.assertTrue((inputs / "archive").samefile(archive))
+        self.assertFalse((inputs / "archive").is_symlink())
+        self.assertTrue((inputs / "receipt").samefile(target / ".boot-image-layouts/docker-a.gz.json"))
+        self.assertTrue((inputs / "index").samefile(selected.layout / "index.json"))
 
         (selected.layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
         selected = Image(export, ["docker-a:latest"], False)
         stage = self.work / "second"
         write_archive_package(stage, [selected], PLATFORM)
         self.assertIsNone(selected.layout)
-        self.assertEqual((stage / "inputs" / selected.archive / "archive").resolve(), archive)
+        self.assertTrue((stage / "inputs" / selected.archive / "archive").samefile(archive))
         self.assertNotIn("receipt =", (stage / "BUILD.bazel").read_text())
+
+    def test_injected_repository_is_private_and_visible_from_the_checkout(self):
+        workspace = self.work / "checkout"
+        workspace.mkdir()
+        archive = self.work / "extra.tar"
+        docker_save(archive, self.config, self.layers)
+        output = self.work / "out"
+        result = self.work / "result"
+        result.write_bytes(b"built")
+        selected = [Image(self.layout, ["native:v1"], False), Image(archive, ["extra:v1"], False)]
+        phase = []
+
+        def verify_graph(repository, package, target, expected, evidence, options):
+            self.assertEqual(repository.parents[1], workspace / "target")
+            self.assertEqual(repository.parent.stat().st_mode & 0o777, 0o700)
+            self.assertFalse(any(p.is_symlink() for p in repository.rglob("*")))
+            phase.append(package)
+            if package == "archives":
+                # Simulate the archive action's metadata. Source files are already
+                # present in the repository even if the original /tmp is hidden.
+                self.assertTrue(any(p.samefile(archive) for p in (repository / "archives/inputs").rglob("archive")))
+                native = validate_layout(self.layout, PLATFORM)
+                result_info = self.work / "archive.json"
+                result_info.write_text(json.dumps({"use_sidecar": False, "config": digest(self.config),
+                    "diff_ids": native.config["rootfs"]["diff_ids"], "layers": native.manifest["layers"],
+                    "original_tags": []}))
+                return {name: result_info for name in expected}
+            self.assertEqual(package, "bundle")
+            self.assertEqual(len(list((repository / "bundle/blobs").iterdir())), len(self.layers))
+            return {name: result for name in expected}
+
+        with chdir(workspace), mock.patch.object(bridge, "build_target", side_effect=verify_graph):
+            bridge.build(selected, PLATFORM, output, None, None)
+        self.assertEqual(phase, ["archives", "bundle"])
+        self.assertEqual(output.read_bytes(), b"built")
+        self.assertEqual(list((workspace / "target").iterdir()), [])
+
+    def test_cross_device_staging_copies_bytes_and_removes_failed_partial(self):
+        source = self.work / "real-source"
+        source.write_bytes(b"content")
+        alias = self.work / "logical-source"
+        alias.symlink_to(source)
+        repo = self.work / "stage"
+        with mock.patch.object(os, "link", side_effect=OSError(errno.EXDEV, "cross-device")):
+            bridge.link_input(repo, "inputs/archive", alias)
+            with mock.patch.object(shutil, "copyfileobj", side_effect=OSError(errno.ENOSPC, "disk full")):
+                with self.assertRaises(OSError) as failure:
+                    bridge.link_input(repo, "inputs/receipt", alias)
+                self.assertEqual(failure.exception.errno, errno.ENOSPC)
+        staged = repo / "inputs/archive"
+        self.assertFalse(staged.is_symlink())
+        self.assertFalse(staged.samefile(source))
+        self.assertEqual(staged.read_bytes(), source.read_bytes())
+        self.assertEqual(list(staged.parent.iterdir()), [staged])
 
     def test_archive_target_survives_new_tags_extra_images_and_new_checkout(self):
         def graph(directory, names):
@@ -85,9 +145,10 @@ class BootBundleBridgeTest(unittest.TestCase):
         package.finish(PLATFORM, False)
         self.assertEqual(len(package.layer_targets), 2 * len(self.layers))
         sources = {package.directory / src for _, src in package.layer_targets}
-        self.assertEqual({p.resolve() for p in sources}, {
-            d / "blobs/sha256" / digest(layer)[7:] for d in [self.layout, separate] for layer in self.layers
-        })
+        expected = [d / "blobs/sha256" / digest(layer)[7:]
+                    for d in [self.layout, separate] for layer in self.layers]
+        self.assertTrue(all(any(p.samefile(original) for p in sources) for original in expected))
+        self.assertFalse(any(p.is_symlink() for p in sources))
         self.assertFalse(any(i["check_label"] for i in package.spec))
 
     def test_fallback_projection_and_version_inventory(self):
