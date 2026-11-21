@@ -451,7 +451,11 @@ else
 DOCKER_PRIVMODE := --privileged
 endif
 
-DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
+builder_auto_remove := true
+ifeq ($(SONIC_VS_DEFER_BUILDER_CLEANUP):$(BLDENV):$(MAKECMDGOALS),y:trixie:target/sonic-vs.bin)
+builder_auto_remove := false
+endif
+DOCKER_RUN := docker run --rm=$(builder_auto_remove) $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     $(GIT_WORKTREE_MOUNTS) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \

@@ -162,8 +162,12 @@ NFS cache in the workflow. Provision access for the Docker daemon to mount the
 source and for the slave build user's UID/GID to use `/dpkg_cache`, accounting
 for root squashing.
 
-After artifact upload attempts, the job removes its labeled containers and then
-its own `vs-<run-id>-<attempt>` checkout, including per-run nested-Docker state.
+The VS installer job runs its final Trixie `target/sonic-vs.bin` builder with
+`--rm=false`. Make returns when that container exits, so publication can proceed
+while its writable layer is still on the runner. After artifact upload attempts,
+the job removes its labeled containers and then its own `vs-<run-id>-<attempt>`
+checkout, including per-run nested-Docker state. Bookworm and the other builder
+invocations use automatic removal. Both cleanup steps count toward total job time.
 Checkout deletion requires noninteractive `sudo rm` for root-owned build output.
 It refuses symlinked checkouts, remaining host mounts, and references from any
 Docker container. If container cleanup or an artifact upload fails or is

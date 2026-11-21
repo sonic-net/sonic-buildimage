@@ -85,7 +85,7 @@ else:
                      "FORBID_VALIDATION", "CHANGE_REVISION_ACTION", "NOBOOKWORM", "NOTRIXIE",
                      "SONIC_OVERRIDE_BUILD_VARS", "SONIC_BUILD_VARS", "FAIL_ONCE_GOAL",
                      "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH", "SONIC_ENABLE_DEBUG_LAYER",
-                     "DOCKER_LOAD_ON_BOOT"):
+                     "DOCKER_LOAD_ON_BOOT", "SONIC_VS_DEFER_BUILDER_CLEANUP"):
             self.environment.pop(name, None)
 
     def run_script(self, name, *args, **environment):
@@ -127,6 +127,11 @@ else:
         self.assertEqual(self.calls()[0]["build_revision"], "a" * 40)
         self.assertEqual([path.name for path in (self.root / "artifacts/vs").iterdir()], ["build-revision.txt"])
 
+    def test_deferred_cleanup_reaches_installer_make(self):
+        result = self.run_script("build_vs.sh", SONIC_VS_DEFER_BUILDER_CLEANUP="y")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("SONIC_VS_DEFER_BUILDER_CLEANUP=y", self.calls()[0]["args"])
+
     def test_explicit_debug_layer_reaches_installer_make(self):
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="y")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -141,6 +146,7 @@ else:
         self.assertEqual(builders, ["vs_container"])
         build = next(step for step in jobs["vs_container"]["steps"] if step.get("id") == "native_build")
         self.assertEqual(build["env"]["DOCKER_LOAD_ON_BOOT"], "y")
+        self.assertEqual(build["env"]["SONIC_VS_DEFER_BUILDER_CLEANUP"], "y")
         verify = jobs["installer_validation"]
         self.assertEqual(verify["needs"], "vs_container")
         self.assertTrue(any("--expect-boot-bundle" in step.get("run", "") for step in verify["steps"]))

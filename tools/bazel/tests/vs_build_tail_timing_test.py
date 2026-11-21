@@ -22,17 +22,20 @@ class VsBuildTailTimingTest(unittest.TestCase):
         # Execute the production host recipe, including the two nested shells in
         # the Docker/su command. The tiny stand-ins omit the actual image build.
         source = (ROOT / "Makefile.work").read_text()
+        auto_remove = source[source.index("builder_auto_remove :="):source.index("DOCKER_RUN :=")]
+        run_prefix = source.split("DOCKER_RUN := ", 1)[1].split(" $(DOCKER_PRIVMODE)", 1)[0]
         timing = source[source.index("vs_installer_tail_timing ="):source.index("ifdef SOURCE_FOLDER")]
         rule = source[source.index("%:: | sonic-build-hooks"):source.index("\ndocker-cleanup:")]
         docker = rule[rule.index("\t$(Q)$(DOCKER_RUN)"):]
 
         (self.work / "Makefile.work").write_text(
             "SHELL = /bin/bash\n.SHELLFLAGS = -e -c\n.ONESHELL:\nQ = @\n"
-            "DOCKER_RUN = ./docker\nDOCKER_USER_COMMANDS = :\nUSER = builder\n"
+            + auto_remove + f"DOCKER_RUN := {run_prefix}\n"
+            "DOCKER_USER_COMMANDS = :\nUSER = builder\n"
             "SONIC_BUILD_INSTRUCTION = ./build\ndocker-image-cleanup = echo HOST_CLEANUP\n"
             + timing + "%::\n" + docker +
             "\n.PHONY: docker-cleanup\ndocker-cleanup:\n\t@echo RECURSIVE_CLEANUP\n")
-        self.script("docker", 'shift\n"$@"\nstatus=$?\necho "DOCKER_RETURN $status"\nexit "$status"')
+        self.script("docker", 'echo "BUILDER ${1} ${2}" >> builder-flags\nshift 3\n"$@"\nstatus=$?\necho "DOCKER_RETURN $status"\nexit "$status"')
         self.script("su", 'exec bash -c "$3"')
         self.script("build", 'echo BUILT\nexit "${BUILD_STATUS:-0}"')
         # The production collector sources buildinfo from the installed slave.
@@ -47,10 +50,11 @@ class VsBuildTailTimingTest(unittest.TestCase):
         path.write_text("#!/bin/bash\n" + body + "\n")
         path.chmod(0o755)
 
-    def run_make(self, goal="target/sonic-vs.bin", timings="1", status=0):
+    def run_make(self, goal="target/sonic-vs.bin", timings="1", status=0, *, bookworm=False, defer=False):
         result = subprocess.run(
             ["make", "--no-print-directory", "-f", str(ROOT / "Makefile"), goal,
-             "NOBOOKWORM=1", "SONIC_VS_IMAGE_TIMINGS=" + timings],
+             f"NOBOOKWORM={int(not bookworm)}", "SONIC_VS_IMAGE_TIMINGS=" + timings,
+             *(["SONIC_VS_DEFER_BUILDER_CLEANUP=y"] if defer else [])],
             cwd=self.work, capture_output=True, text=True,
             env={"PATH": str(self.work) + ":" + os.defpath, "BUILD_STATUS": str(status)})
         events = [line for line in result.stdout.splitlines() if
@@ -77,6 +81,20 @@ class VsBuildTailTimingTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(events, ["BUILT", "COLLECT 0", "DOCKER_RETURN 0",
                                           "HOST_CLEANUP", "RECURSIVE_CLEANUP"])
+
+    def test_deferred_cleanup_retains_only_the_final_trixie_installer_builder(self):
+        for goal, defer, expected in (
+            ("target/sonic-vs.bin", False, "true"),
+            ("target/sonic-vs.bin", True, "false"),
+            ("target/sonic-vs.img.gz", True, "true"),
+        ):
+            with self.subTest(goal=goal, defer=defer):
+                flags = self.work / "builder-flags"
+                flags.write_text("")
+                result, _ = self.run_make(goal, bookworm=True, defer=defer)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(flags.read_text().splitlines(),
+                                 ["BUILDER run --rm=true", f"BUILDER run --rm={expected}"])
 
     def test_inner_build_status_crosses_collector_and_docker_shells(self):
         result, events = self.run_make(status=19)

@@ -882,6 +882,8 @@ jobs:
       - name: Build sonic-vs.bin through the host Make wrapper
         id: native_build
         env:
+          # The labeled cleanup step removes the stopped builder after artifact publication.
+          SONIC_VS_DEFER_BUILDER_CLEANUP: "y"
           DOCKER_LOAD_ON_BOOT: "y"
           SONIC_VS_IMAGE_TIMINGS: "1"
           SONIC_VS_RETRY_GO_FETCH: "1"

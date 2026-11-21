@@ -30,6 +30,9 @@ options=(
     "DOCKER_LOAD_ON_BOOT=${DOCKER_LOAD_ON_BOOT:-n}"
     "SONIC_ENABLE_DEBUG_LAYER=${SONIC_ENABLE_DEBUG_LAYER:-n}"
 )
+if [[ ${SONIC_VS_DEFER_BUILDER_CLEANUP:-n} == y ]]; then
+    options+=(SONIC_VS_DEFER_BUILDER_CLEANUP=y)
+fi
 revision=$(git rev-parse HEAD)
 mkdir -p artifacts/vs
 printf '%s\n' "$revision" > artifacts/vs/build-revision.txt
