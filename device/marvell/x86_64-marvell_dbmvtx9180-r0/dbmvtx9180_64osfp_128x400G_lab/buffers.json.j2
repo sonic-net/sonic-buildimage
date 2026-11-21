@@ -1,1 +1,2 @@
-buffers_defaults_t1.j2
+{%- set default_topo = default_topo | default('t1', true) %}
+{%- include 'buffers_config.j2' %}
