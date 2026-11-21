@@ -30,14 +30,14 @@ route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
 {% if 'match_prefix_set' in rm_val %}
 {% for pfx_key, pfx_val in PREFIX_SET.items() %}
 {% if rm_val['match_prefix_set'] == pfx_key %}
- match {{ip_str[pfx_val['mode']]}} address prefix-list {{rm_val['match_prefix_set']}}
+ match {{ip_str[pfx_val['mode']|default('IPv4', true)]}} address prefix-list {{rm_val['match_prefix_set']}}
 {% endif %}
 {% endfor %}
 {% endif %}
 {% if 'match_next_hop_set' in rm_val %}
 {% for pfx_key, pfx_val in PREFIX_SET.items() %}
 {% if rm_val['match_next_hop_set'] == pfx_key %}
- match {{ip_str[pfx_val['mode']]}} next-hop prefix-list {{rm_val['match_next_hop_set']}}
+ match {{ip_str[pfx_val['mode']|default('IPv4', true)]}} next-hop prefix-list {{rm_val['match_next_hop_set']}}
 {% endif %}
 {% endfor %}
 {% endif %}
