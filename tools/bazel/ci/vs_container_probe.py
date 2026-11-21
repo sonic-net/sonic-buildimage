@@ -137,24 +137,6 @@ def verify_service_installation(image, variant, directory, config, files):
         snmp_image.verify_state_directory(files)
 
 
-def p4rt_expectations(owner, revision, files, symbols, native):
-    from tools.bazel.ci import p4rt_validate
-    api, _ = p4rt_validate.owner_debug_api(owner, revision)
-    result = {}
-    for name, (source, _) in api.PROGRAMS.items():
-        binary = "usr/local/bin/" + name
-        dwp = binary + ".dwp"
-        check.require(files.get(dwp, {}).get("sha256") == symbols[dwp]["sha256"],
-                      "installed P4RT DWP differs from owner: " + name)
-        lines = (owner / source).read_text().splitlines()
-        definitions = [i for i, line in enumerate(lines, 1) if re.match(r"\s*int\s+main\s*\(", line)]
-        check.require(len(definitions) == 1, "ambiguous P4RT source main: " + name)
-        result[name] = {"source": source, "first_line": definitions[0], "last_line": len(lines),
-                        "parameters": ["int", "char **"],
-                        "runtime_sha256": native[binary]["sha256"], "dwp_sha256": symbols[dwp]["sha256"]}
-    return result
-
-
 def runtime_report(directory, bundle):
     image = bundle["image"]
     if image == "docker-teamd":
@@ -229,15 +211,12 @@ def runtime_report(directory, bundle):
             report["scapy_files"] = verify_scapy(files, directory / "scapy-2.6.1.dev0-py3-none-any.whl")
             report["config_files"] = owners["owners"]["config.tar"]
         if image == "docker-sonic-p4rt":
-            from tools.bazel.ci.p4rt_handoff import source_identity
+            from tools.bazel.ci import p4rt_image
             revision = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD:src/sonic-p4rt/sonic-pins"],
                                                text=True).strip()
-            report["owner_revision"] = source_identity(owner, revision)
-            handoff = json.loads((directory / "handoff.json").read_bytes())
-            check.require(handoff["source_revision"] == revision, "P4RT handoff differs from the selected Git owner")
+            p4rt_image.verify_owner_source(owner, revision)
+            report["owner_revision"] = revision
             report["p4rt_owner_test_sha256"] = check.sha(owner / "p4rt_app/runtime_package_test.py")
-            if variant == "debug":
-                report["p4rt_debug_pairs"] = p4rt_expectations(owner, revision, files, owners["owners"]["p4rt.debug.tar"], native)
         summary = {"status": "passed", "native_paths": sorted(native), "config_digest": spec["config_digest"],
                    "rootfs": spec["rootfs"], "elfs": report["elfs"], "native": native,
                    "source_debug_pairs": pairs}

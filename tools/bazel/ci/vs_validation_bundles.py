@@ -27,7 +27,6 @@ BASE = "docker-base-trixie"
 CONFIG = "docker-config-engine-trixie"
 SWSS = "docker-swss-layer-trixie"
 P4RT = "docker-sonic-p4rt"
-P4RT_SYMBOLS = "//dockers/docker-sonic-p4rt:p4rt_with_symbols"
 # Standalone parent probes also run on the original parents used by this build.
 PARENTS = (BASE, SWSS)
 GNMI_DIALOUT = "@sonic_gnmi//tools/bazel:enable_dialout"
@@ -100,14 +99,6 @@ def validation_targets(archives, registered_debug, debug_enabled, validation_onl
             entry["sources"]["libteam-source-receipt.json"] = package + ":libteam_source_receipt"
         if image == "docker-dash-engine":
             entry["apt_lock"] = DASH_LOCK
-        if image == P4RT:
-            for name in ["handoff.json", "p4rt_runtime_contract.json"]:
-                entry["sources"][name] = "@p4rt_owner_payload//:" + name
-        if image == P4RT and with_debug:
-            entry["sources"]["p4rt_runtime_debug_contract.json"] = "@p4rt_owner_payload//:p4rt_runtime_debug_contract.json"
-            entry["sources"]["symbols-apt.json"] = package + ":symbols_apt_selection"
-            # This layout is already an input of the selected debug archive.
-            entry["symbols_layout"] = P4RT_SYMBOLS
     return families
 
 

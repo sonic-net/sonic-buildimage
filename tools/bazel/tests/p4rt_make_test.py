@@ -39,7 +39,8 @@ class P4rtMakeTest(unittest.TestCase):
 import json, os, sys
 from pathlib import Path
 args = sys.argv[1:]
-command = next(arg for arg in args if arg in {'build', 'test', 'info', 'shutdown'})
+assert os.environ.get('USE_BAZEL_VERSION') == '8.5.1', os.environ.get('USE_BAZEL_VERSION')
+command = next(arg for arg in args if arg in {'build', 'test', 'cquery', 'shutdown'})
 start, options = args[:args.index(command)], args[args.index(command) + 1:]
 base, = [Path(arg.split('=', 1)[1]) for arg in start if arg.startswith('--output_base=')]
 with open(os.environ['BAZEL_RECORD'], 'a') as record:
@@ -55,15 +56,12 @@ if command == 'build':
         (out / 'p4rt_app' / (name + '.deb')).write_text(name)
 if command == 'test' and os.environ.get('FAIL_TEST'):
     sys.exit(12)
-if command == 'info':
-    assert options[-1] == 'bazel-bin'
-    print(out)
+if command == 'cquery':
+    assert options[-2:] == ['--output=files', '//p4rt_app:p4rt_deb']
+    print('bazel-out/k8-opt/bin/p4rt_app/p4rt.deb')
 """)
             bazel.chmod(0o755)
-            sdk_builder = root / "sdk_builder.py"
-            sdk_builder.write_text("")
             command = ["make", "--no-print-directory", f"DEST={dest}", f"BAZEL_CACHE={root}",
-                       f"COMMON_SDK_BUILDER={sdk_builder}",
                        "SONIC_P4RT=p4rt.deb", "SONIC_P4RT_DBG=p4rt-dbg.deb", str(dest / "p4rt.deb")]
             record = root / "calls.jsonl"
             env = dict(os.environ, SONIC_VS_IMAGE_TIMINGS="1", BAZEL="root-workspace-only-wrapper",
@@ -73,9 +71,9 @@ if command == 'info':
                 subprocess.run(command, env=env, cwd=source, check=True, capture_output=True)
             directory, = (root / "artifacts/vs/image-timings/sonic-p4rt").iterdir()
             self.assertEqual(json.loads((directory / "recipe.json").read_text()),
-                             {"bazel": ["build", "test", "info", "shutdown"], "profiles": ["build", "test"],
+                             {"bazel": ["build", "test", "cquery", "shutdown"], "profiles": ["build", "test"],
                               "exports": ["stage-debs"]})
-            for phase in ("build", "test", "info", "shutdown", "stage-debs"):
+            for phase in ("build", "test", "cquery", "shutdown", "stage-debs"):
                 self.assertEqual(json.loads((directory / f"{phase}.timing.json").read_text())["exit_code"], 0)
             self.assertCountEqual([p.name for p in directory.glob("*.profile.json.gz")],
                                   ["build.profile.json.gz", "test.profile.json.gz"])
@@ -83,7 +81,7 @@ if command == 'info':
             self.assertEqual((dest / "p4rt.deb").read_text(), "p4rt")
             self.assertEqual((dest / "p4rt-dbg.deb").read_text(), "p4rt-dbg")
             calls = [json.loads(line) for line in record.read_text().splitlines()]
-            self.assertEqual([c[0] for c in calls], ["build", "test", "info", "shutdown"])
+            self.assertEqual([c[0] for c in calls], ["build", "test", "cquery", "shutdown"])
             base, = {Path(c[1]) for c in calls}
             self.assertFalse(base.exists())
             for name, _, startup, options in calls:
@@ -113,15 +111,26 @@ if command == 'info':
                 "BAZEL_CACHE=" + dest + "/absent", dest + "/p4rt.deb",
             ], cwd=SOURCE, text=True)
         lines = result.splitlines()
+        self.assertIn("export USE_BAZEL_VERSION=8.5.1", lines)
         options, = [line for line in lines if line.startswith("build_options=(")]
         parsed_options = shlex.split(options.removeprefix("build_options=(").removesuffix(")"))
         self.assertIn("--experimental_downloader_config=" + str(POLICY), parsed_options)
-        self.assertIn("--override_repository=sonic_swss_common=" + str(SOURCE / ".common-sdk"), parsed_options)
+        self.assertFalse(any(opt.startswith("--override_repository=") for opt in parsed_options))
+        self.assertNotIn("--config=aarch64", parsed_options)
         build, test = [shlex.split(line) for line in lines if line.startswith('"${private_bazel[@]}"')]
         self.assertEqual(build[1:3], ["build", "${build_options[@]}"])
         self.assertEqual(build[-2:], ["//p4rt_app:p4rt_deb", "//p4rt_app:p4rt_dbg_deb"])
         self.assertEqual(test[1:3], ["test", "${build_options[@]}"])
         self.assertEqual(test[-1], "//p4rt_app/...")
+
+        with tempfile.TemporaryDirectory() as dest:
+            arm64 = subprocess.check_output([
+                "make", "--no-print-directory", "--dry-run", "DEST=" + dest,
+                "SONIC_P4RT=p4rt.deb", "SONIC_P4RT_DBG=p4rt-dbg.deb",
+                "CONFIGURED_ARCH=arm64", "BAZEL_CACHE=" + dest + "/absent", dest + "/p4rt.deb",
+            ], cwd=SOURCE, text=True)
+        arm_options, = [line for line in arm64.splitlines() if line.startswith("build_options=(")]
+        self.assertIn("--config=aarch64", shlex.split(arm_options.removeprefix("build_options=(").removesuffix(")")))
 
     def test_only_the_pinned_xz_archive_adds_an_official_mirror(self):
         rewrites = [line.split()[1:] for line in POLICY.read_text().splitlines() if line.startswith("rewrite ")]

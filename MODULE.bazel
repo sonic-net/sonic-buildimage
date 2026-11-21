@@ -28,6 +28,11 @@ bazel_dep(name = "redis-dump-load", version = "1.1.sonic.2", repo_name = "redis_
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.7", repo_name = "p4lang_pi")
 bazel_dep(name = "p4lang-bmv2", version = "1.15.0.sonic.6", repo_name = "p4lang_bmv2")
 bazel_dep(name = "p4c", version = "1.2.4.2.sonic.7")
+
+single_version_override(
+    module_name = "p4c",
+    version = "1.2.4.2.sonic.7",
+)
 bazel_dep(name = "sonic-dash", version = "0.0.1-d5c003dd7774c2b43f275c0233acc73a0ea28d2f", repo_name = "sonic_dash")
 
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.
@@ -379,6 +384,7 @@ source_modules(
         "@libyang_python//:MODULE.bazel": "libyang-python",
         "@libnl3//:MODULE.bazel": "libnl3",
         "//:MODULE.bazel": "sonic-buildimage",
+        "@sonic_pins//:MODULE.bazel": "sonic-pins",
         "@sonic_sysmgr//:MODULE.bazel": "sonic-sysmgr",
         "@sonic_protobuf//:MODULE.bazel": "protobuf-legacy",
     },
@@ -687,13 +693,10 @@ source_modules(
     },
 )
 
-# P4RT retains its source-owned Bazel 6 build. The explicit preparation step
-# verifies and stages its runtime/debug TARs and source contracts here.
-local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
-
-local_repository(
-    name = "p4rt_owner_payload",
-    path = ".bazel-inputs/p4rt-owner",
+bazel_dep(
+    name = "sonic-pins",
+    version = "0.0.1-42726b44e5f7b1ffeeedc5283aab7ea83a4d224e",
+    repo_name = "sonic_pins",
 )
 
 use_repo(apt, "p4rt_debian", "p4rt_debug_debian", "p4rt_test_debian")

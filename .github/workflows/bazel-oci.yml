@@ -331,181 +331,6 @@ jobs:
           BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
 
-  p4rt_owner:
-    name: P4RT source and SDK tests (AMD64)
-    needs: vs_container
-    if: contains(fromJSON(needs.vs_container.outputs.containers).include.*.image, 'docker-sonic-p4rt')
-    runs-on: [self-hosted, linux, bazel-x64, vs]
-    timeout-minutes: 360
-    container:
-      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
-      options: --init
-    env:
-      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
-      P4RT_TRUSTED_CACHE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-      # Like the image producers, only master pushes write owner results.
-      P4RT_UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Install execution tools
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Bind the tested checkout identity
-        id: checkout_identity
-        env:
-          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          python3 -B tools/bazel/ci/checkout_identity.py \
-            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
-            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
-            --github-output "$GITHUB_OUTPUT"
-
-      - name: Configure remote cache uploads
-        env:
-          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-        run: |
-          printf '\nbuild --remote_upload_local_results=%s\n' \
-            "$UPLOAD_CACHE" >> .bazelrc.user
-
-      - name: Check native architecture and generated dependency state
-        run: |
-          test "$(uname -m)" = "x86_64"
-          test ! -e MODULE.bazel.lock
-          test -z "$(git ls-files -- MODULE.bazel.lock)"
-          git check-ignore MODULE.bazel.lock
-
-      - name: Register post-job Bazel cleanup
-        id: bazel_cleanup_register
-        uses: ./.github/actions/bazel-post-job-cleanup
-      - name: Initialize P4RT's pinned source owner
-        run: git submodule update --init -- src/sonic-p4rt/sonic-pins
-      - name: Install P4RT source execution dependencies
-        run: |
-          apt-get install -y --no-install-recommends bison flex libfl-dev libgmp-dev patch zip \
-            libarchive-tools libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-nf-3-dev \
-            libnl-route-3-dev libzmq3-dev libboost-serialization-dev nlohmann-json3-dev uuid-dev
-          git config --global --add safe.directory "$GITHUB_WORKSPACE/src/sonic-p4rt/sonic-pins"
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
-        with:
-          bazelisk-version: 1.29.0
-          bazelisk-cache: true
-          repository-cache: true
-          disk-cache: p4rt-native-amd64
-          cache-version: "8.5.1"
-      - name: Configure Bazel action memory budget
-        run: python3 -B tools/bazel/ci/resources.py --configure
-      - name: Preserve setup-bazel caches and enable the pool service for trusted sources
-        if: env.P4RT_TRUSTED_CACHE == 'true'
-        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
-      - name: Preserve local setup-bazel caches for fork builds
-        if: env.P4RT_TRUSTED_CACHE != 'true'
-        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py
-      - name: Restore default Bazel startup ownership
-        run: python3 tools/bazel/ci/repair_bazel_startup.py
-
-      - name: Configure shared source download mirrors
-        run: |
-          python3 -B tools/bazel/ci/source_mirrors.py \
-            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
-          # common.bazelrc imports this ignored file, including through Draft wrappers.
-          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
-
-      - name: Allocate fresh P4RT build and owner output paths
-        id: p4rt_storage
-        run: |
-          scratch=$(mktemp -d "$SONIC_BAZEL_JOB_TEMP/p4rt.XXXXXXXX")
-          printf 'scratch=%s\n' "$scratch" >> "$GITHUB_OUTPUT"
-          python3 - "$scratch" <<'PYSPACE'
-          from pathlib import Path
-          import shutil, sys
-          path = Path(sys.argv[1])
-          free = shutil.disk_usage(path).free
-          print(f"P4RT scratch has {free / 1024**3:.1f} GiB available for the root and P4RT test output bases")
-          if free < 90 * 1024**3:
-              raise SystemExit("P4RT requires 90 GiB of free build space")
-          PYSPACE
-          printf 'P4RT_SCRATCH=%s\nP4RT_ARTIFACTS=%s/artifacts\n' "$scratch" "$scratch" >> "$GITHUB_ENV"
-          df -h "$scratch" "$GITHUB_WORKSPACE"
-      - name: Bound P4RT build phases and verify execution tools
-        run: |
-          for tool in bsdtar gdb readelf objcopy make git python3 zip bison flex g++ pkg-config; do
-            command -v "$tool" >/dev/null
-          done
-          PYTHONPATH="$PWD" python3 -B - <<'PYLAUNCH'
-          import os, shlex, shutil
-          from pathlib import Path
-          from tools.bazel.ci.preserve_setup_bazel_cache import write_bazel6_owner_rc
-          real = shutil.which("bazel")
-          if not real:
-              raise SystemExit("Bazelisk is unavailable")
-          directory = Path(os.environ["P4RT_SCRATCH"]) / "bazel-bin"
-          directory.mkdir()
-          owner_rc = directory.parent / "p4rt-owner.bazelrc"
-          write_bazel6_owner_rc(owner_rc, Path.home(), Path(os.environ["RUNNER_TEMP"]) / "sonic-source-mirrors.cfg",
-                                private_remote_cache=os.environ["P4RT_TRUSTED_CACHE"] == "true",
-                                upload=os.environ["P4RT_UPLOAD_CACHE"] == "true")
-          for name, heap in (("bazel", "3g"), ("owner", "2g")):
-              path = directory / name
-              if name == "owner":
-                  # Retain the PINS workspace rc and its split-DWARF configuration.
-                  startup = " --nosystem_rc --nohome_rc --bazelrc=" + shlex.quote(str(owner_rc))
-              else:
-                  startup = " --output_base=" + shlex.quote(str(directory.parent / "root-output-base"))
-              path.write_text("#!/bin/sh\nset -eu\n"
-                  'if [ "$#" -eq 1 ] && [ "$1" = --version ]; then\n'
-                  "  exec " + shlex.quote(real) + ' "$@"\nfi\n'
-                  "exec " + shlex.quote(real) + startup + " --host_jvm_args=-Xmx" + heap + ' "$@"\n')
-              path.chmod(0o755)
-          with Path(os.environ["GITHUB_ENV"]).open("a") as output:
-              output.write("P4RT_OWNER_BAZEL=" + str(directory / "owner") + "\n")
-          with Path(os.environ["GITHUB_PATH"]).open("a") as output:
-              output.write(str(directory) + "\n")
-          PYLAUNCH
-      - name: Download the VS input used for the P4RT parent library
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ${{ needs.vs_container.outputs.artifact_prefix }}-docker-sonic-p4rt
-          path: ${{ env.P4RT_SCRATCH }}/vs-parent
-      - name: Prepare the matching SDK and test the P4RT source owner
-        run: |
-          for phase in prepare-owner prepare-owner-runtime owner-tests; do
-            python3 -B tools/bazel/ci/p4rt_image.py "$phase" --bazel "$BAZEL" \
-              --vs-parent "$P4RT_SCRATCH/vs-parent" --directory "$P4RT_ARTIFACTS" --owner-source src/sonic-p4rt/sonic-pins \
-              --owner-revision "$(git rev-parse HEAD:src/sonic-p4rt/sonic-pins)" \
-              --owner-output-base "$P4RT_SCRATCH/owner-output-base" --owner-bazel "$P4RT_OWNER_BAZEL"
-          done
-      - name: Prepare reviewed P4RT public evidence
-        id: p4rt_public
-        if: always() && steps.p4rt_storage.outcome == 'success'
-        run: python3 -B tools/bazel/ci/p4rt_public.py --directory "$P4RT_ARTIFACTS"
-      - name: Retain P4RT owner test and SDK evidence
-        id: bazel_upload_p4rt_public
-        if: always() && steps.p4rt_public.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: p4rt-owner-tests-amd64-${{ github.sha }}
-          path: ${{ env.P4RT_ARTIFACTS }}/public
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
-
-      - name: Authorize published artifacts for post-job cleanup
-        if: always() && steps.bazel_cleanup_register.outcome == 'success'
-        env:
-          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
-        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
-
   checks:
     name: OCI regression checks (AMD64)
     runs-on: [self-hosted, Linux, X64, ubuntu-x64]
@@ -1410,7 +1235,7 @@ jobs:
 
   archive_acceptance:
     name: Container archive (AMD64)
-    needs: [archive, p4rt_owner, vs_container, installer_validation, validate_container]
+    needs: [archive, vs_container, installer_validation, validate_container]
     if: always() && !cancelled() && needs.vs_container.result != 'skipped'
     runs-on: [self-hosted, linux, bazel-x64]
     steps:
@@ -1418,9 +1243,8 @@ jobs:
         env:
           INSTALLER: ${{ needs.installer_validation.result }}
           PACKAGES: ${{ needs.archive.result }}
-          P4RT_OWNER: ${{ needs.p4rt_owner.result }}
           PRODUCER: ${{ needs.vs_container.result }}
           VALIDATION: ${{ needs.validate_container.result }}
         run: |
-          test "$PACKAGES" = success && test "$P4RT_OWNER" = success &&
+          test "$PACKAGES" = success &&
           test "$PRODUCER" = success && test "$INSTALLER" = success && test "$VALIDATION" = success

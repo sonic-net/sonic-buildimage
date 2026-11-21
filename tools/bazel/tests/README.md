@@ -19,9 +19,8 @@ python3 -B -m unittest discover -s tools/bazel/tests -p '*_test.py'
 ```
 
 The suite uses Python 3, Make, Bash, Git, `j2` from `j2cli`, `jq`, a C compiler,
-`readelf` and `objcopy`. The Make tests use a controlled Bazel executable and small local
-archives. The AMD64 P4RT split-debug checks also require GNU `dwp` and GDB;
-Trixie supplies `dwp` through `binutils-gold`. Fixture generators also live here so CI's real Bazel cache and Make
+`readelf`, `objcopy`, `strip` and GDB. The Make tests use a controlled Bazel executable and small local
+archives; AMD64 P4RT split-debug checks use `.build-id` debug ELFs and GDB. Fixture generators also live here so CI's real Bazel cache and Make
 export checks use the same inputs. `oci_base_fixture.py` also supplies the OCI
 metadata and ordered tar-file builders used by the shared OCI image tests.
 
@@ -128,7 +127,7 @@ replacements; they do not build or boot a VS image.
 | [manifest_labels_test.py](manifest_labels_test.py) | Preserve nested values, unknown fields and quoting when converting a JSON manifest to one OCI label line. Reject malformed JSON, non-object manifests and non-JSON numbers. |
 | [oci_base_layout_test.py](oci_base_layout_test.py) | Validate an OCI base's platform, index, descriptors and blob contents before consumption. Reject ambiguous, missing, corrupted or unsafe entries. |
 | [oci_base_make_test.py](oci_base_make_test.py) | Ensure Make prepares and revalidates each declared OCI base before its consumers, including parallel runtime/debug requests and changed archives with misleading timestamps. |
-| [p4rt_debug_test.py](p4rt_debug_test.py) | Require a populated AMD64 DWP that independently supplies matching function types and source lines in GDB. Reject empty, unrelated or malformed symbols and loose-DWO fallback. Fixtures compile ELF files without generating packages. |
+| [p4rt_debug_test.py](p4rt_debug_test.py) | Require a stripped AMD64 runtime ELF and matching `.build-id` split debug ELF that independently supply function types and source lines in GDB. Reject empty, unrelated, unstripped or malformed symbols. Fixtures compile ELF files without generating packages. |
 | [p4rt_tar_test.py](p4rt_tar_test.py) | Check standalone TAR validation and preserve the debug verifier's paired DEB interface. Verify legacy P4RT Docker builds keep DEB dependencies with the global Bazel selector enabled, and the separate VS validation step requests both DEB inputs. |
 | [prepare_oci_base_test.py](prepare_oci_base_test.py) | Publish native OCI entries from Docker-save fixtures without changing source archives. Protect stable timestamps, prior readers, corruption recovery and concurrent publication. |
 | [public_artifacts_test.py](public_artifacts_test.py) | Publish only reviewed files and sanitized status. Require exact agreement between declared container tests and successful Bazel test identities, retain required package validation, and reject missing outputs or sensitive content. |

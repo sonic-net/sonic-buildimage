@@ -34,30 +34,6 @@ def setup_cache_settings(home, repository_only=False):
     return list(settings.values())
 
 
-def write_bazel6_owner_rc(path, home, downloader_config, *, private_remote_cache, upload=False):
-    """Select only local caches and the approved pool services for an isolated Bazel 6 owner.
-
-    Like the image producers, the owner uploads only to the pool cache and only
-    when the caller allows writes (master pushes).
-    """
-    if not downloader_config.is_absolute() or not downloader_config.is_file():
-        raise ValueError("Expected the verified downloader configuration")
-    selected = []
-    for line in setup_cache_settings(home):
-        command, flag = shlex.split(line, comments=True)
-        if not Path(flag.split("=", 1)[1]).is_absolute():
-            raise ValueError("Expected an absolute setup-bazel cache path")
-        selected.append(command + " " + shlex.quote(flag))
-    if private_remote_cache:
-        selected.extend(PRIVATE_REMOTE_SETTINGS)
-    selected.extend((
-        "common " + shlex.quote("--experimental_downloader_config=" + str(downloader_config)),
-        "build --remote_upload_local_results=" + ("true" if private_remote_cache and upload else "false"),
-    ))
-    with path.open("x") as output:
-        output.write("\n".join(selected) + "\n")
-
-
 def preserve(workspace, home, repository_only=False, private_remote_cache=False):
     selected = setup_cache_settings(home, repository_only)
     if private_remote_cache:

@@ -50,12 +50,13 @@ class PackageStagesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "first declared stage layer"):
             vs_package_stages.verify(self.directory, bundle, "runtime", current, {})
 
-    def test_p4rt_validates_symbols_only_when_validating_its_debug_companion(self):
+    def test_p4rt_validates_runtime_and_debug_against_their_direct_bases(self):
         bundle = {"image": "docker-sonic-p4rt"}
         with patch.object(vs_package_stages, "verify_p4rt_stage") as verify:
             vs_package_stages.verify(self.directory, bundle, "runtime", {}, {})
-            self.assertEqual([call.args[1] for call in verify.call_args_list], ["runtime"])
+            self.assertEqual([(call.args[1], call.args[2]["manifest_digest"]) for call in verify.call_args_list],
+                             [("runtime", "parent")])
             verify.reset_mock()
             vs_package_stages.verify(self.directory, bundle, "debug", {}, {})
             self.assertEqual([(call.args[1], call.args[2]["manifest_digest"]) for call in verify.call_args_list],
-                             [("symbols", "runtime"), ("debug", "symbols")])
+                             [("debug", "runtime")])

@@ -113,7 +113,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive_acceptance"]
         self.assertEqual(job["name"], "Container archive (AMD64)")
         self.assertEqual(set(job["needs"]), {
-            "archive", "p4rt_owner", "vs_container", "installer_validation", "validate_container",
+            "archive", "vs_container", "installer_validation", "validate_container",
         })
         gate, = job["steps"]
         self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})

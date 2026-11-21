@@ -13,7 +13,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci.verify_p4rt_debug import extract_member, verify_inventory
+from tools.bazel.ci.verify_p4rt_debug import extract_member, verify_debug_inventory, verify_inventory
 
 
 class TarPayloadTest(unittest.TestCase):
@@ -39,6 +39,15 @@ class TarPayloadTest(unittest.TestCase):
         extract_member(self.package, 'usr/local/bin/p4rt', destination)
         self.assertEqual(destination.read_bytes(), b'payload')
 
+    def test_verifies_build_id_debug_tar_inventory_and_permissions(self):
+        bid = 'ab' * 20
+        path = f'usr/lib/debug/.build-id/{bid[:2]}/{bid[2:]}.debug'
+        self.archive(('./' + path, tarfile.REGTYPE, 0o644))
+        self.assertEqual(verify_debug_inventory(self.package, expected_count=1), [path])
+        self.archive(('./' + path, tarfile.REGTYPE, 0o755))
+        with self.assertRaises(ValueError):
+            verify_debug_inventory(self.package, expected_count=1)
+
     def test_rejects_missing_duplicate_link_and_wrong_mode(self):
         for members in [(), (('usr/local/bin/p4rt', tarfile.REGTYPE, 0o644),),
                         (('usr/local/bin/p4rt', tarfile.SYMTYPE, 0o755),),
@@ -56,17 +65,20 @@ class TarPayloadTest(unittest.TestCase):
         runtime.write_bytes(b'existing runtime input')
         debug.write_bytes(b'existing debug input')
         receipt = self.root / 'receipt.json'
+        bid = 'ab' * 20
         arguments = ['verify_p4rt_debug.py', '--runtime-deb', str(runtime),
                      '--debug-deb', str(debug), '--source-root', str(self.root),
                      '--output', str(receipt)]
         with mock.patch.object(sys, 'argv', arguments), \
                 mock.patch.object(verifier, 'extract_deb_member') as decode_deb, \
                 mock.patch.object(verifier, 'extract_member') as decode_tar, \
+                mock.patch.object(verifier, 'elf_build_id', return_value=bid), \
                 mock.patch.object(verifier, 'verify_pair', return_value={'status': 'passed'}), \
                 mock.patch('builtins.print'):
             verifier.main()
         self.assertEqual([call.args[:2] for call in decode_deb.call_args_list],
-                         [(runtime, 'usr/local/bin/p4rt'), (debug, 'usr/local/bin/p4rt.dwp')])
+                         [(runtime, 'usr/local/bin/p4rt'),
+                          (debug, f'usr/lib/debug/.build-id/{bid[:2]}/{bid[2:]}.debug')])
         decode_tar.assert_not_called()
         self.assertEqual(json.loads(receipt.read_text()), {
             'status': 'passed', 'packages': {

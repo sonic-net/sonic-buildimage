@@ -31,12 +31,9 @@ class IncrementalOwnerOutputTest(unittest.TestCase):
                 output = execution / path
                 output.parent.mkdir(parents=True, exist_ok=True)
                 output.write_bytes(name.encode())
-            handoff = workspace / '.bazel-inputs/p4rt-owner/handoff.json'
-            handoff.parent.mkdir(parents=True)
-            handoff.write_text('{}\n')
             receipt = {
                 'status': 'built', 'revision': 'reviewed-revision',
-                'layouts': {name: 'layouts/' + name for name in (*validation.IMAGES, validation.SYMBOLS)},
+                'layouts': {name: 'layouts/' + name for name in validation.IMAGES},
                 'base_layout': 'layouts/base',
                 'artifacts': {name: {'sha256': validation.check.sha(execution / path)}
                               for name, path in paths.items()},
@@ -120,7 +117,7 @@ class DebugSaiTest(unittest.TestCase):
                 'payload_sha256': self.hashes[package], 'control_fields': {'Version': '1.0.0'}}
 
     def verify(self, runtime=None):
-        validation.verify_debug_sai(runtime or {}, {}, self.debug, self.metadata, self.payloads, self.hashes, self.owner)
+        validation.verify_debug_sai(runtime or {}, self.debug, self.metadata, self.payloads, self.hashes, self.owner)
 
     def test_declared_debug_closure_and_owner_metadata_are_required(self):
         self.verify()
@@ -152,7 +149,7 @@ class DebugSaiTest(unittest.TestCase):
     def test_missing_changed_or_runtime_sai_libraries_are_rejected(self):
         name = next(iter(self.debug))
         original = self.debug[name]
-        with self.assertRaisesRegex(ValueError, 'leaked into an earlier stage'):
+        with self.assertRaisesRegex(ValueError, 'leaked into the runtime stage'):
             self.verify({name: original})
         self.debug[name] = {**original, 'mode': 0o777}
         with self.assertRaisesRegex(ValueError, 'payload changed'):
@@ -249,18 +246,21 @@ class LoadedSaiSelectionTest(unittest.TestCase):
 class StageBindingTest(unittest.TestCase):
     def setUp(self):
         self.apt = {'image': 'docker-sonic-p4rt', 'group': 'debug',
-                    'base_manifest_digest': 'sha256:symbols', 'dependency_check': {'status': 'satisfied'}}
-        self.metadata = {'architecture': 'amd64', 'base_manifest_digest': 'sha256:symbols',
-                         'apt_selection_sha256': 'apt-hash', 'dependency_check': {'status': 'satisfied'}}
+                    'base_manifest_digest': 'sha256:runtime', 'dependency_check': {'status': 'satisfied'}}
+        self.metadata = {'architecture': 'amd64', 'base_manifest_digest': 'sha256:runtime',
+                         'apt_selection_sha256': 'apt-hash', 'dependency_check': {'status': 'satisfied'},
+                         'source_contract_sha256': 'contract-hash',
+                         'source_modules': {'sonic-fips': {'version': '0.0.6'},
+                                            'sonic-sairedis': {'version': '0.0.5'}}}
 
     def verify(self):
-        validation.stage_binding('debug', self.apt, self.metadata, base_digest='sha256:symbols', apt_sha='apt-hash')
+        validation.stage_binding('debug', self.apt, self.metadata, base_digest='sha256:runtime', apt_sha='apt-hash')
 
-    def test_final_debug_requires_the_completed_symbols_base(self):
+    def test_final_debug_requires_the_completed_runtime_base(self):
         self.verify()
         for record in (self.apt, self.metadata):
             original = record['base_manifest_digest']
-            record['base_manifest_digest'] = 'sha256:runtime'
+            record['base_manifest_digest'] = 'sha256:other'
             with self.assertRaisesRegex(ValueError, 'different completed OCI base'):
                 self.verify()
             record['base_manifest_digest'] = original
@@ -274,14 +274,14 @@ class StageBindingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unsatisfied stage'):
             self.verify()
 
-    def test_workspace_owner_cannot_be_relabelled_as_a_bzlmod_source(self):
-        self.metadata['source_contract_sha256'] = 'contract'
-        validation.stage_binding('symbols', self.apt, self.metadata, base_digest='sha256:symbols',
-                                 apt_sha='apt-hash', contract_sha='contract')
-        self.metadata['source_modules'] = {'sonic-pins': {'version': 'invented'}}
-        with self.assertRaisesRegex(ValueError, 'real owner contract'):
-            validation.stage_binding('symbols', self.apt, self.metadata, base_digest='sha256:symbols',
-                                     apt_sha='apt-hash', contract_sha='contract')
+    def test_bzlmod_source_modules_are_required_with_source_contract(self):
+        self.metadata['source_contract_sha256'] = ''
+        with self.assertRaisesRegex(ValueError, 'checked APT selection'):
+            self.verify()
+        self.metadata['source_contract_sha256'] = 'contract-hash'
+        self.metadata['source_modules'] = {'wrong-module': {'version': '1.0'}}
+        with self.assertRaisesRegex(ValueError, 'stage source modules'):
+            self.verify()
 
 
 class InheritanceTest(unittest.TestCase):
@@ -321,22 +321,22 @@ class InheritanceTest(unittest.TestCase):
 
 class OwnerPackageTest(unittest.TestCase):
     def test_native_inventory_and_provenance_must_match_the_real_owner(self):
-        payload = {'usr/local/bin/p4rt': {'elf_machine': 62, 'sha256': 'actual', 'mode': 0o755, 'uid': 0, 'gid': 0}}
-        definition = {'control_fields': {'Version': '1.0'}, 'target': '//p4rt_app:p4rt_runtime',
-                      'source_revision': 'a' * 40, 'payload_sha256': 'tar'}
-        contract = {'packages': {'sonic-p4rt': definition}}
-        row = {'package': 'sonic-p4rt', 'version': '1.0', **{k: definition[k] for k in
-               ('target', 'source_revision', 'payload_sha256')},
-               'native_files': [{'path': 'usr/local/bin/p4rt', **payload['usr/local/bin/p4rt']}]}
+        payload = {'usr/local/bin/p4rt': {'kind': 'file', 'elf_machine': 62, 'sha256': 'actual',
+                                          'mode': 0o755, 'uid': 0, 'gid': 0}}
+        row = {'package': 'sonic-p4rt', 'version': '0.0.1',
+               'target': '@@sonic-pins+//p4rt_app:p4rt_runtime',
+               'source_revision': '0.0.1-deadbeef', 'payload_sha256': 'a' * 64,
+               'native_files': [{'path': 'usr/local/bin/p4rt',
+                                 **{k: payload['usr/local/bin/p4rt'][k] for k in ('sha256', 'mode', 'uid', 'gid')}}]}
         metadata = {'source_packages': [row]}
-        validation.owner_package_state(metadata, contract, payload)
+        validation.owner_package_state(metadata, payload)
         row['native_files'].append(copy.deepcopy(row['native_files'][0]))
         with self.assertRaisesRegex(ValueError, 'native inventory'):
-            validation.owner_package_state(metadata, contract, payload)
+            validation.owner_package_state(metadata, payload)
         row['native_files'].pop()
-        row['source_revision'] = 'b' * 40
+        row['target'] = '@@other+//p4rt_app:p4rt_runtime'
         with self.assertRaisesRegex(ValueError, 'provenance'):
-            validation.owner_package_state(metadata, contract, payload)
+            validation.owner_package_state(metadata, payload)
 
 
 class ConfigTest(unittest.TestCase):
@@ -352,6 +352,20 @@ class ConfigTest(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 validation.verify_config({**runtime, key: changed}, parent, runtime=True, manifest={'name': 'p4rt'})
         validation.verify_config(runtime, runtime)
+
+    def test_p4rt_elf_checks_rpath_netlink_exports_and_dynamic_needed(self):
+        needed = ['libswsscommon.so.0', 'libnl-3.so.200', 'libnl-genl-3.so.200']
+        with mock.patch.object(validation.check, 'command', side_effect=[' 0x0000000000000001 (NEEDED)\n', '0000000000001234 T main\n']):
+            validation.verify_p4rt_elf(Path('/tmp/p4rt'), needed, 'usr/local/bin/p4rt')
+        with mock.patch.object(validation.check, 'command', side_effect=[' 0x000000000000001d (RUNPATH)\n']):
+            with self.assertRaisesRegex(ValueError, 'RPATH/RUNPATH'):
+                validation.verify_p4rt_elf(Path('/tmp/p4rt'), needed, 'usr/local/bin/p4rt')
+        with mock.patch.object(validation.check, 'command', side_effect=['', '0000000000001234 T nl_connect\n']):
+            with self.assertRaisesRegex(ValueError, 'netlink symbols'):
+                validation.verify_p4rt_elf(Path('/tmp/p4rt'), needed, 'usr/local/bin/p4rt')
+        with mock.patch.object(validation.check, 'command', side_effect=['', '']):
+            with self.assertRaisesRegex(ValueError, 'libnl3 dependencies'):
+                validation.verify_p4rt_elf(Path('/tmp/p4rt'), ['libswsscommon.so.0'], 'usr/local/bin/p4rt')
 
 
 if __name__ == '__main__':

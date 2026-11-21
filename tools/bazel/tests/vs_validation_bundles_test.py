@@ -92,20 +92,8 @@ class BundleSelectionTest(unittest.TestCase):
                     else:
                         self.assertNotIn("parent.oci.json.gz", fixtures)
 
-    def test_only_the_selected_p4rt_debug_image_publishes_its_symbols_parent(self):
-        """The P4RT intermediate is reused from debug's graph without adding it to Make's archives."""
-        image = bundles.P4RT
-        target = "//dockers/" + image + ":" + image
-        archive, debug = image + ".gz", image + "-dbg.gz"
-        with patch("tools.bazel.ci.vs_probe_policy.preparation_targets", return_value={}):
-            runtime = bundles.validation_targets({archive: target + ".gz"}, {debug}, False)
-            paired = bundles.validation_targets({archive: target + ".gz", debug: target + "-dbg.gz"}, {debug}, True)
-            self.assertNotIn(bundles.P4RT_SYMBOLS, bundles.extra_targets(runtime))
-            self.assertIn(bundles.P4RT_SYMBOLS, bundles.extra_targets(paired))
-            self.assertEqual(set(paired[image]["members"]), {"runtime", "debug"})
-
     def test_apt_evidence_comes_from_each_selected_stage_and_the_original_owner(self):
-        """Runtime-only builds omit the debug APT graph, P4RT DWP contract and symbols-stage receipt."""
+        """Runtime-only builds omit the debug APT graph."""
         for image in sorted(bundles.APT_REPORT_FAMILIES):
             with self.subTest(image=image), patch("tools.bazel.ci.vs_probe_policy.preparation_targets", return_value={}):
                 package = "//dockers/" + image + ":"
@@ -114,14 +102,8 @@ class BundleSelectionTest(unittest.TestCase):
                 plain = bundles.validation_targets(images, {debug}, False)[image]
                 self.assertEqual(plain["sources"]["runtime-apt.json"], package + "runtime_apt_selection")
                 self.assertNotIn("debug-apt.json", plain["sources"])
-                self.assertNotIn("symbols-apt.json", plain["sources"])
-                self.assertNotIn("p4rt_runtime_debug_contract.json", plain["sources"])
                 paired = bundles.validation_targets({**images, debug: package + debug}, {debug}, True)[image]
                 self.assertEqual(paired["sources"]["debug-apt.json"], package + "debug_apt_selection")
-                if image == bundles.P4RT:
-                    self.assertEqual(paired["sources"]["symbols-apt.json"], package + "symbols_apt_selection")
-                    for name in ("p4rt_runtime_contract.json", "p4rt_runtime_debug_contract.json", "handoff.json"):
-                        self.assertEqual(paired["sources"][name], "@p4rt_owner_payload//:" + name)
                 if image == "docker-orchagent":
                     self.assertEqual(plain["sources"]["libteam-source-receipt.json"], package + "libteam_source_receipt")
                 if image == "docker-dash-engine":

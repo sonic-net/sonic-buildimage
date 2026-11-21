@@ -449,7 +449,7 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
                     if any(step.get("uses") == action and
                            step.get("with", {}).get("migrated-job") != "true"
                            for step in job["steps"])}
-        self.assertEqual(selected, {"archive", "p4rt_owner"})
+        self.assertEqual(selected, {"archive"})
         self.assertLessEqual(selected, subject.CONTAINER_JOBS)
         self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
                          {"amd64", "arm64"})

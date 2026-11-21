@@ -49,13 +49,14 @@ class VSProbePolicyTest(unittest.TestCase):
 
     def test_p4rt_projects_only_selected_owner_packages_and_records_whole_tar_hashes(self):
         image = "docker-sonic-p4rt"
-        debug_tar = "p4rt.owner-debug.tar"
-        self.assertEqual(policy.preparation_targets(image, True)[debug_tar],
-                         "@p4rt_owner_payload//:p4rt_runtime_debug.tar")
+        self.assertEqual(policy.preparation_targets(image, False)["p4rt.source.tar"],
+                         "@sonic_pins//p4rt_app:p4rt_runtime")
+        self.assertEqual(policy.preparation_targets(image, True)["p4rt.debug.tar"],
+                         "//dockers/docker-sonic-p4rt:all_debug_symbols")
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             inputs = {}
-            files = {"p4rt.source.tar": "usr/share/p4rt/main.json", debug_tar: "usr/lib/debug/main.dwp"}
+            files = {"p4rt.source.tar": "usr/share/p4rt/main.json", "sairedis.source.tar": "usr/lib/libsairedis.txt"}
             for name, member in files.items():
                 inputs[name] = root / name
                 with tarfile.open(inputs[name], "w") as output:

@@ -8,15 +8,21 @@ import tempfile
 import unittest
 
 from tools.bazel.ci import artifact_validation as check
-from tools.bazel.ci import p4rt_public
+from tools.bazel.ci import p4rt_image, p4rt_public
 
 
 class PublicEvidenceTest(unittest.TestCase):
+    def test_acceptance_contract_matches_image_targets_and_audit_labels(self):
+        contract = json.loads(Path(__file__).with_name('p4rt_acceptance.json').read_bytes())
+        self.assertEqual(contract['outputs'], p4rt_image.TARGETS)
+        expected_audit = [*p4rt_image.TARGETS.values(), p4rt_image.BASE,
+                          *[p4rt_image.OWNER + name for name in p4rt_image.IMAGES]]
+        self.assertEqual(contract['audit_labels'], expected_audit)
     def test_resolved_graph_must_contain_each_accepted_version_without_a_conflicting_version(self):
         """The shared CI graph must preserve the dependency pins of the standalone P4RT build."""
         script = Path(__file__).with_name('p4rt_acceptance.py')
         pins = json.loads(script.with_suffix('.json').read_bytes())['selected_modules']
-        self.assertEqual(set(pins), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips'})
+        self.assertEqual(set(pins), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips', 'p4c', 'sonic-pins'})
         nodes = [{'name': name, 'version': version} for name, version in pins.items()]
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / 'module-graph.json'

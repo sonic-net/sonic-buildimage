@@ -34,7 +34,7 @@ EXTRA_OWNERS = {"source-runtime.tar", "mux-source.tar", "eventd-runtime.tar", "s
 FULL_INSTALL_TARS = {
     "docker-snmp": {"snmp_install.tar"},
     "docker-sonic-gnmi": {"gnmi-runtime.tar", "common-runtime.tar"},
-    "docker-sonic-p4rt": {"p4rt.source.tar", "p4rt.owner-debug.tar", "sairedis.source.tar", "saimetadata.source.tar"},
+    "docker-sonic-p4rt": {"p4rt.source.tar", "sairedis.source.tar", "saimetadata.source.tar"},
     "docker-sonic-mgmt-framework": {"framework-runtime.tar", "common-runtime.tar", "python-runtime.tar"},
 }
 
@@ -58,8 +58,6 @@ def preparation_targets(image, debug_selected):
             result["debug-apt.json"] = module.TARGETS["debug-apt.json"]
     if image == "docker-teamd":
         result["runtime-apt.json"] = module.TARGETS["runtime-apt.json"]
-    if image == "docker-sonic-p4rt" and debug_selected:
-        result["p4rt.owner-debug.tar"] = "@p4rt_owner_payload//:p4rt_runtime_debug.tar"
     if image == "docker-gbsyncd-vs":
         result.update({"base.source.tar": "//dockers/docker-base-trixie:source_runtime",
                        **{n: module.TARGETS[n] for n in ("source-contract.json", "source-receipt.json",
@@ -131,8 +129,7 @@ def prepare(image, version, variant, layout_dir, source_paths, bundle_dir, *, ma
             artifacts[name] = path
         if name.startswith("openssh") and variant == "runtime":
             continue
-        if image == "docker-sonic-p4rt" and variant == "runtime" and (
-                name.startswith(("sairedis", "saimetadata")) or name == "p4rt.owner-debug.tar"):
+        if image == "docker-sonic-p4rt" and variant == "runtime" and name.startswith(("sairedis", "saimetadata")):
             continue
         if name == "engine.runtime-apt.tar":
             if variant == "runtime":

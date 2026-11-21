@@ -1,7 +1,6 @@
 SPATH       := $($(SONIC_P4RT)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/p4rt.mk rules/p4rt.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST) $(SPATH)/Makefile tools/bazel/private_server.sh
-DEP_FILES   += tools/bazel/p4rt_common_sdk.py
 SMDEP_PATH  := $(SPATH)/sonic-pins
 DEP_FILES   += $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files | grep -v ^sonic-pins))
 SMDEP_FILES := $(addprefix $(SMDEP_PATH)/,$(shell cd $(SMDEP_PATH) && git ls-files))

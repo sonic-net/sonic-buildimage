@@ -1,6 +1,5 @@
-"""P4RT images consume the source owner's verified Bazel 6 TAR handoff."""
+"""Native AMD64 P4RT images built from the @sonic_pins Bzlmod module."""
 
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@p4rt_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_oci//oci:defs.bzl", "oci_image")
@@ -68,111 +67,57 @@ tar(
     ]
 ]
 
-# Export a generated file under the image execution root, including for local owners.
-copy_file(
+sonic_layer(
     name = "source_runtime",
-    src = "@p4rt_owner_payload//:p4rt_runtime.tar",
-    out = "p4rt-runtime.tar",
-    allow_symlink = False,
+    root_owned = True,
+    tars = ["@sonic_pins//p4rt_app:p4rt_runtime"],
+)
+
+apt_layer(
+    name = "runtime_debian",
+    base = _BASE,
+    dependency_set = "p4rt_debian",
+    lock = _LOCK,
+    packages = APT_INPUTS["p4rt_debian"]["amd64"],
+    policy = _POLICY,
+    variant = "runtime",
+)
+
+filegroup(
+    name = "runtime_apt_selection",
+    srcs = [":runtime_debian"],
+    output_group = "selection",
+)
+
+installed_packages(
+    name = "runtime_installed_packages",
+    apt_receipt = ":runtime_apt_selection",
+    architecture = "amd64",
+    base = _BASE,
+    controls = [label + ":control" for label in APT_INPUTS["p4rt_debian"]["amd64"].values()],
+    owner_metadata = ["@sonic_pins//:runtime_packages.json"],
+    source_modules = {"sonic-pins": "@image_source_modules//:sonic-pins.MODULE.bazel"},
+    source_spec = "//dockers/docker-sonic-p4rt/bazel:source_paths.json",
+    sources = {"sonic-p4rt": "@sonic_pins//p4rt_app:p4rt_runtime"},
+)
+
+filegroup(
+    name = "runtime_package_metadata",
+    srcs = [":runtime_installed_packages"],
+    output_group = "metadata",
 )
 
 tar(
-    name = "owner_handoff",
-    srcs = ["@p4rt_owner_payload//:handoff.json"],
-    mtree = ["usr/share/sonic/bazel/p4rt-handoff.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location @p4rt_owner_payload//:handoff.json)"],
-)
-
-debug_symbols_layer(
-    name = "parent_debug_symbols",
-    image = _BASE,
-)
-
-flatten(
-    name = "source_debug_symbols",
-    deduplicate = True,
-    tars = [
-        ":parent_debug_symbols",
-        "@p4rt_owner_payload//:p4rt_runtime_debug.tar",
+    name = "runtime_package_state",
+    srcs = [
+        ":runtime_installed_packages",
+        ":runtime_package_metadata",
+    ],
+    mtree = [
+        "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_installed_packages)",
+        "usr/share/sonic/bazel/p4rt-runtime-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :runtime_package_metadata)",
     ],
 )
-
-# The owner has a real WORKSPACE identity, not a Bzlmod MODULE. Each flat
-# contract is sealed by that owner to its clean source revision and TAR bytes.
-# Keep runtime and DWP package state in separate stages. Every APT receipt is
-# evaluated against that stage's exact base; no receipt crosses a base digest.
-[
-    apt_layer(
-        name = stage + "_debian",
-        base = base,
-        dependency_set = "p4rt_debian",
-        lock = _LOCK,
-        packages = APT_INPUTS["p4rt_debian"]["amd64"],
-        policy = _POLICY,
-        variant = variant,
-    )
-    for stage, base, variant in [
-        ("runtime", _BASE, "runtime"),
-        ("symbols", ":docker-sonic-p4rt", "debug"),
-    ]
-]
-
-[
-    filegroup(
-        name = stage + "_apt_selection",
-        srcs = [":" + stage + "_debian"],
-        output_group = "selection",
-    )
-    for stage in [
-        "runtime",
-        "symbols",
-    ]
-]
-
-[
-    installed_packages(
-        name = stage + "_installed_packages",
-        apt_receipt = ":" + stage + "_apt_selection",
-        architecture = "amd64",
-        base = base,
-        controls = [label + ":control" for label in APT_INPUTS["p4rt_debian"]["amd64"].values()],
-        source_spec = "@p4rt_owner_payload//:" + target + "_contract.json",
-        sources = {package_name: "@p4rt_owner_payload//:" + target + ".tar"},
-    )
-    for stage, base, package_name, target in [
-        ("runtime", _BASE, "sonic-p4rt", "p4rt_runtime"),
-        ("symbols", ":docker-sonic-p4rt", "sonic-p4rt-dbgsym", "p4rt_runtime_debug"),
-    ]
-]
-
-[
-    filegroup(
-        name = stage + "_package_metadata",
-        srcs = [":" + stage + "_installed_packages"],
-        output_group = "metadata",
-    )
-    for stage in [
-        "runtime",
-        "symbols",
-    ]
-]
-
-[
-    tar(
-        name = stage + "_package_state",
-        srcs = [
-            ":" + stage + "_installed_packages",
-            ":" + stage + "_package_metadata",
-        ],
-        mtree = [
-            "var/lib/dpkg/status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :" + stage + "_installed_packages)",
-            "usr/share/sonic/bazel/p4rt-" + stage + "-packages.json uid=0 gid=0 mode=0644 time=0 type=file content=$(location :" + stage + "_package_metadata)",
-        ],
-    )
-    for stage in [
-        "runtime",
-        "symbols",
-    ]
-]
 
 sonic_layer(
     name = "runtime_debian_payload",
@@ -189,26 +134,19 @@ oci_image(
     tars = [
         ":runtime_debian_payload",
         ":source_runtime",
-        ":owner_handoff",
         ":files",
         ":runtime_package_state",
     ],
 )
 
-oci_image(
-    name = "p4rt_with_symbols",
-    base = ":docker-sonic-p4rt",
-    target_compatible_with = _COMPATIBLE,
-    tars = [
-        ":symbols_debian",
-        ":source_debug_symbols",
-        ":symbols_package_state",
-    ],
+debug_symbols_layer(
+    name = "docker-sonic-p4rt.debug_symbols",
+    image = ":docker-sonic-p4rt",
 )
 
 apt_layer(
     name = "debug_debian",
-    base = ":p4rt_with_symbols",
+    base = ":docker-sonic-p4rt",
     dependency_set = "p4rt_debug_debian",
     lock = _LOCK,
     packages = APT_INPUTS["p4rt_debug_debian"]["amd64"],
@@ -263,7 +201,7 @@ flatten(
 account_layer(
     name = "debug_accounts",
     architecture = "amd64",
-    base = ":p4rt_with_symbols",
+    base = ":docker-sonic-p4rt",
     groups = [{
         "name": "_ssh",
         "password": "x",
@@ -281,7 +219,7 @@ installed_packages(
     name = "debug_installed_packages",
     apt_receipt = ":debug_apt_selection",
     architecture = "amd64",
-    base = ":p4rt_with_symbols",
+    base = ":docker-sonic-p4rt",
     controls = [label + ":control" for label in APT_INPUTS["p4rt_debug_debian"]["amd64"].values()],
     owner_metadata = [
         "@sonic_fips//:runtime_packages.json",
@@ -319,11 +257,12 @@ tar(
 
 oci_image(
     name = "docker-sonic-p4rt-dbg",
-    base = ":p4rt_with_symbols",
+    base = ":docker-sonic-p4rt",
     labels = ":labels-dbg",
     target_compatible_with = _COMPATIBLE,
     tars = [
         ":debug_tools",
+        ":docker-sonic-p4rt.debug_symbols",
         ":debug_sai_runtime",
         ":debug_sai_symbols",
         ":debug_client",
@@ -345,19 +284,12 @@ oci_image(
 ]
 
 flatten(
-    name = "native_debug_symbols",
+    name = "all_debug_symbols",
+    deduplicate = True,
     tars = [
-        ":parent_debug_symbols",
+        ":docker-sonic-p4rt.debug_symbols",
         ":debug_sai_symbols",
         ":debug_client_symbols",
-    ],
-)
-
-flatten(
-    name = "all_debug_symbols",
-    tars = [
-        ":native_debug_symbols",
-        "@p4rt_owner_payload//:p4rt_runtime_debug.tar",
     ],
 )
 
@@ -366,32 +298,3 @@ flatten(
     testonly = True,
     tars = ["@p4rt_test_debian//redis-server"],
 )
-
-# The selected Common owner supplies the runtime and declared-loader runner.
-# P4RT additionally links generic netlink and the image's locked GMP runtime.
-flatten(
-    name = "owner_test_runtime",
-    testonly = True,
-    tars = [
-        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
-        "@libnl3//:libnl-genl-3-runtime_files",
-        "@p4rt_debian//libgmp10:data",
-        "@p4rt_debian//libgmpxx4ldbl:data",
-    ],
-)
-
-# Export declared preparation tools as ordinary outputs for the shared CI
-# collector. Direct external source labels are relative to Bazel's execroot.
-[
-    copy_file(
-        name = name,
-        testonly = True,
-        src = source,
-        out = output,
-    )
-    for name, source, output in [
-        ("owner_common_module", "@image_source_modules//:sonic-swss-common.MODULE.bazel", "owner-common.MODULE.bazel"),
-        ("owner_runtime_runner", "@sonic_swss_common//tools/bazel/runtime:run_with_runtime.py", "owner-run-with-runtime.py"),
-        ("owner_patchelf", "@patchelf//:patchelf", "owner-patchelf"),
-    ]
-]

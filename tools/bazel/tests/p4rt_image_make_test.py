@@ -31,11 +31,11 @@ class P4rtMakeTest(unittest.TestCase):
             *[key + '=' + value for key, value in values.items()]], input=recipe, cwd=ROOT, text=True)
         return [line.strip() for line in output.splitlines()]
 
-    def test_native_selection_has_explicit_owner_and_all_manifests(self):
+    def test_native_selection_has_all_manifests_without_owner_prep(self):
         rows = self.evaluate()
         self.assertEqual(rows[:4], ['docker-sonic-p4rt.gz', 'docker-sonic-p4rt-dbg.gz',
             '//dockers/docker-sonic-p4rt:docker-sonic-p4rt.gz', '//dockers/docker-sonic-p4rt:docker-sonic-p4rt-dbg.gz'])
-        self.assertEqual(set(rows[4].split()), {'bazel-p4rt-owner'} | {
+        self.assertEqual(set(rows[4].split()), {
             'target/bazel-manifests/' + name + '/manifest.json' for name in
             ('docker-base-trixie', 'docker-config-engine-trixie', 'docker-sonic-p4rt', 'docker-sonic-p4rt-dbg')})
 
@@ -59,7 +59,7 @@ class P4rtMakeTest(unittest.TestCase):
                 self.assertEqual(rows[5:12], baseline[5:12])
                 self.assertEqual(rows[12], 'docker-sonic-p4rt-' + changes.get('DBG_IMAGE_MARK', 'dbg') + '.gz')
 
-    def test_parallel_archive_prerequisites_prepare_owner_once_without_tests(self):
+    def test_parallel_archive_prerequisites_only_require_manifests(self):
         with tempfile.TemporaryDirectory(prefix='p4rt-make-') as temporary:
             root = Path(temporary)
             recorder = root / 'python3'
@@ -75,29 +75,12 @@ class P4rtMakeTest(unittest.TestCase):
             recipe = ('include rules/docker-p4rt.mk\n.PHONY: all release debug\nall: release debug\n'
                       'release: $(docker-sonic-p4rt.gz_BAZEL_DEPENDS)\n'
                       'debug: $(docker-sonic-p4rt-dbg.gz_BAZEL_DEPENDS)\n')
-            values = {**VALUES, 'TARGET_PATH': str(manifests), 'P4RT_BAZEL': '/owner/bazel6',
-                      'P4RT_BAZEL_OUTPUT_BASE': str(root / 'owner-output')}
-            for jobs in ('', '2'):
-                with self.subTest(jobs=jobs):
-                    calls.unlink(missing_ok=True)
-                    subprocess.run(['make', '--no-print-directory', '-j2', '-f', '-', 'all', 'P4RT_BAZEL_JOBS=' + jobs,
-                        *[key + '=' + value for key, value in values.items()]], input=recipe, cwd=ROOT, text=True,
-                        env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'], 'P4RT_TEST_CALLS': str(calls),
-                             'BAZEL': '/image/bazel8'}, check=True, capture_output=True)
-                    invocations = [json.loads(line) for line in calls.read_text().splitlines()]
-                    self.assertEqual(len(invocations), 1)
-                    args = invocations[0]
-                    if jobs:
-                        self.assertEqual(args[args.index('--jobs') + 1], jobs)
-                    else:
-                        # Without a cap the helper keeps Bazel's one-job-per-CPU default.
-                        self.assertNotIn('--jobs', args)
-            self.assertEqual(args[:3], ['-B', 'tools/bazel/ci/p4rt_image.py', 'prepare-make-owner'])
-            for key, value in (('--directory', 'artifacts/p4rt'), ('--owner-bazel', '/owner/bazel6'),
-                               ('--bazel', '/image/bazel8'), ('--owner-source', 'src/sonic-p4rt/sonic-pins')):
-                self.assertEqual(args[args.index(key) + 1], value)
-            revision = subprocess.check_output(['git', 'rev-parse', 'HEAD:src/sonic-p4rt/sonic-pins'], cwd=ROOT, text=True).strip()
-            self.assertEqual(args[args.index('--owner-revision') + 1], revision)
+            values = {**VALUES, 'TARGET_PATH': str(manifests)}
+            subprocess.run(['make', '--no-print-directory', '-j2', '-f', '-', 'all',
+                *[key + '=' + value for key, value in values.items()]], input=recipe, cwd=ROOT, text=True,
+                env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'], 'P4RT_TEST_CALLS': str(calls)},
+                check=True, capture_output=True)
+            self.assertFalse(calls.exists())
 
     def test_metadata_only_manifest_generation_never_prepares_the_owner(self):
         with tempfile.TemporaryDirectory(prefix='p4rt-manifests-') as temporary:

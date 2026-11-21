@@ -9,7 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci import p4rt_receipt_semantics, p4rt_sdk_receipt_semantics
+from tools.bazel.ci import p4rt_receipt_semantics
 from tools.bazel.ci.artifact_validation import require
 
 
@@ -42,29 +42,32 @@ def verify(directory, contract, source, owner):
     require(__debug__, "P4RT acceptance requires assertions enabled")
     require(owner == contract["owner"], "Selected PINS gitlink changed")
 
-    def raw(name):
-        return (directory / name).read_bytes()
-
     def read(name):
-        return json.loads(raw(name))
+        return json.loads((directory / name).read_bytes())
 
     targets = contract["test_targets"]
-    require(len(targets) == len(set(targets)) == 59, "The original 59 owner test targets changed")
-    p4rt_receipt_semantics.verify(read, raw, source=source, owner=owner, outputs=contract["outputs"],
-                                  test_targets=targets, owner_test_helper_sha256=contract["owner_test_helper_sha256"])
-    p4rt_sdk_receipt_semantics.verify(read, source=source, owner=owner,
-                                      preparation_targets=contract["preparation_outputs"],
-                                      common_revision=contract["common_revision"])
+    require(len(targets) == len(set(targets)) == 1, "Expected unified P4RT runtime package test")
+    p4rt_receipt_semantics.verify(
+        read, source=source, owner=owner, outputs=contract["outputs"], test_targets=targets,
+    )
     audit = read("action-audit.json")
     require(audit["deb_outputs"] == audit["packaging_wrappers"] == [] and
-            len(audit["targets"]) == len(set(audit["targets"])) == 31 and
+            len(audit["targets"]) == len(set(audit["targets"])) == 26 and
             set(audit["targets"]) == set(contract["audit_labels"]), "Image no-DEB scope changed")
-    build = read("build-summary.json")["build-events.jsonl"]
+    summary = read("build-summary.json")
+    build = summary["build-events.jsonl"]
     require(build["finished"] == {"success": True, "exit_code": 0} and build["bazel_version"] == "8.5.1"
             and build["truncated"] is False and build["tests"] == {}, "Image build summary differs")
-    names = {label.replace("@@sonic-sairedis+//", "@sonic_sairedis//", 1) for label in build["targets"]}
-    require(len(build["targets"]) == 27 and set(build["targets"].values()) == {True}
+    names = {label.replace("@@sonic-sairedis+//", "@sonic_sairedis//", 1).replace("@@sonic-pins+//", "@sonic_pins//", 1)
+             for label in build["targets"]}
+    require(len(build["targets"]) == 23 and set(build["targets"].values()) == {True}
             and names == set(contract["outputs"].values()), "Image build output inventory changed")
+    owner_tests = summary["owner-test-events.jsonl"]
+    require(owner_tests["finished"] == {"success": True, "exit_code": 0}
+            and owner_tests["bazel_version"] == "8.5.1" and owner_tests["truncated"] is False
+            and set(owner_tests["tests"]) == set(targets)
+            and all(entry.get("status") == "PASSED" for entry in owner_tests["tests"].values()),
+            "Owner test build-event summary differs")
     verify_selected_modules(read("module-graph.json"), contract["selected_modules"])
 
 

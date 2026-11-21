@@ -15,46 +15,31 @@ def verify_p4rt_stage(directory, stage, base, current, evidence):
     selection = directory / (stage + "-apt.json")
     metadata_path = directory / ("p4rt-" + stage + ".packages.json")
     metadata = read(metadata_path)
-    contract = {"runtime": "p4rt_runtime_contract.json", "symbols": "p4rt_runtime_debug_contract.json"}.get(stage)
     p4rt_validate.stage_binding(
         stage, read(selection), metadata, base_digest=base["manifest_digest"], apt_sha=check.sha(selection),
-        contract_sha=check.sha(directory / contract) if contract else None,
     )
-    # Only the runtime changes the parent's command/environment. Both exported
-    # variants replace their manifest; the symbols stage inherits the full config.
-    manifest = read(directory / (stage + ".make.manifest.json")) if stage != "symbols" else None
+    manifest = read(directory / (stage + ".make.manifest.json"))
     p4rt_validate.verify_config(current["config"]["config"], base["config"]["config"],
                                 runtime=stage == "runtime", manifest=manifest)
     installed = current["files"]
-    handoff = read(directory / "handoff.json")
     owners = evidence["owners"]
     hashes = evidence["source_sha256"]
-    if contract:
-        tar_name = "p4rt.source.tar" if stage == "runtime" else "p4rt.owner-debug.tar"
-        upstream = "p4rt_runtime.tar" if stage == "runtime" else "p4rt_runtime_debug.tar"
-        definition = read(directory / contract)
-        p4rt_validate.owner_package_state(metadata, definition, owners[tar_name])
-        package, = definition["packages"].values()
-        check.require(hashes[tar_name] == handoff["files"][upstream]["sha256"] == package["payload_sha256"] and
-                      check.sha(directory / contract) == handoff["files"][contract]["sha256"],
-                      "P4RT payload or contract differs from the source owner's handoff: " + upstream)
-        p4rt_validate.verify_payload(installed, owners[tar_name], "Installed P4RT package changed in " + stage)
     if stage == "runtime":
-        common = handoff["parent_common"]
-        check.require(installed.get(common["path"], {}).get("sha256") == common["sha256"] and
-                      check.sha(directory / "config-engine.source.tar") == common["parent_source_tar_sha256"],
-                      "Installed libswsscommon or its source TAR differs from the P4RT SDK handoff")
+        p4rt_validate.owner_package_state(metadata, owners["p4rt.source.tar"])
+        record, = metadata["source_packages"]
+        check.require(hashes["p4rt.source.tar"] == record["payload_sha256"],
+                      "P4RT payload differs from the source owner's TAR")
+        p4rt_validate.verify_payload(installed, owners["p4rt.source.tar"], "Installed P4RT package changed in runtime")
     if stage == "debug":
         packages = {"libsairedis": "sairedis.source.tar", "libsaimetadata": "saimetadata.source.tar"}
         p4rt_validate.verify_debug_sai(
-            read_oci(directory, "runtime")["files"], base["files"], installed, metadata,
+            read_oci(directory, "runtime")["files"], installed, metadata,
             {name: owners[tar] for name, tar in packages.items()}, {name: hashes[tar] for name, tar in packages.items()},
             read(directory / "sairedis.library-packages.json"),
         )
     for path, source in (
         ("var/lib/dpkg/status", directory / ("p4rt-" + stage + ".status")),
         ("usr/share/sonic/bazel/p4rt-" + stage + "-packages.json", metadata_path),
-        ("usr/share/sonic/bazel/p4rt-handoff.json", directory / "handoff.json"),
     ):
         check.require(installed.get(path, {}).get("sha256") == check.sha(source),
                       "Installed P4RT package input changed in stage " + stage + ": " + path)
@@ -70,10 +55,6 @@ def verify(directory, bundle, variant, current, owners):
         return
     parent = read_oci(directory, "parent" if variant == "runtime" else "runtime")
     if image == "docker-sonic-p4rt":
-        if variant == "debug":
-            intermediate = read_oci(directory, "symbols")
-            verify_p4rt_stage(directory, "symbols", parent, intermediate, owners)
-            parent = intermediate
         verify_p4rt_stage(directory, variant, parent, current, owners)
         return
 

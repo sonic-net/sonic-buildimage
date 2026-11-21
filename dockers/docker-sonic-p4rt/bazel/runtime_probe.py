@@ -6,17 +6,22 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import signal
 import subprocess
-import tempfile
 import time
 from xmlrpc.client import ServerProxy
 
-import p4rt_runtime_package as owner
 import redis
 import runtime_smoke
 from supervisor.xmlrpc import SupervisorTransport
+
+P4RT_PROGRAMS = {
+    "p4rt": "--p4rt_grpc_port",
+    "p4rt_program_table": "--input_file",
+    "p4rt_read": "--table_ids",
+    "p4rt_set_forwarding_pipeline": "--forwarding_action",
+    "p4rt_write": "--ir_write_request_file",
+}
 
 
 def require(value, message):
@@ -46,6 +51,17 @@ def source_debug_pairs(report, native, debug):
     return pairs
 
 
+def p4rt_debug_pairs(report, native, debug):
+    if not debug:
+        return []
+    expected = {"usr/local/bin/" + name for name in P4RT_PROGRAMS}
+    require(expected <= set(native), "missing installed P4RT runtime binaries")
+    pairs = [item for item in report["source_debug_pairs"] if item["path"] in expected]
+    require(len(pairs) == len(expected) and {item["path"] for item in pairs} == expected,
+            "missing or duplicate P4RT .build-id debug pairs")
+    return pairs
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--validation", type=Path, required=True)
@@ -63,7 +79,8 @@ def main():
         require((info.st_uid, info.st_gid, info.st_mode & 0o7777) ==
                 (expected["uid"], expected["gid"], expected["mode"]),
                 "installed source metadata differs: " + name)
-    selected_pairs = source_debug_pairs(report, native, args.debug)
+    p4rt_pairs = p4rt_debug_pairs(report, native, args.debug)
+    selected_pairs = source_debug_pairs(report, native, args.debug) + p4rt_pairs
     probe = runtime_smoke.probe({
         "architecture": "amd64",
         "elfs": [item for item in report["elfs"] if item["path"] in native],
@@ -76,37 +93,12 @@ def main():
     }, "debug" if args.debug else "runtime")
     require(probe["passed"], json.dumps(probe))
 
-    split_debug = {}
-    for name, (_, flag) in owner.PROGRAMS.items():
+    for name, flag in P4RT_PROGRAMS.items():
         binary = Path("/usr/local/bin") / name
         result = subprocess.run([str(binary), "--helpshort"], text=True, capture_output=True, timeout=30)
         require(result.returncode in (0, 1) and flag in result.stdout + result.stderr,
                 "installed CLI differs: " + name)
-        if not args.debug:
-            require(not binary.with_name(name + ".dwp").exists(), "runtime contains debug DWP: " + name)
-            continue
-        expected = report["p4rt_debug_pairs"][name]
-        symbols = binary.with_name(name + ".dwp")
-        require(digest(binary) == expected["runtime_sha256"] and digest(symbols) == expected["dwp_sha256"],
-                "installed P4RT split-symbol pair changed: " + name)
-        with tempfile.TemporaryDirectory(prefix="p4rt-symbols-") as temporary:
-            work = Path(temporary)
-            (work / "empty").mkdir()
-            copied = work / name
-            shutil.copyfile(binary, copied)
-            missing = owner.debug_lookup(copied, work)
-            require(not missing["found"], "GDB found missing DWP information: " + name)
-            (work / (name + ".dwp")).symlink_to(symbols)
-            found = owner.debug_lookup(copied, work)
-            if "source" in expected:
-                owner_match = (found.get("file", "").replace("\\", "/").endswith(expected["source"])
-                               and expected["first_line"] <= found.get("line", 0) <= expected["last_line"]
-                               and found.get("parameters") == expected["parameters"])
-            else:
-                owner_match = all(found.get(key) == expected[key] for key in ("file", "line", "parameters"))
-            require(found.get("found") and owner_match,
-                    "GDB did not resolve the installed owner's DWP: " + name)
-            split_debug[name] = {"without_dwp": missing, "with_dwp": found}
+        require(not binary.with_name(name + ".dwp").exists(), "image contains unexpected DWP: " + name)
 
     root = Path("/run/p4rt-fixture")
     root.mkdir()
@@ -207,7 +199,7 @@ def main():
                           "loader_checks": len(probe["loader_checks"]),
                           "debug_checks": len(probe["debug_pairs"]),
                           "debug_tool_checks": len(probe["commands"]),
-                          "split_debug_checks": split_debug, "supervisor_states": {
+                          "build_id_debug_checks": len(p4rt_pairs), "supervisor_states": {
                               name: item["statename"] for name, item in after.items()},
                           "p4runtime_verify": "passed", "p4runtime_unsupported_action": "rejected",
                           "configdb_rendered_startup": True,
