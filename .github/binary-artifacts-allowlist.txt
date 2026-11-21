@@ -1,0 +1,29 @@
+# Files that may be added to a pull request even though they are binary.
+# Used by scripts/check_binary_artifacts.py (workflow: binary-artifacts-check).
+#
+# One pattern per line, matched against the path relative to the repository
+# root with fnmatch rules: "*" matches any characters, including "/".
+# Blank lines and lines starting with "#" are ignored.
+#
+# Keep entries as narrow as possible and add a comment saying why the file has
+# to be committed in binary form. Files that are already binary are never
+# reported when they are only modified or renamed.
+
+# Broadcom LED processor microcode, shipped per device
+device/*/custom_led.bin
+device/*/custom_led_*.bin
+device/*/cmicx_customer_led.bin
+device/*/led.bin
+device/*/linkscan_fw.bin
+device/*/linkscan_led.bin
+device/*/linkscan_led_fw.bin
+
+# Broadcom Cancun firmware packages
+device/*/cancun/*.pkg
+dockers/docker-pde/cancun_files/*.pkg
+
+# Dell port locator microcode
+device/dell/*/port-locator.bin
+
+# Ragile firmware upgrade headers
+device/ragile/*/latest_firmware/*.bin

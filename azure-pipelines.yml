@@ -45,6 +45,16 @@ parameters:
   type: boolean
   default: true
 
+# path: pull requests build only the platforms mapped to the paths they change.
+# all: build every platform. Only pull requests use the selection, every other
+# build always builds every platform.
+- name: SELECTIVE_MODE
+  type: string
+  default: path
+  values:
+  - path
+  - all
+
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
@@ -52,6 +62,8 @@ variables:
   value: rcache
 - name: ENABLE_FIPS
   value: y
+- name: SELECTIVE_MODE
+  value: ${{ parameters.SELECTIVE_MODE }}
 - name: BUILD_BRANCH
   ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
     value: $(System.PullRequest.TargetBranch)
@@ -96,9 +108,71 @@ stages:
         ./scripts/audit_dep_completeness.sh --verbose --base "origin/${TARGET}"
       displayName: 'audit_dep_completeness.sh --base origin/<target> (fails on PR-introduced P0)'
 
+# Selective build decision. Maps the files changed by a pull request to the
+# platform build jobs that have to run, so that a change touching one platform
+# does not start every platform build and the VS tests. The rules are in
+# scripts/selective_build.py. The decision is published as the
+# SELECTIVE_RUN_ALL, SELECTIVE_RUN_VS_TESTS and SELECTIVE_PLATFORMS output
+# variables, which the BuildVS, Build and Test stages use to skip jobs. Only pull
+# requests use the selection: push, scheduled and manual builds, including a full
+# rerun requested with a pull request comment, build every platform.
+- stage: SelectiveDecision
+  displayName: 'Calculate selective build scope'
+  dependsOn: []
+  pool:
+    vmImage: 'ubuntu-22.04'
+  jobs:
+  - job: determine_scope
+    displayName: 'Determine affected platforms'
+    steps:
+    - checkout: self
+      fetchDepth: 0          # full history so the changed paths against the target branch resolve
+      submodules: false
+    - bash: |
+        set -euo pipefail
+
+        if [ "$(Build.Reason)" = "PullRequest" ]; then
+          TARGET="$(System.PullRequest.TargetBranchName)"
+          if [ -z "$TARGET" ]; then
+            echo "##[error]System.PullRequest.TargetBranchName is empty."
+            exit 1
+          fi
+          # Ensure the PR target branch is present as origin/<target> for the diff.
+          git fetch --no-tags --prune origin "+refs/heads/${TARGET}:refs/remotes/origin/${TARGET}"
+          BASE="origin/${TARGET}"
+          MODE="${SELECTIVE_MODE:-path}"
+        else
+          BASE="$(Build.SourceVersion)"
+          MODE="all"
+        fi
+
+        SELECTION="$(Pipeline.Workspace)/selection.json"
+        python3 scripts/selective_build.py \
+          --base "$BASE" \
+          --head "$(Build.SourceVersion)" \
+          --mode "$MODE" \
+          --output "$SELECTION"
+
+        # Print one field of the decision: lists are comma separated, booleans lower case.
+        get_field() {
+          python3 -c "import json, sys; value = json.load(open(sys.argv[1]))[sys.argv[2]]; print(','.join(value) if isinstance(value, list) else str(value).lower())" "$SELECTION" "$1"
+        }
+
+        echo "##vso[task.setvariable variable=SELECTIVE_RUN_ALL;isOutput=true]$(get_field run_all)"
+        echo "##vso[task.setvariable variable=SELECTIVE_RUN_VS_TESTS;isOutput=true]$(get_field run_vs_tests)"
+        echo "##vso[task.setvariable variable=SELECTIVE_PLATFORMS;isOutput=true]$(get_field platforms)"
+      name: selection
+      displayName: 'Publish selective build decision'
+
 - stage: BuildVS
   pool: sonicso1ES-amd64
-  dependsOn: []
+  dependsOn:
+  - SelectiveDecision
+  variables:
+  - name: SELECTIVE_RUN_ALL
+    value: $[ stageDependencies.SelectiveDecision.determine_scope.outputs['selection.SELECTIVE_RUN_ALL'] ]
+  - name: SELECTIVE_PLATFORMS
+    value: $[ stageDependencies.SelectiveDecision.determine_scope.outputs['selection.SELECTIVE_PLATFORMS'] ]
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -121,7 +195,13 @@ stages:
 
 - stage: Build
   pool: sonicso1ES-amd64
-  dependsOn: []
+  dependsOn:
+  - SelectiveDecision
+  variables:
+  - name: SELECTIVE_RUN_ALL
+    value: $[ stageDependencies.SelectiveDecision.determine_scope.outputs['selection.SELECTIVE_RUN_ALL'] ]
+  - name: SELECTIVE_PLATFORMS
+    value: $[ stageDependencies.SelectiveDecision.determine_scope.outputs['selection.SELECTIVE_PLATFORMS'] ]
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -162,9 +242,21 @@ stages:
           PLATFORM_NAME: aspeed
           PLATFORM_ARCH: arm64
 
+# On pull requests the VS tests run only when the SelectiveDecision stage selected the vs platform.
 - stage: Test
-  dependsOn: BuildVS
-  condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+  dependsOn:
+  - SelectiveDecision
+  - BuildVS
+  condition: |
+    and(
+      succeeded(),
+      or(
+        ne(variables['Build.Reason'], 'PullRequest'),
+        eq(stageDependencies.SelectiveDecision.outputs['determine_scope.selection.SELECTIVE_RUN_VS_TESTS'], 'true')
+      ),
+      ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'),
+      in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')
+    )
   variables:
   - group: SONiC-Elastictest
   - name: inventory
