@@ -4,7 +4,7 @@
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
-subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+subtype=`sonic-db-cli -s CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
 TSA_CHASSIS_STATE=false
 
 if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]]; then
