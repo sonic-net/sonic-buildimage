@@ -103,14 +103,31 @@ def test_get_bfd_sessions_nobfdd(mocked_syslog, mocked_getstatusoutput, bfd_mon)
     assert "bfdd not currently running" in mocked_syslog.call_args[0][1]
     assert result == False
 
+@patch('time.sleep')
 @patch('bfdmon.bfdmon.getstatusoutput_noshell', return_value=(1, ""))
 @patch('syslog.syslog')
-def test_get_bfd_sessions_failure2(mocked_syslog, mocked_getstatusoutput, bfd_mon):
-    # Command to get bfd peers json fails because rc is not valid
+def test_get_bfd_sessions_failure2(mocked_syslog, mocked_getstatusoutput, mocked_sleep, bfd_mon):
+    # Command to get bfd peers json keeps failing with invalid rc
     bfd_mon.bfdd_running = True
     result = bfd_mon.get_bfd_sessions()
-    assert "Failed with rc:1 when execute" in mocked_syslog.call_args[0][1]
+    assert mocked_syslog.call_count == 4
+    for i in range(3):
+        assert mocked_syslog.call_args_list[i][0][0] == syslog.LOG_WARNING
+        assert "Failed with rc:1 when execute" in mocked_syslog.call_args_list[i][0][1]
+    assert mocked_syslog.call_args_list[3][0][0] == syslog.LOG_ERR
+    assert "Maximum retry attempts reached" in mocked_syslog.call_args_list[3][0][1]
     assert result == False
+
+@patch('time.sleep')
+@patch('bfdmon.bfdmon.getstatusoutput_noshell', side_effect=[(1, ""), (0, "[]")])
+@patch('syslog.syslog')
+def test_get_bfd_sessions_transient_rc(mocked_syslog, mocked_getstatusoutput, mocked_sleep, bfd_mon):
+    # Command fails once while bfdd is starting, then succeeds on retry
+    bfd_mon.bfdd_running = True
+    result = bfd_mon.get_bfd_sessions()
+    assert mocked_syslog.call_count == 1
+    assert mocked_syslog.call_args[0][0] == syslog.LOG_WARNING
+    assert result == True
 
 @patch('bfdmon.bfdmon.getstatusoutput_noshell', return_value=(0, ""))
 @patch('syslog.syslog')
