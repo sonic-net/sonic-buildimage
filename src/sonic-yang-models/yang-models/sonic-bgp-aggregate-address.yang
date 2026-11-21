@@ -17,7 +17,7 @@ module sonic-bgp-aggregate-address {
         "SONiC";
 
     description
-        "SONIC BGP aggregate address configuration module.";
+        "BGP aggregate address configuration module.";
 
     revision 2024-07-10 {
         description

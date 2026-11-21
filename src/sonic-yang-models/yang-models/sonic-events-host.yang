@@ -125,7 +125,7 @@ module sonic-events-host {
             evtcmn:EVENT_SEVERITY_2;
 
             description "
-                Declares an container that is expected to be up is down.
+                Declares a container that is expected to be up but is down.
                 Reported by monit periodically.";
 
             leaf ctr_name {

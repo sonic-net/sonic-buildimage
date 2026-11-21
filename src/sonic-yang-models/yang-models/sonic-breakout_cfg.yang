@@ -5,7 +5,7 @@ module sonic-breakout_cfg {
     namespace "http://github.com/sonic-net/sonic-breakout_cfg";
     prefix breakout_cfg;
 
-    description "BREAKOUT_CFG YANG Module for SONiC OS";
+    description "BREAKOUT_CFG configuration";
 
     revision 2020-04-10 {
         description "First Revision";
@@ -36,7 +36,7 @@ module sonic-breakout_cfg {
                 }
 
                 leaf brkout_mode {
-                    description "break_mode for port, it is verifed using platform.json";
+                    description "break_mode for port, it is verified using platform.json";
                     type string {
                         length 1..64;
                     }

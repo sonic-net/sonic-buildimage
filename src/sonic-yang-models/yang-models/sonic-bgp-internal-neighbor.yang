@@ -30,7 +30,7 @@ module sonic-bgp-internal-neighbor {
         "SONiC";
 
     description
-        "SONIC BGP Internal Neighbor for multi asic platforms";
+        "BGP Internal Neighbor for multi asic platforms";
 
     revision 2021-04-10 {
         description
@@ -78,7 +78,7 @@ module sonic-bgp-internal-neighbor {
                         must "(starts-with(../neighbor, 'Eth') or starts-with(../neighbor, 'Po') or starts-with(../neighbor, 'Vlan') or
                                 (contains(../neighbor, '.') and contains(current(), '.')) or
                                 (contains(../neighbor, ':') and contains(current(), ':')))" {
-                            error-message "local address and neighbor address family doesnt match";
+                            error-message "local address and neighbor address family does not match";
                         }
                     }
                 }

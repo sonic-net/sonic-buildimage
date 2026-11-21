@@ -10,7 +10,7 @@ module sonic-macsec {
         prefix stypes;
     }
 
-    description "IEEE 802.1AE MACsec link-layer encryption YANG module for SONiC OS.";
+    description "IEEE 802.1AE MACsec link-layer encryption configuration";
 
     revision 2022-04-12 {
         description "First Revision";

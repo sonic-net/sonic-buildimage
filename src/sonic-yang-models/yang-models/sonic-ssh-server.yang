@@ -9,7 +9,7 @@ module sonic-ssh-server {
         prefix inet;
     }
 
-    description "SSH server daemon configuration YANG module for SONiC OS.";
+    description "SSH server daemon configuration";
 
     revision 2026-08-31 {
         description

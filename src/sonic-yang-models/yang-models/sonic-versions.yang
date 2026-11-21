@@ -6,7 +6,7 @@ module sonic-versions {
     prefix versions;
 
 
-    description "VERSIONS YANG Module for SONiC OS";
+    description "VERSIONS configuration";
 
     revision 2020-04-10 {
         description "First Revision";

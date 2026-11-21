@@ -15,7 +15,7 @@ module sonic-bmp {
     contact
         "SONiC";
 
-    description "BMP YANG Module for SONiC OS";
+    description "BMP configuration";
 
     revision 2024-03-20 {
         description "First Revision";

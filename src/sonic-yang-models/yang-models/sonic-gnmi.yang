@@ -18,7 +18,7 @@ module sonic-gnmi {
     contact
         "SONiC";
 
-    description "GNMI YANG Module for SONiC OS";
+    description "GNMI configuration";
 
     revision 2025-09-01 {
         description "Add VRF support for GNMI service";

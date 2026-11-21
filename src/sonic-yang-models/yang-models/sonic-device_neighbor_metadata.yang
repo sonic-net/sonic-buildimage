@@ -13,7 +13,7 @@ module sonic-device_neighbor_metadata {
         prefix stypes;
     }
 
-    description "DEVICE_NEIGHBOR_METADATA YANG Module for SONiC OS";
+    description "DEVICE_NEIGHBOR_METADATA configuration";
 
     revision 2022-08-25 {
         description "First Revision";

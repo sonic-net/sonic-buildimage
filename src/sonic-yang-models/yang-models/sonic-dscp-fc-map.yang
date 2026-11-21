@@ -13,7 +13,7 @@ module sonic-dscp-fc-map {
         "SONiC";
 
     description
-        "DSCP_TO_FC_MAP yang Module for SONiC OS";
+        "DSCP_TO_FC_MAP configuration";
 
     revision 2021-10-29 {
         description

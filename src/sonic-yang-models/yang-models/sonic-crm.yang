@@ -13,7 +13,7 @@ module sonic-crm {
         prefix dm;
     }
 
-    description "CRM YANG Module for SONiC OS";
+    description "CRM configuration";
 
     revision 2020-04-10 {
         description "First Revision";

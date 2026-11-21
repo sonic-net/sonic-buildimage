@@ -11,7 +11,7 @@ module sonic-system-aaa {
         prefix tacacs;
     }
 
-    description "Authentication, Authorization, and Accounting (AAA) YANG module for SONiC OS.";
+    description "Authentication, Authorization, and Accounting (AAA) configuration";
 
     revision 2021-10-12 {
         description "Add AAA authorization/accounting support.";

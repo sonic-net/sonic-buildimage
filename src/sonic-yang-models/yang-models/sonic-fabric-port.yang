@@ -9,7 +9,7 @@ module sonic-fabric-port{
        prefix stypes;
     }
 
-    description "FABRIC_PORT yang Module for SONiC OS";
+    description "FABRIC_PORT configuration";
 
     revision 2023-03-14 {
         description "First Revision";

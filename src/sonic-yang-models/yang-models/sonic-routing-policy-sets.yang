@@ -18,7 +18,7 @@ module sonic-routing-policy-sets {
         "SONiC";
 
     description
-        "SONiC ROUTING POLICY SETS";
+        "Routing policy sets configuration";
 
     revision 2021-02-26 {
         description

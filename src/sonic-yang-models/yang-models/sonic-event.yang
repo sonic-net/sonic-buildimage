@@ -10,7 +10,7 @@
     "SONiC";
 
     description
-    "This module defines operational state data for SONiC events.";
+    "This module defines operational state data for events.";
 
     revision "2024-01-30" {
       description
