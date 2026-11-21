@@ -249,6 +249,35 @@
             }
         }
     },
+    "BGP_NEIGHBOR_EVPN_AF_VALID": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                {
+                    "neighbor": "10.100.0.33",
+                    "asn": "64640",
+                    "name": "PEER_ROUTER",
+                    "admin_status": "up",
+                    "address_family": "evpn"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_NEIGHBOR_NEG_INVALID_AF": {
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_TEMPLATE_LIST": [
+                {
+                    "neighbor": "10.100.0.33",
+                    "asn": "64640",
+                    "name": "PEER_ROUTER",
+                    "address_family": "noevpn"
+                }
+                ]
+            }
+        }
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
