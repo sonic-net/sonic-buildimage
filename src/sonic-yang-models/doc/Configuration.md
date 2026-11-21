@@ -36,6 +36,7 @@
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
   * [EVPN](#evpn)
+  * [BRIDGE_PORT_PROTECTION](#bridge_port_protection)
   * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
@@ -1436,6 +1437,34 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
     }
 }
 ```
+
+### BRIDGE_PORT_PROTECTION
+
+The **BRIDGE_PORT_PROTECTION** table stores per-PortChannel protection policy. The key references an existing **PORTCHANNEL** entry. The current implementation supports software protection on PORT-type bridge ports; physical interfaces, subinterfaces and hardware-mode tunables are not supported by this model.
+
+| Field | Values | Effective default |
+| --- | --- | --- |
+| `protection_mode` | `SOFTWARE` | `SOFTWARE` in this implementation |
+| `admin_mode` | `AUTO`, `PRIMARY`, `PROTECTION` | `AUTO` |
+| `revertive` | Boolean | `false` |
+| `wait_to_restore_time_ms` | Unsigned integer `0..4294967295`, milliseconds | `0` |
+
+Unspecified fields use the model and SWSS defaults. In software mode `AUTO` follows aggregate PortChannel operational state and SWSS selects SAI PRIMARY/PROTECTION. With revertive recovery enabled, the wait-to-restore interval requires continuous link-up; zero means no delay. The current `revertive=false` default follows the [SONiC bridge-port protection HLD](https://github.com/sonic-net/SONiC/pull/2556).
+
+```json
+{
+    "BRIDGE_PORT_PROTECTION": {
+        "PortChannel0": {
+            "protection_mode": "SOFTWARE",
+            "admin_mode": "AUTO",
+            "revertive": "true",
+            "wait_to_restore_time_ms": "5000"
+        }
+    }
+}
+```
+
+FRR owns the backup next-hop group and publishes its binding separately through FPM; no backup group ID is configured in this table. Remove the protection row before deleting the referenced PortChannel.
 
 ### FDB_SYNC
 

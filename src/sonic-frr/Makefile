@@ -9,7 +9,8 @@ PATCHSET_SHA_FILE = ../.sonic-frr-patch-$(STG_PATCHED_BRANCH).sha1
 SONIC_FRR_MODULE_FILES = \
 	dplane_fpm_sonic/dplane_fpm_sonic.c \
 	dplane_fpm_sonic/fpm_mac.c \
-	dplane_fpm_sonic/fpm_mac.h
+	dplane_fpm_sonic/fpm_mac.h \
+	dplane_fpm_sonic/bridge_port_protection.h
 SONIC_FRR_TEST_FILES = \
 	dplane_fpm_sonic/tests/fpm_mac_test.c \
 	dplane_fpm_sonic/tests/fpm_mac_test.py
@@ -18,6 +19,10 @@ SONIC_FRR_TEST_FILES = \
 export DEBEMAIL := sonicproject@googlegroups.com
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
+
+	# Exercise the provider's enabled encoder contract even when the pinned
+	# FRR does not yet include the companion protection dataplane API.
+	CC=$${CC_FOR_BUILD:-cc} python3 -m unittest discover -s dplane_fpm_sonic/tests -v
 
 	# Prepare source tree.
 
@@ -80,3 +85,8 @@ endif
 	mv $(DERIVED_TARGET) $* $(DEST)/
 
 $(addprefix $(DEST)/, $(DERIVED_TARGET)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
+
+# Host-native tests do not require an FRR source checkout or patched branch.
+.PHONY: check-bpp-fpm
+check-bpp-fpm:
+	CC=$${CC_FOR_BUILD:-cc} python3 -m unittest discover -s dplane_fpm_sonic/tests -v
