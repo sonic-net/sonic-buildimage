@@ -46,7 +46,7 @@ module sonic-mgmt_interface {
                 leaf ip_prefix {
                     description "IPv4 or IPv6 address with prefix length for the management interface";
                     must "(contains(current(), ':') and contains(../gwaddr, ':')) or (contains(current(), '.') and contains(../gwaddr, '.'))";
-                    type stypes:sonic-ip-prefix;
+                    type stypes:sonic-ip-address-with-prefix;
                 }
 
                 leaf gwaddr {
@@ -57,7 +57,7 @@ module sonic-mgmt_interface {
 
                 leaf-list forced_mgmt_routes {
                     type union {
-                        type stypes:sonic-ip-prefix;
+                        type inet:ip-prefix;
                         type inet:ip-address;
                     }
                     ordered-by user;

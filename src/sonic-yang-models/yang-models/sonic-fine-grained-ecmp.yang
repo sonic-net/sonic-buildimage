@@ -17,10 +17,6 @@ module sonic-fine-grained-ecmp {
         prefix port;
     }
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     organization
         "SONiC";
 
@@ -122,7 +118,7 @@ module sonic-fine-grained-ecmp {
                 key "ip_prefix";
 
                 leaf ip_prefix{
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     description "FG_NHG_PREFIX for which FG behavior is
                     desired";
                 }
