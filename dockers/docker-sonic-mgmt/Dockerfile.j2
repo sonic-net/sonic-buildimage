@@ -55,6 +55,18 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN uv venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Make the venv's site-packages visible to the *system* python (/usr/bin/python3).
+# `uv venv --system-site-packages` only lets the venv see system packages, not
+# the other way around. Many existing sonic-mgmt code paths (notably the
+# Ansible localhost connection which historically hardcodes
+# ansible_python_interpreter to /usr/bin/python3) invoke system python
+# directly. Without this .pth file those callers fail with ModuleNotFoundError
+# for yaml/ansible/etc.
+RUN py_ver=$(/usr/bin/python3 -c 'import sys; print("python%d.%d" % sys.version_info[:2])') \
+    && mkdir -p "/usr/local/lib/${py_ver}/dist-packages" \
+    && echo "/opt/venv/lib/${py_ver}/site-packages" \
+         > "/usr/local/lib/${py_ver}/dist-packages/venv-fallback.pth"
+
 # Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
 # Without this change, running pip or python with sudo will not use the binaries from /opt/venv/bin
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
