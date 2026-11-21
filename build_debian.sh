@@ -79,6 +79,58 @@ if [ "$IMAGE_TYPE" = "aboot" ]; then
     TARGET_BOOTLOADER="aboot"
 fi
 
+set_admin_password()
+{
+    ## Create password for the default user
+    ## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+    set +x
+    if [ -n "$PASSWORD" ]; then
+        printf '%s:%s\n' "$USERNAME" "$PASSWORD" | sudo LANG=C chroot "$FILESYSTEM_ROOT" chpasswd
+    else
+        sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
+    fi
+    set -x
+}
+
+write_account_config()
+{
+    # Default users info
+    export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
+    export username="${USERNAME}"
+    set +x
+    export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
+    j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json > /dev/null
+    unset password
+    sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
+    sudo LANG=c chroot $FILESYSTEM_ROOT chown root:shadow /etc/sonic/default_users.json
+
+    # BMC config info
+    export bmc_nos_account_username="${BMC_NOS_ACCOUNT_USERNAME}"
+    export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
+    j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json > /dev/null
+    unset bmc_root_account_default_password
+    sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
+    sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
+    set -x
+}
+
+# These hooks belong to the build slave as well as the kernel preparation
+# process. A worker restoring the rootfs starts with a fresh slave.
+install_slave_initramfs_hooks()
+{
+    sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
+    sudo mkdir -p /etc/initramfs-tools/hooks
+    sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+    sudo cp files/scripts/network_setup /etc/initramfs-tools/hooks/network_setup
+    sudo chmod +x /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+    sudo chmod +x /etc/initramfs-tools/hooks/network_setup
+}
+
+if [[ ${SONIC_VS_UNPERSONALIZED_BASE:-} == y ]]; then
+    # Check before reading credentials or sourcing any optional site hook.
+    scripts/vs_host_base_state.sh check-inputs
+fi
+
 ## Check if not a last stage of RFS build
 if [[ $RFS_SPLIT_LAST_STAGE != y ]]; then
 
@@ -319,15 +371,11 @@ sudo cp files/docker/docker.service.conf $_
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
-## Create password for the default user
-## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
-set +x
-if [ -n "$PASSWORD" ]; then
-    printf '%s:%s\n' "$USERNAME" "$PASSWORD" | sudo LANG=C chroot "$FILESYSTEM_ROOT" chpasswd
-else
-    sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
+# Keep the account's UID and its group allocation stable on both paths.
+# useradd leaves the account locked until the installer sets its password.
+if [[ ${SONIC_VS_UNPERSONALIZED_BASE:-} != y ]]; then
+    set_admin_password
 fi
-set -x
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -444,19 +492,7 @@ sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/group
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "mkdir -p /etc/initramfs-tools/conf.d"
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/initramfs-tools/conf.d/driver-policy"
 
-# Ensure the relevant directories exist
-sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
-sudo mkdir -p /etc/initramfs-tools/hooks
-
-# Copy the network setup script
-sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
-
-# Copy the hook file
-sudo cp files/scripts/network_setup /etc/initramfs-tools/hooks/network_setup
-
-# Make the scripts executable
-sudo chmod +x /etc/initramfs-tools/scripts/init-premount/network_setup.sh
-sudo chmod +x /etc/initramfs-tools/hooks/network_setup
+install_slave_initramfs_hooks
 
 # Copy vmcore-sysctl.conf to add more vmcore dump flags to kernel
 sudo cp files/image_config/kdump/vmcore-sysctl.conf $FILESYSTEM_ROOT/etc/sysctl.d/
@@ -611,24 +647,9 @@ fi
 
 run_organization_build_hook post-sonic-config-directory
 
-# Default users info
-export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
-export username="${USERNAME}"
-set +x
-export password="$(sudo grep ^${USERNAME} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)"
-j2 files/build_templates/default_users.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/default_users.json > /dev/null
-unset password
-sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/sonic/default_users.json
-sudo LANG=c chroot $FILESYSTEM_ROOT chown root:shadow /etc/sonic/default_users.json
-
-# BMC config info
-export bmc_nos_account_username="${BMC_NOS_ACCOUNT_USERNAME}"
-export bmc_root_account_default_password="${BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD}"
-j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/bmc_config.json > /dev/null
-unset bmc_root_account_default_password
-sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
-sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
-set -x
+if [[ ${SONIC_VS_UNPERSONALIZED_BASE:-} != y ]]; then
+    write_account_config
+fi
 
 # SED TPM bank addresses (platform-specific)
 if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
@@ -647,8 +668,7 @@ fi
 sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
 
 ## Copy ASIC config checksum
-sudo chmod 755 files/build_scripts/generate_asic_config_checksum.py
-./files/build_scripts/generate_asic_config_checksum.py
+python3 ./files/build_scripts/generate_asic_config_checksum.py
 if [[ ! -f './asic_config_checksum' ]]; then
     echo 'asic_config_checksum not found'
     exit 1
@@ -674,8 +694,10 @@ if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /proc || true
     ## Wait fuser fully kill the processes
     sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
+    if [[ ${SONIC_VS_UNPERSONALIZED_BASE:-} == y ]]; then
+        sudo bash scripts/vs_host_base_state.sh seal "$FILESYSTEM_ROOT" "$kversion"
+    fi
     rfs_timing rootfs-prepare end rootfs-compress start
-
     sudo rm -f $TARGET_PATH/$RFS_SQUASHFS_NAME
     sudo mksquashfs $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME -Xcompression-level 1
 
@@ -700,6 +722,15 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
 
     trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
     sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+
+    if [[ -f "$FILESYSTEM_ROOT/etc/sonic/.vs-host-base-v1" ]]; then
+        [[ $USERNAME == admin && $TARGET_MACHINE == vs && $IMAGE_TYPE == onie ]] ||
+            die "Cached host base requires the stock VS installer and admin account"
+        install_slave_initramfs_hooks
+        sudo bash scripts/vs_host_base_state.sh restore "$FILESYSTEM_ROOT" "$kversion"
+        set_admin_password
+        write_account_config
+    fi
 fi
 
 ## Version file part 2

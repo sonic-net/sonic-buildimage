@@ -545,6 +545,45 @@ same command scope, the workspace file takes precedence. The worker sets
 `BAZEL_REAL` to its resource-limited Bazel launcher. Ordinary CI still uses
 registry `main`.
 
+## Reusing the VS host filesystem
+
+The AMD64 Trixie VS installer builds a host SquashFS before assembling
+`sonic-vs.bin`. Bazel can reuse that filesystem and its debootstrap package
+inventory across Git commits. Changing only the SWSS container leaves the
+host base reusable. Changing a selected kernel package, initramfs hook,
+Debian snapshot, host build script or build-slave image changes the cache key.
+Final assembly still applies the current build's account and machine
+configuration, container archives and SONiC version.
+
+The VS installer workflow retains each newly built base as a workflow artifact
+for 14 days. A same-repository PR can restore a snapshot published by an
+earlier run of that PR or by a push to `master`. A `master` build restores
+only snapshots from `master` pushes. The workflow checks the producing
+workflow, repository and event before downloading the artifact by ID.
+
+Bazel verifies the host inputs against the restored snapshot. A hit provides
+the SquashFS and package inventory. On a miss, Make builds a new base and CI
+publishes its snapshot. The download and upload steps show transfer time
+separately. The VS build evidence includes `artifacts/vs/host-base-cache.json`
+with the revision, input key, hit or miss, elapsed time and output SHA-256 digests.
+On the producing run’s **Summary** page, look under **Artifacts** for
+`sonic-vs-host-base-v1-pr-<number>` or `sonic-vs-host-base-v1-master`.
+A consuming run’s **Download the previous VS host-base snapshot** step shows
+the artifact ID it selected.
+
+For local builds, configure VS for AMD64 and provide a private directory that
+the build user owns. Reuse that directory on subsequent invocations.
+
+```sh
+install -d -m 0700 "$HOME/.cache/sonic-vs-host-base"
+make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y \
+    SONIC_HOSTBASE_CACHE_SOURCE="$HOME/.cache/sonic-vs-host-base"
+```
+
+Omit `SONIC_HOSTBASE_CACHE_SOURCE` to use the native Make recipe. Builds
+with unsupported site settings, including organization hooks or custom mirrors,
+also use the native recipe.
+
 ## Kernel Debian packages in the Make VS flow
 
 The opt-in kernel runtime/debug/header DEB producer and installer handoff are documented

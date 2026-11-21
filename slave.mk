@@ -1605,8 +1605,16 @@ ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
 $(addprefix $(TARGET_PATH)/,$(SONIC_RFS_TARGETS) $(SONIC_INSTALLERS)): | bazel-kernel-ensure
 endif
 
+# A retained Make target may belong to an earlier checkout. Re-evaluate the
+# host's actual input key before using a cached VS SquashFS or its inventory.
+ifneq ($(strip $(SONIC_HOSTBASE_CACHE_DIR)),)
+.PHONY: check-vs-host-base
+$(TARGET_PATH)/sonic-vs.bin__vs__rfs.squashfs: check-vs-host-base
+$(TARGET_PATH)/sonic-vs.bin__vs__rfs.squashfs: private vs_host_base_cache := y
+endif
+
 vs_rfs_timing = $(filter 1:sonic-vs.bin__vs__rfs.squashfs,$(SONIC_VS_IMAGE_TIMINGS):$*)
-vs_rfs_cache_marker = $(if $(and $(vs_rfs_timing),$(call CHECK_WCACHE_ENABLED,$*)),echo '[ vs timing ] [ rootfs-cache-save ] [ $(1) ]' || :)
+vs_rfs_cache_marker = $(if $(and $(if $(vs_host_base_cache),,y),$(vs_rfs_timing),$(call CHECK_WCACHE_ENABLED,$*)),echo '[ vs timing ] [ rootfs-cache-save ] [ $(1) ]' || :)
 
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : private export PASSWORD := $(PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : private export BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD := $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
@@ -1623,7 +1631,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
     # $(call LOAD_CACHE,$*,$@)
 
 	# Skip building the target if it is already loaded from cache
-	if [ -z '$($*_CACHE_LOADED)' ] ; then
+	if [ -n '$(vs_host_base_cache)' ] || [ -z '$($*_CACHE_LOADED)' ] ; then
 
 		# Keep the public timing markers on the original recipe stdout while
 		# build_debian.sh sends its normal output through the target log.
@@ -1666,10 +1674,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
-			./build_debian.sh $(LOG)
+			$(if $(vs_host_base_cache),python3 -B tools/bazel/ci/vs_host_base.py,./build_debian.sh) $(LOG)
 
 		$(call vs_rfs_cache_marker,start)
-		$(call SAVE_CACHE,$*,$@)
+		$(if $(vs_host_base_cache),,$(call SAVE_CACHE,$*,$@))
 		$(call vs_rfs_cache_marker,end)
 
 	fi

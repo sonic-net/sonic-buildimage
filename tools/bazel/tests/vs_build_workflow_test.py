@@ -119,6 +119,61 @@ else:
                                         f"SONIC_ENABLE_DEBUG_LAYER={debug_layer}"])
         self.assertEqual(call["bazel_args"], self.environment["BAZEL_CONTAINER_ARGS"])
 
+    def test_actions_host_base_snapshot_is_scoped_and_saved_only_on_cache_miss(self):
+        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
+        by_id = {step["id"]: step for step in job["steps"] if "id" in step}
+        prepare = by_id["host_base_dir"]
+        selector = by_id["host_base_source"]
+        download = by_id["host_base_download"]
+        publish = by_id["host_base_publish"]
+        save = next(step for step in job["steps"] if step["name"] == "Retain the VS host base for subsequent commits")
+        cleanup = next(step for step in job["steps"] if step["name"] == "Remove this job's host-base cache snapshot")
+        self.assertEqual(job["permissions"], {"contents": "read", "actions": "read"})
+        self.assertIn("vs_host_base_snapshot.py", selector["run"])
+        self.assertEqual(download["with"]["run-id"], "${{ steps.host_base_source.outputs.read_run_id }}")
+        self.assertEqual(download["with"]["artifact-ids"], "${{ steps.host_base_source.outputs.read_artifact_id }}")
+        self.assertEqual(save["with"]["name"], "${{ steps.host_base_source.outputs.write_name }}")
+        self.assertTrue(download["with"]["path"].endswith("/host-base-transfer/download"))
+        self.assertEqual(save["with"]["path"], download["with"]["path"].removesuffix("/download") + "/publish")
+        self.assertEqual(save["if"], "steps.host_base_publish.outputs.ready == 'true'")
+        self.assertFalse(publish.get("continue-on-error"))
+        self.assertFalse(save.get("continue-on-error"))
+        self.assertIn("pull_request.head.repo.full_name == github.repository", job["if"])
+
+        workspace = self.root / "runner workspace"
+        checkout = workspace / "vs-run-attempt"
+        artifacts = checkout / "artifacts/vs"
+        artifacts.mkdir(parents=True)
+        (checkout / "tools").symlink_to(ROOT / "tools", target_is_directory=True)
+        snapshot = workspace / ".sonic-vs-host-base-cache"
+        output = self.root / "github-output"
+        summary = self.root / "github-summary"
+        env = dict(os.environ, GITHUB_WORKSPACE=str(workspace), GITHUB_OUTPUT=str(output),
+                   GITHUB_STEP_SUMMARY=str(summary))
+
+        def run(step):
+            subprocess.run(["bash", "-e", "-c", step["run"]], cwd=checkout, env=env, check=True)
+
+        run(prepare)
+        self.assertEqual(snapshot.stat().st_mode & 0o777, 0o700)
+        (snapshot / "previous-key").mkdir()
+        key = "a" * 64
+        (snapshot / key).mkdir(mode=0o700)
+        (snapshot / key / "cas").mkdir()
+        (snapshot / key / "cas" / "blob").write_bytes(b"test-data")
+        receipt = artifacts / "host-base-cache.json"
+        run(publish)  # native fallback produces no receipt
+        receipt.write_text(json.dumps({"identity_sha256": key, "cache_hit": True}))
+        run(publish)
+        self.assertFalse(output.exists())
+        receipt.write_text(json.dumps({"identity_sha256": key, "cache_hit": False}))
+        run(publish)
+        self.assertEqual(output.read_text(), "ready=true\n")
+        self.assertEqual((artifacts / "host-base-transfer/publish" / key / "cas/blob").read_bytes(), b"test-data")
+        run(cleanup)
+        self.assertFalse(snapshot.exists())
+        self.assertTrue(receipt.exists())
+
     def test_build_records_revision_before_one_make_without_validation_receipts(self):
         result = self.run_script("build_vs.sh", FORBID_VALIDATION="1")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

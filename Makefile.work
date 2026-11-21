@@ -83,6 +83,9 @@
 #  *                 When disabled they fall back to the normal Make docker build.
 #  *                 Default: n
 #  *                 Values: y,n
+#  * SONIC_HOSTBASE_CACHE_SOURCE: Existing private (0700) directory for the
+#  *                 stock native AMD64/Trixie VS host base. Empty disables
+#  *                 reuse. Requires BUILD_WITH_BAZEL_WHEN_AVAILABLE=y.
 #  * SONIC_BAZEL_CACHE_SOURCE: Host directory for persistent Bazel repository,
 #  *                 action and Bazelisk caches for all Bazel builds.
 #  *                 Default: $(SONIC_DPKG_CACHE_SOURCE)/bazel, independent of
@@ -524,6 +527,21 @@ DOCKER_RUN += -e 'SONIC_BAZEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_REMOTE_
 DOCKER_RUN += -e 'SONIC_BAZEL_KERNEL_REMOTE_CACHE=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))' \
 	-e 'SONIC_BAZEL_KERNEL_REMOTE_UPLOAD=$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD))'
 
+# Use the same immutable Docker image for the host-base key and the running
+# slave. A caller can opt in by supplying a private cache directory on the host.
+vs_build_slave_image = $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+ifneq ($(strip $(SONIC_HOSTBASE_CACHE_SOURCE)),)
+ifeq ($(BLDENV):$(CONFIGURED_ARCH):$(CONFIGURED_PLATFORM):$(BUILD_WITH_BAZEL_WHEN_AVAILABLE),trixie:amd64:vs:y)
+vs_hostbase_dir := '$(subst ','"'"',$(abspath $(SONIC_HOSTBASE_CACHE_SOURCE)))'
+vs_hostbase_setup = SONIC_HOSTBASE_BUILDER_ID=$$(docker image inspect --format '{{.Id}}' $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)) && export SONIC_HOSTBASE_BUILDER_ID &&
+vs_hostbase_args = --mount type=bind,src=$(vs_hostbase_dir),dst=/vs_host_base_cache -e SONIC_HOSTBASE_CACHE_DIR=/vs_host_base_cache -e SONIC_HOSTBASE_BUILDER_ID
+vs_build_slave_image = "$$SONIC_HOSTBASE_BUILDER_ID"
+# This DEB is rebuilt on the host. Its content must not change just because
+# checkout times or the timestamp of an unrelated commit changed.
+vs_hostbase_hooks = -B SOURCE_DATE_EPOCH=0
+endif
+endif
+
 # Reuse downloads and action outputs across disposable builder containers.
 # Create the bind source as the host build user, before Docker can create a
 # root-owned directory. Keep the output base private to each builder/check-out.
@@ -850,8 +868,8 @@ endif
 
 	$(Q)$(SONIC_WT_GITDIR_FIXUP)
 
-	$(Q)$(DOCKER_RUN) \
-		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
+	$(Q)$(vs_hostbase_setup) $(DOCKER_RUN) $(vs_hostbase_args) \
+		$(vs_build_slave_image) \
 		bash -c "$(DOCKER_USER_COMMANDS) && su $(USER) -c 'ulimit -S -n 524288; export BUILD_HOSTNAME=$(shell hostname); $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)'"
 	@$(call vs_host_timing_marker,builder-exit,end)
 	@$(call vs_host_timing_marker,trixie-image-cleanup,start)
@@ -863,7 +881,7 @@ docker-cleanup:
 
 .PHONY: sonic-build-hooks
 sonic-build-hooks:
-	$(Q)pushd src/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) all; popd
+	$(Q)pushd src/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) $(vs_hostbase_hooks) all; popd
 	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
 	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
 
