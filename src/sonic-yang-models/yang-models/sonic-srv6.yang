@@ -18,6 +18,11 @@ module sonic-srv6 {
     description
         "Segment Routing over IPv6 (SRv6) configuration for SONiC.";
 
+    revision 2026-11-10 {
+        description
+            "Add SRv6 locator format configuration for BGP GRT Service SID allocation.";
+    }
+
     revision 2024-12-05 {
 		description
 			"Initial revision.";
@@ -40,6 +45,13 @@ module sonic-srv6 {
                     description "IPv6 address prefix for this locator.";
                     type inet:ipv6-address;
                     mandatory true;
+                }
+
+                leaf format {
+                    type enumeration {
+                        enum usid-f3216;
+                    }
+                    description "SID format used for this locator.";
                 }
 
                 leaf block_len {
