@@ -1,0 +1,45 @@
+{
+    "ISIS_VALID": {"desc": "Multiple instances, independent levels and table sources."},
+    "ISIS_EMPTY_INSTANCE": {
+        "desc": "An instance without explicit fields exists and has native MTU default.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS/ISIS_GLOBALS_LIST[vrf_name='default'][instance_name='CORE']/instance_name",
+            "key": "sonic-isis-global:lsp_mtu",
+            "value": 1497
+        }
+    },
+    "ISIS_NET_SHORT": {"desc": "Reject a NET missing its system ID.", "eStrKey": "Pattern"},
+    "ISIS_NET_NSEL": {"desc": "Reject nonzero NSEL.", "eStrKey": "Pattern"},
+    "ISIS_NET_SYSTEM_ID": {"desc": "Require shared system ID within a VRF.", "eStrKey": "Must"},
+    "ISIS_INSTANCE_NAME": {"desc": "Reject invalid instance names.", "eStrKey": "Pattern"},
+    "ISIS_UNKNOWN_VRF": {"desc": "Reject a missing VRF.", "eStrKey": "InvalidValue"},
+    "ISIS_MTU_LOW": {"desc": "Reject MTU below 128.", "eStrKey": "Range"},
+    "ISIS_MTU_HIGH": {"desc": "Reject MTU above 4352.", "eStrKey": "Range"},
+    "ISIS_REFRESH_HIGH": {"desc": "Reject refresh above 65235.", "eStrKey": "Range"},
+    "ISIS_LIFETIME_LOW": {"desc": "Reject lifetime below 350.", "eStrKey": "Range"},
+    "ISIS_TIMER_RELATION": {"desc": "Validate explicit refresh against default lifetime.", "eStrKey": "Must"},
+    "ISIS_GENERATION_RELATION": {"desc": "Generation must be smaller than refresh.", "eStrKey": "Must"},
+    "ISIS_BACKOFF_VALID": {"desc": "All five SPF backoff values, including zero, are accepted."},
+    "ISIS_BACKOFF_PARTIAL": {"desc": "Reject partial SPF backoff.", "eStrKey": "Must"},
+    "ISIS_BACKOFF_ORDER": {"desc": "Hold-down must exceed time-to-learn.", "eStrKey": "Must"},
+    "ISIS_ORPHAN_INTERFACE": {"desc": "Require same-VRF parent instance.", "eStrKey": "Must"},
+    "ISIS_IPV6_ONLY": {
+        "desc": "An IPv6-only interface defaults IPv4 to false.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-interface:sonic-isis-interface/ISIS_INTERFACE/ISIS_INTERFACE_LIST[vrf_name='default'][ifname='Loopback0']/ifname",
+            "key": "sonic-isis-interface:ipv4_enabled",
+            "value": false
+        }
+    },
+    "ISIS_BOTH_AF_DISABLED": {"desc": "Reject interface rows without any AF.", "eStrKey": "Must"},
+    "ISIS_LEVEL_INTERSECTION": {"desc": "Reject disjoint instance/interface levels.", "eStrKey": "Must"},
+    "ISIS_VALID_VRF": {"desc": "Accept matching parent and actual interface VRF."},
+    "ISIS_WRONG_INTERFACE_VRF": {"desc": "Reject mismatched actual interface VRF.", "eStrKey": "Must"},
+    "ISIS_REDISTRIBUTE_TABLE_ZERO": {"desc": "Table sources require positive ID.", "eStrKey": "Must"},
+    "ISIS_REDISTRIBUTE_ORDINARY_TABLE": {"desc": "Ordinary sources require ID zero.", "eStrKey": "Must"},
+    "ISIS_REDISTRIBUTE_AF": {"desc": "Source protocol must match AF.", "eStrKey": "Must"},
+    "ISIS_REDISTRIBUTE_LEVEL": {"desc": "Parent must support redistribution level.", "eStrKey": "Must"},
+    "ISIS_REDISTRIBUTE_ROUTE_MAP": {"desc": "Require an existing route-map.", "eStrKey": "LeafRef"}
+}

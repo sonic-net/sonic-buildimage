@@ -1,0 +1,91 @@
+! IS-IS: FRR 10.7.1, three ConfigDB tables
+{% set globals = ISIS_GLOBALS|default({}) %}
+{% set interfaces = ISIS_INTERFACE|default({}) %}
+{% set policies = ISIS_REDISTRIBUTE|default({}) %}
+{% set levels = {'level-1': [1], 'level-2': [2], 'level-1-2': [1, 2]} %}
+{% set frr_levels = {'level-1': 'level-1', 'level-2': 'level-2-only', 'level-1-2': 'level-1-2'} %}
+{% for key, row in globals|dictsort %}
+{% set parts = key.split('|') if key is string else key %}
+{% set vrf, instance = parts %}
+!
+router isis {{ instance }}{{ ' vrf ' ~ vrf if vrf != 'default' else '' }}
+ metric-style wide
+{% if row.net_title is defined %}
+ net {{ row.net_title }}
+{% endif %}
+ is-type {{ frr_levels[row.level|default('level-1-2')] }}
+ {{ '' if row.dynamic_hostname|default('true')|string|lower == 'true' else 'no ' }}hostname dynamic
+ lsp-mtu {{ row.lsp_mtu|default(1497) }}
+ {{ '' if row.ipv6_multi_topology|default('false')|string|lower == 'true' else 'no ' }}topology ipv6-unicast
+ {{ '' if row.overload|default('false')|string|lower == 'true' else 'no ' }}set-overload-bit
+{% if row.overload_on_startup|default(0)|int > 0 %}
+ set-overload-bit on-startup {{ row.overload_on_startup }}
+{% else %}
+ no set-overload-bit on-startup
+{% endif %}
+{% for n in [1, 2] %}
+{% set suffix = '_level_' ~ n %}
+ lsp-timers level-{{ n }} gen-interval {{ row.get('lsp_generation_interval' ~ suffix, 30) }} refresh-interval {{ row.get('lsp_refresh_interval' ~ suffix, 900) }} max-lifetime {{ row.get('lsp_lifetime' ~ suffix, 1200) }}
+ spf-interval level-{{ n }} {{ row.get('spf_minimum_interval' ~ suffix, 1) }}
+{% endfor %}
+{% if row.spf_init_delay is defined %}
+ spf-delay-ietf init-delay {{ row.spf_init_delay }} short-delay {{ row.spf_short_delay }} long-delay {{ row.spf_long_delay }} holddown {{ row.spf_hold_down }} time-to-learn {{ row.spf_time_to_learn }}
+{% else %}
+ no spf-delay-ietf
+{% endif %}
+{% endfor %}
+{% for key, row in interfaces|dictsort %}
+{% set parts = key.split('|') if key is string else key %}
+{% set vrf, ifname = parts %}
+{% set parent = globals.get((vrf, row.instance_name), globals.get(vrf ~ '|' ~ row.instance_name, {})) %}
+{% set actual = namespace(vrf='default') %}
+{% for routed in [INTERFACE|default({}), PORTCHANNEL_INTERFACE|default({}), VLAN_INTERFACE|default({}), LOOPBACK_INTERFACE|default({}), VLAN_SUB_INTERFACE|default({})] %}
+{% if routed.get(ifname, {}).get('vrf_name') %}
+{% set actual.vrf = routed[ifname].vrf_name %}
+{% endif %}
+{% endfor %}
+{% set ipv4 = row.ipv4_enabled|default('false')|string|lower == 'true' %}
+{% set ipv6 = row.ipv6_enabled|default('false')|string|lower == 'true' %}
+{% if parent and actual.vrf == vrf and (ipv4 or ipv6) %}
+{% set effective = namespace(levels=[]) %}
+{% for n in levels[row.level|default('level-1-2')] %}
+{% if n in levels[parent.level|default('level-1-2')] %}
+{% set effective.levels = effective.levels + [n] %}
+{% endif %}
+{% endfor %}
+{% if effective.levels %}
+!
+interface {{ ifname }}{{ ' vrf ' ~ vrf if vrf != 'default' else '' }}
+{% if ipv4 %}
+ ip router isis {{ row.instance_name }}
+{% endif %}
+{% if ipv6 %}
+ ipv6 router isis {{ row.instance_name }}
+{% endif %}
+ isis circuit-type {{ 'level-1-2' if effective.levels|length == 2 else ('level-1' if effective.levels[0] == 1 else 'level-2-only') }}
+ {{ '' if row.passive|default('false')|string|lower == 'true' else 'no ' }}isis passive
+ {{ '' if row.network_type|default('lan') == 'p2p' else 'no ' }}isis network point-to-point
+{% for field in ['metric', 'hello_interval', 'hello_multiplier'] %}
+{% for n in [1, 2] %}
+{% set field_name = field ~ '_level_' ~ n %}
+{% if field_name in row %}
+ isis {{ field|replace('_', '-') }} level-{{ n }} {{ row[field_name] }}
+{% else %}
+ no isis {{ field|replace('_', '-') }} level-{{ n }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% for key, row in policies|dictsort %}
+{% set parts = key.split('|') if key is string else key %}
+{% set vrf, instance, af, source, level, table_id = parts %}
+{% if (vrf, instance) in globals or (vrf ~ '|' ~ instance) in globals %}
+!
+router isis {{ instance }}{{ ' vrf ' ~ vrf if vrf != 'default' else '' }}
+{% set route_maps = row.route_map|default([]) %}
+{% set route_map = route_maps if route_maps is string else route_maps|first|default('') %}
+ redistribute {{ af }} {{ source }}{{ ' ' ~ table_id if source == 'table' else '' }} {{ level }} metric {{ row.metric|default(0) }}{{ ' route-map ' ~ route_map if route_map else '' }}
+{% endif %}
+{% endfor %}
