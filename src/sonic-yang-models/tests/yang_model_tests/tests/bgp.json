@@ -321,5 +321,30 @@
     "BGP_SENTINEL_INVALID_RANGE_IPV6": {
         "desc": "does not satisfy.",
         "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
+    },
+    "BGP_NEIGHBOR_NEG_NO_ASN_NO_PEER_GROUP": {
+        "desc": "Configure an address-based BGP neighbor carrying neither an asn nor a peer group.",
+        "eStr": ["A BGP neighbor must carry an asn."]
+    },
+    "BGP_NEIGHBOR_PEER_GROUP_ONLY_VALID": {
+        "desc": "With no DEVICE_METADATA to name the routing mode, an address-based BGP neighbor carrying a peer group and no asn stays valid, so subset validation still works."
+    },
+    "BGP_NEIGHBOR_INTERFACE_NO_ASN_VALID": {
+        "desc": "With no DEVICE_METADATA to name the routing mode, an interface-attached BGP neighbor carrying no asn stays valid, so subset validation still works."
+    },
+    "BGP_NEIGHBOR_INTF_NO_ASN_BGPCFGD_NEG": {
+        "desc": "Under bgpcfgd an interface-attached BGP neighbor carrying no asn is rejected; bgpcfgd renders its remote-as from asn alone.",
+        "eStr": ["A BGP neighbor must carry an asn."]
+    },
+    "BGP_NEIGHBOR_INTF_NO_ASN_FRR_VALID": {
+        "desc": "Under frrcfgd an interface-attached BGP neighbor carrying no asn stays valid."
+    },
+    "BGP_NEIGHBOR_PEER_GROUP_ONLY_BGPCFGD_NEG": {
+        "desc": "Under bgpcfgd a BGP neighbor carrying only a peer group is rejected; bgpcfgd never reads peer_group_name.",
+        "eStr": ["A BGP neighbor must carry an asn."]
+    },
+    "BGP_NEIGHBOR_TEMPLATE_NEG_NO_ASN": {
+        "desc": "Configure a template-based BGP neighbor carrying no asn.",
+        "eStr": ["A template based BGP neighbor must carry an asn."]
     }
 }
