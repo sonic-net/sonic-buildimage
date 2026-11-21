@@ -348,11 +348,27 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
         return db_data
 
     @staticmethod
+    def bool_to_str(data):
+        """Turn Python bools into the lowercase strings YANG boolean leaves accept.
+
+        ConfigDBConnector stores a Python bool as str(value), which is "True" or
+        "False". A JSON literal true/false would land in CONFIG_DB that way and
+        then fail YANG validation. Strings are left untouched.
+        """
+        if isinstance(data, bool):
+            return 'true' if data else 'false'
+        if isinstance(data, dict):
+            return {key: FormatConverter.bool_to_str(value) for key, value in data.items()}
+        if isinstance(data, list):
+            return [FormatConverter.bool_to_str(value) for value in data]
+        return data
+
+    @staticmethod
     def output_to_db(output_data):
         db_data = {}
         for table_name in output_data:
             if table_name[0].isupper():
-                db_data[table_name] = output_data[table_name]
+                db_data[table_name] = FormatConverter.bool_to_str(output_data[table_name])
         return db_data
 
     @staticmethod
@@ -362,7 +378,7 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                 newData = {}
                 for key in data.keys():
                     if ((type(key) is STR_TYPE and lookup_key == key) or (type(key) is tuple and lookup_key in key)):
-                        newData[ConfigDBConnector.serialize_key(key)] = data.pop(key)
+                        newData[ConfigDBConnector.serialize_key(key)] = FormatConverter.bool_to_str(data.pop(key))
                         break
                 return newData
 
@@ -372,7 +388,8 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                 if new_key != key:
                     data[new_key] = data.pop(key)
                 data[new_key] = FormatConverter.to_serialized(data[new_key])
-        return data
+            return data
+        return FormatConverter.bool_to_str(data)
 
     @staticmethod
     def to_deserialized(data):
