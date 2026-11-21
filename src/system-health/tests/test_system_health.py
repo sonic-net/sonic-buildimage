@@ -200,6 +200,53 @@ def test_service_checker_removes_stale_cache_when_empty():
     assert not os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE)
 
 
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+def test_critical_process_parser_handles_long_malformed_line(tmp_path):
+    critical_processes = tmp_path / 'critical_processes'
+    critical_processes.write_text(
+        ('invalid' * 50000) + '\nprogram:syncd\ngroup:swss\n',
+        encoding='utf-8'
+    )
+    checker = ServiceChecker()
+
+    processes, groups = checker.get_critical_process_list_from_file(
+        'swss', str(critical_processes)
+    )
+
+    assert processes == ['syncd']
+    assert groups == ['swss']
+    assert checker.bad_containers == {'swss'}
+
+
+@pytest.mark.parametrize('invalid_line', [
+    ':syncd',
+    ':',
+    ' \t : syncd',
+    'program:foo:bar',
+    'group:swss:extra',
+])
+@patch('health_checker.service_checker.ServiceChecker.load_critical_process_cache', MagicMock())
+@patch('health_checker.service_checker.logger.log_error')
+def test_critical_process_parser_rejects_invalid_syntax(
+        mock_log_error, tmp_path, invalid_line):
+    critical_processes = tmp_path / 'critical_processes'
+    critical_processes.write_text(
+        f'{invalid_line}\n{invalid_line}\nprogram:syncd\ngroup:swss\n',
+        encoding='utf-8'
+    )
+    checker = ServiceChecker()
+
+    processes, groups = checker.get_critical_process_list_from_file(
+        'swss', str(critical_processes)
+    )
+
+    assert processes == ['syncd']
+    assert groups == ['swss']
+    assert checker.bad_containers == {'swss'}
+    mock_log_error.assert_called_once_with(
+        'Invalid syntax in critical_processes file of swss')
+
+
 def test_sanitize_optional_containers():
     assert sanitize_optional_containers(None) == {}
     assert sanitize_optional_containers(['docker-image']) == {}
