@@ -282,6 +282,18 @@
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
     },
+    "DEVICE_METADATA_VALID_NEXTHOP_ON_DEMAND": {
+        "desc": "Verifying valid nexthop_on_demand configuration."
+    },
+    "DEVICE_METADATA_DEFAULT_NEXTHOP_ON_DEMAND": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR NEXTHOP_ON_DEMAND FIELD.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:nexthop_on_demand",
+            "value": false
+        }
+    },
     "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
         "desc": "Verifying valid zebra_nexthop configuration."
     },
