@@ -1,0 +1,12 @@
+[Unit]
+Description=Micas USB Network Gadget Service
+After=platform_process.service systemd-modules-load.service local-fs.target
+Wants=platform_process.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/micas-usb-network-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

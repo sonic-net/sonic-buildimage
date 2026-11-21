@@ -1,0 +1,6 @@
+# Aspeed BMC USB Network Gadget Interface Renaming Rule
+# Renames USB NCM gadget interface from usb0 to bmc0 for consistent naming
+
+# Match USB NCM gadget interface with BMC MAC address and rename to bmc0
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:01", NAME="bmc0"
+

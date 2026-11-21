@@ -1,0 +1,15 @@
+[Unit]
+Description=Global Initialize platform drivers.
+After=platform_driver_sh.service
+Requires=platform_driver_sh.service
+Before=watchdog-control.service basic.target platform_driver_late.service platform_process.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_driver.py start
+ExecStop=/usr/local/bin/platform_driver.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
