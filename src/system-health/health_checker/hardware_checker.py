@@ -27,7 +27,7 @@ class HardwareChecker(HealthChecker):
     def get_category(self):
         return 'Hardware'
 
-    def check(self, config):
+    def check(self, config, chassis=None):
         self.reset()
         self._check_asic_status(config)
         self._check_fan_status(config)
