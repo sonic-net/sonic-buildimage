@@ -62,6 +62,8 @@ https://github.com/anchore/syft/releases/download/v1.44.0/syft_1.44.0_linux_arm6
 https://github.com/aristanetworks/sonic-firmware/raw/24716c4e03f223d8e18afff786ac427f6ac77fe0/phy/phy-credo_1.0_amd64.deb==14e233cd68bc5db22eb8c9e177242851
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
+https://github.com/bazelbuild/bazelisk/releases/download/v1.30.0/bazelisk-linux-amd64==7773876ee1c20fefff55a42d8a43f02d
+https://github.com/bazelbuild/bazelisk/releases/download/v1.30.0/bazelisk-linux-arm64==348478f2b7e93c2f4bd90eaebd20128e
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==7773876ee1c20fefff55a42d8a43f02d
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==348478f2b7e93c2f4bd90eaebd20128e
 https://github.com/ChubbyAnt/sedutil/releases/download/1.15-5ad84d8/sedutil-cli-1.15-5ad84d8.zip==63b3ada5eade5b2d0bb79a0a2a635049
