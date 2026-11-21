@@ -11,7 +11,8 @@ DB_KEY_LOG="$(mktemp)"
 LOGGER_LOG="$(mktemp)"
 MARKER_FILE="/tmp/arp-update-test-marker"
 rm -f "$MARKER_FILE"
-trap 'rm -f "${SOURCE_SCRIPT}" "${MISMATCH_LOOP_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${LOGGER_LOG}" "${MARKER_FILE}"' EXIT
+POP_MARK="$(mktemp -u)"
+trap 'rm -f "${SOURCE_SCRIPT}" "${MISMATCH_LOOP_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${LOGGER_LOG}" "${MARKER_FILE}" "${POP_MARK}"' EXIT
 
 # Load only the helper functions; the remainder of arp_update is an infinite loop.
 sed '/^while \/bin\/true; do$/,$d' "$SCRIPT" > "$SOURCE_SCRIPT"
@@ -122,6 +123,77 @@ assert_eq "non-DualToR IPv4 link-local neighbor is flushed" "169.254.1.1" "${IP_
 assert_eq "non-DualToR IPv4 link-local mismatch is logged" \
     "-p warning MAC mismatch for 169.254.1.1 on Vlan1000 - kernel: 02:00:00:00:00:01, APPL_DB: 02:00:00:00:00:02" \
     "$(<"$LOGGER_LOG")"
+
+# MAC-mismatch flush: APPL_DB rows are emulated by key, and a row that
+# neighsyncd wrote but orchagent has not popped yet lives only in _NEIGH_TABLE.
+declare -A APPL_DB_ROWS
+sonic-db-cli() {
+    if [[ "$1" == "-s" && "$2" == "APPL_DB" && "$3" == "hget" && "$5" == "neigh" ]]; then
+        printf '%s' "${APPL_DB_ROWS[$4]-}"
+    fi
+}
+
+# Prints "flushed" or "kept", or what went wrong.
+mismatch_flushes() {
+    IP_ARGS=()
+    TIMEOUT_ARGS=()
+    if flush_mac_mismatch_neighbor "$@"; then
+        if [[ "${IP_ARGS[*]}" != "neigh flush $2" || "${TIMEOUT_ARGS[3]-}" != "$1" ]]; then
+            echo "flushed with ip '${IP_ARGS[*]}' and ping '${TIMEOUT_ARGS[*]}'"
+            return
+        fi
+        echo flushed
+    elif [[ ${#IP_ARGS[@]} -ne 0 || ${#TIMEOUT_ARGS[@]} -ne 0 ]]; then
+        echo "kept but ran ip '${IP_ARGS[*]}' and ping '${TIMEOUT_ARGS[*]}'"
+    else
+        echo kept
+    fi
+}
+
+APPL_DB_ROWS=(["NEIGH_TABLE:Vlan1000:192.0.2.10"]="02:00:00:00:00:10")
+assert_eq "kernel MAC matches NEIGH_TABLE" "kept" \
+    "$(mismatch_flushes Vlan1000 192.0.2.10 02:00:00:00:00:10)"
+
+APPL_DB_ROWS=(["_NEIGH_TABLE:Vlan1000:192.0.2.11"]="02:00:00:00:00:11")
+assert_eq "new neighbor queued for orchagent" "kept" \
+    "$(mismatch_flushes Vlan1000 192.0.2.11 02:00:00:00:00:11)"
+
+APPL_DB_ROWS=(["_NEIGH_TABLE:Vlan1000:2001:db8::11"]="02:00:00:00:00:11")
+assert_eq "new IPv6 neighbor queued for orchagent" "kept" \
+    "$(mismatch_flushes Vlan1000 2001:db8::11 02:00:00:00:00:11)"
+
+APPL_DB_ROWS=(["NEIGH_TABLE:Vlan1000:192.0.2.12"]="02:00:00:00:00:01"
+              ["_NEIGH_TABLE:Vlan1000:192.0.2.12"]="02:00:00:00:00:12")
+assert_eq "changed MAC queued for orchagent" "kept" \
+    "$(mismatch_flushes Vlan1000 192.0.2.12 02:00:00:00:00:12)"
+
+APPL_DB_ROWS=(["NEIGH_TABLE:Vlan1000:192.0.2.13"]="02:00:00:00:00:01"
+              ["_NEIGH_TABLE:Vlan1000:192.0.2.13"]="02:00:00:00:00:99")
+assert_eq "neither APPL_DB row has the kernel MAC" "flushed" \
+    "$(mismatch_flushes Vlan1000 192.0.2.13 02:00:00:00:00:13)"
+
+APPL_DB_ROWS=(["NEIGH_TABLE:Vlan1000:192.0.2.14"]="02:00:00:00:00:01")
+assert_eq "NEIGH_TABLE MAC differs from the kernel" "flushed" \
+    "$(mismatch_flushes Vlan1000 192.0.2.14 02:00:00:00:00:14)"
+
+APPL_DB_ROWS=()
+assert_eq "neighbor missing from APPL_DB" "flushed" \
+    "$(mismatch_flushes Vlan1000 192.0.2.15 02:00:00:00:00:15)"
+
+# orchagent pops the queued row after NEIGH_TABLE is read but before
+# _NEIGH_TABLE is, so neither read sees the kernel MAC.
+sonic-db-cli() {
+    if [[ "$4" == _NEIGH_TABLE:* ]]; then
+        touch "$POP_MARK"
+    elif [[ -e "$POP_MARK" ]]; then
+        printf '%s' "02:00:00:00:00:16"
+    else
+        printf '%s' "02:00:00:00:00:01"
+    fi
+}
+rm -f "$POP_MARK"
+assert_eq "queued row popped between the two reads" "kept" \
+    "$(mismatch_flushes Vlan1000 192.0.2.16 02:00:00:00:00:16)"
 
 [[ ! -e "$MARKER_FILE" ]]
 
