@@ -60,10 +60,16 @@ def test_write(tmp_path, monkeypatch):
 
 def test_write_fail(tmp_path, monkeypatch):
     original_mkstemp = tempfile.mkstemp
+    failed_config_file = tmp_path / "bgpcfgd_failed_config"
     monkeypatch.setattr(
         bgpcfgd.frr.tempfile,
         "mkstemp",
         lambda dir: original_mkstemp(dir=str(tmp_path))
+    )
+    monkeypatch.setattr(
+        bgpcfgd.frr,
+        "FAILED_CONFIG_FILE",
+        str(failed_config_file)
     )
 
     def run_command(cmd):
@@ -74,7 +80,13 @@ def test_write_fail(tmp_path, monkeypatch):
     f = bgpcfgd.frr.FRR(["abc", "cde"])
     res = f.write("config context")
     assert not res, "Expect False return value"
-    assert list(tmp_path.iterdir()) == []
+    assert list(tmp_path.iterdir()) == [failed_config_file]
+    assert failed_config_file.read_text() == "config context\n"
+
+    res = f.write("new config context")
+    assert not res, "Expect False return value"
+    assert list(tmp_path.iterdir()) == [failed_config_file]
+    assert failed_config_file.read_text() == "new config context\n"
 
 def test_restart_peer_groups():
     bgpcfgd.frr.run_command = lambda cmd: (0, "some output", "")
