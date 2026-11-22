@@ -991,6 +991,7 @@ jobs:
       eventd_artifact_id: ${{ steps.component_eventd.outputs.artifact-id }}
       supervisor_rust_artifact_id: ${{ steps.component_supervisor_rust.outputs.artifact-id }}
       frr_native_artifact_id: ${{ steps.component_frr_native.outputs.artifact-id }}
+      fib_artifact_id: ${{ steps.component_fib.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
       python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
@@ -1445,6 +1446,17 @@ jobs:
         with:
           name: vs-component-frr_native-${{ github.run_id }}-${{ github.run_attempt }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/frr_native/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component fib
+        id: component_fib
+        if: contains(fromJSON(steps.bundles.outputs.components), 'fib')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-fib-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/fib/
           if-no-files-found: error
           retention-days: 3
           compression-level: 1

@@ -111,13 +111,7 @@ jobs:
               --bazelrc="$PWD/tools/bazel/common.bazelrc" \
               "$command" "${options[@]}" "$@"
           }
-          targets=(
-            //src/sonic-frr:check_programs
-            //src/libraries/sonic-fib:runtime
-            //src/libraries/sonic-fib:runtime.debug_symbols
-            //src/libraries/sonic-fib:development
-            //src/libraries/sonic-fib:runtime_packages.json
-          )
+          targets=(//src/sonic-frr:check_programs)
           if [[ "$USE_VS_PACKAGES" != true ]]; then
             targets+=(
               //src/sonic-frr:frr_layout
@@ -125,6 +119,10 @@ jobs:
               //src/sonic-frr:frr_snmp_layout
               //src/sonic-frr:frr_snmp_elf.debug_symbols
               //src/sonic-frr:pythontools_layout
+              //src/libraries/sonic-fib:runtime
+              //src/libraries/sonic-fib:runtime.debug_symbols
+              //src/libraries/sonic-fib:development
+              //src/libraries/sonic-fib:runtime_packages.json
             )
             if [[ "$CI_DISTRIBUTION" == trixie ]]; then
               targets+=(//src/sonic-frr:runtime_packages.json)
@@ -139,12 +137,12 @@ jobs:
             sha256sum "$output" >> artifacts/SHA256SUMS
           done < artifacts/outputs.txt
           cp MODULE.bazel.lock artifacts/
-          python3 src/libraries/sonic-fib/verify_runtime.py \
-            --runtime "$(run_bazel cquery //src/libraries/sonic-fib:runtime --output=files)" \
-            --development "$(run_bazel cquery //src/libraries/sonic-fib:development --output=files)" \
-            --symbols "$(run_bazel cquery //src/libraries/sonic-fib:runtime.debug_symbols --output=files)" \
-            --output artifacts/libfib-installed.json
           if [[ "$USE_VS_PACKAGES" != true ]]; then
+              python3 src/libraries/sonic-fib/verify_runtime.py \
+                --runtime "$(run_bazel cquery //src/libraries/sonic-fib:runtime --output=files)" \
+                --development "$(run_bazel cquery //src/libraries/sonic-fib:development --output=files)" \
+                --symbols "$(run_bazel cquery //src/libraries/sonic-fib:runtime.debug_symbols --output=files)" \
+                --output artifacts/libfib-installed.json
               python3 src/sonic-frr/verify_runtime.py \
                 --runtime "$(run_bazel cquery //src/sonic-frr:frr_layout --output=files)" \
                 --symbols "$(run_bazel cquery //src/sonic-frr:frr_elf.debug_symbols --output=files)" \
