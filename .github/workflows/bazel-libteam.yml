@@ -90,6 +90,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
           CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          USE_VS_LIBTEAM: ${{ matrix.architecture == 'amd64' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           CI_ARCHITECTURE: ${{ matrix.architecture }}
           CI_CPU: ${{ matrix.cpu }}
@@ -120,43 +121,46 @@ jobs:
               --bazelrc="$PWD/tools/bazel/common.bazelrc" \
               "$command" "${options[@]}" "$@"
           }
-          targets=(
-            //src/libteam:libteam_runtime
-            //src/libteam:libteam_runtime.debug_symbols
-            //src/libteam:libteamdctl_runtime
-            //src/libteam:libteamdctl_runtime.debug_symbols
-            //src/libteam:libteam_utils_runtime
-            //src/libteam:libteam_utils_runtime.debug_symbols
-            //src/libteam:libteam_dev
-            //src/libteam:runtime_packages.json
-            @libnl3//:libnl-3-dev_files
-            @sonic_swss//teamsyncd:teamsyncd
-            @sonic_swss//tlm_teamd:tlm_teamd
-          )
-          run_bazel build --build_event_json_file="$PWD/artifacts/build-events.json" "${targets[@]}" 2>&1 | tee artifacts/build.log
-          run_bazel cquery "set(${targets[*]})" --output=files > artifacts/outputs.txt
-          test -s artifacts/outputs.txt
-          while IFS= read -r output; do
-            test -f "$output"
-            cp --parents "$output" artifacts/
-            sha256sum "$output" >> artifacts/SHA256SUMS
-          done < artifacts/outputs.txt
-          # Selecting the compatibility alias builds the executable but does not
-          # run its test; select the source owner's test rule directly.
-          run_bazel test --nocache_test_results --build_event_json_file="$PWD/artifacts/test-events.json" \
-            @libteam//:consumer_test \
-            2>&1 | tee artifacts/test.log
-          output() { run_bazel cquery "//src/libteam:$1" --output=files; }
-          python3 -B src/libteam/verify_runtime.py \
-            --libteam "$(output libteam_runtime)" \
-            --libteam-symbols "$(output libteam_runtime.debug_symbols)" \
-            --libteamdctl "$(output libteamdctl_runtime)" \
-            --libteamdctl-symbols "$(output libteamdctl_runtime.debug_symbols)" \
-            --libteam-utils "$(output libteam_utils_runtime)" \
-            --libteam-utils-symbols "$(output libteam_utils_runtime.debug_symbols)" \
-            --development "$(output libteam_dev)" \
-            --dependency-development "$(run_bazel cquery @libnl3//:libnl-3-dev_files --output=files)" \
-            --output artifacts/installed-runtime.json
+          # VS verifies the packaged SWSS consumers; its AMD64 source job runs consumer_test.
+          if [[ "$USE_VS_LIBTEAM" != true ]]; then
+            targets=(
+              @sonic_swss//teamsyncd:teamsyncd
+              @sonic_swss//tlm_teamd:tlm_teamd
+              //src/libteam:libteam_runtime
+              //src/libteam:libteam_runtime.debug_symbols
+              //src/libteam:libteamdctl_runtime
+              //src/libteam:libteamdctl_runtime.debug_symbols
+              //src/libteam:libteam_utils_runtime
+              //src/libteam:libteam_utils_runtime.debug_symbols
+              //src/libteam:libteam_dev
+              //src/libteam:runtime_packages.json
+              @libnl3//:libnl-3-dev_files
+            )
+            run_bazel build --build_event_json_file="$PWD/artifacts/build-events.json" "${targets[@]}" 2>&1 | tee artifacts/build.log
+            run_bazel cquery "set(${targets[*]})" --output=files > artifacts/outputs.txt
+            test -s artifacts/outputs.txt
+            while IFS= read -r output; do
+              test -f "$output"
+              cp --parents "$output" artifacts/
+              sha256sum "$output" >> artifacts/SHA256SUMS
+            done < artifacts/outputs.txt
+            # Selecting the compatibility alias builds the executable but does not
+            # run its test; select the source owner's test rule directly.
+            run_bazel test --nocache_test_results --build_event_json_file="$PWD/artifacts/test-events.json" \
+              @libteam//:consumer_test \
+              2>&1 | tee artifacts/test.log
+            output() { run_bazel cquery "//src/libteam:$1" --output=files; }
+            python3 -B src/libteam/verify_runtime.py \
+              --libteam "$(output libteam_runtime)" \
+              --libteam-symbols "$(output libteam_runtime.debug_symbols)" \
+              --libteamdctl "$(output libteamdctl_runtime)" \
+              --libteamdctl-symbols "$(output libteamdctl_runtime.debug_symbols)" \
+              --libteam-utils "$(output libteam_utils_runtime)" \
+              --libteam-utils-symbols "$(output libteam_utils_runtime.debug_symbols)" \
+              --development "$(output libteam_dev)" \
+              --dependency-development "$(run_bazel cquery @libnl3//:libnl-3-dev_files --output=files)" \
+              --output artifacts/installed-runtime.json
+          fi
           # Resolve the selected owner's probe in this same Bazel execution
           # root; cquery's external/ path is not relative to the Git checkout.
           probe_bazel="$PWD/tools/bazel/ci/libteam_draft_bazel.sh"
@@ -165,6 +169,9 @@ jobs:
             "--platforms=@sonic_build_infra//platforms:${CI_CPU}_${CI_DISTRIBUTION}"
             "--experimental_downloader_config=$RUNNER_TEMP/libteam-source-mirrors.cfg"
           )
+          # The registered rebuild driver checks its Bazel execution root before
+          # its first build. Materialize only its source input on a fresh runner.
+          "$probe_bazel" build "${probe_flags[@]}" @libteam//:bazel/verify_rebuild.py
           # Bazel 8.5.1 Bzlmod uses the standard output_base/execroot/_main.
           # Unlike info execution_root, output_base needs no platform configuration.
           output_base="$("$probe_bazel" info "${probe_flags[@]}" output_base)"
