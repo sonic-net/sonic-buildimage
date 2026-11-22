@@ -509,6 +509,58 @@ class PublicArtifactsTest(unittest.TestCase):
         self.assertNotIn("BAZELISK_GITHUB_TOKEN", encoded)
         self.assertNotIn("file://", encoded)
 
+    def test_public_bep_preserves_metrics_results_and_terminal_marker(self):
+        metrics = {"timingMetrics": {"wallTimeInMs": 9000, "analysisPhaseTimeInMs": 1000},
+                   "actionSummary": {"actionsExecuted": 5, "actionCacheStatistics": {"hits": 3, "misses": 2},
+                                     "runnerCount": [{"name": "remote cache hit", "count": 4},
+                                                     {"name": "total", "count": 5}],
+                                     "actionData": [{"mnemonic": "CppCompile", "actionsExecuted": "5"}]}}
+        source = write(self.root, "private-bep.json", events(1) + json.dumps({
+            "id": {"buildMetrics": {}}, "buildMetrics": dict(metrics, diagnostic=SENTINEL),
+        }) + "\n" + json.dumps({
+            "id": {"buildToolLogs": {}}, "buildToolLogs": {"log": [{"contents": SENTINEL}]},
+            "lastMessage": True,
+        }) + "\n")
+        original = source.read_bytes()
+        destination = self.root / "build.bep.json"
+        artifacts.write_public_bep(source, destination)
+        published = [json.loads(line) for line in destination.read_text().splitlines()]
+        self.assertEqual(published[-2], {"id": {"buildMetrics": {}}, "buildMetrics": metrics})
+        self.assertEqual(published[-1], {"id": {"buildToolLogs": {}}, "buildToolLogs": {}, "lastMessage": True})
+        summary = artifacts.bep_summary(destination.read_text().splitlines())
+        self.assertEqual(summary["targets"], {"//tests:contract_0": True})
+        self.assertEqual(summary["tests"]["//tests:contract_0"]["status"], "PASSED")
+        self.assertEqual(summary["finished"], {"success": True, "exit_code": 0})
+        self.assertEqual(source.read_bytes(), original)
+        for value in (SENTINEL, SYNTHETIC_JOB_TOKEN, "commandLine", "file://", "workingDirectory"):
+            self.assertNotIn(value, destination.read_text())
+        for event in published:
+            artifacts.safe_json(event)
+
+    def test_public_bep_does_not_invent_completion_for_partial_stream(self):
+        source = write(self.root, "partial-bep.json", json.dumps({
+            "id": {"buildMetrics": {}}, "buildMetrics": {"actionSummary": {"actionsExecuted": 2}},
+        }) + "\n")
+        destination = self.root / "partial.bep.json"
+        artifacts.write_public_bep(source, destination)
+        self.assertEqual(json.loads(destination.read_text())["buildMetrics"]["actionSummary"]["actionsExecuted"], 2)
+        self.assertNotIn("lastMessage", destination.read_text())
+
+    def test_invalid_or_sensitive_bep_never_publishes_partial_output(self):
+        for content in ('{"id":', '{"id":{},"id":{}}\n', '[]\n',
+                        '{"id":{"started":{}},"started":"invalid"}\n',
+                        '{"id":{"targetCompleted":null},"completed":{}}\n',
+                        '{"id":{"buildFinished":{}},"finished":{"exitCode":null}}\n',
+                        '{"id":{"buildMetrics":{}},"buildMetrics":{"timingMetrics":{"wallTimeInMs":NaN}}}\n',
+                        json.dumps({"id": {"targetCompleted": {"label": "//:" + SYNTHETIC_JOB_TOKEN}},
+                                    "completed": {"success": True}}) + "\n"):
+            with self.subTest(content=content[:40]), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                source = write(root, "events.json", events(1) + content)
+                with self.assertRaises((ValueError, artifacts.PublicArtifactError)):
+                    artifacts.write_public_bep(source, root / "build.bep.json")
+                self.assertEqual(sorted(path.name for path in root.iterdir()), ["events.json"])
+
     def test_cli_success_never_selects_secret_bearing_raw_inputs(self):
         for kind in ("archive", "source"):
             with self.subTest(kind=kind):

@@ -315,6 +315,101 @@ def bep_summary(lines, partial=False, *, include_action_summary=False):
     return result
 
 
+def _bep_metric(value, field=""):
+    if isinstance(value, dict):
+        return {key: selected for key, child in value.items()
+                if (selected := _bep_metric(child, key)) is not None}
+    if isinstance(value, list):
+        return [selected for child in value if (selected := _bep_metric(child)) is not None]
+    if isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        if re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?s?", value):
+            return value
+        if field == "name" and value in {
+            "total", "remote cache hit", "disk cache hit", "remote", "local",
+            "linux-sandbox", "processwrapper-sandbox", "worker", "internal",
+        }:
+            return value
+        if field == "mnemonic" and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", value):
+            return value
+    return None
+
+
+def public_bep_event(event):
+    """Project BEP into public metrics/results, never commands or output paths."""
+    identifier = event.get("id")
+    require(isinstance(identifier, dict), "invalid-bep-event")
+    if "buildMetrics" in identifier:
+        metrics = event.get("buildMetrics", {})
+        require(isinstance(metrics, dict), "invalid-bep-metrics")
+        selected = {key: _bep_metric(metrics[key]) for key in (
+            "actionSummary", "artifactMetrics", "buildGraphMetrics", "memoryMetrics",
+            "networkMetrics", "packageMetrics", "targetMetrics", "timingMetrics",
+        ) if key in metrics}
+        result = {"id": {"buildMetrics": {}}, "buildMetrics": selected}
+    elif "buildToolLogs" in identifier:
+        result = {"id": {"buildToolLogs": {}}, "buildToolLogs": {}}
+    elif any(key in identifier for key in ("started", "targetCompleted", "testSummary", "buildFinished")):
+        payload = next(payload for key, payload in (
+            ("started", "started"), ("targetCompleted", "completed"),
+            ("testSummary", "testSummary"), ("buildFinished", "finished"),
+        ) if key in identifier)
+        require(isinstance(event.get(payload, {}), dict), "invalid-bep-event")
+        if "targetCompleted" in identifier or "testSummary" in identifier:
+            require(all(isinstance(value, dict) for value in identifier.values()), "invalid-bep-event")
+        if payload == "finished":
+            require(isinstance(event.get(payload, {}).get("exitCode", {}), dict), "invalid-bep-exit-code")
+        summary = bep_summary([json.dumps(event)])
+        if "started" in identifier:
+            result = {"id": {"started": {}}, "started": {
+                "command": summary["command"], "buildToolVersion": summary["bazel_version"],
+            }}
+        elif "targetCompleted" in identifier:
+            name, success = next(iter(summary["targets"].items()))
+            result = {"id": {"targetCompleted": {"label": name}}, "completed": {"success": success}}
+        elif "testSummary" in identifier:
+            name, test = next(iter(summary["tests"].items()))
+            result = {"id": {"testSummary": {"label": name}}, "testSummary": {
+                "overallStatus": test["status"], **{key: value for key, value in test.items() if key != "status"},
+            }}
+        else:
+            result = {"id": {"buildFinished": {}}, "finished": {
+                "overallSuccess": summary["finished"]["success"],
+                "exitCode": {"code": summary["finished"]["exit_code"]},
+            }}
+    else:
+        return None
+    if "lastMessage" in event:
+        require(isinstance(event["lastMessage"], bool), "invalid-bep-last-message")
+        result["lastMessage"] = event["lastMessage"]
+    safe_json(result)
+    return result
+
+
+def write_public_bep(source, destination):
+    """Atomically publish a bounded JSON-lines subset; raw events stay private."""
+    source, destination = Path(source), Path(destination)
+    require(source.is_file() and not source.is_symlink(), "invalid-bep-file")
+    require(source.stat().st_size <= 512 * 1024 * 1024, "oversized-bep")
+    temporary = None
+    try:
+        with source.open("r", encoding="utf-8") as stream, tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=destination.parent, delete=False) as output:
+            temporary = Path(output.name)
+            while line := stream.readline(16 * 1024 * 1024 + 1):
+                require(len(line) <= 16 * 1024 * 1024, "oversized-bep-event")
+                event = load_json(line)
+                require(isinstance(event, dict), "invalid-bep-event")
+                selected = public_bep_event(event)
+                if selected is not None:
+                    output.write(json.dumps(selected, separators=(",", ":"), allow_nan=False) + "\n")
+        temporary.replace(destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def relative_name(value):
     require(isinstance(value, str) and RELATIVE.fullmatch(value), "invalid-relative-name")
     path = PurePosixPath(value)

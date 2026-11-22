@@ -10,6 +10,9 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.bazel.ci import public_artifacts
+
 
 def start_recipe(workspace, owner, bazel, profiles, exports):
     root = workspace / "artifacts/vs/image-timings" / owner
@@ -23,6 +26,37 @@ def start_recipe(workspace, owner, bazel, profiles, exports):
 
 def exit_status(returncode):
     return returncode if returncode >= 0 else 128 - returncode
+
+
+def preserve_bep(source, destination):
+    try:
+        public_artifacts.write_public_bep(source, destination)
+    except (OSError, ValueError, TypeError, AttributeError, RecursionError):
+        print("Public BEP capture unavailable: missing or invalid event stream.", file=sys.stderr)
+
+
+@contextmanager
+def capture_bep(directory, phase, command, *, cwd):
+    if directory is None or phase not in ("build", "test"):
+        yield command
+        return
+    with tempfile.TemporaryDirectory(prefix="sonic-bep-") as temporary:
+        events = None
+        for index, argument in enumerate(command):
+            if argument.startswith("--build_event_json_file="):
+                events = argument.split("=", 1)[1]
+            elif argument == "--build_event_json_file" and index + 1 < len(command):
+                events = command[index + 1]
+        if events:
+            source = Path(cwd or Path.cwd()) / events
+        else:
+            source = Path(temporary) / "events.json"
+            index = command.index("--") if "--" in command else len(command)
+            command = [*command[:index], "--build_event_json_file=" + str(source), *command[index:]]
+        try:
+            yield command
+        finally:
+            preserve_bep(source, directory / f"{phase}.bep.json")
 
 
 @contextmanager
@@ -68,7 +102,7 @@ def run_phase(directory, phase, command, *, cwd=None, env=None):
         if directory.parent.name == "vs-container-images":
             flags.append("--experimental_profile_include_target_label")
         command = [*command[:index], *flags, *command[index:]]
-    with time_phase(directory, phase):
+    with capture_bep(directory, phase, command, cwd=cwd) as command, time_phase(directory, phase):
         return subprocess.run(command, check=True, cwd=cwd, env=env)
 
 

@@ -1254,7 +1254,13 @@ jobs:
             cat "$timings/summary.md" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Preserve VS Bazel profiles, timings and Make logs
+      - name: Summarize sanitized VS BEP events
+        if: always() && steps.native_build.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          python3 -B tools/bazel/ci/summarize_bep.py artifacts/vs/image-timings
+
+      - name: Preserve VS Bazel profiles, sanitized BEP JSON, timings and Make logs
         id: vs_image_timings_upload
         if: always()
         continue-on-error: true

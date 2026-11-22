@@ -44,7 +44,7 @@ DEFAULT_REGISTRY = REGISTRY_PREFIX + "main"
 WATCHED = [
     ".gitmodules", "Makefile", "Makefile.work", "rules/linux-kernel.mk", "rules/linux-kernel.dep",
     "tools/bazel/ci/resolution.py", "tools/bazel/ci/time_vs_image.py",
-    "tools/bazel/ci/resources.py",
+    "tools/bazel/ci/resources.py", "tools/bazel/ci/public_artifacts.py",
     "tools/bazel/ci/kernel_make_smoke.py", "rules/config",
     "tools/bazel/kernel", "build_debian.sh", "slave.mk", "Makefile.cache",
     "tools/bazel/ci/kernel_install_smoke.sh", "scripts/build_sbom.py",
@@ -758,6 +758,7 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
                 source = state / "build" / name
                 if source.is_file() and not source.is_symlink():
                     shutil.copyfile(source, timings / destination)
+            time_vs_image.preserve_bep(state / "build/bep.json", timings / "build.bep.json")
     invocation = json.loads(regular(state / "build/invocation.json").read_text())
     require(invocation.get("schema") == 3 and invocation.get("target") == TARGET
             and invocation.get("execution_strategy") == "linux-sandbox"
