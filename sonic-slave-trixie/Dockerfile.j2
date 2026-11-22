@@ -28,6 +28,8 @@ COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 {%- else %}
 COPY ["sources.list.amd64", "/etc/apt/sources.list"]
+# the target architecture's packages (python3:arm64 etc.) for cross builds
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list.d/{{ CONFIGURED_ARCH }}.list"]
 {%- endif %}
 
 # Install certificates by disabling the peer verification
@@ -67,7 +69,6 @@ COPY ["pip.conf", "/etc/pip.conf"]
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y python3 python3-pip
 RUN eatmydata apt-get install -y python3-minimal:$arch python3.13:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
-RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
 RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
 RUN pip3 install virtualenv
@@ -607,9 +608,11 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
+# The Go toolchain runs on the build host: in cross builds that is amd64
+{%- set go_host_arch = "amd64" if CROSS_BUILD_ENVIRON == "y" else CONFIGURED_ARCH %}
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ go_host_arch }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ go_host_arch }}.deb' \
+ && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ go_host_arch }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata apt-get install -y ./golang-go.deb ./golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
@@ -783,13 +786,13 @@ RUN eatmydata apt-get install -y \
         libnfnetlink-dev:$arch \
         libnftnl-dev:$arch \
         libldap2-dev:$arch \
-        libbind-export-dev:$arch check:$arch \
+        check:$arch \
         libboost-atomic-dev:$arch \
         libboost-test-dev:$arch \
         libglib2.0-dev:$arch \
         libexplain-dev:$arch \
         libc-ares-dev:$arch \
-        libiptc0:$arch \
+        libip4tc2:$arch libip6tc2:$arch \
         libxtables12:$arch \
         libatm1-dev:$arch \
         libbpf-dev:$arch \
