@@ -9,6 +9,10 @@
 .PHONY: bazel-manifests-force
 bazel-manifests-force:
 
+# Start before Make expands generate_manifest, which also evaluates service
+# metadata. End in the shell after validation and any update to the output.
+vs_manifest_timing := $(and $(filter 1:trixie,$(SONIC_VS_IMAGE_TIMINGS):$(BLDENV)),$(filter vs,$(CONFIGURED_PLATFORM)))
+
 # Check on each request: metadata may come from conditionals, command-line
 # settings or optional templates. Compare bytes before replacing a published
 # input, so unchanged manifests do not invalidate downstream Make targets.
@@ -16,6 +20,7 @@ $(addprefix $(TARGET_PATH)/bazel-manifests/,$(addsuffix /manifest.json,$(sort $(
 	$(if $(value generate_manifest),,$(error include rules/functions before tools/bazel/manifests.mk))
 	$(if $(strip $($*_MANIFEST_IMAGE)),,$(error $*_MANIFEST_IMAGE is required))
 	$(if $(strip $($($*_MANIFEST_IMAGE)_PATH)),,$(error $($*_MANIFEST_IMAGE)_PATH is required))
+	$(if $(vs_manifest_timing),$(info [ vs timing ] [ container-manifest ] [ $* ] [ start ]))
 	@mkdir -p "$(@D)"
 	@manifest_stage=$$(mktemp -d "$(@D)/.manifest.XXXXXX")
 	trap 'rm -rf "$$manifest_stage"' EXIT
@@ -24,6 +29,7 @@ $(addprefix $(TARGET_PATH)/bazel-manifests/,$(addsuffix /manifest.json,$(sort $(
 	if ! cmp -s "$$manifest_stage/manifest.json" "$@"; then
 		mv -f "$$manifest_stage/manifest.json" "$@"
 	fi
+	$(if $(vs_manifest_timing),echo '[ vs timing ] [ container-manifest ] [ $* ] [ end ]' || :)
 
 # Owners opt in with SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-example and add
 # target/bazel-manifests/docker-example/image.env to their _BAZEL_DEPENDS.

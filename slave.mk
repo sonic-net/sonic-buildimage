@@ -599,7 +599,17 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS))
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
 endif
+
+# The cache include evaluates the package dependency rules while Make parses
+# them, before any package recipe can emit its own build marker.
+ifeq ($(SONIC_VS_IMAGE_TIMINGS):$(BLDENV):$(MAKECMDGOALS),1:trixie:$(TARGET_PATH)/sonic-vs.bin)
+ifeq ($(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON)),vs:amd64:)
+vs_trixie_cache_marker = $(info [ vs timing ] [ trixie-cache-eval ] [ $(1) ])
+endif
+endif
+$(call vs_trixie_cache_marker,start)
 include Makefile.cache
+$(call vs_trixie_cache_marker,end)
 
 # Track Bazel kernel inputs for downstream Make consumers.
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)

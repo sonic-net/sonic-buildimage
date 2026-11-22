@@ -1,4 +1,4 @@
-"""Run the VS installer's outer Make and builder shell boundaries with a disposable fixture."""
+"""Run the VS installer's Make and builder timing boundaries with disposable fixtures."""
 
 import os
 from pathlib import Path
@@ -8,6 +8,37 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+class VsCacheEvaluationTimingTest(unittest.TestCase):
+    def test_parse_time_markers_only_for_the_native_trixie_installer(self):
+        source = (ROOT / "slave.mk").read_text()
+        include = source[source.index("# Overwrite the buildinfo in slave container"):
+                         source.index("# Track Bazel kernel inputs")]
+        installer = "target/sonic-vs.bin"
+        config = dict(SONIC_VS_IMAGE_TIMINGS="1", BLDENV="trixie", CONFIGURED_ARCH="amd64",
+                      CONFIGURED_PLATFORM="vs", TARGET_PATH="target", SONIC_BUILD_TARGET=installer)
+        start = "[ vs timing ] [ trixie-cache-eval ] [ start ]"
+        end = "[ vs timing ] [ trixie-cache-eval ] [ end ]"
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / "scripts").mkdir()
+            buildinfo = work / "scripts/prepare_slave_container_buildinfo.sh"
+            buildinfo.write_text("#!/bin/sh\nexit 0\n")
+            buildinfo.chmod(0o755)
+            (work / "Makefile.cache").write_text("$(info CACHE $(MAKECMDGOALS))\n")
+            (work / "Makefile").write_text(include + f"\n{installer}:\n\t@$(MAKE) nested\nnested: ; @:\n")
+            for override in ({}, {"SONIC_VS_IMAGE_TIMINGS": ""}, {"BLDENV": "bookworm"},
+                             {"CONFIGURED_ARCH": "arm64"}, {"CONFIGURED_PLATFORM": "mellanox"},
+                             {"CROSS_BUILD_ENVIRON": "y"}, {"MULTIARCH_QEMU_ENVIRON": "y"}):
+                with self.subTest(override=override):
+                    args = [f"{key}={value}" for key, value in (config | override).items()]
+                    result = subprocess.run(["make", "--no-print-directory", installer, *args], cwd=work,
+                                            env={"PATH": os.defpath}, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    evaluation = [f"CACHE {installer}"]
+                    self.assertEqual(result.stdout.splitlines(),
+                                     (evaluation if override else [start, *evaluation, end]) + ["CACHE nested"])
 
 
 class VsBuildTailTimingTest(unittest.TestCase):

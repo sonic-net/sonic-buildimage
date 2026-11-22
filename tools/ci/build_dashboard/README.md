@@ -229,6 +229,15 @@ lacked its internal phase markers. Recent instrumented runs can show those phase
 Overlapping tasks count once when calculating uncovered wall time, and nested
 P4RT and root filesystem subtasks are included in the parent duration.
 
+In **Prepare kernel, packages and P4RT**, the dashboard can recover the Bookworm
+Make invocation and paired Debian package and Python wheel build/cache and
+install operations from existing installer logs. Each package row shows its
+invocation count and the wall time during which at least one was active.
+For [build `a32f3340c63d`](https://github.com/securely1g/sonic-buildimage/actions/runs/44954951829/job/137003009031),
+these operations account for another 51.315 seconds, leaving 2m 42s unattributed.
+New instrumented runs also measure Trixie package cache rule evaluation and
+container manifest generation, including manifests whose contents are unchanged.
+
 Expand **Build and export Bazel container images** to see the batch's compiler,
 cache and lock-wait timings and its per-container table. The first stage shows
 the kernel recipe in a horizontal table when the kernel preparation task
@@ -243,15 +252,17 @@ cannot establish the Bazel cache-hit rate. Repeated target invocations remain
 separate observations. Log timestamps have finer precision than Actions step
 timestamps, so their totals can differ slightly.
 
-The collector reads at most 20 eligible missing job logs per refresh, newest
+The collector reads at most 20 eligible job logs per refresh, newest
 first. Each download has a 32 MiB size limit and a 45-second deadline. It retains
 only known task identifiers, fixed labels, outcomes and numeric timings; raw
 logs, command lines and machine details never enter the published snapshot.
 Completed measurements are cached with their exact run, attempt, job and step
 identity. Expired or unsupported logs are shown as unavailable. Temporary read
-failures can be retried without discarding the ordinary step timings. Older
-unsupported or incomplete results are retried once with the current parser
-revision, within the same log-read budget; successful measurements are retained.
+failures can be retried without discarding the ordinary step timings. Logs
+marked unsupported or incomplete by revision 1 are eligible for a bounded
+retry. Earlier successful host installer measurements with a container batch
+are refreshed for preparation attribution within the same budget. When an old
+log has expired or cannot be parsed, its existing measurements remain available.
 Step boundaries match both the start and end timestamps, so a preceding short
 setup step in the same timestamp second does not make the build ambiguous.
 Older snapshots without breakdowns remain supported and gain details incrementally.

@@ -127,6 +127,83 @@ class VSPipelineTimingTests(unittest.TestCase):
         self.assertEqual(breakdown.parse_log(log, job()["steps"][0]), parsed())
 
 
+class InstallerPreparationTests(unittest.TestCase):
+    batch = ["[ building ] [ target/vs-container-images ]", "[ finished ] [ target/vs-container-images ]"]
+    deb = "target/debs/trixie/private-package_1:2.0-3+b1_amd64.deb"
+    wheel = "target/python-wheels/trixie/private_wheel-1.0-py3-none-any.whl"
+
+    def parse(self, events, image="target/sonic-vs.bin"):
+        lines = ["2026-10-10T00:00:00.200Z ##[group]Run build",
+                 f"2026-10-10T00:00:00.300Z +++ --- Making {image} --- +++"]
+        lines.extend(f"2026-10-10T00:00:{second:02d}Z {event}" for second, event in enumerate(events, 1))
+        lines += [f"2026-10-10T00:02:00Z [ building ] [ {image} ]",
+                  f"2026-10-10T00:08:00Z [ finished ] [ {image} ]",
+                  "2026-10-10T00:10:00.400Z ##[group]Run next step"]
+        value = breakdown.parse_log("\n".join(lines).encode(), job()["steps"][0])
+        self.assertEqual(value["status"], "available")
+        self.assertTrue(breakdown.valid(value))
+        self.assertNotIn("private", json.dumps(value))
+        return {t["id"]: (t["duration_seconds"], t["outcome"]) for t in value["sections"][0]["tasks"]}
+
+    def test_pre_batch_package_targets_are_paired_by_exact_identity(self):
+        device = "target/debs/trixie/sonic-device-data_1.0-1_all.deb"
+        events = [f"[ building ] [ {self.deb} ]", f"[ building ] [ {self.wheel} ]",
+                  f"[ cached ] [ {self.deb} ]", f"[ finished ] [ {self.wheel} ]",
+                  f"[ building ] [ {self.deb}-install ]", f"[ cached ] [ {self.deb}-install ]",
+                  f"[ building ] [ {self.wheel}-install ]", f"[ finished ] [ {self.wheel}-install ]",
+                  f"[ building ] [ {device} ]", f"[ cached ] [ {device} ]",
+                  # Duplicate starts and completions across the batch cannot supply a measured interval.
+                  f"[ building ] [ {self.deb} ]", f"[ building ] [ {self.deb} ]", f"[ finished ] [ {self.deb} ]",
+                  f"[ building ] [ {self.wheel} ]", *self.batch, f"[ finished ] [ {self.wheel} ]",
+                  f"[ building ] [ {self.deb} ]", f"[ finished ] [ {self.deb} ]"]
+        tasks = self.parse(events)
+        self.assertEqual({key: val for key, val in tasks.items() if key.startswith(("prep-", "device-data-"))}, {
+            "prep-deb-1": (2, "cached"), "prep-wheel-1": (2, "finished"),
+            "prep-deb-install-1": (1, "cached"), "prep-wheel-install-1": (1, "finished"),
+            "device-data-1": (1, "cached"),
+        })
+        for tasks in (self.parse(events, image="target/sonic-vs.img.gz"),
+                      self.parse([e for e in events if e not in self.batch])):
+            self.assertFalse(any(key.startswith("prep-") for key in tasks))
+
+    def test_bookworm_requires_exact_invocation_level_and_matching_directory(self):
+        enter = "make[1]: Entering directory '/private/runner'"
+        leave = "make[1]: Leaving directory '/private/runner'"
+        command = breakdown.BOOKWORM_COMMAND
+        events = [enter, leave, command.replace("bookworm", "trixie"), enter, leave,
+                  command, enter, leave.replace("runner", "nested"), leave,
+                  command, enter, enter.replace("[1]", "[2]"), leave.replace("[1]", "[2]"), leave,
+                  command, "unrelated line", enter, leave,
+                  *self.batch, command, enter, leave]
+        tasks = self.parse(events)
+        self.assertEqual({k: v for k, v in tasks.items() if k.startswith("bookworm-")}, {
+            "bookworm-make-1": (3, "finished"),
+        })
+
+    def test_explicit_cache_and_parallel_manifest_timers_require_matching_boundaries(self):
+        cache = "[ vs timing ] [ trixie-cache-eval ]"
+        manifest = "[ vs timing ] [ container-manifest ]"
+        a = f"{manifest} [ docker-private-a ]"
+        b = f"{manifest} [ telemetry ]"
+        bad = f"{manifest} [ /private/path ]"
+        events = [f"{cache} [ end ]", f"{cache} [ start ]", f"{cache} [ end ]",
+                  f"{a} [ start ]", f"{b} [ start ]", f"{a} [ end ]", f"{b} [ end ]",
+                  f"{cache} [ start ]", f"{cache} [ start ]", f"{cache} [ end ]",
+                  f"{a} [ start ]", f"{b} [ end ]", f"{bad} [ start ]", f"{bad} [ end ]",
+                  f"{manifest} [ start ]", f"{manifest} [ end ]"]
+        for suffix in (self.batch, []):
+            tasks = self.parse(events + suffix)
+            self.assertEqual({k: v for k, v in tasks.items() if k.startswith(("trixie-cache-", "container-manifest-"))},
+                             {"trixie-cache-eval-1": (1, "finished"), "container-manifest-1": (2, "finished"),
+                              "container-manifest-2": (2, "finished")})
+
+    def test_optional_intervals_cannot_displace_existing_recipe_measurements(self):
+        package = [f"[ building ] [ {self.deb} ]", f"[ cached ] [ {self.deb} ]"]
+        with mock.patch.object(breakdown, "MAX_TASKS", 3):
+            tasks = self.parse(package * 4 + self.batch)
+        self.assertEqual(set(tasks), {"prep-deb-1", "vs-container-images-1", "final-image-1"})
+
+
 class ImagePhaseTests(unittest.TestCase):
     def parse(self, log):
         value = breakdown.parse_log(log, job()["steps"][0])
@@ -520,6 +597,50 @@ class ParserTests(unittest.TestCase):
 
 
 class EnrichmentTests(unittest.TestCase):
+    def test_retained_host_preparation_refreshes_within_budget_and_preserves_existing_measurements(self):
+        native = job()
+        native["name"] = "VS installer in SONiC slave (AMD64)"
+        native["steps"][0]["name"] = collector.HOST_VS_BUILD
+        log = synthetic_log().replace(b"sonic-vs.img.gz", b"sonic-vs.bin")
+        log = log.replace(b"target/docker-base-trixie.gz", b"target/vs-container-images")
+        batch = b"2026-10-10T00:00:10Z [ building ] [ target/vs-container-images ]"
+        log = log.replace(batch, b"2026-10-10T00:00:02Z [ building ] [ target/debs/trixie/pkg_1_amd64.deb ]\n"
+                                 b"2026-10-10T00:00:04Z [ cached ] [ target/debs/trixie/pkg_1_amd64.deb ]\n" + batch)
+        api = FakeAPI()
+        api.jobs[f"repos/{REPO}/actions/runs/10/attempts/1/jobs"] = [native]
+        api.logs[99] = log
+        history = collector.collect(api, REPO, empty())
+        saved = history["runs"][0]["jobs"][0]["steps"][0]["breakdown"]
+        self.assertEqual(saved["status"], "available")
+        saved["parser_revision"] = 2
+        saved["sections"][0]["tasks"] = [t for t in saved["sections"][0]["tasks"] if t["id"] != "prep-deb-1"]
+        refresh = FakeAPI(latest=[])
+        deferred = collector.collect(refresh, REPO, history, log_jobs=0)
+        self.assertEqual(deferred["runs"], history["runs"])
+        self.assertEqual(refresh.log_calls, [])
+        refresh.logs[99] = collector.LogReadError("logs-temporarily-unavailable")
+        transient = collector.collect(refresh, REPO, deferred)
+        self.assertEqual(transient["runs"], history["runs"])
+        refresh.logs[99] = log
+        updated = collector.collect(refresh, REPO, transient)
+        measured = updated["runs"][0]["jobs"][0]["steps"][0]["breakdown"]
+        self.assertEqual(measured["parser_revision"], breakdown.PARSER_REVISION)
+        self.assertEqual(measured["duration_seconds"], saved["duration_seconds"])
+        self.assertTrue(any(t["id"] == "prep-deb-1" for t in measured["sections"][0]["tasks"]))
+        self.assertEqual(collector.collect(refresh, REPO, updated)["runs"], updated["runs"])
+        self.assertEqual(refresh.log_calls, [(REPO, 99), (REPO, 99)])
+
+        for log_error in (collector.LogReadError("logs-expired"), b"incomplete historical log"):
+            with self.subTest(log_error=log_error):
+                expired = FakeAPI(latest=[])
+                expired.logs[99] = log_error
+                result = collector.collect(expired, REPO, history)
+                retained = result["runs"][0]["jobs"][0]["steps"][0]["breakdown"]
+                self.assertEqual(retained, dict(saved, refresh_attempt_revision=breakdown.PARSER_REVISION))
+                self.assertTrue(breakdown.valid(retained))
+                self.assertEqual(collector.collect(expired, REPO, result)["runs"], result["runs"])
+                self.assertEqual(expired.log_calls, [(REPO, 99)])
+
     def test_old_parser_failures_retry_once_and_preserve_step_measurements(self):
         for reason in ("unsupported-log-format", "incomplete-log"):
             for log in (synthetic_log(), b""):
@@ -549,6 +670,10 @@ class EnrichmentTests(unittest.TestCase):
         result = collector.collect(refresh, REPO, old)
         self.assertEqual(result["runs"], old["runs"])
         self.assertEqual(refresh.log_calls, [])
+
+    def test_optional_preparation_tasks_do_not_retry_already_unsupported_logs(self):
+        for reason in ("unsupported-log-format", "incomplete-log"):
+            self.assertFalse(breakdown.retry_needed(dict(breakdown.unavailable(reason), parser_revision=2)))
 
     def test_old_parser_retry_obeys_log_read_budget(self):
         old = collector.collect(FakeAPI(latest=[run(run_id=i) for i in range(1, 26)]),

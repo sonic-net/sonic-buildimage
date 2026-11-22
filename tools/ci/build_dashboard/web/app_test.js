@@ -1542,6 +1542,27 @@ test("native preparation substeps, ONIE Docker phases and unmarked cleanup time 
   assert.ok(overlappingTail.textContent.includes(`Unattributed wall time: ${duration(gap + 1)}`));
 }));
 
+test("preparation groups show active wall time for each category, including parallel and subsecond work", () => withDocument(() => {
+  const step = nativeInstallerStep(), tasks = step.breakdown.sections[0].tasks;
+  const batchStart = tasks[0].offset_seconds;
+  for (const [id, offset_seconds, duration_seconds] of [
+    ["bookworm-make-1", 0, 4], ["trixie-cache-eval-1", 5, 4],
+    ["prep-deb-1", 12, 4], ["prep-deb-2", 14, 5], ["prep-deb-3", 24, 1],
+    ["prep-deb-install-1", 18, 2], ["prep-wheel-1", 27, 0.31], ["prep-wheel-install-1", 30, 3],
+    ["container-manifest-1", batchStart - 6, 9], ["container-manifest-2", batchStart - 3, 2],
+  ]) tasks.push({id, offset_seconds, duration_seconds, outcome: "finished"});
+  const [prep, batch] = installerStages(renderStep(step));
+  const rows = descendants(prep, node => node.className === "interval-task").map(row => row.textContent);
+  assert.deepEqual(rows, [
+    "Bookworm Make invocation4s", "Evaluate Trixie package cache4s",
+    "Build or reuse Debian packages8s3 measured invocations", "Install Debian packages2s1 measured invocation",
+    "Build or reuse Python wheels0.31s1 measured invocation", "Install Python wheels3s1 measured invocation",
+    "Generate container manifests6s2 measured invocations",
+  ]);
+  assert.ok(prep.textContent.includes(`Unattributed wall time: ${duration(batchStart - 26.31)}`));
+  assert.match(batch.textContent, /Generate container manifests3s1 measured invocation/);
+}));
+
 test("a task crossing the start of the container batch contributes only its portion to each stage", () => withDocument(() => {
   const step = nativeInstallerStep(), tasks = step.breakdown.sections[0].tasks;
   const start = tasks.find(task => task.id === "vs-container-images-1").offset_seconds;

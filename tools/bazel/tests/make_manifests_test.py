@@ -106,6 +106,31 @@ docker-routing.gz_SERVICE_BEFORE = telemetry
         for name, before in snapshot.items():
             self.assertEqual((self.path(name).read_bytes(), self.path(name).stat().st_mtime_ns), before)
 
+    def test_timed_vs_manifests_pair_by_owner_across_parallel_recipes(self):
+        profile = ["SONIC_VS_IMAGE_TIMINGS=1", "BLDENV=trixie", "CONFIGURED_PLATFORM=vs"]
+        result = self.run_make(*profile)
+        self.assert_success(result)
+        markers = [line for line in result.stdout.splitlines() if line.startswith("[ vs timing ]")]
+        owners = ("telemetry", "telemetry-dbg", "routing", "routing-dbg")
+        self.assertEqual(len(markers), 2 * len(owners))
+        for owner in owners:
+            prefix = f"[ vs timing ] [ container-manifest ] [ {owner} ]"
+            self.assertEqual([line for line in markers if line.startswith(prefix)],
+                             [prefix + " [ start ]", prefix + " [ end ]"])
+
+        target = "target/bazel-manifests/telemetry/manifest.json"
+        for override in ("SONIC_VS_IMAGE_TIMINGS=0", "BLDENV=bookworm", "CONFIGURED_PLATFORM=broadcom"):
+            with self.subTest(override=override):
+                result = self.run_make(*profile, override, target)
+                self.assert_success(result)
+                self.assertNotIn("[ vs timing ]", result.stdout)
+
+        self.fragment.write_text('{"package":')
+        failed = self.run_make(*profile, target)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn("[ vs timing ] [ container-manifest ] [ telemetry ] [ start ]", failed.stdout)
+        self.assertNotIn("[ end ]", failed.stdout)
+
     def test_condition_and_service_template_changes_refresh_inputs(self):
         """Refresh JSON after Make options, service files or optional overrides change."""
         self.assert_success(self.run_make())

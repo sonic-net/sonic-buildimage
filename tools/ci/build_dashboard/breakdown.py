@@ -7,12 +7,13 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timedelta
+from itertools import islice
 import json
 import math
 import re
 
 VERSION = 1
-PARSER_REVISION = 2
+PARSER_REVISION = 3
 SOURCE = "github-job-log"
 MAX_LOG_BYTES = 32 * 1024 * 1024
 MAX_SECTIONS = 32
@@ -130,6 +131,13 @@ VS_TIMING_LABELS = {
 }
 TASK_LABELS.update(VS_TIMING_LABELS)
 TASK_LABELS.update({
+    "bookworm-make": "Bookworm Make invocation",
+    "prep-deb": "Debian package build or cache lookup",
+    "prep-deb-install": "Debian package install",
+    "prep-wheel": "Python wheel build or cache lookup",
+    "prep-wheel-install": "Python wheel install",
+    "trixie-cache-eval": "Evaluate Trixie package cache",
+    "container-manifest": "Generate container manifest",
     "device-data": "SONiC device data package",
     "config-engine-load": "Load the config-engine base image",
     "swss-layer-load": "Load the SWSS base image",
@@ -144,6 +152,11 @@ STAMP = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z) (.*)$")
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 OUTER = re.compile(r"\+\+\+ --- Making (\S{1,256}) --- \+\+\+\s*\Z")
 TARGET = re.compile(r"\[ (building|finished|cached) \] \[ (\S{1,256}) \]\s*\Z")
+BOOKWORM_COMMAND = "./scripts/run_with_retry make EXTRA_DOCKER_TARGETS=sonic-vs.bin BLDENV=bookworm -f Makefile.work bookworm"
+MAKE_DIRECTORY = re.compile(r"make\[1\]: (Entering|Leaving) directory '(/[^'\n]+)'\Z")
+PREP_DEB = re.compile(r"target/debs/trixie/[a-z0-9][a-z0-9+.-]*_[A-Za-z0-9.+~:-]+_[a-z0-9-]+\.deb(-install)?\Z")
+PREP_WHEEL = re.compile(r"target/python-wheels/trixie/[A-Za-z0-9][A-Za-z0-9_.+-]*\.whl(-install)?\Z")
+MANIFEST_TIMING = re.compile(r"\[ vs timing \] \[ container-manifest \] \[ ([a-z0-9][a-z0-9_.-]{0,95}) \] \[ (start|end) \]\Z")
 IMAGE_PHASE_MARKER = re.compile(r"\[ image phases \] \[ (\S{1,256}) \] (.*)\Z")
 IMAGE_PAIR_MARKER = re.compile(r"\[ bazel image pair \] \[ (\S{1,256}) \] \[ (\S{1,256}) \]\Z")
 IMAGE_PAIR_KINDS = {"target/docker-orchagent.gz": "orchagent-pair", "target/docker-syncd-vs.gz": "syncd-pair"}
@@ -577,9 +590,11 @@ def unavailable(reason):
 
 
 def retry_needed(value):
+    # Revision 2 added support for previously unrecognized step boundaries.
+    # Revision 3 adds optional tasks inside an already recognized installer.
     return (value is None or value.get("reason") in RETRY_REASONS
             or (value.get("reason") in {"unsupported-log-format", "incomplete-log"}
-                and value.get("parser_revision", 1) < PARSER_REVISION))
+                and value.get("parser_revision", 1) < 2))
 
 
 def moment(value):
@@ -599,6 +614,73 @@ def log_rows(log):
             when = moment(match[1])
             if when is not None:
                 yield when, match[2]
+
+
+def installer_preparation_tasks(rows, section_start, tasks, budget):
+    """Pair optional installer work while preserving space for all existing task measurements."""
+    in_preparation = any(task["id"] == "vs-container-images-1" for task in tasks)
+    result, active, counts = [], {}, Counter()
+    previous_line = bookworm_directory = None
+    for when, text in rows:
+        if len(result) >= budget:
+            break
+        manifest = MANIFEST_TIMING.fullmatch(text)
+        timer = VS_TIMING.fullmatch(text)
+        directory = MAKE_DIRECTORY.fullmatch(text) if in_preparation else None
+        preceded_by_bookworm = previous_line == BOOKWORM_COMMAND
+        previous_line = text
+        if manifest:
+            kind, event = "container-manifest", manifest[2]
+            key = (kind, manifest[1])
+        elif timer and timer[1] == "trixie-cache-eval":
+            kind, key, event = timer[1], timer[1], timer[2]
+        elif directory:
+            kind = key = "bookworm-make"
+            if directory[1] == "Entering":
+                # Only the top-level submake immediately after this specific
+                # recipe identifies Bookworm. An unrelated entry invalidates it.
+                active.pop(key, None)
+                bookworm_directory = directory[2] if preceded_by_bookworm else None
+                if bookworm_directory is None:
+                    continue
+                event = "start"
+            else:
+                matches = directory[2] == bookworm_directory
+                bookworm_directory = None
+                if not matches:
+                    active.pop(key, None)
+                    continue
+                event = "end"
+        elif in_preparation and (target := TARGET.fullmatch(text)):
+            event, key = target.groups()
+            if event == "building" and key == "target/vs-container-images":
+                in_preparation = False
+                continue
+            if target_kind(key) is not None:
+                continue
+            if deb := PREP_DEB.fullmatch(key):
+                kind = "prep-deb-install" if deb[1] else "prep-deb"
+            elif wheel := PREP_WHEEL.fullmatch(key):
+                kind = "prep-wheel-install" if wheel[1] else "prep-wheel"
+            else:
+                continue
+        else:
+            continue
+
+        if event in ("start", "building"):
+            if len(active) >= MAX_TASKS and key not in active:
+                break
+            active[key] = when if key not in active else None
+            continue
+        began = active.pop(key, None)
+        if began is None:
+            continue
+        counts[kind] += 1
+        result.append({"id": f"{kind}-{counts[kind]}", "label": TASK_LABELS[kind],
+                       "offset_seconds": (began - section_start).total_seconds(),
+                       "duration_seconds": (when - began).total_seconds(),
+                       "outcome": "finished" if event == "end" else event})
+    return result
 
 
 def parse_log(log, step):
@@ -641,7 +723,9 @@ are observed recipe/cache intervals and are deliberately not summed.
     task_count = 0
     active_phases = {}
     timed_starts = {}
-    for when, text in rows[first:last]:
+    installer_first, installer_last = None, last
+    for index in range(first, last):
+        when, text = rows[index]
         # Phase marker failures affect only the optional inner measurement. A
         # marker is associated with the exact currently building image target;
         # stale markers outside that interval cannot be reused by later work.
@@ -676,6 +760,10 @@ are observed recipe/cache intervals and are deliberately not summed.
             continue
         outer = OUTER.fullmatch(text)
         if outer:
+            if not sections and outer[1] == "target/sonic-vs.bin":
+                installer_first = index + 1
+            elif len(sections) == 1:
+                installer_last = index
             timed_starts.clear()
             kind = OUTER_TARGETS.get(outer[1]) or target_kind(outer[1])
             kind = "vs-image" if kind == "final-image" else kind
@@ -749,6 +837,10 @@ are observed recipe/cache intervals and are deliberately not summed.
     if not any(task["id"].startswith("final-image-") for section in sections for task in section["tasks"]):
         return unavailable("incomplete-log")
     current["duration_seconds"] = round((log_end - current.pop("start")).total_seconds(), 6)
+    if installer_first is not None:
+        tasks = sections[0]["tasks"]
+        tasks.extend(installer_preparation_tasks(islice(rows, installer_first, installer_last),
+                                                log_start, tasks, MAX_TASKS - task_count))
     for section in sections:
         section["tasks"].sort(key=lambda task: (task["offset_seconds"], task["id"]))
     result = {"version": VERSION, "parser_revision": PARSER_REVISION,
@@ -772,12 +864,17 @@ def known_identity(value, labels):
 def valid(value):
     """Strict retained-data allowlist, including safe static labels and bounds."""
     if (not isinstance(value, dict)
-            or set(value) - {"parser_revision"} != {"version", "status", "reason", "source", "duration_seconds", "sections"}
+            or set(value) - {"parser_revision", "refresh_attempt_revision"} != {"version", "status", "reason", "source", "duration_seconds", "sections"}
             or type(value["version"]) is not int or value["version"] != VERSION or value["source"] != SOURCE
             or type(value.get("parser_revision", 1)) is not int
             or not 1 <= value.get("parser_revision", 1) <= PARSER_REVISION
             or not isinstance(value["sections"], list)):
         return False
+    if "refresh_attempt_revision" in value:
+        attempted = value["refresh_attempt_revision"]
+        if (value["status"] != "available" or type(attempted) is not int
+                or not value.get("parser_revision", 1) < attempted <= PARSER_REVISION):
+            return False
     if value["status"] == "unavailable":
         return (isinstance(value["reason"], str) and value["reason"] in REASONS
                 and value["duration_seconds"] is None and value["sections"] == [])

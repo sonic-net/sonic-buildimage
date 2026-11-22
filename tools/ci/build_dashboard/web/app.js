@@ -51,6 +51,13 @@ const TASK_LABELS = {
   "config-engine-load": "Load the config-engine base image",
   "swss-layer-load": "Load the SWSS base image",
   "kernel-prep": "Kernel package preparation",
+  "bookworm-make": "Bookworm Make invocation",
+  "prep-deb": "Build or reuse Debian packages",
+  "prep-deb-install": "Install Debian packages",
+  "prep-wheel": "Build or reuse Python wheels",
+  "prep-wheel-install": "Install Python wheels",
+  "trixie-cache-eval": "Evaluate Trixie package cache",
+  "container-manifest": "Generate container manifests",
   "p4rt-prep": "P4RT source and SDK preparation",
   "p4rt-audit": "P4RT dependency graph audit",
   "p4rt-sdk": "P4RT SDK inputs",
@@ -767,6 +774,17 @@ function renderPhaseBreakdown(phases) {
   return body;
 }
 const P4RT_SUBTASKS = new Set(["p4rt-audit", "p4rt-sdk", "p4rt-owner", "p4rt-handoff"]);
+const GROUPED_PREPARATION_TASKS = new Set(["prep-deb", "prep-deb-install", "prep-wheel", "prep-wheel-install", "container-manifest"]);
+
+// The caller clips spans to the stage and orders them by start time.
+function coveredSeconds(spans) {
+  let covered = 0, previousEnd = 0;
+  for (const {from, to} of spans) {
+    covered += Math.max(0, to - Math.max(from, previousEnd));
+    previousEnd = Math.max(previousEnd, to);
+  }
+  return covered;
+}
 
 function intervalTaskRow({task, from, to}) {
   const row = el("div", "interval-task");
@@ -784,8 +802,14 @@ function intervalTaskList(spans, start, end, reportUncovered) {
   const list = el("ul", "interval-measurements");
   const parents = spans.filter(({task}) => task.kind === "p4rt-prep" || task.kind === "rootfs");
   const children = new Map();
+  const groups = new Map();
   for (const span of spans) {
     const kind = span.task.kind;
+    if (GROUPED_PREPARATION_TASKS.has(kind)) {
+      if (!groups.has(kind)) groups.set(kind, []);
+      groups.get(kind).push(span);
+      continue;
+    }
     const parentKind = P4RT_SUBTASKS.has(kind) ? "p4rt-prep" : kind.startsWith("rootfs-") ? "rootfs" : null;
     const parent = parents.find(p => p.task.kind === parentKind &&
       p.task.offset_seconds <= span.task.offset_seconds &&
@@ -795,6 +819,17 @@ function intervalTaskList(spans, start, end, reportUncovered) {
   for (const span of spans) {
     if (children.has(span)) continue;
     const item = el("li");
+    const group = groups.get(span.task.kind);
+    if (group) {
+      if (span !== group[0]) continue;
+      const row = el("div", "interval-task");
+      row.append(el("span", "", TASK_LABELS[span.task.kind]),
+        el("span", "timing-duration", readable(coveredSeconds(group))),
+        el("small", "timing-hint", `${group.length} measured ${group.length === 1 ? "invocation" : "invocations"}`));
+      item.append(row);
+      list.append(item);
+      continue;
+    }
     item.append(intervalTaskRow(span));
     const nested = [...children].filter(([, parent]) => parent === span);
     if (nested.length) {
@@ -811,13 +846,7 @@ function intervalTaskList(spans, start, end, reportUncovered) {
   else body.append(el("p", "unmeasured-note", "No task timings recorded for this interval."));
 
   if (!reportUncovered) return body;
-  // Spans are clipped to the interval and sorted by start. Count covered wall time once.
-  let cursor = start, uncovered = 0;
-  for (const {from, to} of spans) {
-    uncovered += Math.max(0, from - cursor);
-    cursor = Math.max(cursor, to);
-  }
-  uncovered += Math.max(0, end - cursor);
+  const uncovered = Math.max(0, end - start - coveredSeconds(spans));
   body.append(el("p", "breakdown-note", `Unattributed wall time: ${duration(uncovered)}. Overlapping task spans count once.`));
   return body;
 }

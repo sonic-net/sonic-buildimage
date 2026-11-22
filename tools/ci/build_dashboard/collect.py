@@ -575,8 +575,25 @@ def retain_breakdowns(jobs, old_jobs):
                 job["image_recipe_timings"] = copy.deepcopy(value)
 
 
+def needs_preparation_refresh(step):
+    value = step.get("breakdown")
+    return (step["name"] == HOST_VS_BUILD and value and value["status"] == "available"
+            and value.get("refresh_attempt_revision", value.get("parser_revision", 1)) < 3
+            and any(task["id"] == "vs-container-images-1" for section in value["sections"]
+                    if section["id"] == "vs-image-1" for task in section["tasks"]))
+
+
+def store_step_breakdown(step, parsed):
+    previous = step.get("breakdown")
+    if previous and previous["status"] == "available" and parsed["status"] == "unavailable":
+        if parsed["reason"] not in breakdown.RETRY_REASONS:
+            previous["refresh_attempt_revision"] = breakdown.PARSER_REVISION
+    else:
+        step["breakdown"] = parsed
+
+
 def enrich_breakdowns(api, repo, runs, limit):
-    """Enrich at most limit newest missing jobs, including cached run attempts."""
+    """Enrich at most limit jobs, newest first, including retained VS preparation timings."""
     fetched = 0
     for run in sorted(runs, key=lambda item: (item["run_id"], item["attempt"]), reverse=True):
         for job in run["jobs"]:
@@ -593,6 +610,8 @@ def enrich_breakdowns(api, repo, runs, limit):
                     step["breakdown"] = breakdown.unavailable("step-not-successful")
                 elif breakdown.retry_needed(step.get("breakdown")):
                     step["breakdown"] = breakdown.unavailable("pending-collection")
+                    pending.append(step)
+                elif needs_preparation_refresh(step):
                     pending.append(step)
             steps = recipe_steps(job) if run["workflow_path"] == ".github/workflows/bazel-oci.yml" else None
             summary = steps[1] if steps else None
@@ -619,14 +638,14 @@ def enrich_breakdowns(api, repo, runs, limit):
                 log = api.job_log(repo, job["job_id"])
             except LogReadError as error:
                 for step in pending:
-                    step["breakdown"] = breakdown.unavailable(error.reason)
+                    store_step_breakdown(step, breakdown.unavailable(error.reason))
                 if need_recipes:
                     job["image_recipe_timings"] = breakdown.recipe_unavailable(error.reason, version)
                 elif need_members:
                     recipes["container_breakdown"] = breakdown.container_unavailable(error.reason)
                 continue
             for step in pending:
-                step["breakdown"] = breakdown.parse_log(log, step)
+                store_step_breakdown(step, breakdown.parse_log(log, step))
             if need_recipes:
                 job["image_recipe_timings"] = breakdown.parse_recipe_log(log, summary)
             elif need_members:
