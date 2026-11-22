@@ -58,6 +58,39 @@ def test_write(tmp_path, monkeypatch):
     assert res, "Expect True return value"
     assert list(tmp_path.iterdir()) == []
 
+@pytest.mark.parametrize(
+    "ret_code, expected_result, remove_called",
+    [
+        (0, True, True),
+        (1, False, False),
+    ]
+)
+@patch('bgpcfgd.frr.log_err')
+def test_write_cleanup_error(
+    mocked_log_err, ret_code, expected_result, remove_called, tmp_path, monkeypatch
+):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda prefix, dir: original_mkstemp(prefix=prefix, dir=str(tmp_path))
+    )
+    bgpcfgd.frr.run_command = lambda cmd: (ret_code, "some output", "some error")
+
+    f = bgpcfgd.frr.FRR(["abc", "cde"])
+    with patch('bgpcfgd.frr.os.remove', side_effect=OSError("remove error")) as mocked_remove:
+        res = f.write("config context")
+
+    assert res is expected_result
+    assert mocked_remove.called is remove_called
+    mocked_log_err.assert_called_once()
+    if remove_called:
+        assert "can't remove temporary file=" in mocked_log_err.call_args.args[0]
+        assert "remove error" in mocked_log_err.call_args.args[0]
+    else:
+        assert len(list(tmp_path.iterdir())) == 1
+        assert "can't push configuration from file=" in mocked_log_err.call_args.args[0]
+
 def test_write_fail(tmp_path, monkeypatch):
     original_mkstemp = tempfile.mkstemp
     monkeypatch.setattr(
