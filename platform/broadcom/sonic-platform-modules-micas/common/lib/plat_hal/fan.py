@@ -59,9 +59,7 @@ class fan(devicebase):
             self.AirFlowconifg = conf.get("airflow", None)
             self.WatchdogStatus_config = conf.get('WatchdogStatus', None)
             self.EnableWatchdogConf = conf.get('EnableWatchdogConf', None)
-            self.led_attrs_config = conf.get('led_attrs', None)
             self.led_config = conf.get('led', None)
-            self.led_map = conf.get('led_map', None)
             self.Rotor_config = conf.get('Rotor', None)
             self.fan_display_name_conifg = conf.get("fan_display_name", None)
             rotor_tmp = []
@@ -70,6 +68,44 @@ class fan(devicebase):
             rotor_tmp.sort(key=lambda x: x.name, reverse=False)
             self.rotor_list = rotor_tmp
             self.rotors = len(self.rotor_list)
+            led_attrs = conf.get('led_attrs')
+            led_map = conf.get('led_map')
+            self.led_color_scheme = conf.get('led_color_scheme', None)
+            if self.led_color_scheme is not None:
+                ret, led_color_scheme_ori = self.get_value(self.led_color_scheme)
+                if ret:
+                    led_color_scheme = self.led_color_scheme.get('ledcolorschemedecode').get(led_color_scheme_ori, "default_scheme")
+                else:
+                    led_color_scheme = "default_scheme"
+                self.led_attrs_config = self._get_led_config(led_attrs, led_color_scheme)
+                self.led_map = self._get_led_config(led_map, led_color_scheme)
+            else:
+                self.led_attrs_config = led_attrs
+                self.led_map = led_map
+
+    def _get_led_config(self, config, color_scheme):
+        """
+        Select LED configuration according to color scheme.
+
+        Supports:
+        1. Single configuration:
+            {"off": 0x00, "green": 0x02}
+
+        2. Multiple configurations:
+            NOTE: default configuration is MUST for this type.
+            {
+                scheme1: {...},
+                scheme2: {...},
+                ...,
+                "default_scheme": {...}
+            }
+        """
+        if "default_scheme" in config:
+            if color_scheme in config:
+                return config[color_scheme]
+            return config["default_scheme"]
+
+        return config
 
     @property
     def EnableWatchdogConf(self):

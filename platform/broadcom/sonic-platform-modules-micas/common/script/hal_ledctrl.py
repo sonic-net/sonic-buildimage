@@ -19,6 +19,7 @@ import time
 import syslog
 import traceback
 import re
+import subprocess
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
 from platform_util import get_value
@@ -357,6 +358,7 @@ class ledcontrol(object):
         self.__fan_mix_list = self.__ledcontrol_para.get("fan_mix_list", [])
         self.__sysled_check_temp = self.__ledcontrol_para.get("sysled_check_temp", 1)
         self.__sysled_check_fw_up = self.__ledcontrol_para.get("sysled_check_fw_up", 0)
+        self.__sysled_check_system_health = self.__ledcontrol_para.get("sysled_check_system_health", 0)
         self.__smbled_ctrl = self.__ledcontrol_para.get("smbled_ctrl", 0)
 
     @property
@@ -454,6 +456,10 @@ class ledcontrol(object):
     @property
     def sysled_check_fw_up(self):
         return self.__sysled_check_fw_up
+
+    @property
+    def sysled_check_system_health(self):
+        return self.__sysled_check_system_health    
 
     @property
     def smbled_ctrl(self):
@@ -746,6 +752,43 @@ class ledcontrol(object):
                 return COLOR_FLASH
         ledcontrol_debug("Firmware upgrade check: firmware upgrade not in progress")
         return COLOR_GREEN
+    
+    def get_sys_led_follow_system_health(self):
+        """
+        Determine SYS LED color based on SONiC system-health summary status.
+
+        Rules:
+        - All statuses are OK                -> COLOR_GREEN
+        - Any status is not OK (hardware/services, etc.) -> COLOR_AMBER
+        - Query failure / timeout (cannot retrieve health status) -> False (fail-safe)
+
+        Sample output of show system-health summary:
+        System status summary
+            System status LED  amber
+            Services:
+            Status: OK
+            Hardware:
+            Status: Not OK
+            Reasons: PSU2 is out of power
+        """
+        try:
+            proc = subprocess.run(
+                ["show", "system-health", "summary"],
+                capture_output=True, text=True, timeout=10,
+            )
+            output = (proc.stdout or "") + (proc.stderr or "")
+        except Exception:
+            return False
+
+        statuses = re.findall(r"Status\s*:\s*(\S+)", output, flags=re.IGNORECASE)
+        if not statuses:
+            return False
+        
+        for s in statuses:
+            if s.strip().lower() != "ok":
+                return COLOR_AMBER
+
+        return COLOR_GREEN
 
     def check_board_air_flow(self):
         board_air_flow = self.board_air_flow
@@ -982,6 +1025,17 @@ class ledcontrol(object):
             sys_led_status_list.append(sys_led_status)
         else:
             ledcontrol_debug("sys led don't need to check firmware upgrade")
+
+        # check sys led follow system-health
+        if self.sysled_check_system_health == 1:
+            ledcontrol_debug("sys led check system health")
+            sys_led_status = self.get_sys_led_follow_system_health()
+            if sys_led_status: 
+                sys_led_status_list.append(sys_led_status)
+                ledcontrol_debug("monitor system health to get sys led status: %s" %
+                    LED_STATUS_DICT.get(sys_led_status))
+        else:
+            ledcontrol_debug("sys led don't need to check system health")
 
         sys_led_status = max(sys_led_status_list)
         sys_led_color = LED_STATUS_DICT.get(sys_led_status)
