@@ -555,8 +555,16 @@ jobs:
 
       - name: Test SONiC component packages and their upstream suites
         if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
         run: |
           mkdir -p artifacts/owners
+          scapy_tests=(@scapy//:upstream_test @scapy//:wheel_test)
+          if [[ -n "$VS_PACKAGE" ]]; then
+            python3 -B -m tools.bazel.ci.scapy_installed_tests --bazel "$BAZEL" --package "$VS_PACKAGE" \
+              > artifacts/owners/scapy-tests.txt
+            mapfile -t scapy_tests < artifacts/owners/scapy-tests.txt
+          fi
           "$BAZEL" query 'kind(".*_test rule", @hsflowd//src/json:*)' > artifacts/owners/hsflowd-targets.txt
           mapfile -t hsflowd_tests < artifacts/owners/hsflowd-targets.txt
           test "${#hsflowd_tests[@]}" -eq 22
@@ -568,7 +576,7 @@ jobs:
             //tools/bazel/tests:oci_package_contract_test //tools/bazel/tests:oci_package_payloads_test
             //tools/bazel/tests:oci_package_receipts_test //tools/bazel/tests:oci_package_state_layer_test
             @libteam//:consumer_test @sonic_swss//crates/countersyncd:common_rust_test
-            @sonic_swss//bazel:protobuf_runtime_test @scapy//:upstream_test @scapy//:wheel_test
+            @sonic_swss//bazel:protobuf_runtime_test "${scapy_tests[@]}"
             @otelcol_contrib//distributions/otelcol-contrib:source_contract_test
             @otelcol_contrib//bazel:components_output_test @otelcol_contrib//distributions/otelcol-contrib:package_test
             "${hsflowd_tests[@]}"

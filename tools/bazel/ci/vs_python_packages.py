@@ -28,6 +28,7 @@ YANG = {
     YANG_RUNTIME: "@sonic_yang_models//:yang_models_pkg",
     YANG_TREE: "@sonic_yang_models//:yang_models",
 }
+SCAPY_WHEEL = "scapy-2.6.1.dev0-py3-none-any.whl"
 PDDF_WHEEL = "sonic_platform_pddf_common-1.0-py3-none-any.whl"
 PDDF_OWNER = "//platform/pddf/platform-api-pddf-base:"
 FRR_COMPONENTS = ("sonic-frr-mgmt-framework", "sonic-bgpcfgd")
@@ -47,7 +48,7 @@ DHCP = {
     "sonic_dhcp_utilities-1.0-py3-none-any.whl": "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
 }
 WHEEL_GROUPS = {"config-engine": WHEELS, "frr": FRR, "dhcp": DHCP, "yang-models": YANG}
-PACKAGES = {**WHEELS, **FRR, **DHCP, **YANG}
+PACKAGES = {**WHEELS, **FRR, **DHCP, **YANG, SCAPY_WHEEL: "@scapy//:wheel"}
 
 
 def package_targets(pddf_enabled):
