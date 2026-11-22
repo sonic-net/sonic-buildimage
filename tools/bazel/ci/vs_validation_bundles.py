@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from tools.bazel.ci import vs_component_artifacts
 from tools.bazel.ci.build import execution_root_from_bep
 from tools.bazel.ci.artifact_validation import require, sha
 from tools.bazel.ci.vs_container_validation import PMON, static_i386_files
@@ -112,7 +113,7 @@ def validation_targets(archives, registered_debug, debug_enabled, validation_onl
 def extra_targets(families):
     # The archives, layouts and test fixtures share one Bazel configuration and
     # one build. Some fixtures are external targets with apparent repo names.
-    labels = set()
+    labels = vs_component_artifacts.targets(families)
     for entry in families.values():
         for _, archive, layout in entry["members"].values():
             labels.update((archive, layout))
@@ -458,10 +459,14 @@ def write_bundles(args, families, paths, build_settings, *, native_archives=()):
                 "debug_enabled": args.validation_debug == "y", "supports_debug": entry["supports_debug"],
                 "archives": archive_specs, "fixtures": fixtures, **settings,
             }, sort_keys=True) + "\n")
+        components_dir = staged / "components"
+        components_dir.mkdir()
+        vs_component_artifacts.publish(components_dir, families, paths, revision, args.architecture, build_settings)
         (staged / "selection.json").write_text(json.dumps({
             "revision": revision, "build_version": version, "architecture": args.architecture,
             "debug_enabled": args.validation_debug == "y",
             "installer_archives": sorted(args.archive),
+            "components": sorted(vs_component_artifacts.selected(families)),
             "auxiliary_parents": list(PARENTS),
             "registered_debug": sorted(set(args.registered_debug)),
             "validation_only_debug": sorted(set(args.validation_only_debug)),
@@ -479,7 +484,7 @@ def matrix(directory, debug_layer):
     selection = json.loads((directory / "selection.json").read_bytes())
     expected = {family(name) for name in selection["installer_archives"]} | set(PARENTS)
     require(selection["debug_enabled"] == (debug_layer == "y"), "Make and workflow debug settings differ")
-    require({p.name for p in directory.iterdir() if p.is_dir()} == expected,
+    require({p.name for p in directory.iterdir() if p.is_dir() and p.name != "components"} == expected,
             "validation bundle list differs from the VS build")
     output = []
     for image in sorted(expected):

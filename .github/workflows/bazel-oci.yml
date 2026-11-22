@@ -743,6 +743,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, ubuntu-x64]
     outputs:
       p4_sources_artifact_id: ${{ steps.p4_sources_upload.outputs.artifact-id }}
+      source_workflows: ${{ steps.source_workflows.outputs.workflows }}
     # No SWSS/Syncd package compilation: those checks reuse the full Make build.
     timeout-minutes: 60
     container:
@@ -780,6 +781,12 @@ jobs:
           test ! -e MODULE.bazel.lock
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
+
+      - name: Select component source suites for the tested changes
+        id: source_workflows
+        run: |
+          workflows=$(python3 -B -m tools.bazel.ci.source_workflows)
+          echo "workflows=$workflows" >> "$GITHUB_OUTPUT"
 
       - name: Check hosted storage
         run: df -h "$GITHUB_WORKSPACE" "$HOME"
@@ -961,6 +968,8 @@ jobs:
       actions: read
     outputs:
       containers: ${{ steps.bundles.outputs.matrix }}
+      source_workflows: ${{ needs.checks.outputs.source_workflows }}
+      component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
       python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
       kernel_artifact_id: ${{ steps.vs_kernel_upload.outputs.artifact-id }}
@@ -1349,6 +1358,7 @@ jobs:
             --directory artifacts/vs/containers --debug-layer "$SONIC_ENABLE_DEBUG_LAYER")
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "debug_layer=$SONIC_ENABLE_DEBUG_LAYER" >> "$GITHUB_OUTPUT"
+          echo "components=$(jq -c .components artifacts/vs/containers/selection.json)" >> "$GITHUB_OUTPUT"
           echo "prefix=vs-container-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       - name: Collect the kernel handoff used by VS
@@ -1383,6 +1393,14 @@ jobs:
           PYTHON_ID: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
         run: |
           [[ $KERNEL_ID =~ ^[1-9][0-9]*$ && $PYTHON_ID =~ ^[1-9][0-9]*$ ]]
+
+      - name: Select component validators for the published artifacts
+        id: component_matrix
+        env:
+          UPLOAD_STEPS: ${{ toJSON(steps) }}
+        run: |
+          matrix=$(python3 -B -m tools.bazel.ci.vs_component_artifacts matrix --directory artifacts/vs/containers/components)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
       - name: Publish the installer and matching container archives
         id: vs_installer_upload
@@ -1915,9 +1933,46 @@ jobs:
           BUNDLE_DIR: ${{ steps.bundle.outputs.directory }}
         run: rm -rf -- "$BUNDLE_DIR"
 
+  validate_component:
+    name: Validate component ${{ matrix.component }} (AMD64)
+    needs: vs_container
+    if: needs.vs_container.outputs.component_matrix != '{"include":[]}'
+    runs-on: [self-hosted, linux, bazel-x64]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.vs_container.outputs.component_matrix) }}
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    steps:
+      - name: Install native inspection tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git python3 binutils gdb gcc libc6-dev pkg-config
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Allocate a fresh component directory
+        id: bundle
+        shell: bash
+        run: echo "path=$(mktemp -d)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ matrix.artifact_id }}
+          merge-multiple: true
+          path: ${{ steps.bundle.outputs.path }}
+      - name: Validate the original VS component files
+        env:
+          COMPONENT: ${{ matrix.component }}
+          DEBUG: ${{ matrix.debug }}
+          BUNDLE: ${{ steps.bundle.outputs.path }}
+        run: |
+          python3 -B -m tools.bazel.ci.vs_component_artifacts test --component "$COMPONENT" \
+            --revision "$GITHUB_SHA" --debug "$DEBUG" --directory "$BUNDLE"
+
   archive_acceptance:
     name: Container archive (AMD64)
-    needs: [archive, package_amd64, kernel_packages_amd64, frr_python_amd64, vs_container, installer_validation, validate_container]
+    needs: [archive, package_amd64, kernel_packages_amd64, frr_python_amd64, vs_container, installer_validation, validate_container, validate_component]
     if: always() && !cancelled() && needs.vs_container.result != 'skipped'
     runs-on: [self-hosted, linux, bazel-x64]
     steps:
@@ -1930,7 +1985,9 @@ jobs:
           FRR_PYTHON: ${{ needs.frr_python_amd64.result }}
           PRODUCER: ${{ needs.vs_container.result }}
           VALIDATION: ${{ needs.validate_container.result }}
+          COMPONENTS: ${{ needs.validate_component.result }}
         run: |
+          test "$COMPONENTS" = success
           test "$ARM64_PACKAGES" = success && test "$AMD64_PACKAGES" = success &&
           test "$KERNEL" = success && test "$FRR_PYTHON" = success &&
           test "$PRODUCER" = success && test "$INSTALLER" = success && test "$VALIDATION" = success

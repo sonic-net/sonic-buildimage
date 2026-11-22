@@ -159,7 +159,7 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(job["name"], "Container archive (AMD64)")
         self.assertEqual(set(job["needs"]), {
             "archive", "package_amd64", "kernel_packages_amd64", "frr_python_amd64",
-            "vs_container", "installer_validation", "validate_container",
+            "vs_container", "installer_validation", "validate_container", "validate_component",
         })
         gate, = job["steps"]
         self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
