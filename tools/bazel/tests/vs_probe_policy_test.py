@@ -81,6 +81,32 @@ class VSProbePolicyTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "runtime contains debug-only files"):
                     probe.verify_debug_separation(image, "debug", native, {"all-debug.tar": {symbols: {}}}, {symbols})
 
+    def test_dhcp_installed_checks_use_selected_owner_bytes_and_private_redis(self):
+        """Keep native and Python package checks in runtime; only debug needs SSH and detached symbols."""
+        from tools.bazel.ci import vs_validation_bundles as bundles
+        image = "docker-dhcp-relay"
+        runtime = policy.preparation_targets(image, False)
+        debug = policy.preparation_targets(image, True)
+        self.assertEqual(bundles.PARENT_IMAGES[image], bundles.CONFIG)
+        for name in ("config-files.tar", "python-runtime.tar", "inherited-python.tar", "runtime.status",
+                     "runtime-packages.json", "dhcp-relay-source.tar", "test-redis.tar", "config-engine-source.tar"):
+            self.assertIn(name, runtime)
+        for name in ("all-debug.tar", "debug-tools.tar", "openssh-source.tar", "debug.status", "debug-packages.json"):
+            self.assertNotIn(name, runtime)
+            self.assertIn(name, debug)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "config-engine-source.tar"
+            record = tarfile.TarInfo("run/redis/sonic-db/database_config.json")
+            data = b'{"INSTANCES":{"redis":{"hostname":"127.0.0.1"}}}'
+            record.size = len(data)
+            with tarfile.open(source, "w") as owner:
+                owner.addfile(record, io.BytesIO(data))
+            fixtures = bundles.stage_probe_fixtures(image, {source.name: source}, root)
+            self.assertEqual(set(fixtures), {"redis-config-fixture.tar"})
+            with tarfile.open(fixtures["redis-config-fixture.tar"]) as archive:
+                self.assertEqual(archive.extractfile(record.name).read(), data)
+
     def test_disabled_debug_does_not_request_owner_symbols(self):
         for image in set(policy.FAMILIES) | {"docker-gnmi-sidecar", "docker-restapi-sidecar",
                                                      "docker-gnmi-watchdog", "docker-bmp-watchdog"}:

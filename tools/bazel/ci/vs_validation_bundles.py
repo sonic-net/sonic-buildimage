@@ -43,6 +43,7 @@ APT_REPORT_FAMILIES = {"docker-orchagent", "docker-sonic-gnmi", "docker-sonic-ot
 # also has the selected runtime inventory in its own bundle.
 PARENT_IMAGES = {
     CONFIG: BASE, "docker-dash-engine": BASE,
+    "docker-dhcp-relay": CONFIG,
     SWSS: CONFIG, "docker-database": CONFIG, "docker-eventd": CONFIG, "docker-gbsyncd-vs": CONFIG,
     "docker-lldp": CONFIG, "docker-mux": CONFIG, "docker-orchagent": CONFIG, PMON: CONFIG,
     "docker-router-advertiser": CONFIG, "docker-snmp": CONFIG, "docker-sonic-gnmi": CONFIG,

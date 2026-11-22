@@ -13,12 +13,13 @@ import uuid
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import artifact_validation as check
-from tools.bazel.ci import dhcp_relay_image, validate_runtime
+from tools.bazel.ci import dhcp_relay_image, validate_runtime, verify_dhcp_relay
 from tools.bazel.ci.public_artifacts import safe_json
+from tools.bazel.ci.vs_probe_policy import install_redis_config, selected_images
 
 
 def verify_inputs(directory):
-    """Check both archives and their source identity before running Docker."""
+    """Bind each selected VS or standalone qualification archive to its source revision."""
     dhcp_relay_image.clean_source(directory)
     source = dhcp_relay_image.source_identity()
     report = json.loads((directory / "validation.json").read_text())
@@ -27,9 +28,9 @@ def verify_inputs(directory):
     check.require(report.get("revision") == source["revision"] and
                   report.get("tested_revision_parents") == source["tested_revision_parents"],
                   "runtime checkout differs from built source")
-    check.require(set(report.get("images", {})) == set(dhcp_relay_image.IMAGES),
-                  "DHCP relay acceptance requires both runtime and debug images")
-    for name in dhcp_relay_image.IMAGES:
+    images = selected_images(directory, dhcp_relay_image.IMAGES)
+    check.require(set(report.get("images", {})) == set(images), "DHCP relay image selection differs")
+    for name in images:
         archive = directory / (name + ".gz")
         check.require(check.sha(archive) == report["artifacts"][archive.name]["sha256"],
                       "archive changed: " + archive.name)
@@ -54,13 +55,7 @@ def main():
             source.extractall(fixture, filter="data")
         # The extracted fixture must be readable inside the isolated image.
         fixture.chmod(0o755)
-        owner = directory / "config-engine-source.tar"
-        check.require(check.sha(owner) == report["artifacts"][owner.name]["sha256"], "database fixture owner changed")
-        with tarfile.open(owner) as archive:
-            members = [member for member in archive.getmembers()
-                       if str(Path(member.name)) == "run/redis/sonic-db/database_config.json"]
-            check.require(len(members) == 1 and members[0].isfile(), "missing owner database fixture")
-            (fixture / "database_config.json").write_bytes(archive.extractfile(members[0]).read())
+        install_redis_config(directory, report, fixture, "config-engine-source.tar")
         for name, expected in report["images"].items():
             archive = directory / (name + ".gz")
             check.require(check.sha(archive) == report["artifacts"][archive.name]["sha256"], "archive changed")
@@ -70,6 +65,9 @@ def main():
                 loaded, config, diagnostics = validate_runtime.load_archive(archive, tag, expected["config_digest"])
                 validate_runtime.verify_loaded_image(loaded, config, expected["config_digest"])
                 check.require(config["rootfs"] == expected["rootfs"], "loaded layers differ from validated OCI")
+                validate_runtime.docker("run", "--rm", "--read-only", "--network", "none",
+                                        "--env", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/bin/sh", tag,
+                                        "-ec", verify_dhcp_relay.PROBE)
                 command = ["docker", "run", "--rm", "--name", container_name, "--network=none", "--cap-drop=ALL",
                            "--cap-add=NET_ADMIN", "--cap-add=NET_RAW", "--cap-add=NET_BIND_SERVICE", "--cap-add=SETUID", "--cap-add=SETGID", "--cap-add=CHOWN",
                            "--cap-add=SYS_CHROOT", "--cap-add=DAC_OVERRIDE", "--cap-add=FOWNER", "--cap-add=KILL",
@@ -88,6 +86,11 @@ def main():
                            "--mount", "type=bind,src=" + str(fixture) + ",dst=/probe/redis,readonly",
                            "--entrypoint", "/usr/bin/python3", tag, "-B", "/probe/runtime_probe.py",
                            "/probe/validation.json", name]
+                if name.endswith("-dbg") and (directory / "bundle.json").is_file():
+                    # Run the ELF checks on installed bytes with the shared, dependency-free Python readers.
+                    for path in ("tools/bazel/oci/elf.py", "tools/bazel/ci/artifact_validation.py",
+                                 "tools/bazel/ci/validation_inputs.py"):
+                        command[2:2] = ["--mount", f"type=bind,src={ROOT / path},dst=/probe/{path},readonly"]
                 # Only the configuration written by the unchanged start script
                 # is writable; the installed root filesystem remains read-only.
                 with tempfile.TemporaryDirectory(prefix="dhcp-relay-generated-") as writable:

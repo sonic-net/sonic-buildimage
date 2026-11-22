@@ -27,6 +27,7 @@ DEBUG_ONLY_PAYLOADS = {
     **dict.fromkeys(("docker-gnmi-sidecar", "docker-restapi-sidecar",
                      "docker-gnmi-watchdog", "docker-bmp-watchdog"), ("all-debug.tar",)),
     "docker-orchagent": ("openssh.source.tar",),
+    "docker-dhcp-relay": ("all-debug.tar",),
     "docker-sonic-p4rt": ("p4rt.debug.tar", "sairedis.source.tar", "saimetadata.source.tar"),
 }
 
@@ -122,6 +123,7 @@ def native_expectations(directory, bundle, variant, files, evidence):
 def verify_service_installation(image, variant, directory, config, files):
     """Check metadata the runtime probe cannot see underneath its writable mounts."""
     package_record = {
+        "docker-dhcp-relay": "runtime-packages.json",
         "docker-database": variant + "-packages.json",
         "docker-lldp": "runtime-packages.json",
         "docker-mux": "runtime-packages.json",
@@ -169,6 +171,9 @@ def runtime_report(directory, bundle):
         if variant == "runtime":
             runtime_paths = set(files)
         verify_debug_separation(image, variant, native, owners["owners"], runtime_paths)
+        if image == "docker-dhcp-relay":
+            from tools.bazel.ci import dhcp_relay_image
+            native = dhcp_relay_image.verify_vs_owners(directory, variant, inventory, owners, native, pairs)
         if image == "docker-snmp":
             from tools.bazel.ci import snmp_image
             for filename in snmp_image.TARGETS:

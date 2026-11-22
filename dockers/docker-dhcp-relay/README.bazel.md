@@ -22,6 +22,12 @@ adds matching source symbols and debugging tools.
 
 ## Build and validate
 
+On normal CI, **Validate docker-dhcp-relay (AMD64)** downloads the DHCP relay
+archives and owner records from the VS installer build. It verifies installed
+files and exercises DHCPv4, DHCPv6 and the monitor against a private Redis
+instance and virtual links. Enabling the VS debug layer also checks the debug
+archive, ELF build IDs and source lookups.
+
 Use a native AMD64 Trixie worker with the repository's declared toolchains and
 dependencies available. From a clean checkout:
 

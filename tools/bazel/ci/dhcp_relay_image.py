@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import base_images, bazel_commands, build, command_log, resolution
+from tools.bazel.ci.vs_container_validation import read_oci
 from tools.bazel.oci import image_validation, oci_layout
 
 OWNER = "//dockers/docker-dhcp-relay:"
@@ -143,6 +144,59 @@ def checked_layouts(paths):
     return parent, layouts
 
 
+def verify_relay_files(files):
+    """Check the installed service links, native programs and original configuration files."""
+    for level, action in (("0", "K"), ("1", "K"), ("2", "S"), ("3", "S"),
+                          ("4", "S"), ("5", "S"), ("6", "K")):
+        path = "etc/rc" + level + ".d/" + action + "01isc-dhcp-relay"
+        link = files.get(path, {})
+        check.require(link.get("kind") == "symlink" and
+                      link.get("linkname") == "../init.d/isc-dhcp-relay" and
+                      (link.get("uid"), link.get("gid")) == (0, 0),
+                      "ISC relay service link differs: " + path)
+    for source, (destination, mode) in CONFIGS.items():
+        item = files.get(destination, {})
+        check.require(item.get("sha256") == check.sha(ROOT / "dockers/docker-dhcp-relay" / source)
+                      and (item.get("uid"), item.get("gid"), item.get("mode")) == (0, 0, mode),
+                      "original service file differs: " + destination)
+    for path in NATIVE_RELAYS:
+        check.require(files.get(path, {}).get("elf_machine") == 62, "owner AMD64 relay is missing: " + path)
+
+
+
+def verify_vs_owners(directory, variant, inventory, owners, native, pairs):
+    """Compare the VS archive to its configured parent and independent DHCP package owners."""
+    files = inventory["files"]
+    verify_relay_files(files)
+    check.require("DEBIAN_FRONTEND=noninteractive" in inventory["config"]["config"].get("Env", []),
+                  "DHCP image environment changed")
+    check.require((directory / (variant + ".make.manifest.json")).is_file(), "Missing Make DHCP manifest")
+    debug = variant == "debug"
+    parent = read_oci(directory, "runtime" if debug else "parent")
+    check.require(len(inventory["layers"]) > len(parent["layers"]), "DHCP image did not extend its parent")
+    if not debug:
+        base_images.verify_installed_payload(parent["files"], owners["owners"]["inherited-python.tar"])
+    metadata = ["base-packages.json", "config-engine-packages.json", "runtime-packages.json"]
+    if debug:
+        metadata.append("debug-packages.json")
+        check.require(files["usr/bin/ssh-agent"]["gid"] == 104 and files["usr/bin/ssh-agent"]["mode"] == 0o2755,
+                      "source OpenSSH permissions differ")
+        tools = owners["owners"]["debug-tools.tar"]
+        runtime_elfs = {path: item for path, item in parent["files"].items() if "elf_machine" in item}
+        check.verify_inherited_files(runtime_elfs, files, tools, set(), "DHCP debug ELF")
+    for stage in ["runtime", "debug"] if debug else ["runtime"]:
+        suffix = "" if stage == "runtime" else "-debug"
+        path = "usr/share/sonic/bazel/dhcp-relay" + suffix + "-packages.json"
+        check.require(files[path]["sha256"] == check.sha(directory / (stage + "-packages.json")),
+                      "Installed DHCP package metadata differs: " + stage)
+    packages = [json.loads((directory / name).read_bytes()) for name in metadata]
+    declared = base_images.verify_source_files(files, packages, 62)
+    check.require(set(NATIVE_RELAYS) <= declared.keys() <= native.keys(), "DHCP owner ELF coverage differs")
+    if debug:
+        check.require(declared.keys() <= {pair["path"] for pair in pairs}, "Incomplete DHCP debug pairs")
+    return {name: {**native[name], "source_package": item["source_package"]} for name, item in declared.items()}
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "image build did not complete")
@@ -174,21 +228,7 @@ def validate_images(directory):
         base_images.verify_installed_layer(files, directory / "config-files.tar")
         base_images.verify_installed_layer(files, directory / "dhcp-relay-source.tar")
         base_images.verify_installed_layer(files, directory / "python-runtime.tar")
-        for level, action in (("0", "K"), ("1", "K"), ("2", "S"), ("3", "S"),
-                              ("4", "S"), ("5", "S"), ("6", "K")):
-            path = "etc/rc" + level + ".d/" + action + "01isc-dhcp-relay"
-            link = files.get(path, {})
-            check.require(link.get("kind") == "symlink" and
-                          link.get("linkname") == "../init.d/isc-dhcp-relay" and
-                          (link.get("uid"), link.get("gid")) == (0, 0),
-                          "ISC relay service link differs: " + path)
-        for source, (destination, mode) in CONFIGS.items():
-            item = files.get(destination, {})
-            check.require(item.get("sha256") == check.sha(ROOT / "dockers/docker-dhcp-relay" / source)
-                          and (item.get("uid"), item.get("gid"), item.get("mode")) == (0, 0, mode),
-                          "original service file differs: " + destination)
-        for path in NATIVE_RELAYS:
-            check.require(files.get(path, {}).get("elf_machine") == 62, "owner AMD64 relay is missing: " + path)
+        verify_relay_files(files)
         check.require(files["usr/share/sonic/bazel/dhcp-relay-packages.json"]["sha256"] == check.sha(directory / "runtime-packages.json"),
                       "runtime imported package records differ")
         status = "debug.status" if debug else "runtime.status"

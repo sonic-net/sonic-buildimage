@@ -176,13 +176,9 @@ jobs:
 
   dhcp_relay_runtime:
     name: Run installed DHCP relay images (AMD64)
-    needs: [package_amd64, dhcp_relay_source_image]
-    if: >-
-      always() && !cancelled() &&
-      ((needs.package_amd64.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')) ||
-       (needs.dhcp_relay_source_image.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay'))
+    needs: dhcp_relay_source_image
     env:
-      TESTED_REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay' && inputs.source_revision || github.sha }}
+      TESTED_REVISION: ${{ inputs.source_revision }}
     runs-on: [self-hosted, Linux, X64, ubuntu-x64]
     timeout-minutes: 25
     steps:
@@ -375,90 +371,6 @@ jobs:
       - name: Check DHCP utilities and CLI tests without DEB generation
         if: matrix.architecture == 'amd64'
         run: *dhcp_utility_tests
-      - name: Build DHCP relay runtime and debug images from source owners
-        id: dhcp_relay_build
-        if: matrix.architecture == 'amd64'
-        env:
-          BAZELISK_GITHUB_TOKEN: ""
-          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
-          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          test "$(uname -m)" = x86_64
-          test "$(. /etc/os-release; echo "$VERSION_CODENAME")" = trixie
-          python3 -B tools/bazel/ci/dhcp_relay_image.py build --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
-      - name: Validate DHCP relay image contents and source symbols
-        if: matrix.architecture == 'amd64'
-        env:
-          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
-          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
-        run: python3 -B tools/bazel/ci/dhcp_relay_image.py validate --artifacts artifacts/dhcp-relay
-      - name: Check DHCP relay incremental rebuild and restored image digests
-        if: matrix.architecture == 'amd64'
-        env:
-          BAZELISK_GITHUB_TOKEN: ""
-          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
-          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
-        run: |
-          python3 -B tools/bazel/ci/dhcp_relay_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
-          git diff --exit-code
-      - name: Prepare reviewed DHCP relay evidence
-        id: dhcp_relay_public
-        if: always() && matrix.architecture == 'amd64' && (steps.dhcp_relay_build.outcome == 'success' || steps.dhcp_relay_build.outcome == 'failure')
-        run: |
-          python3 - <<'PYCODE'
-          import json
-          from pathlib import Path
-          from tools.bazel.ci.public_artifacts import safe_json, dependency_json, bep_summary
-          root = Path('artifacts/dhcp-relay')
-          if (root / 'build-receipt.json').exists():
-              receipt = json.loads((root / 'build-receipt.json').read_text())
-              public = {key: receipt[key] for key in ('status', 'architecture', 'revision', 'tested_revision_parents', 'artifacts') if key in receipt}
-              safe_json(public)
-              (root / 'public-receipt.json').write_text(json.dumps(public, indent=2) + '\n')
-          names = ['validation.json', 'action-audit.json', 'incremental.json']
-          names += [path.name for path in root.glob('*.validation.json')]
-          names += [path.name for path in root.glob('*packages.json')]
-          for name in names:
-              path = root / name
-              if path.exists():
-                  safe_json(json.loads(path.read_text()))
-          for name, kind in (('MODULE.bazel.lock', 'lock'), ('module-graph.json', 'graph')):
-              path = root / name
-              if path.exists():
-                  dependency_json(json.loads(path.read_text()), kind)
-          summary = {str(path.relative_to(root)): bep_summary(path.read_text().splitlines(), partial=True)
-                     for path in root.rglob('*events.json*')}
-          safe_json(summary)
-          (root / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
-          PYCODE
-      - name: Retain images and reviewed build evidence
-        id: bazel_upload_dhcp_relay_public
-        if: always() && steps.dhcp_relay_public.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dhcp-relay-image-amd64
-          path: |
-            artifacts/dhcp-relay/*.gz
-            artifacts/dhcp-relay/*.tar
-            artifacts/dhcp-relay/*.status
-            artifacts/dhcp-relay/*packages.json
-            artifacts/dhcp-relay/*.validation.json
-            artifacts/dhcp-relay/validation.json
-            artifacts/dhcp-relay/public-receipt.json
-            artifacts/dhcp-relay/action-audit.json
-            artifacts/dhcp-relay/incremental.json
-            artifacts/dhcp-relay/build-summary.json
-            artifacts/dhcp-relay/MODULE.bazel.lock
-            artifacts/dhcp-relay/module-graph.json
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 1
-
-      - name: Release published DHCP relay payload copies
-        if: steps.bazel_upload_dhcp_relay_public.outcome == 'success' && steps.bazel_upload_dhcp_relay_public.outputs.artifact-id != ''
-        run: python3 -B tools/bazel/ci/release_image_payloads.py dhcp-relay
-
       - name: Test archive rules against synthetic OCI fixtures
         run: |
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \

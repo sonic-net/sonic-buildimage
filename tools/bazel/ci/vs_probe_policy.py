@@ -12,6 +12,7 @@ from tools.bazel.ci import artifact_validation as check
 
 FAMILIES = {
     "docker-dash-engine": "dash_engine", "docker-dash-ha": "dash_ha",
+    "docker-dhcp-relay": "dhcp_relay",
     "docker-database": "database", "docker-eventd": "eventd", "docker-fpm-frr": "frr",
     "docker-gbsyncd-vs": "gbsyncd", "docker-lldp": "lldp", "docker-macsec": "macsec",
     "docker-mux": "mux", "docker-orchagent": "orchagent", "docker-router-advertiser": "radv",
@@ -41,6 +42,7 @@ P4RT_OWNER_TEST_INPUTS = {
 # Other native source TARs are projected to their ELF metadata for the runtime probes.
 FULL_INSTALL_TARS = {
     "docker-snmp": {"snmp_install.tar"},
+    "docker-dhcp-relay": {"dhcp-relay-source.tar", "python-runtime.tar", "inherited-python.tar"},
     "docker-sonic-gnmi": {"gnmi-runtime.tar", "common-runtime.tar"},
     "docker-sonic-p4rt": {"p4rt.source.tar", "sairedis.source.tar", "saimetadata.source.tar"},
     "docker-sonic-mgmt-framework": {"framework-runtime.tar", "common-runtime.tar", "python-runtime.tar"},

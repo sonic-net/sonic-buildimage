@@ -45,13 +45,17 @@ def verify_unique_layer_paths(layout):
 
 
 def _verify_unique_layer_paths(layer):
-    seen = set()
     with tarfile.open(layer, "r:*") as archive:
-        for member in archive:
-            name = str(PurePosixPath(member.name))
-            require(name not in seen, "OCI layer repeats a path that Docker cannot load: " + name)
-            seen.add(name)
+        verify_unique_tar_members(archive)
     return True
+
+
+def verify_unique_tar_members(archive):
+    seen = set()
+    for member in archive:
+        name = str(PurePosixPath(member.name))
+        require(name not in seen, "OCI layer repeats a path that Docker cannot load: " + name)
+        seen.add(name)
 
 
 def image_inventory(layout):
@@ -220,7 +224,7 @@ def expected_state(path):
     return result
 
 
-def docker_archive(path, expected_tag, config_digest, layer_descriptors):
+def docker_archive(path, expected_tag, config_digest, layer_descriptors, *, unique_layer_paths=False):
     require(re.fullmatch(r"sha256:[0-9a-f]{64}", config_digest) is not None, "invalid expected OCI config digest")
     with path.open("rb") as stream:
         header = stream.read(10)
@@ -258,6 +262,13 @@ def docker_archive(path, expected_tag, config_digest, layer_descriptors):
     for name, descriptor in zip(layers, layer_descriptors):
         require(files.get(member_name(name)) == {"size": descriptor["size"], "sha256": descriptor["digest"][7:]},
                 "Docker archive layer differs from its OCI image: " + name)
+    if unique_layer_paths:
+        layer_names = {member_name(name) for name in layers}
+        with tarfile.open(path, "r|gz") as archive:
+            for member in archive:
+                if member.isfile() and member_name(member.name) in layer_names:
+                    with tarfile.open(fileobj=archive.extractfile(member), mode="r|*") as layer:
+                        verify_unique_tar_members(layer)
     return {"sha256": sha(path), "bytes": path.stat().st_size, "tag": expected_tag,
             "config_digest": config_digest, "layers": len(layer_descriptors)}
 

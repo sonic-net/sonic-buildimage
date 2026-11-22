@@ -143,17 +143,23 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertIn('"$BAZEL" test "${wheel_flags[@]}"', installed)
         self.assertIn('--vs-packages "$VS_WHEELS"', steps["Retain wheels and required Python test evidence"]["run"])
 
-    def test_dhcp_runtime_waits_for_the_amd64_incremental_test_artifact(self):
-        """The ARM64 archive job cannot publish the images for the installed DHCP relay probe."""
+    def test_dhcp_source_builds_are_confined_to_the_dedicated_worker(self):
+        """The normal relay probe uses the installer; only a source qualification builds both variants."""
         jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        self.assertEqual(FAMILIES["docker-dhcp-relay"], "dhcp_relay")
+        self.assertNotIn("docker-dhcp-relay", STANDALONE_IMAGES)
+        for job in ("package_amd64", "archive", "validate_container"):
+            steps = jobs[job]["steps"]
+            self.assertFalse(any("dhcp_relay_image.py" in step.get("run", "") for step in steps))
+            self.assertFalse(any(step.get("with", {}).get("name") == "dhcp-relay-image-amd64" for step in steps))
         runtime = jobs["dhcp_relay_runtime"]
-        self.assertEqual(set(runtime["needs"]), {"package_amd64", "dhcp_relay_source_image"})
-        self.assertIn("needs.package_amd64.result == 'success'", runtime["if"])
-        download, = (step["with"]["name"] for step in runtime["steps"]
-                     if step.get("uses", "").startswith("actions/download-artifact@"))
-        for producer in runtime["needs"]:
-            upload, = (step for step in jobs[producer]["steps"] if step.get("id") == "bazel_upload_dhcp_relay_public")
-            self.assertEqual(upload["with"]["name"], download)
+        self.assertEqual(runtime["needs"], "dhcp_relay_source_image")
+        worker = jobs[runtime["needs"]]
+        self.assertIn("inputs.source_image == 'dhcp-relay'", worker["if"])
+        self.assertTrue(any("dhcp_relay_image.py incremental" in step.get("run", "") for step in worker["steps"]))
+        upload, = (step for step in worker["steps"] if step.get("id") == "bazel_upload_dhcp_relay_public")
+        download, = (step for step in runtime["steps"] if step.get("uses", "").startswith("actions/download-artifact@"))
+        self.assertEqual(upload["with"]["name"], download["with"]["name"])
 
     def test_required_archive_status_propagates_each_validation_failure(self):
         """A bad installer, an incomplete production job or any failed image row must block acceptance."""
