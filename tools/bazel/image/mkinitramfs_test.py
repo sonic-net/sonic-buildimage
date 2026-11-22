@@ -15,15 +15,18 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from mkinitramfs import ARCH, compress_initrd, Mkinitramfs, Rootfs, gnu_tsort, script_prereqs, read_kernel_metadata, build_initrd
+from mkinitramfs import ARCH, compress_initrd, write_compressed_initrd, Mkinitramfs, Rootfs, gnu_tsort, script_prereqs, read_kernel_metadata, build_initrd
 from newc import write_newc
 
 
 _parser = argparse.ArgumentParser(add_help=False)
 _parser.add_argument('--pigz')
+_parser.add_argument('--zstd')
 TOOLS, _arguments = _parser.parse_known_args()
 if TOOLS.pigz:
     TOOLS.pigz = str(Path(TOOLS.pigz).absolute())
+if TOOLS.zstd:
+    TOOLS.zstd = str(Path(TOOLS.zstd).absolute())
 sys.argv = [sys.argv[0]] + _arguments
 
 
@@ -34,6 +37,58 @@ class InitrdTest(unittest.TestCase):
         self.root = Path(self.temp.name) / 'root'
         self.root.mkdir()
         self.fs = Rootfs(str(self.root))
+        self.addCleanup(self.fs.close)
+
+    def test_layer_payloads_preserve_links_and_overrides_without_expanding_unselected_files(self):
+        layer = Path(self.temp.name) / 'payloads.tar'
+        with tarfile.open(layer, 'w') as archive:
+            for name, data in [('usr/bin/tool', b'original tool'), ('usr/share/unrelated/data', b'unselected payload')]:
+                member = tarfile.TarInfo(name)
+                member.mode, member.mtime, member.size = 0o751, 42, len(data)
+                archive.addfile(member, io.BytesIO(data))
+            for name in ['alias', 'second-alias']:
+                member = tarfile.TarInfo('usr/bin/' + name)
+                member.type, member.linkname = tarfile.LNKTYPE, 'usr/bin/tool'
+                archive.addfile(member)
+        self.fs.apply_layer(layer)
+        self.fs.host('/usr/bin/tool')
+        self.fs.host('/usr/bin/second-alias')
+        upper = Path(self.temp.name) / 'replacement.tar'
+        with tarfile.open(upper, 'w') as archive:
+            whiteout = tarfile.TarInfo('usr/bin/.wh.tool')
+            archive.addfile(whiteout)
+            member = tarfile.TarInfo('usr/bin/tool')
+            member.size = 11
+            archive.addfile(member, io.BytesIO(b'replacement'))
+        self.fs.apply_layer(upper)
+        self.assertEqual(self.fs.glob('/usr/bin', '*'), ['/usr/bin/alias', '/usr/bin/second-alias', '/usr/bin/tool'])
+        self.assertEqual(self.fs.read('/usr/bin/alias'), b'original tool')
+        self.assertEqual(self.fs.read('/usr/bin/tool'), b'replacement')
+        self.assertFalse((self.root / 'usr/share/unrelated/data').exists())
+        self.assertFalse((self.root / 'usr/bin/alias').exists())
+        self.fs.host('/usr/bin')  # kmod and other declared tools may need a real subtree.
+        self.assertEqual((self.root / 'usr/bin/alias').read_bytes(), b'original tool')
+        self.assertEqual((self.root / 'usr/bin/alias').stat().st_ino,
+                         (self.root / 'usr/bin/second-alias').stat().st_ino)
+        self.assertNotEqual((self.root / 'usr/bin/alias').stat().st_ino,
+                            (self.root / 'usr/bin/tool').stat().st_ino)
+        self.assertFalse((self.root / 'usr/share/unrelated/data').exists())
+
+    def test_hook_copy_reads_selected_member_directly_into_staging(self):
+        layer = Path(self.temp.name) / 'selected.tar'
+        with tarfile.open(layer, 'w') as archive:
+            member = tarfile.TarInfo('usr/share/initramfs-tools/selected')
+            member.mode, member.mtime, member.size = 0o751, 23, 8
+            archive.addfile(member, io.BytesIO(b'selected'))
+        self.fs.apply_layer(layer)
+        mk = object.__new__(Mkinitramfs)
+        mk.r, mk.D, mk.dmeta = self.fs, '/staged', {}
+        mk.mkdir_p('/staged')
+        mk.cp_p('/usr/share/initramfs-tools/selected', '/staged/selected')
+        self.assertEqual((self.root / 'staged/selected').read_bytes(), b'selected')
+        self.assertFalse((self.root / 'usr/share/initramfs-tools/selected').exists())
+        st = (self.root / 'staged/selected').stat()
+        self.assertEqual(mk.dmeta[st.st_ino][:2], (stat.S_IFREG | 0o751, 23))
 
     def test_debian_merged_usr_keeps_directory_alias(self):
         (self.root / 'usr/lib/modules/abi').mkdir(parents=True)
@@ -49,7 +104,7 @@ class InitrdTest(unittest.TestCase):
         self.fs.apply_layer(layer)
         self.assertTrue((self.root / 'lib').is_symlink())
         self.assertTrue(self.fs.isdir('/lib/modules/abi'))
-        self.assertEqual((self.root / 'usr/lib/initramfs-tools/hook-functions').read_bytes(), b'hook')
+        self.assertEqual(self.fs.read('/usr/lib/initramfs-tools/hook-functions'), b'hook')
 
     def kernel_layer(self, name, directories=(), symlinks=()):
         layer = Path(self.temp.name) / (name + '.tar')
@@ -96,7 +151,7 @@ class InitrdTest(unittest.TestCase):
                 member.size = len(data) if data else 0
                 archive.addfile(member, io.BytesIO(data) if data else None)
         self.fs.apply_layer(layer)
-        self.assertEqual((self.root / 'usr/lib/staged').read_bytes(), b'new bytes')
+        self.assertEqual(self.fs.read('/usr/lib/staged'), b'new bytes')
         self.assertEqual(self.fs.rmeta('/usr/lib/staged')[0], stat.S_IFREG | 0o755)
 
     def test_layer_rejects_parent_components_before_writes(self):
@@ -141,6 +196,7 @@ class InitrdTest(unittest.TestCase):
                     case = self.root / ('whiteout-' + str(index) + '-' + order)
                     case.mkdir()
                     fs = Rootfs(str(case))
+                    self.addCleanup(fs.close)
                     lower = Path(self.temp.name) / ('lower-' + str(index) + '-' + order + '.tar')
                     with tarfile.open(lower, 'w') as archive:
                         member = tarfile.TarInfo('d/sub/lower')
@@ -157,7 +213,8 @@ class InitrdTest(unittest.TestCase):
                             member.size = len(content)
                             archive.addfile(member, io.BytesIO(content))
                     fs.apply_layer(upper)
-                    files = {path.relative_to(case).as_posix(): path.read_bytes() for path in case.rglob('*') if path.is_file()}
+                    files = {path.lstrip('/'): fs.read(path) for path in fs.glob('/d/sub', '*') if fs.isfile(path)}
+                    self.assertFalse(fs.exists('/d/sub/lower'))
                     self.assertEqual(files, {'d/sub/new': b'upper'})
 
     def test_script_prereqs_and_tsort(self):
@@ -446,6 +503,56 @@ class InitrdTest(unittest.TestCase):
 
 
 class CompressionContractTest(unittest.TestCase):
+    def test_streamed_newc_preserves_entries_and_hardlinks_through_compression(self):
+        import gzip
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'stage'
+            root.mkdir()
+            (root / 'busybox').write_bytes(b'busybox payload')
+            (root / 'busybox').chmod(0o755)
+            os.link(root / 'busybox', root / 'sh')
+            (root / 'link').symlink_to('/busybox')
+            raw = io.BytesIO()
+            write_newc(root, raw)
+            self.assertFalse(raw.closed)
+            plain = raw.getvalue()
+            self.assertEqual(len(plain) % 512, 0)
+            offset, entries = 0, {}
+            while True:
+                self.assertEqual(plain[offset:offset + 6], b'070701')
+                fields = [int(plain[i:i + 8], 16) for i in range(offset + 6, offset + 110, 8)]
+                name_start = offset + 110
+                name = plain[name_start:name_start + fields[11] - 1].decode()
+                content_start = (name_start + fields[11] + 3) & ~3
+                content = plain[content_start:content_start + fields[6]]
+                offset = (content_start + fields[6] + 3) & ~3
+                if name == 'TRAILER!!!':
+                    break
+                entries[name] = (fields, content)
+            self.assertEqual(entries['busybox'][0][0], entries['sh'][0][0])
+            self.assertEqual(entries['busybox'][0][4], 2)
+            self.assertEqual(entries['sh'][0][4], 2)
+            self.assertEqual(entries['busybox'][1], b'')
+            self.assertEqual(entries['sh'][1], b'busybox payload')
+            self.assertEqual(entries['link'][1], b'/busybox')
+            for kind in ['xz'] + (['gzip'] if TOOLS.pigz else []) + (['zstd'] if TOOLS.zstd else []):
+                with self.subTest(compression=kind):
+                    output = Path(directory) / kind
+                    spec = {'compression': kind, 'compression_level': -1,
+                            'pigz': TOOLS.pigz, 'zstd': TOOLS.zstd}
+                    listing, size = write_compressed_initrd(output, spec, lambda stream: write_newc(root, stream))
+                    self.assertEqual(size, len(plain))
+                    self.assertEqual({entry['name'] for entry in listing}, {'.', 'busybox', 'sh', 'link'})
+                    if kind == 'xz':
+                        decoded = lzma.decompress(output.read_bytes())
+                    elif kind == 'gzip':
+                        decoded = gzip.decompress(output.read_bytes())
+                    else:
+                        decoded = subprocess.run([TOOLS.zstd, '-q', '-d', '-c', str(output)],
+                                                 check=True, stdout=subprocess.PIPE).stdout
+                    self.assertEqual(decoded, plain)
+
     def test_newc_rejects_invalid_header_values(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'root'

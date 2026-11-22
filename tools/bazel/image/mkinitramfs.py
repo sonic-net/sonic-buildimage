@@ -11,6 +11,7 @@ No target executable or host chroot is executed.
 """
 
 import collections
+from contextlib import ExitStack
 import fnmatch
 import gzip
 import hashlib
@@ -26,6 +27,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from types import SimpleNamespace
 
 from ldcache import generate_cache
 from newc import write_newc
@@ -66,14 +68,6 @@ USR_MERGED = re.compile(r'^/(bin/|lib|sbin/)')
 ENV = {'LC_ALL': 'C', 'TZ': 'UTC', 'PATH': '/nonexistent'}
 
 
-def sha256(path):
-    h = hashlib.sha256()
-    with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(1 << 20), b''):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 # ---------------------------------------------------------------------------
 # Rootfs: ordered layer tars with OCI whiteouts, metadata kept on the side
 # (the action runs unprivileged: owners and special bits cannot be applied).
@@ -82,6 +76,64 @@ class Rootfs:
     def __init__(self, host):
         self.h = host
         self.meta = {}  # canonical rel path -> (st_mode, mtime, uid, gid)
+        self.payloads = {}  # canonical path -> shared (TarFile, TarInfo)
+        self.payload_directories = collections.Counter()
+        self.children = collections.defaultdict(set)
+        self.materialized = {}
+        self.materialized_directories = set()
+        self.layers = ExitStack()
+
+    def close(self):
+        self.layers.close()
+
+    def _payload_parents(self, rel):
+        while True:
+            rel = rel.rpartition('/')[0]
+            yield rel
+            if not rel:
+                break
+
+    def _set_payload(self, rel, payload):
+        self.payloads[rel] = payload
+        self.payload_directories.update(self._payload_parents(rel))
+
+    def _drop_payload(self, rel):
+        if self.payloads.pop(rel, None) is not None:
+            self.payload_directories.subtract(self._payload_parents(rel))
+
+    def _stat(self, rel):
+        try:
+            return os.lstat(self.h + '/' + rel)
+        except (FileNotFoundError, NotADirectoryError):
+            if rel in self.payloads:
+                return SimpleNamespace(st_mode=self.meta[rel][0])
+            raise
+
+    def listdir(self, cpath):
+        return sorted(set(os.listdir(self.h + cpath)) | self.children[cpath.strip('/')])
+
+    def copy_regular(self, cpath, destination):
+        rel = cpath.lstrip('/')
+        if os.path.isfile(self.h + '/' + rel):
+            shutil.copyfile(self.h + '/' + rel, destination)
+        else:
+            archive, member = self.payloads[rel]
+            with archive.extractfile(member) as source, open(destination, 'wb') as target:
+                shutil.copyfileobj(source, target, 1 << 20)
+
+    def _materialize(self, rel):
+        hp = self.h + '/' + rel
+        if os.path.lexists(hp):
+            return
+        payload = self.payloads[rel]
+        for previous in self.materialized.get(id(payload), ()):
+            if self.payloads.get(previous) is payload and os.path.isfile(self.h + '/' + previous):
+                os.link(self.h + '/' + previous, hp)
+                break
+        else:
+            self.copy_regular('/' + rel, hp)
+            os.chmod(hp, (self.meta[rel][0] & 0o777) | 0o600)
+        self.materialized.setdefault(id(payload), set()).add(rel)
 
     # -- in-root path resolution (absolute symlinks are relative to root) --
     def canon(self, path, follow=True, missing='none'):
@@ -98,7 +150,7 @@ class Rootfs:
                 continue
             cand = cur + [c]
             try:
-                st = os.lstat(self.h + '/' + '/'.join(cand))
+                st = self._stat('/'.join(cand))
             except (FileNotFoundError, NotADirectoryError):
                 if missing == 'all' or (missing == 'last' and not parts):
                     cur = cand
@@ -122,6 +174,17 @@ class Rootfs:
         return '/' + '/'.join(cur)
 
     def host(self, cpath):
+        """Expose the named native-tool input, leaving unrelated payloads in TARs."""
+        rel = cpath.strip('/')
+        if rel in self.payloads:
+            self._materialize(rel)
+        elif rel not in self.materialized_directories and self.payload_directories[rel] and \
+                not os.path.islink(self.h + cpath) and os.path.isdir(self.h + cpath):
+            prefix = rel + '/' if rel else ''
+            for name in self.payloads:
+                if name.startswith(prefix):
+                    self._materialize(name)
+            self.materialized_directories.add(rel)
         return self.h + cpath if cpath != '/' else self.h
 
     def lstat(self, path, follow):
@@ -129,7 +192,7 @@ class Rootfs:
         if c is None:
             return None
         try:
-            return os.lstat(self.host(c))
+            return self._stat(c.lstrip('/'))
         except FileNotFoundError:
             return None
 
@@ -155,7 +218,7 @@ class Rootfs:
         return self.canon(p, missing='last')
 
     def rmeta(self, cpath):
-        st = os.lstat(self.host(cpath))
+        st = self._stat(cpath.lstrip('/'))
         m = self.meta.get(cpath.lstrip('/'))
         if m is None or stat.S_IFMT(m[0]) != stat.S_IFMT(st.st_mode):
             return (stat.S_IFMT(st.st_mode) | (0o755 if stat.S_ISDIR(st.st_mode) else 0o644), 0, 0, 0)
@@ -163,24 +226,32 @@ class Rootfs:
 
     def is_exec(self, p):
         c = self.canon(p)
-        if c is None or not stat.S_ISREG(os.lstat(self.host(c)).st_mode):
+        if c is None or not stat.S_ISREG(self._stat(c.lstrip('/')).st_mode):
             return False
         return bool(self.rmeta(c)[0] & 0o111)
 
     def glob(self, dirpath, pattern):
         """Shell glob DIR/PATTERN (no dot files), sorted like sh."""
         c = self.canon(dirpath)
-        if c is None or not os.path.isdir(self.host(c)):
+        if c is None or not self.isdir(c):
             return []
-        names = sorted(n for n in os.listdir(self.host(c)) if not n.startswith('.') and fnmatch.fnmatchcase(n, pattern))
+        names = [n for n in self.listdir(c) if not n.startswith('.') and fnmatch.fnmatchcase(n, pattern)]
         return [dirpath.rstrip('/') + '/' + n for n in names]
 
     def read(self, p):
-        with open(self.host(self.canon(p)), 'rb') as f:
+        canonical = self.canon(p)
+        rel = canonical.lstrip('/')
+        if rel in self.payloads and not os.path.isfile(self.h + '/' + rel):
+            archive, member = self.payloads[rel]
+            with archive.extractfile(member) as source:
+                return source.read()
+        with open(self.h + canonical, 'rb') as f:
             return f.read()
 
     # -- materialization --
     def _remove(self, hp):
+        if not os.path.lexists(hp):
+            return
         if os.path.isdir(hp) and not os.path.islink(hp):
             shutil.rmtree(hp)
         else:
@@ -188,9 +259,15 @@ class Rootfs:
 
     def _drop_meta(self, rel):
         self.meta.pop(rel, None)
+        self._drop_payload(rel)
+        parent, _, base = rel.rpartition('/')
+        self.children[parent].discard(base)
         prefix = rel + '/'
         for k in [k for k in self.meta if k.startswith(prefix)]:
             del self.meta[k]
+            self._drop_payload(k)
+            parent, _, base = k.rpartition('/')
+            self.children[parent].discard(base)
 
     def _parent(self, rel):
         d, _, base = rel.rpartition('/')
@@ -201,6 +278,8 @@ class Rootfs:
         for comp in c.strip('/').split('/'):
             cur = cur + '/' + comp
             hp = self.h + cur
+            if cur.lstrip('/') in self.payloads:
+                raise ValueError('layer parent is not a directory: ' + cur)
             if not os.path.lexists(hp):
                 os.mkdir(hp, 0o755)
             elif not os.path.isdir(hp) or os.path.islink(hp):
@@ -208,93 +287,96 @@ class Rootfs:
         return c.strip('/'), base
 
     def apply_layer(self, path, skip_prefixes=()):
-        with tarfile.open(path, 'r:*') as tf:
-            members = tf.getmembers()
-            for m in members:
-                if '..' in m.name.split('/'):
-                    raise ValueError('parent component in rootfs layer member: ' + m.name)
-                if m.islnk() and '..' in m.linkname.split('/'):
-                    raise ValueError('parent component in rootfs hardlink target: ' + m.linkname)
-                parts = [part for part in m.name.split('/') if part not in ('', '.')]
-                base = parts[-1] if parts else ''
-                if base.startswith('.wh.') and base[4:] in ('', '.', '..'):
-                    raise ValueError('invalid rootfs whiteout target: ' + m.name)
-            entries = []
-            for m in members:
-                name = m.name
-                while name.startswith('./'):
-                    name = name[2:]
-                name = name.strip('/')
-                if not name or name == '.':
-                    continue
-                if any(name == p or name.startswith(p + '/') for p in skip_prefixes):
-                    continue
-                entries.append((m, name))
+        self.materialized_directories.clear()
+        tf = self.layers.enter_context(tarfile.open(path, 'r:*'))
+        members = tf.getmembers()
+        for m in members:
+            if '..' in m.name.split('/'):
+                raise ValueError('parent component in rootfs layer member: ' + m.name)
+            if m.islnk() and '..' in m.linkname.split('/'):
+                raise ValueError('parent component in rootfs hardlink target: ' + m.linkname)
+            parts = [part for part in m.name.split('/') if part not in ('', '.')]
+            base = parts[-1] if parts else ''
+            if base.startswith('.wh.') and base[4:] in ('', '.', '..'):
+                raise ValueError('invalid rootfs whiteout target: ' + m.name)
+        entries = []
+        for m in members:
+            name = m.name
+            while name.startswith('./'):
+                name = name[2:]
+            name = name.strip('/')
+            if not name or name == '.':
+                continue
+            if any(name == p or name.startswith(p + '/') for p in skip_prefixes):
+                continue
+            entries.append((m, name))
 
-            # OCI whiteouts remove lower-layer state, regardless of where the
-            # marker appears relative to this layer's own entries.
-            for m, name in entries:
-                base = name.rsplit('/', 1)[-1]
-                if not base.startswith('.wh.'):
-                    continue
-                pd = name.rsplit('/', 1)[0] if '/' in name else ''
-                pc = self.canon('/' + pd) if pd else '/'
-                if pc is None:
-                    continue
-                d = pc.strip('/')
-                if base == '.wh..wh..opq':
-                    hd = self.h + '/' + d if d else self.h
-                    for n in os.listdir(hd):
-                        r = (d + '/' + n) if d else n
-                        self._remove(hd + '/' + n)
-                        self._drop_meta(r)
+        # OCI whiteouts remove lower-layer state, regardless of where the
+        # marker appears relative to this layer's own entries.
+        for m, name in entries:
+            base = name.rsplit('/', 1)[-1]
+            if not base.startswith('.wh.'):
+                continue
+            pd = name.rsplit('/', 1)[0] if '/' in name else ''
+            pc = self.canon('/' + pd) if pd else '/'
+            if pc is None:
+                continue
+            d = pc.strip('/')
+            if base == '.wh..wh..opq':
+                hd = self.h + '/' + d if d else self.h
+                for n in self.listdir('/' + d):
+                    r = (d + '/' + n) if d else n
+                    self._remove(hd + '/' + n)
+                    self._drop_meta(r)
+            else:
+                r = (d + '/' + base[4:]) if d else base[4:]
+                self._remove(self.h + '/' + r)
+                self._drop_meta(r)
+
+        # Preserve stream order for ordinary entries and hardlinks.
+        for m, name in entries:
+            if name.rsplit('/', 1)[-1].startswith('.wh.'):
+                continue
+            # Debian merged-/usr package extraction keeps a directory
+            # alias supplied by base-files when an older package names
+            # that directory explicitly (tar --keep-directory-symlink).
+            if m.isdir() and self.islink('/' + name) and self.isdir('/' + name):
+                continue
+            d, base = self._parent(name)
+            rel = (d + '/' + base) if d else base
+            hp = self.h + '/' + rel
+            if (os.path.lexists(hp) or rel in self.payloads) and not (m.isdir() and os.path.isdir(hp) and not os.path.islink(hp)):
+                self._remove(hp)
+                self._drop_meta(rel)
+            if m.isdir():
+                if not os.path.lexists(hp):
+                    os.mkdir(hp, 0o755)
+                os.chmod(hp, (m.mode & 0o777) | 0o700)
+                mode = stat.S_IFDIR
+            elif m.issym():
+                os.symlink(m.linkname, hp)
+                mode = stat.S_IFLNK
+            elif m.islnk():
+                target = m.linkname
+                while target.startswith('./'):
+                    target = target[2:]
+                td, tb = self._parent(target.strip('/'))
+                tr = (td + '/' + tb) if td else tb
+                if tr in self.payloads:
+                    self._set_payload(rel, self.payloads[tr])
+                    self.children[d].add(base)
                 else:
-                    r = (d + '/' + base[4:]) if d else base[4:]
-                    if os.path.lexists(self.h + '/' + r):
-                        self._remove(self.h + '/' + r)
-                        self._drop_meta(r)
-
-            # Preserve stream order for ordinary entries and hardlinks.
-            for m, name in entries:
-                if name.rsplit('/', 1)[-1].startswith('.wh.'):
-                    continue
-                # Debian merged-/usr package extraction keeps a directory
-                # alias supplied by base-files when an older package names
-                # that directory explicitly (tar --keep-directory-symlink).
-                if m.isdir() and self.islink('/' + name) and self.isdir('/' + name):
-                    continue
-                d, base = self._parent(name)
-                rel = (d + '/' + base) if d else base
-                hp = self.h + '/' + rel
-                if os.path.lexists(hp) and not (m.isdir() and os.path.isdir(hp) and not os.path.islink(hp)):
-                    self._remove(hp)
-                    self._drop_meta(rel)
-                if m.isdir():
-                    if not os.path.lexists(hp):
-                        os.mkdir(hp, 0o755)
-                    os.chmod(hp, (m.mode & 0o777) | 0o700)
-                    mode = stat.S_IFDIR
-                elif m.issym():
-                    os.symlink(m.linkname, hp)
-                    mode = stat.S_IFLNK
-                elif m.islnk():
-                    target = m.linkname
-                    while target.startswith('./'):
-                        target = target[2:]
-                    td, tb = self._parent(target.strip('/'))
-                    tr = (td + '/' + tb) if td else tb
                     os.link(self.h + '/' + tr, hp, follow_symlinks=False)
-                    src = self.meta.get(tr)
-                    self.meta[rel] = (src[0] if src else stat.S_IFREG | m.mode, m.mtime, m.uid, m.gid)
-                    continue
-                elif m.isreg():
-                    with tf.extractfile(m) as src, open(hp, 'wb') as dst:
-                        shutil.copyfileobj(src, dst, 1 << 20)
-                    os.chmod(hp, (m.mode & 0o777) | 0o600)
-                    mode = stat.S_IFREG
-                else:
-                    continue  # device nodes / fifos: never read by mkinitramfs
-                self.meta[rel] = (mode | (m.mode & 0o7777), int(m.mtime), m.uid, m.gid)
+                src = self.meta.get(tr)
+                self.meta[rel] = (src[0] if src else stat.S_IFREG | m.mode, m.mtime, m.uid, m.gid)
+                continue
+            elif m.isreg():
+                self._set_payload(rel, (tf, m))
+                self.children[d].add(base)
+                mode = stat.S_IFREG
+            else:
+                continue  # device nodes / fifos: never read by mkinitramfs
+            self.meta[rel] = (mode | (m.mode & 0o7777), int(m.mtime), m.uid, m.gid)
 
 
 # ---------------------------------------------------------------------------
@@ -518,17 +600,16 @@ class Mkinitramfs:
             if os.path.isdir(hdst) and not os.path.islink(hdst):
                 raise ValueError('cp onto directory ' + dest)
             os.unlink(hdst)
-        hsrc = self.r.host(csrc)
         meta = self.r.rmeta(csrc)
         if stat.S_ISLNK(meta[0]):
-            os.symlink(os.readlink(hsrc), hdst)
+            os.symlink(os.readlink(self.r.host(csrc)), hdst)
         elif stat.S_ISREG(meta[0]):
-            shutil.copyfile(hsrc, hdst)
+            self.r.copy_regular(csrc, hdst)
             os.chmod(hdst, (meta[0] & 0o777) | 0o600)
         elif stat.S_ISDIR(meta[0]):
             os.mkdir(hdst, 0o755)
             self.note(hdst, meta[0], meta[1])
-            for n in sorted(os.listdir(hsrc)):
+            for n in self.r.listdir(csrc):
                 self.cp_p(csrc + '/' + n, dest + '/' + n, deref=deref)
             return
         else:
@@ -595,7 +676,7 @@ class Mkinitramfs:
     def ldd(self, src):
         """Library paths `ldd src` prints (sed-filtered as in copy_exec)."""
         c = self.r.canon(src)
-        info = elf_read(self.r.host(c))
+        info = elf_read(src, data=self.r.read(c))
         if info is None:
             return []
         if info['machine'] != self.a['machine']:
@@ -641,7 +722,7 @@ class Mkinitramfs:
                     raise ValueError('required ELF library %s not found for %s' % (name, src))
                 loaded[name] = found
                 order.append(found)
-                sub = elf_read(self.r.host(self.r.canon(found)))
+                sub = elf_read(found, data=self.r.read(found))
                 if sub is None or sub['machine'] != self.a['machine']:
                     raise ValueError('bad library ' + found)
                 queue.append((found, sub, chain if not inf['runpath'] else own_rpath))
@@ -652,7 +733,7 @@ class Mkinitramfs:
         canonical = self.r.canon(src)
         if canonical is None:
             raise ValueError('missing ' + role + ': ' + src)
-        info = elf_read(self.r.host(canonical), data=data)
+        info = elf_read(src, data=self.r.read(canonical) if data is None else data)
         if info is None:
             raise ValueError(role + ' is not ELF: ' + src)
         if info['machine'] != self.a['machine']:
@@ -783,11 +864,10 @@ class Mkinitramfs:
         mods = []
 
         def walk(cpath):
-            hp = self.r.host(self.r.canon(cpath))
-            for n in sorted(os.listdir(hp)):
+            for n in self.r.listdir(self.r.canon(cpath)):
                 if any(fnmatch.fnmatchcase(n, p) for p in pats):
                     continue
-                st = os.lstat(hp + '/' + n)
+                st = self.r.lstat(cpath + '/' + n, False)
                 if fnmatch.fnmatchcase(n, '*.ko*'):
                     mods.append(n.split('.', 1)[0])
                 if stat.S_ISDIR(st.st_mode):
@@ -964,7 +1044,7 @@ class Mkinitramfs:
             destination = directory.rstrip('/') + '/' + source.rsplit('/', 1)[-1]
             self.mkdir_p(destination)
             canonical = self.r.canon(source)
-            for name in sorted(os.listdir(self.r.host(canonical))):
+            for name in self.r.listdir(canonical):
                 self.copy_network_entry(source.rstrip('/') + '/' + name, destination)
             mode, mtime, _, _ = self.r.rmeta(canonical)
             self.note(self.r.host(self.r.canon(destination)), mode, mtime)
@@ -973,8 +1053,7 @@ class Mkinitramfs:
 
     def find_L(self, top):
         out = []
-        hp = self.r.host(self.r.canon(top))
-        for n in sorted(os.listdir(hp)):
+        for n in self.r.listdir(self.r.canon(top)):
             p = top + '/' + n
             out.append(p)
             if self.r.isdir(p):
@@ -1091,7 +1170,7 @@ class Mkinitramfs:
             name = p.rsplit('/', 1)[-1]
             if not SCRIPT_NAME.match(name) or self.r.isdir(p) or not self.r.is_exec(p):
                 continue
-            digest = sha256(self.r.host(self.r.canon(p)))
+            digest = hashlib.sha256(self.r.read(p)).hexdigest()
             if HOOK_PINS.get(name) != digest:
                 raise ValueError('unpinned initramfs hook %s (sha256 %s): review and extend mkinitramfs.py' % (p, digest))
             initlist.append(name)
@@ -1138,7 +1217,7 @@ class Mkinitramfs:
         r = self.r
         self.confdir = confdir
         for rel, want in PINS.items():
-            got = sha256(r.host(r.canon('/' + rel)))
+            got = hashlib.sha256(r.read('/' + rel)).hexdigest()
             if got != want:
                 raise ValueError('unpinned %s (sha256 %s)' % (rel, got))
         conf = shell_conf(r.read(confdir + '/initramfs.conf').decode(), confdir + '/initramfs.conf')
@@ -1247,16 +1326,15 @@ class Mkinitramfs:
         c = self.r.canon(top)
         if c is None:
             return []
-        base = self.r.host(c)
         out = []
 
         def walk(rel, depth):
-            hp = base + ('/' + rel if rel else '')
-            for n in sorted(os.listdir(hp)):
+            current = c + ('/' + rel if rel else '')
+            for n in self.r.listdir(current):
                 if maxdepth is not None and len(n) >= 2 and n.startswith('.'):
                     continue
                 p = (rel + '/' + n) if rel else n
-                st = os.lstat(hp + '/' + n)
+                st = self.r.lstat(current + '/' + n, False)
                 if stat.S_ISREG(st.st_mode) and SCRIPT_NAME.match(n):
                     out.append(p)
                 if stat.S_ISDIR(st.st_mode) and (maxdepth is None or depth + 1 < maxdepth):
@@ -1289,27 +1367,56 @@ def compression_level(spec, conf=None):
     return level
 
 
-def compress_initrd(source_path, output, spec):
+class CountedStream:
+    def __init__(self, stream):
+        self.stream, self.size = stream, 0
+
+    def write(self, data):
+        result = self.stream.write(data)
+        self.size += len(data)
+        return result
+
+
+def write_compressed_initrd(output, spec, write):
+    """Send newc directly to the declared compressor and count plain bytes."""
     compression = spec.get('compression', 'zstd')
     level = compression_level(spec)
-    with open(source_path, 'rb') as source, open(output, 'wb') as destination:
-        if compression == 'gzip':
-            if not spec.get('pigz'):
-                raise ValueError('gzip compression requires a declared pigz executable')
-            subprocess.run([spec['pigz'], '-n', '-' + str(level), '-c'], stdin=source, stdout=destination,
-                           check=True, env=ENV)
-        elif compression == 'xz':
+    with open(output, 'wb') as destination:
+        if compression == 'xz':
             with lzma.LZMAFile(destination, mode='wb', preset=level, check=lzma.CHECK_CRC32) as compressed:
-                shutil.copyfileobj(source, compressed, 1024 * 1024)
-        elif compression == 'zstd':
-            if not spec.get('zstd'):
-                raise ValueError('zstd compression requires a declared zstd executable')
-            result = subprocess.run([spec['zstd'], '-q', '-' + str(level), '-c'], stdin=source, stdout=destination,
-                                    stderr=subprocess.PIPE, env=ENV)
-            if result.returncode:
-                raise RuntimeError('zstd failed: ' + result.stderr.decode())
-        else:
+                counted = CountedStream(compressed)
+                result = write(counted)
+            return result, counted.size
+        if compression not in ('gzip', 'zstd'):
             raise ValueError('unsupported initramfs compression: ' + compression)
+        tool = 'pigz' if compression == 'gzip' else 'zstd'
+        if not spec.get(tool):
+            raise ValueError(compression + ' compression requires a declared ' + tool + ' executable')
+        command = [spec[tool], '-n' if compression == 'gzip' else '-q', '-' + str(level), '-c']
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=destination,
+                              stderr=subprocess.PIPE, env=ENV) as process:
+            counted = CountedStream(process.stdin)
+            try:
+                result = write(counted)
+                process.stdin.close()
+                error = process.stderr.read()
+                status = process.wait()
+            except BaseException:
+                process.kill()
+                process.wait()
+                try:
+                    process.stdin.close()
+                except BrokenPipeError:
+                    pass
+                raise
+            if status:
+                raise RuntimeError(tool + ' failed: ' + error.decode(errors='replace'))
+            return result, counted.size
+
+
+def compress_initrd(source_path, output, spec):
+    with open(source_path, 'rb') as source:
+        write_compressed_initrd(output, spec, lambda stream: shutil.copyfileobj(source, stream, 1 << 20))
 
 
 def read_kernel_metadata(path):
@@ -1328,6 +1435,9 @@ def prepare_module_indexes(root, mk, work, release, module_path, module_indexes)
         raise NotImplementedError('image depmod.d configuration: %r' % dconf)
     empty = os.path.join(work, 'empty-host-depmod.d')
     os.mkdir(empty)
+    # Native kmod tools require a real module tree; other host payloads stay
+    # in their source TARs until a hook actually needs them.
+    root.host(root.canon(module_path))
     mk.run([mk.depmod, '-b', root.h, '-C', empty, release])
     if module_indexes is not None:
         with tarfile.open(module_indexes, 'w', format=tarfile.PAX_FORMAT) as archive:
@@ -1345,16 +1455,17 @@ def build_initrd(spec, output, report, module_indexes=None, kernel_links=None):
     if spec.get('compression', 'zstd') not in ('zstd', 'gzip', 'xz'):
         raise ValueError('unsupported initramfs compression')
     os.umask(0o022)
-    with tempfile.TemporaryDirectory(prefix='mkinitramfs-', dir='.') as tmp:
+    with tempfile.TemporaryDirectory(prefix='mkinitramfs-', dir='.') as tmp, ExitStack() as resources:
         work = os.path.abspath(tmp)
         root = Rootfs(os.path.join(work, 'root'))
+        resources.callback(root.close)
         os.mkdir(root.h)
         for layer in spec['layers']:
             root.apply_layer(layer, skip_prefixes=('var/lib/docker', 'dev'))
         release = metadata['kernel_release']
         for entry in metadata['boot'].values():
             source = root.canon('/' + entry['path'])
-            if source is None or sha256(root.host(source)) != entry['sha256']:
+            if source is None or hashlib.sha256(root.read(source)).hexdigest() != entry['sha256']:
                 raise ValueError('rootfs boot file differs from kernel producer metadata: ' + entry['path'])
         module_directory = metadata.get('module_directory')
         if not isinstance(module_directory, str):
@@ -1371,7 +1482,7 @@ def build_initrd(spec, output, report, module_indexes=None, kernel_links=None):
             name = os.path.basename(extra)
             if not CONF_NAME.fullmatch(name):
                 raise ValueError('invalid initramfs configuration fragment name: ' + name)
-            directory = root.host(root.canon(confdir + '/conf.d', missing='all'))
+            directory = root.h + root.canon(confdir + '/conf.d', missing='all')
             os.makedirs(directory, exist_ok=True)
             destination = os.path.join(directory, name)
             relative = os.path.relpath(destination, root.h)
@@ -1396,9 +1507,7 @@ def build_initrd(spec, output, report, module_indexes=None, kernel_links=None):
                     member.type, member.mode, member.linkname = tarfile.SYMTYPE, 0o777, target
                     archive.addfile(member)
         spec['compression_level'] = mk.compression_level
-        cpio_path = os.path.join(work, 'initrd.cpio')
-        listing = mk.cpio(cpio_path)
-        compress_initrd(cpio_path, output, spec)
+        listing, cpio_bytes = write_compressed_initrd(output, spec, mk.cpio)
         seen_inodes = set()
         allocated = 0
         staged = root.host(root.canon(mk.D))
@@ -1410,7 +1519,7 @@ def build_initrd(spec, output, report, module_indexes=None, kernel_links=None):
         with open(report, 'w') as stream:
             json.dump({'config_dir': confdir, 'arch': spec['arch'], 'kernel_release': release,
                        'uncompressed_size_mib': (allocated + (1 << 20) - 1) // (1 << 20),
-                       'cpio_bytes': os.path.getsize(cpio_path), 'initrd_bytes': os.path.getsize(output),
+                       'cpio_bytes': cpio_bytes, 'initrd_bytes': os.path.getsize(output),
                        'hooks_run': mk.hooks_run, 'orders': mk.orders, 'log': mk.log,
                        'busybox_applets': len(getattr(mk, 'busybox_applets', [])), 'entries': listing}, stream, indent=1)
 

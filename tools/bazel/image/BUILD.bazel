@@ -129,8 +129,14 @@ py_test(
 
 py_test(
     name = "mkinitramfs_test",
-    args = ["--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)"],
-    data = ["@sonic_build_infra//tools/build_tools:pigz"],
+    args = [
+        "--pigz=$(rootpath @sonic_build_infra//tools/build_tools:pigz)",
+        "--zstd=$(rootpath @sonic_build_infra//tools/build_tools:zstd)",
+    ],
+    data = [
+        "@sonic_build_infra//tools/build_tools:pigz",
+        "@sonic_build_infra//tools/build_tools:zstd",
+    ],
     srcs = [
         "mkinitramfs.py",
         "mkinitramfs_test.py",

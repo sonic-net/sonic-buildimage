@@ -6,6 +6,7 @@ Owners and device numbers are zero, inode numbers are allocated in path order,
 and payloads of hardlinked regular files are deferred until the last link.
 """
 import collections
+from contextlib import nullcontext
 import hashlib
 import os
 import stat
@@ -43,7 +44,7 @@ def write_newc(root, output, metadata=None):
     inodes = {}
     deferred = []
     listing = []
-    with open(output, 'wb') as stream:
+    with (nullcontext(output) if hasattr(output, 'write') else open(output, 'wb')) as stream:
         position = 0
 
         def identity(st):
