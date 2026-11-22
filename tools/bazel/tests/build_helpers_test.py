@@ -1,5 +1,6 @@
 """Check shared archive publication and optional cache settings."""
 
+import errno
 import os
 from pathlib import Path
 import sys
@@ -10,6 +11,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from tools.bazel import build_helpers
+from tools.bazel.image import file_copy
 from tools.bazel.oci import boot_layout
 from tools.bazel.tests.oci_base_fixture import image_fixture, oci_files, write_layout
 
@@ -27,11 +29,57 @@ class BuildHelpersTest(unittest.TestCase):
         """Keep the last good image and remove staging files when archive copying fails."""
         source = self.root / "source"
         source.write_bytes(b"new image")
-        with patch.object(build_helpers.shutil, "copyfile", side_effect=OSError("disk full")):
+        with patch.object(build_helpers, "copy_file", side_effect=OSError("disk full")):
             with self.assertRaises(OSError):
                 build_helpers.export_archive(source, self.destination)
         self.assertEqual(self.destination.read_bytes(), b"previous image")
         self.assertEqual(list(self.destination.parent.glob("container.gz.*")), [])
+
+    def test_reflink_publication_has_an_independent_inode_and_preserves_source(self):
+        source = self.root / "source"
+        source.write_bytes(b"new image")
+
+        def clone(destination, operation, original):
+            os.write(destination, os.read(original, 4096))
+
+        with patch.object(file_copy.fcntl, "ioctl", side_effect=clone) as ioctl, \
+                patch.object(file_copy.shutil, "copyfile") as fallback:
+            build_helpers.export_archive(source, self.destination)
+        ioctl.assert_called_once()
+        fallback.assert_not_called()
+        self.assertFalse(source.samefile(self.destination))
+        self.assertEqual(self.destination.stat().st_mode & 0o777, 0o644)
+        self.destination.write_bytes(b"changed")
+        self.assertEqual(source.read_bytes(), b"new image")
+
+    def test_unsupported_reflink_falls_back_and_copy_failure_is_atomic(self):
+        source = self.root / "source"
+        source.write_bytes(b"new image")
+        for error in (errno.EXDEV, errno.EOPNOTSUPP, errno.ENOTTY, errno.EINVAL):
+            with self.subTest(error=error):
+                with patch.object(file_copy.fcntl, "ioctl", side_effect=OSError(error, "unsupported")):
+                    build_helpers.export_archive(source, self.destination)
+                self.assertEqual(self.destination.read_bytes(), source.read_bytes())
+                self.destination.write_bytes(b"previous image")
+        with patch.object(file_copy.fcntl, "ioctl", side_effect=OSError(errno.EOPNOTSUPP, "unsupported")), \
+                patch.object(file_copy.shutil, "copyfile", side_effect=OSError(errno.ENOSPC, "full")):
+            with self.assertRaises(OSError):
+                build_helpers.export_archive(source, self.destination)
+        self.assertEqual(self.destination.read_bytes(), b"previous image")
+        self.assertEqual(list(self.destination.parent.glob("container.gz.*")), [])
+
+    def test_reflink_storage_errors_do_not_retry_and_samefile_is_not_truncated(self):
+        source = self.root / "source"
+        source.write_bytes(b"new image")
+        with patch.object(file_copy.fcntl, "ioctl", side_effect=OSError(errno.ENOSPC, "full")), \
+                patch.object(file_copy.shutil, "copyfile") as fallback:
+            with self.assertRaises(OSError):
+                build_helpers.export_archive(source, self.destination)
+        fallback.assert_not_called()
+        self.assertEqual(self.destination.read_bytes(), b"previous image")
+        with self.assertRaises(file_copy.shutil.SameFileError):
+            file_copy.copy_file(source, source)
+        self.assertEqual(source.read_bytes(), b"new image")
 
     def test_unchanged_archive_keeps_timestamp(self):
         """Avoid invalidating downstream Make targets when the exported archive bytes are

@@ -32,6 +32,17 @@ elif [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
     python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
 fi
 
+installer_timed()
+{
+    local step=$1
+    shift
+    if [[ ${RFS_SPLIT_LAST_STAGE:-n} == y && -n ${SONIC_INSTALLER_EVIDENCE_DIR:-} ]]; then
+        python3 scripts/installer_step_timing.py "$step" "$@"
+    else
+        "$@"
+    fi
+}
+
 ORGANIZATION_BUILD_HOOK=files/build_templates/build_debian.organization.sh
 
 run_organization_build_hook()
@@ -61,6 +72,12 @@ TRUSTED_GPG_DIR=$BUILD_TOOL_PATH/trusted.gpg.d
 . ./onie-image.conf
 if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
     export FILESYSTEM_DOCKERFS=sonic-images.tar.gz
+fi
+installer_rootfs_handoff=n
+if [[ -n ${SONIC_VS_RFS_HANDOFF_SESSION:-} && ${TARGET_MACHINE:-} == vs &&
+      ${IMAGE_TYPE:-} == onie && $CONFIGURED_ARCH == amd64 &&
+      ${CROSS_BUILD_ENVIRON:-n} != y && ${MULTIARCH_QEMU_ENVIRON:-n} != y ]]; then
+    installer_rootfs_handoff=y
 fi
 [ -n "$ONIE_IMAGE_PART_SIZE" ] || {
     echo "Error: Invalid ONIE_IMAGE_PART_SIZE in onie image config file"
@@ -711,9 +728,14 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
     ## ensure proc is mounted
     sudo mount proc /proc -t proc || true
 
-    sudo fuser -vm $FILESYSTEM_ROOT || true
-    sudo rm -rf $FILESYSTEM_ROOT
-    sudo unsquashfs -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
+    if [[ $installer_rootfs_handoff != y ]] ||
+        ! installer_timed rootfs-restore sudo python3 scripts/installer_rootfs_handoff.py restore \
+            --session "$SONIC_VS_RFS_HANDOFF_SESSION" --root "$FILESYSTEM_ROOT" \
+            --archive "$TARGET_PATH/$RFS_SQUASHFS_NAME"; then
+        sudo fuser -vm $FILESYSTEM_ROOT || true
+        sudo rm -rf $FILESYSTEM_ROOT
+        installer_timed rootfs-extract sudo unsquashfs -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
+    fi
 
     ## make / as a mountpoint in chroot env, needed by dockerd
     pushd $FILESYSTEM_ROOT
@@ -758,7 +780,7 @@ sudo install -o root -g root -m 0644 "$sonic_version_tmp" \
 rm -f "$sonic_version_tmp"
 
 if [ -f sonic_debian_extension.sh ]; then
-    ./sonic_debian_extension.sh $FILESYSTEM_ROOT $PLATFORM_DIR $IMAGE_DISTRO
+    installer_timed extensions ./sonic_debian_extension.sh $FILESYSTEM_ROOT $PLATFORM_DIR $IMAGE_DISTRO
 fi
 
 ## Organization specific extensions such as Configuration & Scripts for features like AAA, ZTP...
@@ -859,7 +881,7 @@ if [[ $BUILD_WITH_BAZEL_WHEN_AVAILABLE == y && $DEBUG_IMG == y ]]; then
     sudo rm -f "$FILESYSTEM_ROOT/$kernel_debug_deb"
 fi
 ## Update initramfs
-sudo chroot $FILESYSTEM_ROOT update-initramfs -u
+installer_timed initramfs sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format
 if [[ $TARGET_BOOTLOADER == uboot ]]; then
     INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
@@ -929,7 +951,7 @@ fi
 # Collect host image version files before cleanup
 SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE}  \
 	DBGOPT="${DBGOPT}" \
-	scripts/collect_host_image_version_files.sh $CONFIGURED_ARCH $IMAGE_DISTRO $TARGET_PATH $FILESYSTEM_ROOT
+	installer_timed version-collection scripts/collect_host_image_version_files.sh $CONFIGURED_ARCH $IMAGE_DISTRO $TARGET_PATH $FILESYSTEM_ROOT
 
 # SBOM license harvest happens uniformly via the per-scope
 # collect_version_files hook (see src/sonic-build-hooks/scripts/collect_version_files).
@@ -938,17 +960,17 @@ SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE}  \
 # below at line ~838.
 
 # Remove GCC
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
+installer_timed remove-gcc sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
 
 # Remove eatmydata
 sudo rm $FILESYSTEM_ROOT/etc/apt/apt.conf.d/00image-install-eatmydata $FILESYSTEM_ROOT/usr/local/bin/dpkg
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove eatmydata
+installer_timed remove-eatmydata sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove eatmydata
 
 ## Clean up apt
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y autoremove
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get autoclean
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get clean
-sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/locale/* /var/lib/apt/lists/* /tmp/*'
+installer_timed apt-autoremove sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y autoremove
+installer_timed apt-clean sudo LANG=C chroot $FILESYSTEM_ROOT apt-get autoclean
+installer_timed apt-clean sudo LANG=C chroot $FILESYSTEM_ROOT apt-get clean
+installer_timed cleanup-files sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/locale/* /var/lib/apt/lists/* /tmp/*'
 
 ## Clean up proxy
 [ -n "$http_proxy" ] && sudo rm -f $FILESYSTEM_ROOT/etc/apt/apt.conf.d/01proxy
@@ -984,7 +1006,7 @@ fi
 sudo rm -f $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
 ## Output the file system total size for diag purpose
 ## Note: -x to skip directories on different file systems, such as /proc
-sudo du -hsx $FILESYSTEM_ROOT
+installer_timed size-scan sudo du -hsx $FILESYSTEM_ROOT
 sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 
 ## Clear DNS configuration inherited from the build server
@@ -1003,7 +1025,7 @@ sudo cp files/image_config/resolv-config/resolv-symlink.conf $FILESYSTEM_ROOT/us
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
-   sudo scripts/build-optimize-fs-size.py "$FILESYSTEM_ROOT" \
+   installer_timed size-optimize sudo scripts/build-optimize-fs-size.py "$FILESYSTEM_ROOT" \
       --image-type "$IMAGE_TYPE" \
       --hardlinks var/lib/docker \
       --hardlinks usr/share/sonic/device \
@@ -1015,7 +1037,16 @@ fi
 if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
     python3 ./scripts/image_timing.py switch compression filesystem 2>/dev/null || true
 fi
-sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e boot -e var/lib/docker -e $PLATFORM_DIR
+squashfs_compression=()
+if [[ -n ${SONIC_SQUASHFS_ZSTD_LEVEL:-} ]]; then
+    [[ $SONIC_SQUASHFS_ZSTD_LEVEL =~ ^([1-9]|1[0-9]|2[0-2])$ ]] || {
+        echo 'SONIC_SQUASHFS_ZSTD_LEVEL must be between 1 and 22' >&2
+        exit 1
+    }
+    squashfs_compression=(-Xcompression-level "$SONIC_SQUASHFS_ZSTD_LEVEL")
+fi
+installer_timed squashfs sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M \
+    "${squashfs_compression[@]}" -e boot -e var/lib/docker -e $PLATFORM_DIR
 if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
     python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
 fi

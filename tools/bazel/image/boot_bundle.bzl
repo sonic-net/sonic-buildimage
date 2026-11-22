@@ -89,6 +89,7 @@ def _layer_impl(ctx):
         blob = ctx.actions.declare_file(ctx.label.name + "/layer.tar.gz")
         args.add("--out", blob)
         args.add("--pigz", ctx.executable._pigz)
+        args.add("--gzip-level", ctx.attr.gzip_level)
         outputs.append(blob)
         tools.append(ctx.attr._pigz[DefaultInfo].files_to_run)
     if ctx.attr.media_type.endswith("+zstd"):
@@ -113,13 +114,14 @@ _boot_layer = rule(
         "source_size": attr.string(mandatory = True),
         "diff_id": attr.string(mandatory = True),
         "media_type": attr.string(mandatory = True),
+        "gzip_level": attr.int(default = 6, values = range(1, 10)),
         "_worker": _exec_tool(":boot_bundle_action"),
         "_pigz": _exec_tool("@sonic_build_infra//tools/build_tools:pigz"),
         "zstd": attr.label(executable = True, cfg = "exec"),
     },
 )
 
-def boot_layer(name, src, source_digest, source_size, diff_id, media_type):
+def boot_layer(name, src, source_digest, source_size, diff_id, media_type, gzip_level = 6):
     # A layer can be larger than the largest signed 32-bit Bazel integer attr.
     _boot_layer(
         name = name,
@@ -128,6 +130,7 @@ def boot_layer(name, src, source_digest, source_size, diff_id, media_type):
         source_size = str(source_size),
         diff_id = diff_id,
         media_type = media_type,
+        gzip_level = gzip_level,
         zstd = Label("@sonic_build_infra//tools/build_tools:zstd") if media_type.endswith("+zstd") else None,
     )
 

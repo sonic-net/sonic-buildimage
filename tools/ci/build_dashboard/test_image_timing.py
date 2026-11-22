@@ -249,6 +249,7 @@ export -f git make
     def test_final_filesystem_compression_boundaries_and_failure(self):
         source = (ROOT / "build_debian.sh").read_text()
         marker = 'if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then\n    python3 ./scripts/image_timing.py switch compression filesystem'
+        helper = source[source.index("installer_timed()\n"):source.index("\nORGANIZATION_BUILD_HOOK=")]
         tail = source[source.index(marker):]
         (self.cwd / "fsroot").mkdir()
         stub = '''
@@ -273,7 +274,7 @@ PLATFORM_DIR=platform
                 with self.subTest(image_type=image_type, failure=failure):
                     path = self.begin()
                     self.complete(path, pattern[:squashfs])
-                    result = self.shell(stub + tail, **{timing.ENV: path, "IMAGE_TYPE": image_type,
+                    result = self.shell(stub + helper + tail, **{timing.ENV: path, "IMAGE_TYPE": image_type,
                                                        "FAIL_SQUASHFS": str(failure)})
                     self.assertEqual(result.returncode, failure, result.stderr)
                     events = [json.loads(line) for line in Path(path).read_text().splitlines()]

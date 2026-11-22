@@ -11,7 +11,6 @@ import json
 import os
 from pathlib import Path
 import shlex
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -25,6 +24,7 @@ from tools.bazel.ci.cache_reuse import json_records
 from tools.bazel.oci.boot_layout import direct_layout_for_archive
 from tools.bazel.oci.oci_layout import validate_layout
 from tools.bazel.image.boot_image_bundle import DIGEST, blob_name, json_bytes
+from tools.bazel.image.file_copy import copy_file
 
 REPO = "sonic_boot_bundle_inputs"
 RULES = "@@//tools/bazel/image:boot_bundle.bzl"
@@ -60,8 +60,8 @@ def link_input(directory, name, source):
         fd, tmp = tempfile.mkstemp(dir=destination.parent)
         partial = Path(tmp)
         try:
-            with os.fdopen(fd, "wb") as staged, source.open("rb") as stream:
-                shutil.copyfileobj(stream, staged, length=1024 * 1024)
+            os.close(fd)
+            copy_file(source, partial)
             partial.replace(destination)
         finally:
             partial.unlink(missing_ok=True)
@@ -138,7 +138,10 @@ def write_archive_package(package, images, platform, handoff=None):
 
 
 class BundlePackage:
-    def __init__(self, directory):
+    def __init__(self, directory, gzip_level=6):
+        if type(gzip_level) is not int or not 1 <= gzip_level <= 9:
+            raise ValueError("gzip level must be between 1 and 9")
+        self.gzip_level = gzip_level
         self.directory = directory
         directory.mkdir()
         self.rules = [f'load("{RULES}", "boot_archive_members", "boot_bundle", "boot_layer")']
@@ -204,8 +207,11 @@ class BundlePackage:
                 self.aliases[prefix] += 1
                 name = prefix + (f"_{number}" if number else "")
                 self.layer_targets[(key, src)] = name
+                compression = ({} if desc["mediaType"].endswith(("+gzip", ".gzip"))
+                               else {"gzip_level": self.gzip_level})
                 self.rules.append(starlark_call("boot_layer", name=name, src=src, source_digest=digest,
-                                       source_size=desc["size"], diff_id=diff, media_type=desc["mediaType"]))
+                                       source_size=desc["size"], diff_id=diff, media_type=desc["mediaType"],
+                                       **compression))
             self.verified.add(key)
         return {"config": cfg_digest, "tags": image.tags, "layers": layers,
                 "original_tags": original_tags, "check_label": image.check_label}
@@ -285,7 +291,10 @@ def lock_checkout():
         os.close(checkout)
 
 
-def build(images, platform, output, inventory, labels, evidence_dir=None):
+def build(images, platform, output, inventory, labels, evidence_dir=None, gzip_level=6):
+    if type(gzip_level) is not int or not 1 <= gzip_level <= 9:
+        raise ValueError("gzip level must be between 1 and 9")
+    started = time.monotonic()
     options = (cache_options(os.environ.get("BAZEL_CONTAINER_CACHE_DIR") or os.environ.get("BAZEL_SWSS_CACHE_DIR"))
                + shlex.split(os.environ.get("BAZEL_CONTAINER_ARGS", ""))
                + remote_cache_options())
@@ -308,9 +317,18 @@ def build(images, platform, output, inventory, labels, evidence_dir=None):
                     im.info = json.loads(results[im.archive + "/image.json"].read_bytes())
                     if not im.info["use_sidecar"]:
                         im.layout = None
-        package = BundlePackage(repo / "bundle")
+        graph_start = time.monotonic()
+        package = BundlePackage(repo / "bundle", gzip_level)
         package.select(images, platform)
         package.finish(platform, archives)
+        if evidence is not None:
+            evidence["inputs"] = {
+                "native_images": sum(im.layout is not None for im in images),
+                "archive_images": sum(im.layout is None for im in images),
+                "layer_actions": len(package.layer_targets),
+                "gzip_level": gzip_level,
+                "graph_seconds": time.monotonic() - graph_start,
+            }
         expected = {"boot/bundle.tar.gz", "boot/inventory.json", "boot/labels.json"}
         result = build_target(repo, "bundle", "boot", expected, evidence, options)
         publish_start = time.monotonic()
@@ -325,6 +343,7 @@ def build(images, platform, output, inventory, labels, evidence_dir=None):
                 "archive_only": sum(im.layout is None for im in images),
             }
     if evidence is not None:
+        evidence["total_seconds"] = time.monotonic() - started
         evidence_dir.mkdir(exist_ok=True, parents=True)
         with tempfile.NamedTemporaryFile(mode="w", dir=evidence_dir, prefix="boot-", suffix=".json", delete=False) as receipt:
             json.dump(evidence, receipt, sort_keys=True)
@@ -339,6 +358,8 @@ def main():
     parser.add_argument("--labels", type=Path)
     parser.add_argument("--image", nargs=2, action="append", default=[])
     parser.add_argument("--package-image", nargs=2, action="append", default=[])
+    parser.add_argument("--gzip-level", type=int, choices=range(1, 10),
+                        default=os.environ.get("SONIC_BOOT_LAYER_GZIP_LEVEL", "6") or "6")
     args = parser.parse_args()
     images = []
     for selections, check_label in ((args.image, True), (args.package_image, False)):
@@ -347,7 +368,8 @@ def main():
     if not images:
         parser.error("at least one image is required")
     evidence = os.environ.get("SONIC_BOOT_BUNDLE_EVIDENCE_DIR")
-    build(images, args.platform, args.output, args.inventory, args.labels, Path(evidence) if evidence else None)
+    build(images, args.platform, args.output, args.inventory, args.labels,
+          Path(evidence) if evidence else None, args.gzip_level)
 
 
 if __name__ == "__main__":

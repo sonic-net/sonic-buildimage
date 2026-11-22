@@ -5,7 +5,6 @@ import filecmp
 import os
 from pathlib import Path
 import shlex
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +12,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tools.bazel.cache import credentials
+from tools.bazel.image.file_copy import copy_file
 
 
 def cache_options(cache_directory):
@@ -90,7 +90,7 @@ def export_archive(source, destination, *, bind_identity=False):
                                      delete=False) as output:
         temporary = Path(output.name)
         try:
-            shutil.copyfile(source, temporary)
+            copy_file(source, temporary)
             temporary.chmod(0o644)
             if bind_identity:
                 before = os.fstat(output.fileno())

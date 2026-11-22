@@ -141,7 +141,7 @@ else:
         """Preserve the published archive and remove temporary output when copying fails."""
         previous = self.directory / 'telemetry.tar'
         previous.write_bytes(b'previous publication')
-        with mock.patch('tools.bazel.build_helpers.shutil.copyfile', side_effect=OSError('disk full')):
+        with mock.patch('tools.bazel.build_helpers.copy_file', side_effect=OSError('disk full')):
             with self.assertRaisesRegex(OSError, 'disk full'): self.collect()
         self.assertEqual(previous.read_bytes(), b'previous publication')
         self.assertEqual(self.receipt['artifacts'], {})
@@ -278,7 +278,7 @@ else:
 
     def test_failed_copy_does_not_publish_an_incomplete_artifact(self):
         """An interrupted first publication must leave no artifact or temporary partial copy."""
-        with mock.patch('tools.bazel.build_helpers.shutil.copyfile', side_effect=OSError('disk full')):
+        with mock.patch('tools.bazel.build_helpers.copy_file', side_effect=OSError('disk full')):
             with self.assertRaisesRegex(OSError, 'disk full'): self.collect()
         self.assertFalse(list(self.directory.glob("telemetry.tar*")))
         self.assertEqual(self.receipt.get("artifacts", {}), {})

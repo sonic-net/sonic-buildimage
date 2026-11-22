@@ -65,7 +65,16 @@ py_binary(
 py_binary(
     name = "boot_bundle_action",
     srcs = ["boot_bundle_action.py"],
-    deps = [":boot_image_bundle"],
+    deps = [
+        ":boot_image_bundle",
+        ":file_copy",
+    ],
+)
+
+py_library(
+    name = "file_copy",
+    srcs = ["file_copy.py"],
+    imports = ["."],
 )
 
 py_test(

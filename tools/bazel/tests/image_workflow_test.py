@@ -448,7 +448,8 @@ class VerificationWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="image configs ") as temporary:
             directory = Path(temporary)
             (directory / "artifacts/vs").mkdir(parents=True)
-            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py"):
+            for source in ("tools/bazel/build_helpers.py", "tools/bazel/cache/credentials.py",
+                           "tools/bazel/image/file_copy.py"):
                 destination = directory / source
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / source, destination)

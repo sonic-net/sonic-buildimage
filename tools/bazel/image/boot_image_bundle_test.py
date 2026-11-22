@@ -14,7 +14,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from boot_bundle_action import archive_input, bundle_input, normalize_layer
+from boot_bundle_action import archive_input, bundle_input, normalize_layer, project_members
 from boot_image_bundle import build, descriptor, emit, json_bytes, LAYER, OCI
 from boot_layout import publish_layout, layout_for_archive
 
@@ -174,6 +174,55 @@ class BootBundleTest(unittest.TestCase):
             self.cached_layer(zstd, desc, sha(b"wrong"), "bad-diff")
         with self.assertRaisesRegex(ValueError, "encoding does not match"):
             self.cached_layer(zstd, {**desc, "mediaType": LAYER}, sha(self.layer), "bad-media")
+
+    def test_fast_layer_profile_preserves_diffids_tags_and_existing_gzip_bytes(self):
+        raw = self.pool / sha(self.layer)[7:]
+        desc = descriptor(LAYER, sha(self.layer), len(self.layer))
+        inventory = None
+        for level in (1, 6):
+            receipt = self.work / ("layer-" + str(level) + ".json")
+            encoded = self.work / ("layer-" + str(level) + ".gz")
+            normalize_layer(raw, desc, sha(self.layer), receipt, encoded, PIGZ, ZSTD, level)
+            self.assertEqual(gzip.decompress(encoded.read_bytes()), self.layer)
+            report = json.loads(receipt.read_bytes())
+            self.assertEqual(report["diff_id"], sha(self.layer))
+            self.assertEqual(report["normalized"]["digest"], sha(encoded.read_bytes()))
+            spec = self.work / "fast.json"
+            spec.write_bytes(json_bytes({"images": [{"config": sha(self.config),
+                "tags": ["builtin:latest", "builtin:v1"], "layers": [desc], "check_label": True}]}))
+            bundle_input(spec, [self.pool / sha(self.config)[7:]], [(receipt, encoded)],
+                         "linux/amd64", self.output, self.inventory, self.labels, PIGZ)
+            current = self.inventory.read_bytes()
+            if inventory is not None:
+                self.assertEqual(current, inventory)
+            inventory = current
+            with tarfile.open(self.output) as bundle:
+                manifest = json.load(bundle.extractfile("manifest.json"))[0]
+                self.assertEqual(gzip.decompress(bundle.extractfile(manifest["Layers"][0]).read()), self.layer)
+            with self.assertRaisesRegex(ValueError, "uncompressed layer digest"):
+                normalize_layer(raw, desc, sha(b"bad"), receipt, encoded, PIGZ, ZSTD, level)
+
+        compressed = self.work / "original.gz"
+        compressed.write_bytes(gzip.compress(self.layer, mtime=0))
+        original = compressed.read_bytes()
+        desc = descriptor(LAYER + "+gzip", sha(original), len(original))
+        normalize_layer(compressed, desc, sha(self.layer), self.work / "gzip.json",
+                        None, PIGZ, ZSTD, 1)
+        self.assertEqual(compressed.read_bytes(), original)
+        with self.assertRaisesRegex(ValueError, "gzip level"):
+            normalize_layer(raw, desc, sha(self.layer), receipt, encoded, PIGZ, ZSTD, 0)
+
+    def test_projected_members_are_independent_and_preserve_bytes(self):
+        source = self.work / "archive/layers" / sha(self.layer)[7:]
+        source.parent.mkdir(parents=True)
+        source.write_bytes(self.layer)
+        destination = self.work / "project/layers" / source.name
+        destination.parent.mkdir(parents=True)
+        project_members(self.work / "archive", [destination])
+        self.assertEqual(destination.read_bytes(), self.layer)
+        self.assertFalse(destination.samefile(source))
+        destination.write_bytes(b"changed")
+        self.assertEqual(source.read_bytes(), self.layer)
 
     def test_cached_archive_route_verifies_receipt_and_falls_back(self):
         publish_layout(self.layout, self.legacy, self.legacy)

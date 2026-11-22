@@ -25,6 +25,8 @@ class VsBuildWorkflowTest(unittest.TestCase):
         self.scripts.mkdir(parents=True)
         (self.root / "scripts").mkdir()
         (self.root / "scripts/run_with_retry").symlink_to(ROOT / "scripts/run_with_retry")
+        (self.root / "scripts/installer_rootfs_handoff.py").symlink_to(
+            ROOT / "scripts/installer_rootfs_handoff.py")
         self.commands = self.root / "commands"
         self.commands.mkdir()
         self.revision = self.root / "revision"
@@ -42,9 +44,18 @@ with pathlib.Path("calls.jsonl").open("a") as output:
     output.write(json.dumps({"action": action, "goal": goal, "args": args,
         "bazel_args": os.environ.get("BAZEL_CONTAINER_ARGS"),
         "override_build_vars": os.environ.get("SONIC_OVERRIDE_BUILD_VARS"),
+        "rootfs_handoff_session": os.environ.get("SONIC_VS_RFS_HANDOFF_SESSION"),
+        "gzip_level": os.environ.get("SONIC_BOOT_LAYER_GZIP_LEVEL"),
+        "zstd_level": os.environ.get("SONIC_SQUASHFS_ZSTD_LEVEL"),
+        "batch_packages": os.environ.get("SONIC_VS_BATCH_PACKAGES"),
         "build_vars": os.environ.get("SONIC_BUILD_VARS"),
         "build_revision": pathlib.Path("artifacts/vs/build-revision.txt").read_text().strip()}) + "\n")
 print("controlled " + action)
+session = os.environ.get("SONIC_VS_RFS_HANDOFF_SESSION")
+if session:
+    tree = pathlib.Path(session) / "root"
+    tree.mkdir()
+    (tree / "unused-rootfs").write_text("fixture")
 if os.environ.get("FAIL_ONCE_GOAL") == goal and goal is not None:
     failed = pathlib.Path("failed-once")
     if not failed.exists():
@@ -75,6 +86,9 @@ else:
             path = self.commands / name
             path.write_text(gate)
             path.chmod(0o755)
+        sudo = self.commands / "sudo"
+        sudo.write_text("#!/bin/sh\nexec \"$@\"\n")
+        sudo.chmod(0o755)
         self.environment = dict(
             os.environ, PATH=str(self.commands) + os.pathsep + os.environ["PATH"],
             SONIC_CI_CONTAINER_LABEL="vs-fixture-label", BAZEL="fixture-bazel",
@@ -87,6 +101,11 @@ else:
                      "SONIC_VS_IMAGE_TIMINGS", "SONIC_VS_RETRY_GO_FETCH", "SONIC_ENABLE_DEBUG_LAYER",
                      "DOCKER_LOAD_ON_BOOT", "SONIC_VS_DEFER_BUILDER_CLEANUP"):
             self.environment.pop(name, None)
+        for name in ("SONIC_VS_FAST_ASSEMBLY", "SONIC_BOOT_LAYER_GZIP_LEVEL", "SONIC_SQUASHFS_ZSTD_LEVEL",
+                     "SONIC_VS_BATCH_PACKAGES"):
+            self.environment.pop(name, None)
+        self.environment.pop("SONIC_VS_RFS_HANDOFF", None)
+        self.environment.pop("SONIC_VS_RFS_HANDOFF_SESSION", None)
 
     def run_script(self, name, *args, **environment):
         env = dict(self.environment)
@@ -237,6 +256,44 @@ else:
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_profile(self.calls()[0], "target/sonic-vs.bin", "y")
 
+    def test_fast_assembly_profile_is_opt_in_and_allows_valid_overrides(self):
+        result = self.run_script("build_vs.sh", SONIC_VS_FAST_ASSEMBLY="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        call = self.calls()[-1]
+        builder = next(arg for arg in call["args"] if arg.startswith("SONIC_BUILDER_EXTRA_CMDLINE="))
+        self.assertIn("-e SONIC_BOOT_LAYER_GZIP_LEVEL", builder)
+        self.assertIn("-e SONIC_SQUASHFS_ZSTD_LEVEL", builder)
+        self.assertIn("-e SONIC_VS_BATCH_PACKAGES", builder)
+        self.assertEqual((call["gzip_level"], call["zstd_level"]), ("1", "3"))
+        self.assertEqual(call["batch_packages"], "1")
+        result = self.run_script("build_vs.sh", SONIC_VS_FAST_ASSEMBLY="1",
+                                 SONIC_BOOT_LAYER_GZIP_LEVEL="6", SONIC_SQUASHFS_ZSTD_LEVEL="15",
+                                 SONIC_VS_BATCH_PACKAGES="0")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        call = self.calls()[-1]
+        self.assertEqual((call["gzip_level"], call["zstd_level"]), ("6", "15"))
+        self.assertEqual(call["batch_packages"], "0")
+        for name, value in (("SONIC_BOOT_LAYER_GZIP_LEVEL", "0"), ("SONIC_SQUASHFS_ZSTD_LEVEL", "23"),
+                            ("SONIC_BOOT_LAYER_GZIP_LEVEL", "1 --bad"),
+                            ("SONIC_SQUASHFS_ZSTD_LEVEL", "3 --bad"),
+                            ("SONIC_VS_BATCH_PACKAGES", "2"), ("SONIC_VS_BATCH_PACKAGES", "1 --bad")):
+            before = len(self.calls())
+            result = self.run_script("build_vs.sh", **{name: value})
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertEqual(len(self.calls()), before)
+        workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
+        enabled = [step["id"] for job in workflow["jobs"].values() for step in job.get("steps", [])
+                   if step.get("env", {}).get("SONIC_VS_FAST_ASSEMBLY") == "1"]
+        self.assertEqual(enabled, ["native_build"])
+
+    def test_package_batching_can_be_enabled_without_changing_compression(self):
+        result = self.run_script("build_vs.sh", SONIC_VS_BATCH_PACKAGES="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        call = self.calls()[-1]
+        self.assertEqual(call["batch_packages"], "1")
+        self.assertEqual((call["gzip_level"], call["zstd_level"]), (None, None))
+        self.assertIn("-e SONIC_VS_BATCH_PACKAGES", " ".join(call["args"]))
+
     def test_ci_builds_and_verifies_the_boot_bundle(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
         jobs = workflow["jobs"]
@@ -258,6 +315,23 @@ else:
         self.assertIn("-e SONIC_BOOT_BUNDLE_EVIDENCE_DIR=artifacts/vs/image-timings/boot-bundle",
                       " ".join(self.calls()[-1]["args"]))
 
+    def test_optional_rootfs_handoff_is_private_and_cleaned_on_success_and_failure(self):
+        for load_on_boot in ("n", "y"):
+            for failure, expected in (("", 0), ("make", 17)):
+                with self.subTest(load_on_boot=load_on_boot, failure=failure):
+                    result = self.run_script(
+                        "build_vs.sh", SONIC_VS_RFS_HANDOFF="1", FAIL_ACTION=failure,
+                        DOCKER_LOAD_ON_BOOT=load_on_boot)
+                    self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+                    call = self.calls()[-1]
+                    session = call["rootfs_handoff_session"]
+                    self.assertRegex(session, r"^\.vs-rootfs-handoff\.[A-Za-z0-9]+$")
+                    self.assertFalse((self.root / session).exists())
+                    self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_RFS_HANDOFF_SESSION",
+                                  call["args"])
+                    self.assertIn(f"DOCKER_LOAD_ON_BOOT={load_on_boot}", call["args"])
+                    self.assertIn('"status": "unused"', result.stdout)
+
     def test_runtime_only_installer_and_validation_use_only_runtime_goals(self):
         result = self.run_script("build_vs.sh", SONIC_ENABLE_DEBUG_LAYER="n")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -277,7 +351,9 @@ else:
     def test_profile_opt_in_reaches_the_builder(self):
         result = self.run_script("build_vs.sh", SONIC_VS_IMAGE_TIMINGS="1")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_IMAGE_TIMINGS", self.calls()[0]["args"])
+        self.assertIn(self.profile_options()[-1] + " -e SONIC_VS_IMAGE_TIMINGS"
+                      " -e SONIC_INSTALLER_EVIDENCE_DIR=artifacts/vs/image-timings/installer-steps",
+                      self.calls()[0]["args"])
 
     def test_go_fetch_retry_reaches_the_full_installer_builder(self):
         result = self.run_script("build_vs.sh", SONIC_VS_RETRY_GO_FETCH="1")

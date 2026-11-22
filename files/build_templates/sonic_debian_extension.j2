@@ -33,6 +33,12 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 CONFIGURED_PLATFORM=$([ -f .platform ] && cat .platform || echo generic)
 
+batch_packages=n
+if [[ ${SONIC_VS_BATCH_PACKAGES:-0} == 1 && $CONFIGURED_PLATFORM == vs && $CONFIGURED_ARCH == amd64 &&
+      ${MULTIARCH_QEMU_ENVIRON:-n} != y && ${CROSS_BUILD_ENVIRON:-n} != y ]]; then
+    batch_packages=y
+fi
+
 . functions.sh
 BUILD_SCRIPTS_DIR=files/build_scripts
 BUILD_TEMPLATES=files/build_templates
@@ -88,6 +94,24 @@ install_pip_package() {
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_pip_wheel )
 }
 
+install_pip_package_batch() {
+    local pip_wheel=$1
+    shift
+    local pip_packages=("$@")
+    local basename_pip_wheel=
+    if [[ -n "$pip_wheel" ]]; then
+        sudo cp "$pip_wheel" "$FILESYSTEM_ROOT/"
+        basename_pip_wheel=$(basename "$pip_wheel")
+        pip_packages+=("$basename_pip_wheel")
+    fi
+    if [[ -n "${pip_packages[*]}" ]]; then
+        sudo https_proxy=$https_proxy LANG=C chroot "$FILESYSTEM_ROOT" pip3 install "${pip_packages[@]}"
+    fi
+    if [[ -n "$basename_pip_wheel" ]]; then
+        ( cd "$FILESYSTEM_ROOT"; sudo rm -f -- "$basename_pip_wheel" )
+    fi
+}
+
 install_deb_package() {
     deb_packages=$@
     if [[ -z "$deb_packages" ]]; then
@@ -116,8 +140,12 @@ install_deb_package_lazy() {
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get update
 
 # Install efitools to support secure upgrade
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
+if [[ $batch_packages == y ]]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools mokutil
+else
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
+fi
 
 # Install sedutil for SED password management
 install_deb_package $debs_path/sedutil_*.deb
@@ -173,43 +201,56 @@ sudo bash -c "echo \"q	/var/tmp 1777 root root -\" >> $FILESYSTEM_ROOT/etc/tmpfi
 install_deb_package $debs_path/ifupdown2_*.deb
 
 # Install dependencies for SONiC config engine
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install \
-    python3-dev
+if [[ $batch_packages == y ]]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dev j2cli
+else
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install \
+        python3-dev
 
-# Install j2cli for handling jinja template
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install j2cli
-
-# Install Python client for Redis
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "redis==3.5.3"
-
-# Install redis-dump-load Python 3 package
-# Note: the scripts will be overwritten by corresponding Python 2 package
-
-install_pip_package {{redis_dump_load_py3_wheel_path}}
-
-# Install Python module for psutil
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
-
-# Install Python module for blkinfo
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinfo
-
-# Install Python module for ipaddr
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
-
-# Install Python module for grpcio and grpcio-tools
-if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 || $CONFIGURED_ARCH == armhf ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.71.0"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.71.0"
+    # Install j2cli for handling jinja template
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install j2cli
 fi
 
-# Install Python module for smbus2
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install smbus2
+# Install Python client for Redis
+if [[ $batch_packages == y ]]; then
+    install_pip_package_batch "{{redis_dump_load_py3_wheel_path}}" "redis==3.5.3"
+else
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "redis==3.5.3"
 
-# Install Python module for telnetlib3
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install telnetlib3
+    # Install redis-dump-load Python 3 package
+    # Note: the scripts will be overwritten by corresponding Python 2 package
 
-# Install sonic-py-common Python 3 package
-install_pip_package {{sonic_py_common_py3_wheel_path}}
+    install_pip_package {{redis_dump_load_py3_wheel_path}}
+fi
+
+# Install Python module for psutil
+if [[ $batch_packages == y ]]; then
+    install_pip_package_batch "{{sonic_py_common_py3_wheel_path}}" \
+        psutil blkinfo ipaddr "grpcio==1.71.0" "grpcio-tools==1.71.0" smbus2 telnetlib3
+else
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
+
+    # Install Python module for blkinfo
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinfo
+
+    # Install Python module for ipaddr
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
+
+    # Install Python module for grpcio and grpcio-tools
+    if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 || $CONFIGURED_ARCH == armhf ]]; then
+        sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.71.0"
+        sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.71.0"
+    fi
+
+    # Install Python module for smbus2
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install smbus2
+
+    # Install Python module for telnetlib3
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install telnetlib3
+
+    # Install sonic-py-common Python 3 package
+    install_pip_package {{sonic_py_common_py3_wheel_path}}
+fi
 
 # Install dependency pkgs for SONiC config engine Python 2 package
 if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then

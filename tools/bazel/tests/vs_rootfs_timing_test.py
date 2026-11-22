@@ -95,6 +95,74 @@ sudo() {
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(events[-1], SAVE + " [ start ]")
 
+    def test_handoff_runs_after_successful_compression_and_cache_save_only(self):
+        (self.work / "onie-image.conf").write_text("FILESYSTEM_ROOT=fsroot-vs\n")
+        self.script("sudo", 'echo HANDOFF >> handoff-events')
+        self.script("save", 'echo SAVE >> handoff-events; exit "${SAVE_STATUS:-0}"')
+        options = dict(SONIC_VS_RFS_HANDOFF_SESSION=".vs-rootfs-handoff.fixture",
+                       CONFIGURED_ARCH="amd64")
+        result, _ = self.run_make(**options)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.work / "handoff-events").read_text().splitlines(), ["SAVE", "HANDOFF"])
+        (self.work / "handoff-events").unlink()
+        result, _ = self.run_make(**options, SAVE_STATUS="32")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.work / "handoff-events").read_text().splitlines(), ["SAVE"])
+
+    def test_cached_rootfs_does_not_stage_an_unrelated_existing_tree(self):
+        self.script("sudo", 'echo HANDOFF >> handoff-events')
+        options = {
+            "SONIC_VS_RFS_HANDOFF_SESSION": ".vs-rootfs-handoff.fixture",
+            "CONFIGURED_ARCH": "amd64",
+            Path(TARGET).name + "_CACHE_LOADED": "1",
+        }
+        result, events = self.run_make(**options)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events, [])
+        self.assertFalse((self.work / "handoff-events").exists())
+
+    def test_host_base_cache_hit_preserves_retained_tree_and_miss_allows_handoff(self):
+        with (self.work / "Makefile").open("a") as stream:
+            stream.write(f"\n.PHONY: check-vs-host-base\n{TARGET}: check-vs-host-base\n")
+        producer = self.work / "tools/bazel/ci/vs_host_base.py"
+        producer.parent.mkdir(parents=True)
+        producer.write_text('''import hashlib, json, os
+from pathlib import Path
+hit = os.environ["HOST_BASE_CACHE_HIT"] == "1"
+archive = Path("target/sonic-vs.bin__vs__rfs.squashfs")
+archive.write_bytes(b"host base archive")
+root = Path("fsroot-vs")
+if not hit:
+    (root / "payload").write_bytes(b"fresh rootfs")
+receipt = Path("artifacts/vs/host-base-cache.json")
+receipt.parent.mkdir(parents=True, exist_ok=True)
+receipt.write_text(json.dumps({"cache_hit": hit, "outputs": {"image": {
+    "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+    "bytes": archive.stat().st_size}}}))
+''')
+        (self.work / "scripts/installer_rootfs_handoff.py").symlink_to(
+            ROOT / "scripts/installer_rootfs_handoff.py")
+        (self.work / "onie-image.conf").write_text("FILESYSTEM_ROOT=fsroot-vs\n")
+        self.script("sudo", 'exec "$@"')
+        root = self.work / "fsroot-vs"
+        root.mkdir()
+        (root / "payload").write_bytes(b"retained rootfs")
+        for hit in (True, False):
+            with self.subTest(hit=hit):
+                session = self.work / f".vs-rootfs-handoff.hostbase{int(hit)}"
+                session.mkdir(mode=0o700)
+                result, _ = self.run_make(
+                    SONIC_VS_RFS_HANDOFF_SESSION=session.name, CONFIGURED_ARCH="amd64",
+                    vs_host_base_cache="y", HOST_BASE_CACHE_HIT=str(int(hit)),
+                    **{Path(TARGET).name + "_CACHE_LOADED": "1"})
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                if hit:
+                    self.assertEqual((root / "payload").read_bytes(), b"retained rootfs")
+                    self.assertFalse((session / "root").exists())
+                else:
+                    self.assertFalse(root.exists())
+                    self.assertEqual((session / "root/payload").read_bytes(), b"fresh rootfs")
+
     def test_direct_invocation_ignores_stale_or_invalid_timing_descriptors(self):
         for fd in ("999", "invalid-file"):
             result = subprocess.run(["./build_debian.sh"], cwd=self.work, capture_output=True, text=True,

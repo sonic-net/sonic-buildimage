@@ -24,7 +24,7 @@ class VsOciSessionTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
         for source in ("tools/bazel/ci/verify_vs_oci.sh", "tools/bazel/build_helpers.py",
-                       "tools/bazel/cache/credentials.py"):
+                       "tools/bazel/cache/credentials.py", "tools/bazel/image/file_copy.py"):
             destination = self.directory / source
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / source, destination)

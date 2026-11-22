@@ -5,7 +5,6 @@ import gzip
 import hashlib
 import json
 import os
-import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -14,6 +13,7 @@ from boot_image_bundle import (
     CHUNK, LAYER, archive_image, blob_name, checked_rootfs, decode, descriptor,
     hash_file, json_bytes, layer_media, register_tags, write_bundle,
 )
+from file_copy import copy_file
 
 
 def archive_input(src, receipt, index, dest, info_out, pigz):
@@ -50,10 +50,12 @@ def project_members(archive, outputs):
         if kind not in ("configs", "layers"):
             raise ValueError("unexpected archive member group: " + kind)
         blob_name("sha256:" + hex_digest)
-        shutil.copyfile(archive / kind / hex_digest, out)
+        copy_file(archive / kind / hex_digest, out)
 
 
-def normalize_layer(src, source, diff_id, receipt, out, pigz, zstd):
+def normalize_layer(src, source, diff_id, receipt, out, pigz, zstd, gzip_level=6):
+    if type(gzip_level) is not int or not 1 <= gzip_level <= 9:
+        raise ValueError("gzip level must be between 1 and 9")
     digest = source["digest"]
     blob_name(digest)
     blob_name(diff_id)
@@ -84,7 +86,8 @@ def normalize_layer(src, source, diff_id, receipt, out, pigz, zstd):
         checksum = hashlib.sha256()
         with (decode([zstd, "-dc", str(src)]) if kind == LAYER + "+zstd" else src.open("rb")) as raw:
             with out.open("wb") as encoded, subprocess.Popen(
-                    [pigz, "-n", "-6", "-p", "2", "-c"], stdin=subprocess.PIPE, stdout=encoded) as process:
+                    [pigz, "-n", "-" + str(gzip_level), "-p", "2", "-c"],
+                    stdin=subprocess.PIPE, stdout=encoded) as process:
                 with process.stdin:
                     for chunk in iter(lambda: raw.read(CHUNK), b""):
                         checksum.update(chunk)
@@ -157,6 +160,7 @@ def main():
     layer.add_argument("--out", type=Path)
     layer.add_argument("--pigz")
     layer.add_argument("--zstd")
+    layer.add_argument("--gzip-level", type=int, choices=range(1, 10), default=6)
     final = sub.add_parser("bundle")
     final.add_argument("--spec", type=Path, required=True)
     final.add_argument("--platform", required=True)
@@ -173,7 +177,8 @@ def main():
         project_members(args.archive, args.out)
     elif args.action == "layer":
         source = descriptor(args.media_type, args.source_digest, args.source_size)
-        normalize_layer(args.src, source, args.diff_id, args.receipt, args.out, args.pigz, args.zstd)
+        normalize_layer(args.src, source, args.diff_id, args.receipt, args.out, args.pigz, args.zstd,
+                        args.gzip_level)
     else:
         bundle_input(args.spec, args.config, args.layer, args.platform, args.out,
                      args.inventory, args.labels, args.pigz)

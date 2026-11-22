@@ -67,7 +67,11 @@ def verify_files(case, requested, image_id, layers):
 
 def action_counts(evidence):
     counts = defaultdict(Counter)
-    for phase in json.loads(evidence.read_bytes()).values():
+    receipt = json.loads(evidence.read_bytes())
+    for name in ("archives", "bundle"):
+        if name == "archives" and name not in receipt:
+            continue
+        phase = receipt[name]
         for mnemonic, actions in phase["actions"].items():
             counts[mnemonic].update(actions)
     return counts

@@ -265,6 +265,7 @@ class SourceWorkflowTest(unittest.TestCase):
         self.commands.mkdir()
         (self.directory / "artifacts/vs").mkdir(parents=True)
         for name in (".bazelversion", "tools/bazel/build_helpers.py",
+                     "tools/bazel/image/file_copy.py",
                      "tools/bazel/ci/prepare_image_submodules.sh",
                      "tools/bazel/cache/credentials.py",
                      "platform/vs/docker-syncd-vs/BUILD.bazel"):

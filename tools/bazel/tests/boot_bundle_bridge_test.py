@@ -20,6 +20,7 @@ from tools.bazel.image.build_boot_bundle import BundlePackage, Image, write_arch
 from tools.bazel.oci.boot_layout import publish_layout
 from tools.bazel.oci.oci_layout import validate_layout
 from tools.bazel.tests.oci_base_fixture import digest, docker_save, image_fixture, oci_files, write_layout
+from tools.bazel.tests.integration.boot_bundle_cache import action_counts
 
 PLATFORM = "linux/amd64"
 
@@ -32,6 +33,29 @@ class BootBundleBridgeTest(unittest.TestCase):
         self.config, self.layers = image_fixture()
         self.layout = self.work / "native"
         write_layout(self.layout, oci_files(self.config, self.layers))
+
+    def test_cache_counts_ignore_receipt_metadata_and_accept_native_only_bundles(self):
+        evidence = self.work / "evidence.json"
+        receipt = {
+            "archives": {"actions": {"SonicBootArchive": {"executed": 1}}},
+            "bundle": {"actions": {"SonicBootLayer": {"executed": 1, "hits": 2},
+                                   "SonicBootBundle": {"executed": 1}}},
+            "inputs": {"native_images": 1, "gzip_level": 1, "graph_seconds": 0.01},
+            "total_seconds": 2.0,
+        }
+        evidence.write_text(json.dumps(receipt))
+        self.assertEqual(action_counts(evidence), {
+            "SonicBootArchive": {"executed": 1},
+            "SonicBootLayer": {"executed": 1, "hits": 2},
+            "SonicBootBundle": {"executed": 1},
+        })
+        del receipt["archives"]
+        evidence.write_text(json.dumps(receipt))
+        self.assertEqual(action_counts(evidence), receipt["bundle"]["actions"])
+        receipt["bundle"] = {"seconds": 1.0}
+        evidence.write_text(json.dumps(receipt))
+        with self.assertRaises(KeyError):
+            action_counts(evidence)
 
     def test_make_symlink_receipt_and_pruned_sidecar_fallback(self):
         archive = self.work / "cached-export.gz"
@@ -135,7 +159,7 @@ class BootBundleBridgeTest(unittest.TestCase):
         repo = self.work / "stage"
         with mock.patch.object(os, "link", side_effect=OSError(errno.EXDEV, "cross-device")):
             bridge.link_input(repo, "inputs/archive", alias)
-            with mock.patch.object(shutil, "copyfileobj", side_effect=OSError(errno.ENOSPC, "disk full")):
+            with mock.patch.object(bridge, "copy_file", side_effect=OSError(errno.ENOSPC, "disk full")):
                 with self.assertRaises(OSError) as failure:
                     bridge.link_input(repo, "inputs/receipt", alias)
                 self.assertEqual(failure.exception.errno, errno.ENOSPC)
@@ -144,6 +168,24 @@ class BootBundleBridgeTest(unittest.TestCase):
         self.assertFalse(staged.samefile(source))
         self.assertEqual(staged.read_bytes(), source.read_bytes())
         self.assertEqual(list(staged.parent.iterdir()), [staged])
+
+    def test_fast_profile_only_changes_actions_that_compress_layers(self):
+        info = validate_layout(self.layout, PLATFORM)
+        compressed = [{**desc, "mediaType": desc["mediaType"] + "+gzip",
+                       "digest": digest(b"encoded" + bytes([index]))}
+                      for index, desc in enumerate(info.manifest["layers"])]
+        generated = []
+        for level in (1, 6):
+            package = BundlePackage(self.work / ("bundle-" + str(level)), gzip_level=level)
+            package.select([Image(self.layout, ["raw:v1"], False, layout=self.layout),
+                            Image(self.work / "gzip.tar", ["gzip:v1"], False, archive="gzip", info={
+                                "config": digest(self.config), "layers": compressed,
+                                "diff_ids": info.config["rootfs"]["diff_ids"], "original_tags": []})], PLATFORM)
+            package.finish(PLATFORM, False)
+            generated.append((package.directory / "BUILD.bazel").read_text())
+        self.assertIn("gzip_level = 1,", generated[0])
+        self.assertEqual(generated[0].count("gzip_level = 1,"), len(self.layers))
+        self.assertEqual(generated[0].replace("gzip_level = 1,", "gzip_level = 6,"), generated[1])
 
     def test_archive_target_survives_new_tags_extra_images_and_new_checkout(self):
         def graph(directory, names):

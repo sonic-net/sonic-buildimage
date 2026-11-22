@@ -1178,6 +1178,8 @@ jobs:
           SONIC_VS_KERNEL_REMOTE_REUSE: "1"
           KERNEL_INDEX_DOWNLOAD: ${{ steps.kernel_index_download.outcome }}
           HOST_BASE_DIR: ${{ steps.host_base_dir.outcome }}
+          SONIC_VS_RFS_HANDOFF: "1"
+          SONIC_VS_FAST_ASSEMBLY: "1"
           TERM: dumb
         run: |
           set -euo pipefail
