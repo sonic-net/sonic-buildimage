@@ -43,6 +43,56 @@ def shell(step):
 
 
 class ArchiveCachePolicyTest(unittest.TestCase):
+    def test_vs_reuses_prepared_repositories_within_each_cache_scope(self):
+        job = yaml.safe_load(WORKFLOW.read_text())["jobs"]["vs_container"]
+        step = next(step for step in job["steps"]
+                    if step.get("name") == "Prepare runner-local Bazel repository contents cache")
+        self.assertEqual(step["env"]["VS_RUNNER_WORKSPACE"], "${{ runner.workspace }}")
+        self.assertEqual(step["env"]["CACHE_SCOPE"],
+                         "${{ github.event_name == 'push' && 'master' || "
+                         "github.event_name == 'pull_request' && 'review' || 'dispatch' }}")
+        self.assertIn("--repo_contents_cache=/bazel_repo_contents_cache",
+                      job["env"]["BAZEL_CONTAINER_ARGS"].split())
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            disk = directory / "data disk"
+            disk.mkdir()
+            workspace = directory / "runner workspace"
+            workspace.symlink_to(disk, target_is_directory=True)
+            parent = disk / "vs-cache" / "repo-contents"
+            environment_file = directory / "github-env"
+
+            def prepare(scope):
+                environment_file.write_text("")
+                return subprocess.run(
+                    ["bash", "-c", step["run"]], text=True, capture_output=True,
+                    env=dict(os.environ, VS_RUNNER_WORKSPACE=str(workspace), CACHE_SCOPE=scope,
+                             GITHUB_ENV=str(environment_file)))
+
+            for scope in ("review", "dispatch", "master"):
+                with self.subTest(scope=scope):
+                    result = prepare(scope)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    cache = parent / scope
+                    self.assertEqual(environment_file.read_text().splitlines(),
+                                     [f"SONIC_BAZEL_REPO_CONTENTS_SOURCE={cache}"])
+                    self.assertEqual(list(cache.iterdir()), [])
+                    (cache / "prepared-input").write_text(scope)
+
+            result = prepare("review")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((parent / "review" / "prepared-input").read_text(), "review")
+
+            parent.rename(disk / "previous cache")
+            outside = directory / "outside"
+            outside.mkdir()
+            parent.symlink_to(outside, target_is_directory=True)
+            result = prepare("review")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Refusing redirected repository cache", result.stderr)
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertEqual(environment_file.read_text(), "")
+
     def test_local_bazel_cache_is_step_scoped_and_shared_package_cache_is_preserved(self):
         workflow = yaml.safe_load(WORKFLOW.read_text())
         for name, job in workflow["jobs"].items():

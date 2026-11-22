@@ -371,6 +371,19 @@ An explicitly empty `SONIC_BAZEL_CACHE_SOURCE` omits both this cache mount and
 the mounted system configuration. Bazel still runs with its usual local
 configuration; an empty value does not disable Bazel or its own local caches.
 
+### Reuse prepared repositories across local builds
+
+Direct `bazel build` commands in the buildimage workspace and Bazel-backed
+`make` targets use `~/.cache/sonic/bazel-repo-contents` on the developer's
+host by default. Make mounts it at `/bazel_repo_contents_cache` inside the
+builder. A fresh worktree or builder can reuse an extracted dependency such
+as the SymCrypt LLVM toolchain when Bazel verifies that its inputs still match.
+
+To choose another location for a direct Bazel build, pass
+`--repo_contents_cache=/absolute/path`. For Make, point
+`SONIC_BAZEL_REPO_CONTENTS_SOURCE` at an existing writable host directory.
+To disable this cache for a Bazel invocation, pass `--repo_contents_cache=`.
+
 ### Read the remote cache from Make image builds
 
 When the host environment contains `BAZEL_REMOTE_AUTH`, Make forwards that

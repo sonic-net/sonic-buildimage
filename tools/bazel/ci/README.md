@@ -320,6 +320,13 @@ Malformed files produce an unavailable entry without raw exception details.
 The independent, always-run analysis step is non-blocking even if the build or
 profile summary fails. Existing profile summaries and dashboard data are unchanged.
 
+The VS job keeps Bazel's prepared external repositories on the runner under
+`vs-cache/repo-contents`. Master pushes, same-repository PRs and manual runs
+each use a separate directory. The builder mounts the selected directory at
+`/bazel_repo_contents_cache`. Bazel 8.5.1 can reuse repositories that declare
+reproducible contents across fresh output bases, including the SymCrypt LLVM
+distribution. The job still clears its download and action caches before building.
+
 The active **VS installer in SONiC slave (AMD64)** job uses a host agent and
 the native Make wrapper to build `target/sonic-vs.bin`. After managed-identity
 registry login, Make reuses a local computed-tag slave image, pulls the matching

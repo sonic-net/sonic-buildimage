@@ -201,6 +201,9 @@ class RunnerBazelCacheCleanupTest(unittest.TestCase):
 
     def test_explicit_package_cleanup_removes_only_the_obsolete_local_directory(self):
         self.populate()
+        llvm = self.vs_cache.parent / "repo-contents" / "review" / "llvm" / "BUILD.bazel"
+        llvm.parent.mkdir(parents=True)
+        llvm.write_text("prepared repository")
         packages = self.vs_cache.parent / "packages"
         packages.mkdir()
         (packages / "package.tgz").write_text("old local cache")
@@ -224,6 +227,7 @@ class RunnerBazelCacheCleanupTest(unittest.TestCase):
         self.assertEqual(run.call_count, 5)
         self.assertTrue(all(not path.exists() for path in expected))
         self.assertEqual((nfs / "package.tgz").read_text(), "retain shared cache")
+        self.assertEqual(llvm.read_text(), "prepared repository")
 
     def test_package_reference_blocks_all_cleanup(self):
         self.populate()

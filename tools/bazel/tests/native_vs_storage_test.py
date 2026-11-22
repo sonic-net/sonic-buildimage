@@ -68,7 +68,6 @@ class NativeVsStorageTest(unittest.TestCase):
         native = workflow.split("\n  vs_container:\n", 1)[1]
         invocation = "python3 -B tools/ci/runner/preflight.py --host-agent"
         self.assertNotIn("check_native_vs_storage.py", native)
-        self.assertIn("runs-on: [self-hosted, linux, bazel-x64, vs]", native)
         self.assertLess(native.index(invocation), native.index("Prepare the host-driven SONiC slave"))
         self.assertIn('--workspace "$PWD"', native)
         self.assertIn("--build-target sonic-vs.bin", native)

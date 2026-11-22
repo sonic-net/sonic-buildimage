@@ -1,0 +1,2 @@
+# Imported by the buildimage workspace when Make mounts its host cache.
+common --repo_contents_cache=/bazel_repo_contents_cache

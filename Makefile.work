@@ -90,6 +90,8 @@
 #  *                 action and Bazelisk caches for all Bazel builds.
 #  *                 Default: $(SONIC_DPKG_CACHE_SOURCE)/bazel, independent of
 #  *                 BUILD_WITH_BAZEL_WHEN_AVAILABLE. Empty disables the mount.
+#  * SONIC_BAZEL_REPO_CONTENTS_SOURCE: Host directory for prepared repositories.
+#  *                 Defaults to the native user's cache; see rules/config.
 ###############################################################################
 
 SHELL = /bin/bash
@@ -553,6 +555,19 @@ DOCKER_RUN := mkdir -p -- $(SONIC_BAZEL_CACHE_QUOTED) && test -w $(SONIC_BAZEL_C
 	-v $(SONIC_BAZEL_CACHE_QUOTED):/bazel_cache:rw \
 	-e BAZELISK_HOME=/bazel_cache/bazelisk \
 	-v '$(subst ','"'"',$(PWD)/tools/bazel/slave.bazelrc)':/etc/bazel.bazelrc:ro
+endif
+
+ifneq ($(strip $(SONIC_BAZEL_REPO_CONTENTS_SOURCE)),)
+SONIC_BAZEL_REPO_CONTENTS_ABS := $(shell realpath -m -- '$(subst ','"'"',$(SONIC_BAZEL_REPO_CONTENTS_SOURCE))')
+SONIC_BAZEL_REPO_CONTENTS_QUOTED := '$(subst ','"'"',$(SONIC_BAZEL_REPO_CONTENTS_ABS))'
+ifeq ($(SONIC_BAZEL_REPO_CONTENTS_SOURCE),$(sonic_bazel_dev_repo_contents))
+repo_contents_dir_check := mkdir -p -m 0700 --
+else
+repo_contents_dir_check := test -d
+endif
+DOCKER_RUN := $(repo_contents_dir_check) $(SONIC_BAZEL_REPO_CONTENTS_QUOTED) && test -w $(SONIC_BAZEL_REPO_CONTENTS_QUOTED) && $(DOCKER_RUN) \
+	-v $(SONIC_BAZEL_REPO_CONTENTS_QUOTED):/bazel_repo_contents_cache:rw \
+	-v '$(subst ','"'"',$(PWD)/tools/bazel/slave-repo-contents.bazelrc)':/etc/sonic-buildimage/repo-contents.bazelrc:ro
 endif
 
 # User name and tag for "docker-*" images created by native dockerd mode.

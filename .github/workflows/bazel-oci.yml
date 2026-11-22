@@ -988,6 +988,7 @@ jobs:
       # cache. Keep the output base and shared remote/repository caches available.
       BAZEL_CONTAINER_ARGS: >-
         ${{ inputs.enable_debug_layer && '--disk_cache=' || '' }}
+        --repo_contents_cache=/bazel_repo_contents_cache
         --remote_local_fallback
         --incompatible_remote_local_fallback_for_remote_cache
         --experimental_remote_downloader=grpc://172.16.0.4:9092
@@ -1080,6 +1081,22 @@ jobs:
             --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json
           printf 'SONIC_BAZEL_CACHE_SOURCE=%s\nSONIC_DPKG_CACHE_SOURCE=%s\n' \
             "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE" >> "$GITHUB_ENV"
+
+      - name: Prepare runner-local Bazel repository contents cache
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_SCOPE: ${{ github.event_name == 'push' && 'master' || github.event_name == 'pull_request' && 'review' || 'dispatch' }}
+        run: |
+          set -euo pipefail
+          workspace=$(realpath -e -- "$VS_RUNNER_WORKSPACE")
+          cache="$workspace/vs-cache/repo-contents/$CACHE_SCOPE"
+          if [[ $(realpath -m -- "$cache") != "$cache" ]]; then
+            echo 'Refusing redirected repository cache below the runner workspace' >&2
+            exit 1
+          fi
+          install -d -m 0700 -- "$cache"
+          test -w "$cache"
+          printf 'SONIC_BAZEL_REPO_CONTENTS_SOURCE=%s\n' "$cache" >> "$GITHUB_ENV"
 
       - name: Authenticate to the slave image registry
         env:

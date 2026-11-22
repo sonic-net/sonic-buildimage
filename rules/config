@@ -186,6 +186,12 @@ SONIC_ENABLE_DEBUG_LAYER ?= n
 # writable by the build user; this does not enable Make's package cache.
 SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
 
+# Reuse prepared external repositories across native buildimage commands and
+# disposable builders on this host. Make creates the per-user default. Set an
+# existing writable directory to use another location, or empty to skip the mount.
+sonic_bazel_dev_repo_contents = $(HOME)/.cache/sonic/bazel-repo-contents
+SONIC_BAZEL_REPO_CONTENTS_SOURCE ?= $(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),$(sonic_bazel_dev_repo_contents))
+
 # Independent Bazel builds can share completed actions. Opt in to remote writes
 # separately. The kernel launcher also supports its existing per-kernel override.
 SONIC_BAZEL_REMOTE_CACHE ?=
