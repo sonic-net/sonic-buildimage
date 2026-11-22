@@ -152,6 +152,12 @@ class VerificationWorkflowTest(unittest.TestCase):
             steps = jobs[job]["steps"]
             self.assertFalse(any("dhcp_relay_image.py" in step.get("run", "") for step in steps))
             self.assertFalse(any(step.get("with", {}).get("name") == "dhcp-relay-image-amd64" for step in steps))
+        steps = {step["name"]: step for step in jobs["package_amd64"]["steps"]}
+        check = steps["Check DHCP utilities and CLI tests without DEB generation"]
+        self.assertLess(list(steps).index("Test Python packages and check startup generation"), list(steps).index(check["name"]))
+        self.assertEqual(check["env"]["VS_PACKAGE"], "${{ steps.wheel_inputs.outputs.package }}")
+        self.assertIn("flags --group dhcp", check["run"])
+        self.assertIn('"$BAZEL" test "${wheel_flags[@]}"', check["run"])
         runtime = jobs["dhcp_relay_runtime"]
         self.assertEqual(runtime["needs"], "dhcp_relay_source_image")
         worker = jobs[runtime["needs"]]

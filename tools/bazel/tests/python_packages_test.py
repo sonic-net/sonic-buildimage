@@ -1,5 +1,6 @@
 """Require complete native test evidence for the Python wheels retained by CI."""
 
+import contextlib
 import hashlib
 import io
 import json
@@ -107,6 +108,17 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         self.assertEqual(set(result["artifacts"]), set(python_packages.WHEELS))
         for name in result["artifacts"]:
             self.assertEqual((self.directory / name).read_bytes(), (bundle / name).read_bytes())
+
+    def test_dhcp_probe_selects_the_installer_wheel(self):
+        """The installed utility test receives the exact wheel used for the relay's Python layer."""
+        bundle = self.vs_bundle()
+        package = Path("target/validation/inputs")
+        with contextlib.chdir(self.workspace), mock.patch("builtins.print") as output:
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            vs_python_packages.flags("dhcp", package, "amd64")
+        name, = vs_python_packages.DHCP
+        self.assertEqual((self.workspace / package / name).read_bytes(), (bundle / name).read_bytes())
+        output.assert_called_once_with(f"--//tools/bazel/tests:sonic_dhcp_utilities_test_wheel=//{package}:{name}")
 
     def test_vs_bundle_rejects_stale_or_modified_products(self):
         """A changed SHA, target, archive or unexpected build file invalidates the handoff."""

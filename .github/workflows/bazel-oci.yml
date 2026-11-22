@@ -127,11 +127,19 @@ jobs:
       - name: Check DHCP utilities and CLI tests without DEB generation
         id: dhcp_utility_tests
         run: &dhcp_utility_tests |
-          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
+          set -euo pipefail
+          wheel_flags=()
+          audit_flags=()
+          if [[ -n ${VS_PACKAGE:-} ]]; then
+            wheel_flag=$(python3 -B -m tools.bazel.ci.vs_python_packages flags --group dhcp --package "$VS_PACKAGE")
+            wheel_flags+=("$wheel_flag")
+            audit_flags+=("--bazel-arg=$wheel_flag")
+          fi
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
             --output artifacts/dhcp-relay/utility-action.validation.json \
             //src/sonic-dhcp-utilities:upstream_tests //src/sonic-dhcp-utilities:installed_wheel_test \
             //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests
-          "$BAZEL" test //src/sonic-dhcp-utilities:upstream_tests \
+          "$BAZEL" test "${wheel_flags[@]}" //src/sonic-dhcp-utilities:upstream_tests \
             //src/sonic-dhcp-utilities:installed_wheel_test \
             //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests --nocache_test_results \
             --build_event_json_file="$PWD/artifacts/dhcp-relay/utility-test-events.json"
@@ -368,9 +376,6 @@ jobs:
             @sonic_host_services//:sonic-host-services-data.runtime_metadata \
             @sonic_host_services//:sonic-host-services-rs.runtime_metadata
 
-      - name: Check DHCP utilities and CLI tests without DEB generation
-        if: matrix.architecture == 'amd64'
-        run: *dhcp_utility_tests
       - name: Test archive rules against synthetic OCI fixtures
         run: |
           "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
@@ -517,6 +522,12 @@ jobs:
             --build_event_json_file="$PWD/artifacts/source-installation/test-events.jsonl" \
             //tools/bazel/tests:source_installation_test \
             2>&1 | tee artifacts/source-installation/test.log
+
+      - name: Check DHCP utilities and CLI tests without DEB generation
+        if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: *dhcp_utility_tests
 
       - name: Test SONiC component packages and their upstream suites
         if: matrix.architecture == 'amd64'

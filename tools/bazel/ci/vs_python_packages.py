@@ -33,11 +33,15 @@ def frr_outputs(component):
 
 
 FRR = {name: label for component in FRR_COMPONENTS for name, label in frr_outputs(component).items()}
-PACKAGES = {**WHEELS, **FRR}
+DHCP = {
+    "sonic_dhcp_utilities-1.0-py3-none-any.whl": "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
+}
+WHEEL_GROUPS = {"config-engine": WHEELS, "frr": FRR, "dhcp": DHCP}
+PACKAGES = {**WHEELS, **FRR, **DHCP}
 
 
 def publish(directory, revision, outputs):
-    """Copy all ten top-level outputs from a single configured VS build."""
+    """Copy the requested top-level outputs from a single configured VS build."""
     directory.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=directory.parent) as work:
         staged = Path(work) / "packages"
@@ -160,7 +164,7 @@ def stage(directory, revision, package):
 def flags(group, package, architecture):
     """Print one source-or-VS input override per installed-wheel probe."""
     path = package_path(package)
-    selected = WHEELS if group == "config-engine" else FRR
+    selected = WHEEL_GROUPS[group]
     if architecture == "arm64":
         verify_portable(path, selected)
     for name in selected:
@@ -181,7 +185,7 @@ def main():
             sub.add_argument("--package", type=Path, required=True)
         if name == "flags":
             sub.add_argument("--architecture", choices=("amd64", "arm64"), default="amd64")
-            sub.add_argument("--group", choices=("config-engine", "frr"), required=True)
+            sub.add_argument("--group", choices=WHEEL_GROUPS, required=True)
     args = parser.parse_args()
     if args.command == "verify":
         verify(args.directory, args.revision)

@@ -277,6 +277,11 @@ label_flag(
 )
 
 label_flag(
+    name = "sonic_dhcp_utilities_test_wheel",
+    build_setting_default = "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
+)
+
+label_flag(
     name = "sonic_frr_mgmt_framework_test_wheel",
     build_setting_default = "//src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel",
 )
