@@ -104,7 +104,7 @@ stack-data==0.6.3
 supervisor==4.3.0
 sympy==1.13.3
 thrift==0.25.0
-tornado==6.6
+tornado==6.6.1
 tqdm==4.67.1
 traitlets==5.16.1
 typeguard==4.4.2

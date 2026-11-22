@@ -1,0 +1,45 @@
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Tue, 11 Aug 2026 12:22:18 -0700
+Subject: [PATCH] SONiC-ONLY: build the FPM MAC decode and its unit test
+
+dplane_fpm_sonic keeps its MAC decode in fpm_mac.c, which src/sonic-frr/Makefile
+copies into zebra/ next to the module source. Build it into the module, and
+build tests/zebra/fpm_mac_test from it: a CUnit test the FRR test suite runs.
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+diff --git a/tests/zebra/subdir.am b/tests/zebra/subdir.am
+index d9fcde80a9..1774ec5e2d 100644
+--- a/tests/zebra/subdir.am
++++ b/tests/zebra/subdir.am
+@@ -4,6 +4,17 @@ endif
+ ZEBRA_TEST_LDADD = zebra/label_manager.o $(ALL_TESTS_LDADD)
+ 
+ 
++if ZEBRA
++check_PROGRAMS += tests/zebra/fpm_mac_test
++endif
++tests_zebra_fpm_mac_test_CFLAGS = $(TESTS_CFLAGS)
++tests_zebra_fpm_mac_test_CPPFLAGS = $(TESTS_CPPFLAGS) -I$(top_srcdir)/zebra
++tests_zebra_fpm_mac_test_LDADD = -lcunit
++tests_zebra_fpm_mac_test_SOURCES = tests/zebra/fpm_mac_test.c zebra/fpm_mac.c
++EXTRA_DIST += \
++	tests/zebra/fpm_mac_test.py \
++	# end
++
+ if ZEBRA
+ check_PROGRAMS += tests/zebra/test_lm_plugin
+ endif
+diff --git a/zebra/subdir.am b/zebra/subdir.am
+index 9b86d2c5b7..f52ba6c928 100644
+--- a/zebra/subdir.am
++++ b/zebra/subdir.am
+@@ -247,7 +247,7 @@ endif
+ 
+ module_LTLIBRARIES += zebra/dplane_fpm_sonic.la
+ 
+-zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c
++zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c zebra/fpm_mac.c
+ zebra_dplane_fpm_sonic_la_LDFLAGS = $(MODULE_LDFLAGS)
+ zebra_dplane_fpm_sonic_la_LIBADD  = -lnexthopgroup
+ 

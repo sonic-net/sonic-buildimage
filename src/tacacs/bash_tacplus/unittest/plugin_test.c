@@ -345,10 +345,7 @@ void testcase_check_and_load_changed_tacacs_config() {
 
 /* Test on_shell_execve authorization successed */
 void testcase_on_shell_execve_success() {
-	char *testargv[2];
-	testargv[0] = "arg1";
-	testargv[1] = "arg2";
-	testargv[2] = 0;
+	char *testargv[] = {"arg1", "arg2", NULL};
 
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
@@ -360,10 +357,7 @@ void testcase_on_shell_execve_success() {
 
 /* Test on_shell_execve authorization denined */
 void testcase_on_shell_execve_denined() {
-	char *testargv[2];
-	testargv[0] = "arg1";
-	testargv[1] = "arg2";
-	testargv[2] = 0;
+	char *testargv[] = {"arg1", "arg2", NULL};
 
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT);
@@ -375,10 +369,7 @@ void testcase_on_shell_execve_denined() {
 
 /* Test on_shell_execve authorization failed */
 void testcase_on_shell_execve_failed() {
-	char *testargv[2];
-	testargv[0] = "arg1";
-	testargv[1] = "arg2";
-	testargv[2] = 0;
+	char *testargv[] = {"arg1", "arg2", NULL};
 
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_ALL_FAILED);

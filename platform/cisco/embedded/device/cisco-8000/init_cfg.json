@@ -1,0 +1,7 @@
+{
+    "KDUMP": {
+        "config": {
+            "enabled": "true"
+        }
+    }
+}
