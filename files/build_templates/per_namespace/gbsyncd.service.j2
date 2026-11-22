@@ -11,7 +11,7 @@ After=sonic.target
 ConditionPathExists=!/run/sonic/shutdown-in-progress
 
 [Service]
-ExecCondition=/usr/bin/test ! -e /run/sonic/shutdown-in-progress
+ExecCondition=+/usr/bin/test ! -e /run/sonic/shutdown-in-progress
 User=root
 Environment=sonic_asic_platform={{ sonic_asic_platform }}
 Environment=gbsyncd_platform={{ docker_container_name }}
