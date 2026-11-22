@@ -223,10 +223,16 @@ elif name == "stat":
                 preflight = next(step for step in steps
                                  if step.get("name") == "Check host-agent build prerequisites")
                 self.assertLess(steps.index(cleanup), steps.index(preflight))
-                self.assertEqual(cleanup["run"],
-                                 "python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache"
-                                 ' --runner-workspace "${{ runner.workspace }}"' +
-                                 (" --remove-package-cache" if job is self.consumer else ""))
+                if job is self.consumer:
+                    self.assertIn("python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache",
+                                  cleanup["run"])
+                    self.assertIn('--runner-workspace "$VS_RUNNER_WORKSPACE" --remove-package-cache',
+                                  cleanup["run"])
+                    self.assertIn("--retain-repo-contents", cleanup["run"])
+                else:
+                    self.assertEqual(cleanup["run"],
+                                     "python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache"
+                                     ' --runner-workspace "${{ runner.workspace }}"')
                 self.assertNotIn("continue-on-error", cleanup)
 
     def test_nfs_validation_precedes_local_cleanup_and_build(self):

@@ -1055,10 +1055,27 @@ jobs:
           docker system df
 
       - name: Reclaim local build caches
-        run: python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache --runner-workspace "${{ runner.workspace }}" --remove-package-cache
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_MAX_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MAX_GIB || '70' }}
+          CACHE_MAX_AGE_DAYS: ${{ vars.VS_REPO_CONTENTS_CACHE_MAX_AGE_DAYS || '14' }}
+          CACHE_MIN_FREE_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MIN_FREE_GIB || '220' }}
+        run: |
+          python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache \
+            --runner-workspace "$VS_RUNNER_WORKSPACE" --remove-package-cache \
+            --retain-repo-contents --repo-contents-max-gib "$CACHE_MAX_GIB" \
+            --repo-contents-max-age-days "$CACHE_MAX_AGE_DAYS" \
+            --repo-contents-min-free-gib "$CACHE_MIN_FREE_GIB"
 
       - name: Check host-agent build prerequisites
-        run: python3 -B tools/ci/runner/preflight.py --host-agent --workspace "$PWD" --build-target sonic-vs.bin
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_MIN_FREE_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MIN_FREE_GIB || '220' }}
+        run: |
+          python3 -B -m tools.bazel.ci.retain_repo_contents_cache \
+            --runner-workspace "$VS_RUNNER_WORKSPACE" \
+            --min-free-gib "$CACHE_MIN_FREE_GIB" --check-free-space-only
+          python3 -B tools/ci/runner/preflight.py --host-agent --workspace "$PWD" --build-target sonic-vs.bin
 
       - name: Require the P4 source artifact from this producer job
         env:

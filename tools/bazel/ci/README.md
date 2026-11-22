@@ -327,6 +327,72 @@ each use a separate directory. The builder mounts the selected directory at
 reproducible contents across fresh output bases, including the SymCrypt LLVM
 distribution. The job still clears its download and action caches before building.
 
+The existing `cleanup_runner_bazel_cache.py` entry point accepts
+`--retain-repo-contents` to apply a shared prepared-repository retention policy
+after its ordinary selected-cache cleanup. The native VS workflow opts in
+before disk preflight and builder startup; other callers remain unchanged.
+The policy bounds only prepared repositories across all three scopes. Defaults are a
+**70 GiB combined budget**, **14 days since last use**, and **220 GiB free on the
+cache/workspace filesystem**. Repository Actions variables
+`VS_REPO_CONTENTS_CACHE_MAX_GIB`, `VS_REPO_CONTENTS_CACHE_MAX_AGE_DAYS`, and
+`VS_REPO_CONTENTS_CACHE_MIN_FREE_GIB` override these positive integer limits.
+The initial limits are provisional; measure peak cold/warm build disk usage
+before treating them as a capacity guarantee. Existing Docker, download,
+action-cache and package-cache cleanup and the separate Docker/workspace
+preflight remain unchanged.
+
+The shared `retain_repo_contents_cache.py` policy understands Bazel **8.5.1**'s
+prepared-cache layout. Last use comes
+from the mtime of `<N>.recorded_inputs`, which Bazel refreshes on cache hits,
+not from repository directory mtime. It acquires nonblocking POSIX exclusive
+locks on every existing scope's `gc_lock`, compatible with Bazel's own locks,
+and refuses redirected paths, unknown layouts, mounts and Docker references.
+Run it only on an idle, dedicated agent, never against an active developer
+cache. It removes expired entries, then evicts oldest-unused entries until
+both budget and free-space limits are met. Interrupted eviction trash and
+unusable orphan entries are reclaimed on the next pass. Atomic moves to
+`_trash` precede guarded deletion; cache-root, scope and lock files survive.
+Usage/free-space checks are repeated after eviction batches to account for
+hardlinks and actual reclaimed space. If deleting eligible entries cannot
+provide headroom, the step fails rather than starting the build.
+
+Preview on an idle runner with its actual workspace path:
+
+```bash
+python3 -B -m tools.bazel.ci.retain_repo_contents_cache \
+  --runner-workspace /home/azureuser/actions-runner/_work/sonic-buildimage \
+  --max-gib 70 --max-age-days 14 --min-free-gib 220 --dry-run
+```
+
+Dry-run logs planned evictions and estimated remaining usage/free space; it
+does not delete contents, but may create missing `gc_lock` files. Normal runs
+log measured totals per scope and add a job summary. A separate
+`--check-free-space-only` invocation in host preflight checks the 220 GiB
+headroom without scanning, locking or modifying cache contents.
+
+The future opt-in post-job supervisor in #286 can reuse the same cleanup API:
+
+```python
+cleanup_caches(
+    runner_temp, runner_workspace, remove_package_cache=True,
+    repo_contents_policy=dict(
+        max_bytes=70 * 1024**3, max_age_days=14,
+        min_free_bytes=220 * 1024**3))
+```
+
+After its existing final-result, publication, storage and idle-host guards,
+the supervisor can perform retention before admitting the next job. Newly
+created GC locks retain the scope directory owner's UID/GID even when invoked
+by a root supervisor; existing ownership and permissions are never changed.
+This change does **not** modify #286, deploy a service, or enable deferred cleanup.
+Until that integration is reviewed and deployed, ordinary VS jobs keep the
+pre-build cleanup fallback. When eviction moves post-job, keep the cheap
+free-space-only check in the workflow and ensure fallback remains for unenrolled
+jobs. This is not a hard during-build cap: an active build can grow the cache, and
+other users of the filesystem can consume space. Bazel's own idle age GC is
+still enabled, but the host pass does not depend on idle GC completing before
+the ephemeral builder exits. Nothing changes for direct developer builds.
+
 The active **VS installer in SONiC slave (AMD64)** job uses a host agent and
 the native Make wrapper to build `target/sonic-vs.bin`. After managed-identity
 registry login, Make reuses a local computed-tag slave image, pulls the matching
