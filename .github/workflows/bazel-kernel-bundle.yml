@@ -220,6 +220,8 @@ jobs:
       - name: Verify registry package publication and repeated Make consumption
         env:
           SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256: ${{ steps.vs_handoff.outputs.receipt_sha256 }}
+          SONIC_BAZEL_KERNEL_REMOTE_CACHE: ${{ env.KERNEL_REMOTE_CACHE }}
+          SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ env.UPLOAD_KERNEL_CACHE == 'true' && 'y' || 'n' }}
         run: |
           python3 -B tools/bazel/kernel/packages.py verify --architecture "${{ matrix.arch }}"
           python3 -B tools/bazel/ci/kernel_make_smoke.py --architecture "${{ matrix.arch }}"

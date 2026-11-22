@@ -1,0 +1,80 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+
+package(default_visibility = ["//visibility:public"])
+
+_COPTS = ["-g", "-O2", "-Wall", "-fstack-protector-strong", "-Wformat", "-Werror=format-security"]
+
+cc_library(
+    name = "common",
+    srcs = ["libnss-radius/nss_radius_common.c"],
+    hdrs = ["libnss-radius/nss_radius_common.h"],
+    includes = ["libnss-radius"],
+    copts = _COPTS,
+)
+cc_binary(
+    name = "libnss_radius.so.2",
+    srcs = ["libnss-radius/nss_radius.c"],
+    deps = [":common"],
+    copts = _COPTS,
+    linkshared = True,
+    additional_linker_inputs = ["libnss-radius/libnss_radius_vs.txt"],
+    linkopts = ["-Wl,-soname,libnss_radius.so.2", "-Wl,--version-script=$(location libnss-radius/libnss_radius_vs.txt)"],
+    features = ["-strip_debug_symbols"],
+)
+cc_binary(
+    name = "cache_radius",
+    srcs = ["libnss-radius/cache_radius.c"],
+    deps = [":common"],
+    copts = _COPTS,
+    features = ["-strip_debug_symbols"],
+)
+
+# Original make test compiles these two programs; it does not execute them.
+cc_binary(
+    name = "test_nss_radius",
+    srcs = ["libnss-radius/nss_radius.c", "libnss-radius/nss_radius_common.c", "libnss-radius/test_nss_radius.c", "libnss-radius/nss_radius_common.h"],
+    local_defines = ["TEST_RADIUS_NSS"],
+    copts = _COPTS,
+)
+cc_binary(
+    name = "test_cache_radius",
+    srcs = ["libnss-radius/cache_radius.c", "libnss-radius/nss_radius_common.c", "libnss-radius/nss_radius_common.h"],
+    local_defines = ["TEST_RADIUS_NSS"],
+    copts = _COPTS,
+)
+filegroup(name = "original_test_binaries", srcs = [":test_nss_radius", ":test_cache_radius"])
+
+genrule(
+    name = "changelog",
+    srcs = ["debian/changelog"],
+    outs = ["changelog.Debian.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -9 -c $< > $@",
+)
+sonic_deploy_tar(
+    name = "libnss-radius.runtime",
+    binaries = {
+        "./lib/x86_64-linux-gnu/libnss_radius.so.2 type=file uid=0 gid=0 mode=0644 time=0": ":libnss_radius.so.2",
+        "./usr/sbin/cache_radius type=file uid=0 gid=0 mode=0755 time=0": ":cache_radius",
+    },
+    srcs = [":changelog", "debian/copyright", "debian/README.Debian"],
+    mtree = [
+        "./etc/pam_radius_auth.d type=dir uid=0 gid=0 mode=0755 time=0",
+        "./usr/share/doc/libnss-radius/changelog.Debian.gz type=file uid=0 gid=0 mode=0644 time=0 content=$(location :changelog)",
+        "./usr/share/doc/libnss-radius/copyright type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/copyright)",
+        "./usr/share/doc/libnss-radius/README.Debian type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/README.Debian)",
+    ],
+    force_debug_build = True,
+    compress_debug_sections = True,
+    target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux"],
+)
+runtime_packages(
+    name = "runtime_packages.json",
+    control = "debian/control",
+    changelog = "debian/changelog",
+    debian_files = {"compat": "debian/compat"},
+    control_file_helpers = [["dh_makeshlibs"], ["dh_installdeb"]],
+    packages = {"libnss-radius": ":libnss-radius.runtime"},
+)

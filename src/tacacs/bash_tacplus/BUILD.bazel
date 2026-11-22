@@ -1,0 +1,23 @@
+load("@rules_python//python:defs.bzl","py_test")
+load("@bazel_skylib//rules:expand_template.bzl","expand_template")
+load("@rules_cc//cc:cc_library.bzl","cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl","cc_shared_library")
+load("@rules_cc//cc:cc_binary.bzl","cc_binary")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl","sonic_deploy_tar")
+load("@sonic_build_infra//oci:runtime_packages.bzl","runtime_packages")
+load("@sonic_build_infra//oci:source_controls.bzl","source_package_controls")
+package(default_visibility=["//visibility:public"])
+exports_files(glob(["*.bzl","*.bazel","*.tpl"]))
+expand_template(name="config_h",template="config.h.tpl",out="generated/config.h",substitutions={})
+cc_library(name="headers",hdrs=[":config_h"],includes=["generated"],deps=["@pam-tacplus//:libtac_dev_headers"])
+COPTS=["-DHAVE_CONFIG_H","-Wdate-time","-U_FORTIFY_SOURCE","-D_FORTIFY_SOURCE=3","-g","-O2","-fstack-protector-strong","-fstack-clash-protection","-fcf-protection","-Wformat","-Werror=format-security"]
+FEATURES=["-rules_go_unsupported_feature","-opt","-strip_debug_symbols","sonic_as_needed"]
+cc_library(name="code",srcs=["bash_tacplus.c"],copts=COPTS,features=FEATURES,deps=[":headers","@pam-tacplus//:libtac","@pam-tacplus//:libtacsupport"])
+cc_shared_library(name="bash_tacplus",deps=[":code"],dynamic_deps=["@pam-tacplus//:libtac_shared","@pam-tacplus//:libtacsupport_shared"],shared_lib_name="bash_tacplus.so",features=FEATURES,user_link_flags=["-g","-Wl,-soname,bash_tacplus.so","-Wl,-z,relro"])
+# dh_auto_test is explicitly empty; original all still builds this noinst binary.
+cc_binary(name="original_check_binary",srcs=["unittest/plugin_test.c","unittest/mock_helper.c","bash_tacplus.c"]+glob(["unittest/*.h"]),copts=["-DHAVE_CONFIG_H","-g","-O2","-fstack-protector-strong","-fstack-clash-protection","-Wformat","-Werror=format-security","-Wno-parentheses","-Wno-format-security","-Wno-implicit-function-declaration","-Wno-int-to-pointer-cast","-DDEBUG","-DBASH_PLUGIN_UT","'-DTACACS_DEVICE_TYPE=\"Test\\040Device\\040Type\"'"],features=FEATURES,deps=[":headers","@tacacs_build_debian//libcunit1-dev:libcunit_cc"])
+expand_template(name="libtool_archive",template="bash_tacplus.la.tpl",out="bash_tacplus.la",substitutions={})
+sonic_deploy_tar(name="bash-tacplus.runtime",compress_debug_sections=True,binaries={"./usr/lib/x86_64-linux-gnu/security/bash_tacplus.so type=file uid=0 gid=0 mode=0644 time=0":":bash_tacplus"},srcs=[":libtool_archive"],mtree=["./usr/lib/x86_64-linux-gnu/security/bash_tacplus.la type=file uid=0 gid=0 mode=0644 time=0 content=$(location :libtool_archive)"])
+runtime_packages(name="runtime_metadata",module_name="bash-tacplus",control="debian/control",changelog="debian/changelog",packages={"bash-tacplus":":bash-tacplus.runtime"},dependencies=["@pam-tacplus//:runtime_metadata"],required_paths={"bash-tacplus":["usr/lib/x86_64-linux-gnu/security/bash_tacplus.so","usr/lib/x86_64-linux-gnu/security/bash_tacplus.la"]},debian_files={"compat":"debian/compat","bash-tacplus.postinst":"debian/bash-tacplus.postinst"},control_file_helpers=[["dh_installdeb"]])
+source_package_controls(name="bash-tacplus.control",metadata=":runtime_metadata",package="bash-tacplus")
+py_test(name="installation_test",srcs=["installation_test.py"],args=["$(rootpath :bash-tacplus.runtime)","$(rootpath :bash-tacplus.control)"],data=[":bash-tacplus.runtime",":bash-tacplus.control",":original_check_binary"],deps=["@sonic_build_infra//deb:elf_metadata"])

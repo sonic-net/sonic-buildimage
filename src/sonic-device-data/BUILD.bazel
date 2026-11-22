@@ -55,3 +55,18 @@ tar(
     mtree = ":vs_install.mtree",
     visibility = ["//visibility:public"],
 )
+
+# Keep the Make TAR producer usable from its dependency-limited workspace.
+exports_files(["src/debian/control", "src/debian/changelog"])
+
+alias(
+    name = "vs_platform_asic",
+    actual = "//src/sonic-device-data/bazel:vs_platform_asic",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "runtime_packages.json",
+    actual = "//src/sonic-device-data/bazel:runtime_packages.json",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,71 @@
+load("@rules_python//python:defs.bzl", "py_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("@sonic_build_infra//deb:sonic_deb.bzl", "sonic_deb")
+load("@tar.bzl//tar:tar.bzl", "tar")
+load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tool", "build_tools_runtime")
+package(default_visibility = ["//visibility:public"])
+filegroup(name = "manual_packages", srcs = ["@sonic_build_infra//tools/build_tools:manual_runtime"], output_group = "packages")
+build_tools_runtime(
+    name = "installation_python_runtime",
+    architecture = "amd64",
+    packages = [":manual_packages", "@vs_host_debian//python3-setuptools"],
+    profile = "manuals",
+)
+build_tool(name = "installation_python", runtime = ":installation_python_runtime", tool = "python3")
+genrule(
+    name = "installation_layout",
+    outs = ["installation-layout.json"],
+    tools = [":installation_python"],
+    cmd = "$(location :installation_python) -c 'import json; from setuptools import Distribution; from setuptools.command.install import install; c=install(Distribution()); c.initialize_options(); c.prefix=\"/usr\"; c.install_layout=\"deb\"; c.finalize_options(); print(json.dumps({\"purelib\":c.install_purelib,\"platlib\":c.install_platlib,\"scripts\":c.install_scripts,\"data\":c.install_data}))' > $@",
+)
+
+genrule(
+    name = "python_metadata",
+    srcs = ["setup.py", "metadata.py"] + glob(["sonic_platform/*.py"]),
+    outs = ["generated/PKG-INFO"] + ["generated/" + name + ".cpython-313.pyc" for name in ["__init__", "chassis", "platform"]],
+    tools = [":installation_python"],
+    cmd = "$(location :installation_python) $(location metadata.py) $(location setup.py) $(@D)/generated $(locations sonic_platform/__init__.py) $(locations sonic_platform/chassis.py) $(locations sonic_platform/platform.py)",
+)
+
+write_file(name = "dependency_links", out = "dependency_links.txt", content = [""])
+write_file(name = "top_level", out = "top_level.txt", content = ["sonic_platform"])
+genrule(
+    name = "changelog",
+    srcs = ["debian/changelog"],
+    outs = ["changelog.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(location @sonic_build_infra//tools/build_tools:pigz) -n -9 -c $(location debian/changelog) > $@",
+)
+_FILES = {"sonic_platform/" + name + ".py": "sonic_platform/" + name + ".py" for name in ["__init__", "chassis", "platform"]}
+_FILES.update({"sonic_platform/__pycache__/" + name + ".cpython-313.pyc": "generated/" + name + ".cpython-313.pyc" for name in ["__init__", "chassis", "platform"]})
+_FILES.update({"sonic_platform-1.0.egg-info/" + name: source for name, source in [("PKG-INFO", "generated/PKG-INFO"), ("dependency_links.txt", ":dependency_links"), ("top_level.txt", ":top_level")]})
+tar(
+    name = "runtime",
+    srcs = list(_FILES.values()) + [":changelog"],
+    mtree = ["./usr/lib/python3/dist-packages/" + path + " type=file uid=0 gid=0 mode=0644 time=0 content=$(location " + source + ")" for path, source in _FILES.items()] + [
+        "./usr/share/doc/sonic-platform-vs/changelog.gz type=file uid=0 gid=0 mode=0644 time=0 content=$(location :changelog)",
+    ],
+    out = "sonic-platform-vs.runtime.tar",
+)
+runtime_packages(
+    name = "runtime_metadata",
+    control = "debian/control",
+    changelog = "debian/changelog",
+    module_name = "sonic-platform-vs",
+    architecture = "amd64",
+    packages = {"sonic-platform-vs": ":runtime"},
+    debian_files = {"compat": "debian/compat"},
+    control_file_helpers = [["dh_installdeb"]],
+    required_paths = {"sonic-platform-vs": ["usr/lib/python3/dist-packages/sonic_platform/platform.py"]},
+)
+filegroup(name = "control", srcs = [":runtime_metadata"], output_group = "controls")
+sonic_deb(name = "deb", data = ":runtime", control = ":control")
+
+py_test(
+    name = "deb_test",
+    srcs = ["deb_test.py"],
+    main = "deb_test.py",
+    data = [":deb"] + glob(["sonic_platform/*.py"]),
+    args = ["$(rootpath :deb)", "$(rootpath sonic_platform/__init__.py)"],
+)

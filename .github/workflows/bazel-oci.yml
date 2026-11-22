@@ -348,6 +348,26 @@ jobs:
           }) + '\n')
           PYTHON
 
+      - name: Verify native VS host installation interfaces
+        if: matrix.architecture == 'amd64'
+        run: |
+          bazel test --config=syncd-dash \
+            --build_event_json_file=artifacts/archive/host-package-events.jsonl \
+            @bash_tacplus//:installation_test \
+            //src/radius/pam:installation_test \
+            //platform/vs/sonic-platform-modules-vs:deb_test \
+            //src/sonic-ctrmgrd:ctrmgrd.runtime_metadata \
+            //src/sonic-ctrmgrd-rs:runtime_packages.json \
+            //src/sonic-device-data:runtime_packages.json \
+            //src/sonic-eventd:bazel/rsyslog_plugin.runtime_packages.json \
+            //src/sonic-nettools:runtime_packages.json \
+            //src/syslog-counter:runtime_packages.json \
+            //src/system-health:system_health.runtime_metadata \
+            //src/systemd-sonic-generator:systemd-sonic-generator.runtime_metadata \
+            @sonic_host_services//:sonic-host-services.runtime_metadata \
+            @sonic_host_services//:sonic-host-services-data.runtime_metadata \
+            @sonic_host_services//:sonic-host-services-rs.runtime_metadata
+
       - name: Check DHCP utilities and CLI tests without DEB generation
         if: matrix.architecture == 'amd64'
         run: *dhcp_utility_tests

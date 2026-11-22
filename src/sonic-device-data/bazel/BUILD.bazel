@@ -1,0 +1,23 @@
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+
+package(default_visibility = ["//visibility:public"])
+
+write_file(
+    name = "vs_platform_asic",
+    out = "vs.platform_asic",
+    content = ["vs", ""],
+    newline = "unix",
+)
+
+runtime_packages(
+    name = "runtime_packages.json",
+    module_name = "sonic-device-data",
+    packages = {"sonic-device-data": "//src/sonic-device-data:vs_runtime_tar"},
+    control = "//src/sonic-device-data:src/debian/control",
+    changelog = "//src/sonic-device-data:src/debian/changelog",
+    required_paths = {"sonic-device-data": [
+        "usr/share/sonic/device/x86_64-kvm_x86_64-r0/platform_asic",
+        "usr/share/sonic/device/x86_64-kvm_x86_64-r0/Force10-S6000/port_config.ini",
+    ]},
+)

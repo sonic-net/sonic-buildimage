@@ -34,6 +34,8 @@ def main():
         # The first consumer can create the advisory lock beside the package outputs.
         before = {path.name: (path.stat().st_size, path.stat().st_mtime_ns)
                   for path in packages.iterdir() if path.is_file() and path.name != ".bazel-kernel.lock"}
+        before_json = {name: (packages / name).read_text()
+                       for name in before if name.endswith(".json")}
         directory = Path(temporary)
         (directory / ".platform").touch()
         makefile = directory / "smoke.mk"
@@ -58,6 +60,12 @@ def main():
         after = {path.name: (path.stat().st_size, path.stat().st_mtime_ns)
                  for path in packages.iterdir() if path.is_file() and path.name != ".bazel-kernel.lock"}
         if before != after or unrelated_path.read_bytes() != unrelated_bytes:
+            for name in sorted(before.keys() | after.keys()):
+                if before.get(name) != after.get(name):
+                    print(f"Changed {name}: {before.get(name)} -> {after.get(name)}", flush=True)
+                    if name in before_json and (packages / name).is_file():
+                        print("Before: " + before_json[name], flush=True)
+                        print("After: " + (packages / name).read_text(), flush=True)
             raise ValueError("Make changed retained kernel outputs or unrelated packages")
     print("Make uses normal DEBs; repeated and concurrent requests preserve their timestamps and unrelated packages.")
 

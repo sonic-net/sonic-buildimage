@@ -1,0 +1,20 @@
+load("@rules_cc//cc:cc_library.bzl","cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl","cc_shared_library")
+load("@sonic_build_infra//cc:shared_library.bzl","shared_library_cc_info")
+load("@//src/radius/pam:source_includes.bzl","private_includes")
+package(default_visibility=["//visibility:public"])
+exports_files(glob(["**"]))
+filegroup(name="configure_inputs",srcs=glob(["**"]))
+FEATURES=["-opt","-strip_debug_symbols","-rules_go_unsupported_feature","sonic_as_needed"]
+# configure's original non-developer branch adds NDEBUG. Diagnostics below
+# retain the legacy C source under GCC14 without changing product code.
+COPTS=["-g","-O2","-D_REENTRANT","-D_POSIX_PTHREAD_SEMANTICS","-Wall","-D_GNU_SOURCE","-DNDEBUG","-Wno-error=format-security","-Wno-error=implicit-function-declaration","-Wno-error=incompatible-pointer-types","-Wno-error=int-conversion"]
+cc_library(name="headers",hdrs=glob(["src/include/*.h","src/lib/*.h","src/modules/rlm_eap/*.h","src/modules/rlm_eap/libeap/*.h"]),includes=["src/include","src/lib","src/modules/rlm_eap","src/modules/rlm_eap/libeap"],deps=["@//src/radius/pam:freeradius_config_headers"])
+cc_library(name="radius_code",srcs=["src/lib/"+name+".c" for name in ["crypt","dict","filters","hash","hmac","hmacsha1","isaac","log","misc","missing","md4","md5","print","radius","rbtree","sha1","snprintf","token","udpfromto","valuepair"]],copts=COPTS+["-D_LIBRADIUS"]+private_includes(["src/include","src/lib"]),features=FEATURES,deps=[":headers","@radius_pam_build_debian//libcrypt-dev:libcrypt_cc"])
+cc_shared_library(name="libradius",deps=[":radius_code"],shared_lib_name="libradius-1.1.8.so",features=FEATURES,user_link_flags=["-g","-Wl,-soname,libradius-1.1.8.so"])
+shared_library_cc_info(name="libradius_cc",shared_library=":libradius")
+cc_library(name="radius",deps=[":libradius_cc","@radius_pam_build_debian//libcrypt-dev:libcrypt_cc"])
+cc_library(name="eap_code",srcs=["src/modules/rlm_eap/libeap/"+name+".c" for name in ["eapcommon","eapcrypto","eapsimlib","fips186prf","cb","eap_tls","mppe_keys","tls"]],copts=COPTS+["-DEAPLIB","-DOPENSSL_NO_KRB5"]+private_includes(["src/include","src/lib","src/modules/rlm_eap","src/modules/rlm_eap/libeap"]),features=FEATURES,deps=[":headers",":radius","@radius_pam_build_debian//libssl-dev:libssl_headers","@radius_pam_build_debian//libnsl-dev:libnsl_cc"])
+cc_shared_library(name="libeap",deps=[":eap_code"],dynamic_deps=[":libradius"],shared_lib_name="libeap-1.1.8.so",features=FEATURES,user_link_flags=["-g","-Wl,-soname,libeap-1.1.8.so","-lresolv","-lpthread"])
+shared_library_cc_info(name="libeap_cc",shared_library=":libeap")
+cc_library(name="eap",deps=[":libeap_cc",":radius","@radius_pam_build_debian//libnsl-dev:libnsl_cc"])

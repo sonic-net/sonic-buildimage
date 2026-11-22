@@ -813,3 +813,30 @@ pip.parse(
     download_only = True,
 )
 use_repo(pip, "pmon_pddf_pip")
+
+# RADIUS source preparation and its managed build dependencies.
+radius_prepared_source = use_repo_rule("@sonic_build_infra//source:prepared_source.bzl", "prepared_source")
+
+radius_patch_tools_repository = use_repo_rule("@sonic_build_infra//source:patch_tools.bzl", "patch_tools_repository")
+
+radius_patch_tools_repository(name="radius_source_patch_tools",lock="@sonic_build_infra//apt:apt.lock.json")
+
+radius_prepared_source(name="freeradius_pam_src",gnu_tools="@radius_source_patch_tools//:ROOT",build_file="//src/radius/pam:freeradius.BUILD.bazel",inputs={'freeradius_configure.patch': '//src/radius/pam:freeradius/patches/freeradius_configure.patch', 'freeradius_2007-04-06.patch': '//src/radius/pam:freeradius/patches/freeradius_2007-04-06.patch', 'freeradius_libeap_deprecated_openssl_1_0.patch': '//src/radius/pam:freeradius/patches/freeradius_libeap_deprecated_openssl_1_0.patch', 'libltdl_config_sub.patch': '//src/radius/pam:freeradius/patches/libltdl_config_sub.patch', 'config.sub': '//src/radius/pam:freeradius/patches/config.sub', 'config.guess': '//src/radius/pam:freeradius/patches/config.guess'},steps=['{"op": "archive", "urls": ["https://github.com/FreeRADIUS/freeradius-server/archive/5f715dba4d2dbdb268bf60fcc656352274930941.tar.gz"], "sha256": "8f95c10749877ff00e03a58aad4662063e30de57f8eb45cc9094d2f2028b82b9", "strip_prefix": "freeradius-server-5f715dba4d2dbdb268bf60fcc656352274930941"}', '{"op": "patch", "input": "freeradius_configure.patch"}', '{"op": "patch", "input": "freeradius_2007-04-06.patch", "format": "gnu", "fuzz": 2}', '{"op": "patch", "input": "freeradius_libeap_deprecated_openssl_1_0.patch"}', '{"op": "patch", "input": "libltdl_config_sub.patch"}', '{"op": "file", "input": "config.sub", "path": "config.sub"}', '{"op": "file", "input": "config.guess", "path": "config.guess"}'])
+
+radius_prepared_source(name="pam_radius_src",build_file="//src/radius/pam:pam_radius.BUILD.bazel",inputs={'0001-chap-support.patch': '//src/radius/pam:debian/patches/0001-chap-support.patch', '0002-peap-mschapv2-support.patch': '//src/radius/pam:debian/patches/0002-peap-mschapv2-support.patch', '0003-nas-ip-address-config.patch': '//src/radius/pam:debian/patches/0003-nas-ip-address-config.patch', '0004-fix-blastradius.patch': '//src/radius/pam:debian/patches/0004-fix-blastradius.patch'},steps=['{"op": "archive", "urls": ["https://github.com/FreeRADIUS/pam_radius/archive/149c25df84cf5cd0e9addd9346699a9ca8fdddd2.tar.gz"], "sha256": "3b45c13f4fa009a68b391338484050b91f9f37363ddb88c4cba59b137e932b3a", "strip_prefix": "pam_radius-149c25df84cf5cd0e9addd9346699a9ca8fdddd2"}', '{"op": "patch", "input": "0001-chap-support.patch"}', '{"op": "patch", "input": "0002-peap-mschapv2-support.patch"}', '{"op": "patch", "input": "0003-nas-ip-address-config.patch"}', '{"op": "patch", "input": "0004-fix-blastradius.patch"}'])
+
+use_repo(apt, "radius_pam_build_debian")
+
+# Buildimage owns the Bash TACACS plugin sources.
+bazel_dep(name = "pam-tacplus", version = "1.4.1.sonic.1")
+bazel_dep(name = "bash-tacplus", version = "1.0.0.sonic.1", repo_name = "bash_tacplus")
+local_path_override(module_name = "bash-tacplus", path = "src/tacacs/bash_tacplus")
+
+use_repo(apt, "vs_host_debian")
+
+# Published Python, data and Rust installation interfaces for the VS host.
+bazel_dep(
+    name = "sonic-host-services",
+    version = "1.0.0-0e4c6a355c80396345a31232e30d20168060ae10",
+    repo_name = "sonic_host_services",
+)

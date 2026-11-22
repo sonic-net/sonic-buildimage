@@ -14,7 +14,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel import build_helpers
-from tools.bazel.kernel import remote_bundle
+from tools.bazel.kernel import prepare, remote_bundle
 
 TARGET = '@sonic_linux_kernel//:kernel_packages'
 MANIFEST = 'kernel-packages.json'
@@ -265,6 +265,12 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         platform = '@sonic_build_infra//platforms:' + {'amd64': 'x86_64', 'arm64': 'aarch64'}[args.architecture] + '_trixie'
         host_platform = '@sonic_build_infra//platforms:' + {'amd64': 'x86_64', 'arm64': 'aarch64'}[host_architecture] + '_trixie'
+        # Standalone and Make callers must select the same Bazel configuration
+        # when they request the same effective kernel settings.
+        config = prepare.effective_config(workspace, args.architecture, {
+            'CROSS_BUILD_ENVIRON': 'y' if args.architecture != host_architecture else 'n',
+            **config,
+        })
         options = ['--platforms=' + platform, '--host_platform=' + host_platform,
                    '--@sonic_linux_kernel//tools/bazel:kernel_config=' + json.dumps(config, sort_keys=True)]
         if args.cache_directory:

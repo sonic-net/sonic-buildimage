@@ -142,3 +142,16 @@ runtime_packages(
         "usr/bin/events_tool",
     ]},
 )
+
+# The Make recipe produces a separate host package for the rsyslog plugin.
+runtime_packages(
+    name = "bazel/rsyslog_plugin.runtime_packages.json",
+    changelog = "debian/changelog",
+    control = "debian/control",
+    debian_files = {"compat": "debian/compat"},
+    control_file_helpers = [["dh_installdeb"]],
+    dependencies = ["@sonic_swss_common//:runtime_packages.json"],
+    apt_packages = {"@eventd_deps//liblua5.1-0:data": "@eventd_deps//liblua5.1-0:control"},
+    packages = {"sonic-rsyslog-plugin": ":rsyslog_plugin_runtime"},
+    required_paths = {"sonic-rsyslog-plugin": ["usr/bin/rsyslog_plugin"]},
+)

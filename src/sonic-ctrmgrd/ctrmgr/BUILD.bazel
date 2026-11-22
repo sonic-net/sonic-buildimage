@@ -2,3 +2,5 @@ exports_files([
     "container_startup.py",
     "readiness_probe.sh",
 ])
+
+exports_files(['__init__.py', 'container', 'ctrmgr_iptables.py', 'ctrmgr_tools.py', 'ctrmgrd.py', 'docker-wait-any', 'kube_commands.py'])
