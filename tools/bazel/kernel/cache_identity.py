@@ -8,6 +8,7 @@ Unverifiable requests fall back to the existing Bazel producer.
 
 from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
 import ast
+from functools import lru_cache
 import hashlib
 import json
 import os
@@ -15,6 +16,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import re
 import shlex
+import ssl
 import subprocess
 import time
 import urllib.error
@@ -203,9 +205,17 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise CacheUnverifiable("unexpected redirect fetching registry metadata")
 
 
+@lru_cache(maxsize=1)
+def _tls_context():
+    # Load the system trust store once. Repeating this for every registry file
+    # dominates large root graphs; SSLContext supports concurrent connections.
+    return ssl.create_default_context()
+
+
 def _fetch(url):
     try:
-        with urllib.request.build_opener(_NoRedirect).open(url, timeout=5) as response:
+        opener = urllib.request.build_opener(_NoRedirect, urllib.request.HTTPSHandler(context=_tls_context()))
+        with opener.open(url, timeout=5) as response:
             data = response.read(MAX_REGISTRY_FILE_BYTES + 1)
             require(len(data) <= MAX_REGISTRY_FILE_BYTES, "registry metadata exceeds size limit")
             return data
@@ -230,14 +240,14 @@ def _registry_path(url, registry):
     raise CacheUnverifiable("kernel lock refers to an unselected registry")
 
 
-def _fetch_many(urls, fetch, timeout):
+def _fetch_many(urls, fetch, timeout, *, workers=REGISTRY_WORKERS):
     require(timeout > 0, "kernel registry validation exceeded its time budget")
     def check(url):
         data = fetch(url)
         require(data is None or isinstance(data, bytes) and len(data) <= MAX_REGISTRY_FILE_BYTES,
                 "invalid registry response")
         return data
-    pool = ThreadPoolExecutor(max_workers=REGISTRY_WORKERS)
+    pool = ThreadPoolExecutor(max_workers=workers)
     futures = {url: pool.submit(check, url) for url in urls}
     try:
         done, pending = wait(futures.values(), timeout=timeout, return_when=FIRST_EXCEPTION)
@@ -254,14 +264,14 @@ def _fetch_many(urls, fetch, timeout):
         pool.shutdown(wait=False, cancel_futures=True)
 
 
-def _registry_inputs(hashes, registry, fetch, timeout):
+def _registry_inputs(hashes, registry, fetch, timeout, *, workers=REGISTRY_WORKERS):
     require(isinstance(hashes, dict) and 0 < len(hashes) <= MAX_REGISTRY_FILES,
             "invalid registry input set in kernel lock")
     for url, digest in hashes.items():
         _registry_path(url, registry)
         require(isinstance(digest, str) and (HEX.fullmatch(digest) or digest == "not found"),
                 "invalid registry input digest")
-    inputs = _fetch_many(hashes, fetch, timeout)
+    inputs = _fetch_many(hashes, fetch, timeout, workers=workers)
     for url, digest in hashes.items():
         data = inputs[url]
         if digest == "not found":
@@ -318,13 +328,13 @@ def _module_sources(inputs, registry, source):
     return modules
 
 
-def _yanked_versions(modules, registry, fetch, timeout):
+def _yanked_versions(modules, registry, fetch, timeout, *, workers=REGISTRY_WORKERS):
     requests = {}
     for name, versions in modules.items():
         for version, _, source_url in versions:
             origin, _ = _registry_path(source_url, registry)
             requests.setdefault(origin + "/modules/" + name + "/metadata.json", set()).add(version)
-    for url, data in _fetch_many(requests, fetch, timeout).items():
+    for url, data in _fetch_many(requests, fetch, timeout, workers=workers).items():
         if data is None:
             continue  # Bazel also accepts a registry without yanking metadata.
         metadata = _json(data)

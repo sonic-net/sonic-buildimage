@@ -143,6 +143,19 @@ class KernelSbomTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "compiled source inventory"):
             sbom_kernel_deb._patches(self.fixture.root, manifest, self.fixture.gitlink)
 
+    def test_root_registry_pedigree_binds_replaced_and_added_patches(self):
+        hashes = sbom_kernel_deb.REGISTRY_PATCH_HASHES
+        original = self.fixture.source / "patches-debian/bazel-relocatable-tools.patch"
+        original.write_text("Different patch in the kernel source checkout\n")
+        manifest = {"source_files": [{"name": path, "sha256": digest} for path, digest in hashes.items()]}
+        args = (self.fixture.root, manifest, self.fixture.gitlink, sbom_kernel_deb.REGISTRY_VERSION)
+        patches, properties = sbom_kernel_deb._patches(*args)
+        self.assertEqual({p["diff"]["url"] for p in patches}, {sbom_kernel_deb.REGISTRY_OVERLAY + p for p in hashes})
+        self.assertEqual({prop["value"] for prop in properties}, {digest + "  " + path for path, digest in hashes.items()})
+        manifest["source_files"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "compiled source inventory"):
+            sbom_kernel_deb._patches(*args)
+
     def test_final_aggregator_replaces_stale_deb_and_rejects_missing_bundle(self):
         target = self.fixture.root / "target"
         stale = {

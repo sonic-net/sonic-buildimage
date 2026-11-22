@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   kernel-bundle:
-    name: Kernel DEBs and Make handoff (${{ matrix.arch }})
+    name: Registry kernel outputs and Make handoff (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
@@ -77,7 +77,7 @@ jobs:
           ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Initialize the pinned kernel source
-        run: git submodule update --init -- src/sonic-linux-kernel
+        run: git submodule update --init -- src/sonic-linux-kernel src/sonic-frr src/sonic-supervisord-utilities-rs
       - name: Check the producer and artifact contracts
         run: |
           python3 -B tools/bazel/tests/kernel_test.py
@@ -130,13 +130,16 @@ jobs:
         run: |
           python3 - <<'PY'
           import os, shutil
+          for path in (os.environ['KERNEL_RUN_TEMP'], os.path.expanduser('~')):
+              print(f"Kernel storage: {path}: device={os.stat(path).st_dev}, usage={shutil.disk_usage(path)}")
           if shutil.disk_usage(os.environ['KERNEL_RUN_TEMP']).free < 45 * 2**30:
               raise SystemExit('Kernel source validation requires 45 GiB free scratch space')
           PY
-      - name: Require unprivileged Linux sandboxing
-        run: |
-          test "$(id -u)" -ne 0
-          unshare --user --map-current-user --mount --pid --fork true
+      - name: Set up pinned Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          output-base: ${{ env.KERNEL_RUN_TEMP }}/kernel-bundle-state/build/output
       - name: Start a disposable cache for optional cold-build verification
         if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
         env:
@@ -167,88 +170,103 @@ jobs:
           merge-multiple: true
           path: target/debs/trixie
       - name: Verify the downloaded package set before exercising Make reuse
+        id: vs_handoff
         if: inputs.vs_artifact_id != ''
         run: |
+          receipt=$(sha256sum target/debs/trixie/vs-kernel-handoff.json)
           python3 -B tools/bazel/ci/kernel_artifacts.py --from-vs-handoff --architecture "${{ matrix.arch }}" \
             --output "$KERNEL_RUN_TEMP/kernel-bundle-artifacts"
-      - name: Build and verify kernel DEBs in the normal package directory
+          echo "receipt_sha256=${receipt%% *}" >> "$GITHUB_OUTPUT"
+      - name: Build registry kernel outputs in the root module graph
         if: inputs.vs_artifact_id == ''
+        shell: bash
         run: |
-          umask 077
+          set -euo pipefail
+          platform="@sonic_build_infra//platforms:${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}_trixie"
+          bazel build --platforms="$platform" --host_platform="$platform" \
+            --remote_cache="$KERNEL_REMOTE_CACHE" --remote_upload_local_results="$UPLOAD_KERNEL_CACHE" \
+            --execution_log_json_file="$KERNEL_RUN_TEMP/kernel-runtime-actions.json" \
+            @sonic_linux_kernel//:linux-image.runtime \
+            @sonic_linux_kernel//:linux-image.runtime_metadata \
+            @sonic_linux_kernel//:linux-image.control \
+            @sonic_linux_kernel//:boot @sonic_linux_kernel//:kernel_metadata.json
+          python3 - "$KERNEL_RUN_TEMP/kernel-runtime-actions.json" <<'PY_RUNTIME'
+          import json, sys
+          decoder = json.JSONDecoder()
+          content = open(sys.argv[1]).read()
+          while content.strip():
+              action, end = decoder.raw_decode(content.lstrip())
+              content = content.lstrip()[end:]
+              owner = action.get('targetLabel', '').split('//', 1)[0].lstrip('@').split('+', 1)[0]
+              if owner != 'sonic-linux-kernel': continue
+              assert not any(path.endswith(('.deb', '.debs')) for path in action.get('listedOutputs', [])), action
+          PY_RUNTIME
           cache_args=(--remote-cache "$KERNEL_REMOTE_CACHE")
-          if [[ "$UPLOAD_KERNEL_CACHE" == true ]]; then
-            cache_args+=(--upload-local-results)
-          fi
-          if python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
-            --state-dir "$KERNEL_RUN_TEMP/kernel-bundle-state" \
-            "${cache_args[@]}"; then
-            test ! -e target/bazel-kernel-inputs
-            test ! -e "$KERNEL_RUN_TEMP/kernel-bundle-state/bundle"
-            echo 'Kernel DEBs verified in target/debs/trixie.'
-          else
-            status=$?
-            echo "Kernel DEB build failed with exit code $status."
-            exit "$status"
-          fi
-      - name: Verify a fresh output directory reuses the kernel action
-        if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
-        run: |
-          umask 077
-          python3 -B tools/bazel/kernel/prepare.py build --architecture "${{ matrix.arch }}" \
-            --state-dir "$KERNEL_RUN_TEMP/kernel-cache-hit" \
-            --remote-cache "$KERNEL_REMOTE_CACHE"
-          python3 -B src/sonic-linux-kernel/tools/bazel/verify_cache.py \
-            --architecture "${{ matrix.arch }}" \
-            --cold "$KERNEL_RUN_TEMP/kernel-bundle-state/build" --hit "$KERNEL_RUN_TEMP/kernel-cache-hit/build" \
-            --artifacts "$KERNEL_RUN_TEMP/kernel-cache-proof"
-          echo 'Unprivileged linux-sandbox build and fresh-output remote cache hit verified.'
+          if [[ "$UPLOAD_KERNEL_CACHE" == true ]]; then cache_args+=(--upload-local-results); fi
+          python3 -B tools/bazel/kernel/packages.py build --architecture "${{ matrix.arch }}" "${cache_args[@]}"
       - name: Reject an unsupported kernel configuration without replacing the DEBs
+        shell: bash
         run: |
-          umask 077
+          set -euo pipefail
           sha256sum target/debs/trixie/*.deb > "$KERNEL_RUN_TEMP/kernel-before-rejection.sha256"
-          if python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
-            --kernel-config SECURE_UPGRADE_MODE=unsupported \
-            --state-dir "$KERNEL_RUN_TEMP/kernel-unsupported" \
-            --remote-cache "$KERNEL_REMOTE_CACHE" > "$KERNEL_RUN_TEMP/kernel-unsupported.log" 2>&1; then
+          if python3 -B tools/bazel/kernel/packages.py build --architecture "${{ matrix.arch }}" \
+            --kernel-config SECURE_UPGRADE_MODE=unsupported --remote-cache "$KERNEL_REMOTE_CACHE" \
+            > "$KERNEL_RUN_TEMP/kernel-unsupported.log" 2>&1; then
             echo 'An unsupported kernel setting was silently accepted.'
             exit 1
           fi
-          cat "$KERNEL_RUN_TEMP/kernel-unsupported.log"
           grep -F 'Unsupported kernel configuration' "$KERNEL_RUN_TEMP/kernel-unsupported.log"
-          if grep -Fq SONIC_KERNEL_COMPILATION_STARTED "$KERNEL_RUN_TEMP/kernel-unsupported.log"; then
-            echo 'Unsupported settings reached kernel compilation.'
-            exit 1
-          fi
           sha256sum --check "$KERNEL_RUN_TEMP/kernel-before-rejection.sha256"
-      - name: Repeat automatic preparation without rebuilding
+      - name: Verify registry package publication and repeated Make consumption
+        env:
+          SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256: ${{ steps.vs_handoff.outputs.receipt_sha256 }}
         run: |
-          umask 077
-          python3 -B tools/bazel/kernel/prepare.py ensure --architecture "${{ matrix.arch }}" \
-            > "$KERNEL_RUN_TEMP/kernel-bundle-stage.log"
-          python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["reused"] is True' \
-            "$KERNEL_RUN_TEMP/kernel-bundle-stage.log"
-          python3 -B tools/bazel/kernel/prepare.py verify --architecture "${{ matrix.arch }}" \
-            --debs-directory target/debs/trixie
-      - name: Consume the normal DEB directory through Make without rebuilding or copying
-        run: |
+          python3 -B tools/bazel/kernel/packages.py verify --architecture "${{ matrix.arch }}"
           python3 -B tools/bazel/ci/kernel_make_smoke.py --architecture "${{ matrix.arch }}"
+      - name: Verify a fresh output base reuses the registered kernel action
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          platform="@sonic_build_infra//platforms:${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}_trixie"
+          bazel --output_base="$KERNEL_RUN_TEMP/kernel-cache-hit" build \
+            --platforms="$platform" --host_platform="$platform" \
+            --remote_cache="$KERNEL_REMOTE_CACHE" --remote_upload_local_results=false \
+            --execution_log_json_file="$KERNEL_RUN_TEMP/kernel-cache-hit.json" \
+            @sonic_linux_kernel//:kernel_packages
+          python3 - "$KERNEL_RUN_TEMP/kernel-cache-hit.json" <<'PY_VERIFY'
+          import json, sys
+          decoder = json.JSONDecoder()
+          content = open(sys.argv[1]).read()
+          actions = []
+          while content.strip():
+              entry, end = decoder.raw_decode(content.lstrip())
+              content = content.lstrip()[end:]
+              if entry.get('mnemonic') == 'SonicKernelBuild': actions.append(entry)
+          assert len(actions) == 1 and actions[0].get('cacheHit') is True and actions[0].get('runner') == 'remote cache hit', actions
+          PY_VERIFY
       # Installation exercises APT hooks in a disposable Debian system after the
       # native unprivileged build/cache proof. This container never builds a kernel.
       - name: Validate already-built DEB installation, modules and initramfs
         run: |
           umask 077
+          # The artifact-only lane may have no build output symlink in its checkout.
+          location="$(bazel query --output=location @sonic_linux_kernel//tools/bazel:verify_debug.py)"
+          verification_script="${location%%:*}"
+          test -f "$verification_script"
+          verification_tools="$(dirname -- "$(realpath -e -- "$verification_script")")"
           docker run --rm --platform "linux/${{ matrix.arch }}" \
             --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/sonic,readonly" \
+            --mount "type=bind,src=$verification_tools,dst=/kernel-verification,readonly" \
             --workdir /sonic \
             debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c \
-            bash tools/bazel/ci/kernel_install_smoke.sh /sonic/target/debs/trixie
+            bash tools/bazel/ci/kernel_install_smoke.sh /sonic/target/debs/trixie /kernel-verification
           echo 'Installed kernel DEB, external module and initramfs checks passed.'
       - name: Select verified DEBs and a public validation summary
         if: inputs.vs_artifact_id == ''
         run: |
           umask 077
           python3 -B tools/bazel/ci/kernel_artifacts.py --architecture "${{ matrix.arch }}" \
-            --state-dir "$KERNEL_RUN_TEMP/${{ github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache && 'kernel-cache-hit' || 'kernel-bundle-state' }}" \
             --output "$KERNEL_RUN_TEMP/kernel-bundle-artifacts"
       - name: Retain verified DEBs and the validation summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

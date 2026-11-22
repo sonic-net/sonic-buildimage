@@ -110,6 +110,19 @@ def fixture_policy(source, lock_bytes):
     return stack
 
 
+class IsolatedKernelTemplateTest(unittest.TestCase):
+    def test_shipped_legacy_template_still_selects_the_audited_producer(self):
+        from tools.bazel.kernel import prepare
+        _, declarations = prepare.module_declarations(ROOT / "tools/bazel/kernel/MODULE.bazel")
+        modules = {name: spec["version"] for name, spec in declarations.items()}
+        gitlink = prepare.git(ROOT, "rev-parse", "HEAD:src/sonic-linux-kernel")
+        self.assertEqual(modules["sonic-linux-kernel"], "0.0.2-" + gitlink)
+        identity._producer({"kernel_gitlink": gitlink, "modules": modules})
+        source = ROOT / prepare.KERNEL_PATH
+        if (source / "MODULE.bazel").is_file():
+            self.assertEqual(prepare.consumer_modules(ROOT, source, gitlink), modules)
+
+
 class KernelCacheIdentityTest(unittest.TestCase):
     def setUp(self):
         self.source = source_fixture()

@@ -45,8 +45,9 @@ SONIC_BAZEL_KERNEL_CONFIG := CONFIGURED_ARCH CONFIGURED_PLATFORM BLDENV \
         SECURE_UPGRADE_MODE SECURE_UPGRADE_KERNEL_CAFILE INCLUDE_EXTERNAL_PATCHES \
         EXTERNAL_KERNEL_PATCH_URL EXTERNAL_KERNEL_PATCH_LOC
 bazel-kernel-ensure:
-	python3 -B tools/bazel/kernel/prepare.py ensure --debs-directory '$(subst ','"'"',$(DEBS_PATH))' \
+	python3 -B tools/bazel/kernel/packages.py build --debs-directory '$(subst ','"'"',$(DEBS_PATH))' \
 		$(foreach setting,$(SONIC_BAZEL_KERNEL_CONFIG),--kernel-config '$(setting)=$(subst ','"'"',$(if $(filter SECURE_UPGRADE_MODE,$(setting)),$(subst ",,$($(setting))),$($(setting))))') \
+		$(if $(strip $(SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256)),--vs-handoff-sha256 '$(subst ','"'"',$(SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256))') \
 		$(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),--cache-directory /bazel_cache) \
 		$(if $(strip $(SONIC_BAZEL_KERNEL_REMOTE_CACHE)),--remote-cache '$(subst ','"'"',$(SONIC_BAZEL_KERNEL_REMOTE_CACHE))') \
 		$(if $(filter y,$(SONIC_BAZEL_KERNEL_REMOTE_UPLOAD)),--upload-local-results)

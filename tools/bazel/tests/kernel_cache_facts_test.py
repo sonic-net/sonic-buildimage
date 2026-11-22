@@ -39,6 +39,26 @@ class KernelCacheFactsTest(unittest.TestCase):
         self.sources[cache_facts.GO_RELEASES] = json.dumps([{"version": "go0.1"}, self.release]).encode()
         cache_facts.validate(self.facts, self.fetch)
 
+    def test_root_checks_every_selected_sdk_and_rejects_extra_facts(self):
+        releases = []
+        for version in cache_facts.ROOT_GO_VERSIONS:
+            self.facts[cache_facts.GO_EXTENSION][version] = {"linux_amd64": ["sdk.tar.gz", "c" * 64]}
+            releases.append(dict(self.release, version="go" + version))
+        self.sources[cache_facts.GO_RELEASES] = json.dumps(releases).encode()
+        cache_facts.validate_root(self.facts, self.fetch)
+        with self.assertRaisesRegex(ValueError, "Go"):
+            cache_facts.validate(self.facts, self.fetch)
+        self.sources[cache_facts.GO_RELEASES] = json.dumps(releases[1:]).encode()
+        with self.assertRaisesRegex(ValueError, "Go"):
+            cache_facts.validate_root(self.facts, self.fetch)
+        self.sources[cache_facts.GO_RELEASES] = json.dumps(releases).encode()
+        self.facts[cache_facts.GO_EXTENSION]["1.23.0"]["linux_amd64"][1] = "d" * 64
+        with self.assertRaisesRegex(ValueError, "Go"):
+            cache_facts.validate_root(self.facts, self.fetch)
+        self.facts["unknown extension"] = {}
+        with self.assertRaisesRegex(ValueError, "Unexpected"):
+            cache_facts.validate_root(self.facts, self.fetch)
+
     def test_changes_to_known_upstream_releases_fail(self):
         self.sources[self.url] = b"new checksum list"
         with self.assertRaisesRegex(ValueError, "Python"):

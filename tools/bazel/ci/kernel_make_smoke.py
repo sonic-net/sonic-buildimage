@@ -31,8 +31,9 @@ def main():
         unrelated.flush()
         unrelated_path = Path(unrelated.name)
         unrelated_bytes = unrelated_path.read_bytes()
+        # The first consumer can create the advisory lock beside the package outputs.
         before = {path.name: (path.stat().st_size, path.stat().st_mtime_ns)
-                  for path in packages.iterdir() if path.is_file()}
+                  for path in packages.iterdir() if path.is_file() and path.name != ".bazel-kernel.lock"}
         directory = Path(temporary)
         (directory / ".platform").touch()
         makefile = directory / "smoke.mk"
@@ -55,7 +56,7 @@ def main():
         if any(results):
             raise ValueError("Concurrent Make kernel verification failed: " + str(results))
         after = {path.name: (path.stat().st_size, path.stat().st_mtime_ns)
-                 for path in packages.iterdir() if path.is_file()}
+                 for path in packages.iterdir() if path.is_file() and path.name != ".bazel-kernel.lock"}
         if before != after or unrelated_path.read_bytes() != unrelated_bytes:
             raise ValueError("Make changed retained kernel outputs or unrelated packages")
     print("Make uses normal DEBs; repeated and concurrent requests preserve their timestamps and unrelated packages.")

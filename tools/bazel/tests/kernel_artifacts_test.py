@@ -33,6 +33,16 @@ class KernelArtifactsTest(unittest.TestCase):
         }
         self.write_records()
 
+    def test_direct_root_publication_archives_without_private_consumer_records(self):
+        self.fixture.make_fixture()
+        summary = kernel_artifacts.collect(self.fixture.root, None, self.output,
+            architecture=self.fixture.architecture, debs_directory=self.fixture.bundle)
+        self.assertEqual(summary["artifact_count"], 5)
+        self.assertEqual({path.name for path in self.output.iterdir()},
+                         set(self.fixture.packages) | {"summary.json"})
+        for item in summary["artifacts"]:
+            self.assertEqual(hashlib.sha256((self.output / item["name"]).read_bytes()).hexdigest(), item["sha256"])
+
     def write_records(self):
         fields = ("lock_sha256", "graph_sha256", "kernel_source_json_sha256", "infra_source_json_sha256")
         for (name, value), field in zip(self.records.items(), fields):

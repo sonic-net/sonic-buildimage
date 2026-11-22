@@ -41,23 +41,46 @@ def _installed_hash(root, archive, member):
     return expected
 
 
-def _patches(workspace, manifest, commit):
+# Registry #446 supplies two packaging patches on top of the kernel gitlink.
+# The installed-image SBOM also runs offline, including after a direct DEB
+# restore. Bind their published overlay URLs to the exact compiled bytes.
+REGISTRY_VERSION = "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
+REGISTRY_OVERLAY = ("https://github.com/securely1g/sonic-bazel-registry/blob/"
+                    "066e962d36592590d2f6634202b5176922aad07c/modules/sonic-linux-kernel/"
+                    + REGISTRY_VERSION + "/overlay/")
+REGISTRY_PATCH_HASHES = {
+    "patches-debian/bazel-install-outputs.patch": "ce84bcecd9c98abcdd5c4d7e65e4cc57c66f97fb8f654c78604ab066201a4611",
+    "patches-debian/bazel-relocatable-tools.patch": "d4f28a1e44b37532e1fa4476525d0ff575bc4e74f03a36e72133fe6ddd728414",
+}
+
+
+def _patches(workspace, manifest, commit, module_version=None):
     source = workspace / kernel.KERNEL_PATH
     # Use the same SONiC series/CVE interpretation as the existing SBOM and VEX
-    # emitters. The separate Debian packaging patch is applied explicitly by
+    # emitters. The Debian packaging patches are applied explicitly by
     # the kernel action; Debian's own patches remain in the source ancestor.
     records = sbom_fragment.enumerate_patches(str(source / "patches-sonic"))
     records.extend(record for record in sbom_fragment.enumerate_patches(str(source / "patches-debian"))
                    if record["name"] in {"disable-secureboot-config-checks.patch", "bazel-debug-sources.patch",
-                                         "bazel-relocatable-tools.patch"})
+                                         "bazel-relocatable-tools.patch", "bazel-install-outputs.patch"})
     inventory = {item["name"]: item["sha256"] for item in manifest["source_files"]}
-    patches, properties = [], []
+    overlays = REGISTRY_PATCH_HASHES if module_version == REGISTRY_VERSION else {}
+    patch_sources = []
     for record in records:
         path = Path(record["path"]).resolve().relative_to(source).as_posix()
+        if path not in overlays:
+            patch_sources.append((path, record, SOURCE_URL + "/blob/" + commit + "/" + path))
+    for path, digest in overlays.items():
+        # These exact packaging patches carry no CVE claims. The replaced
+        # gitlink file may have different content or may be absent altogether.
+        patch_sources.append((path, {"path": path, "sha256": digest}, REGISTRY_OVERLAY + path))
+
+    patches, properties = [], []
+    for path, record, url in patch_sources:
         kernel.require(inventory.get(path) == record["sha256"],
                        "kernel SBOM patch differs from the compiled source inventory: " + path)
         entry = sbom_fragment._patch_entry(record)
-        entry["diff"]["url"] = SOURCE_URL + "/blob/" + commit + "/" + path
+        entry["diff"]["url"] = url
         patches.append(entry)
         properties.append({"name": "sonic:patch_sha256", "value": record["sha256"] + "  " + path})
     return patches, properties
@@ -113,7 +136,7 @@ def component(debs_directory, workspace, rootfs):
     commit = provenance["kernel_gitlink"]
     purl = sbom_purl.build("deb", name, runtime["version"], namespace="sonic",
                            qualifiers={"arch": runtime["architecture"]})
-    patches, patch_properties = _patches(workspace, manifest, commit)
+    patches, patch_properties = _patches(workspace, manifest, commit, provenance.get("module_version"))
     ancestor = {
         "type": "library", "name": "linux", "version": manifest["package_version"],
         "purl": sbom_purl.build("deb", "linux", manifest["package_version"], namespace="debian", qualifiers={"arch": "source"}),

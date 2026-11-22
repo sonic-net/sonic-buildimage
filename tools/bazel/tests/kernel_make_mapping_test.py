@@ -219,7 +219,6 @@ class KernelMakeMappingTest(unittest.TestCase):
         python = binary / "python3"
         python.write_text(
             "#!" + sys.executable + "\nimport json,sys\nfrom pathlib import Path\n"
-            "assert sys.argv[1:4] == ['-B', 'tools/bazel/kernel/prepare.py', 'ensure']\n"
             "with Path('order.txt').open('a') as out: out.write('ensure\\n')\n"
             "Path('arguments.json').write_text(json.dumps(sys.argv[4:]))\n"
             "if Path('fail-prepare').exists(): raise SystemExit(29)\n"

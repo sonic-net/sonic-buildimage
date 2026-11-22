@@ -17,6 +17,8 @@ OUTPUT_INDEX = Path("artifacts/vs/kernel-cache-output/index.json")
 RESTORED_INDEX = OUTPUT_INDEX.with_name("verified-restore.json")
 # The shortcut is optional. Failures here happen before any file is installed.
 RESTORE_ERRORS = (OSError, ValueError, KeyError, TypeError, AttributeError, ImportError, subprocess.SubprocessError)
+ROOT_SCHEMA = 2
+MAX_METADATA_BYTES = 16 * 1024 * 1024
 COMPRESSED_LOCK = "MODULE.bazel.lock.gz"
 METADATA = ("kernel-packages.json", "kernel-provenance.json", COMPRESSED_LOCK)
 
@@ -46,9 +48,14 @@ def _bound_metadata(manifest, provenance, lock_digest):
 
 
 def restore(workspace, incoming, expected_names, source, registry, endpoint):
-    index = _read_json(workspace / INPUT_INDEX)
     key = cache_identity.request_key(source, registry, workspace=workspace)
-    if index.get("schema") != 1 or index.get("request_key") != key:
+    return restore_bundle(workspace, incoming, expected_names, endpoint, key=key, schema=1,
+                          validate_lock=lambda data: cache_identity.validate_resolution(data, registry, source=source))
+
+
+def restore_bundle(workspace, incoming, expected_names, endpoint, *, key, schema, validate_lock):
+    index = _read_json(workspace / INPUT_INDEX)
+    if index.get("schema") != schema or index.get("request_key") != key:
         raise ValueError("kernel inputs differ from the published bundle")
     metadata = index.get("metadata")
     if not isinstance(metadata, dict) or set(metadata) != set(METADATA):
@@ -56,7 +63,7 @@ def restore(workspace, incoming, expected_names, source, registry, endpoint):
     with cache_transport.BlobCache(endpoint) as cache:
         for name in METADATA:
             digest, size = _descriptor(metadata[name])
-            if size > 16 * 1024 * 1024:
+            if size > MAX_METADATA_BYTES:
                 raise ValueError(f"kernel metadata exceeds the direct-restore limit: {name}")
             cache.download(digest, size, incoming / name)
         provenance = _read_json(incoming / "kernel-provenance.json")
@@ -68,7 +75,9 @@ def restore(workspace, incoming, expected_names, source, registry, endpoint):
             raise ValueError("invalid compressed kernel resolution lock") from error
         _bound_metadata(metadata["kernel-packages.json"]["sha256"], provenance,
                         hashlib.sha256(lock_bytes).hexdigest())
-        cache_identity.validate_resolution(lock_bytes, registry, source=source)
+        if schema == ROOT_SCHEMA and provenance["resolution"].get("root_request_key") != key:
+            raise ValueError("kernel provenance differs from the current root request")
+        validate_lock(lock_bytes)
         packages = manifest.get("packages")
         if not isinstance(packages, list) or len(packages) != len(expected_names):
             raise ValueError("unexpected package count in restored kernel manifest")
@@ -91,6 +100,11 @@ def publish(workspace, destination, lock, verified, source, registry, endpoint):
     with lock.open("rb") as stream:
         lock_bytes = stream.read(cache_identity.MAX_LOCK_BYTES + 1)
     cache_identity.validate_resolution(lock_bytes, registry, source=source)
+    return upload_bundle(destination, lock_bytes, verified, endpoint, key=key, schema=1)
+
+
+def upload_bundle(destination, lock_bytes, verified, endpoint, *, key, schema):
+    """Upload outputs only after the caller has verified this exact resolution."""
     metadata = {}
     with tempfile.TemporaryDirectory() as scratch:
         compressed = Path(scratch) / COMPRESSED_LOCK
@@ -98,6 +112,8 @@ def publish(workspace, destination, lock, verified, source, registry, endpoint):
         paths = {}
         for name in METADATA:
             path = compressed if name == COMPRESSED_LOCK else destination / name
+            if path.stat().st_size > MAX_METADATA_BYTES:
+                raise ValueError(f"kernel metadata exceeds the direct-restore limit: {name}")
             data = path.read_bytes()
             digest = hashlib.sha256(data).hexdigest()
             metadata[name] = {"sha256": digest, "size": len(data)}
@@ -109,7 +125,7 @@ def publish(workspace, destination, lock, verified, source, registry, endpoint):
         with cache_transport.BlobCache(endpoint) as cache:
             for digest, size in cache.missing(paths):
                 cache.upload(digest, size, paths[(digest, size)])
-    return {"schema": 1, "request_key": key, "metadata": metadata}
+    return {"schema": schema, "request_key": key, "metadata": metadata}
 
 
 def save_index(workspace, index, relative=OUTPUT_INDEX):

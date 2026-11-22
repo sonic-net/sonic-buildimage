@@ -2,11 +2,13 @@
 # Install already-built DEBs in a disposable native Trixie system; never builds the kernel.
 set -euo pipefail
 packages=${1:?kernel DEB directory required}
+verification_tools=${2:?Registry kernel verification tools directory required}
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install --no-install-recommends -y python3 git gcc-14 make binutils gdb pahole \
     libelf-dev libssl-dev perl initramfs-tools kmod linux-base busybox cpio xz-utils zstd
-python3 -B tools/bazel/kernel/prepare.py verify --debs-directory "$packages" >/tmp/kernel-package-verification.json
+architecture=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["architecture"])' "$packages/kernel-packages.json")
+python3 -B tools/bazel/kernel/packages.py verify --architecture "$architecture" --debs-directory "$packages" >/tmp/kernel-package-verification.json
 # APT resolves package dependencies and dpkg executes real kernel maintainer hooks.
 python3 - "$packages" <<'PYTHON'
 import json, pathlib, subprocess, sys
@@ -26,7 +28,7 @@ assert not subprocess.check_output(['dpkg', '--audit'], text=True).strip()
 PYTHON
 architecture=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["architecture"])' "$packages/kernel-packages.json")
 gdb --version
-python3 -B src/sonic-linux-kernel/tools/bazel/verify_debug.py --architecture "$architecture" --root / --output /tmp/kernel-debugger.json
+python3 -B "$verification_tools/verify_debug.py" --architecture "$architecture" --root / --output /tmp/kernel-debugger.json
 python3 -B - "$packages" <<'PYTHON'
 from pathlib import Path
 import sys
