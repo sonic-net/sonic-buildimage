@@ -1,6 +1,6 @@
 """Exercise the VS hsflowd and modules with the owner's private Redis and UDP probes."""
 
-from tools.bazel.ci import sflow_owner
+from tools.bazel.ci import installed_package_test
 
 IMAGES = ("docker-sflow",)
 RUNTIME = {
@@ -16,7 +16,7 @@ DEBUG = {"symbols.tar": "@hsflowd//:runtime.debug_symbols"}
 
 
 def verify(directory, *, debug):
-    return sflow_owner.verify("hsflowd", directory, debug=debug, inputs={
+    return installed_package_test.verify("hsflowd", directory, debug=debug, inputs={
         "runtime": "runtime.tar", "metadata": "metadata.json", "changelog": "changelog",
         "fixtures": "redis.tar", "hiredis": "hiredis.tar",
     })

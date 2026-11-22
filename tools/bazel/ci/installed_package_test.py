@@ -8,17 +8,22 @@ import sys
 import tempfile
 
 
+def test_script(owner, directory, scratch, *, debug):
+    test = scratch / "package_test.py"
+    shutil.copyfile(directory / "package_test.py", test)
+    if not debug:
+        # The immutable registered tests require symbols. These small patches make
+        # only that argument and its assertions optional for a runtime-only VS.
+        patch = Path(__file__).resolve().parent / "components" / "runtime_only" / (owner + ".patch")
+        subprocess.run(["git", "apply", "--no-index", str(patch)], cwd=scratch, check=True)
+    return test
+
+
 def verify(owner, directory, *, debug, inputs, executables=()):
     """Keep the exact upstream behavior suite, with optional source-level symbol checks."""
     with tempfile.TemporaryDirectory(prefix=owner + "-owner-") as temporary:
         scratch = Path(temporary)
-        test = scratch / "package_test.py"
-        shutil.copyfile(directory / "package_test.py", test)
-        if not debug:
-            # The immutable registered tests require symbols. These small patches make
-            # only that argument and its assertions optional for a runtime-only VS.
-            patch = Path(__file__).resolve().parent / "components" / "runtime_only" / (owner + ".patch")
-            subprocess.run(["git", "apply", "--no-index", str(patch)], cwd=scratch, check=True)
+        test = test_script(owner, directory, scratch, debug=debug)
         command = [sys.executable, str(test)]
         for argument, filename in inputs.items():
             source = (directory / filename).resolve(strict=True)

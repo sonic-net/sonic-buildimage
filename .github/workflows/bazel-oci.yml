@@ -546,7 +546,6 @@ jobs:
             //tools/bazel/tests:oci_package_receipts_test //tools/bazel/tests:oci_package_state_layer_test
             @libteam//:consumer_test @sonic_swss//crates/countersyncd:common_rust_test
             @sonic_swss//bazel:protobuf_runtime_test @scapy//:upstream_test @scapy//:wheel_test
-            @nnpy//:package_test
             @otelcol_contrib//distributions/otelcol-contrib:source_contract_test
             @otelcol_contrib//bazel:components_output_test @otelcol_contrib//distributions/otelcol-contrib:package_test
             "${hsflowd_tests[@]}"
@@ -554,7 +553,7 @@ jobs:
           if [[ ${USE_VS_WHEELS:-false} != true ]]; then targets+=(//tools/bazel/tests:swss_package_contract_test); fi
           # The VS job validates the selected native packages against its exact TARs.
           if [[ "${USE_VS_WHEELS:-false}" != true ]]; then
-            targets+=(@hsflowd//:package_test @sflowtool//:package_test @libpsample//:package_test)
+            targets+=(@nnpy//:package_test @hsflowd//:package_test @sflowtool//:package_test @libpsample//:package_test)
           fi
           platform=@sonic_build_infra//platforms:x86_64_trixie
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
@@ -964,6 +963,7 @@ jobs:
       hsflowd_artifact_id: ${{ steps.component_hsflowd.outputs.artifact-id }}
       sflowtool_artifact_id: ${{ steps.component_sflowtool.outputs.artifact-id }}
       libpsample_artifact_id: ${{ steps.component_libpsample.outputs.artifact-id }}
+      nnpy_artifact_id: ${{ steps.component_nnpy.outputs.artifact-id }}
       fib_artifact_id: ${{ steps.component_fib.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
@@ -1485,6 +1485,17 @@ jobs:
         with:
           name: vs-component-libpsample-${{ github.run_id }}-${{ github.run_attempt }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/libpsample/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component nnpy
+        id: component_nnpy
+        if: contains(fromJSON(steps.bundles.outputs.components), 'nnpy')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-nnpy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/nnpy/
           if-no-files-found: error
           retention-days: 3
           compression-level: 1

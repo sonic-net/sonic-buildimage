@@ -1,0 +1,33 @@
+--- a/package_test.py
++++ b/package_test.py
+@@ -50,7 +50,7 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     for name in ("runtime", "debug", "native", "source", "generation"):
+-        parser.add_argument("--" + name, type=lambda p: Path(p).resolve(), required=True)
++        parser.add_argument("--" + name, type=lambda p: Path(p).resolve(), required=(name != "debug"))
+     args = parser.parse_args()
+     python_files = ["__init__.py", "errors.py", "socket.py", "tests.py", "constants.py"]
+     metadata_files = ["PKG-INFO", "SOURCES.txt", "dependency_links.txt", "requires.txt", "top_level.txt"]
+@@ -67,7 +67,8 @@
+             directory.mkdir()
+         extract(args.runtime, runtime, expected)
+         extract(args.native, native)
+-        extract(args.debug, debug)
++        if args.debug:
++            extract(args.debug, debug)
+         site = runtime / prefix
+         extension = site / "_nnpy.so"
+         library = (native / "usr/lib/x86_64-linux-gnu/libnanomsg.so.5").resolve()
+@@ -127,6 +128,11 @@
+         assert "libnanomsg.so.5" in needed and not any("python" in n for n in needed), needed
+         assert not re.search(r"\((?:RPATH|RUNPATH)\)", dynamic), dynamic
+         identity = re.search(r"Build ID: ([0-9a-f]+)", elf(extension, "-n")).group(1)
++        if args.debug is None:
++            assert ".debug_info" not in elf(extension, "-SW")
++            print(json.dumps({"runtime_sha256": sha(args.runtime), "build_id": identity,
++                              "upstream_tests": 2, "missing_extension_rejected": True}))
++            return
+         symbols = debug / "usr/lib/debug/.build-id" / identity[:2] / (identity[2:] + ".debug")
+         assert re.search(r"Build ID: ([0-9a-f]+)", elf(symbols, "-n")).group(1) == identity
+         assert ".debug_info" not in elf(extension, "-SW") and ".debug_info" in elf(symbols, "-SW")

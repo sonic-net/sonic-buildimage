@@ -1,6 +1,6 @@
 """Decode and forward the owner's IPv4 and IPv6 captures with the VS sflowtool."""
 
-from tools.bazel.ci import sflow_owner
+from tools.bazel.ci import installed_package_test
 
 IMAGES = ("docker-sflow",)
 RUNTIME = {
@@ -19,4 +19,4 @@ def verify(directory, *, debug):
     inputs = {"runtime": "runtime.tar", "metadata": "metadata.json", "copyright": "copyright"}
     if debug:
         inputs["unstripped"] = "unstripped"
-    return sflow_owner.verify("sflowtool", directory, debug=debug, inputs=inputs)
+    return installed_package_test.verify("sflowtool", directory, debug=debug, inputs=inputs)

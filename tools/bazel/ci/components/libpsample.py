@@ -1,6 +1,6 @@
 """Test the VS psample CLI and library with the owner's netlink fixture and C SDK."""
 
-from tools.bazel.ci import sflow_owner
+from tools.bazel.ci import installed_package_test
 
 IMAGES = ("docker-sflow",)
 RUNTIME = {
@@ -18,7 +18,7 @@ DEBUG = {"symbols.tar": "@libpsample//:runtime.debug_symbols"}
 
 
 def verify(directory, *, debug):
-    return sflow_owner.verify("libpsample", directory, debug=debug, executables=("sdk",), inputs={
+    return installed_package_test.verify("libpsample", directory, debug=debug, executables=("sdk",), inputs={
         "runtime": "runtime.tar", "metadata": "metadata.json", "copyright": "copyright",
         "manual": "psample.8", "mnl": "mnl.tar", "fixture": "netlink.so", "sdk": "sdk-probe",
     })
