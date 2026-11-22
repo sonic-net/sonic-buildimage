@@ -501,8 +501,8 @@ apt_inputs(
 # sFlow adds only locked distro runtime tools to its source-built parent and
 # reuses the shared debug and test collections from the canonical lock.
 use_repo(apt, "sflow_debian")
-# Make the registered hsflowd installed-package test dependency available to VS CI.
-use_repo(apt, "hsflowd_deps")
+# Inputs of the registered hsflowd and psample installed-package suites.
+use_repo(apt, "hsflowd_deps", "psample_deps")
 
 apt_inputs(
     name = "sflow_apt_inputs",
