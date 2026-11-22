@@ -1,0 +1,179 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("@tar.bzl//tar:tar.bzl", "tar")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "source.BUILD.bazel",
+    "loopback-file-system-support.patch",
+    "loopback-file-offset-support.patch",
+    "series",
+])
+
+# The SONiC Make recipe installs the patched v0.142 scripts directly.
+# Debian rules replaces these two placeholders before dh_install.
+expand_template(
+    name = "mkinitramfs",
+    template = "@initramfs_tools_src//:mkinitramfs",
+    out = "installed/mkinitramfs",
+    substitutions = {"@BUSYBOX_PACKAGES@": "busybox or busybox-static", "@BUSYBOX_MIN_VERSION@": "1:1.22.0-17~"},
+)
+
+_CORE_FILES = [
+    ("@initramfs_tools_src//:lsinitramfs", "usr/bin/lsinitramfs", "0755"),
+    ("@initramfs_tools_src//:unmkinitramfs", "usr/bin/unmkinitramfs", "0755"),
+    ("@initramfs_tools_src//:init", "usr/share/initramfs-tools/init", "0755"),
+    ("@initramfs_tools_src//:hook-functions", "usr/share/initramfs-tools/hook-functions", "0644"),
+    ("@initramfs_tools_src//:conf/modules", "usr/share/initramfs-tools/modules", "0644"),
+    ("@initramfs_tools_src//:conf/initramfs.conf", "etc/initramfs-tools/initramfs.conf", "0644"),
+    ("@initramfs_tools_src//:debian/copyright", "usr/share/doc/initramfs-tools-core/copyright", "0644"),
+    ("@initramfs_tools_src//:hooks/fsck", "usr/share/initramfs-tools/hooks/fsck", "0755"),
+    ("@initramfs_tools_src//:hooks/keymap", "usr/share/initramfs-tools/hooks/keymap", "0755"),
+    ("@initramfs_tools_src//:hooks/resume", "usr/share/initramfs-tools/hooks/resume", "0755"),
+    ("@initramfs_tools_src//:hooks/thermal", "usr/share/initramfs-tools/hooks/thermal", "0755"),
+    ("@initramfs_tools_src//:scripts/functions", "usr/share/initramfs-tools/scripts/functions", "0644"),
+    ("@initramfs_tools_src//:scripts/init-top/all_generic_ide", "usr/share/initramfs-tools/scripts/init-top/all_generic_ide", "0755"),
+    ("@initramfs_tools_src//:scripts/init-top/blacklist", "usr/share/initramfs-tools/scripts/init-top/blacklist", "0755"),
+    ("@initramfs_tools_src//:scripts/init-top/keymap", "usr/share/initramfs-tools/scripts/init-top/keymap", "0755"),
+    ("@initramfs_tools_src//:scripts/local", "usr/share/initramfs-tools/scripts/local", "0644"),
+    ("@initramfs_tools_src//:scripts/local-premount/resume", "usr/share/initramfs-tools/scripts/local-premount/resume", "0755"),
+    ("@initramfs_tools_src//:scripts/nfs", "usr/share/initramfs-tools/scripts/nfs", "0644"),
+    ("@initramfs_tools_src//:docs/example_hook", "usr/share/doc/initramfs-tools-core/examples/example_hook", "0644"),
+    ("@initramfs_tools_src//:docs/example_script", "usr/share/doc/initramfs-tools-core/examples/example_script", "0644"),
+    ("@initramfs_tools_src//:docs/framebuffer", "usr/share/doc/initramfs-tools-core/examples/framebuffer", "0644"),
+]
+
+# Original debian/initramfs-tools-core.dirs, before file installation.
+_CORE_DIRS = ['etc/initramfs-tools/scripts/init-bottom', 'etc/initramfs-tools/scripts/init-premount', 'etc/initramfs-tools/scripts/init-top', 'etc/initramfs-tools/scripts/local-bottom', 'etc/initramfs-tools/scripts/local-premount', 'etc/initramfs-tools/scripts/local-top', 'etc/initramfs-tools/scripts/nfs-bottom', 'etc/initramfs-tools/scripts/nfs-premount', 'etc/initramfs-tools/scripts/nfs-top', 'etc/initramfs-tools/scripts/panic', 'etc/initramfs-tools/hooks', 'etc/initramfs-tools/conf.d', 'usr/sbin', 'usr/share/initramfs-tools/conf.d', 'usr/share/initramfs-tools/conf-hooks.d', 'usr/share/initramfs-tools/modules.d']
+
+_AUTOMATION_FILES = [
+    ("@initramfs_tools_src//:update-initramfs", "usr/sbin/update-initramfs", "0755"),
+    ("@initramfs_tools_src//:conf/update-initramfs.conf", "etc/initramfs-tools/update-initramfs.conf", "0644"),
+    ("@initramfs_tools_src//:debian/script", "usr/share/bug/initramfs-tools/script", "0755"),
+    ("@initramfs_tools_src//:bash_completion.d/update-initramfs", "usr/share/bash-completion/completions/update-initramfs", "0644"),
+    ("@initramfs_tools_src//:debian/copyright", "usr/share/doc/initramfs-tools/copyright", "0644"),
+    ("@initramfs_tools_src//:debian/TODO", "usr/share/doc/initramfs-tools/TODO", "0644"),
+    ("@initramfs_tools_src//:kernel/postinst.d/initramfs-tools", "etc/kernel/postinst.d/initramfs-tools", "0755"),
+    ("@initramfs_tools_src//:kernel/postrm.d/initramfs-tools", "etc/kernel/postrm.d/initramfs-tools", "0755"),
+]
+
+genrule(
+    name = "initramfs-tools.7.gz",
+    srcs = ["@initramfs_tools_src//:initramfs-tools.7"],
+    outs = ["man/initramfs-tools.7.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:initramfs-tools.7) > $@",
+)
+
+genrule(
+    name = "initramfs.conf.5.gz",
+    srcs = ["@initramfs_tools_src//:initramfs.conf.5"],
+    outs = ["man/initramfs.conf.5.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:initramfs.conf.5) > $@",
+)
+
+genrule(
+    name = "lsinitramfs.8.gz",
+    srcs = ["@initramfs_tools_src//:lsinitramfs.8"],
+    outs = ["man/lsinitramfs.8.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:lsinitramfs.8) > $@",
+)
+
+genrule(
+    name = "mkinitramfs.8.gz",
+    srcs = ["@initramfs_tools_src//:mkinitramfs.8"],
+    outs = ["man/mkinitramfs.8.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:mkinitramfs.8) > $@",
+)
+
+genrule(
+    name = "unmkinitramfs.8.gz",
+    srcs = ["@initramfs_tools_src//:unmkinitramfs.8"],
+    outs = ["man/unmkinitramfs.8.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:unmkinitramfs.8) > $@",
+)
+
+genrule(
+    name = "update-initramfs.8.gz",
+    srcs = ["@initramfs_tools_src//:update-initramfs.8"],
+    outs = ["man/update-initramfs.8.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:update-initramfs.8) > $@",
+)
+
+genrule(
+    name = "update-initramfs.conf.5.gz",
+    srcs = ["@initramfs_tools_src//:update-initramfs.conf.5"],
+    outs = ["man/update-initramfs.conf.5.gz"],
+    tools = ["@sonic_build_infra//tools/build_tools:pigz"],
+    cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -c $(location @initramfs_tools_src//:update-initramfs.conf.5) > $@",
+)
+
+_CORE_GENERATED = [
+    (":mkinitramfs", "usr/sbin/mkinitramfs", "0755"),
+    (":initramfs-tools.7.gz", "usr/share/man/man7/initramfs-tools.7.gz", "0644"),
+    (":initramfs.conf.5.gz", "usr/share/man/man5/initramfs.conf.5.gz", "0644"),
+    (":lsinitramfs.8.gz", "usr/share/man/man8/lsinitramfs.8.gz", "0644"),
+    (":mkinitramfs.8.gz", "usr/share/man/man8/mkinitramfs.8.gz", "0644"),
+    (":unmkinitramfs.8.gz", "usr/share/man/man8/unmkinitramfs.8.gz", "0644"),
+]
+
+tar(
+    name = "initramfs-tools-core.runtime",
+    srcs = [source for source, _, _ in _CORE_FILES + _CORE_GENERATED],
+    mtree = ["./" + path + " type=dir uid=0 gid=0 mode=0755 time=0" for path in _CORE_DIRS] + [
+        "./" + destination + " type=file uid=0 gid=0 mode=" + mode + " time=0 content=$(location " + source + ")"
+        for source, destination, mode in _CORE_FILES + _CORE_GENERATED
+    ],
+)
+
+# debian/rules override_dh_gencontrol selects these Debian BusyBox relations.
+write_file(
+    name = "core_substvars",
+    out = "initramfs-tools-core.substvars",
+    content = [
+        "busybox:Recommends=busybox (>= 1:1.22.0-17~) | busybox-static (>= 1:1.22.0-17~)",
+        "busybox:Breaks=busybox (<< 1:1.22.0-17~), busybox-static (<< 1:1.22.0-17~)",
+    ],
+)
+
+runtime_packages(
+    name = "initramfs-tools-core.runtime_metadata",
+    debian_files = {"initramfs-tools-core." + suffix: "@initramfs_tools_src//:debian/initramfs-tools-core." + suffix for suffix in ["postinst", "postrm"]},
+    control_file_helpers = [["dh_installdeb"]],
+    substvars = {"initramfs-tools-core": ":core_substvars"},
+    changelog = "@initramfs_tools_src//:debian/changelog",
+    control = "@initramfs_tools_src//:debian/control",
+    packages = {"initramfs-tools-core": ":initramfs-tools-core.runtime"},
+    required_paths = {"initramfs-tools-core": ["usr/sbin/mkinitramfs", "etc/initramfs-tools/initramfs.conf"]},
+)
+
+_AUTOMATION_GENERATED = [
+    (":update-initramfs.8.gz", "usr/share/man/man8/update-initramfs.8.gz", "0644"),
+    (":update-initramfs.conf.5.gz", "usr/share/man/man5/update-initramfs.conf.5.gz", "0644"),
+]
+
+tar(
+    name = "initramfs-tools.runtime",
+    srcs = [source for source, _, _ in _AUTOMATION_FILES + _AUTOMATION_GENERATED],
+    mtree = ["./etc/initramfs-tools/conf.d type=dir uid=0 gid=0 mode=0755 time=0"] + [
+        "./" + destination + " type=file uid=0 gid=0 mode=" + mode + " time=0 content=$(location " + source + ")"
+        for source, destination, mode in _AUTOMATION_FILES + _AUTOMATION_GENERATED
+    ],
+)
+
+runtime_packages(
+    name = "initramfs-tools.runtime_metadata",
+    debian_files = {"initramfs-tools." + suffix: "@initramfs_tools_src//:debian/initramfs-tools." + suffix for suffix in ["preinst", "postinst", "postrm", "triggers", "maintscript"]},
+    control_file_helpers = [["dh_installdeb"]],
+    changelog = "@initramfs_tools_src//:debian/changelog",
+    control = "@initramfs_tools_src//:debian/control",
+    packages = {"initramfs-tools": ":initramfs-tools.runtime"},
+    required_paths = {"initramfs-tools": ["usr/sbin/update-initramfs", "etc/initramfs-tools/update-initramfs.conf"]},
+)

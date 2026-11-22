@@ -156,6 +156,7 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             ("bazel-eventd.yml", "native"),
             ("bazel-supervisor-rust.yml", "native"), ("bazel-yang-models.yml", "package"),
             ("bazel-libteam.yml", "native"), ("bazel-sysmgr.yml", "native"),
+            ("bazel-image-rules.yml", "native-vs-installer"),
         })
 
     def test_preparation_restores_pins_without_cloning_unrelated_modules_or_losing_edits(self):

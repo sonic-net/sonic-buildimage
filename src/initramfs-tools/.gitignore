@@ -1,3 +1,5 @@
 *
 !.gitignore
 !Makefile
+!BUILD.bazel
+!source.BUILD.bazel
