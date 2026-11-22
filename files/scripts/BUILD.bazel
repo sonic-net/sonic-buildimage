@@ -6,3 +6,34 @@ exports_files([
     "gnmi.sh",
     "k8s_pod_control.sh",
 ])
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "asic_status.py",
+        "asic_status.sh",
+        "bgp.sh",
+        "bmp.sh",
+        "core_cleanup.py",
+        "dash-ha.sh",
+        "database.sh",
+        "gbsyncd-platform.sh",
+        "gbsyncd.sh",
+        "lldp.sh",
+        "mark_dhcp_packet.py",
+        "mgmt-framework.sh",
+        "otel.sh",
+        "radv.sh",
+        "snmp.sh",
+        "sonic-db-aliases.py",
+        "sonic-dpu-mgmt-traffic.sh",
+        "sonic-netns-exec",
+        "startup_tsa_tsb.py",
+        "swss.sh",
+        "syncd.sh",
+        "syncd_common.sh",
+        "teamd.sh",
+        "telemetry.sh",
+        "write_standby.py"
+    ],
+)

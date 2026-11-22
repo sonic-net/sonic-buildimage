@@ -218,7 +218,7 @@ site_packages(
     runtime_deps = [
         "//src/sonic-py-common:sonic-py-common.runtime",
         "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
-        "//src/sonic-yang-models:sonic-yang-models.runtime",
+        "@sonic_yang_models//:sonic-yang-models.runtime",
     ],
 )
 

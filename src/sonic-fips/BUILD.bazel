@@ -1,0 +1,126 @@
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":host_runtime.bzl", "fips_host_runtime")
+package(default_visibility = ["//visibility:public"])
+exports_files(["host-artifacts.json"])
+py_binary(name = "host_extract", srcs = ["host_extract.py"], main = "host_extract.py", python_version = "3.13")
+
+fips_host_runtime(
+    name = 'openssl.runtime',
+    deb = '@fips_host_archives//:openssl_3.5.7-1~deb13u2+fips_amd64.deb',
+    package = 'openssl', version = '3.5.7-1~deb13u2+fips', architecture = 'amd64',
+)
+filegroup(name = 'openssl.control', srcs = [':openssl.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libssl3t64.runtime',
+    deb = '@fips_host_archives//:libssl3t64_3.5.7-1~deb13u2+fips_amd64.deb',
+    package = 'libssl3t64', version = '3.5.7-1~deb13u2+fips', architecture = 'amd64',
+)
+filegroup(name = 'libssl3t64.control', srcs = [':libssl3t64.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libssl-dev.runtime',
+    deb = '@fips_host_archives//:libssl-dev_3.5.7-1~deb13u2+fips_amd64.deb',
+    package = 'libssl-dev', version = '3.5.7-1~deb13u2+fips', architecture = 'amd64',
+)
+filegroup(name = 'libssl-dev.control', srcs = [':libssl-dev.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'symcrypt-openssl.runtime',
+    deb = '@fips_host_archives//:symcrypt-openssl_1.11.0_amd64.deb',
+    package = 'symcrypt-openssl', version = '1.11.0', architecture = 'all',
+)
+filegroup(name = 'symcrypt-openssl.control', srcs = [':symcrypt-openssl.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'ssh.runtime',
+    deb = '@fips_host_archives//:ssh_10.0p1-7+fips_all.deb',
+    package = 'ssh', version = '1:10.0p1-7+fips', architecture = 'all',
+)
+filegroup(name = 'ssh.control', srcs = [':ssh.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'openssh-client.runtime',
+    deb = '@fips_host_archives//:openssh-client_10.0p1-7+fips_amd64.deb',
+    package = 'openssh-client', version = '1:10.0p1-7+fips', architecture = 'amd64',
+)
+filegroup(name = 'openssh-client.control', srcs = [':openssh-client.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'openssh-server.runtime',
+    deb = '@fips_host_archives//:openssh-server_10.0p1-7+fips_amd64.deb',
+    package = 'openssh-server', version = '1:10.0p1-7+fips', architecture = 'amd64',
+)
+filegroup(name = 'openssh-server.control', srcs = [':openssh-server.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'openssh-sftp-server.runtime',
+    deb = '@fips_host_archives//:openssh-sftp-server_10.0p1-7+fips_amd64.deb',
+    package = 'openssh-sftp-server', version = '1:10.0p1-7+fips', architecture = 'amd64',
+)
+filegroup(name = 'openssh-sftp-server.control', srcs = [':openssh-sftp-server.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libk5crypto3.runtime',
+    deb = '@fips_host_archives//:libk5crypto3_1.21.3-5+fips_amd64.deb',
+    package = 'libk5crypto3', version = '1.21.3-5+fips', architecture = 'amd64',
+)
+filegroup(name = 'libk5crypto3.control', srcs = [':libk5crypto3.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libkrb5support0.runtime',
+    deb = '@fips_host_archives//:libkrb5support0_1.21.3-5+fips_amd64.deb',
+    package = 'libkrb5support0', version = '1.21.3-5+fips', architecture = 'amd64',
+)
+filegroup(name = 'libkrb5support0.control', srcs = [':libkrb5support0.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libkrb5-3.runtime',
+    deb = '@fips_host_archives//:libkrb5-3_1.21.3-5+fips_amd64.deb',
+    package = 'libkrb5-3', version = '1.21.3-5+fips', architecture = 'amd64',
+)
+filegroup(name = 'libkrb5-3.control', srcs = [':libkrb5-3.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libgssapi-krb5-2.runtime',
+    deb = '@fips_host_archives//:libgssapi-krb5-2_1.21.3-5+fips_amd64.deb',
+    package = 'libgssapi-krb5-2', version = '1.21.3-5+fips', architecture = 'amd64',
+)
+filegroup(name = 'libgssapi-krb5-2.control', srcs = [':libgssapi-krb5-2.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'python3.13.runtime',
+    deb = '@fips_host_archives//:python3.13_3.13.5-2+fips_amd64.deb',
+    package = 'python3.13', version = '3.13.5-2+fips', architecture = 'amd64',
+)
+filegroup(name = 'python3.13.control', srcs = [':python3.13.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'python3.13-minimal.runtime',
+    deb = '@fips_host_archives//:python3.13-minimal_3.13.5-2+fips_amd64.deb',
+    package = 'python3.13-minimal', version = '3.13.5-2+fips', architecture = 'amd64',
+)
+filegroup(name = 'python3.13-minimal.control', srcs = [':python3.13-minimal.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libpython3.13.runtime',
+    deb = '@fips_host_archives//:libpython3.13_3.13.5-2+fips_amd64.deb',
+    package = 'libpython3.13', version = '3.13.5-2+fips', architecture = 'amd64',
+)
+filegroup(name = 'libpython3.13.control', srcs = [':libpython3.13.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libpython3.13-minimal.runtime',
+    deb = '@fips_host_archives//:libpython3.13-minimal_3.13.5-2+fips_amd64.deb',
+    package = 'libpython3.13-minimal', version = '3.13.5-2+fips', architecture = 'amd64',
+)
+filegroup(name = 'libpython3.13-minimal.control', srcs = [':libpython3.13-minimal.runtime'], output_group = "control")
+
+fips_host_runtime(
+    name = 'libpython3.13-stdlib.runtime',
+    deb = '@fips_host_archives//:libpython3.13-stdlib_3.13.5-2+fips_amd64.deb',
+    package = 'libpython3.13-stdlib', version = '3.13.5-2+fips', architecture = 'amd64',
+)
+filegroup(name = 'libpython3.13-stdlib.control', srcs = [':libpython3.13-stdlib.runtime'], output_group = "control")
+
+filegroup(name = "host_runtime", srcs = [':openssl.runtime', ':libssl3t64.runtime', ':libssl-dev.runtime', ':symcrypt-openssl.runtime', ':ssh.runtime', ':openssh-client.runtime', ':openssh-server.runtime', ':openssh-sftp-server.runtime', ':libk5crypto3.runtime', ':libkrb5support0.runtime', ':libkrb5-3.runtime', ':libgssapi-krb5-2.runtime', ':python3.13.runtime', ':python3.13-minimal.runtime', ':libpython3.13.runtime', ':libpython3.13-minimal.runtime', ':libpython3.13-stdlib.runtime'])

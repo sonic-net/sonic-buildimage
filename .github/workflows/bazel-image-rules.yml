@@ -183,3 +183,55 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+  native-vs-installer:
+    name: Native Bazel VS installer (AMD64)
+    if: >-
+      (github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, sonic-slave-container-k3s]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare the pinned image source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Verify the native worker and its configured cache
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(bazel --version)" = 'bazel 8.5.1'
+          python3 -B tools/bazel/ci/resources.py --configure
+          python3 -B tools/bazel/ci/configure_runner_cache.py --remote-only --output artifacts/native-vs/cache.json
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/native-vs-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/native-vs-mirrors.cfg" >> .bazelrc.user
+      - name: Build the complete VS AMD64 Trixie FIPS DASH runtime installer
+        run: |
+          bazel build --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic-vs.bin
+          sha256sum bazel-bin/tools/bazel/image/vs/sonic-vs.bin > artifacts/native-vs/sonic-vs.bin.sha256
+      - name: Verify the produced installer contents and installation layout
+        run: |
+          bazel test --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic_vs_test
+      - name: Verify debug selection without producing a second installer
+        run: |
+          bazel build --nobuild --config=syncd-dash \
+            --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
+      - name: Retain the acceptance results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-vs-installer-amd64
+          path: |
+            artifacts/native-vs/*.json
+            artifacts/native-vs/*.sha256
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.xml
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Clean completed Bazel outputs
+        if: always()
+        run: |
+          bazel clean
+          bazel shutdown
