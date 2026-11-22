@@ -616,7 +616,7 @@ jobs:
           targets=(
             //dockers/docker-platform-monitor/bazel:smartcmd_compatibility_test
             //platform/pddf/platform-api-pddf-base:wheel_contract_test
-            //tools/bazel/tests:swss_package_contract_test //tools/bazel/tests:swss_manifest_labels_test
+            //tools/bazel/tests:swss_manifest_labels_test
             //tools/bazel/tests:oci_apt_overlay_test //tools/bazel/tests:oci_image_test
             //tools/bazel/tests:oci_inventory_test //tools/bazel/tests:oci_native_packages_test
             //tools/bazel/tests:oci_package_contract_test //tools/bazel/tests:oci_package_payloads_test
@@ -628,6 +628,7 @@ jobs:
             @otelcol_contrib//bazel:components_output_test @otelcol_contrib//distributions/otelcol-contrib:package_test
             "${hsflowd_tests[@]}"
           )
+          if [[ ${USE_VS_WHEELS:-false} != true ]]; then targets+=(//tools/bazel/tests:swss_package_contract_test); fi
           platform=@sonic_build_infra//platforms:x86_64_trixie
           python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
             --bazel-arg="--platforms=$platform" --bazel-arg="--host_platform=$platform" \
@@ -636,7 +637,7 @@ jobs:
             --build_event_json_file="$PWD/artifacts/owners/test-events.jsonl" "${targets[@]}"
 
       - name: Verify SWSS native link closure and symbol lookups
-        if: matrix.architecture == 'amd64'
+        if: matrix.architecture == 'amd64' && env.USE_VS_WHEELS != 'true'
         env:
           BAZELISK_GITHUB_TOKEN: ""
         run: |
@@ -666,6 +667,27 @@ jobs:
             --runtime "$runtime" --symbols "$symbols" --policy "$policy" \
             --link-graph "$graph" --output artifacts/owners/native-closure.json
           git diff --exit-code
+      - name: Allocate a clean SWSS package directory
+        id: swss_input
+        if: matrix.architecture == 'amd64' && env.USE_VS_WHEELS == 'true'
+        run: |
+          [[ $VS_SWSS_ARTIFACT_ID =~ ^[1-9][0-9]*$ ]]
+          echo "directory=$(mktemp -d)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        name: Download SWSS package inputs from VS
+        if: steps.swss_input.outcome == 'success'
+        with:
+          artifact-ids: ${{ env.VS_SWSS_ARTIFACT_ID }}
+          merge-multiple: true
+          path: ${{ steps.swss_input.outputs.directory }}
+      - name: Verify SWSS packages and configured native links from VS
+        if: steps.swss_input.outcome == 'success'
+        env:
+          BUNDLE: ${{ steps.swss_input.outputs.directory }}
+        run: |
+          python3 -B -m tools.bazel.ci.vs_component_artifacts test --component swss --directory "$BUNDLE" \
+            --revision "$GITHUB_SHA" --debug "$VS_COMPONENT_DEBUG"
+
       - name: Retain wheels and required Python test evidence
         id: packages
         env:
@@ -738,6 +760,8 @@ jobs:
             disk_cache: swss-layer-amd64
     container: *package_test_container
     env:
+      VS_SWSS_ARTIFACT_ID: ${{ needs.vs_container.outputs.swss_artifact_id }}
+      VS_COMPONENT_DEBUG: ${{ needs.vs_container.outputs.debug_layer }}
       BAZEL: *package_test_bazel
       USE_VS_WHEELS: ${{ needs.vs_container.result == 'success' }}
       VS_WHEELS_ARTIFACT_ID: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
@@ -1002,6 +1026,7 @@ jobs:
       frr_native_artifact_id: ${{ steps.component_frr_native.outputs.artifact-id }}
       libteam_artifact_id: ${{ steps.component_libteam.outputs.artifact-id }}
       sysmgr_artifact_id: ${{ steps.component_sysmgr.outputs.artifact-id }}
+      swss_artifact_id: ${{ steps.component_swss.outputs.artifact-id }}
       fib_artifact_id: ${{ steps.component_fib.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
@@ -1479,6 +1504,17 @@ jobs:
         with:
           name: vs-component-sysmgr-${{ github.run_id }}-${{ github.run_attempt }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/sysmgr/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component swss
+        id: component_swss
+        if: contains(fromJSON(steps.bundles.outputs.components), 'swss')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-swss-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/swss/
           if-no-files-found: error
           retention-days: 3
           compression-level: 1

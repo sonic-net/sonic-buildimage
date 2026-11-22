@@ -41,7 +41,9 @@ def archive_hashes(paths):
 def verify_layers(runtime_path, dependencies_path, configuration_path, symbols_path,
                   libraries, source, policy, *, source_layer_excludes, source_layer_includes, readelf, objcopy):
     """Compare real archives with source declarations and native debug requirements."""
-    archives = [runtime_path, dependencies_path, configuration_path, symbols_path, *libraries.values()]
+    archives = [runtime_path, dependencies_path, configuration_path, *libraries.values()]
+    if symbols_path is not None:
+        archives.append(symbols_path)
     validated_hashes = archive_hashes(archives)
     runtime = artifact_validation.payload(runtime_path)
     programs = package_contract.validate_install_inventory(source, runtime, policy["install_inventory"])
@@ -68,15 +70,17 @@ def verify_layers(runtime_path, dependencies_path, configuration_path, symbols_p
             if original[path]["kind"] != "directory":
                 artifact_validation.require(path not in dependencies, "filtered library path is present in the OCI layer: " + path)
         package_contract.validate_library_payload(dependencies, retained, library_policy)
-    debug = artifact_validation.debug_archives(
-        dependencies_path, symbols_path,
-        expected_machine=package_contract.elf_machine(policy["architecture"]),
-        readelf=readelf, objcopy=objcopy,
-    )
-    artifact_validation.require(
-        set(programs) | set(policy["required_debug_paths"]) <= {pair["path"] for pair in debug["debug_pairs"]},
-        "incomplete declared native debug coverage",
-    )
+    debug = {}
+    if symbols_path is not None:
+        debug = artifact_validation.debug_archives(
+            dependencies_path, symbols_path,
+            expected_machine=package_contract.elf_machine(policy["architecture"]),
+            readelf=readelf, objcopy=objcopy,
+        )
+        artifact_validation.require(
+            set(programs) | set(policy["required_debug_paths"]) <= {pair["path"] for pair in debug["debug_pairs"]},
+            "incomplete declared native debug coverage",
+        )
     configuration = artifact_validation.payload(configuration_path)
     for path, expected in policy["config_paths"].items():
         artifact_validation.require(

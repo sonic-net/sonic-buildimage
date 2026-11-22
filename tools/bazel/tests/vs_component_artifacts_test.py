@@ -8,9 +8,23 @@ import unittest
 from unittest.mock import patch
 
 from tools.bazel.ci import vs_component_artifacts as components
+from tools.bazel.ci.components import swss
 
 
 class ComponentHandoffTest(unittest.TestCase):
+    def test_swss_query_location(self):
+        """Read Bazel's line, column and target fields without treating them as part of the source path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            anchor = root / "fpmsyncd/bgp_eoiu_marker.py"
+            anchor.parent.mkdir()
+            anchor.touch()
+            suffix = ":1:1: source file @@sonic-swss+//fpmsyncd:bgp_eoiu_marker.py\n"
+            self.assertEqual(swss.source_root(str(anchor) + suffix), root)
+            for invalid in (str(anchor.relative_to(root)) + suffix, (str(anchor) + suffix) * 2):
+                with self.subTest(location=invalid), self.assertRaisesRegex(ValueError, "one absolute"):
+                    swss.source_root(invalid)
+
     def test_two_images_share_one_configured_component(self):
         module = SimpleNamespace(IMAGES=("a", "b"), RUNTIME={"runtime.tar": "//c:runtime"},
                                  DEBUG={"symbols.tar": "//c:symbols"})
