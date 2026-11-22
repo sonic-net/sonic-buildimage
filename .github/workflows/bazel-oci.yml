@@ -244,7 +244,10 @@ jobs:
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
 
   archive:
-    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    needs: [checks, vs_container]
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.vs_container.result == 'success' || needs.vs_container.result == 'skipped')
     name: Container archive (${{ matrix.name }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -263,7 +266,8 @@ jobs:
       # Reap the detached Bazel server so each Make archive can finish shutdown.
       options: --init
     env:
-      # Shared CI entry point with the canonical registry; the full Make VS job is separate.
+      USE_VS_WHEELS: ${{ needs.vs_container.result == 'success' }}
+      VS_WHEELS_ARTIFACT_ID: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
       BAZEL: &package_test_bazel ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
     defaults: &package_test_defaults
       run:
@@ -508,7 +512,7 @@ jobs:
           if [[ -n $VS_WHEELS ]]; then
             python3 -B -m tools.bazel.ci.vs_python_packages stage \
               --directory "$VS_WHEELS" --revision "$GITHUB_SHA" --package "$VS_PACKAGE"
-            python3 -B -m tools.bazel.ci.vs_python_packages flags --group config-engine \
+            python3 -B -m tools.bazel.ci.vs_python_packages flags --group config-engine --architecture "${{ matrix.architecture }}" \
               --package "$VS_PACKAGE" > "$VS_PACKAGE/flags.txt"
             mapfile -t wheel_flags < "$VS_PACKAGE/flags.txt"
             for flag in "${wheel_flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
@@ -564,7 +568,6 @@ jobs:
             //tools/bazel/tests:sonic_py_common_full_test \
             //tools/bazel/tests:sonic_config_engine_full_test \
             //tools/bazel/tests:sonic_python_wheels_test \
-            //tools/bazel/tests:source_installation_test \
             //tools/bazel/tests:containercfgd_full_test \
             //tools/bazel/tests:containercfgd_wheel_test \
             //tools/bazel/tests:supervisor_python_full_test \
@@ -586,6 +589,22 @@ jobs:
           cp "$output" artifacts/config-engine/docker-init.sh
           sha256sum artifacts/config-engine/docker-init.sh > artifacts/config-engine/sha256.txt
           git diff --exit-code
+
+      - name: Exercise the alternate source installation TAR rules
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          # VS installs these components from wheels. This independent test builds the
+          # six direct-source TARs and checks their metadata, modes and imports.
+          mkdir -p artifacts/source-installation
+          flags=()
+          if [[ -n "$VS_PACKAGE" ]]; then mapfile -t flags < "$VS_PACKAGE/flags.txt"; fi
+          "$BAZEL" test "${flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --nocache_test_results --test_output=errors \
+            --build_event_json_file="$PWD/artifacts/source-installation/test-events.jsonl" \
+            //tools/bazel/tests:source_installation_test \
+            2>&1 | tee artifacts/source-installation/test.log
 
       - name: Test SONiC component packages and their upstream suites
         if: matrix.architecture == 'amd64'

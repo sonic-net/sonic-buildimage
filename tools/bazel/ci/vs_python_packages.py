@@ -1,5 +1,6 @@
 """Publish and verify the original AMD64 Python package outputs from the VS build."""
 import argparse
+from email.parser import BytesParser
 import json
 from pathlib import Path
 import re
@@ -76,6 +77,37 @@ def verify(directory, revision):
     return manifest
 
 
+def verify_portable(directory, names):
+    """Reject native wheel tags or compiled payloads before reusing AMD64 outputs on ARM64."""
+    def check_file(name, stream):
+        if stream.read(8).startswith((b"\x7fELF", b"!<arch>\n")) or re.search(r"\.(?:so(?:\.\d+)*|a|o)$", name):
+            raise ValueError("Native file in a portable Python package: " + name)
+
+    for name in names:
+        path = directory / name
+        if name.endswith(".whl"):
+            with zipfile.ZipFile(path) as wheel:
+                records = [entry for entry in wheel.namelist() if entry.endswith(".dist-info/WHEEL")]
+                if len(records) != 1 or not name.endswith("-py3-none-any.whl"):
+                    raise ValueError("Expected a universal Python wheel: " + name)
+                metadata = BytesParser().parsebytes(wheel.read(records[0]))
+                if metadata.get("Root-Is-Purelib") != "true" or metadata.get_all("Tag") != ["py3-none-any"]:
+                    raise ValueError("Expected a pure py3-none-any wheel: " + name)
+                for entry in wheel.infolist():
+                    if not entry.is_dir():
+                        with wheel.open(entry) as stream:
+                            check_file(entry.filename, stream)
+        else:
+            with tarfile.open(path) as archive:
+                for entry in archive:
+                    if entry.isdir():
+                        continue
+                    if not entry.isfile():
+                        raise ValueError("Expected regular files in a portable Python TAR: " + entry.name)
+                    with archive.extractfile(entry) as stream:
+                        check_file(entry.name, stream)
+
+
 def verify_frr_runtime(wheel, runtime_tar):
     """Compare the installed code, metadata and FRR templates in the original TAR with its wheel."""
     site = "usr/local/lib/python3.13/dist-packages/"
@@ -125,10 +157,13 @@ def stage(directory, revision, package):
         staged.rename(package)
 
 
-def flags(group, package):
+def flags(group, package, architecture):
     """Print one source-or-VS input override per installed-wheel probe."""
     path = package_path(package)
-    for name in WHEELS if group == "config-engine" else FRR:
+    selected = WHEELS if group == "config-engine" else FRR
+    if architecture == "arm64":
+        verify_portable(path, selected)
+    for name in selected:
         if name.endswith(".whl"):
             selector = name.split("-", 1)[0] + "_test_wheel"
             print(f"--//tools/bazel/tests:{selector}=//{path}:{name}")
@@ -145,6 +180,7 @@ def main():
         if name != "verify":
             sub.add_argument("--package", type=Path, required=True)
         if name == "flags":
+            sub.add_argument("--architecture", choices=("amd64", "arm64"), default="amd64")
             sub.add_argument("--group", choices=("config-engine", "frr"), required=True)
     args = parser.parse_args()
     if args.command == "verify":
@@ -152,7 +188,7 @@ def main():
     elif args.command == "stage":
         stage(args.directory, args.revision, args.package)
     else:
-        flags(args.group, args.package)
+        flags(args.group, args.package, args.architecture)
 
 
 if __name__ == "__main__":

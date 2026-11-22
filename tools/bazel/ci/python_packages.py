@@ -100,9 +100,9 @@ def collect(workspace, directory, revision, architecture, *, bazel="bazel", opti
             paths = build.collect_archives(workspace, directory, receipt, WHEELS,
                                           bazel=bazel, options=options)
         else:
-            if architecture != "amd64":
-                raise ValueError("The VS package bundle is for AMD64")
             manifest = vs_python_packages.verify(vs_packages, revision["tested_head"])
+            if architecture == "arm64":
+                vs_python_packages.verify_portable(vs_packages, WHEELS)
             paths = {}
             for name in WHEELS:
                 path = directory / name

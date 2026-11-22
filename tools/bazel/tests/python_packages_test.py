@@ -132,6 +132,30 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "target"):
             vs_python_packages.verify(bundle, revision)
 
+    def test_arm64_reuse_rejects_a_native_member_in_a_universal_wheel_or_tar(self):
+        """A py3-none-any filename alone cannot authorize an AMD64 binary on ARM64."""
+        wheel = self.workspace / "sample-1-py3-none-any.whl"
+        runtime = self.workspace / "sample.runtime.tar"
+        for tag, payload, error in (("py3-none-any", b"import sys", None),
+                                    ("py3-none-linux_x86_64", b"import sys", "pure py3"),
+                                    ("py3-none-any", b"\x7fELFtest", "Native file")):
+            with self.subTest(tag=tag, payload=payload):
+                with zipfile.ZipFile(wheel, "w") as archive:
+                    archive.writestr("sample-1.dist-info/WHEEL", "Root-Is-Purelib: true\nTag: " + tag + "\n")
+                    archive.writestr("sample/tool", payload)
+                if error:
+                    with self.assertRaisesRegex(ValueError, error):
+                        vs_python_packages.verify_portable(self.workspace, [wheel.name])
+                else:
+                    vs_python_packages.verify_portable(self.workspace, [wheel.name])
+        with tarfile.open(runtime, "w") as archive:
+            file = tarfile.TarInfo("usr/bin/tool")
+            payload = b"\x7fELFtest"
+            file.size = len(payload)
+            archive.addfile(file, io.BytesIO(payload))
+        with self.assertRaisesRegex(ValueError, "Native file"):
+            vs_python_packages.verify_portable(self.workspace, [runtime.name])
+
     def test_frr_runtime_tar_contains_the_shipped_code_and_templates(self):
         """A separately published FRR TAR must install the original wheel modules, metadata and templates."""
         sources = {"frrcfgd/service.py": b"module", "frr-1.0.dist-info/METADATA": b"metadata",

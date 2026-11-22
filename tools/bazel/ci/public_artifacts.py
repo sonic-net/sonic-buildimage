@@ -88,7 +88,8 @@ FILES = {
 BEP = {
     "archive": [
         ("archive-tests", "artifacts/archive/test-events.jsonl", 12),
-        ("python-tests", "artifacts/config-engine/test-events.jsonl", 22),
+        ("python-tests", "artifacts/config-engine/test-events.jsonl", 21),
+        ("source-installation", "artifacts/source-installation/test-events.jsonl", 1),
     ],
     "source": [("source-tests", "artifacts/swss/test-events.jsonl", None)],
     "syncd": [("syncd-tests", "artifacts/syncd-vs/bazel/test-events.jsonl", None)],

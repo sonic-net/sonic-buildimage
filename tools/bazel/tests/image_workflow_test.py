@@ -131,7 +131,9 @@ class VerificationWorkflowTest(unittest.TestCase):
             row, = job["strategy"]["matrix"]["include"]
             self.assertIn("${{ matrix.name }}", job["name"])  # A literal name makes Actions append every matrix value.
             self.assertEqual(job["name"].replace("${{ matrix.name }}", row["name"]), required)
-        self.assertNotIn("needs", jobs["archive"])  # ARM64 has its own native inputs.
+        arm64 = jobs["archive"]
+        self.assertIn("vs_container", arm64["needs"])
+        self.assertEqual(arm64["env"]["VS_WHEELS_ARTIFACT_ID"], amd64["env"]["VS_WHEELS_ARTIFACT_ID"])
         steps = {s["name"]: s for s in amd64["steps"]}
         download = steps["Download wheels used by VS"]["with"]
         self.assertEqual(download["artifact-ids"], "${{ env.VS_WHEELS_ARTIFACT_ID }}")
