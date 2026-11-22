@@ -1,0 +1,57 @@
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@tar.bzl//tar:tar.bzl", "tar")
+
+_DEVICE = "//device:platform_files"
+_INPUTS = "@vs_device_data_inputs//:metadata.json"
+_PROFILES = glob(["src/*.ini", "src/*.vs_profile"])
+
+py_binary(
+    name = "prepare_vs",
+    srcs = ["prepare_vs.py", "src/generate_vs_hwsku.py"],
+    imports = ["src"],
+    main = "prepare_vs.py",
+)
+
+gzip_compress(
+    name = "changelog_gzip",
+    src = "src/debian/changelog",
+    level = 9,
+)
+
+run_binary(
+    name = "vs_install_files",
+    srcs = [
+        _DEVICE,
+        "//device:BUILD.bazel",
+        _INPUTS,
+        ":changelog_gzip",
+        "src/debian/copyright",
+    ] + _PROFILES + glob(["tests/*_checker", "tests/permitted_list"]),
+    tool = ":prepare_vs",
+    args = [
+        "$(execpath //device:BUILD.bazel)",
+        "$(execpath src/sai.vs_profile)",
+        "$(execpath " + _INPUTS + ")",
+        "$(execpath :changelog_gzip)",
+        "$(RULEDIR)/generated",
+        "$(RULEDIR)/vs_install.mtree",
+    ],
+    outs = ["vs_install.mtree"],
+    out_dirs = ["generated"],
+    mnemonic = "GenerateVsDeviceData",
+)
+
+tar(
+    name = "vs_runtime_tar",
+    srcs = [
+        _DEVICE,
+        ":changelog_gzip",
+        ":vs_install_files",
+        "src/debian/copyright",
+    ] + _PROFILES,
+    compress = None,
+    mtree = ":vs_install.mtree",
+    visibility = ["//visibility:public"],
+)

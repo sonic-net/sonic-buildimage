@@ -3,6 +3,11 @@ name: Image assembly rule contracts
 on:
   pull_request:
     paths:
+      - src/sonic-device-data/**
+      - scripts/install_device_data.py
+      - rules/sonic-device-data.mk
+      - tools/bazel/tests/device_data_install_test.py
+      - tools/bazel/ci/device_data_benchmark.py
       - tools/bazel/ci/resources.py
       - tools/bazel/image/**
       - tools/bazel/build_container_batch.py
@@ -17,6 +22,11 @@ on:
   push:
     branches: [master]
     paths:
+      - src/sonic-device-data/**
+      - scripts/install_device_data.py
+      - rules/sonic-device-data.mk
+      - tools/bazel/tests/device_data_install_test.py
+      - tools/bazel/ci/device_data_benchmark.py
       - tools/bazel/ci/resources.py
       - tools/bazel/image/**
       - tools/bazel/build_container_batch.py
@@ -28,12 +38,45 @@ on:
       - MODULE.bazel
       - .github/workflows/bazel-image-rules.yml
   workflow_dispatch:
+    inputs:
+      device_data_cache:
+        description: Measure the AMD64 VS device-data TAR on a fresh K3s runner
+        type: choice
+        options: ['off', populate, restore]
+        default: 'off'
 
 permissions:
   contents: read
 
 jobs:
+  device-data-cache:
+    name: VS device data TAR (${{ inputs.device_data_cache }})
+    if: github.event_name == 'workflow_dispatch' && (inputs.device_data_cache == 'populate' || inputs.device_data_cache == 'restore')
+    runs-on: [self-hosted, Linux, X64, sonic-slave-container-k3s]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify the worker's remote-only cache configuration
+        run: |
+          python3 -B tools/bazel/ci/resources.py --configure
+          python3 -B tools/bazel/ci/configure_runner_cache.py --remote-only --output artifacts/device-data/cache.json
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/device-data-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/device-data-mirrors.cfg" >> .bazelrc.user
+      - name: Build and measure the installer payload
+        env:
+          CACHE_MODE: ${{ inputs.device_data_cache }}
+        run: PYTHONPATH="$GITHUB_WORKSPACE" python3 -B -m tools.bazel.ci.device_data_benchmark "$CACHE_MODE" --report artifacts/device-data/measurement.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: device-data-${{ inputs.device_data_cache }}
+          path: artifacts/device-data/*.json
+          if-no-files-found: error
+          retention-days: 14
+
   contracts:
+    if: github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off'
     name: Image assembly contracts (${{ matrix.architecture }})
     strategy:
       fail-fast: false
@@ -60,6 +103,9 @@ jobs:
           cache-version: "8.5.1"
       - name: Configure Bazel action memory budget
         run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Check AMD64 VS device-data package registration and installer selection
+        if: matrix.architecture == 'amd64'
+        run: sudo python3 -B tools/bazel/tests/device_data_install_test.py
       - name: Compare batched and standalone configured container outputs
         run: python3 tools/bazel/tests/integration/container_batch.py --architecture ${{ matrix.architecture }}
       - name: Configure shared source download mirrors

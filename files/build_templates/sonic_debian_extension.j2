@@ -364,8 +364,12 @@ sudo chroot $FILESYSTEM_ROOT python3 -B -c "from sonic_grpc.gnoi import GnoiClie
 fi
 {% endif %}
 
-# Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
+# Install SONiC platform and generated VS hardware-SKU data.
+{% if installer_device_data_tar %}
+sudo python3 -B scripts/install_device_data.py --root "$FILESYSTEM_ROOT" --tar "$installer_device_data_tar"
+{% else %}
 install_deb_package $debs_path/sonic-device-data_*.deb
+{% endif %}
 
 # package for supporting password hardening (cracklib-runtime is explicitly specified
 # here because it is technically considered a recommended package, and recommended

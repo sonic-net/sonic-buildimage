@@ -8,6 +8,9 @@ module(
 
 include("//src/sonic-supervisord-utilities-rs:deps.MODULE.bazel")
 
+device_data_metadata = use_repo_rule("//src/sonic-device-data:input_metadata.bzl", "device_data_metadata")
+device_data_metadata(name = "vs_device_data_inputs")
+
 watchdog_crates = use_extension("@rules_rs//rs:extensions.bzl", "crate")
 watchdog_crates.from_cargo(
     name = "gnmi_watchdog_crates",

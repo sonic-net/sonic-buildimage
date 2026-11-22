@@ -30,6 +30,7 @@ platform/vs/docker-sonic-vs
 platform/vs/sonic-platform-modules-vs
 platform/vs/sonic-version
 platform/vs/tests
+src/sonic-device-data/workspace
 src/sonic-linux-kernel
 src/sonic-p4rt/sonic-pins
 tools/bazel/kernel

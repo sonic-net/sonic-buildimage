@@ -9,8 +9,11 @@ import shutil
 import sys
 from pathlib import Path
 
-def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_64-r0"):
+def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_64-r0",
+                  *, templates=None, copy_file=shutil.copy2):
     """Process a single HwSKU directory for VS mapping."""
+    if templates is None:
+        templates = src_dir
     hwsku_name = hwsku_dir.name
     vs_hwsku = Path(src_dir, "device", vs_platform, hwsku_name)
     parent = hwsku_dir.parent
@@ -24,18 +27,18 @@ def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_6
                         "pai.vs_profile:pai.profile",
                         "fabriclanemap_vs.ini:fabriclanemap.ini"]:
             src_name, dst_name = profile.split(":")
-            src_path = Path(src_dir, src_name)
+            src_path = Path(templates, src_name)
             if src_path.exists():
-                shutil.copy2(str(src_path), str(vs_hwsku / dst_name))
+                copy_file(str(src_path), str(vs_hwsku / dst_name))
         return
 
     # Copy HwSKU dir to VS platform
-    shutil.copytree(str(hwsku_dir), str(vs_hwsku), symlinks=False)
+    shutil.copytree(str(hwsku_dir), str(vs_hwsku), symlinks=False, copy_function=copy_file)
 
     # Copy asic.conf if exists
     asic_conf = parent / "asic.conf"
     if asic_conf.exists():
-        shutil.copy2(str(asic_conf), str(vs_hwsku / "asic.conf"))
+        copy_file(str(asic_conf), str(vs_hwsku / "asic.conf"))
 
     # Copy profile files
     for profile in ["sai.vs_profile:sai.profile",
@@ -44,9 +47,9 @@ def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_6
                     "pai.vs_profile:pai.profile",
                     "fabriclanemap_vs.ini:fabriclanemap.ini"]:
         src_name, dst_name = profile.split(":")
-        src_path = Path(src_dir, src_name)
+        src_path = Path(templates, src_name)
         if src_path.exists():
-            shutil.copy2(str(src_path), str(vs_hwsku / dst_name))
+            copy_file(str(src_path), str(vs_hwsku / dst_name))
 
     # Remove context_config.json if exists
     ctx_cfg = vs_hwsku / "context_config.json"
@@ -82,9 +85,9 @@ def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_6
             for profile in ["sai.vs_profile:sai.profile",
                             "fabriclanemap_vs.ini:fabriclanemap.ini"]:
                 src_name, dst_name = profile.split(":")
-                src_path = Path(src_dir, src_name)
+                src_path = Path(templates, src_name)
                 if src_path.exists():
-                    shutil.copy2(str(src_path), str(subdir / dst_name))
+                    copy_file(str(src_path), str(subdir / dst_name))
 
             # Remove context_config.json
             sub_ctx = subdir / "context_config.json"
@@ -174,13 +177,8 @@ def generate_lanemap(target_dir, port_config_path, has_chassis, reserve_midplane
             f.write("\n".join(coremap_lines) + "\n")
             if has_chassis:
                 f.write("Cpu0:0,0\n")
-def main():
-    script_dir = Path(__file__).resolve().parent
-    device_base = sys.argv[1] if len(sys.argv) > 1 else str(script_dir / ".." / ".." / ".." / "device")
-    src_dir = str(script_dir)
 
-    # Find all HwSKU directories
-    hwsku_dirs = []
+def hwsku_directories(device_base):
     for platform_dir in Path(device_base).iterdir():
         if not platform_dir.is_dir():
             continue
@@ -194,7 +192,15 @@ def main():
                 name = hwsku_dir.name
                 if "plugins" in name or "led-code" in name or "sonic_platform" in name:
                     continue
-                hwsku_dirs.append(hwsku_dir)
+                yield hwsku_dir
+
+
+def main():
+    script_dir = Path(__file__).resolve().parent
+    device_base = sys.argv[1] if len(sys.argv) > 1 else str(script_dir / ".." / ".." / ".." / "device")
+    src_dir = str(script_dir)
+
+    hwsku_dirs = list(hwsku_directories(device_base))
 
     print(f"Processing {len(hwsku_dirs)} HwSKUs...", file=sys.stderr)
     for hwsku_dir in hwsku_dirs:

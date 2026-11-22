@@ -1709,7 +1709,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 
 	$(FOOTER)
 
-# Rebuild when the image-store format or compression profile changes.
+# Rebuild when the VS image store, compression, package batching, or device-data input changes.
 ifeq ($(CONFIGURED_PLATFORM),vs)
 vs_boot_mode_stamp := $(TARGET_PATH)/.installer-docker-load-on-boot
 ifeq ($(DOCKER_LOAD_ON_BOOT),y)
@@ -1727,8 +1727,8 @@ endif
 .PHONY: check-vs-boot-mode
 $(vs_boot_mode_stamp): check-vs-boot-mode
 	@mkdir -p "$(@D)"
-	@printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' | cmp -s - "$@" || \
-	    printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' > "$@"
+	@printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' | cmp -s - "$@" || \
+	    printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' > "$@"
 endif
 
 # targets for building installers with base image
@@ -1765,10 +1765,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_BUILD_INSTALLS)) \
 		$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_PYTHON_WHEELS)) \
+        $$(installer_device_data_inputs) \
         $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) \
                 $(LINUX_KERNEL) \
                 $(LINUX_KBUILD) \
-                $(SONIC_DEVICE_DATA) \
                 $(IFUPDOWN2) \
                 $(MAKEDUMPFILE) \
                 $(KDUMP_TOOLS) \
@@ -1839,6 +1839,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	fi
 	# Pass initramfs and linux kernel explicitly. They are used for all platforms
 	export debs_path="$(IMAGE_DISTRO_DEBS_PATH)"
+	export installer_device_data_tar="$(installer_device_data_tar)"
 	export files_path="$(FILES_PATH)"
 	export python_debs_path="$(PYTHON_DEBS_PATH)"
 	export initramfs_tools="$(IMAGE_DISTRO_DEBS_PATH)/$(INITRAMFS_TOOLS)"

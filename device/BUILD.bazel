@@ -9,3 +9,12 @@ filegroup(
     ]),
     visibility = ["//tools/bazel/tests:__pkg__"],
 )
+
+# Make stages device/<vendor>/<platform>, following links to their contents.
+filegroup(
+    name = "platform_files",
+    srcs = glob(["*/*/**"], exclude = ["*/.*", "*/.*/**"]),
+    visibility = ["//src/sonic-device-data:__pkg__"],
+)
+
+exports_files(["BUILD.bazel"], visibility = ["//src/sonic-device-data:__pkg__"])

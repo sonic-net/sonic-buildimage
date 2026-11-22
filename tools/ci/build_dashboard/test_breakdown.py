@@ -411,6 +411,7 @@ class ImagePhaseTests(unittest.TestCase):
 
 class ParserTests(unittest.TestCase):
     def test_device_package_and_base_loads_keep_distinct_make_timings(self):
+        self.assertEqual(breakdown.target_kind("target/files/trixie/sonic-device-data-vs.tar"), "device-data")
         log = synthetic_log().replace(b"target/docker-base-trixie.gz", b"target/debs/trixie/sonic-device-data_1.0-1_all.deb")
         log = log.replace(b"target/docker-config-engine-trixie.gz", b"target/docker-config-engine-trixie.gz-load")
         log = log.replace(b"target/private-host-secret.gz", b"target/docker-swss-layer-trixie.gz-load")

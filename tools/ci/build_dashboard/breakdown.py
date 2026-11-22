@@ -91,6 +91,7 @@ TASK_LABELS = {
 }
 VS_ROOTFS_TARGET = "target/sonic-vs.bin__vs__rfs.squashfs"
 EXACT_TARGETS = {
+    "target/files/trixie/sonic-device-data-vs.tar": "device-data",
     "target/vs-container-images": "vs-container-images",
     "target/sonic-vs.bin": "final-image",
     VS_ROOTFS_TARGET: "rootfs",
