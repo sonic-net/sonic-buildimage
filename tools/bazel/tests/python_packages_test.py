@@ -1,6 +1,6 @@
 """Require complete native test evidence for the Python wheels retained by CI."""
 
-import contextlib
+from contextlib import chdir, redirect_stdout
 import hashlib
 import io
 import json
@@ -91,7 +91,11 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         outputs = {}
         for name, target in vs_python_packages.PACKAGES.items():
             source = sources / name
-            source.write_bytes(name.encode())
+            if name == vs_python_packages.YANG_TREE:
+                source.mkdir()
+                (source / "sonic-port.yang").write_text("module sonic-port {}")
+            else:
+                source.write_bytes(name.encode())
             outputs[target] = source
         bundle = self.workspace / "vs"
         vs_python_packages.publish(bundle, self.revision["tested_head"], outputs)
@@ -113,7 +117,7 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         """The installed utility test receives the exact wheel used for the relay's Python layer."""
         bundle = self.vs_bundle()
         package = Path("target/validation/inputs")
-        with contextlib.chdir(self.workspace), mock.patch("builtins.print") as output:
+        with chdir(self.workspace), mock.patch("builtins.print") as output:
             vs_python_packages.stage(bundle, self.revision["tested_head"], package)
             vs_python_packages.flags("dhcp", package, "amd64")
         name, = vs_python_packages.DHCP
@@ -167,6 +171,22 @@ class PythonPackageEvidenceTest(unittest.TestCase):
             archive.addfile(file, io.BytesIO(payload))
         with self.assertRaisesRegex(ValueError, "Native file"):
             vs_python_packages.verify_portable(self.workspace, [runtime.name])
+
+    def test_yang_probes_use_the_producers_model_tree_separately_from_the_wheel_and_layer(self):
+        """The owner must compare three independent VS outputs on the validation runner."""
+        bundle = self.vs_bundle()
+        with chdir(self.workspace):
+            package = Path("target/ytest")
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            self.assertEqual((package / "models/sonic-port.yang").read_text(), "module sonic-port {}")
+            output = io.StringIO()
+            with redirect_stdout(output):
+                vs_python_packages.flags("yang-models", package, "amd64")
+            self.assertEqual(set(output.getvalue().splitlines()), {
+                "--//src/sonic-yang-models:test_layer=//target/ytest:yang_models_pkg.tar",
+                "--//src/sonic-yang-models:test_models=//target/ytest:test_models",
+                "--//src/sonic-yang-models:test_wheel=//target/ytest:sonic_yang_models-1.0-py3-none-any.whl",
+            })
 
     def test_frr_runtime_tar_contains_the_shipped_code_and_templates(self):
         """A separately published FRR TAR must install the original wheel modules, metadata and templates."""

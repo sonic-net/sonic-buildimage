@@ -39,12 +39,21 @@ on:
       - 'src/sonic-yang-models/**'
       - '.github/workflows/bazel-yang-models.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      vs_artifact_id:
+        description: Immutable ID of the Python package bundle built by VS
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   package:
+    if: >-
+      inputs.vs_artifact_id != '' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
     name: YANG model distribution (${{ matrix.architecture }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
@@ -94,10 +103,15 @@ jobs:
             -exec chown --no-dereference -- "$owner" {} +
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Prepare pinned source submodules
         run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Record the called workflow identity for cleanup
+        if: inputs.vs_artifact_id != ''
+        env:
+          JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+        run: printf 'BAZEL_CLEANUP_JOB_WORKFLOW_REF=%s\n' "$JOB_WORKFLOW_REF" >> "$GITHUB_ENV"
       - uses: ./.github/actions/bazel-post-job-cleanup
         id: bazel_cleanup_register
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
@@ -118,10 +132,25 @@ jobs:
           # common.bazelrc imports this ignored file, including through Draft wrappers.
           printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
 
+      - name: Allocate a fresh VS input directory
+        if: inputs.vs_artifact_id != ''
+        run: |
+          mkdir -p target
+          scratch=$(mktemp -d target/vs-yang-XXXXXXXX)
+          echo "VS_SCRATCH=$scratch" >> "$GITHUB_ENV"
+      - name: Download the original VS YANG model distribution
+        if: inputs.vs_artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.vs_artifact_id }}
+          path: ${{ env.VS_SCRATCH }}/download
+          merge-multiple: true
       - name: Build and verify the installed source distribution
         id: yang_build
         working-directory: src/sonic-yang-models
         shell: bash
+        env:
+          NATIVE_PLATFORM: '@sonic_build_infra//platforms:${{ matrix.machine }}_trixie'
         run: |
           set -euo pipefail
           test "$(uname -m)" = '${{ matrix.machine }}'
@@ -132,22 +161,39 @@ jobs:
           mkdir -p artifacts
           # The standalone module and image root use the same maintained registry.
           (cd ../.. && tools/bazel/ci/libteam_draft_bazel.sh cquery --lockfile_mode=update \
+            --platforms="$NATIVE_PLATFORM" --host_platform="$NATIVE_PLATFORM" \
             //src/sonic-yang-models:yang_models_package_test) > artifacts/image-root-targets.txt
           git rev-parse HEAD > artifacts/revision.txt
           uname -m > artifacts/execution-machine.txt
           python3 ../../tools/bazel/ci/bazel_commands.py --output artifacts/action-audit.json \
             --bazel-arg="--registry=$registry" --bazel-arg=--registry=https://bcr.bazel.build \
             //:yang_models_package_test //:yang_models_wheel //:yang_models_pkg
-          bazel test "${options[@]}" --test_output=all //:yang_models_package_test
-          bazel build "${options[@]}" //:yang_models_wheel //:yang_models_pkg
           bazel mod graph "${options[@]}" > artifacts/module-graph.txt
           cp MODULE.bazel.lock artifacts/
-          for target in yang_models_wheel yang_models_pkg; do
-            output=$(bazel cquery "${options[@]}" --output=files "//:$target")
-            test -f "$output"
-            cp "$output" artifacts/
-          done
-          cp bazel-testlogs/yang_models_package_test/test.xml artifacts/
+          if [[ -n "${VS_SCRATCH:-}" ]]; then
+            (
+              cd "$GITHUB_WORKSPACE"
+              package="$VS_SCRATCH/inputs"
+              python3 -B -m tools.bazel.ci.vs_python_packages stage \
+                --directory "$VS_SCRATCH/download" --revision "$GITHUB_SHA" --package "$package"
+              python3 -B -m tools.bazel.ci.vs_python_packages flags --group yang-models \
+                --architecture "${{ matrix.architecture }}" --package "$package" > "$VS_SCRATCH/flags"
+              mapfile -t flags < "$VS_SCRATCH/flags"
+              tools/bazel/ci/libteam_draft_bazel.sh test --platforms="$NATIVE_PLATFORM" --host_platform="$NATIVE_PLATFORM" \
+                "${flags[@]}" --test_output=all \
+                //src/sonic-yang-models:yang_models_package_test
+            )
+            cp "$GITHUB_WORKSPACE"/bazel-testlogs/src/sonic-yang-models/yang_models_package_test/test.xml artifacts/
+            cp "$GITHUB_WORKSPACE/$VS_SCRATCH/download/"{sonic_yang_models-1.0-py3-none-any.whl,yang_models_pkg.tar} artifacts/
+          else
+            bazel test "${options[@]}" --test_output=all //:yang_models_package_test
+            bazel build "${options[@]}" //:yang_models_wheel //:yang_models_pkg
+            for target in yang_models_wheel yang_models_pkg; do
+              output=$(bazel cquery "${options[@]}" --output=files "//:$target")
+              cp "$output" artifacts/
+            done
+            cp bazel-testlogs/yang_models_package_test/test.xml artifacts/
+          fi
           sha256sum artifacts/*.whl artifacts/*.tar > artifacts/SHA256SUMS
           git diff --exit-code HEAD
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -155,6 +201,9 @@ jobs:
         with:
           name: yang-models-${{ matrix.architecture }}
           path: src/sonic-yang-models/artifacts/
+      - name: Remove temporary VS inputs
+        if: always() && env.VS_SCRATCH != ''
+        run: rm -rf -- "$VS_SCRATCH"
       - name: Authorize published artifacts for post-job cleanup
         if: always() && steps.bazel_cleanup_register.outcome == 'success'
         env:

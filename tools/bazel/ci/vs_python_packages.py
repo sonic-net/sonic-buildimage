@@ -20,6 +20,14 @@ WHEELS = {
     "sonic_py_common-1.0-py3-none-any.whl": "//src/sonic-py-common:sonic_py_common_wheel",
     "sonic_config_engine-1.0-py3-none-any.whl": "//src/sonic-config-engine:sonic_config_engine_wheel",
 }
+YANG_TREE = "yang-models.tree.tar"
+YANG_WHEEL = "sonic_yang_models-1.0-py3-none-any.whl"
+YANG_RUNTIME = "yang_models_pkg.tar"
+YANG = {
+    YANG_WHEEL: "@sonic_yang_models//:yang_models_wheel",
+    YANG_RUNTIME: "@sonic_yang_models//:yang_models_pkg",
+    YANG_TREE: "@sonic_yang_models//:yang_models",
+}
 FRR_COMPONENTS = ("sonic-frr-mgmt-framework", "sonic-bgpcfgd")
 
 
@@ -36,8 +44,8 @@ FRR = {name: label for component in FRR_COMPONENTS for name, label in frr_output
 DHCP = {
     "sonic_dhcp_utilities-1.0-py3-none-any.whl": "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
 }
-WHEEL_GROUPS = {"config-engine": WHEELS, "frr": FRR, "dhcp": DHCP}
-PACKAGES = {**WHEELS, **FRR, **DHCP}
+WHEEL_GROUPS = {"config-engine": WHEELS, "frr": FRR, "dhcp": DHCP, "yang-models": YANG}
+PACKAGES = {**WHEELS, **FRR, **DHCP, **YANG}
 
 
 def publish(directory, revision, outputs):
@@ -49,7 +57,19 @@ def publish(directory, revision, outputs):
         entries = {}
         for name, target in PACKAGES.items():
             dest = staged / name
-            shutil.copyfile(outputs[target], dest)
+            if name == YANG_TREE:
+                # Bazel produces both this directory and the wheel in PrepareYangModels.
+                # Retain the original tree as a third input for the wheel/layer comparison.
+                with tarfile.open(dest, "w") as archive:
+                    for model in sorted(outputs[target].iterdir()):
+                        if not model.is_file() or model.is_symlink() or model.suffix != ".yang":
+                            raise ValueError("Unexpected file in VS YANG model tree: " + model.name)
+                        info = tarfile.TarInfo(model.name)
+                        info.size = model.stat().st_size
+                        with model.open("rb") as source:
+                            archive.addfile(info, source)
+            else:
+                shutil.copyfile(outputs[target], dest)
             entries[name] = {"target": target, "bytes": dest.stat().st_size, "sha256": sha(dest)}
         manifest = {"schema": 1, "architecture": "amd64", "revision": revision, "packages": entries}
         (staged / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -157,14 +177,36 @@ def stage(directory, revision, package):
         staged.mkdir()
         for name in PACKAGES:
             shutil.copyfile(directory / name, staged / name)
-        (staged / "BUILD.bazel").write_text('exports_files(' + json.dumps(sorted(PACKAGES)) + ')\n')
+        models = staged / "models"
+        models.mkdir()
+        with tarfile.open(directory / YANG_TREE) as archive:
+            for member in archive:
+                if not member.isfile() or not re.fullmatch(r"[A-Za-z0-9_.@-]+\.yang", member.name):
+                    raise ValueError("Unexpected VS YANG model member: " + member.name)
+                with (models / member.name).open("xb") as output:
+                    shutil.copyfileobj(archive.extractfile(member), output)
+        (staged / "BUILD.bazel").write_text(
+            'load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")\n'
+            'exports_files(' + json.dumps(sorted(PACKAGES)) + ')\n'
+            'copy_to_directory(name="test_models", srcs=glob(["models/*.yang"]), '
+            'root_paths=[' + json.dumps(str(package / "models")) + '], visibility=["//visibility:public"])\n'
+        )
         staged.rename(package)
 
 
 def flags(group, package, architecture):
     """Print one source-or-VS input override per installed-wheel probe."""
     path = package_path(package)
+    if group == "yang-models":
+        if architecture == "arm64":
+            verify_portable(path, YANG)
+        for selector, source in (("test_models", "test_models"), ("test_wheel", YANG_WHEEL),
+                                 ("test_layer", YANG_RUNTIME)):
+            print(f"--//src/sonic-yang-models:{selector}=//{path}:{source}")
+        return
     selected = WHEEL_GROUPS[group]
+    if group == "config-engine":
+        print(f"--@sonic_yang_models//:test_models=//{path}:test_models")
     if architecture == "arm64":
         verify_portable(path, selected)
     for name in selected:

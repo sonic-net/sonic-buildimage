@@ -58,18 +58,30 @@ wheel_layer(
     wheels = [":yang_models_wheel"],
 )
 
+# Standalone source tests select the local outputs. The VS consumer can supply
+# the exact wheel, installed TAR and model directory from the installer build.
+[label_flag(
+    name = name,
+    build_setting_default = source,
+    visibility = ["//visibility:public"],
+) for name, source in [
+    ("test_models", ":yang_models"),
+    ("test_wheel", ":yang_models_wheel"),
+    ("test_layer", ":yang_models_pkg"),
+]]
+
 py_test(
     name = "yang_models_package_test",
     srcs = ["yang_models_package_test.py"],
     args = [
-        "$(location :yang_models_pkg)",
-        "$(location :yang_models_wheel)",
-        "$(location :yang_models)",
+        "$(location :test_layer)",
+        "$(location :test_wheel)",
+        "$(location :test_models)",
     ],
     data = [
-        ":yang_models",
-        ":yang_models_pkg",
-        ":yang_models_wheel",
+        ":test_models",
+        ":test_layer",
+        ":test_wheel",
     ],
     python_version = "3.13",
     visibility = ["//visibility:public"],

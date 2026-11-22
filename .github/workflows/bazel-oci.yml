@@ -712,6 +712,13 @@ jobs:
     with:
       vs_artifact_id: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
 
+  yang_models:
+    needs: vs_container
+    if: needs.vs_container.outputs.python_packages_artifact_id != ''
+    uses: ./.github/workflows/bazel-yang-models.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+
   checks:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
     name: OCI regression checks (AMD64)
