@@ -1,0 +1,18 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+PRESET=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]')
+HWSKU=$(echo ${PRESET} | awk '{print $1}')
+BACKUP_PATH="/host/old_config"
+
+echo "Executing platform_cisco_cfg-pre_cfg_migration ${PLATFORM}:${HWSKU}"
+
+#Take a backup of interface topo data
+mkdir -p ${BACKUP_PATH}
+if [ -f /usr/share/sonic/device/${PLATFORM}/${HWSKU}/platform_cisco_cfg.yaml ]; then
+    cp /usr/share/sonic/device/${PLATFORM}/${HWSKU}/platform_cisco_cfg.yaml ${BACKUP_PATH}/platform_cisco_cfg.yaml${HWSKU}
+    echo "Copied /usr/share/sonic/device/${PLATFORM}/${HWSKU}/platform_cisco_cfg.yaml as ${BACKUP_PATH}/platform_cisco_cfg.yaml${HWSKU}"
+fi
