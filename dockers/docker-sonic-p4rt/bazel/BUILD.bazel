@@ -1,4 +1,29 @@
+load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tools_runtime")
+load("@tar.bzl//tar:tar.bzl", "tar")
+
 exports_files([
     "source_paths.json",
     "debug_source_paths.json",
 ])
+
+# The PINS package test uses GNU nm and readelf. Keep those test tools outside
+# the installed image and run the probe with the image's gdb and SONiC libraries.
+build_tools_runtime(
+    name = "owner_binutils",
+    architecture = "amd64",
+    elf_tools = {
+        "nm": "usr/bin/x86_64-linux-gnu-nm",
+        "readelf": "usr/bin/x86_64-linux-gnu-readelf",
+    },
+    packages = ["@trixie//binutils-x86-64-linux-gnu/amd64"],
+    profile = "elf",
+    testonly = True,
+)
+
+tar(
+    name = "owner_binutils_tar",
+    srcs = [":owner_binutils"],
+    compress = "gzip",
+    testonly = True,
+    visibility = ["//visibility:public"],
+)

@@ -182,11 +182,13 @@ def build(args):
     labels = build_labels(workspace, archives)
     validation_labels = []
     if args.validation_directory:
-        from tools.bazel.ci import vs_validation_bundles as validation
+        from tools.bazel.ci import vs_python_packages, vs_validation_bundles as validation
         families = validation.validation_targets(archives, set(args.registered_debug), args.validation_debug == "y",
                                                  args.validation_only_debug)
         # Top-level requests can select each owner's private test fixtures.
         validation_labels = validation.extra_targets(families)
+        if args.architecture == "amd64":
+            validation_labels.extend(vs_python_packages.PACKAGES.values())
     settings = os.environ
     layout_labels = {}
     if args.boot_layouts:
@@ -245,6 +247,9 @@ def build(args):
         if validation_labels:
             paths = validation.configured_outputs(settings.get("BAZEL", "bazel"), options, validation_labels, events)
             validation.write_bundles(args, families, paths, shared)
+            if args.architecture == "amd64":
+                revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+                vs_python_packages.publish(args.validation_directory.parent / "python-packages", revision, paths)
 
 
 def main():

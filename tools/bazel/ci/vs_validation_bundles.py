@@ -117,9 +117,8 @@ def extra_targets(families):
         for _, archive, layout in entry["members"].values():
             labels.update((archive, layout))
         labels.update(entry["sources"].values())
-        for field in ("symbols_layout", "apt_lock"):
-            if field in entry:
-                labels.add(entry[field])
+        if "apt_lock" in entry:
+            labels.add(entry["apt_lock"])
     return sorted(labels)
 
 
@@ -258,7 +257,7 @@ def stage_probe_fixtures(image, artifacts, bundle):
     from tools.bazel.ci.vs_standalone_probes import STANDALONE_IMAGES, SUPERVISED
 
     # Standalone checks use the owner records projected in *.owners.json.
-    # P4RT also needs the original parent TAR for its separate SDK test.
+    # P4RT reads the Redis configuration from its config-engine parent TAR.
     if image in STANDALONE_IMAGES:
         for name in ("base.source.tar", "config-engine.source.tar", "syncd.source.tar", "source-runtime.tar"):
             artifacts.pop(name, None)
@@ -353,21 +352,14 @@ def write_bundles(args, families, paths, build_settings):
                 settings["apt_lock_sha256"] = sha(paths[entry["apt_lock"]])
                 settings["apt_layers"] = {}
             fixtures = stage_parent(bundle, image, references, account_layers)
-            # Only P4RT has a separate symbols layout between runtime and
-            # final debug. Reuse its own runtime inventory while indexing both.
-            image_prefixes = prefixes.copy() if "symbols_layout" in entry else prefixes
             static_i386 = static_i386_files(image)
             for variant in sorted(entry["members"], key=lambda name: name == "debug"):
                 archive, label, layout_label = entry["members"][variant]
                 layout_path = paths[layout_label]
                 parent = image in PARENTS and variant == "runtime"
-                if variant == "debug" and "symbols_layout" in entry:
-                    symbols, *_ = write_inventory(paths[entry["symbols_layout"]], "symbols", bundle, image_prefixes,
-                                                  account_layers=account_layers, retain=True)
-                    fixtures[symbols.name] = sha(symbols)
                 inventory, manifest, config, common_files = write_inventory(
-                    layout_path, variant, bundle, image_prefixes, account_layers=account_layers,
-                    retain=parent or (variant == "runtime" and "symbols_layout" in entry), static_i386=static_i386)
+                    layout_path, variant, bundle, prefixes, account_layers=account_layers,
+                    retain=parent, static_i386=static_i386)
                 fixtures.update(stage_accounts(bundle, image, variant, common_files, account_layers))
                 if "apt_lock" in entry:
                     payload = source_paths["engine.runtime-apt.tar" if variant == "runtime" else "engine.debug-tools.tar"]

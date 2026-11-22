@@ -26,7 +26,7 @@ PRIVATE_CACHE_JOBS = {
     ("bazel-libteam.yml", "native"),
     ("bazel-frr.yml", "native"), ("bazel-frr-python.yml", "packages"),
     ("bazel-sysmgr.yml", "native"),
-    ("bazel-oci.yml", "archive"), ("bazel-supervisor-rust.yml", "native"),
+    ("bazel-oci.yml", "archive"), ("bazel-oci.yml", "package_amd64"), ("bazel-supervisor-rust.yml", "native"),
     ("bazel-yang-models.yml", "package"),
 }
 PRIVATE_CACHE_SETTINGS = [
@@ -65,13 +65,19 @@ class SetupBazelCacheTest(unittest.TestCase):
                 with self.subTest(workflow=path.name, job=name):
                     enabled.add((path.name, name))
                     self.assertEqual(calls, ["python3 " + HELPER + " --private-remote-cache"])
+                    if path.name == "bazel-frr-python.yml":
+                        self.assertEqual(job["runs-on"], ["self-hosted", "linux",
+                                         "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"])
+                        continue
                     if path.name == "bazel-sysmgr.yml":
                         self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
                         continue
                     self.assertEqual(job["runs-on"], "${{ matrix.runner }}")
                     matrix = job["strategy"]["matrix"]["include"]
                     expected = {("self-hosted", "linux", "bazel-x64")}
-                    if path.name != "bazel-frr.yml":
+                    if (path.name, name) == ("bazel-oci.yml", "archive"):
+                        expected = {("self-hosted", "linux", "bazel-arm64")}
+                    elif path.name != "bazel-frr.yml" and name != "package_amd64":
                         expected.add(("self-hosted", "linux", "bazel-arm64"))
                     self.assertEqual(len(matrix), len(expected))
                     self.assertEqual({tuple(entry["runner"]) for entry in matrix}, expected)
@@ -148,6 +154,7 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
             ("bazel-eventd.yml", "native", "architecture"),
             ("bazel-supervisor-rust.yml", "native", "arch"),
             ("bazel-oci.yml", "archive", "architecture"),
+            ("bazel-oci.yml", "package_amd64", "architecture"),
         ]
         repair_helper = "tools/bazel/ci/repair_bazel_startup.py"
         for filename, name, architecture in jobs:
@@ -156,7 +163,7 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
                 job = document["jobs"][name]
                 self.assertIn("container", job)
                 matrix = job["strategy"]["matrix"]
-                self.assertEqual(len(matrix["include"]), 2)
+                self.assertEqual(len(matrix["include"]), 1 if filename == "bazel-oci.yml" else 2)
                 self.assertNotIn("BAZEL_OUTPUT_USER_ROOT", str(job))
                 self.assertNotIn("--output_user_root=", str(job))
                 handoff = next(step for step in job["steps"] if HELPER in step.get("run", ""))

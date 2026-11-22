@@ -108,12 +108,58 @@ class VerificationWorkflowTest(unittest.TestCase):
         for tool in ("validate_vs.sh", "verify_vs_selection", "vs_container_probe.py"):
             self.assertNotIn(tool, producer_commands)
 
+    def test_amd64_package_checks_consume_the_vs_uploads(self):
+        """A rerun must inspect the producer's original wheels and kernel packages for this run."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        vs = jobs["vs_container"]
+        outputs = vs["outputs"]
+        for name, artifact, upload in (
+            ("kernel_packages_amd64", "kernel_artifact_id", "vs_kernel_upload"),
+            ("frr_python_amd64", "python_packages_artifact_id", "vs_python_packages_upload"),
+        ):
+            job = jobs[name]
+            self.assertEqual(job["needs"], "vs_container")
+            self.assertEqual(job["with"]["vs_artifact_id"], "${{ needs.vs_container.outputs." + artifact + " }}")
+            self.assertEqual(outputs[artifact], "${{ steps." + upload + ".outputs.artifact-id }}")
+            publish, = (s for s in vs["steps"] if s.get("id") == upload)
+            self.assertEqual(publish["with"]["if-no-files-found"], "error")
+
+        amd64 = jobs["package_amd64"]
+        self.assertIn("vs_container", amd64["needs"])
+        for name, required in (("archive", "Container archive (ARM64)"), ("package_amd64", "Container package tests (AMD64)")):
+            job = jobs[name]
+            row, = job["strategy"]["matrix"]["include"]
+            self.assertIn("${{ matrix.name }}", job["name"])  # A literal name makes Actions append every matrix value.
+            self.assertEqual(job["name"].replace("${{ matrix.name }}", row["name"]), required)
+        self.assertNotIn("needs", jobs["archive"])  # ARM64 has its own native inputs.
+        steps = {s["name"]: s for s in amd64["steps"]}
+        download = steps["Download wheels used by VS"]["with"]
+        self.assertEqual(download["artifact-ids"], "${{ env.VS_WHEELS_ARTIFACT_ID }}")
+        self.assertEqual(amd64["env"]["VS_WHEELS_ARTIFACT_ID"], jobs["frr_python_amd64"]["with"]["vs_artifact_id"])
+        installed = steps["Test Python packages and check startup generation"]["run"]
+        self.assertIn('vs_python_packages stage', installed)
+        self.assertIn('"$BAZEL" test "${wheel_flags[@]}"', installed)
+        self.assertIn('--vs-packages "$VS_WHEELS"', steps["Retain wheels and required Python test evidence"]["run"])
+
+    def test_dhcp_runtime_waits_for_the_amd64_incremental_test_artifact(self):
+        """The ARM64 archive job cannot publish the images for the installed DHCP relay probe."""
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        runtime = jobs["dhcp_relay_runtime"]
+        self.assertEqual(set(runtime["needs"]), {"package_amd64", "dhcp_relay_source_image"})
+        self.assertIn("needs.package_amd64.result == 'success'", runtime["if"])
+        download, = (step["with"]["name"] for step in runtime["steps"]
+                     if step.get("uses", "").startswith("actions/download-artifact@"))
+        for producer in runtime["needs"]:
+            upload, = (step for step in jobs[producer]["steps"] if step.get("id") == "bazel_upload_dhcp_relay_public")
+            self.assertEqual(upload["with"]["name"], download)
+
     def test_required_archive_status_propagates_each_validation_failure(self):
         """A bad installer, an incomplete production job or any failed image row must block acceptance."""
         job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["archive_acceptance"]
         self.assertEqual(job["name"], "Container archive (AMD64)")
         self.assertEqual(set(job["needs"]), {
-            "archive", "vs_container", "installer_validation", "validate_container",
+            "archive", "package_amd64", "kernel_packages_amd64", "frr_python_amd64",
+            "vs_container", "installer_validation", "validate_container",
         })
         gate, = job["steps"]
         self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
@@ -358,7 +404,8 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(archive["runs-on"], "${{ matrix.runner }}")
         self.assertEqual(
             {entry["architecture"]: entry["runner"]
-             for entry in archive["strategy"]["matrix"]["include"]},
+             for name in ("archive", "package_amd64")
+             for entry in workflow["jobs"][name]["strategy"]["matrix"]["include"]},
             {"amd64": ["self-hosted", "linux", "bazel-x64"],
              "arm64": ["self-hosted", "linux", "bazel-arm64"]},
         )

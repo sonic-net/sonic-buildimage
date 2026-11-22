@@ -12,17 +12,10 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci import artifact_validation, build
+from tools.bazel.ci import artifact_validation, build, vs_python_packages
+from tools.bazel.ci.vs_python_packages import WHEELS
 
 
-WHEELS = {
-    "redis_dump_load-1.1-py3-none-any.whl": "@redis_dump_load//:wheel",
-    "sonic_supervisord_utilities-1.0-py3-none-any.whl": "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
-    "sonic_yang_mgmt-1.0-py3-none-any.whl": "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
-    "sonic_containercfgd-1.0-py3-none-any.whl": "//src/sonic-containercfgd:sonic_containercfgd_wheel",
-    "sonic_py_common-1.0-py3-none-any.whl": "//src/sonic-py-common:sonic_py_common_wheel",
-    "sonic_config_engine-1.0-py3-none-any.whl": "//src/sonic-config-engine:sonic_config_engine_wheel",
-}
 TESTS = [
     "//tools/bazel/tests:installed_wheel_fixture_test",
     "//tools/bazel/tests:wheel_contract_test",
@@ -87,7 +80,7 @@ def test_result(path):
     return counts
 
 
-def collect(workspace, directory, revision, architecture, *, bazel="bazel", options=()):
+def collect(workspace, directory, revision, architecture, *, bazel="bazel", options=(), vs_packages=None):
     """Export wheels and require matching successful native test evidence."""
     directory.mkdir(parents=True, exist_ok=True)
     receipt = {"status": "running", "revision": revision,
@@ -103,8 +96,20 @@ def collect(workspace, directory, revision, architecture, *, bazel="bazel", opti
         for target, _, _, _ in WHEEL_CHECKS:
             if "//tools/bazel/tests:" + target not in TESTS:
                 raise ValueError("Installed-wheel check has no required test evidence: " + target)
-        paths = build.collect_archives(workspace, directory, receipt, WHEELS,
-                                       bazel=bazel, options=options)
+        if vs_packages is None:
+            paths = build.collect_archives(workspace, directory, receipt, WHEELS,
+                                          bazel=bazel, options=options)
+        else:
+            if architecture != "amd64":
+                raise ValueError("The VS package bundle is for AMD64")
+            manifest = vs_python_packages.verify(vs_packages, revision["tested_head"])
+            paths = {}
+            for name in WHEELS:
+                path = directory / name
+                shutil.copyfile(vs_packages / name, path)
+                paths[name] = path
+            receipt["artifacts"] = {name: manifest["packages"][name] for name in WHEELS}
+            receipt["package_source"] = "vs-installer"
         hashes = {name: artifact_validation.sha(path) for name, path in paths.items()}
         (directory / "wheels-sha256.txt").write_text("".join(
             f"{digest}  {name}\n" for name, digest in sorted(hashes.items())
@@ -172,9 +177,10 @@ def main():
     parser.add_argument("--architecture", choices=MACHINES, required=True)
     parser.add_argument("--bazel", default="bazel")
     parser.add_argument("--bazel-arg", action="append", default=[])
+    parser.add_argument("--vs-packages", type=Path, help="Use the verified wheel files from this VS installer run")
     args = parser.parse_args()
     collect(ROOT, args.artifacts.resolve(), json.loads(args.revision.read_text()),
-            args.architecture, bazel=args.bazel, options=["--lockfile_mode=update", *args.bazel_arg])
+            args.architecture, bazel=args.bazel, vs_packages=args.vs_packages, options=["--lockfile_mode=update", *args.bazel_arg])
 
 
 if __name__ == "__main__":

@@ -5,29 +5,34 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      vs_artifact_id:
+        description: Immutable ID of the AMD64 VS Python package artifact in the caller's run
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   packages:
-    name: FRR Python packages (${{ matrix.name }})
-    runs-on: ${{ matrix.runner }}
+    name: FRR Python packages (${{ matrix.architecture == 'amd64' && 'AMD64' || 'ARM64' }})
+    runs-on: [self-hosted, linux, "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: AMD64
-            architecture: amd64
-            machine: x86_64
-            runner: [self-hosted, linux, bazel-x64]
-            platform: x86_64_trixie
-          - name: ARM64
-            architecture: arm64
-            machine: aarch64
-            runner: [self-hosted, linux, bazel-arm64]
-            platform: aarch64_trixie
+        # VS supplies AMD64 for trusted PRs and master. Forks and explicit standalone runs keep both lanes.
+        architecture: >-
+          ${{ fromJSON(inputs.vs_artifact_id != '' && '["amd64"]' ||
+            ((github.event_name == 'push' || (github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository)) && '["arm64"]' ||
+            '["amd64","arm64"]')) }}
+    env:
+      NATIVE_ARCHITECTURE: ${{ matrix.architecture }}
+      NATIVE_PLATFORM: ${{ matrix.architecture == 'amd64' && 'x86_64_trixie' || 'aarch64_trixie' }}
+      NATIVE_MACHINE: ${{ matrix.architecture == 'amd64' && 'x86_64' || 'aarch64' }}
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
       options: --init
@@ -41,6 +46,12 @@ jobs:
           apt-get install -y --no-install-recommends \
             autoconf automake binutils binutils-gold build-essential ca-certificates \
             git libtool libxml2 pkg-config python3 tar unzip zstd
+
+      - name: Record the called workflow identity for cleanup
+        if: inputs.vs_artifact_id != ''
+        env:
+          JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+        run: printf 'BAZEL_CLEANUP_JOB_WORKFLOW_REF=%s\n' "$JOB_WORKFLOW_REF" >> "$GITHUB_ENV"
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,11 +68,38 @@ jobs:
         run: bash tools/bazel/ci/prepare_image_submodules.sh --populated-only
       - name: Verify native architecture
         run: |
-          test "$(uname -m)" = "${{ matrix.machine }}"
+          test "$(uname -m)" = "$NATIVE_MACHINE"
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test ! -e MODULE.bazel.lock
           test -z "$(git ls-files -- MODULE.bazel.lock)"
           git check-ignore MODULE.bazel.lock
+
+      - name: Allocate fresh VS input directories
+        id: vs_inputs
+        if: inputs.vs_artifact_id != ''
+        env:
+          ARTIFACT_ID: ${{ inputs.vs_artifact_id }}
+        run: |
+          [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          mkdir -p target
+          scratch=$(mktemp -d target/vs-frr-python-XXXXXXXX)
+          echo "scratch=$scratch" >> "$GITHUB_OUTPUT"
+          echo "VS_PACKAGES=$PWD/$scratch/download" >> "$GITHUB_ENV"
+          echo "VS_BAZEL_PACKAGE=$scratch/inputs" >> "$GITHUB_ENV"
+
+      - name: Download original wheels and runtime TARs from the VS installer
+        if: inputs.vs_artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.vs_artifact_id }}
+          path: ${{ env.VS_PACKAGES }}
+          merge-multiple: true
+
+      - name: Verify VS inputs and expose them to installed-wheel tests
+        if: inputs.vs_artifact_id != ''
+        run: |
+          python3 -m tools.bazel.ci.vs_python_packages stage \
+            --directory "$VS_PACKAGES" --revision "$GITHUB_SHA" --package "$VS_BAZEL_PACKAGE"
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
@@ -83,28 +121,29 @@ jobs:
             --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
           printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
 
-      - name: Build wheels and runtime TARs and run complete upstream suites
-        env:
-          NATIVE_PLATFORM: ${{ matrix.platform }}
-          NATIVE_ARCHITECTURE: ${{ matrix.architecture }}
+      - name: Test upstream sources and inspect the native packages
         run: |
           set -euo pipefail
           options=(--platforms="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
                    --host_platform="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
-
                    --lockfile_mode=update)
-          bazel build "${options[@]}" \
-            //src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel \
-            //src/sonic-frr-mgmt-framework:runtime \
-            //src/sonic-bgpcfgd:sonic_bgpcfgd_wheel \
-            //src/sonic-bgpcfgd:runtime
+          installed_inputs=()
+          if [[ -n "${VS_PACKAGES:-}" ]]; then
+            flags="$VS_BAZEL_PACKAGE/probe-flags.txt"
+            python3 -m tools.bazel.ci.vs_python_packages flags --group frr --package "$VS_BAZEL_PACKAGE" > "$flags"
+            mapfile -t installed_inputs < "$flags"
+          else
+            bazel build "${options[@]}" \
+              //src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel \
+              //src/sonic-frr-mgmt-framework:runtime \
+              //src/sonic-bgpcfgd:sonic_bgpcfgd_wheel \
+              //src/sonic-bgpcfgd:runtime
+          fi
           bazel test "${options[@]}" --nocache_test_results --test_output=errors \
             //src/sonic-frr-mgmt-framework:upstream_tests \
             //src/sonic-bgpcfgd:upstream_tests
-          # The new installed-wheel acceptance is scoped to native AMD64.
-          # Preserve the existing ARM64 source suite without extending its scope.
           if [[ "$NATIVE_ARCHITECTURE" == amd64 ]]; then
-            bazel test "${options[@]}" --nocache_test_results --test_output=errors \
+            bazel test "${options[@]}" "${installed_inputs[@]}" --nocache_test_results --test_output=errors \
               //src/sonic-frr-mgmt-framework:installed_wheel_test \
               //src/sonic-bgpcfgd:installed_wheel_test
           fi
@@ -116,6 +155,7 @@ jobs:
           import shutil
           import subprocess
           from tools.bazel.ci.python_packages import test_output, test_result
+          from tools.bazel.ci.vs_python_packages import FRR_COMPONENTS, frr_outputs, verify_frr_runtime
 
           directory = Path("artifacts/frr-python")
           directory.mkdir(parents=True)
@@ -135,7 +175,9 @@ jobs:
               "pull_request_base": pull.get("base", {}).get("sha"),
               "architecture": os.environ["NATIVE_ARCHITECTURE"], "components": {},
           }
-          for component in ("sonic-frr-mgmt-framework", "sonic-bgpcfgd"):
+          bundle = os.environ.get("VS_PACKAGES")
+          receipt["package_source"] = "vs-installer" if bundle else "native-build"
+          for component in FRR_COMPONENTS:
               package = "//src/" + component
               source = Path("bazel-testlogs/src") / component / "upstream_tests"
               counts = test_result(source / "test.xml")
@@ -146,21 +188,25 @@ jobs:
                       or not inventory["python"].startswith("3.13.")):
                   raise ValueError("Incomplete Python 3.13 upstream suite: " + component)
               outputs = []
-              for target in (component.replace("-", "_") + "_wheel", "runtime"):
-                  paths = subprocess.check_output(
-                      ["bazel", "cquery", *options, "--output=files", package + ":" + target],
-                      text=True).splitlines()
-                  if len(paths) != 1:
-                      raise ValueError("Expected one package output: " + repr(paths))
-                  path = Path(paths[0])
+              for filename, target in frr_outputs(component).items():
+                  if bundle:
+                      path = Path(bundle) / filename
+                  else:
+                      paths = subprocess.check_output(
+                          ["bazel", "cquery", *options, "--output=files", target], text=True).splitlines()
+                      if len(paths) != 1:
+                          raise ValueError("Expected one package output: " + repr(paths))
+                      path = Path(paths[0])
                   if not path.is_file() or not path.stat().st_size:
                       raise ValueError("Missing package output: " + str(path))
-                  destination = directory / component / path.name
+                  destination = directory / component / (filename if filename.endswith(".whl") else "runtime.tar")
                   destination.parent.mkdir(exist_ok=True)
                   shutil.copyfile(path, destination)
-                  outputs.append({"target": package + ":" + target,
+                  outputs.append({"target": target,
                                   "path": str(destination.relative_to(directory)),
                                   "sha256": hashlib.sha256(destination.read_bytes()).hexdigest()})
+              wheel, runtime = (directory / output["path"] for output in outputs)
+              verify_frr_runtime(wheel, runtime)
               receipt["components"][component] = {
                   "test_target": package + ":upstream_tests", "tests": counts,
                   "python": inventory["python"].split()[0], "outputs": outputs,
@@ -187,8 +233,8 @@ jobs:
         if: matrix.architecture == 'amd64'
         run: |
           python3 tools/bazel/ci/frr_python_rebuild.py \
-            --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
-            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --bazel-arg=--platforms=@sonic_build_infra//platforms:$NATIVE_PLATFORM \
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:$NATIVE_PLATFORM \
             --output=artifacts/frr-python/rebuild.json
           git diff --exit-code
 
@@ -199,6 +245,12 @@ jobs:
           name: frr-python-${{ matrix.architecture }}
           path: artifacts/frr-python/
           if-no-files-found: error
+      - name: Remove temporary VS package inputs
+        if: always() && steps.vs_inputs.outcome == 'success'
+        env:
+          SCRATCH: ${{ steps.vs_inputs.outputs.scratch }}
+        run: rm -rf -- "$SCRATCH"
+
       - name: Record post-job cleanup eligibility
         if: always() && steps.runner_cleanup.outcome == 'success'
         env:

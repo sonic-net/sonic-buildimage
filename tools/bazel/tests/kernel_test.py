@@ -1224,9 +1224,18 @@ class KernelWorkflowTest(unittest.TestCase):
             "github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository",
         ])
 
+    def test_amd64_vs_handoff_and_standalone_kernel_lanes(self):
+        self.assertIn("""inputs.vs_artifact_id && '["amd64"]' || github.event_name == 'workflow_dispatch' && '["amd64","arm64"]' || '["arm64"]'""", self.workflow)
+        self.assertIn("inputs.vs_artifact_id && 'vs' || 'standalone'", self.workflow)
+        self.assertIn("inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha", self.workflow)
+        self.assertIn("artifact-ids: ${{ inputs.vs_artifact_id }}", self.steps["Download kernel DEBs consumed by the VS installer"])
+        self.assertIn("if: inputs.vs_artifact_id == ''", self.steps["Build and verify kernel DEBs in the normal package directory"])
+        self.assertIn("--from-vs-handoff", self.steps["Verify the downloaded package set before exercising Make reuse"])
+        self.assertLess(self.workflow.index("name: Verify the downloaded package set"), self.workflow.index("name: Reject an unsupported kernel configuration"))
+
     def test_shared_cache_defaults_and_optional_cold_proof(self):
-        self.assertIn("runner: [self-hosted, linux, bazel-x64]", self.workflow)
-        self.assertIn("runner: [self-hosted, linux, bazel-arm64]", self.workflow)
+        self.assertIn("runs-on: [self-hosted, linux,", self.workflow)
+        self.assertIn("matrix.arch == 'amd64' && 'bazel-x64' || 'bazel-arm64'", self.workflow)
         cold = "github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache"
         self.assertIn("KERNEL_REMOTE_CACHE: ${{ " + cold
                       + " && 'http://127.0.0.1:8080' || 'grpc://172.16.0.4:9092' }}",

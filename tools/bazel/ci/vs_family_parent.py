@@ -177,12 +177,12 @@ def verify_parent(directory, bundle, family, variant, current, evidence):
         config = dash_engine_validate.debug_alternatives(payload) if debug else owners["engine.files.tar"]
         dash_engine_validate.verify_parent_payload(base["files"], current["files"], payload, selection, config)
     elif family == "p4rt" and variant == "debug":
-        from tools.bazel.ci.p4rt_validate import inherited_files
+        from tools.bazel.ci.p4rt_validate import inherited_files, verify_payload
         runtime = read_oci(directory, "runtime")
-        symbols = read_oci(directory, "symbols")
-        ancestry(runtime, symbols, "P4RT symbols")
-        ancestry(symbols, current, image)
-        inherited_files(runtime["files"], symbols["files"])
-        inherited_files(symbols["files"], current["files"], owners["p4rt.debug-tools.tar"], group=True)
+        # The native image adds its .build-id symbols as a layer on runtime.
+        ancestry(runtime, current, image)
+        tools = owners["p4rt.debug-tools.tar"]
+        inherited_files(runtime["files"], current["files"], tools, group=True)
+        verify_payload(current["files"], tools, "P4RT debug tools changed")
     else:
         verify_files(family, variant, parent, current, owners)

@@ -176,10 +176,10 @@ jobs:
 
   dhcp_relay_runtime:
     name: Run installed DHCP relay images (AMD64)
-    needs: [archive, dhcp_relay_source_image]
+    needs: [package_amd64, dhcp_relay_source_image]
     if: >-
       always() && !cancelled() &&
-      ((needs.archive.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')) ||
+      ((needs.package_amd64.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.source_image == 'none')) ||
        (needs.dhcp_relay_source_image.result == 'success' && github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay'))
     env:
       TESTED_REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay' && inputs.source_revision || github.sha }}
@@ -245,36 +245,30 @@ jobs:
 
   archive:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
-    name: ${{ matrix.architecture == 'arm64' && 'Container archive (ARM64)' || 'Container package tests (AMD64)' }}
+    name: Container archive (${{ matrix.name }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.architecture == 'amd64' && 360 || 60 }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: AMD64
-            architecture: amd64
-            machine: x86_64
-            runner: [self-hosted, linux, bazel-x64]
-            platform: x86_64_trixie
-            disk_cache: swss-layer-amd64
           - name: ARM64
             architecture: arm64
             machine: aarch64
             runner: [self-hosted, linux, bazel-arm64]
             platform: aarch64_trixie
             disk_cache: buildimage-gzip-arm64
-    container:
+    container: &package_test_container
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
       # Reap the detached Bazel server so each Make archive can finish shutdown.
       options: --init
     env:
       # Shared CI entry point with the canonical registry; the full Make VS job is separate.
-      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
-    defaults:
+      BAZEL: &package_test_bazel ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+    defaults: &package_test_defaults
       run:
         shell: bash
-    steps:
+    steps: &package_test_steps
       - name: Install execution tools
         run: |
           apt-get update
@@ -461,17 +455,51 @@ jobs:
             //tools/bazel/oci/tests:normalize_layer_rule_test \
             2>&1 | tee artifacts/archive/test.log
 
+      - name: Allocate a directory for the VS wheels
+        id: wheel_inputs
+        if: env.USE_VS_WHEELS == 'true'
+        env:
+          ARTIFACT_ID: ${{ env.VS_WHEELS_ARTIFACT_ID }}
+        run: |
+          [[ $ARTIFACT_ID =~ ^[1-9][0-9]*$ ]]
+          mkdir -p target
+          scratch=$(mktemp -d target/vs-python-XXXXXXXX)
+          echo "scratch=$scratch" >> "$GITHUB_OUTPUT"
+          echo "directory=$PWD/$scratch/download" >> "$GITHUB_OUTPUT"
+          echo "package=$scratch/inputs" >> "$GITHUB_OUTPUT"
+
+      - name: Download wheels used by VS
+        if: steps.wheel_inputs.outcome == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ env.VS_WHEELS_ARTIFACT_ID }}
+          path: ${{ steps.wheel_inputs.outputs.directory }}
+          merge-multiple: true
+
       - name: Test Python packages and check startup generation
+        env:
+          VS_WHEELS: ${{ steps.wheel_inputs.outputs.directory }}
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/config-engine
+          wheel_flags=()
+          audit_flags=()
+          if [[ -n $VS_WHEELS ]]; then
+            python3 -B -m tools.bazel.ci.vs_python_packages stage \
+              --directory "$VS_WHEELS" --revision "$GITHUB_SHA" --package "$VS_PACKAGE"
+            python3 -B -m tools.bazel.ci.vs_python_packages flags --group config-engine \
+              --package "$VS_PACKAGE" > "$VS_PACKAGE/flags.txt"
+            mapfile -t wheel_flags < "$VS_PACKAGE/flags.txt"
+            for flag in "${wheel_flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          fi
           # Render SWSS metadata on either host; this does not build an ARM64 image.
           make -f tools/bazel/prepare_manifests.mk \
             MANIFEST_METADATA=rules/docker-orchagent.mk \
             BUILD_WITH_BAZEL_WHEN_AVAILABLE=y BLDENV=trixie CONFIGURED_PLATFORM=vs \
             CONFIGURED_ARCH=amd64 ENABLE_ASAN=n DBG_IMAGE_MARK=dbg DOCKERS_PATH=dockers \
             2>&1 | tee artifacts/config-engine/make-manifests.log
-          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
             --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --output artifacts/config-engine/action-audit.json \
@@ -503,7 +531,7 @@ jobs:
             //src/sonic-containercfgd:sonic_containercfgd_wheel \
             //src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel \
             //dockers/docker-orchagent/config:docker_init
-          "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+          "$BAZEL" test "${wheel_flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --nocache_test_results --test_output=all \
             --build_event_json_file="$PWD/artifacts/config-engine/test-events.jsonl" \
@@ -530,7 +558,7 @@ jobs:
             //tools/bazel/tests:cfggen_template_test \
             //tools/bazel/tests:swss_render_test \
             2>&1 | tee artifacts/config-engine/test.log
-          output=$("$BAZEL" cquery --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+          output=$("$BAZEL" cquery "${wheel_flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
             --output=files //dockers/docker-orchagent/config:docker_init)
           test -s "$output"
@@ -601,8 +629,12 @@ jobs:
           git diff --exit-code
       - name: Retain wheels and required Python test evidence
         id: packages
+        env:
+          VS_WHEELS: ${{ steps.wheel_inputs.outputs.directory }}
         run: |
-          python3 -B tools/bazel/ci/python_packages.py \
+          inputs=()
+          if [[ -n $VS_WHEELS ]]; then inputs=(--vs-packages "$VS_WHEELS"); fi
+          python3 -B tools/bazel/ci/python_packages.py "${inputs[@]}" \
             --artifacts artifacts/config-engine \
             --revision artifacts/archive/revision.json \
             --architecture "${{ matrix.architecture }}" \
@@ -635,11 +667,55 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      - name: Remove downloaded wheel inputs
+        if: always() && steps.wheel_inputs.outcome == 'success'
+        env:
+          SCRATCH: ${{ steps.wheel_inputs.outputs.scratch }}
+        run: rm -rf -- "$SCRATCH"
+
       - name: Authorize published artifacts for post-job cleanup
         if: always() && steps.bazel_cleanup_register.outcome == 'success'
         env:
           BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  package_amd64:
+    name: Container package tests (${{ matrix.name }})
+    needs: [checks, vs_container]
+    # Fork PRs and explicit source-only runs retain their standalone package tests.
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.vs_container.result == 'success' || needs.vs_container.result == 'skipped')
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      matrix:
+        include:
+          - name: AMD64
+            architecture: amd64
+            machine: x86_64
+            runner: [self-hosted, linux, bazel-x64]
+            platform: x86_64_trixie
+            disk_cache: swss-layer-amd64
+    container: *package_test_container
+    env:
+      BAZEL: *package_test_bazel
+      USE_VS_WHEELS: ${{ needs.vs_container.result == 'success' }}
+      VS_WHEELS_ARTIFACT_ID: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+    defaults: *package_test_defaults
+    steps: *package_test_steps
+
+  kernel_packages_amd64:
+    needs: vs_container
+    uses: ./.github/workflows/bazel-kernel-bundle.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.kernel_artifact_id }}
+
+  frr_python_amd64:
+    needs: vs_container
+    uses: ./.github/workflows/bazel-frr-python.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
 
   checks:
     if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
@@ -866,6 +942,8 @@ jobs:
     outputs:
       containers: ${{ steps.bundles.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
+      python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
+      kernel_artifact_id: ${{ steps.vs_kernel_upload.outputs.artifact-id }}
       installer_artifact_id: ${{ steps.vs_installer_upload.outputs.artifact-id }}
       debug_layer: ${{ steps.bundles.outputs.debug_layer }}
     if: >-
@@ -1203,6 +1281,39 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "debug_layer=$SONIC_ENABLE_DEBUG_LAYER" >> "$GITHUB_OUTPUT"
           echo "prefix=vs-container-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      - name: Collect the kernel handoff used by VS
+        run: |
+          make -f Makefile.work BLDENV=trixie sonic-slave-run \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL" \
+            SONIC_RUN_CMDS='python3 -B tools/bazel/ci/kernel_artifacts.py --vs-handoff --output artifacts/vs/kernel-amd64'
+
+      - name: Publish kernel packages for validation
+        id: vs_kernel_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-kernel-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-amd64/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Publish Python packages for validation
+        id: vs_python_packages_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-python-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/python-packages/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Require immutable artifact IDs for the package checks
+        env:
+          KERNEL_ID: ${{ steps.vs_kernel_upload.outputs.artifact-id }}
+          PYTHON_ID: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
+        run: |
+          [[ $KERNEL_ID =~ ^[1-9][0-9]*$ && $PYTHON_ID =~ ^[1-9][0-9]*$ ]]
 
       - name: Publish the installer and matching container archives
         id: vs_installer_upload
@@ -1737,16 +1848,20 @@ jobs:
 
   archive_acceptance:
     name: Container archive (AMD64)
-    needs: [archive, vs_container, installer_validation, validate_container]
+    needs: [archive, package_amd64, kernel_packages_amd64, frr_python_amd64, vs_container, installer_validation, validate_container]
     if: always() && !cancelled() && needs.vs_container.result != 'skipped'
     runs-on: [self-hosted, linux, bazel-x64]
     steps:
       - name: Require the installer and every selected container
         env:
           INSTALLER: ${{ needs.installer_validation.result }}
-          PACKAGES: ${{ needs.archive.result }}
+          ARM64_PACKAGES: ${{ needs.archive.result }}
+          AMD64_PACKAGES: ${{ needs.package_amd64.result }}
+          KERNEL: ${{ needs.kernel_packages_amd64.result }}
+          FRR_PYTHON: ${{ needs.frr_python_amd64.result }}
           PRODUCER: ${{ needs.vs_container.result }}
           VALIDATION: ${{ needs.validate_container.result }}
         run: |
-          test "$PACKAGES" = success &&
+          test "$ARM64_PACKAGES" = success && test "$AMD64_PACKAGES" = success &&
+          test "$KERNEL" = success && test "$FRR_PYTHON" = success &&
           test "$PRODUCER" = success && test "$INSTALLER" = success && test "$VALIDATION" = success

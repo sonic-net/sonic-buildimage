@@ -448,10 +448,11 @@ class ContainerCleanupWorkflowTest(unittest.TestCase):
         selected = {name for name, job in jobs.items()
                     if any(step.get("uses") == action and
                            step.get("with", {}).get("migrated-job") != "true"
-                           for step in job["steps"])}
-        self.assertEqual(selected, {"archive"})
+                           for step in job.get("steps", []))}
+        self.assertEqual(selected, {"archive", "package_amd64"})
         self.assertLessEqual(selected, subject.CONTAINER_JOBS)
-        self.assertEqual({entry["architecture"] for entry in jobs["archive"]["strategy"]["matrix"]["include"]},
+        self.assertEqual({entry["architecture"] for name in ("archive", "package_amd64")
+                          for entry in jobs[name]["strategy"]["matrix"]["include"]},
                          {"amd64", "arm64"})
         for name in selected:
             with self.subTest(job=name):

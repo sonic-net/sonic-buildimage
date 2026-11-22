@@ -29,6 +29,14 @@ MANIFEST = "kernel-packages.json"
 PROVENANCE = "kernel-provenance.json"
 TARGET = "@sonic_linux_kernel//:kernel_packages"
 DEBS_DIRECTORY = Path("target/debs/trixie")
+# Keep the exact dependency evidence with Make's DEBs across retained-package hits.
+RESOLUTION_DIRECTORY = ".kernel-resolution"
+RESOLUTION_RECORDS = {
+    "consumer/MODULE.bazel.lock": "lock_sha256",
+    "build/module-graph.json": "graph_sha256",
+    "build/kernel-source.json": "kernel_source_json_sha256",
+    "build/infra-source.json": "infra_source_json_sha256",
+}
 KERNEL_PATH = Path("src/sonic-linux-kernel")
 DOWNLOADER_CONFIG = Path("tools/bazel/debian_mirrors.cfg")
 REGISTRY_PREFIX = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"
@@ -530,6 +538,26 @@ def package_lock(workspace):
         yield
 
 
+def retain_resolution(state, destination, selected):
+    """Keep the four private records by digest even if Make reuses the DEBs later."""
+    destination.mkdir(parents=True, exist_ok=True)
+    directory = destination / RESOLUTION_DIRECTORY
+    require(not directory.is_symlink(), "kernel resolution directory must not be a symlink")
+    directory.mkdir(mode=0o700, exist_ok=True)
+    for relative, field in RESOLUTION_RECORDS.items():
+        digest = selected[field]
+        require(re.fullmatch(r"[0-9a-f]{64}", digest), "invalid kernel resolution hash")
+        retained = directory / digest
+        if retained.exists() or retained.is_symlink():
+            require(sha256(regular(retained)) == digest, "corrupt retained kernel resolution record")
+            continue
+        with tempfile.TemporaryDirectory(dir=directory) as temporary:
+            incoming = Path(temporary) / digest
+            shutil.copyfile(regular(state / relative), incoming)
+            require(sha256(incoming) == digest, "kernel resolution record changed during publication")
+            incoming.replace(retained)
+
+
 def stage_outputs(workdir, destination, workspace, source, selected):
     """Publish verified Bazel outputs once into Make's shared DEB directory."""
     architecture = source["launcher"]["architecture"]
@@ -746,7 +774,9 @@ def _build(workspace, state, remote_cache, upload, *, architecture=None, kernel_
             "kernel launcher invocation differs from the prepared source build")
     selected = inspect_resolution(state / "build", consumer, prepared["source"], prepared["registry"], fetch=fetch)
     with time_vs_image.time_phase(timings, "stage-debs"):
-        result = stage_outputs(state / "build", Path(prepared["debs_directory"]), workspace, prepared["source"], selected)
+        destination = Path(prepared["debs_directory"])
+        retain_resolution(state, destination, selected)
+        result = stage_outputs(state / "build", destination, workspace, prepared["source"], selected)
     receipt = {"schema": 1, "plan": prepared, "result": result}
     (state / "kernel-receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
@@ -825,6 +855,10 @@ def ensure(workspace, *, architecture=None, kernel_config=None, state=None, cach
                 try:
                     index = remote_bundle.restore(workspace, incoming, expected - {MANIFEST}, source, registry, remote_cache)
                     result = verify(incoming, workspace, source=source, architecture=architecture)
+                    # A restore verifies the original provenance and dependency lock without
+                    # creating Bazel's module graph or local source records. Keep the index
+                    # that passed those checks for the VS artifact collector in this run.
+                    remote_bundle.save_index(workspace, index, remote_bundle.RESTORED_INDEX)
                 except remote_bundle.RESTORE_ERRORS as error:
                     print(f"Kernel remote bundle unavailable; using Bazel: {error}", file=sys.stderr)
                 else:

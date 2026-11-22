@@ -1,7 +1,9 @@
 """Exercise inherited file, account, stage and owner checks independently from service startup."""
 
 import copy
+import gzip
 import hashlib
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -49,6 +51,43 @@ class VSFamilyParentTest(unittest.TestCase):
                     rows.append("IMAGE_VERSION=HEAD.0-c079810a")
                     with self.assertRaisesRegex(ValueError, "inherited configuration"):
                         parent.verify_service_config(directory, "mgmt_framework", variant, base, current, fixtures)
+
+    def test_p4rt_debug_inherits_runtime_and_adds_its_symbols_as_a_layer(self):
+        # The producer records only parent, runtime and debug OCI layouts.
+        group = b"root:x:0:\n_ssh:x:104:\n"
+        runtime = {
+            "files": {"etc/group": regular(hashlib.sha256(group).hexdigest()), "usr/local/bin/p4rt": regular()},
+            "layers": ["base", "p4rt"],
+            "config": {"rootfs": {"diff_ids": ["base", "p4rt"]}},
+        }
+        runtime["files"].update({
+            path: {"kind": "symlink", "linkname": dest}
+            for path, dest in (("bin", "usr/bin"), ("sbin", "usr/sbin"), ("lib", "usr/lib"), ("var/run", "/run"))
+        })
+        base = copy.deepcopy(runtime)
+        base["layers"].pop()
+        base["config"]["rootfs"]["diff_ids"].pop()
+        debug = copy.deepcopy(runtime)
+        debug["layers"].append("symbols")
+        debug["config"]["rootfs"]["diff_ids"].append("symbols")
+        debug["files"]["usr/bin/gdb"] = regular("tool")
+        bundle = {"image": "docker-sonic-p4rt", "fixtures": {}}
+        owners = {"owners": {"p4rt.debug-tools.tar": {"usr/bin/gdb": regular("tool")}}}
+        with TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            for stage, image in (("parent", base), ("runtime", runtime)):
+                (directory / (stage + ".oci.json.gz")).write_bytes(gzip.compress(json.dumps(image).encode()))
+            for stage in ("parent", "debug"):
+                (directory / (stage + ".group")).write_bytes(group)
+            (directory / "parent.json").write_text(json.dumps({"image": "docker-config-engine-trixie", "diff_ids": ["base"]}))
+            parent.verify_parent(directory, bundle, "p4rt", "debug", debug, owners)
+            debug["layers"][1] = "other-runtime"
+            with self.assertRaisesRegex(ValueError, "does not inherit"):
+                parent.verify_parent(directory, bundle, "p4rt", "debug", debug, owners)
+            debug["layers"][1] = "p4rt"
+            debug["files"]["usr/bin/gdb"] = regular("changed")
+            with self.assertRaisesRegex(ValueError, "debug tools changed"):
+                parent.verify_parent(directory, bundle, "p4rt", "debug", debug, owners)
 
     def test_only_the_service_owners_declared_replacement_may_override_its_parent(self):
         original = {"files": {"etc/debian_version": regular(), "etc/rsyslog.conf": regular()}}

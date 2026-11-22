@@ -4,6 +4,12 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_call:
+    inputs:
+      vs_artifact_id:
+        description: Same-run artifact containing the AMD64 kernel DEBs consumed by Make
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       verify_cold_cache:
@@ -15,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bazel-kernel-bundle-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}
+  group: bazel-kernel-bundle-${{ inputs.vs_artifact_id && 'vs' || 'standalone' }}-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
@@ -24,15 +30,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: amd64
-            runner: [self-hosted, linux, bazel-x64]
-            cache_sha256: 6a6b64666c2238ec6b49b7b29f5e41e4149de09417a0028897c9bffe40376876
-          - arch: arm64
-            runner: [self-hosted, linux, bazel-arm64]
-            cache_sha256: 295e54fd58841211b00fb204cafc13affc6a13d8946a4520c0ecdce22626ef93
+        arch: ${{ fromJSON(inputs.vs_artifact_id && '["amd64"]' || github.event_name == 'workflow_dispatch' && '["amd64","arm64"]' || '["arm64"]') }}
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ matrix.runner }}
+    runs-on: [self-hosted, linux, "${{ matrix.arch == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 300
     env:
       KERNEL_RUN_TEMP: /mnt/build/k
@@ -74,7 +74,7 @@ jobs:
             -exec chown --no-dereference -- "$owner" {} +
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Initialize the pinned kernel source
         run: git submodule update --init -- src/sonic-linux-kernel
@@ -126,6 +126,7 @@ jobs:
         id: kernel_state
         run: python3 -B tools/bazel/ci/kernel_scratch.py cleanup
       - name: Check available scratch space
+        if: inputs.vs_artifact_id == ''
         run: |
           python3 - <<'PY'
           import os, shutil
@@ -138,13 +139,15 @@ jobs:
           unshare --user --map-current-user --mount --pid --fork true
       - name: Start a disposable cache for optional cold-build verification
         if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
+        env:
+          CACHE_SHA256: ${{ matrix.arch == 'amd64' && '6a6b64666c2238ec6b49b7b29f5e41e4149de09417a0028897c9bffe40376876' || '295e54fd58841211b00fb204cafc13affc6a13d8946a4520c0ecdce22626ef93' }}
         run: |
           umask 077
           mkdir -p "$KERNEL_RUN_TEMP/kernel-cache"
           curl --fail --location --retry 3 \
             "https://github.com/buchgr/bazel-remote/releases/download/v2.6.4/bazel-remote-2.6.4-linux-${{ matrix.arch }}" \
             --output "$KERNEL_RUN_TEMP/kernel-cache/bazel-remote"
-          printf '%s  %s\n' '${{ matrix.cache_sha256 }}' "$KERNEL_RUN_TEMP/kernel-cache/bazel-remote" | sha256sum -c -
+          printf '%s  %s\n' "$CACHE_SHA256" "$KERNEL_RUN_TEMP/kernel-cache/bazel-remote" | sha256sum -c -
           chmod 700 "$KERNEL_RUN_TEMP/kernel-cache/bazel-remote"
           env -i RUNNER_TRACKING_ID="${RUNNER_TRACKING_ID:-}" \
             "$KERNEL_RUN_TEMP/kernel-cache/bazel-remote" --dir="$KERNEL_RUN_TEMP/kernel-cache/objects" \
@@ -156,7 +159,20 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:8080/status > /dev/null
+      - name: Download kernel DEBs consumed by the VS installer
+        if: inputs.vs_artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.vs_artifact_id }}
+          merge-multiple: true
+          path: target/debs/trixie
+      - name: Verify the downloaded package set before exercising Make reuse
+        if: inputs.vs_artifact_id != ''
+        run: |
+          python3 -B tools/bazel/ci/kernel_artifacts.py --from-vs-handoff --architecture "${{ matrix.arch }}" \
+            --output "$KERNEL_RUN_TEMP/kernel-bundle-artifacts"
       - name: Build and verify kernel DEBs in the normal package directory
+        if: inputs.vs_artifact_id == ''
         run: |
           umask 077
           cache_args=(--remote-cache "$KERNEL_REMOTE_CACHE")
@@ -228,14 +244,13 @@ jobs:
             bash tools/bazel/ci/kernel_install_smoke.sh /sonic/target/debs/trixie
           echo 'Installed kernel DEB, external module and initramfs checks passed.'
       - name: Select verified DEBs and a public validation summary
-        id: artifacts
+        if: inputs.vs_artifact_id == ''
         run: |
           umask 077
           python3 -B tools/bazel/ci/kernel_artifacts.py --architecture "${{ matrix.arch }}" \
             --state-dir "$KERNEL_RUN_TEMP/${{ github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache && 'kernel-cache-hit' || 'kernel-bundle-state' }}" \
             --output "$KERNEL_RUN_TEMP/kernel-bundle-artifacts"
       - name: Retain verified DEBs and the validation summary
-        if: success() && steps.artifacts.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kernel-source-packages-${{ matrix.arch }}

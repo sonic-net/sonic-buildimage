@@ -107,12 +107,32 @@ class VSProbePolicyTest(unittest.TestCase):
                     output.addfile(info, io.BytesIO(b"x"))
             for variant, expected in (("runtime", {"p4rt.source.tar"}), ("debug", set(inputs))):
                 result = policy.prepare(image, "test", variant, None, inputs, root)
-                self.assertFalse(result.keys() & inputs.keys())
+                self.assertEqual(result.keys() & inputs.keys(), {"p4rt.source.tar"} if variant == "debug" else set())
                 report = json.loads(result[variant + ".owners.json"].read_bytes())
                 self.assertEqual(set(report["owners"]), expected)
                 for name in expected:
                     self.assertEqual(report["source_sha256"][name], hashlib.sha256(inputs[name].read_bytes()).hexdigest())
                     self.assertEqual(report["owners"][name][files[name]]["sha256"], hashlib.sha256(b"x").hexdigest())
+
+    def test_p4rt_exports_the_pinned_owner_test_inputs_only_with_the_debug_image(self):
+        image = "docker-sonic-p4rt"
+        targets = {
+            "p4rt.source.tar": "@sonic_pins//p4rt_app:p4rt_runtime",
+            "pins-debug-symbols.tar": "@sonic_pins//p4rt_app:p4rt_runtime.debug_symbols",
+            "pins-metadata.json": "@sonic_pins//p4rt_app:runtime_packages.json",
+            "pins-binutils.tar.gz": "//dockers/docker-sonic-p4rt/bazel:owner_binutils_tar",
+        }
+        self.assertEqual({k: policy.preparation_targets(image, True)[k] for k in targets}, targets)
+        self.assertEqual(targets.keys() & policy.preparation_targets(image, False).keys(), {"p4rt.source.tar"})
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            paths = {name: directory / name for name in targets}
+            with tarfile.open(paths["p4rt.source.tar"], "w"):
+                pass
+            runtime = policy.prepare(image, "test", "runtime", None, paths, directory)
+            self.assertFalse(paths.keys() & runtime.keys())
+            debug = policy.prepare(image, "test", "debug", None, paths, directory)
+            self.assertEqual({name: debug[name] for name in targets}, paths)
 
     def test_runtime_only_bundle_never_runs_a_companion_probe(self):
         with tempfile.TemporaryDirectory() as temporary:

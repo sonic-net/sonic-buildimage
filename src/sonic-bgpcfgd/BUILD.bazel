@@ -109,7 +109,7 @@ py_binary(
     name = "installed_wheel_probe",
     testonly = True,
     srcs = ["//tools/bazel/tests:integration/frr_python_wheel_probe.py"],
-    data = [":setup.py", ":sonic_bgpcfgd_wheel", ":test_sources"],
+    data = [":setup.py", "//tools/bazel/tests:sonic_bgpcfgd_test_wheel", ":test_sources"],
     legacy_create_init = False,
     main = "//tools/bazel/tests:integration/frr_python_wheel_probe.py",
     python_version = "3.13",
@@ -119,9 +119,9 @@ py_binary(
 common_runtime_test(
     name = "installed_wheel_test",
     binary = ":installed_wheel_probe",
-    data = [":setup.py", ":sonic_bgpcfgd_wheel"],
+    data = [":setup.py", "//tools/bazel/tests:sonic_bgpcfgd_test_wheel"],
     test_args = [
-        "$(rootpath :sonic_bgpcfgd_wheel)",
+        "$(rootpath //tools/bazel/tests:sonic_bgpcfgd_test_wheel)",
         "$(rootpath :setup.py)",
     ],
     target_compatible_with = ["@platforms//cpu:x86_64"],

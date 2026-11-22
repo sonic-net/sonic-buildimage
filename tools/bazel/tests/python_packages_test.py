@@ -1,16 +1,18 @@
 """Require complete native test evidence for the Python wheels retained by CI."""
 
 import hashlib
+import io
 import json
 from pathlib import Path
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from tools.bazel.ci import python_packages
+from tools.bazel.ci import python_packages, vs_python_packages
 
 
 class PythonPackageEvidenceTest(unittest.TestCase):
@@ -80,6 +82,79 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         receipt = json.loads((self.directory / "receipt.json").read_text())
         self.assertEqual(receipt["status"], "failed")
         self.assertRegex(receipt["error"], message)
+
+    def vs_bundle(self):
+        self.revision["tested_head"] = "a" * 40
+        sources = self.workspace / "sources"
+        sources.mkdir()
+        outputs = {}
+        for name, target in vs_python_packages.PACKAGES.items():
+            source = sources / name
+            source.write_bytes(name.encode())
+            outputs[target] = source
+        bundle = self.workspace / "vs"
+        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs)
+        return bundle
+
+    def test_installer_wheels_are_retained_without_a_collection_build(self):
+        """The six shipped wheels must match the actual installed-test receipts byte for byte."""
+        bundle = self.vs_bundle()
+        self.fixture()
+        with mock.patch.object(python_packages.build, "collect_archives", side_effect=AssertionError), \
+                mock.patch.object(python_packages.platform, "machine", return_value="x86_64"):
+            result = python_packages.collect(self.workspace, self.directory, self.revision, "amd64", vs_packages=bundle)
+        self.assertEqual(result["package_source"], "vs-installer")
+        self.assertEqual(set(result["artifacts"]), set(python_packages.WHEELS))
+        for name in result["artifacts"]:
+            self.assertEqual((self.directory / name).read_bytes(), (bundle / name).read_bytes())
+
+    def test_vs_bundle_rejects_stale_or_modified_products(self):
+        """A changed SHA, target, archive or unexpected build file invalidates the handoff."""
+        bundle = self.vs_bundle()
+        revision = self.revision["tested_head"]
+        with self.assertRaisesRegex(ValueError, "revision"):
+            vs_python_packages.verify(bundle, "b" * 40)
+        name = next(iter(vs_python_packages.FRR))
+        path = bundle / name
+        path.write_bytes(b"modified!")
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            vs_python_packages.verify(bundle, revision)
+        path.write_bytes(name.encode())
+        unexpected = bundle / "BUILD.bazel"
+        unexpected.touch()
+        with self.assertRaisesRegex(ValueError, "files"):
+            vs_python_packages.verify(bundle, revision)
+        unexpected.unlink()
+        manifest_path = bundle / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["packages"][name]["target"] = "//another:package"
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "target"):
+            vs_python_packages.verify(bundle, revision)
+
+    def test_frr_runtime_tar_contains_the_shipped_code_and_templates(self):
+        """A separately published FRR TAR must install the original wheel modules, metadata and templates."""
+        sources = {"frrcfgd/service.py": b"module", "frr-1.0.dist-info/METADATA": b"metadata",
+                   "frr-1.0.data/data/sonic/frrcfgd/bfdd.conf.j2": b"template"}
+        wheel, runtime = self.workspace / "frr.whl", self.workspace / "runtime.tar"
+        with zipfile.ZipFile(wheel, "w") as output:
+            for name, content in sources.items():
+                output.writestr(name, content)
+        for changed in (False, True):
+            with tarfile.open(runtime, "w") as archive:
+                for name, content in sources.items():
+                    install = ("usr/local/" + name.split(".data/data/")[1] if ".data/data/" in name
+                               else "usr/local/lib/python3.13/dist-packages/" + name)
+                    if changed and name.endswith(".j2"):
+                        content = b"stale"
+                    member = tarfile.TarInfo("./" + install)
+                    member.size = len(content)
+                    archive.addfile(member, io.BytesIO(content))
+            if changed:
+                with self.assertRaisesRegex(ValueError, "bfdd.conf.j2"):
+                    vs_python_packages.verify_frr_runtime(wheel, runtime)
+            else:
+                vs_python_packages.verify_frr_runtime(wheel, runtime)
 
     def test_retain_native_results_with_direct_outputs(self):
         """Preserve each required result, collected test inventory and matching wheel hash."""

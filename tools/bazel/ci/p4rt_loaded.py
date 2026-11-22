@@ -12,7 +12,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel.ci.vs_probe_policy import selected_images, selected_artifacts
+from tools.bazel.ci.vs_probe_policy import P4RT_OWNER_TEST_INPUTS, selected_images, selected_artifacts
 from tools.bazel.ci import artifact_validation as check
 from tools.bazel.ci import p4rt_image, validate_runtime
 from tools.bazel.ci.public_artifacts import safe_json
@@ -29,6 +29,22 @@ def verify_download(directory, artifacts, release_inputs):
         # be loaded. The original native job artifacts stay available in Actions.
         for name in ('p4rt.debug.tar', 'p4rt.source.tar'):
             (directory / name).unlink()
+
+
+def owner_package_probe(tag, container_name, source, directory):
+    """Exercise PINS' native runtime/debug TAR interface on the VS validator."""
+    command = ['docker', 'run', '--rm', '--name', container_name, '--network=none', '--cap-drop=ALL',
+               '--security-opt=no-new-privileges', '--read-only', '--pids-limit=256',
+               '--memory=8g', '--cpus=2', '--tmpfs', '/tmp:rw,nosuid,nodev,exec,size=6g,mode=1777']
+    mounts = {
+        'owner_probe.py': ROOT / 'dockers/docker-sonic-p4rt/bazel/owner_probe.py',
+        'source': source,
+        **{name: directory / name for name in ('p4rt.source.tar', *P4RT_OWNER_TEST_INPUTS)},
+    }
+    for name, path in mounts.items():
+        command += ['--mount', f'type=bind,src={path},dst=/probe/{name},readonly']
+    command += ['--entrypoint', '/usr/bin/python3', tag, '-B', '/probe/owner_probe.py']
+    return json.loads(subprocess.check_output(command, text=True, timeout=1800))
 
 
 def main():
@@ -102,6 +118,8 @@ def main():
                 results[name] = {**records[0], 'config_and_layers_verified': True,
                                  'archive_sha256': check.sha(archive), 'revision': revision,
                                  'owner_revision': report['owner_revision']}
+                if name.endswith('-dbg') and (directory / 'bundle.json').is_file():
+                    results[name]['owner_package_test'] = owner_package_probe(tag, container_name, owner_source, directory)
                 safe_json(results[name])
                 (directory / (name + '.runtime.json')).write_text(json.dumps(results[name], indent=2) + '\n')
             finally:

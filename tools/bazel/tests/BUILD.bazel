@@ -245,6 +245,47 @@ py_test(
     ],
 )
 
+# Installed-package tests accept either their source target or the exact VS installer wheel.
+label_flag(
+    name = "redis_dump_load_test_wheel",
+    build_setting_default = "@redis_dump_load//:wheel",
+)
+
+label_flag(
+    name = "sonic_supervisord_utilities_test_wheel",
+    build_setting_default = "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+)
+
+label_flag(
+    name = "sonic_yang_mgmt_test_wheel",
+    build_setting_default = "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+)
+
+label_flag(
+    name = "sonic_containercfgd_test_wheel",
+    build_setting_default = "//src/sonic-containercfgd:sonic_containercfgd_wheel",
+)
+
+label_flag(
+    name = "sonic_py_common_test_wheel",
+    build_setting_default = "//src/sonic-py-common:sonic_py_common_wheel",
+)
+
+label_flag(
+    name = "sonic_config_engine_test_wheel",
+    build_setting_default = "//src/sonic-config-engine:sonic_config_engine_wheel",
+)
+
+label_flag(
+    name = "sonic_frr_mgmt_framework_test_wheel",
+    build_setting_default = "//src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel",
+)
+
+label_flag(
+    name = "sonic_bgpcfgd_test_wheel",
+    build_setting_default = "//src/sonic-bgpcfgd:sonic_bgpcfgd_wheel",
+)
+
 # Shared installed-wheel mechanics: reject owner checkout imports and retain
 # receipts for the exact artifacts exercised by component-specific probes.
 py_library(
@@ -303,15 +344,15 @@ py_test(
     name = "containercfgd_wheel_test",
     srcs = ["integration/containercfgd_wheel_test.py"],
     args = [
-        "$(rootpath //src/sonic-containercfgd:sonic_containercfgd_wheel)",
+        "$(rootpath :sonic_containercfgd_test_wheel)",
         "$(rootpath //src/sonic-containercfgd:setup.py)",
-        "$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
+        "$(rootpath :sonic_py_common_test_wheel)",
     ],
     data = [
         "//src/sonic-containercfgd:setup.py",
-        "//src/sonic-containercfgd:sonic_containercfgd_wheel",
+        ":sonic_containercfgd_test_wheel",
         "//src/sonic-containercfgd:test_sources",
-        "//src/sonic-py-common:sonic_py_common_wheel",
+        ":sonic_py_common_test_wheel",
     ],
     legacy_create_init = False,
     main = "integration/containercfgd_wheel_test.py",
@@ -353,14 +394,14 @@ py_test(
     name = "supervisor_python_wheel_test",
     srcs = ["integration/supervisor_python_wheel_test.py"],
     args = [
-        "$(rootpath //src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel)",
+        "$(rootpath :sonic_supervisord_utilities_test_wheel)",
         "$(rootpath //src/sonic-supervisord-utilities:setup.py)",
-        "$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
+        "$(rootpath :sonic_py_common_test_wheel)",
     ],
     data = [
-        "//src/sonic-py-common:sonic_py_common_wheel",
+        ":sonic_py_common_test_wheel",
         "//src/sonic-supervisord-utilities:setup.py",
-        "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+        ":sonic_supervisord_utilities_test_wheel",
         "//src/sonic-supervisord-utilities:test_sources",
     ],
     legacy_create_init = False,
@@ -401,13 +442,13 @@ py_test(
     name = "sonic_yang_mgmt_wheel_test",
     srcs = ["integration/yang_mgmt_wheel_test.py"],
     args = [
-        "$(rootpath //src/sonic-yang-mgmt:sonic_yang_mgmt_wheel)",
+        "$(rootpath :sonic_yang_mgmt_test_wheel)",
         "$(rootpath //src/sonic-yang-mgmt:setup.py)",
         "$(rootpath @sonic_yang_models//:yang_models)",
     ],
     data = [
         "//src/sonic-yang-mgmt:setup.py",
-        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        ":sonic_yang_mgmt_test_wheel",
         "//src/sonic-yang-mgmt:test_sources",
         "@sonic_yang_models//:yang_models",
     ],
@@ -488,22 +529,22 @@ py_test(
     size = "medium",
     srcs = ["integration/sonic_python_wheels_test.py"],
     args = [
-        "--redis-wheel=$(rootpath @redis_dump_load//:wheel)",
-        "--common-wheel=$(rootpath //src/sonic-py-common:sonic_py_common_wheel)",
-        "--config-wheel=$(rootpath //src/sonic-config-engine:sonic_config_engine_wheel)",
-        "--yang-wheel=$(rootpath //src/sonic-yang-mgmt:sonic_yang_mgmt_wheel)",
+        "--redis-wheel=$(rootpath :redis_dump_load_test_wheel)",
+        "--common-wheel=$(rootpath :sonic_py_common_test_wheel)",
+        "--config-wheel=$(rootpath :sonic_config_engine_test_wheel)",
+        "--yang-wheel=$(rootpath :sonic_yang_mgmt_test_wheel)",
         "--common-setup=$(rootpath //src/sonic-py-common:setup.py)",
         "--config-setup=$(rootpath //src/sonic-config-engine:setup.py)",
     ],
     data = [
-        "@redis_dump_load//:wheel",
+        ":redis_dump_load_test_wheel",
         "//src/sonic-config-engine:setup.py",
-        "//src/sonic-config-engine:sonic_config_engine_wheel",
+        ":sonic_config_engine_test_wheel",
         "//src/sonic-config-engine:wheel_sources",
         "//src/sonic-py-common:setup.py",
-        "//src/sonic-py-common:sonic_py_common_wheel",
+        ":sonic_py_common_test_wheel",
         "//src/sonic-py-common:wheel_sources",
-        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        ":sonic_yang_mgmt_test_wheel",
     ],
     legacy_create_init = False,
     main = "integration/sonic_python_wheels_test.py",
@@ -1420,7 +1461,7 @@ py_test(
     name = "source_installation_test",
     srcs = ["integration/source_installation_test.py"],
     args = [
-        "--redis-wheel=$(rootpath @redis_dump_load//:wheel)",
+        "--redis-wheel=$(rootpath :redis_dump_load_test_wheel)",
         "--yang-mgmt-dependencies",
         "$(rootpaths //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata)",
         "--metadata",
@@ -1439,7 +1480,7 @@ py_test(
         "--setup=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
     ],
     data = [
-        "@redis_dump_load//:wheel",
+        ":redis_dump_load_test_wheel",
         ":source_installation_metadata",
         "//src/sonic-config-engine:setup.py",
         "//src/sonic-config-engine:sonic-config-engine.runtime",

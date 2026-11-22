@@ -28,6 +28,14 @@ EXTRA_OWNERS = {"source-runtime.tar", "mux-source.tar", "eventd-runtime.tar", "s
                 "lldpd-owner.tar", "dbsyncd-runtime.tar", "framework-runtime.tar", "gnmi-runtime.tar",
                 "sflowtool-runtime.tar", "psample-runtime.tar", "hsflowd-runtime.tar"}
 
+# Runtime is already collected as p4rt.source.tar. These additional inputs
+# allow the debug validator to run the pinned PINS package test on VS outputs.
+P4RT_OWNER_TEST_INPUTS = {
+    "pins-debug-symbols.tar": "@sonic_pins//p4rt_app:p4rt_runtime.debug_symbols",
+    "pins-metadata.json": "@sonic_pins//p4rt_app:runtime_packages.json",
+    "pins-binutils.tar.gz": "//dockers/docker-sonic-p4rt/bazel:owner_binutils_tar",
+}
+
 
 # These install TARs receive full file verification in the original image jobs.
 # Other native source TARs are projected to their ELF metadata for the runtime probes.
@@ -56,6 +64,8 @@ def preparation_targets(image, debug_selected):
         result.update({name: module.TARGETS[name] for name in ("runtime-apt.json", "engine.runtime-apt.tar")})
         if debug_selected:
             result["debug-apt.json"] = module.TARGETS["debug-apt.json"]
+    if image == "docker-sonic-p4rt" and debug_selected:
+        result.update(P4RT_OWNER_TEST_INPUTS)
     if image == "docker-teamd":
         result["runtime-apt.json"] = module.TARGETS["runtime-apt.json"]
     if image == "docker-gbsyncd-vs":
@@ -125,6 +135,13 @@ def prepare(image, version, variant, layout_dir, source_paths, bundle_dir, *, ma
             if source.is_file():
                 artifacts[variant + ".make." + file] = source
     for name, path in source_paths.items():
+        if image == "docker-sonic-p4rt":
+            if name in P4RT_OWNER_TEST_INPUTS:
+                if variant == "debug":
+                    artifacts[name] = path
+                continue
+            if variant == "debug" and name == "p4rt.source.tar":
+                artifacts[name] = path
         if name in FIXTURES or name in standalone or name.startswith("config-engine") and owner_archive(name):
             artifacts[name] = path
         if name.startswith("openssh") and variant == "runtime":
