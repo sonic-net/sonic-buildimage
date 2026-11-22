@@ -37,7 +37,7 @@ else:
         # Jinja2 v3.0.0+ dropped support for Python 2.7.
         'future',
         'Jinja2<3.0.0',
-        'pyangbind==0.6.0',
+        'pyangbind==0.8.7',
         # PyYAML 6.0 and newer dropped support for Python 2.7
         'pyyaml==5.4.1',
     ]
