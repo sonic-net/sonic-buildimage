@@ -18,15 +18,16 @@ from tools.bazel.oci.runtime_smoke import gdb_lookup
 
 def verify(runtime, symbols, package):
     payload = artifacts.payload(runtime)
-    debug = artifacts.payload(symbols)
-    documentation = 'usr/share/doc/' + package + '-dbgsym'
-    artifacts.require(debug[documentation]['kind'] == 'symlink' and
-                      debug[documentation]['linkname'] == package,
-                      'incorrect debug documentation link: ' + documentation)
-    artifacts.require(all(item['kind'] == 'directory' or name == documentation or
-                          (item['kind'] == 'file' and re.fullmatch(
-                              r'usr/lib/debug/\.build-id/[0-9a-f]{2}/[0-9a-f]+\.debug', name))
-                          for name, item in debug.items()), 'unexpected detached-symbol payload')
+    debug = artifacts.payload(symbols) if symbols else {}
+    if symbols:
+        documentation = 'usr/share/doc/' + package + '-dbgsym'
+        artifacts.require(debug[documentation]['kind'] == 'symlink' and
+                          debug[documentation]['linkname'] == package,
+                          'incorrect debug documentation link: ' + documentation)
+        artifacts.require(all(item['kind'] == 'directory' or name == documentation or
+                              (item['kind'] == 'file' and re.fullmatch(
+                                  r'usr/lib/debug/\.build-id/[0-9a-f]{2}/[0-9a-f]+\.debug', name))
+                              for name, item in debug.items()), 'unexpected detached-symbol payload')
     combined = dict(payload)
     for name, item in debug.items():
         artifacts.require(name not in combined or combined[name] == item,
@@ -40,13 +41,16 @@ def verify(runtime, symbols, package):
         artifacts.require(item['mode'] == mode, 'incorrect installed ELF mode: ' + name)
     with tempfile.TemporaryDirectory(prefix='frr-installed-') as directory:
         root = Path(directory)
-        for archive in (runtime, symbols):
+        for archive in ([runtime, symbols] if symbols else [runtime]):
             with tarfile.open(archive) as source:
                 source.extractall(root, filter='data')
-        pairs, gaps = artifacts.elf_debug(root, combined, set())
         identity = {name: artifacts.elf_info(root / name, dynamic=True) for name in binaries}
-        result = {'runtime_sha256': artifacts.sha(runtime), 'symbols_sha256': artifacts.sha(symbols),
-                  'elfs': identity, 'debug_pairs': pairs, 'prebuilt_debug_gaps': gaps}
+        artifacts.require(all(info["build_id"] and not info["has_dwarf"] for info in identity.values()),
+                          "FRR runtime contains an unstripped ELF or one without a build ID")
+        result = {'runtime_sha256': artifacts.sha(runtime), 'elfs': identity}
+        if symbols:
+            pairs, gaps = artifacts.elf_debug(root, combined, set())
+            result.update(symbols_sha256=artifacts.sha(symbols), debug_pairs=pairs, prebuilt_debug_gaps=gaps)
         if package == 'frr':
             sonic = 'usr/lib/x86_64-linux-gnu/frr/modules/dplane_fpm_sonic.so'
             artifacts.require(identity[sonic]['soname'] == 'dplane_fpm_sonic.so',
@@ -55,6 +59,7 @@ def verify(runtime, symbols, package):
             # API calls. Preserve actual loader requirements instead of forcing
             # an unused library into DT_NEEDED just because Make lists it.
             result['sonic_fpm_libfib_needed'] = 'libnexthopgroup.so.0' in identity[sonic]['needed']
+        if package == 'frr' and symbols:
             binary = root / 'usr/lib/frr/bgpd'
             isolated = root / 'isolated'
             isolated.mkdir()

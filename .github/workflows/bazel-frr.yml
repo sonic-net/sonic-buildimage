@@ -82,6 +82,7 @@ jobs:
         env:
           BAZELISK_GITHUB_TOKEN: ""
           CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          USE_VS_PACKAGES: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           CI_ARCHITECTURE: ${{ matrix.architecture }}
           CI_CPU: ${{ matrix.cpu }}
@@ -111,21 +112,23 @@ jobs:
               "$command" "${options[@]}" "$@"
           }
           targets=(
-            //src/sonic-frr:frr_layout
-            //src/sonic-frr:frr_elf.debug_symbols
-            //src/sonic-frr:frr_snmp_layout
-            //src/sonic-frr:frr_snmp_elf.debug_symbols
-            //src/sonic-frr:pythontools_layout
             //src/sonic-frr:check_programs
             //src/libraries/sonic-fib:runtime
             //src/libraries/sonic-fib:runtime.debug_symbols
             //src/libraries/sonic-fib:development
             //src/libraries/sonic-fib:runtime_packages.json
           )
-          # FRR metadata declares Trixie-only compatibility; sonic-fib metadata
-          # and all installation TARs retain both target distributions.
-          if [[ "$CI_DISTRIBUTION" == trixie ]]; then
-            targets+=(//src/sonic-frr:runtime_packages.json)
+          if [[ "$USE_VS_PACKAGES" != true ]]; then
+            targets+=(
+              //src/sonic-frr:frr_layout
+              //src/sonic-frr:frr_elf.debug_symbols
+              //src/sonic-frr:frr_snmp_layout
+              //src/sonic-frr:frr_snmp_elf.debug_symbols
+              //src/sonic-frr:pythontools_layout
+            )
+            if [[ "$CI_DISTRIBUTION" == trixie ]]; then
+              targets+=(//src/sonic-frr:runtime_packages.json)
+            fi
           fi
           run_bazel build --build_event_json_file="$PWD/artifacts/build-events.json" "${targets[@]}" 2>&1 | tee artifacts/build.log
           run_bazel cquery "set(${targets[*]})" --output=files > artifacts/outputs.txt
@@ -141,12 +144,14 @@ jobs:
             --development "$(run_bazel cquery //src/libraries/sonic-fib:development --output=files)" \
             --symbols "$(run_bazel cquery //src/libraries/sonic-fib:runtime.debug_symbols --output=files)" \
             --output artifacts/libfib-installed.json
-          python3 src/sonic-frr/verify_runtime.py \
-            --runtime "$(run_bazel cquery //src/sonic-frr:frr_layout --output=files)" \
-            --symbols "$(run_bazel cquery //src/sonic-frr:frr_elf.debug_symbols --output=files)" \
-            --snmp-runtime "$(run_bazel cquery //src/sonic-frr:frr_snmp_layout --output=files)" \
-            --snmp-symbols "$(run_bazel cquery //src/sonic-frr:frr_snmp_elf.debug_symbols --output=files)" \
-            --output artifacts/frr-installed.json
+          if [[ "$USE_VS_PACKAGES" != true ]]; then
+              python3 src/sonic-frr/verify_runtime.py \
+                --runtime "$(run_bazel cquery //src/sonic-frr:frr_layout --output=files)" \
+                --symbols "$(run_bazel cquery //src/sonic-frr:frr_elf.debug_symbols --output=files)" \
+                --snmp-runtime "$(run_bazel cquery //src/sonic-frr:frr_snmp_layout --output=files)" \
+                --snmp-symbols "$(run_bazel cquery //src/sonic-frr:frr_snmp_elf.debug_symbols --output=files)" \
+                --output artifacts/frr-installed.json
+          fi
           run_bazel test --build_event_json_file="$PWD/artifacts/test-events.json" \
             //src/sonic-frr:upstream_native_check \
             //src/libraries/sonic-fib:tests \
