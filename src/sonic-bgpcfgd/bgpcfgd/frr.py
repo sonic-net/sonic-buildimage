@@ -7,7 +7,7 @@ from bgpcfgd.log import log_err, log_info, log_warn, log_crit
 from .utils import run_command
 
 
-FAILED_CONFIG_FILE = '/tmp/bgpcfgd_failed_config'
+FAILED_CONFIG_PREFIX = 'bgpcfgd_failed_config.'
 
 
 class FRR(object):
@@ -66,7 +66,8 @@ class FRR(object):
 
     @staticmethod
     def write(config_text):
-        fd, tmp_filename = tempfile.mkstemp(dir='/tmp')
+        fd, tmp_filename = tempfile.mkstemp(prefix=FAILED_CONFIG_PREFIX, dir='/tmp')
+        retain_failed_config = False
         try:
             os.close(fd)
             with open(tmp_filename, 'w') as fp:
@@ -74,18 +75,12 @@ class FRR(object):
             command = ["vtysh", "-f", tmp_filename]
             ret_code, out, err = run_command(command)
             if ret_code != 0:
-                try:
-                    os.replace(tmp_filename, FAILED_CONFIG_FILE)
-                    tmp_filename = None
-                    config_file = FAILED_CONFIG_FILE
-                except OSError as exc:
-                    config_file = "not retained"
-                    log_err("ConfigMgr::commit(): can't retain failed configuration: %s" % exc)
-                err_tuple = config_file, ret_code, out, err
+                retain_failed_config = True
+                err_tuple = tmp_filename, ret_code, out, err
                 log_err("ConfigMgr::commit(): can't push configuration from file='%s', rc='%d', stdout='%s', stderr='%s'" % err_tuple)
             return ret_code == 0
         finally:
-            if tmp_filename is not None:
+            if not retain_failed_config:
                 try:
                     os.remove(tmp_filename)
                 except OSError as exc:
