@@ -173,17 +173,23 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(job["name"], "Container archive (AMD64)")
         self.assertEqual(set(job["needs"]), {
             "archive", "package_amd64", "kernel_packages_amd64", "frr_python_amd64",
-            "vs_container", "installer_validation", "validate_container", "validate_component",
+            "vs_container", "installer_validation", "validate_container", "validate_component", "native_sysmgr_amd64", "yang_models",
         })
         gate, = job["steps"]
-        self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
-        success = dict.fromkeys(gate["env"], "success")
-        self.assertEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=success).returncode, 0)
-        for dependency in success:
+        results = {name: expression for name, expression in gate["env"].items() if name not in ("EXPECT_COMPONENTS", "EXPECT_SYSMGR")}
+        self.assertEqual(set(results.values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
+        success = {**dict.fromkeys(results, "success"), "EXPECT_COMPONENTS": "true", "EXPECT_SYSMGR": "true"}
+        def status(env):
+            return subprocess.run(["bash", "-eu", "-c", gate["run"]], env=env).returncode
+        self.assertEqual(status(success), 0)
+        for dependency in results:
             for outcome in ("failure", "skipped", "cancelled"):
                 with self.subTest(dependency=dependency, outcome=outcome):
-                    env = dict(success, **{dependency: outcome})
-                    self.assertNotEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=env).returncode, 0)
+                    self.assertNotEqual(status(dict(success, **{dependency: outcome})), 0)
+        for dependency in ("COMPONENTS", "SYSMGR"):
+            unselected = dict(success, **{dependency: "skipped", "EXPECT_" + dependency: "false"})
+            self.assertEqual(status(unselected), 0)
+            self.assertNotEqual(status(dict(unselected, **{dependency: "failure"})), 0)
 
     def test_runtime_pruning_commands_stop_on_errors_without_using_a_real_daemon(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())

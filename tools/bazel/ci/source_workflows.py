@@ -9,8 +9,7 @@ import subprocess
 import yaml
 
 
-WORKFLOWS = ("bazel-eventd.yml", "bazel-frr.yml", "bazel-libteam.yml", "bazel-supervisor-rust.yml",
-             "bazel-sysmgr.yml", "bazel-yang-models.yml")
+WORKFLOWS = ("bazel-sysmgr.yml",)
 
 
 def changed_paths(base):
