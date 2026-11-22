@@ -51,6 +51,7 @@ class FakeAPI:
         self.attempts = {}
         self.jobs = {}
         self.linked = []
+        self.commits = {}
         self.fail_jobs = False
         self.logs = {}
         self.log_calls = []
@@ -68,6 +69,12 @@ class FakeAPI:
             return {"full_name": REPO, "private": False, "default_branch": "master"}
         if endpoint == f"repos/{REPO}/git/ref/heads/master":
             return {"ref": "refs/heads/master", "object": {"type": "commit", "sha": "c" * 40}}
+        if endpoint.startswith(f"repos/{REPO}/git/commits/"):
+            sha = endpoint.rsplit("/", 1)[-1]
+            result = self.commits.get(sha, collector.CollectionError("Missing commit", http_status=404))
+            if isinstance(result, Exception):
+                raise result
+            return result
         if endpoint in self.attempts:
             return self.attempts[endpoint]
         if endpoint.startswith(f"repos/{REPO}/actions/runs/"):
@@ -382,6 +389,50 @@ class CollectionTests(unittest.TestCase):
             enriched["runs"][0]["source_sha"] = "invalid-sha"
             collector.write_atomic(path, enriched)
             with self.assertRaisesRegex(collector.CollectionError, "invalid source commit title"):
+                collector.load_history(path, REPO)
+
+    def test_commit_dates_match_exact_source_for_pr_master_and_retries(self):
+        master = run(run_id=11, event="push", head_branch="master", head_sha=OTHER_SHA,
+                     head_commit={"id": OTHER_SHA, "timestamp": "2026-10-09T14:00:00-07:00"})
+        retry = run(attempt=2, head_commit={"id": SHA, "timestamp": "2026-10-09T20:00:00Z"})
+        api = FakeAPI(latest=[master, retry])
+        api.attempts[f"repos/{REPO}/actions/runs/10/attempts/1"] = run(head_commit=None)
+        snapshot = collector.collect(api, REPO, empty(), log_jobs=0)
+        self.assertEqual([r["source_committed_at"] for r in snapshot["runs"]],
+                         ["2026-10-09T21:00:00Z", "2026-10-09T20:00:00Z", "2026-10-09T20:00:00Z"])
+        self.assertFalse(any("/git/commits/" in call for call in api.calls))
+        refresh = FakeAPI(latest=[])
+        self.assertEqual(collector.collect(refresh, REPO, snapshot, log_jobs=0)["runs"], snapshot["runs"])
+        self.assertFalse(any("/git/commits/" in call for call in refresh.calls))
+
+    def test_backfills_exact_committer_dates_for_old_runs_with_bounded_requests(self):
+        # Multiple retained runs have the same SHA. A PR title, author date or
+        # workflow timestamp cannot establish when the source was committed.
+        api = FakeAPI(latest=[run(), run(run_id=11),
+                              run(run_id=12, head_sha=OTHER_SHA,
+                                  head_commit={"id": SHA, "timestamp": START})])
+        history = collector.collect(api, REPO, empty(), log_jobs=0)
+        for record in history["runs"]:
+            record.pop("source_committed_at", None)
+        refresh = FakeAPI(latest=[])
+        refresh.commits[SHA] = {"sha": SHA, "author": {"date": START}, "committer": {"date": END}}
+        refresh.commits[OTHER_SHA] = {"sha": SHA, "committer": {"date": END}}
+        with mock.patch.object(collector, "MAX_COMMIT_LOOKUPS", 1):
+            snapshot = collector.collect(refresh, REPO, history)
+        self.assertEqual([r.get("source_committed_at") for r in snapshot["runs"]], [None, END, END])
+        self.assertEqual([call for call in refresh.calls if "/git/commits/" in call],
+                         [f"repos/{REPO}/git/commits/{SHA}"])
+        second = collector.collect(refresh, REPO, snapshot)
+        self.assertNotIn("source_committed_at", second["runs"][0])
+        self.assertEqual(refresh.calls.count(f"repos/{REPO}/git/commits/{SHA}"), 1)
+        self.assertEqual(refresh.calls.count(f"repos/{REPO}/git/commits/{OTHER_SHA}"), 1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "data.json")
+            collector.write_atomic(path, second)
+            self.assertEqual(collector.load_history(path, REPO), second)
+            second["runs"][1]["source_committed_at"] = "yesterday"
+            collector.write_atomic(path, second)
+            with self.assertRaisesRegex(collector.CollectionError, "invalid source commit timestamp"):
                 collector.load_history(path, REPO)
 
     def test_cached_retry_start_requires_matching_observed_provenance(self):

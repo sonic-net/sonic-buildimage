@@ -57,6 +57,7 @@ IMAGE_STEPS = {
 MAX_LOG_JOBS = 20
 LOG_TIMEOUT_SECONDS = 45
 MAX_COMMIT_TITLE = 256
+MAX_COMMIT_LOOKUPS = 20
 
 
 class LogReadError(RuntimeError):
@@ -410,12 +411,37 @@ def commit_title(message):
     return title or None
 
 
-def remember_commit_title(titles, raw):
+def remember_source_commit(titles, dates, raw):
     commit, sha = raw.get("head_commit"), raw.get("head_sha")
     if isinstance(sha, str) and SHA_RE.fullmatch(sha) and isinstance(commit, dict) and commit.get("id") == sha:
         title = commit_title(commit.get("message"))
         if title:
             titles[sha] = title
+        committed_at = timestamp(commit.get("timestamp"))
+        if committed_at:
+            dates[sha] = committed_at
+
+
+def backfill_commit_dates(api, repo, runs, dates):
+    """Enrich retained revisions that no longer have a workflow payload."""
+    missing = {run["source_sha"] for run in runs if run.get("source_sha") not in dates
+               and SHA_RE.fullmatch(str(run.get("source_sha", "")))}
+    for sha in sorted(missing)[:MAX_COMMIT_LOOKUPS]:
+        try:
+            commit = api.get(f"repos/{repo}/git/commits/{sha}")
+        except CollectionError as error:
+            if error.http_status == 404:
+                # A deleted fork's commit may be unavailable. A subsequent
+                # matching workflow payload can still supply its date.
+                dates[sha] = None
+                continue
+            print(f"Deferring source commit dates: {error}", file=sys.stderr)
+            break
+        if commit.get("sha") != sha:
+            continue
+        date = timestamp((commit.get("committer") or {}).get("date"))
+        if date:
+            dates[sha] = date
 
 
 def event_bases(raw):
@@ -475,7 +501,7 @@ def load_history(path, repo):
     allowed = {
         "document": {"schema_version", "repository", "generated_at", "pull_requests", "runs", "comparisons"},
         "pr": {"number", "title", "state", "draft", "url", "head_sha", "base_sha", "base_branch", "base_target_sha", "base_target_observed_at", "head_branch", "updated_at", "merged_at"},
-        "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "source_commit_title", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "event_bases", "started_at", "started_at_source", "completed_at", "updated_at", "url", "jobs"},
+        "run": {"run_id", "attempt", "workflow_name", "workflow_path", "source_sha", "source_commit_title", "source_committed_at", "branch", "event", "status", "conclusion", "pr_numbers", "pr_association", "pr_association_note", "event_bases", "started_at", "started_at_source", "completed_at", "updated_at", "url", "jobs"},
         "event_base": {"number", "ref", "sha"},
         "job": {"job_id", "name", "kind", "architecture", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "image_build_seconds", "image_build_elapsed_seconds", "image_build_step_numbers", "image_recipe_timings", "phases", "steps", "url"},
         "step": {"number", "name", "status", "conclusion", "started_at", "completed_at", "duration_seconds", "phase", "breakdown"},
@@ -497,6 +523,11 @@ def load_history(path, repo):
             if (not isinstance(title, str) or title != commit_title(title)
                     or not SHA_RE.fullmatch(str(run.get("source_sha", "")))):
                 raise CollectionError("Dashboard history contains an invalid source commit title")
+        if "source_committed_at" in run:
+            date = run["source_committed_at"]
+            if (not SHA_RE.fullmatch(str(run.get("source_sha", "")))
+                    or date is not None and (not isinstance(date, str) or timestamp(date) != date)):
+                raise CollectionError("Dashboard history contains an invalid source commit timestamp")
         if not isinstance(run.get("event_bases", []), list):
             raise CollectionError("Dashboard history contains invalid event base metadata")
         for base in run.get("event_bases", []):
@@ -678,6 +709,8 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
     retained = {(run["run_id"], run["attempt"]): copy.deepcopy(run) for run in history["runs"]}
     titles = {run["source_sha"]: run["source_commit_title"] for run in retained.values()
               if "source_commit_title" in run}
+    dates = {run["source_sha"]: run["source_committed_at"] for run in retained.values()
+             if "source_committed_at" in run}
     # Recompute derived image totals from cached public steps as recognition
     # evolves; keep precise measurements even when old logs have expired.
     for old in retained.values():
@@ -697,7 +730,7 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
                 f"repos/{repo}/actions/workflows/{workflow}/runs", "workflow_runs"))
     pending = []
     for workflow, latest_raw in latest:
-        remember_commit_title(titles, latest_raw)
+        remember_source_commit(titles, dates, latest_raw)
         current_id, current_attempt = integer(latest_raw.get("id")), integer(latest_raw.get("run_attempt"))
         if not current_id or not current_attempt:
             raise CollectionError("Run-list response is missing its ID or attempt")
@@ -738,7 +771,7 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
             if raw.get("id") != current_id or raw.get("run_attempt") != attempt:
                 raise CollectionError("Run-attempt response does not match the requested identity")
             if attempt < current_attempt:
-                remember_commit_title(titles, raw)
+                remember_source_commit(titles, dates, raw)
             association = associations.identify(raw)
             pending.append((workflow, raw, association, associations.notes.get(raw.get("head_sha"))))
 
@@ -759,7 +792,10 @@ def collect(api, repo, history, run_id=None, backfill=False, workers=4, log_jobs
             if (run["source_sha"], run["workflow_path"]) == (previous.get("source_sha"), previous.get("workflow_path")):
                 retain_breakdowns(run["jobs"], previous.get("jobs", []))
             retained[(run["run_id"], run["attempt"])] = run
+    backfill_commit_dates(api, repo, retained.values(), dates)
     for run in retained.values():
+        if run.get("source_sha") in dates:
+            run["source_committed_at"] = dates[run["source_sha"]]
         if run.get("source_sha") in titles:
             run["source_commit_title"] = titles[run["source_sha"]]
     enrich_breakdowns(api, repo, retained.values(), max(0, min(MAX_LOG_JOBS, log_jobs)))

@@ -146,9 +146,13 @@ function duration(value, includeSeconds = false) {
   return rounded >= 3600 ? `${Math.floor(rounded / 3600)}h ${Math.floor(rounded % 3600 / 60)}m${includeSeconds ? ` ${rounded % 60}s` : ""}` : `${Math.floor(rounded / 60)}m ${rounded % 60}s`;
 }
 function timestamp(value) { const parsed = Date.parse(value || ""); return Number.isFinite(parsed) ? parsed : null; }
-function dateTime(value, short = false) {
+const pacificTime = {timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit", timeZoneName: "short"};
+const commitDateTime = new Intl.DateTimeFormat("en-US", {...pacificTime, year: "numeric", month: "short", day: "numeric"});
+const axisDate = new Intl.DateTimeFormat("en-US", {timeZone: pacificTime.timeZone, month: "short", day: "numeric"});
+const axisHour = new Intl.DateTimeFormat("en-US", pacificTime);
+function dateTime(value) {
   if (timestamp(value) === null) return "Not recorded";
-  return new Date(value).toLocaleString(undefined, short ? {month: "short", day: "numeric"} : {month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"});
+  return new Date(value).toLocaleString(undefined, {month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"});
 }
 function result(item) { return item.conclusion || item.status || "unknown"; }
 function resultLabel(value) { return String(value || "unknown").replaceAll("_", " "); }
@@ -318,10 +322,15 @@ function imageSeries(job) {
 }
 function selectTrendPoints(points, {series = "all", days = "all", limit = "10", reference = Date.now()} = {}) {
   const cutoff = days === "all" ? null : reference - Number(days) * 86400000;
-  const matching = points.filter(item => (series === "all" || imageSeries(item.job).key === series) &&
-    (cutoff === null || (timestamp(item.execution?.startedAt) >= cutoff && timestamp(item.execution?.startedAt) <= reference)))
-    .sort((a, b) => timestamp(b.execution?.startedAt) - timestamp(a.execution?.startedAt) || b.run.attempt - a.run.attempt || b.run.run_id - a.run.run_id);
-  return {matching, points: (limit === "all" ? [...matching] : matching.slice(0, Number(limit))).reverse()};
+  const inSeries = series === "all" ? points : points.filter(item => imageSeries(item.job).key === series);
+  const dated = inSeries.filter(item => timestamp(item.run.source_committed_at) !== null);
+  const matching = dated.filter(item => {
+    const time = timestamp(item.run.source_committed_at);
+    return cutoff === null || (time >= cutoff && time <= reference);
+  }).sort((a, b) => timestamp(b.run.source_committed_at) - timestamp(a.run.source_committed_at) ||
+    timestamp(b.execution.startedAt) - timestamp(a.execution.startedAt) || b.run.attempt - a.run.attempt || b.run.run_id - a.run.run_id);
+  return {matching, missingDates: inSeries.length - dated.length,
+    points: (limit === "all" ? matching.slice() : matching.slice(0, Number(limit))).reverse()};
 }
 function chartScale(maximum) {
   const target = Math.max(1, maximum * 1.08) / 5;
@@ -548,16 +557,20 @@ function renderFilters() {
   for (const run of masterRuns) {
     const sha = run.source_sha;
     if (!revisions.has(sha)) {
-      revisions.set(sha, {latest: run, title: ""});
+      revisions.set(sha, {time: null, title: ""});
       const prefix = sha.slice(0, 12);
       prefixCounts.set(prefix, (prefixCounts.get(prefix) || 0) + 1);
     }
-    if (typeof run.source_commit_title === "string") revisions.get(sha).title ||= run.source_commit_title.trim();
+    const revision = revisions.get(sha);
+    revision.time ??= timestamp(run.source_committed_at);
+    if (typeof run.source_commit_title === "string") revision.title ||= run.source_commit_title.trim();
   }
-  for (const [sha, {latest, title}] of revisions) {
+  const newestFirst = [...revisions].sort(([shaA, a], [shaB, b]) =>
+    (b.time ?? -Infinity) - (a.time ?? -Infinity) || shaA.localeCompare(shaB));
+  for (const [sha, {time, title}] of newestFirst) {
     const prefix = sha.slice(0, 12);
     const label = prefixCounts.get(prefix) > 1 ? sha : prefix;
-    const date = dateTime(latest.started_at || latest.completed_at);
+    const date = time === null ? "Commit time unavailable" : commitDateTime.format(time);
     const option = el("option", "", [label, title, date].filter(Boolean).join(" · "));
     option.value = sha;
     option.title = title ? `${sha} · ${title}` : sha;
@@ -591,7 +604,7 @@ function renderTrend() {
     const option = el("option", "", value.label); option.value = value.key; select.append(option);
   }
   select.value = series.some(value => value.key === old) ? old : "all";
-  const {matching, points} = selectTrendPoints(all, {
+  const {matching, points, missingDates} = selectTrendPoints(all, {
     series: select.value, days: byId("date-filter").value, limit: byId("limit-filter").value,
     reference: timestamp(state.data.generated_at) ?? Date.now(),
   });
@@ -612,6 +625,7 @@ function renderTrend() {
   legend.hidden = !points.length;
   const preview = byId("trend-preview");
   const note = byId("trend-note");
+  const missingNote = missingDates ? `${missingDates} ${missingDates === 1 ? "measurement has" : "measurements have"} no recorded commit time and cannot be plotted.` : "";
   preview.hidden = !points.length;
   preview.replaceChildren();
   if (!points.length) {
@@ -621,27 +635,28 @@ function renderTrend() {
       const job = pending.job;
       message.append(link(job.name, job.url), document.createTextNode(` ${PENDING_JOB_TEXT[result(job)]}. No build duration yet.`));
     } else {
-      message.textContent = "No successful image measurements with verified execution times match these filters. Failed, skipped, pending, and unverified records remain visible in run history.";
+      message.textContent = "No successful image measurements with a known commit time and verified duration match these filters. See run history for individual results.";
     }
     container.append(message);
-    note.hidden = !unverified;
-    note.textContent = unverified ? `${unverified} unverified records are omitted.` : "";
+    note.textContent = [missingNote, unverified ? `${unverified} unverified records are omitted.` : ""].filter(Boolean).join(" ");
+    note.hidden = !note.textContent;
     return pending || all[0];
   }
   preview.append(el("p", "", "Hover or focus a point to inspect its measurement, source revision and breakdown availability. Select it to open the full run details."));
   note.hidden = false;
-  note.textContent = `${points.length < matching.length ? `Showing the newest ${points.length} of ${matching.length}` : `Showing all ${points.length}`} matching verified image executions. Carried retries count once. ${unverified} unverified records are omitted. ${select.value === "all" ? "Select one measurement series to see its trend." : "Each line follows one build source, path, architecture and measured step."} Date ranges use execution start times and end at the published snapshot.`;
+  note.textContent = `${points.length < matching.length ? `Showing the newest ${points.length} of ${matching.length}` : `Showing all ${points.length}`} matching verified image executions. Carried retries count once. ${unverified} unverified records are omitted. ${select.value === "all" ? "Select one measurement series to see its trend." : "Each line follows one build source, path, architecture and measured step."} Date ranges use commit times and end at the published snapshot.`;
+  if (missingNote) note.append(document.createTextNode(` ${missingNote}`));
   const padding = getComputedStyle(container);
   const width = Math.max(240, Math.round(container.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight)));
   const height = width < 520 ? 250 : 265;
-  const left = 55, right = 40, top = 19, bottom = 41;
+  const left = 55, right = 44, top = 19, bottom = 55;
   const scale = chartScale(points.reduce((maximum, item) => Math.max(maximum, item.job.image_build_seconds), 0));
   const maxSeconds = scale.maximum;
-  const firstTime = Math.min(...points.map(item => timestamp(item.execution.startedAt)));
-  const lastTime = Math.max(...points.map(item => timestamp(item.execution.startedAt)));
-  const x = item => lastTime === firstTime ? (width + left - right) / 2 : left + (timestamp(item.execution.startedAt) - firstTime) / (lastTime - firstTime) * (width - left - right);
+  const firstTime = timestamp(points[0].run.source_committed_at);
+  const lastTime = timestamp(points.at(-1).run.source_committed_at);
+  const x = item => lastTime === firstTime ? (width + left - right) / 2 : left + (timestamp(item.run.source_committed_at) - firstTime) / (lastTime - firstTime) * (width - left - right);
   const y = item => top + (1 - item.job.image_build_seconds / maxSeconds) * (height - top - bottom);
-  const svg = svgEl("svg", {viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "Successful image build durations, ordered by image execution start time. Each point opens run details."});
+  const svg = svgEl("svg", {viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "Successful image build durations, ordered by source commit time in Pacific time. Each point opens run details."});
   for (const value of scale.ticks) {
     const position = top + (1 - value / maxSeconds) * (height - top - bottom);
     svg.append(svgEl("line", {x1: left, y1: position, x2: width - right, y2: position, stroke: "#e6edef", "stroke-dasharray": value ? "3 4" : "0"}), svgEl("text", {x: left - 11, y: position + 4, "text-anchor": "end"}, value ? duration(value).replace(/ 0[ms]$/, "") : "0"));
@@ -650,7 +665,11 @@ function renderTrend() {
   for (let index = 0; index < dateCount; index++) {
     const fraction = dateCount === 1 ? .5 : index / (dateCount - 1);
     const tick = firstTime + (lastTime - firstTime) * fraction;
-    svg.append(svgEl("text", {x: left + fraction * (width - left - right), y: height - 13, "text-anchor": "middle"}, dateTime(new Date(tick).toISOString(), true)));
+    const position = left + fraction * (width - left - right);
+    const label = svgEl("text", {x: position, y: height - 27, "text-anchor": "middle"});
+    label.append(svgEl("tspan", {x: position}, axisDate.format(tick)),
+      svgEl("tspan", {x: position, dy: "1.25em"}, axisHour.format(tick)));
+    svg.append(label);
   }
   for (const items of select.value === "all" ? [] : imageTrendGroups(points).filter(items => items.length > 1)) {
     const source = BUILD_SOURCES[buildSource(items[0].run)];
@@ -664,8 +683,9 @@ function renderTrend() {
     const sha = item.run.source_sha;
     const commit = `Commit ${String(sha || "unknown").slice(0, 12)}`;
     const subject = item.run.source_commit_title || "Commit message unavailable";
+    const committed = `Committed ${commitDateTime.format(timestamp(item.run.source_committed_at))}`;
     const breakdown = imageBreakdownLabel(item.job);
-    const label = `${commit} · ${subject}\n${context} · ${imageSeries(item.job).label} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · ${breakdown} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
+    const label = `${commit} · ${subject}\n${committed} · ${context} · ${imageSeries(item.job).label} · ${duration(item.job.image_build_seconds)} · ${imageMeasurement(item.job).label} · ${breakdown} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`;
     const point = svgEl("g", {class: "chart-point", tabindex: "0", role: "button", "aria-label": label});
     point.append(svgEl("title", {}, label));
     point.append(svgEl("circle", {cx: x(item), cy: y(item), r: 17, fill: "transparent", "pointer-events": "all"}));
@@ -675,7 +695,7 @@ function renderTrend() {
       heading.append(el("strong", "", duration(item.job.image_build_seconds)), el("span", "", imageSeries(item.job).label));
       const revision = el("p");
       const commitId = FULL_COMMIT_SHA.test(sha) ? link(commit, `https://github.com/${state.data.repository}/commit/${sha}`) : el("span", "", commit);
-      revision.append(commitId, document.createTextNode(` · ${subject}`));
+      revision.append(commitId, document.createTextNode(` · ${subject} · ${committed}`));
       preview.replaceChildren(heading, revision,
         el("p", "", `${item.run.workflow_name || "Workflow"} · ${context} · ${executionTimeLabel(item.execution)} · ${executionOriginLabel(item.execution)}`),
         el("p", "", `${imageMeasurement(item.job).label}. ${breakdown}.`));
@@ -687,7 +707,7 @@ function renderTrend() {
     svg.append(point);
   }
   container.append(svg);
-  return all[0];
+  return points.at(-1);
 }
 
 function renderCoverage() {

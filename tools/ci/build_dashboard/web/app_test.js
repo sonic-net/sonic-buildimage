@@ -376,14 +376,16 @@ function datedPoint(run_id, started_at, name = "Build the VS installer (.bin)") 
       image_build_step_numbers: [1], url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${run_id}/job/${run_id}`,
       steps: point.job.steps.map((step, index) => ({...step, number: index + 1, status: "completed", conclusion: "success", started_at, completed_at}))},
     run: {run_id, attempt: 1, status: "completed", conclusion: "success", started_at, completed_at,
-      started_at_source: "run_started_at", pr_numbers: [], source_sha: "abcdef0123456789",
+      started_at_source: "run_started_at", pr_numbers: [], source_sha: "abcdef0123456789", source_committed_at: started_at,
       workflow_name: "Bazel OCI", workflow_path: ".github/workflows/bazel-oci.yml", branch: "master"},
     execution: {startedAt: started_at},
   };
 }
 
-test("chart date windows use the original execution time and count carried retries once", () => {
-  const snapshot = pr72CarriedSnapshot(), measurements = imageMeasurements(snapshot);
+test("chart date windows use commit time and count carried retries once", () => {
+  const snapshot = pr72CarriedSnapshot();
+  for (const run of snapshot.runs) run.source_committed_at = "2026-10-29T13:00:00Z";
+  const measurements = imageMeasurements(snapshot);
   const reference = Date.parse("2026-10-31T12:00:00Z");
   assert.equal(measurements.records.length, 1);
   assert.equal(selectTrendPoints(measurements.records, {days: "1", reference}).points.length, 0);
@@ -419,7 +421,8 @@ test("date windows are inclusive and anchored to the snapshot rather than the vi
     datedPoint(3, new Date(reference).toISOString()), datedPoint(4, new Date(reference + 1).toISOString()),
     datedPoint(5, null)];
   assert.deepEqual(selectTrendPoints(points, {days: "7", reference}).points.map(point => point.run.run_id), [2, 3]);
-  assert.equal(selectTrendPoints(points, {days: "all", reference}).points.length, 5);
+  assert.equal(selectTrendPoints(points, {days: "all", reference}).points.length, 4);
+  assert.equal(selectTrendPoints(points, {days: "7", reference}).missingDates, 1);
   assert.equal(selectTrendPoints(points.slice(0, 1), {days: "7", reference}).points.length, 0);
 });
 
@@ -733,6 +736,37 @@ test("the hover tooltip and keyboard preview identify the commit used for each b
   }
 });
 
+test("chart position, limit and Pacific labels follow commit time across the daylight saving transition", () => {
+  const master = datedPoint(1, "2026-11-10T03:00:00Z"), pr = datedPoint(2, "2026-11-10T02:00:00Z");
+  const undated = datedPoint(3, "2026-11-11T00:00:00Z");
+  master.run.source_committed_at = "2026-11-01T08:30:00Z"; // 1:30 AM PDT.
+  Object.assign(pr.run, {event: "pull_request", pr_numbers: [270], source_committed_at: "2026-11-01T09:30:00Z"});
+  delete undated.run.source_committed_at;
+  const {nodes, render} = chartFixture([pr, master, undated]);
+  nodes["source-filter"].value = "combined";
+  render();
+  const dots = () => descendants(nodes.trend, node => node.attributes?.class === "chart-point");
+  assert.equal(dots().length, 2);
+  const [first, last] = dots();
+  assert.ok(Number(first.children[1].attributes.cx) < Number(last.children[1].attributes.cx));
+  assert.match(first.textContent, /Committed Nov 1, 2026, 1:30 AM PDT/);
+  assert.match(last.textContent, /Committed Nov 1, 2026, 1:30 AM PST/);
+  const labels = descendants(nodes.trend, node => node.tagName === "tspan").map(node => node.textContent);
+  assert.ok(labels.includes("1:30 AM PDT") && labels.includes("1:30 AM PST"));
+  last.listeners.focus();
+  assert.match(nodes["trend-preview"].textContent, /Committed Nov 1, 2026, 1:30 AM PST/);
+  assert.ok(nodes["trend-preview"].textContent.includes(executionTimeLabel({
+    timeKind: "image_step", startedAt: pr.job.started_at, completedAt: pr.job.completed_at})));
+  assert.match(nodes["trend-note"].textContent, /1 measurement has no recorded commit time/);
+  nodes["limit-filter"].value = "1";
+  render();
+  assert.equal(dots().length, 1);
+  assert.match(dots()[0].textContent, /PR #270/);
+  nodes["date-filter"].value = "7";
+  render();
+  assert.equal(dots().length, 0, "a recent build of an old commit falls outside the commit date range");
+});
+
 test("unknown boundaries never gain trend lines and empty filters clear stale chart details", () => {
   const points = [datedPoint(1, "2026-11-01T00:00:00Z", "Unknown image step"),
     datedPoint(2, "2026-11-02T00:00:00Z", "Unknown image step")];
@@ -975,6 +1009,7 @@ test("choosing a master commit scopes status, chart, history and details to the 
       url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${id}`});
     return point;
   });
+  points[0].run.source_committed_at = points[2].run.source_committed_at;
   points[1].job.conclusion = points[1].run.conclusion = "failure";
   points[3].job.kind = "checks";
   points[4].run.event = "pull_request"; // A PR can also come from a branch named master.
@@ -1014,7 +1049,7 @@ test("choosing a master commit scopes status, chart, history and details to the 
   assert.deepEqual(history(), ["Workflow 6", "Workflow 4", "Workflow 3", "Workflow 2", "Workflow 1"]);
 });
 
-test("master commit labels pair each revision with its own title and latest run date", async () => {
+test("master commit options sort by commit time and retain undated revisions", async () => {
   const installer = "1".repeat(40), kernel = "2".repeat(40), untitled = "3".repeat(40);
   const points = [installer, kernel, untitled, installer, untitled, untitled].map((sha, index) => {
     const id = index + 1;
@@ -1023,6 +1058,9 @@ test("master commit labels pair each revision with its own title and latest run 
     return point;
   });
   points[0].run.source_commit_title = "Build <installer> from the shared archive";
+  points[0].run.source_committed_at = "2026-10-31T07:30:00Z";
+  delete points[3].run.source_committed_at; // A later run for the same commit lacks metadata.
+  delete points[2].run.source_committed_at;
   points[1].run.source_commit_title = "Update the kernel configuration";
   Object.assign(points[4].run, {event: "pull_request", source_commit_title: "PR title"});
   Object.assign(points[5].run, {branch: "topic", source_commit_title: "Feature branch title"});
@@ -1030,13 +1068,16 @@ test("master commit labels pair each revision with its own title and latest run 
   nodes["source-filter"].value = "master";
   nodes["source-filter"].listeners.change();
   const commits = nodes["commit-filter"].options;
-  assert.deepEqual(commits.map(option => option.value), ["all", installer, untitled, kernel]);
+  assert.deepEqual(commits.map(option => option.value), ["all", kernel, installer, untitled]);
   const label = sha => commits.find(option => option.value === sha).textContent;
-  const runDate = point => new Date(point.run.started_at).toLocaleString(undefined,
-    {month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short"});
-  assert.equal(label(installer), `111111111111 · Build <installer> from the shared archive · ${runDate(points[3])}`);
-  assert.equal(label(kernel), `222222222222 · Update the kernel configuration · ${runDate(points[1])}`);
-  assert.equal(label(untitled), `333333333333 · ${runDate(points[2])}`);
+  assert.equal(label(installer), "111111111111 · Build <installer> from the shared archive · Oct 31, 2026, 12:30 AM PDT");
+  assert.equal(label(kernel), "222222222222 · Update the kernel configuration · Nov 2, 2026, 10:00 AM PST");
+  assert.equal(label(untitled), "333333333333 · Commit time unavailable");
+  nodes["commit-filter"].value = untitled;
+  nodes["commit-filter"].listeners.change();
+  assert.ok(nodes["runs-body"].children.length);
+  assert.equal(nodes["trend-note"].hidden, false);
+  assert.match(nodes["trend-note"].textContent, /1 measurement has no recorded commit time/);
 });
 
 test("refresh preserves a selected master commit until it leaves the retained history", async () => {

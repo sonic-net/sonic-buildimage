@@ -44,6 +44,11 @@ and dashboard can also read the original version 1 single-file snapshots.
   title to 256 characters. A normal refresh also fills in earlier runs
   at the same SHA using the workflow metadata it already reads. A revision
   without a verified title shows its SHA with “Commit message unavailable” on the chart.
+  Optional `source_committed_at` is the UTC Git committer timestamp for that
+  exact `source_sha`. Attempts for the same SHA share this value. The collector
+  reads the matching workflow `head_commit.timestamp` first. Each refresh can
+  look up up to 20 remaining SHAs directly in GitHub. If the commit is
+  unavailable, its date stays unknown.
   `pr_association` is `github` (run's explicit PR links), `commit` (exact
   current same-repository PR head, or a unique exact fork repository/branch/head
   match for a `pull_request` event), `branch` (unique same-repository feature
@@ -284,8 +289,11 @@ deduplicated only when the execution signatures match.
 
 Run details labels image step time, job execution time and retry
 attempt start separately. Verified carried records link to the original job.
-Performance counts and trends count each verified origin once and use the image
-step's execution start, or a labeled job start when step identities are absent.
+Performance counts and trends count each verified origin once. The trend places
+each measurement at `source_committed_at` and uses that date to select the newest
+measurements. A missing commit time leaves the run in history and the timing
+off the chart. Run details retain the image step's execution window or, when
+step identities are absent, the labeled job execution window.
 A successful job that completed before its retry began is never counted as a new
 execution when its origin is unverified; it remains visible in raw run history
 with that limitation. These timestamps do not establish artifact publication.

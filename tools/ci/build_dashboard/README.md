@@ -15,9 +15,9 @@ generate a package, modify a runner, or clear a cache.
   **Other branches** for runs on branches with no recorded PR association.
   Under **Master**, choose a **Master commit** to see that revision's latest
   image result, successful timings, run history, and details. Each commit
-  appears once, newest run first, including revisions with only failed or
-  pending runs. The picker shows the short SHA, commit title, and latest run
-  date. For example, look for **9bbd301c1212 · Wait for the Framework REST
+  appears once, newest commit first, including revisions with only failed or
+  pending runs. The picker shows the short SHA, commit title, and Git
+  committer date in Pacific time. For example, look for **9bbd301c1212 · Wait for the Framework REST
   binary before checking its certificate** to find that commit's VS installer
   build. Older records without a title show the SHA and date.
   If the selected commit's image job is still queued or running, the empty
@@ -62,9 +62,13 @@ Select one **Measurement series** to see trend lines. Each line follows one
 build source, path, architecture and measured step. The **Host Make .bin + archives** series
 includes both runtime-only and paired installer builds. Recognized steps use
 their measurement label. Unrecognized steps appear as isolated **Boundary
-unknown** points. Date ranges end at snapshot time and
-use verified image execution starts. Carried retries count once at the original
-execution time. The chart shows the newest 10 matching measurements by default.
+unknown** points. The horizontal axis shows when each source revision was
+committed, in Pacific time (PST or PDT). The vertical axis shows the image
+build duration. For example, master commit `ede451eaef4d` appears at
+9:57 PM PST on November 21, even though its image finished at 11:15 PM.
+Date ranges and **Newest 10** use the commit date. A retry stays at the same
+horizontal position. A carried execution counts once. Measurements without a
+known commit time remain available in run history.
 Choose **Newest 60**, **Newest 120**, or **Show all** to see more. Hover or
 focus a point to see the measured commit's short SHA and the first line of
 its message. For example, the master point for `b65761475de4` shows
