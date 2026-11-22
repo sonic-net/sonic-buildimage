@@ -529,6 +529,30 @@ jobs:
           VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
         run: *dhcp_utility_tests
 
+      - name: Check the PDDF wheel against its independent setuptools reference
+        if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          flags=()
+          if [[ -n "$VS_PACKAGE" ]]; then
+            wheel=sonic_platform_pddf_common-1.0-py3-none-any.whl
+            if [[ -f "$VS_PACKAGE/$wheel" ]]; then
+              flags+=("--//platform/pddf/platform-api-pddf-base:test_wheel=//$VS_PACKAGE:$wheel")
+            else
+              echo "PDDF was disabled in VS. Running the standalone source packaging contract."
+            fi
+          fi
+          target=//platform/pddf/platform-api-pddf-base:wheel_contract_test
+          platform=@sonic_build_infra//platforms:x86_64_trixie
+          flags+=("--platforms=$platform" "--host_platform=$platform")
+          audit_flags=()
+          for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
+            --output artifacts/pddf/action-audit.json "$target"
+          "$BAZEL" test "${flags[@]}" --test_output=errors \
+            --build_event_json_file="$PWD/artifacts/pddf/test-events.jsonl" "$target"
+
       - name: Test SONiC component packages and their upstream suites
         if: matrix.architecture == 'amd64'
         run: |
@@ -538,7 +562,6 @@ jobs:
           test "${#hsflowd_tests[@]}" -eq 22
           targets=(
             //dockers/docker-platform-monitor/bazel:smartcmd_compatibility_test
-            //platform/pddf/platform-api-pddf-base:wheel_contract_test
             //tools/bazel/tests:swss_manifest_labels_test
             //tools/bazel/tests:oci_apt_overlay_test //tools/bazel/tests:oci_image_test
             //tools/bazel/tests:oci_inventory_test //tools/bazel/tests:oci_native_packages_test
@@ -648,6 +671,7 @@ jobs:
           path: |
             artifacts/*/test-summary.json
             artifacts/owners/action-audit.json
+            artifacts/pddf/action-audit.json
             artifacts/owners/native-closure.json
             artifacts/config-engine/*.whl
             artifacts/config-engine/wheels-sha256.txt

@@ -84,12 +84,12 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         self.assertEqual(receipt["status"], "failed")
         self.assertRegex(receipt["error"], message)
 
-    def vs_bundle(self):
+    def vs_bundle(self, *, pddf_enabled=False):
         self.revision["tested_head"] = "a" * 40
         sources = self.workspace / "sources"
         sources.mkdir()
         outputs = {}
-        for name, target in vs_python_packages.PACKAGES.items():
+        for name, target in vs_python_packages.package_targets(pddf_enabled).items():
             source = sources / name
             if name == vs_python_packages.YANG_TREE:
                 source.mkdir()
@@ -98,8 +98,18 @@ class PythonPackageEvidenceTest(unittest.TestCase):
                 source.write_bytes(name.encode())
             outputs[target] = source
         bundle = self.workspace / "vs"
-        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs)
+        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs, pddf_enabled=pddf_enabled)
         return bundle
+
+    def test_enabled_pddf_requires_the_original_wheel(self):
+        """The VS PMON selection decides whether the PDDF wheel is a required artifact."""
+        self.assertNotIn(vs_python_packages.PDDF_WHEEL, vs_python_packages.package_targets(False))
+        bundle = self.vs_bundle(pddf_enabled=True)
+        wheel = bundle / vs_python_packages.PDDF_WHEEL
+        self.assertTrue(wheel.is_file())
+        wheel.unlink()
+        with self.assertRaisesRegex(ValueError, "files"):
+            vs_python_packages.verify(bundle, self.revision["tested_head"])
 
     def test_installer_wheels_are_retained_without_a_collection_build(self):
         """The six shipped wheels must match the actual installed-test receipts byte for byte."""

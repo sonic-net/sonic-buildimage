@@ -28,6 +28,8 @@ YANG = {
     YANG_RUNTIME: "@sonic_yang_models//:yang_models_pkg",
     YANG_TREE: "@sonic_yang_models//:yang_models",
 }
+PDDF_WHEEL = "sonic_platform_pddf_common-1.0-py3-none-any.whl"
+PDDF_OWNER = "//platform/pddf/platform-api-pddf-base:"
 FRR_COMPONENTS = ("sonic-frr-mgmt-framework", "sonic-bgpcfgd")
 
 
@@ -48,14 +50,20 @@ WHEEL_GROUPS = {"config-engine": WHEELS, "frr": FRR, "dhcp": DHCP, "yang-models"
 PACKAGES = {**WHEELS, **FRR, **DHCP, **YANG}
 
 
-def publish(directory, revision, outputs):
-    """Copy the requested top-level outputs from a single configured VS build."""
+def package_targets(pddf_enabled):
+    if pddf_enabled:
+        return {**PACKAGES, PDDF_WHEEL: PDDF_OWNER + "sonic_platform_pddf_common_wheel"}
+    return PACKAGES
+
+
+def publish(directory, revision, outputs, *, pddf_enabled=False):
+    """Copy the top-level package outputs from one configured VS build."""
     directory.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=directory.parent) as work:
         staged = Path(work) / "packages"
         staged.mkdir()
         entries = {}
-        for name, target in PACKAGES.items():
+        for name, target in package_targets(pddf_enabled).items():
             dest = staged / name
             if name == YANG_TREE:
                 # Bazel produces both this directory and the wheel in PrepareYangModels.
@@ -71,7 +79,8 @@ def publish(directory, revision, outputs):
             else:
                 shutil.copyfile(outputs[target], dest)
             entries[name] = {"target": target, "bytes": dest.stat().st_size, "sha256": sha(dest)}
-        manifest = {"schema": 1, "architecture": "amd64", "revision": revision, "packages": entries}
+        manifest = {"schema": 2, "architecture": "amd64", "revision": revision,
+                    "pddf_enabled": pddf_enabled, "packages": entries}
         (staged / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         verify(staged, revision)
         if directory.exists():
@@ -85,15 +94,21 @@ def verify(directory, revision):
     """Bind the complete, named payload to this checkout, architecture and original Bazel targets."""
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ValueError("Expected a full Git commit")
-    expected_files = {"manifest.json", *PACKAGES}
+    manifest_file = directory / "manifest.json"
+    if manifest_file.is_symlink() or not manifest_file.is_file():
+        raise ValueError("Missing regular VS package manifest")
+    manifest = json.loads(manifest_file.read_text())
+    if type(manifest.get("pddf_enabled")) is not bool:
+        raise ValueError("Missing VS PDDF feature selection")
+    packages = package_targets(manifest["pddf_enabled"])
+    expected_files = {"manifest.json", *packages}
     if ({p.name for p in directory.iterdir()} != expected_files
             or any(p.is_symlink() or not p.is_file() for p in directory.iterdir())):
         raise ValueError("Unexpected VS package bundle files")
-    manifest = json.loads((directory / "manifest.json").read_text())
-    if (manifest.get("schema") != 1 or manifest.get("architecture") != "amd64"
-            or manifest.get("revision") != revision or set(manifest.get("packages", {})) != set(PACKAGES)):
+    if (manifest.get("schema") != 2 or manifest.get("architecture") != "amd64"
+            or manifest.get("revision") != revision or set(manifest.get("packages", {})) != set(packages)):
         raise ValueError("Unexpected VS package manifest, architecture or revision")
-    for name, target in PACKAGES.items():
+    for name, target in packages.items():
         path = directory / name
         size = path.stat().st_size
         if not size or manifest["packages"][name] != {"target": target, "bytes": size, "sha256": sha(path)}:
@@ -167,7 +182,7 @@ def package_path(path):
 
 def stage(directory, revision, package):
     """Expose verified payloads as Bazel inputs. BUILD content comes from this checkout."""
-    verify(directory, revision)
+    packages = verify(directory, revision)["packages"]
     package = package_path(package)
     if package.exists():
         raise ValueError("Expected a fresh Bazel package directory")
@@ -175,7 +190,7 @@ def stage(directory, revision, package):
     with tempfile.TemporaryDirectory(dir=package.parent) as work:
         staged = Path(work) / "inputs"
         staged.mkdir()
-        for name in PACKAGES:
+        for name in packages:
             shutil.copyfile(directory / name, staged / name)
         models = staged / "models"
         models.mkdir()
@@ -187,7 +202,7 @@ def stage(directory, revision, package):
                     shutil.copyfileobj(archive.extractfile(member), output)
         (staged / "BUILD.bazel").write_text(
             'load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")\n'
-            'exports_files(' + json.dumps(sorted(PACKAGES)) + ')\n'
+            'exports_files(' + json.dumps(sorted(packages)) + ')\n'
             'copy_to_directory(name="test_models", srcs=glob(["models/*.yang"]), '
             'root_paths=[' + json.dumps(str(package / "models")) + '], visibility=["//visibility:public"])\n'
         )
