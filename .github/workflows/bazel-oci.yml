@@ -744,6 +744,15 @@ jobs:
     defaults: *package_test_defaults
     steps: *package_test_steps
 
+  native_sysmgr_amd64:
+    needs: vs_container
+    if: needs.vs_container.outputs.sysmgr_artifact_id != ''
+    uses: ./.github/workflows/bazel-sysmgr.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.sysmgr_artifact_id }}
+      vs_debug: ${{ needs.vs_container.outputs.debug_layer }}
+      run_source_tests: ${{ contains(fromJSON(needs.vs_container.outputs.source_workflows), 'bazel-sysmgr.yml') }}
+
   kernel_packages_amd64:
     needs: vs_container
     uses: ./.github/workflows/bazel-kernel-bundle.yml
@@ -992,6 +1001,7 @@ jobs:
       supervisor_rust_artifact_id: ${{ steps.component_supervisor_rust.outputs.artifact-id }}
       frr_native_artifact_id: ${{ steps.component_frr_native.outputs.artifact-id }}
       libteam_artifact_id: ${{ steps.component_libteam.outputs.artifact-id }}
+      sysmgr_artifact_id: ${{ steps.component_sysmgr.outputs.artifact-id }}
       fib_artifact_id: ${{ steps.component_fib.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
@@ -1458,6 +1468,17 @@ jobs:
         with:
           name: vs-component-libteam-${{ github.run_id }}-${{ github.run_attempt }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/libteam/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component sysmgr
+        id: component_sysmgr
+        if: contains(fromJSON(steps.bundles.outputs.components), 'sysmgr')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-sysmgr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/sysmgr/
           if-no-files-found: error
           retention-days: 3
           compression-level: 1

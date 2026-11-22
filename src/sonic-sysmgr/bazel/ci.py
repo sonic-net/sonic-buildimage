@@ -20,8 +20,35 @@ sys.path.insert(0, str(REPO))
 from tools.bazel.ci.bazel_commands import audit_targets
 
 TESTS = ['//rebootbackend:gnoi_runtime_test', '//tests:installed_sysmgr_test', '//tests:original_unit_tests']
+INSTALLED_TEST = '//tests:installed_sysmgr_test'
 PACKAGES = {'runtime.tar': '//:sysmgr_pkg', 'debug.tar': '//:sysmgr_debug_pkg',
             'runtime_packages.json': '//:runtime_packages.json'}
+
+
+def vs_test_inputs(directory, debug):
+    from tools.bazel.ci.components import sysmgr
+
+    tests = {
+        "runtime_under_test": "sysmgr.tar",
+        "metadata_under_test": "sysmgr-packages.json",
+        "common_under_test": "libswsscommon.tar",
+        "swss_fixture_under_test": "swss-test-runtime.tar",
+        "protobuf_under_test": "libprotobuf.tar",
+    }
+    if debug:
+        tests["symbols_under_test"] = "sysmgr-symbols.tar"
+    # Keep untrusted artifact content out of BUILD files. All names below
+    # come from this module, and the launcher allocates a fresh ignored path.
+    directory = directory.resolve(strict=True)
+    if directory.parent != MODULE / "target" or not re.fullmatch(r"vs-sysmgr-[A-Za-z0-9]+", directory.name):
+        raise ValueError("Expected fresh Sysmgr inputs under the module target directory")
+    with (directory / "BUILD.bazel").open("x") as out:
+        out.write('exports_files(' + json.dumps(sorted(tests.values())) + ')\n')
+    label = "//target/" + directory.name + ":"
+    flags = ["--//tests:" + name + "=" + label + filename for name, filename in tests.items()]
+    if not debug:
+        flags.append("--define=sysmgr_test_symbols=off")
+    return flags, {**sysmgr.RUNTIME, **(sysmgr.DEBUG if debug else {})}
 
 
 def main():
@@ -31,7 +58,13 @@ def main():
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--jobs', type=int)
     parser.add_argument('--startup-arg', action='append', default=[])
+    parser.add_argument('--vs-directory', type=Path)
+    parser.add_argument('--vs-debug', choices=('y', 'n'), default='n')
+    parser.add_argument('--installed-only', action='store_true', help='Run the installed-package suite on a VS handoff')
     args = parser.parse_args()
+    if args.installed_only and args.vs_directory is None:
+        parser.error('--installed-only requires --vs-directory')
+    tests = [INSTALLED_TEST] if args.installed_only else TESTS
     assert platform.machine() == 'x86_64'
     assert platform.freedesktop_os_release()['VERSION_CODENAME'] == 'trixie'
     output = args.artifacts.resolve(); output.mkdir(parents=True, exist_ok=True)
@@ -47,6 +80,13 @@ def main():
                '--spawn_strategy=linux-sandbox', '--strategy=Genrule=linux-sandbox',
                '--strategy=TestRunner=linux-sandbox', '--noincompatible_legacy_local_fallback',
                '--color=no', '--curses=no']
+
+    packages = PACKAGES
+    build_targets = list(PACKAGES.values())
+    if args.vs_directory is not None:
+        flags, packages = vs_test_inputs(args.vs_directory, args.vs_debug == 'y')
+        options.extend(flags)
+        build_targets = []
 
     def bazel(command, *values, capture=False):
         argv = [args.bazel, *start, command, *values]
@@ -83,19 +123,19 @@ def main():
                       if label.startswith('//rebootbackend:') and label.endswith('.cpp')}
     original_sources = set(re.findall(r'\b\w+\.cpp\b', (MODULE / 'rebootbackend/Makefile.am').read_text()))
     assert actual_sources == original_sources | {'gnoi_runtime_test.cpp'}, (actual_sources, original_sources)
-    audit_targets(args.bazel, options, [*PACKAGES.values(), *TESTS], workspace=MODULE,
+    audit_targets(args.bazel, options, [*build_targets, *tests], workspace=MODULE,
                   output=output / 'no-deb-audit.json', startup_options=start)
     (output / 'module-graph.json').write_text(bazel('mod', 'graph', *resolution, '--output=json', capture=True))
     begun = time.monotonic()
     report = {'status': 'failed', 'checkout': head, 'pr_head': expected_head, 'gnoi_revision': gnoi_revision,
               'architecture': 'amd64', 'os': 'trixie', 'sources': sources, 'proto_sources': proto_sources,
               'production_sources': sorted(original_sources),
-              'selected_tests': TESTS, 'catalog': args.registry}
+              'selected_tests': tests, 'catalog': args.registry}
     failure = None
     try:
         bazel('test', *options, '--nocache_test_results', '--test_output=errors',
               '--build_event_json_file=' + str(output / 'test-events.jsonl'),
-              '--profile=' + str(output / 'profile.json.gz'), *TESTS, *PACKAGES.values())
+              '--profile=' + str(output / 'profile.json.gz'), *tests, *build_targets)
     except Exception as error:
         failure = error
         report['build_error'] = repr(error)
@@ -133,9 +173,9 @@ def main():
                             if outputs.is_dir():
                                 shutil.copytree(outputs, destination / 'outputs', dirs_exist_ok=True)
             if failure is None:
-                assert summaries == {label: 'PASSED' for label in TESTS}, summaries
+                assert summaries == {label: 'PASSED' for label in tests}, summaries
                 cases = {}
-                for label in TESTS:
+                for label in tests:
                     folder = output / 'testlogs' / label.removeprefix('//').replace(':', '_')
                     xmls = list(folder.glob('*/test.xml'))
                     assert len(xmls) == 1, (label, xmls)
@@ -146,11 +186,16 @@ def main():
                 report['test_cases'] = cases
         if failure is None:
             report['packages'] = {}
-            for name, target in PACKAGES.items():
-                paths = bazel('cquery', *options, target, '--output=files', capture=True).splitlines()
-                assert len(paths) == 1
-                shutil.copyfile(MODULE / paths[0], output / name)
-                report['packages'][target] = {'path': name, 'sha256': hashlib.sha256((output / name).read_bytes()).hexdigest()}
+            for name, target in packages.items():
+                if args.vs_directory is not None:
+                    path = args.vs_directory / name
+                else:
+                    paths = bazel('cquery', *options, target, '--output=files', capture=True).splitlines()
+                    assert len(paths) == 1
+                    path = MODULE / paths[0]
+                    shutil.copyfile(path, output / name)
+                report['packages'][target] = {'path': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+            report['package_source'] = 'vs' if args.vs_directory is not None else 'standalone'
             assert sources == {name: hashlib.sha256((REPO / name).read_bytes()).hexdigest() for name in sources}
             assert proto_sources == {name: hashlib.sha256((gnoi / name).read_bytes()).hexdigest() for name in proto_sources}
             assert not git('status', '--porcelain', '--untracked-files=no')

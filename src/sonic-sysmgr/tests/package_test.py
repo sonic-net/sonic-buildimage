@@ -28,7 +28,8 @@ def installed_member(member, destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for flag in ('runtime-tar', 'debug-tar', 'dependencies', 'mock', 'probe', 'fixture',
+    parser.add_argument('--debug-tar', type=Path)
+    for flag in ('runtime-tar', 'dependencies', 'mock', 'probe', 'fixture',
                  'metadata', 'control', 'changelog'):
         parser.add_argument('--' + flag, type=Path, required=True)
     args = parser.parse_args()
@@ -115,47 +116,50 @@ def main():
         assert not re.search(r'\((?:RPATH|RUNPATH)\).*bazel-out', dynamic), dynamic
         if name.endswith('.so.0.0.0'):
             assert re.search(r'\(SONAME\).*\[librebootgnoi.so.0\]', dynamic), dynamic
-    expected_debug = {'usr/lib/debug/.build-id/' + value[:2] + '/' + value[2:] + '.debug' for value in ids.values()}
-    with tarfile.open(args.debug_tar) as archive:
-        members = archive.getmembers()
-        names = [m.name.removeprefix('./').rstrip('/') for m in members]
-        assert len(names) == len(set(names)), 'Duplicate debug TAR member'
-        assert {m.name.removeprefix('./') for m in members if m.isfile()} == expected_debug
-        for member in members:
-            name = member.name.removeprefix('./').rstrip('/')
-            assert member.uid == member.gid == 0
-            # Keep tar.bzl's fixed directory epoch distinct from owner symbols.
-            expected_time = 946699200 if member.isdir() and name in ('.', 'usr', 'usr/lib', 'usr/lib/debug') else 1672560000
-            assert member.mtime == expected_time, (member.name, member.mtime)
-            assert member.isdir() and member.mode == 0o755 or member.isfile() and member.mode == 0o644
-            if member.isdir():
-                assert name == '.' or any(p.startswith(name + '/') for p in expected_debug), name
-        archive.extractall(symbols, filter='data')
     report = {'status': 'passed', 'programs': {}, 'scope': 'AMD64 installed Sysmgr; private Redis and mock D-Bus only'}
     for name, identity in ids.items():
-        binary = runtime / name
-        debug = symbols / 'usr/lib/debug/.build-id' / identity[:2] / (identity[2:] + '.debug')
-        assert build_id(debug) == identity and '.debug_info' in run(tool('readelf'), '-SW', debug)
-        section = root / (Path(name).name + '.debuglink')
-        run(tool('objcopy'), '--dump-section', '.gnu_debuglink=' + str(section), binary)
-        data = section.read_bytes(); end = data.index(b'\0')
-        assert data[:end].decode() == debug.name
-        assert struct.unpack_from('<I', data, (end + 4) & ~3)[0] == zlib.crc32(debug.read_bytes()) & 0xffffffff
-        query = 'info line main' if name.endswith('rebootbackend') else 'info functions gnoi::system::RebootRequest'
-        common = ['--batch', '--nx', '--quiet', '--data-directory=' + str(runtime / 'usr/share/gdb'),
-                  '-iex', 'set auto-load off', '-iex', 'set debuginfod enabled off']
-        empty = root / (Path(name).name + '-no-symbols'); empty.mkdir()
-        positive = run(tool('gdb'), *common, '-iex', 'set debug-file-directory ' + str(symbols / 'usr/lib/debug'),
-                       '-ex', 'file ' + str(binary), '-ex', query)
-        negative = run(tool('gdb'), *common, '-iex', 'set debug-file-directory ' + str(empty),
-                       '-ex', 'file ' + str(binary), '-ex', query, accepted=(0, 1))
-        expected = r'Line \d+ of .*rebootbackend.cpp' if name.endswith('rebootbackend') else r'File .*system.pb.cc:'
-        assert re.search(expected, positive), positive
-        assert not re.search(expected, negative), negative
-        if name.endswith('rebootbackend'):
-            assert any(text in negative for text in ('No symbol table', 'No line number information', 'not defined')), negative
-        report['programs'][name] = dict(sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
-                                       build_id=identity, gdb=positive, negative_gdb=negative)
+        report['programs'][name] = dict(sha256=hashlib.sha256((runtime / name).read_bytes()).hexdigest(),
+                                        build_id=identity)
+    if args.debug_tar is not None:
+        expected_debug = {'usr/lib/debug/.build-id/' + value[:2] + '/' + value[2:] + '.debug' for value in ids.values()}
+        with tarfile.open(args.debug_tar) as archive:
+            members = archive.getmembers()
+            names = [m.name.removeprefix('./').rstrip('/') for m in members]
+            assert len(names) == len(set(names)), 'Duplicate debug TAR member'
+            assert {m.name.removeprefix('./') for m in members if m.isfile()} == expected_debug
+            for member in members:
+                name = member.name.removeprefix('./').rstrip('/')
+                assert member.uid == member.gid == 0
+                # Keep tar.bzl's fixed directory epoch distinct from owner symbols.
+                expected_time = 946699200 if member.isdir() and name in ('.', 'usr', 'usr/lib', 'usr/lib/debug') else 1672560000
+                assert member.mtime == expected_time, (member.name, member.mtime)
+                assert member.isdir() and member.mode == 0o755 or member.isfile() and member.mode == 0o644
+                if member.isdir():
+                    assert name == '.' or any(p.startswith(name + '/') for p in expected_debug), name
+            archive.extractall(symbols, filter='data')
+        for name, identity in ids.items():
+            binary = runtime / name
+            debug = symbols / 'usr/lib/debug/.build-id' / identity[:2] / (identity[2:] + '.debug')
+            assert build_id(debug) == identity and '.debug_info' in run(tool('readelf'), '-SW', debug)
+            section = root / (Path(name).name + '.debuglink')
+            run(tool('objcopy'), '--dump-section', '.gnu_debuglink=' + str(section), binary)
+            data = section.read_bytes(); end = data.index(b'\0')
+            assert data[:end].decode() == debug.name
+            assert struct.unpack_from('<I', data, (end + 4) & ~3)[0] == zlib.crc32(debug.read_bytes()) & 0xffffffff
+            query = 'info line main' if name.endswith('rebootbackend') else 'info functions gnoi::system::RebootRequest'
+            common = ['--batch', '--nx', '--quiet', '--data-directory=' + str(runtime / 'usr/share/gdb'),
+                      '-iex', 'set auto-load off', '-iex', 'set debuginfod enabled off']
+            empty = root / (Path(name).name + '-no-symbols'); empty.mkdir()
+            positive = run(tool('gdb'), *common, '-iex', 'set debug-file-directory ' + str(symbols / 'usr/lib/debug'),
+                           '-ex', 'file ' + str(binary), '-ex', query)
+            negative = run(tool('gdb'), *common, '-iex', 'set debug-file-directory ' + str(empty),
+                           '-ex', 'file ' + str(binary), '-ex', query, accepted=(0, 1))
+            expected = r'Line \d+ of .*rebootbackend.cpp' if name.endswith('rebootbackend') else r'File .*system.pb.cc:'
+            assert re.search(expected, positive), positive
+            assert not re.search(expected, negative), negative
+            if name.endswith('rebootbackend'):
+                assert any(text in negative for text in ('No symbol table', 'No line number information', 'not defined')), negative
+            report['programs'][name].update(gdb=positive, negative_gdb=negative)
     report['gnoi_probe'] = run(args.probe)
     assert 'gNOI JSON and serialization passed' in report['gnoi_probe']
 

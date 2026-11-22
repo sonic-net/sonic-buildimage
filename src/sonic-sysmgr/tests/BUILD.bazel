@@ -3,6 +3,25 @@ load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@rules_python//python:defs.bzl", "py_test")
 load("//:flags.bzl", "CFLAGS_GTEST", "DBGFLAGS")
 
+# Standalone source tests default to this module's packages. CI sets these
+# test-only inputs to the exact files installed by the same VS build.
+[
+    label_flag(name = name, build_setting_default = default, testonly = True)
+    for name, default in [
+        ("runtime_under_test", "//:sysmgr_pkg"),
+        ("metadata_under_test", "//:runtime_packages.json"),
+        ("symbols_under_test", "//:sysmgr_debug_pkg"),
+        ("swss_fixture_under_test", "@sonic_swss_common//tools/bazel/runtime:test_runtime"),
+        ("common_under_test", "@sonic_swss_common//dist:libswsscommon_pkg"),
+        ("protobuf_under_test", "@sonic_protobuf//:libprotobuf_pkg"),
+    ]
+]
+
+config_setting(
+    name = "runtime_only",
+    define_values = {"sysmgr_test_symbols": "off"},
+)
+
 genrule(
     name = "mock_header",
     testonly = True,
@@ -31,9 +50,9 @@ flatten(
     testonly = True,
     deduplicate = True,
     tars = [
-        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
-        "@sonic_swss_common//dist:libswsscommon_pkg",
-        "@sonic_protobuf//:libprotobuf_pkg",
+        ":swss_fixture_under_test",
+        ":common_under_test",
+        ":protobuf_under_test",
         "@trixie//libdbus-c++-1-0v5",
         "@trixie//gdb",
         "@build_tools//binutils",
@@ -50,27 +69,31 @@ py_test(
     timeout = "moderate",
     srcs = ["package_test.py"],
     args = [
-        "--runtime-tar=$(rootpath //:sysmgr_pkg)",
-        "--debug-tar=$(rootpath //:sysmgr_debug_pkg)",
+        "--runtime-tar=$(rootpath :runtime_under_test)",
         "--dependencies=$(rootpath :test_runtime)",
         "--mock=$(rootpath :reboot_dbus_mock)",
         "--probe=$(rootpath //rebootbackend:gnoi_runtime_test)",
         "--fixture=$(rootpath :installed_reboot_test.py)",
-        "--metadata=$(rootpath //:runtime_packages.json)",
+        "--metadata=$(rootpath :metadata_under_test)",
         "--control=$(rootpath //:debian/control)",
         "--changelog=$(rootpath //:debian/changelog)",
-    ],
+    ] + select({
+        ":runtime_only": [],
+        "//conditions:default": ["--debug-tar=$(rootpath :symbols_under_test)"],
+    }),
     data = [
         ":installed_reboot_test.py",
         ":reboot_dbus_mock",
         ":test_runtime",
         "//:debian/changelog",
         "//:debian/control",
-        "//:runtime_packages.json",
-        "//:sysmgr_debug_pkg",
-        "//:sysmgr_pkg",
+        ":metadata_under_test",
+        ":runtime_under_test",
         "//rebootbackend:gnoi_runtime_test",
-    ],
+    ] + select({
+        ":runtime_only": [],
+        "//conditions:default": [":symbols_under_test"],
+    }),
     main = "package_test.py",
 )
 
@@ -102,12 +125,12 @@ py_test(
     args = [
         "--binary=$(rootpath :original_unit_tests_binary)",
         "--dependencies=$(rootpath :test_runtime)",
-        "--runtime-tar=$(rootpath //:sysmgr_pkg)",
+        "--runtime-tar=$(rootpath :runtime_under_test)",
     ],
     data = [
         ":original_unit_tests_binary",
         ":test_runtime",
-        "//:sysmgr_pkg",
+        ":runtime_under_test",
     ],
     # The rules_python launcher does not add the main file's directory.
     imports = ["."],

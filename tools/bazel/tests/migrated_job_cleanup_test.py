@@ -251,22 +251,29 @@ class MigratedCleanupTest(unittest.TestCase):
             prepare.assert_not_called()
 
     def test_reusable_frr_job_requires_the_matching_caller_callee_job_and_ref(self):
-        """Only the local OCI caller's FRR packages job can enter cleanup with its caller's workflow ref."""
+        self.check_reusable_job("bazel-frr-python.yml", "packages", "native")
+
+    def test_reusable_sysmgr_job_requires_the_matching_caller_callee_job_and_ref(self):
+        """Authorize Sysmgr's native job for this pull request while rejecting other native workflows."""
+        self.check_reusable_job("bazel-sysmgr.yml", "native", "packages")
+
+    def check_reusable_job(self, callee, job, other_job):
         repo = "securely1g/project/.github/workflows/"
-        ref = "@refs/pull/282/merge"
+        ref = "@refs/pull/298/merge"
         environment = {
-            "GITHUB_JOB": "packages",
+            "GITHUB_JOB": job,
             "GITHUB_WORKFLOW_REF": repo + "bazel-oci.yml" + ref,
-            "BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + "bazel-frr-python.yml" + ref,
+            "BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + callee + ref,
         }
         with mock.patch.dict(os.environ, environment), mock.patch.object(subject.Path, "is_file", return_value=False):
             for change in (
-                    {"GITHUB_JOB": "native"},
+                    {"GITHUB_JOB": other_job},
                     {"GITHUB_WORKFLOW_REF": repo + "bazel-make-cache.yml" + ref},
                     {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": ""},
                     {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + "bazel-kernel-bundle.yml" + ref},
-                    {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + "bazel-frr-python.yml@refs/heads/master"},
-                    {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": "other/project/.github/workflows/bazel-frr-python.yml" + ref}):
+                    {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + "bazel-frr.yml" + ref},
+                    {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": repo + callee + "@refs/heads/master"},
+                    {"BAZEL_CLEANUP_JOB_WORKFLOW_REF": "other/project/.github/workflows/" + callee + ref}):
                 with self.subTest(change=change), mock.patch.dict(os.environ, change), \
                         mock.patch.object(sys, "argv", ["cleanup", "--migrated-job", "--prepare"]), \
                         mock.patch.object(subject, "prepare") as prepare, contextlib.redirect_stderr(io.StringIO()), \
@@ -356,10 +363,17 @@ class MigratedWorkflowCleanupTest(unittest.TestCase):
 
     def test_oci_frr_caller_passes_the_server_workflow_identity_to_cleanup(self):
         """Keep the reusable call and the real prepare/authorize/post environment wired together."""
+        self.check_oci_callee_identity("frr_python_amd64", "bazel-frr-python.yml", "packages")
+
+    def test_oci_sysmgr_caller_passes_the_server_workflow_identity_to_cleanup(self):
+        """Register the exact Sysmgr workflow identity before allocating job-owned cleanup state."""
+        self.check_oci_callee_identity("native_sysmgr_amd64", "bazel-sysmgr.yml", "native")
+
+    def check_oci_callee_identity(self, caller_job, filename, callee_job):
         workflows = ROOT / ".github/workflows"
-        caller = yaml.safe_load((workflows / "bazel-oci.yml").read_text())["jobs"]["frr_python_amd64"]
-        self.assertEqual(caller["uses"], "./.github/workflows/bazel-frr-python.yml")
-        steps = yaml.safe_load((workflows / "bazel-frr-python.yml").read_text())["jobs"]["packages"]["steps"]
+        caller = yaml.safe_load((workflows / "bazel-oci.yml").read_text())["jobs"][caller_job]
+        self.assertEqual(caller["uses"], "./.github/workflows/" + filename)
+        steps = yaml.safe_load((workflows / filename).read_text())["jobs"][callee_job]["steps"]
         identity = next(step for step in steps if "JOB_WORKFLOW_REF" in step.get("env", {}))
         register = next(step for step in steps if step.get("id") == "runner_cleanup")
         self.assertLess(steps.index(identity), steps.index(register))
@@ -367,7 +381,7 @@ class MigratedWorkflowCleanupTest(unittest.TestCase):
         self.assertEqual(identity["if"], "inputs.vs_artifact_id != ''")
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "env"
-            reference = "securely1g/project/.github/workflows/bazel-frr-python.yml@refs/pull/282/merge"
+            reference = f"securely1g/project/.github/workflows/{filename}@refs/pull/298/merge"
             subprocess.run(["bash", "-eu", "-c", identity["run"]], check=True,
                            env=dict(os.environ, GITHUB_ENV=str(output), JOB_WORKFLOW_REF=reference))
             self.assertEqual(output.read_text(), f"BAZEL_CLEANUP_JOB_WORKFLOW_REF={reference}\n")

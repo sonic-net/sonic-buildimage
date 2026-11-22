@@ -34,6 +34,8 @@ MIGRATED_JOBS = {
     "runner-manager.yml": {"tests"},
     "runtime-image-validation.yml": {"native-tests"},
 }
+# Reusable jobs called by bazel-oci.yml that use migrated-job cleanup.
+OCI_CLEANUP_WORKFLOWS = {"packages": "bazel-frr-python.yml", "native": "bazel-sysmgr.yml"}
 
 
 def owner(workspace):
@@ -393,11 +395,12 @@ def main():
             workflow = reference.removeprefix(prefix).split("@", 1)[0]
             job = os.environ["GITHUB_JOB"]
             # In a local reusable workflow GitHub reports the caller's workflow
-            # ref and the callee's job ID. Authorize only this same-ref FRR call.
-            if (workflow, job) == ("bazel-oci.yml", "packages"):
-                callee = prefix + "bazel-frr-python.yml@" + reference.partition("@")[2]
-                if os.environ.get("BAZEL_CLEANUP_JOB_WORKFLOW_REF") == callee:
-                    workflow = "bazel-frr-python.yml"
+            # ref and the callee's job ID. Require the exact same-ref callee.
+            if workflow == "bazel-oci.yml" and job in OCI_CLEANUP_WORKFLOWS:
+                callee = OCI_CLEANUP_WORKFLOWS[job]
+                callee_ref = prefix + callee + "@" + reference.partition("@")[2]
+                if os.environ.get("BAZEL_CLEANUP_JOB_WORKFLOW_REF") == callee_ref:
+                    workflow = callee
             if (os.environ.get("RUNNER_ENVIRONMENT") != "self-hosted" or
                     not reference.startswith(prefix) or "@" not in reference or
                     job not in MIGRATED_JOBS.get(workflow, set())):
