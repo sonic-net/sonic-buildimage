@@ -134,6 +134,7 @@ jobs:
       - name: Audit and test source runtime and debug packages
         id: rust_packages
         env:
+          USE_VS_LISTENER: ${{ matrix.arch == 'AMD64' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
           MACHINE: ${{ matrix.machine }}
           BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
         run: |
@@ -143,9 +144,11 @@ jobs:
             "--host_platform=@sonic_build_infra//platforms:${MACHINE}_trixie")
           targets=(//src/sonic-supervisord-utilities-rs:unit_tests
             //src/sonic-supervisord-utilities-rs:integration_tests
-            //src/sonic-supervisord-utilities-rs:listener_tests
-            //src/sonic-supervisord-utilities-rs:package_test
-            @sonic_swss//crates/countersyncd:common_rust_test)
+            //src/sonic-supervisord-utilities-rs:listener_tests)
+          if [[ "$USE_VS_LISTENER" != true ]]; then
+            targets+=(//src/sonic-supervisord-utilities-rs:package_test
+              @sonic_swss//crates/countersyncd:common_rust_test)
+          fi
           audit_flags=()
           for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
           python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
@@ -156,8 +159,11 @@ jobs:
             > artifacts/supervisor-rust/rust-libraries.txt
           cp MODULE.bazel.lock artifacts/supervisor-rust/MODULE.bazel.lock
           cp -aL bazel-testlogs/src/sonic-supervisord-utilities-rs artifacts/supervisor-rust/tests
-          common_repo="$("$BAZEL" mod dump_repo_mapping '' | python3 -c 'import json, sys; print(json.load(sys.stdin)["sonic_swss"])')"
-          cp -aL "bazel-testlogs/external/$common_repo/crates/countersyncd/common_rust_test" artifacts/supervisor-rust/tests/
+          # Trusted AMD64 runs the shared countersyncd test in the container package suite.
+          if [[ "$USE_VS_LISTENER" != true ]]; then
+            common_repo="$("$BAZEL" mod dump_repo_mapping '' | python3 -c 'import json, sys; print(json.load(sys.stdin)["sonic_swss"])')"
+            cp -aL "bazel-testlogs/external/$common_repo/crates/countersyncd/common_rust_test" artifacts/supervisor-rust/tests/
+          fi
           git diff --exit-code
 
       - name: Retain source and installed-package evidence

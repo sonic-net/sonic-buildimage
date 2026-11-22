@@ -989,6 +989,7 @@ jobs:
       containers: ${{ steps.bundles.outputs.matrix }}
       source_workflows: ${{ needs.checks.outputs.source_workflows }}
       eventd_artifact_id: ${{ steps.component_eventd.outputs.artifact-id }}
+      supervisor_rust_artifact_id: ${{ steps.component_supervisor_rust.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
       python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
@@ -1421,6 +1422,17 @@ jobs:
         with:
           name: vs-component-eventd-${{ github.run_id }}-${{ github.run_attempt }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/eventd/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component supervisor_rust
+        id: component_supervisor_rust
+        if: contains(fromJSON(steps.bundles.outputs.components), 'supervisor_rust')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-supervisor_rust-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/supervisor_rust/
           if-no-files-found: error
           retention-days: 3
           compression-level: 1

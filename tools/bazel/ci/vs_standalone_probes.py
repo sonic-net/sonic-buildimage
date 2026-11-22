@@ -321,6 +321,11 @@ def standalone(image, directory, bundle, report):
                         options=["--env", "PYTHONDONTWRITEBYTECODE=1"])
                 elif image in (BASE, CONFIG):
                     validate_base(directory, variant, image, summary)
+                    if image == CONFIG:
+                        help_text = run(tag, "/usr/bin/supervisor-proc-exit-listener-rs", ["--help"])
+                        require("--container-name" in help_text and "--use-unix-socket-path" in help_text,
+                                "installed Rust listener does not expose its required command-line options")
+                        summary["rust_listener_help"] = help_text
                 elif image == SWSS:
                     require(summary["native"], "Missing SWSS source ELF inventory")
                     swss_layer.verify_libteam_metadata(json.loads((directory / "packages.json").read_bytes()),
