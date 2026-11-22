@@ -25,6 +25,36 @@ module sonic-srv6 {
 
     container sonic-srv6 {
 
+        container SRV6_MY_FORMATS {
+            description "Global allocation settings shared by all locators using a SID format.";
+
+            list SRV6_MY_FORMATS_LIST {
+                key "name";
+
+                must "count(/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[format = current()/name]) > 0" {
+                    error-message "a format override requires a locator using that format";
+                }
+
+                leaf name {
+                    type enumeration {
+                        enum usid-f3216;
+                    }
+                    description "Built-in SID format name.";
+                }
+
+                leaf lib_start {
+                    type uint16 {
+                        range "1..65023";
+                    }
+                    mandatory true;
+                    description
+                        "First Local ID Block value, in decimal. The default is 57344.
+                         Values must remain below the built-in explicit LIB start 65024.
+                         Removing the row resets the owned override to the FRR default.";
+                }
+            }
+        }
+
         container SRV6_MY_LOCATORS {
             description "SRv6 locator definitions partitioning the SID address space.";
 

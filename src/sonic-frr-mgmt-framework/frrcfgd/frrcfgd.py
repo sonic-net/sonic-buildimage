@@ -121,6 +121,7 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
+            'SRV6_MY_FORMATS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
             'SRV6_MY_SIDS': ['mgmtd'],
             'ISIS_GLOBALS': ['isisd'],
@@ -2589,6 +2590,7 @@ class BGPConfigDaemon:
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
+            ('SRV6_MY_FORMATS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
             ('ISIS_GLOBALS', self.bgp_table_handler_common),
@@ -2618,7 +2620,7 @@ class BGPConfigDaemon:
     ISIS_ROUTED_INTERFACE_TABLES = ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE',
                                     'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE')
     ISIS_RECOVERY_TABLES = ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE',
-                            'SRV6_MY_LOCATORS', 'SRV6_MY_SOURCE', 'SRV6_MY_SIDS')
+                            'SRV6_MY_LOCATORS', 'SRV6_MY_FORMATS', 'SRV6_MY_SOURCE', 'SRV6_MY_SIDS')
 
     def isis_recovery_notify(self, *unused):
         if self.isis_recovery_worker is not None:
@@ -4435,6 +4437,9 @@ class BGPConfigDaemon:
     def bgp_table_handler_common(self, table, key, data, comb_attr_list = []):
         if getattr(self, 'isis_recovery_mode', False) and table in self.ISIS_RECOVERY_TABLES:
             self.isis_recovery_notify()
+            return
+        if table == 'SRV6_MY_FORMATS':
+            syslog.syslog(syslog.LOG_ERR, 'SRv6 format overrides require canonical IS-IS/SRv6 recovery')
             return
         syslog.syslog(syslog.LOG_DEBUG, '----------------------------------')
         syslog.syslog(syslog.LOG_DEBUG, ' BGP table handling')

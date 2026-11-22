@@ -1027,5 +1027,192 @@
                 ]
             }
         }
+    },
+    "SRV6_FORMAT_LIB_START_VALID": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 53248
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_LIB_START_DEFAULT": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 57344
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_LIB_START_MIN": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 1
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_LIB_START_MAX": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 65023
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_LIB_START_ZERO": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 0
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_LIB_START_OVERLAP": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 65024
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_UNKNOWN_NAME": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "unknown",
+                        "lib_start": 53248
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_MISSING_START": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216"
+                    }
+                ]
+            },
+            "sonic-srv6:SRV6_MY_LOCATORS": {
+                "SRV6_MY_LOCATORS_LIST": [
+                    {
+                        "locator_name": "LOC1",
+                        "prefix": "2001:db8:100::/48",
+                        "behavior": "usid",
+                        "format": "usid-f3216"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_FORMAT_UNUSED": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_FORMATS": {
+                "SRV6_MY_FORMATS_LIST": [
+                    {
+                        "name": "usid-f3216",
+                        "lib_start": 53248
+                    }
+                ]
+            }
+        }
     }
 }

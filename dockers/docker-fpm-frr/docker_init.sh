@@ -100,7 +100,7 @@ import sys
 
 with open(sys.argv[1]) as source:
     config = json.load(source)
-tables = ('SRV6_MY_SOURCE', 'SRV6_MY_LOCATORS', 'SRV6_MY_SIDS')
+tables = ('SRV6_MY_SOURCE', 'SRV6_MY_FORMATS', 'SRV6_MY_LOCATORS', 'SRV6_MY_SIDS')
 globals_ = config.get('ISIS_GLOBALS', {})
 legacy = (sys.argv[3] == 'legacy' or bool(sys.argv[4]) or
           isinstance(globals_, dict) and any(key != 'default' for key in globals_))

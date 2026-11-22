@@ -10,7 +10,7 @@ class ConfigError(ValueError):
 
 
 MANAGED_TABLES = ('ISIS_GLOBALS', 'ISIS_GLOBALS_TIMERS', 'ISIS_INTERFACE',
-                  'SRV6_MY_SOURCE', 'SRV6_MY_LOCATORS', 'SRV6_MY_SIDS')
+                  'SRV6_MY_SOURCE', 'SRV6_MY_FORMATS', 'SRV6_MY_LOCATORS', 'SRV6_MY_SIDS')
 ROUTED_TABLES = ('INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE',
                  'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE')
 
@@ -134,6 +134,14 @@ def validate_srv6_config(config, frr_version=None):
     if not isinstance(config, dict):
         raise ConfigError('Invalid configuration snapshot')
     config = normalize_managed_config(config)
+    for key, row in table(config, 'SRV6_MY_FORMATS').items():
+        if key != 'usid-f3216':
+            raise ConfigError('Unsupported SRv6 format key')
+        _known_fields(row, ('lib_start',))
+        if 'lib_start' not in row or not 1 <= integer(row, 'lib_start', 0) < 0xFE00:
+            raise ConfigError('LIB start must be between 1 and 65023, below the explicit LIB')
+        if not any(locator.get('format') == key for locator in table(config, 'SRV6_MY_LOCATORS').values()):
+            raise ConfigError('An SRv6 format override requires a locator using that format')
     sources = table(config, 'SRV6_MY_SOURCE')
     if len(sources) > 1:
         raise ConfigError('SRv6 encapsulation source is a singleton')

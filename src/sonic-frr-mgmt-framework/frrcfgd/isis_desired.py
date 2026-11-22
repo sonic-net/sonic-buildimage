@@ -135,7 +135,7 @@ def parse_canonical_config(text, defaults, frr_version):
     if not headers:
         text = 'frr version ' + frr_version + '\n' + text
     text = text.rstrip() + '\nend\n'
-    parsed = parse_running_config(text, defaults)
+    parsed = parse_running_config(text, defaults, preserve_format_defaults=True)
     if parsed.unsupported:
         raise RecoveryError('Unsupported canonical managed configuration')
     if any(identity.kind == 'isis-process' and identity.key != 'default'

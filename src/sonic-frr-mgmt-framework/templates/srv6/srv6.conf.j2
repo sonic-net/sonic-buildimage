@@ -12,15 +12,27 @@
 {% set locators = SRV6_MY_LOCATORS|default({}) %}
 {% set sources = SRV6_MY_SOURCE|default({}) %}
 {% set sids = SRV6_MY_SIDS|default({}) %}
+{% set formats = SRV6_MY_FORMATS|default({}) %}
 {% set state = namespace(has_static=false) %}
 {% for key, sid in sids.items() %}
 {% if sid.get('action') in ('uN', 'uA', 'uDT4', 'uDT6', 'uDT46') %}
 {% set state.has_static = true %}
 {% endif %}
 {% endfor %}
-{% if locators or sources or state.has_static %}
+{% if locators or sources or formats or state.has_static %}
 segment-routing
  srv6
+{% if formats %}
+  formats
+{% for name, format in formats.items() %}
+   format {{ name }}
+    compressed usid
+     local-id-block start {{ format.lib_start|int }}
+    exit
+   exit
+{% endfor %}
+  exit
+{% endif %}
 {% if locators %}
   locators
 {% for name, locator in locators.items() %}

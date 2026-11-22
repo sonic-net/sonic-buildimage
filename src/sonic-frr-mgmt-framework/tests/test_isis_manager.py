@@ -513,12 +513,15 @@ def test_canonical_isis_events_only_wake_worker_and_bgp_keeps_its_existing_queue
     assert connector.get_table_key('ISIS_GLOBALS', 'default') not in daemon.table_data_cache
     assert connector.get_table_key('ISIS_INTERFACE', 'Ethernet0') not in daemon.table_data_cache
     assert connector.get_table_key('BGP_GLOBALS', 'default') in daemon.table_data_cache
+    assert ('SRV6_MY_FORMATS', daemon.bgp_table_handler_common) in daemon.table_handler_list
     with patch('frrcfgd.frrcfgd.g_run_command') as run:
         daemon.bgp_table_handler_common('ISIS_GLOBALS', 'default', {'enabled': 'true'})
         daemon.bgp_table_handler_common('SRV6_MY_LOCATORS', 'LOC1', {'prefix': '2001:db8:100::/48'})
+        daemon.bgp_table_handler_common('SRV6_MY_FORMATS', 'usid-f3216', {'lib_start': '53248'})
+        daemon.bgp_table_handler_common('SRV6_MY_FORMATS', 'usid-f3216', None)
         daemon.isis_routed_interface_handler('INTERFACE', 'Ethernet0', {})
         run.assert_not_called()
-    assert worker.notify.call_count == 3 and daemon.bgp_message.empty()
+    assert worker.notify.call_count == 5 and daemon.bgp_message.empty()
     assert connector.get_table_key('ISIS_GLOBALS', 'default') not in daemon.table_data_cache
     worker.notify.reset_mock()
     daemon._BGPConfigDaemon__update_bgp = Mock()

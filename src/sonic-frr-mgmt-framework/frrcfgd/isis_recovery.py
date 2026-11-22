@@ -24,7 +24,8 @@ from typing import Any, Mapping, Optional, Tuple
 
 
 KINDS = frozenset(
-    ('isis-process', 'isis-net', 'isis-binding', 'isis-circuit', 'isis-srv6', 'srv6-source', 'srv6-locator', 'srv6-sid')
+    ('isis-process', 'isis-net', 'isis-binding', 'isis-circuit', 'isis-srv6',
+     'srv6-source', 'srv6-format', 'srv6-locator', 'srv6-sid')
 )
 
 
@@ -110,6 +111,13 @@ class NativeSnapshot:
         object.__setattr__(self, 'objects', _freeze(objects))
         object.__setattr__(self, 'unsupported', tuple(self.unsupported))
         object.__setattr__(self, 'unconfirmed', unconfirmed)
+
+    def value(self, identity):
+        if identity.kind == 'srv6-format':
+            # The native writer omits the built-in default. An explicit default
+            # intent still owns the setting and can reset a previously owned override.
+            return self.objects.get(identity, {'lib_start': 0xE000})
+        return self.objects.get(identity)
 
 
 def _objects_json(objects):
@@ -389,7 +397,7 @@ def _identifier(value):
     return value
 
 
-def parse_running_config(text, defaults):
+def parse_running_config(text, defaults, *, preserve_format_defaults=False):
     """Parse complete native running-config; never interpret missing output as empty.
 
     Unrelated sections/foreign SRv6 objects are retained or ignored, not adopted.
@@ -552,7 +560,7 @@ def parse_running_config(text, defaults):
         elif parent == 'segment-routing':
             stack.append((indent, 'srv6' if command == 'srv6' else 'ignored', None))
         elif parent == 'srv6':
-            if command in ('encapsulation', 'locators', 'static-sids'):
+            if command in ('encapsulation', 'formats', 'locators', 'static-sids'):
                 stack.append((indent, command, None))
             else:
                 unsupported.append(raw)
@@ -560,6 +568,24 @@ def parse_running_config(text, defaults):
         elif parent == 'encapsulation':
             if len(parts) == 2 and parts[0] == 'source-address':
                 add(Identity('srv6-source', 'default'), dict(address=str(ipaddress.IPv6Address(parts[1]))))
+            else:
+                unsupported.append(raw)
+        elif parent == 'formats':
+            if command == 'format usid-f3216':
+                # FRR omits a format that uses only built-in defaults.
+                add(Identity('srv6-format', 'usid-f3216'), dict(lib_start=0xE000))
+                stack.append((indent, 'format', 'usid-f3216'))
+            else:
+                unsupported.append(raw)
+                stack.append((indent, 'ignored', None))
+        elif parent in ('format', 'compressed-usid'):
+            if command == 'compressed usid' and parent == 'format':
+                stack.append((indent, 'compressed-usid', key))
+            elif re.fullmatch(r'local-id-block start (?:[0-9]+|0[xX][0-9a-fA-F]+)', command):
+                value = int(parts[2], 16 if parts[2].lower().startswith('0x') else 10)
+                if not 1 <= value < 0xFE00:
+                    raise RecoveryError('Unsupported native LIB start')
+                objects[Identity('srv6-format', key)]['lib_start'] = value
             else:
                 unsupported.append(raw)
         elif parent == 'locators':
@@ -634,6 +660,9 @@ def parse_running_config(text, defaults):
                 and value['block_len'] + value['node_len'] + value['func_len'] <= 128
             ):
                 raise RecoveryError('Unsupported native locator geometry')
+    if not preserve_format_defaults:
+        objects = {identity: value for identity, value in objects.items()
+                   if identity.kind != 'srv6-format' or value['lib_start'] != 0xE000}
     return NativeSnapshot(objects, tuple(unsupported))
 
 
@@ -678,7 +707,7 @@ def _matches(native, desired, authorized):
     if native.unconfirmed & scope:
         return False
     for identity in scope:
-        if native.objects.get(identity) != desired.objects.get(identity):
+        if native.value(identity) != desired.value(identity):
             return False
     return True
 

@@ -90,7 +90,7 @@ def executable(path, program):
     path.chmod(0o755)
 
 
-@pytest.mark.parametrize('problem', ['missing-prefix', 'arg-len', 'legacy-binding', 'namespace'])
+@pytest.mark.parametrize('problem', ['missing-prefix', 'arg-len', 'legacy-binding', 'namespace', 'lib-start'])
 def test_shell_managed_failure_keeps_frozen_bgp_and_cleans_secrets(tmp_path, problem):
     binaries = tmp_path / 'bin'
     binaries.mkdir()
@@ -112,6 +112,11 @@ def test_shell_managed_failure_keeps_frozen_bgp_and_cleans_secrets(tmp_path, pro
         config['SRV6_MY_LOCATORS']['LOC1'] = {'prefix': '2001:db8:100::', 'arg_len': '16'}
     elif problem == 'legacy-binding':
         config['ISIS_GLOBALS'] = {'Blue': {'enabled': 'true', 'srv6_locator': 'LOC1'}}
+    elif problem == 'lib-start':
+        config['ISIS_GLOBALS']['default']['net_title'] = '49.0001.0000.0000.0001.00'
+        config['SRV6_MY_LOCATORS']['LOC1'] = {
+            'prefix': '2001:db8:100::/48', 'behavior': 'usid', 'format': 'usid-f3216'}
+        config['SRV6_MY_FORMATS'] = {'usid-f3216': {'lib_start': '65024'}}
     database, destination, events, journal = [tmp_path / name for name in
                                               ('database.json', 'final.conf', 'events.jsonl', 'owned.json')]
     database.write_text(json.dumps(config))
@@ -149,7 +154,8 @@ def test_shell_managed_failure_keeps_frozen_bgp_and_cleans_secrets(tmp_path, pro
     helpers = [event for event in trace if event['kind'] == 'helper']
     assert len(captures) == 1 and '-t' not in captures[0]['args']
     assert len(renders) == 2 and len(helpers) == 1
-    assert helpers[0]['candidate_exists'] == (problem in ('arg-len', 'legacy-binding'))
+    assert helpers[0]['candidate_exists'] == (problem in ('arg-len', 'legacy-binding', 'lib-start'))
+    assert 'SRV6_MY_FORMATS' not in renders[-1]['tables']
     assert helpers[0]['source'] == renders[0]['source']
     assert all(event['mode'] == 0o600 for event in renders + helpers)
     assert not Path(helpers[0]['source']).parent.exists()

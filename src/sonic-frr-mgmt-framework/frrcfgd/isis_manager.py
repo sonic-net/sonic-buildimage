@@ -52,13 +52,22 @@ class DeltaPlanner:
 
     def __call__(self, native, desired, authorized):
         old, new = native.objects, desired.objects
-        changed = {key for key in set(authorized) | set(new) if old.get(key) != new.get(key)}
+        changed = {key for key in set(authorized) | set(new) if native.value(key) != desired.value(key)}
         changed.update(native.unconfirmed & set(authorized))
         if not changed:
             return None
         if not changed <= set(authorized):
             raise RecoveryError('Delta includes an unauthorized native identity')
         locators = {key.key for key in changed if key.kind == 'srv6-locator'}
+        formats = {key.key for key in changed if key.kind == 'srv6-format'}
+        format_locators = {
+            key for objects in (old, new) for key, value in objects.items()
+            if key.kind == 'srv6-locator' and value.get('format') in formats
+        }
+        if not format_locators <= set(authorized):
+            raise RecoveryError('Format delta would change a foreign locator')
+        changed.update(format_locators)
+        locators.update(key.key for key in format_locators)
         process = Identity('isis-process', 'default')
         removed_process = process in changed and process in old and process not in new
         detached = {
@@ -111,6 +120,13 @@ class DeltaPlanner:
                 operations.append(_operation('zebra', 'segment-routing', 'srv6', 'locators', 'no locator ' + key.key))
             elif key.kind == 'srv6-source' and key not in new:
                 operations.append(_operation('zebra', 'segment-routing', 'srv6', 'encapsulation', 'no source-address'))
+        for key in sorted(changed):
+            if key.kind == 'srv6-format':
+                value = new.get(key)
+                command = ('local-id-block start ' + str(value['lib_start'])
+                           if value is not None else 'no local-id-block')
+                operations.append(_operation('zebra', 'segment-routing', 'srv6', 'formats',
+                                             'format ' + key.key, 'compressed usid', command))
         for key in sorted(changed):
             value = new.get(key)
             if value is None:

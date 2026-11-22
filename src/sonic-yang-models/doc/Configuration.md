@@ -3572,10 +3572,26 @@ DNS configuration options can also be set when nameservers are defined:
 
 ### SRv6
 
-The **SRV6_MY_LOCATORS**, **SRV6_MY_SIDS**, and **SRV6_MY_SOURCE** tables configure local Segment Routing over IPv6 state. The optional **ISIS_GLOBALS** fields below bind a locator to the default IS-IS instance. The configuration fragment assumes that `Loopback0` and `Ethernet0` are already configured.
+The **SRV6_MY_FORMATS**, **SRV6_MY_LOCATORS**, **SRV6_MY_SIDS**, and **SRV6_MY_SOURCE** tables configure local Segment Routing over IPv6 state. The optional **ISIS_GLOBALS** fields below bind a locator to the default IS-IS instance. The configuration fragment assumes that `Loopback0` and `Ethernet0` are already configured.
+
+`SRV6_MY_FORMATS` is global per format. A boundary change affects every locator using
+that format and reallocates dependent dynamic SIDs. Runtime reconciliation checks
+ownership of all affected locators and references before applying a change.
+Unowned consumers cause a conflict. Delete the row to reset an owned override to
+the FRR default without deleting the built-in format or changing other format
+parameters. Existing configurations without this table retain their format
+settings. Explicit default values and FRR's omitted defaults compare equally.
+
+Configure the boundary through CONFIG_DB, then use `config save -y` to include it
+in `/etc/sonic/config_db.json`. Reload and boot render the format before locators
+from the same saved snapshot. The runtime worker subscribes to this table and
+reconciles UPDATE/DELETE events, including changes made while frrcfgd was stopped.
+The format table uses the canonical default-instance recovery path.
+
 
 | Table | Key | Fields and compatibility |
 |-------|-----|--------------------------|
+| SRV6_MY_FORMATS | Built-in format name `usid-f3216` | Required decimal `lib_start` in 1..65023 sets the GIB/LIB boundary. FRR defaults to 57344 (0xE000), with explicit LIB starting at 65024 (0xFE00). At least one locator must use the format. |
 | SRV6_MY_LOCATORS | Locator name | `prefix` accepts an IPv6 address or an IPv6 prefix. For an address, the prefix length is `block_len + node_len`; an explicit prefix length must equal that sum. Geometry defaults remain `block_len=32`, `node_len=16`, `func_len=16`, and `arg_len=0`. |
 | SRV6_MY_LOCATORS | Locator name | Optional `behavior=usid` selects unformatted uSID behavior. With neither `behavior` nor `format`, the locator retains Classic behavior. Optional `format=usid-f3216` requires explicit `behavior=usid` and geometry `32/16/16/0`. |
 | SRV6_MY_SOURCE | Singleton name | `source-address` is a mandatory IPv6 address. `tunnel-source` is the canonical key; a single existing row with an arbitrary key remains accepted. More than one row is invalid. |
@@ -3586,6 +3602,11 @@ The startup adapter validates native representability before applying configurat
 
 ```json
 {
+    "SRV6_MY_FORMATS": {
+        "usid-f3216": {
+            "lib_start": "53248"
+        }
+    },
     "SRV6_MY_LOCATORS": {
         "LOC1": {
             "prefix": "2001:db8:100::/48",

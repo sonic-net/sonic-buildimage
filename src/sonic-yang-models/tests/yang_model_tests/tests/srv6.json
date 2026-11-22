@@ -142,5 +142,41 @@
     },
     "SRV6_SHARED_PREFIX_POLICY_ONLY": {
         "desc": "Allow policy-only rows to share a prefix across locators."
+    },
+    "SRV6_FORMAT_LIB_START_VALID": {
+        "desc": "srv6 format lib start valid"
+    },
+    "SRV6_FORMAT_LIB_START_DEFAULT": {
+        "desc": "srv6 format lib start default"
+    },
+    "SRV6_FORMAT_LIB_START_MIN": {
+        "desc": "srv6 format lib start min"
+    },
+    "SRV6_FORMAT_LIB_START_MAX": {
+        "desc": "srv6 format lib start max"
+    },
+    "SRV6_FORMAT_LIB_START_ZERO": {
+        "desc": "srv6 format lib start zero",
+        "eStrKey": "Range"
+    },
+    "SRV6_FORMAT_LIB_START_OVERLAP": {
+        "desc": "srv6 format lib start overlap",
+        "eStrKey": "Range"
+    },
+    "SRV6_FORMAT_UNKNOWN_NAME": {
+        "desc": "srv6 format unknown name",
+        "eStrKey": "InvalidValue"
+    },
+    "SRV6_FORMAT_MISSING_START": {
+        "desc": "srv6 format missing start",
+        "eStr": [
+            "lib_start"
+        ]
+    },
+    "SRV6_FORMAT_UNUSED": {
+        "desc": "srv6 format unused",
+        "eStr": [
+            "a format override requires a locator using that format"
+        ]
     }
 }
