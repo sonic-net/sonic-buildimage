@@ -4,7 +4,6 @@ import time
 import tempfile
 
 from bgpcfgd.log import log_err, log_info, log_warn, log_crit
-from .vars import g_debug
 from .utils import run_command
 
 
@@ -65,18 +64,21 @@ class FRR(object):
     @staticmethod
     def write(config_text):
         fd, tmp_filename = tempfile.mkstemp(dir='/tmp')
-        os.close(fd)
-        with open(tmp_filename, 'w') as fp:
-            fp.write("%s\n" % config_text)
-        command = ["vtysh", "-f", tmp_filename]
-        ret_code, out, err = run_command(command)
-        if ret_code != 0:
-            err_tuple = tmp_filename, ret_code, out, err
-            log_err("ConfigMgr::commit(): can't push configuration from file='%s', rc='%d', stdout='%s', stderr='%s'" % err_tuple)
-        else:
-            if not g_debug:
+        try:
+            os.close(fd)
+            with open(tmp_filename, 'w') as fp:
+                fp.write("%s\n" % config_text)
+            command = ["vtysh", "-f", tmp_filename]
+            ret_code, out, err = run_command(command)
+            if ret_code != 0:
+                err_tuple = tmp_filename, ret_code, out, err
+                log_err("ConfigMgr::commit(): can't push configuration from file='%s', rc='%d', stdout='%s', stderr='%s'" % err_tuple)
+            return ret_code == 0
+        finally:
+            try:
                 os.remove(tmp_filename)
-        return ret_code == 0
+            except OSError as exc:
+                log_err("ConfigMgr::commit(): can't remove temporary file='%s': %s" % (tmp_filename, exc))
 
     @staticmethod
     def restart_peer_groups(peer_groups):

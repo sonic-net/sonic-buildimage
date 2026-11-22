@@ -1,4 +1,7 @@
+import os
+import tempfile
 from unittest.mock import patch
+
 import bgpcfgd.frr
 import pytest
 
@@ -37,17 +40,41 @@ def test_get_config_fail(mocked_log_crit):
     assert out == ""
     mocked_log_crit.assert_called_with("can't update running config: rc=1 out='some config' err='some error'")
 
-def test_write():
-    bgpcfgd.frr.run_command = lambda cmd: (0, "some output", "")
+def test_write(tmp_path, monkeypatch):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda dir: original_mkstemp(dir=str(tmp_path))
+    )
+
+    def run_command(cmd):
+        assert os.path.exists(cmd[2])
+        return 0, "some output", ""
+
+    bgpcfgd.frr.run_command = run_command
     f = bgpcfgd.frr.FRR(["abc", "cde"])
     res = f.write("config context")
     assert res, "Expect True return value"
+    assert list(tmp_path.iterdir()) == []
 
-def test_write_fail():
-    bgpcfgd.frr.run_command = lambda cmd: (1, "some output", "some error")
+def test_write_fail(tmp_path, monkeypatch):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda dir: original_mkstemp(dir=str(tmp_path))
+    )
+
+    def run_command(cmd):
+        assert os.path.exists(cmd[2])
+        return 1, "some output", "some error"
+
+    bgpcfgd.frr.run_command = run_command
     f = bgpcfgd.frr.FRR(["abc", "cde"])
     res = f.write("config context")
     assert not res, "Expect False return value"
+    assert list(tmp_path.iterdir()) == []
 
 def test_restart_peer_groups():
     bgpcfgd.frr.run_command = lambda cmd: (0, "some output", "")
