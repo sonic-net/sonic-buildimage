@@ -988,6 +988,7 @@ jobs:
     outputs:
       containers: ${{ steps.bundles.outputs.matrix }}
       source_workflows: ${{ needs.checks.outputs.source_workflows }}
+      eventd_artifact_id: ${{ steps.component_eventd.outputs.artifact-id }}
       component_matrix: ${{ steps.component_matrix.outputs.matrix }}
       artifact_prefix: ${{ steps.bundles.outputs.prefix }}
       python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
@@ -1412,6 +1413,17 @@ jobs:
           PYTHON_ID: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
         run: |
           [[ $KERNEL_ID =~ ^[1-9][0-9]*$ && $PYTHON_ID =~ ^[1-9][0-9]*$ ]]
+
+      - name: Publish VS component eventd
+        id: component_eventd
+        if: contains(fromJSON(steps.bundles.outputs.components), 'eventd')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-eventd-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/eventd/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
 
       - name: Select component validators for the published artifacts
         id: component_matrix
