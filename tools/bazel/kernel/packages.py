@@ -8,13 +8,14 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel import build_helpers
-from tools.bazel.kernel import prepare, remote_bundle
+from tools.bazel.kernel import prepare, remote_bundle, root_request
 
 TARGET = '@sonic_linux_kernel//:kernel_packages'
 MANIFEST = 'kernel-packages.json'
@@ -157,7 +158,7 @@ def verify_make_contract(directory, result, expected, packages):
 
 
 def restore_root(workspace, directory, architecture, config, endpoint, key, current_key):
-    from tools.bazel.kernel import prepare, root_resolution
+    from tools.bazel.kernel import root_resolution
 
     expected, packages = prepare.contract(workspace, architecture, config)
     with tempfile.TemporaryDirectory(prefix='.kernel-restore-', dir=directory) as staging:
@@ -175,7 +176,7 @@ def restore_root(workspace, directory, architecture, config, endpoint, key, curr
 
 
 def build_packages(workspace, directory, architecture, config, bazel, options, endpoint, upload):
-    from tools.bazel.kernel import prepare, root_request, root_resolution
+    from tools.bazel.kernel import root_resolution
 
     def current_key():
         return root_request.request_key(workspace, architecture, config, options=options, bazel=bazel)
@@ -233,7 +234,7 @@ def build_packages(workspace, directory, architecture, config, bazel, options, e
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['build', 'verify'])
+    parser.add_argument('command', choices=['build', 'verify', 'bazel-config'])
     parser.add_argument('--workspace', type=Path, default=Path.cwd())
     parser.add_argument('--debs-directory', type=Path, default=Path('target/debs/trixie'))
     parser.add_argument('--architecture', choices=['amd64', 'arm64'])
@@ -245,12 +246,21 @@ def main():
     args = parser.parse_args()
     workspace = args.workspace.resolve()
     directory = args.debs_directory.resolve()
-    config = dict(item.split('=', 1) for item in args.kernel_config)
+    config = prepare.parse_kernel_config(args.kernel_config)
     host_architecture = {'x86_64': 'amd64', 'aarch64': 'arm64'}[os.uname().machine]
     args.architecture = args.architecture or config.get('CONFIGURED_ARCH') or host_architecture
     if args.command == 'verify' and args.vs_handoff_sha256 is None:
         verify(directory, workspace, args.architecture, config)
         print('Kernel DEBs and root module provenance verified.')
+        return
+    # Make passes every setting; a standalone build may omit them all. Bazel
+    # keys the action graph on the serialized flag before the rule expands defaults.
+    if args.architecture != host_architecture:
+        config.setdefault('CROSS_BUILD_ENVIRON', 'y')
+    config = prepare.effective_config(workspace, args.architecture, config)
+    config_json = json.dumps(config, sort_keys=True)
+    if args.command == 'bazel-config':
+        print(config_json)
         return
     if args.vs_handoff_sha256 is None:
         directory.mkdir(parents=True, exist_ok=True)
@@ -265,17 +275,13 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         platform = '@sonic_build_infra//platforms:' + {'amd64': 'x86_64', 'arm64': 'aarch64'}[args.architecture] + '_trixie'
         host_platform = '@sonic_build_infra//platforms:' + {'amd64': 'x86_64', 'arm64': 'aarch64'}[host_architecture] + '_trixie'
-        # Standalone and Make callers must select the same Bazel configuration
-        # when they request the same effective kernel settings.
-        config = prepare.effective_config(workspace, args.architecture, {
-            'CROSS_BUILD_ENVIRON': 'y' if args.architecture != host_architecture else 'n',
-            **config,
-        })
         options = ['--platforms=' + platform, '--host_platform=' + host_platform,
-                   '--@sonic_linux_kernel//tools/bazel:kernel_config=' + json.dumps(config, sort_keys=True)]
+                   '--@sonic_linux_kernel//tools/bazel:kernel_config=' + config_json]
         if args.cache_directory:
             options += build_helpers.cache_options(args.cache_directory / "kernel-linux-sandbox")
         options += build_helpers.remote_cache_options()
+        options.extend(option for option in shlex.split(os.environ.get('BAZEL_CONTAINER_ARGS', ''))
+                       if root_request.is_cache_fallback_option(option))
         if args.remote_cache:
             options += ['--remote_cache=' + args.remote_cache,
                         '--remote_upload_local_results=' + str(args.upload_local_results).lower()]

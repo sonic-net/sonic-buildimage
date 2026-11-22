@@ -128,6 +128,16 @@ class RootKernelRequestTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.key()
 
+    def test_cache_fallback_settings_keep_the_same_root_request(self):
+        """A VS worker and strict cache verifier can reuse the same authenticated kernel bundle."""
+        original = self.key()
+        options = ["--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache"]
+        for flags in (options, ["--noremote_local_fallback", options[1] + "=false"]):
+            self.assertEqual(original, self.key(options=[*self.options, *flags]))
+        for option in ("--remote_local_fallback=invalid", "--remote_executor=grpc://other:9092"):
+            with self.subTest(option=option), self.assertRaisesRegex(ValueError, "unbound root kernel Bazel option"):
+                self.key(options=[*self.options, option])
+
     def test_dedicated_ci_resource_budgets_share_a_key_across_cache_roles(self):
         original = self.key()
         home = Path(self.environment["HOME"])
