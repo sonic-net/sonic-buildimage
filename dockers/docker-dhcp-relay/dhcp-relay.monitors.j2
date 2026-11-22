@@ -40,16 +40,16 @@ dhcpmon-{{ vlan_name | validate_interface_name }}
 command=/usr/sbin/dhcpmon -id {{ vlan_name | validate_interface_name | shellquote }}
 {#- Dual ToR Option #}
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif -%}
-{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers, but emit each interface once when it has primary and secondary prefixes. #}
-{% set upstream_vlans = [] %}
+{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers. Include IPv6 uplinks for IPv6 monitoring and emit each interface once. #}
+{% set upstream_interfaces = [] %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name != vlan_name and name not in upstream_vlans %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_vlans.append(name) %}{% endif -%}
+{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name != vlan_name and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
-{% if prefix | ipv4 %} -iu {{ name | validate_interface_name | shellquote }}{% endif -%}
+{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 %} -iu {{ name | validate_interface_name | shellquote }}{% endif -%}
+{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% if MGMT_INTERFACE %}
 {% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}

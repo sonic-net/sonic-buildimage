@@ -518,6 +518,62 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ports.json'), self.output_file))
 
+    def test_dhcpmon_upstream_address_families(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        interfaces = [
+            ("VLAN_INTERFACE", "Vlan1000", ("192.0.2.1/24", "2001:db8:1000::1/64")),
+            ("VLAN_INTERFACE", "Vlan2000", ("198.51.100.1/24", "2001:db8:2000::1/64")),
+            ("INTERFACE", "Ethernet0", ("203.0.113.1/24", "2001:db8:3::1/64")),
+            ("PORTCHANNEL_INTERFACE", "PortChannel01", ("10.0.0.1/31", "2001:db8:4::1/64")),
+        ]
+        for sonic_backend in (False, True):
+            for families in (("ipv4",), ("ipv6",), ("ipv4", "ipv6")):
+                case = "sonic_backend={}, families={}".format(sonic_backend, families)
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN": {},
+                    "VLAN_INTERFACE": {},
+                    "INTERFACE": {},
+                    "PORTCHANNEL_INTERFACE": {},
+                    "DHCPV4_RELAY": {},
+                    "DHCP_RELAY": {},
+                    "MGMT_INTERFACE": {"eth0|192.0.2.2/24": {}},
+                }
+                for table, name, prefixes in interfaces:
+                    data[table][name] = {}
+                    for family, prefix in zip(("ipv4", "ipv6"), prefixes):
+                        if family in families:
+                            data[table]["{}|{}".format(name, prefix)] = {}
+                data["INTERFACE"]["Ethernet4|2001:db8:5::1/64"] = {}
+                if "ipv4" in families:
+                    table, field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                        "VLAN", "dhcp_servers")
+                    data[table]["Vlan1000"] = {field: ["198.18.0.10"]}
+                if "ipv6" in families:
+                    data["DHCP_RELAY"]["Vlan1000"] = {"dhcpv6_servers": ["2001:db8:6::10"]}
+
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+
+                commands = [
+                    line.partition("=")[2].split()
+                    for line in rendered.splitlines() if line.startswith("command=")
+                ]
+                self.assertEqual(len(commands), 1, case)
+                command = commands[0]
+                self.assertEqual(command[:3], ["/usr/sbin/dhcpmon", "-id", "Vlan1000"], case)
+                upstreams = [
+                    command[index + 1] for index, arg in enumerate(command[:-1]) if arg == "-iu"
+                ]
+                expected_upstreams = ["Vlan2000", "Ethernet0", "PortChannel01"]
+                if "ipv6" in families:
+                    expected_upstreams.append("Ethernet4")
+                self.assertEqual(sorted(upstreams), sorted(expected_upstreams), case)
+                self.assertEqual(command[-2:], ["-im", "eth0"], case)
+
     def test_dhcp_relay(self):
         # Test generation of wait_for_intf.sh
         dhc_sample_data = os.path.join(self.test_dir, "dhcp-relay-sample.json")
