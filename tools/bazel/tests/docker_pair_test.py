@@ -254,6 +254,36 @@ include tools/bazel/docker.mk""")
         self.assertEqual((self.target / self.archives[0]).read_bytes(), b"previous image")
         self.assertFalse((self.root / "installed-containers").exists())
 
+    def test_gazelle_exit_status_footer_retries_with_real_bazel_event_shape(self):
+        description = GAZELLE_TIMEOUT + "\nexit status 1"
+        events = failure_events(description)
+        events[0]["aborted"]["description"] = (
+            "com.google.devtools.build.lib.rules.repository.RepositoryFunction"
+            "$AlreadyReportedRepositoryAccessException: " + description)
+        events[2]["finished"]["failureDetail"]["message"] = (
+            "Analysis of target '//dockers/docker-sonic-otel:installed_packages' failed; "
+            "build aborted: no such package '@@otelcol-contrib++go_deps+"
+            "com_github_open_telemetry_opentelemetry_collector_contrib_receiver_"
+            "otlpjsonfilereceiver//': " + description)
+        self.assert_success(self.build_with_failures([(1, events)]))
+        self.assertEqual(len(self.recorded_calls()), 2)
+        log = (self.target / "vs-container-images.log").read_text()
+        self.assertEqual(log.count("Retrying the container batch once."), 1)
+        for name in self.archives:
+            self.assertEqual((self.target / name).read_bytes(), ("new " + name).encode())
+
+    def test_gazelle_footer_does_not_hide_additional_diagnostics(self):
+        path = self.root / "events.json"
+        events = failure_events(GAZELLE_TIMEOUT + "\nexit status 1\n")
+        path.write_text("".join(json.dumps(event) + "\n" for event in events))
+        self.assertTrue(go_proxy_timed_out(path))
+        for suffix in ("\nexit status 2", "\nexit status 1\nchecksum mismatch",
+                       "\ncertificate verification failed\nexit status 1"):
+            with self.subTest(suffix=suffix):
+                events = failure_events(GAZELLE_TIMEOUT + suffix)
+                path.write_text("".join(json.dumps(event) + "\n" for event in events))
+                self.assertFalse(go_proxy_timed_out(path))
+
     def test_nonretryable_failures_stop_immediately(self):
         timeout = failure_events(GAZELLE_TIMEOUT)
         mismatch = failure_events("fetch_repo: checksum mismatch")

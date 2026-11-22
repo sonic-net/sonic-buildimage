@@ -27,7 +27,7 @@ EXPORT_POLICY = (
 )
 GO_PROXY_TIMEOUT = re.compile(
     r'\+go_deps\+[^:\s]+: fetch_repo: \S+@\S+: Get "https://proxy\.golang\.org/[^"\s]+/@v/[^"\s]+": '
-    r'net/http: TLS handshake timeout\Z'
+    r'net/http: TLS handshake timeout(?:\nexit status 1)?\n?\Z'
 )
 
 
