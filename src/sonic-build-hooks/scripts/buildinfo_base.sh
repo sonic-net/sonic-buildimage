@@ -291,6 +291,20 @@ download_packages()
     return $result
 }
 
+# Drop the frozen pins in the constraint file $1 that the pip arguments after it rule out:
+# the pin of a package the install requires at another version, and of a local wheel's own package.
+release_pip_constraints()
+{
+    local constraint_file=$1
+    shift
+    local python=$(sed -n '1s/^#![[:space:]]*//p' "$REAL_COMMAND")
+    [[ "$python" == */env\ * ]] && python=$(command -v ${python#* })
+    python=${python%% *}
+    [ -x "$python" ] || return 0
+    "$python" $BUILDINFO_PATH/scripts/pip_release_constraints.py "$constraint_file" "$@" ||
+        echo "pip build hook: could not read the install's requirements; every frozen version stays a constraint" 1>&2
+}
+
 run_pip_command()
 {
     declare -a parameters=("--default-timeout" "$PIP_HTTP_TIMEOUT" "$@")
@@ -345,6 +359,7 @@ run_pip_command()
     done
 
     if [ "$found" == "n" ] && [ "$install" == "y" ]; then
+        release_pip_constraints "$tmp_version_file" "$@"
         parameters+=("-c")
         parameters+=("${tmp_version_file}")
     fi
@@ -362,13 +377,12 @@ run_pip_command()
         FUNLOCK ${PIP_CACHE_PATH}
     else
         $REAL_COMMAND "${parameters[@]}"
-		local result=$?
-		if [ "$result" != 0 ]; then
-			echo "Failed to run the command with constraint, try to install with the original command" 1>&2
-			$REAL_COMMAND "$@"
-			result=$?
-		fi
-	fi
+        local result=$?
+    fi
+    if [ "$result" != 0 ] && [ "$install" == "y" ]; then
+        echo "pip build hook: the install failed with the frozen versions in $pip_version_file as constraints." \
+             "If a package it installs needs a newer version of a frozen package, state that requirement in the install." 1>&2
+    fi
     rm $tmp_version_file
     return $result
 }
