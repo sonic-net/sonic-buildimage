@@ -53,6 +53,56 @@ class BundleSelectionTest(unittest.TestCase):
             self.assertTrue(output.samefile(selected))
             self.assertIsNone(bundles.direct_layout_for_archive(selected, "build"))
 
+    def test_deferred_archive_checks_use_the_installed_layout_and_fallback(self):
+        from tools.bazel import build_container_batch as batch
+
+        native = "docker-syncd-vs.gz"
+        fallback = "docker-dhcp-relay.gz"
+        archives = {n: "//images:" + n for n in (native, fallback)}
+        members = {"runtime": (native, archives[native], "//images:syncd-layout")}
+        families = {"docker-syncd-vs": {"members": members},
+                    "docker-dhcp-relay": {"members": {"runtime": (fallback, archives[fallback], "//images:relay-layout")}}}
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            layout = root / "layout"
+            layout.mkdir()
+            (layout / "index.json").write_text("installed index")
+            target = root / "target"
+            target.mkdir()
+            (target / fallback).write_bytes(b"installed fallback")
+            producer = root / "syncd.gz"
+            producer.write_bytes(b"requested archive")
+            paths = {archives[native]: producer, "//images:syncd-layout": layout}
+            destination = root / "validation"
+            args = SimpleNamespace(validation_directory=destination, target_path=target, architecture="amd64",
+                                   validation_debug="n", registered_debug=[], validation_only_debug=[])
+            with patch.object(bundles.subprocess, "check_output", return_value="abc123"), \
+                    patch.object(bundles.subprocess, "run") as build, \
+                    patch.object(bundles, "validation_targets", return_value=families), \
+                    patch.object(bundles, "extra_targets", side_effect=lambda families: list(archives.values())), \
+                    patch.object(bundles, "configured_outputs", return_value=paths), \
+                    patch.object(batch, "build_options", return_value=[]), \
+                    patch.object(bundles, "write_bundles") as publish:
+                bundles.defer_validation(args, archives, {}, {native: layout})
+                build.assert_not_called()
+                self.assertFalse((target / native).exists())
+
+                (layout / "index.json").write_text("different configuration")
+                with self.assertRaisesRegex(ValueError, "layout differs from VS installer"):
+                    bundles.complete_validation(destination)
+                (layout / "index.json").write_text("installed index")
+                (target / fallback).write_bytes(b"replacement")
+                with self.assertRaisesRegex(ValueError, "fallback archive changed"):
+                    bundles.complete_validation(destination)
+                publish.assert_not_called()
+                self.assertFalse((target / native).exists())
+
+                (target / fallback).write_bytes(b"installed fallback")
+                bundles.complete_validation(destination)
+                self.assertIn(archives[native], build.call_args.args[0])
+                self.assertEqual((target / native).read_bytes(), producer.read_bytes())
+                self.assertEqual(publish.call_args.kwargs["native_archives"], {native: bundles.sha(layout / "index.json")})
+
     def test_feature_evidence_uses_the_selected_bazel_flags(self):
         for image, flag, field in (
             (PMON, "//dockers/docker-platform-monitor:pddf", "pddf_enabled"),

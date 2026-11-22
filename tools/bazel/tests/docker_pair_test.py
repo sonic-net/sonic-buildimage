@@ -13,7 +13,7 @@ from tools.bazel.tests.docker_test import ArchiveRecipeFixture
 from tools.bazel.ci.private_server_diagnostics import snapshot
 from tools.bazel.ci.verify_vs_image_tags import batch_archives
 from tools.bazel.build_container_batch import go_proxy_timed_out
-from tools.bazel.oci.boot_layout import direct_layout_for_archive
+from tools.bazel.oci.boot_layout import installer_input
 from tools.bazel.tests.oci_base_fixture import oci_files, image_fixture, write_layout
 
 
@@ -85,7 +85,7 @@ inputs/%.ready: inputs/%.source
 # Exercise the actual installer's selected Docker prerequisite list.
 target/sonic-vs.img.gz: $$(addprefix target/,$$(sonic-vs.img.gz_DOCKERS) $$(SONIC_PACKAGES_LOCAL))
 	@printf '%s\\n' '$(sonic-vs.img.gz_DOCKERS)' > installed-containers
-target/sonic-vs.bin: $$(addprefix target/,$$(sonic-vs.bin_DOCKERS) $$(SONIC_PACKAGES_LOCAL))
+target/sonic-vs.bin: $$(call vs_installer_inputs,$$(sonic-vs.bin_DOCKERS) $$(SONIC_PACKAGES_LOCAL))
 	@printf '%s\\n' '$(sonic-vs.bin_DOCKERS)' > installed-containers
 	@printf '%s\\n' "$$SONIC_VS_BOOT_HANDOFF" > installer-handoff
 # This innocuous goal tests the target propagated by the outer Make invocation.
@@ -148,6 +148,8 @@ include tools/bazel/docker.mk""")
             image["config"]["Labels"]["owner"] = name
             write_layout(layout, oci_files(json.dumps(image).encode(), layers))
             native[self.labels[name] + ".boot-oci"] = str(layout)
+        for name in (private, batch):
+            (self.target / name).unlink()
         env = {"DOCKER_LOAD_ON_BOOT": "y", "BUILD_WITH_BAZEL_WHEN_AVAILABLE": "y"}
         for remove in (False, True):
             if remove:
@@ -156,13 +158,30 @@ include tools/bazel/docker.mk""")
             self.assert_success(self.run_make(goals=["target/sonic-vs.bin"], parallel=True, environment=env))
             token = (self.root / "installer-handoff").read_text().strip()
             self.assertTrue(token)
+            commands = [c["arguments"] for c in self.recorded_calls() if c["operation"] == "build"]
             for name in (private, batch):
-                selected = direct_layout_for_archive(self.target / name, token)
-                if remove and name == private:
-                    self.assertIsNone(selected, "a stale receipt cannot serve a producer without a layout")
+                archive = self.target / name
+                selected = installer_input(archive, token)
+                needs_archive = remove and name == private
+                self.assertEqual(any(self.labels[name] in cmd for cmd in commands), needs_archive)
+                self.assertEqual(archive.exists(), needs_archive)
+                if needs_archive:
+                    self.assertEqual(selected, archive)
+                    self.assertEqual(archive.read_bytes(), ("new " + name).encode())
                 else:
                     self.assertEqual((selected / "index.json").read_bytes(),
                                      (self.root / (name + ".oci/index.json")).read_bytes())
+            self.calls.unlink()
+
+        # Request an explicit archive alongside an installer that uses another
+        # owner's native layout. Make must produce the real archive.
+        native[self.labels[private] + ".boot-oci"] = str(self.root / (private + ".oci"))
+        env["FAKE_BAZEL_BOOT_LAYOUTS"] = json.dumps(native)
+        (self.target / private).unlink()
+        self.assert_success(self.run_make(goals=["target/sonic-vs.bin", "target/" + batch],
+                                          parallel=True, environment=env))
+        self.assertEqual((self.target / batch).read_bytes(), ("new " + batch).encode())
+        self.assertFalse((self.target / private).exists())
 
     def test_default_onie_build_skips_debug_archives_and_prerequisites(self):
         for name in self.archives[1::2]:

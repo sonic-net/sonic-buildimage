@@ -159,6 +159,19 @@ def archive_outputs(events, labels, layout_labels=()):
     return outputs
 
 
+def build_options(shared, architecture):
+    settings = os.environ
+    cache_directory = settings.get("BAZEL_CONTAINER_CACHE_DIR", settings.get("BAZEL_SWSS_CACHE_DIR"))
+    global_args = settings.get("BAZEL_CONTAINER_ARGS", settings.get("BAZEL_SWSS_ARGS", ""))
+    options = build_helpers.cache_options(cache_directory) + shlex.split(global_args)
+    options.extend(f"--{key}={value}" for key, value in sorted(shared.items()))
+    options.extend(build_helpers.remote_cache_options())
+    platform = {"amd64": "x86_64_trixie", "arm64": "aarch64_trixie"}[architecture]
+    platform = "@sonic_build_infra//platforms:" + platform
+    options.extend(["--platforms=" + platform, "--host_platform=" + platform])
+    return options
+
+
 def build(args):
     workspace = Path.cwd()
     if not (len(args.archive) == len(args.label) == len(args.owner_args) == len(set(args.archive))):
@@ -179,41 +192,41 @@ def build(args):
         archives[name] = label
         owner = name.removesuffix(debug_suffix) + ".gz" if name.endswith(debug_suffix) else name
         owners[owner].append(name)
-    labels = build_labels(workspace, archives)
-    validation_labels = []
-    if args.validation_directory:
-        from tools.bazel.ci import vs_python_packages, vs_validation_bundles as validation
-        families = validation.validation_targets(archives, set(args.registered_debug), args.validation_debug == "y",
-                                                 args.validation_only_debug)
-        # Top-level requests can select each owner's private test fixtures.
-        validation_labels = validation.extra_targets(families)
-        if args.architecture == "amd64":
-            validation_labels.extend(vs_python_packages.PACKAGES.values())
     settings = os.environ
+    requested = set(args.layout_only)
+    if requested - archives.keys() or (requested and not args.boot_layouts):
+        raise ValueError("Layout-only outputs must be boot layout candidates in this batch")
     layout_labels = {}
     if args.boot_layouts:
         native = build_helpers.boot_layout_labels(settings.get("BAZEL", "bazel"), archives.values())
         layout_labels = {name: label + ".boot-oci" for name, label in archives.items()
                          if label + ".boot-oci" in native}
-    cache_directory = settings.get("BAZEL_CONTAINER_CACHE_DIR", settings.get("BAZEL_SWSS_CACHE_DIR"))
-    global_args = settings.get("BAZEL_CONTAINER_ARGS", settings.get("BAZEL_SWSS_ARGS", ""))
-    options = build_helpers.cache_options(cache_directory) + shlex.split(global_args)
-    options.extend(f"--{key}={value}" for key, value in sorted(shared.items()))
-    options.extend(build_helpers.remote_cache_options())
-    platform = {"amd64": "x86_64_trixie", "arm64": "aarch64_trixie"}[args.architecture]
-    platform = "@sonic_build_infra//platforms:" + platform
-    options.extend(["--platforms=" + platform, "--host_platform=" + platform])
+    layout_only = requested.intersection(layout_labels)
+    labels = build_labels(workspace, {name: label for name, label in archives.items() if name not in layout_only})
+    validation_labels = []
+    if args.validation_directory:
+        from tools.bazel.ci import vs_python_packages, vs_validation_bundles as validation
+        if not layout_only:
+            families = validation.validation_targets(archives, set(args.registered_debug), args.validation_debug == "y",
+                                                     args.validation_only_debug)
+            validation_labels = validation.extra_targets(families)
+        # Publish the package artifacts from the original configured VS build.
+        if args.architecture == "amd64":
+            validation_labels.extend(vs_python_packages.PACKAGES.values())
+    options = build_options(shared, args.architecture)
     directory = settings.get("SONIC_VS_CONTAINER_BATCH_TIMING_DIR")
     build_timing = Path(directory) if directory else None
     export_timings = {}
+    publication = {name: ("layout-" if name in layout_only else "export-") + name for name in archives}
     for owner, names in owners.items():
         timing = None
         if build_timing:
-            timing = time_vs_image.start_recipe(workspace, owner, [], [], ["export-" + n for n in names])
+            timing = time_vs_image.start_recipe(workspace, owner, [], [], [publication[n] for n in names])
         export_timings.update(dict.fromkeys(names, timing))
     if build_timing:
         # Preserve original producers and this invocation's exact membership.
-        targets = {name: [owner, archives[name]] for owner, names in owners.items() for name in names}
+        targets = {name: [owner, layout_labels[name] if name in layout_only else archives[name]]
+                   for owner, names in owners.items() for name in names}
         (build_timing / "batch-targets.json").write_text(json.dumps(targets) + "\n")
     with tempfile.TemporaryDirectory(prefix="sonic-container-batch-") as events_dir:
         events = Path(events_dir) / "events.json"
@@ -239,14 +252,21 @@ def build(args):
                 build_timing = retry
             time_vs_image.run_phase(build_timing, "build", command)
         outputs = archive_outputs(events, set(labels.values()) | set(layout_labels.values()), set(layout_labels.values()))
-        for name, label in labels.items():
-            with time_vs_image.time_phase(export_timings[name], "export-" + name):
+        published_layouts = {}
+        for name in archives:
+            with time_vs_image.time_phase(export_timings[name], publication[name]):
                 destination = args.target_path / name
                 layout = outputs[layout_labels[name]] if name in layout_labels else None
-                build_helpers.export_image(outputs[label], destination, layout)
+                if name in layout_only:
+                    published_layouts[name] = build_helpers.export_installer_layout(layout, destination)
+                else:
+                    build_helpers.export_image(outputs[labels[name]], destination, layout, installer_input=name in requested)
+        if args.validation_directory and layout_only:
+            validation.defer_validation(args, archives, shared, published_layouts)
         if validation_labels:
             paths = validation.configured_outputs(settings.get("BAZEL", "bazel"), options, validation_labels, events)
-            validation.write_bundles(args, families, paths, shared)
+            if not layout_only:
+                validation.write_bundles(args, families, paths, shared)
             if args.architecture == "amd64":
                 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
                 vs_python_packages.publish(args.validation_directory.parent / "python-packages", revision, paths)
@@ -256,6 +276,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target-path", type=Path, required=True)
     parser.add_argument("--boot-layouts", action="store_true")
+    parser.add_argument("--layout-only", action="append", default=[], metavar="ARCHIVE",
+                        help="Use this image's native OCI layout when available; otherwise export its archive")
     parser.add_argument("--architecture", choices=("amd64", "arm64"), required=True)
     parser.add_argument("--debug-image-mark", default="dbg")
     parser.add_argument("--validation-directory", type=Path, help="Publish per-image runtime-test artifacts")

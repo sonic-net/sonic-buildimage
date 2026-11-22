@@ -275,8 +275,8 @@ def batch_image_starts(epoch_ms, bounds, archives, build_record):
     build_start = build_record["start_epoch_seconds"]
     build_end = build_start + build_record["seconds"]
     phases = defaultdict(set)
-    for archive, (owner, _) in archives.items():
-        phases[owner].add(f"export-{archive}")
+    for archive, (owner, label) in archives.items():
+        phases[owner].add(("layout-" if label.endswith(".boot-oci") else "export-") + archive)
     starts = {}
     for owner, (first_us, last_us) in bounds.items():
         first = epoch_ms / 1000 + first_us / 1e6
@@ -604,12 +604,12 @@ def report(root):
     lines = ["### VS Bazel build timings (wall seconds)", ""]
     if recipes:
         lines.extend(["| Make target or package | Bazel / launcher | Bazel lock wait | Compiler subprocesses | "
-                      "Nested build subprocesses | Cache input/output fetch | Export |", "|---|---:|---:|---:|---:|---:|---:|"])
+                      "Nested build subprocesses | Cache input/output fetch | Output handoff |", "|---|---:|---:|---:|---:|---:|---:|"])
         lines.extend("| " + " | ".join(markdown_row(row)) + " |" for row in recipes)
         if any(row["owner"] == "vs-container-images" for row in recipes):
             lines.extend(["", "`vs-container-images` records the shared Bazel build. "
-                          "Each participating image records its archive export time separately."])
-        lines.extend(["", "Command times and exports are summed per target. The kernel launcher includes bootstrap, "
+                          "Each image records the time spent publishing its OCI layout or exporting its archive."])
+        lines.extend(["", "Command and output handoff times are summed per target. The kernel launcher includes bootstrap, "
                       "build, output query and module resolution. Nested build time covers an entire Make or "
                       "foreign build subprocess. Cache fetch includes both disk and remote reads. "
                       "Parallel activities can overlap. The Bazel total also includes work such as analysis and linking. "
@@ -643,7 +643,7 @@ def report(root):
                              total=measured(row.get("total_seconds")), **row))
         lines.extend(["", "Image rows can overlap. Compiler subprocesses, OCI tar, compression and cache fetch are included in "
                       "action wall time. Total elapsed runs from the first action attributed to the image through its last "
-                      "archive export, including any waits between them.",
+                      "output handoff, including any waits between them.",
                       f"Images ran concurrently for {breakdown['parallel_seconds']:.2f}s. "
                       f"Only shared or unattributed actions ran for {breakdown['other_action_seconds']:.2f}s. "
                       f"No action was recorded for {breakdown['no_action_seconds']:.2f}s."])

@@ -14,7 +14,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
-from tools.bazel.build_helpers import export_image
+from tools.bazel.build_helpers import export_image, export_installer_layout
 from tools.bazel.image import build_boot_bundle as bridge
 from tools.bazel.image.build_boot_bundle import BundlePackage, Image, write_archive_package
 from tools.bazel.oci.boot_layout import publish_layout
@@ -81,6 +81,41 @@ class BootBundleBridgeTest(unittest.TestCase):
         self.assertIsNone(selected.layout)
         self.assertTrue((stage / "inputs" / selected.archive / "archive").samefile(archive))
         self.assertNotIn("receipt =", (stage / "BUILD.bazel").read_text())
+
+    def test_installer_selects_layout_and_fallback_from_same_build(self):
+        archive = self.work / "target/docker-a.gz"
+        fallback = archive.with_name("docker-b.gz")
+        original = self.work / "fallback.tar"
+        docker_save(original, self.config, self.layers)
+        with mock.patch.dict(os.environ, {"SONIC_VS_BOOT_HANDOFF": "build-a"}):
+            export_installer_layout(self.layout, archive)
+            export_image(original, fallback, installer_input=True)
+
+        selected = [Image(archive, ["a:latest"], False), Image(fallback, ["b:latest"], False)]
+        names = {archive.name, fallback.name}
+        stage = self.work / "selected"
+        self.assertTrue(write_archive_package(stage, selected, PLATFORM, "build-a", names))
+        self.assertFalse(archive.exists())
+        self.assertEqual((selected[0].layout / "index.json").read_bytes(), (self.layout / "index.json").read_bytes())
+        self.assertEqual((stage / "BUILD.bazel").read_text().count("boot_archive("), 1)
+        # Adding and removing the staged hardlink changes ctime. The installer
+        # reuses the same fallback when it rebuilds the bundle with extra images.
+        linked = stage / "inputs" / selected[1].archive / "archive"
+        self.assertTrue(linked.samefile(fallback))
+        linked.unlink()
+        self.assertTrue(write_archive_package(self.work / "expanded", selected, PLATFORM, "build-a", names))
+        fallback.write_bytes(b"changed fallback")
+        with self.assertRaisesRegex(ValueError, "fallback archive changed"):
+            write_archive_package(self.work / "tampered", selected, PLATFORM, "build-a", names)
+
+        # A stale archive or previous build's receipt cannot replace the native
+        # image selected for this invocation.
+        archive.write_bytes(b"old archive")
+        with self.assertRaises(FileNotFoundError):
+            write_archive_package(self.work / "stale", [selected[0]], PLATFORM, "build-b", names)
+        (selected[0].layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
+        with self.assertRaisesRegex(ValueError, "Incomplete installer OCI layout"):
+            write_archive_package(self.work / "pruned", [selected[0]], PLATFORM, "build-a", names)
 
     def test_current_producer_layout_skips_staging_only_its_selected_archive(self):
         original = self.work / "producer.gz"

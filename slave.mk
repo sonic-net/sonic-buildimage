@@ -1792,8 +1792,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(AUDISP_TACPLUS) \
                 $(SYSLOG_COUNTER) \
                 $(SEDUTIL)) \
-        $$(addprefix $(TARGET_PATH)/,$$($$*_DOCKERS)) \
-        $$(addprefix $(TARGET_PATH)/,$$(SONIC_PACKAGES_LOCAL)) \
+        $$(call vs_installer_inputs,$$($$*_DOCKERS) $$(SONIC_PACKAGES_LOCAL)) \
         $$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
         $(if $(findstring y,$(ENABLE_ZTP)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_ZTP))) \
         $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_INSTALLER_EXTRA_DEBS)) \

@@ -1,6 +1,7 @@
 """Check shared archive publication and optional cache settings."""
 
 import errno
+import json
 import os
 from pathlib import Path
 import sys
@@ -138,6 +139,66 @@ class BuildHelpersTest(unittest.TestCase):
         self.assertIsNone(boot_layout.direct_layout_for_archive(self.destination, "build"))
         (generation / "index.json").unlink()
         self.assertIsNone(boot_layout.direct_layout_for_archive(self.destination, "build"))
+
+    def test_installer_layout_skips_archive_and_preserves_unchanged_make_prerequisite(self):
+        layout = self.root / "oci"
+        write_layout(layout, oci_files(*image_fixture()))
+        marker = self.destination.parent / ".vs-boot-inputs" / self.destination.name
+        with patch.object(build_helpers, "export_archive", side_effect=AssertionError("exported archive")):
+            with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF="first"):
+                first = build_helpers.export_installer_layout(layout, self.destination)
+            previous = marker.stat()
+            self.assertEqual(self.destination.read_bytes(), b"previous image")
+            self.destination.unlink()
+            with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF="second"):
+                self.assertEqual(build_helpers.export_installer_layout(layout, self.destination), first)
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(marker.stat().st_mtime_ns, previous.st_mtime_ns)
+        self.assertEqual(marker.stat().st_ino, previous.st_ino)
+        self.assertEqual(boot_layout.installer_input(self.destination, "first"), first)
+        self.assertEqual(boot_layout.installer_input(self.destination, "second"), first)
+        with self.assertRaises(FileNotFoundError):
+            boot_layout.installer_input(self.destination, "wrong-invocation")
+        with self.assertRaisesRegex(ValueError, "Invalid VS boot"):
+            boot_layout.installer_input(self.destination, "../escape")
+        # Even a historical .gz cannot replace a damaged layout from the current run.
+        self.destination.write_bytes(b"old")
+        (first / "index.json").write_bytes(b"damaged")
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            boot_layout.installer_input(self.destination, "second")
+
+    def test_installer_selections_from_concurrent_runs_are_independent(self):
+        config, layers = image_fixture()
+        for name in ("first", "second"):
+            layout = self.root / name
+            image = json.loads(config)
+            image["config"]["Labels"]["owner"] = name
+            write_layout(layout, oci_files(json.dumps(image).encode(), layers))
+            with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF=name):
+                build_helpers.export_installer_layout(layout, self.destination)
+        first = boot_layout.installer_input(self.destination, "first")
+        second = boot_layout.installer_input(self.destination, "second")
+        self.assertNotEqual(first, second)
+        for name, selected in (("first", first), ("second", second)):
+            self.assertEqual((selected / "index.json").read_bytes(), (self.root / name / "index.json").read_bytes())
+
+    def test_fallback_marker_is_bound_to_exported_archive(self):
+        source = self.root / "archive"
+        source.write_bytes(b"current")
+        marker = self.destination.parent / ".vs-boot-inputs" / self.destination.name
+        with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF="first"):
+            build_helpers.export_image(source, self.destination, installer_input=True)
+        previous = marker.stat().st_mtime_ns
+        self.assertEqual(boot_layout.installer_input(self.destination, "first"), self.destination)
+        self.assertEqual(self.destination.read_bytes(), b"current")
+        with patch.dict(os.environ, SONIC_VS_BOOT_HANDOFF="second"):
+            build_helpers.export_image(source, self.destination, installer_input=True)
+        self.assertEqual(previous, marker.stat().st_mtime_ns)
+        source.replace(self.destination)
+        self.assertEqual(boot_layout.installer_input(self.destination, "second"), self.destination)
+        self.destination.write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "fallback archive changed"):
+            boot_layout.installer_input(self.destination, "second")
 
 
 if __name__ == "__main__":

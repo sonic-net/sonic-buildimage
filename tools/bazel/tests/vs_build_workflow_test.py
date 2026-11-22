@@ -294,6 +294,16 @@ else:
         self.assertEqual((call["gzip_level"], call["zstd_level"]), (None, None))
         self.assertIn("-e SONIC_VS_BATCH_PACKAGES", " ".join(call["args"]))
 
+    def test_archive_validation_runs_after_the_timed_installer_and_before_checksums(self):
+        job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
+        steps = job["steps"]
+        installer = next(i for i, s in enumerate(steps) if s.get("id") == "native_build")
+        validation = next(i for i, s in enumerate(steps) if "vs_validation_bundles.py complete" in s.get("run", ""))
+        checksums = next(i for i, s in enumerate(steps) if s.get("name") == "Record checksums of installer deliverables")
+        self.assertLess(installer, validation)
+        self.assertLess(validation, checksums)
+        self.assertIn("sonic-slave-run", steps[validation]["run"])
+
     def test_ci_builds_and_verifies_the_boot_bundle(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())
         jobs = workflow["jobs"]

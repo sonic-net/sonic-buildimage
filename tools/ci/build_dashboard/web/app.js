@@ -120,7 +120,7 @@ const RECIPE_METRICS = [
   ["compile_seconds", "Compiler subprocesses", "profiles", "profiles_expected"],
   ["foreign_seconds", "Nested build subprocesses", "profiles", "profiles_expected"],
   ["fetch_seconds", "Cache fetch", "profiles", "profiles_expected"],
-  ["export_seconds", "Export", "exports", "exports_expected"],
+  ["export_seconds", "Output handoff", "exports", "exports_expected"],
 ];
 const BUILD_EVIDENCE = {
   repository_seconds: "Repository preparation",
@@ -874,7 +874,7 @@ function renderInstallerIntervals(breakdown, job, step) {
     `${duration(section.duration_seconds, true)} from the start of the host Make build through its return. Select a step for its measured work.`));
   const intervals = [
     ["Prepare kernel, packages and P4RT", 0, batch.offset_seconds],
-    ["Build and export Bazel container images", batch.offset_seconds, batchEnd, batch],
+    ["Build and hand off Bazel container images", batch.offset_seconds, batchEnd, batch],
     ["Finish Make containers and stage the root filesystem", batchEnd, installer.offset_seconds],
     ["Assemble the final ONIE installer", installer.offset_seconds, installerEnd, installer],
     ["Finish the Make invocation", installerEnd, section.duration_seconds],
@@ -905,14 +905,14 @@ function renderInstallerIntervals(breakdown, job, step) {
         };
         if (batch.bazelSeconds !== null) add(list, "Shared Bazel command", batch.bazelSeconds);
         if (batch.exports.length) {
-          add(list, "Recorded export command time", batch.exports.reduce((total, entry) => total + entry[1], 0));
+          add(list, "Recorded output handoff time", batch.exports.reduce((total, entry) => total + entry[1], 0));
           const detail = el("details", "batch-exports"), rows = el("dl", "interval-receipts");
           for (const [label, elapsed] of batch.exports) add(rows, label, elapsed);
-          detail.append(el("summary", "", `Exports by container (${batch.exports.length})`), rows);
+          detail.append(el("summary", "", `Output handoffs by container (${batch.exports.length})`), rows);
           disclosure.append(list, detail);
         } else disclosure.append(list);
-        disclosure.append(el("p", "breakdown-note", "Export time adds the recorded archive command durations. The section heading shows elapsed time for the whole Make task."));
-      } else disclosure.append(el("p", "unmeasured-note", "Separate Bazel command and export timings were not recorded for this batch."));
+        disclosure.append(el("p", "breakdown-note", "Output handoff time adds the commands that publish OCI layouts or export archives. The section heading shows elapsed time for the whole Make task."));
+      } else disclosure.append(el("p", "unmeasured-note", "Separate Bazel command and output handoff timings were not recorded for this batch."));
     }
     const spans = section.tasks.filter(task => task !== batch && task !== installer).map(task => ({
       task, from: Math.max(start, task.offset_seconds), to: Math.min(end, task.offset_seconds + task.duration_seconds),
@@ -1173,7 +1173,7 @@ function renderBuildExplanations(rows, context = "") {
       Math.max(0, row.lock_seconds - build.lock_seconds) : null;
     for (const [label, value] of [
       [scope, cardTime(row)], ["Build elapsed", build?.seconds ?? null], ["Build lock", build?.lock_seconds ?? null],
-      ["Other-command lock", otherLock], ["All command elapsed", row.bazel_seconds], ["Exports", row.export_seconds],
+      ["Other-command lock", otherLock], ["All command elapsed", row.bazel_seconds], ["Output handoff", row.export_seconds],
     ]) {
       const metric = el("div"); metric.append(el("dt", "", label), el("dd", "", measuredDuration(value))); metrics.append(metric);
     }
@@ -1250,8 +1250,8 @@ function containerBatchMeasurements(job, step) {
     // Owners that also built independently can include exports from outside the batch.
     if (recipe.failed || recipe.bazel_expected || recipe.profiles_expected || !recipe.exports) continue;
     const count = recipe.exports < recipe.exports_expected ? `${recipe.exports} of ${recipe.exports_expected} recorded` : recipe.exports;
-    const label = recipe.exports_expected === 1 ? "" : ` (${count} archive commands)`;
-    exports.push([`Export ${recipe.owner}${label}`, recipe.export_seconds]);
+    const label = recipe.exports_expected === 1 ? "" : ` (${count} commands)`;
+    exports.push([`${recipe.owner}${label}`, recipe.export_seconds]);
   }
   return bazelSeconds !== null || exports.length ? {bazelSeconds, exports} : null;
 }
@@ -1264,8 +1264,8 @@ function renderContainerMembers({profile, members}, wallSeconds) {
     return box;
   }
   if (profile) {
-    box.append(el("p", "stage-note", "Total elapsed runs from the first observed action owned by an image through its last archive export, including time spent waiting. Images build in parallel, so their totals overlap."));
-    box.append(el("p", "stage-note", "Active time counts intervals with at least one observed action owned by the image. Compile time counts elapsed time with a C, C++, Rust or Go compiler running for that image. Simultaneous compiler processes count once per image. Compilation, cache fetch, OCI archive and gzip can overlap. Make exports the archives after Bazel returns."));
+    box.append(el("p", "stage-note", "Total elapsed runs from the first observed action owned by an image through its last output handoff, including time spent waiting. Images build in parallel, so their totals overlap."));
+    box.append(el("p", "stage-note", "Active time counts intervals with at least one observed action owned by the image. Compile time counts elapsed time with a C, C++, Rust or Go compiler running for that image. Simultaneous compiler processes count once per image. Compilation, cache fetch, OCI archive and gzip can overlap. After Bazel returns, Make publishes the OCI layout or exports the requested archive."));
     const totals = el("dl", "recipe-metrics");
     if (wallSeconds !== null && wallSeconds >= profile.other_action_seconds + profile.no_action_seconds) {
       const imageWall = wallSeconds - profile.other_action_seconds - profile.no_action_seconds;
@@ -1277,7 +1277,7 @@ function renderContainerMembers({profile, members}, wallSeconds) {
     }
     box.append(totals, el("p", "stage-note", `Two or more image owners were active together for ${recipeSeconds(profile.parallel_seconds)} of the measured image time.`));
   } else {
-    box.append(el("p", "stage-note", "This run retained per-container export times. Per-container Bazel action times are unavailable."));
+    box.append(el("p", "stage-note", "This run retained per-container output handoff times. Per-container Bazel action times are unavailable."));
   }
   const scroll = el("div", "table-scroll"), table = el("table"), head = el("thead"), header = el("tr"), body = el("tbody");
   scroll.setAttribute("tabindex", "0");
@@ -1286,7 +1286,7 @@ function renderContainerMembers({profile, members}, wallSeconds) {
   const metrics = [["actions", "Actions"], ["total_seconds", "Total elapsed"], ["action_seconds", "Active"],
     ["compile_seconds", "Compile time"], ["fetch_seconds", "Cache fetch"], ["archive_seconds", "OCI archive"],
     ["compress_seconds", "Gzip"]].filter(([key]) => profile || key === "total_seconds" || key === "compile_seconds");
-  for (const label of ["Image", ...metrics.map(([, label]) => label), "Export"]) {
+  for (const label of ["Image", ...metrics.map(([, label]) => label), "Output handoff"]) {
     const th = el("th", "", label); th.setAttribute("scope", "col"); header.append(th);
   }
   head.append(header);
@@ -1341,7 +1341,7 @@ function renderRecipeRows(rows, title, group, batch) {
     box.append(el("p", "stage-note", "No Bazel activity was recorded during this build."));
     return box;
   }
-  if (rows.length > 1) box.append(el("p", "stage-note", "Recipes are ordered by recorded Bazel and export command time. Expand a recipe for its breakdown."));
+  if (rows.length > 1) box.append(el("p", "stage-note", "Recipes are ordered by recorded Bazel and output handoff time. Expand a recipe for its breakdown."));
   const list = el("ol");
   for (const row of rows) {
     const item = el("li"), details = el("details");

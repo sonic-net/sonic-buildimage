@@ -1271,6 +1271,13 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Build archive validation artifacts from the installer image selection
+        run: |
+          make -f Makefile.work BLDENV=trixie sonic-slave-run \
+            BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y ENABLE_ASAN=n ENABLE_SYNCD_RPC=n \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL -e BAZEL -e BAZEL_CONTAINER_ARGS" \
+            SONIC_RUN_CMDS='python3 -B tools/bazel/ci/vs_validation_bundles.py complete --directory artifacts/vs/containers'
+
       - name: Record checksums of installer deliverables
         run: |
           set -euo pipefail

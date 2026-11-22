@@ -1110,7 +1110,7 @@ test("previous four-image receipts retain measured and partial coverage", () => 
   assert.match(view.textContent, /four image recipes/);
   assert.match(rows.at(-1).textContent, /docker-fpm-frr.gzCommand failed12.5sPartial/);
   assert.match(rows.at(-1).textContent, /Bazel lock wait2.25s \(1\/3\)/);
-  assert.match(rows.at(-1).textContent, /Export— \(0\/2\)/);
+  assert.match(rows.at(-1).textContent, /Output handoff— \(0\/2\)/);
   assert.match(view.textContent, /Bazel lock wait<0.001s/);
   assert.match(view.textContent, /can overlap/);
   assert.match(view.textContent, /disk and remote reads/);
@@ -1129,7 +1129,7 @@ test("all build recipes are ordered by recorded commands and exports with separa
   const view = renderRecipeTimings(job), rows = descendants(view, el => el.tagName === "details");
   assert.equal(rows.length, 39);
   assert.match(rows[0].textContent, /linux-headers-amd64120sBazel \/ launcher120sBazel lock wait2.25s \(2\/3\)/);
-  assert.match(rows[0].textContent, /ExportN\/A/);
+  assert.match(rows[0].textContent, /Output handoffN\/A/);
   assert.equal(rows[0].open, true);
   assert.equal(rows[1].open, false);
   assert.match(rows[1].textContent, /package-35.deb/);
@@ -1165,7 +1165,7 @@ test("expanded shared build lists the original per-image exports on older runs",
   assert.equal(rows.length, 1);
   assert.match(rows[0].textContent, /Containers \(1\)/);
   assert.match(rows[0].textContent, /Per-container Bazel action times are unavailable/);
-  assert.match(rows[0].textContent, /ImageTotal elapsedCompile timeExportdocker-sflow.gz——4s/);
+  assert.match(rows[0].textContent, /ImageTotal elapsedCompile timeOutput handoffdocker-sflow.gz——4s/);
 }));
 
 test("batch action times are nested, ordered by activity and distinct from subsequent exports", () => withDocument(() => {
@@ -1183,7 +1183,7 @@ test("batch action times are nested, ordered by activity and distinct from subse
   const view = renderRecipeTimings(job), rows = descendants(view, node => node.tagName === "tr");
   assert.equal(descendants(view, node => node.tagName === "details").length, 1);
   assert.deepEqual(rows.map(tr => tr.children.map(cell => cell.textContent)), [
-    ["Image", "Actions", "Total elapsed", "Active", "Compile time", "Cache fetch", "OCI archive", "Gzip", "Export"],
+    ["Image", "Actions", "Total elapsed", "Active", "Compile time", "Cache fetch", "OCI archive", "Gzip", "Output handoff"],
     ["docker-syncd-vs.gz", "12", "119.5s", "81s", "8.25s", "1.5s", "10s", "7s", "0s (1/2)"],
     ["docker-teamd.gz", "12", "85s", "23s", "0s", "1.5s", "10s", "7s", "4s"]]);
   assert.match(view.textContent, /Only shared or unattributed actions active25s/);
@@ -1357,7 +1357,7 @@ function nativeInstallerStep() {
 
 const installerStageNames = [
   "Prepare kernel, packages and P4RT",
-  "Build and export Bazel container images",
+  "Build and hand off Bazel container images",
   "Finish Make containers and stage the root filesystem",
   "Assemble the final ONIE installer",
   "Finish the Make invocation",
@@ -1409,7 +1409,7 @@ test("the container stage owns its recipe and table while independent recipes st
   assert.equal(stages.length, 5);
   assert.equal(installerStages(details).length, 5, "the raw CI steps should not repeat the same five stages");
   assert.match(stages[1].textContent, /Shared Bazel command/);
-  assert.match(stages[1].textContent, /Export docker-sflow\.gz/);
+  assert.match(stages[1].textContent, /Output handoffs by container \(1\)docker-sflow\.gz/);
   const tables = view => descendants(view, node => node.attributes?.["aria-label"] === "Container timings");
   assert.equal(tables(details).length, 1);
   assert.equal(tables(stages[1]).length, 1);
@@ -1793,8 +1793,8 @@ test("batch receipts show measured commands from the selected host step and pres
   const independent = {...archive, owner: "docker-independent.gz", bazel_expected: 1};
   job.image_recipe_timings.recipes.push(paired, independent);
   assert.deepEqual(containerBatchMeasurements(job, step), {bazelSeconds: 200, exports: [
-    ["Export docker-sflow.gz (2 archive commands)", 4],
-    ["Export docker-syncd-vs.gz (1 of 2 recorded archive commands)", 0],
+    ["docker-sflow.gz (2 commands)", 4],
+    ["docker-syncd-vs.gz (1 of 2 recorded commands)", 0],
   ]});
   assert.deepEqual(containerBatchMeasurements(job, {...step}), null);
   job.steps.push({...step});

@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 from tools.bazel.build_helpers import cache_options, export_archive, remote_cache_options
 from tools.bazel.ci.build import execution_root_from_bep, resolve_output
 from tools.bazel.ci.cache_reuse import json_records
-from tools.bazel.oci.boot_layout import direct_layout_for_archive
+from tools.bazel.oci.boot_layout import direct_layout_for_archive, installer_input
 from tools.bazel.oci.oci_layout import validate_layout
 from tools.bazel.image.boot_image_bundle import DIGEST, blob_name, json_bytes
 from tools.bazel.image.file_copy import copy_file
@@ -96,7 +96,7 @@ def sidecar_for_archive(source, platform):
     return None, None
 
 
-def write_archive_package(package, images, platform, handoff=None):
+def write_archive_package(package, images, platform, handoff=None, layout_inputs=()):
     package.mkdir()
     rules = [f'load("{RULES}", "boot_archive")', 'package(default_visibility=["//visibility:public"])']
     sources = {}
@@ -110,7 +110,15 @@ def write_archive_package(package, images, platform, handoff=None):
         if logical_path in sources:
             image.archive, image.layout = sources[logical_path]
             continue
-        if handoff:
+        if image.source.name in layout_inputs:
+            selected = installer_input(image.source, handoff)
+            if selected.is_dir():
+                if not complete_layout(selected, platform):
+                    raise ValueError(f"Incomplete installer OCI layout for {image.source.name}")
+                image.layout = selected
+                sources[logical_path] = ("", selected)
+                continue
+        elif handoff:
             layout = direct_layout_for_archive(image.source, handoff)
             if layout is not None and complete_layout(layout, platform):
                 image.layout = layout
@@ -308,7 +316,8 @@ def build(images, platform, output, inventory, labels, evidence_dir=None, gzip_l
         repo.mkdir()
         (repo / "MODULE.bazel").write_text(f'module(name="{REPO}")\n')
         archives = write_archive_package(repo / "archives", images, platform,
-                                         os.environ.get("SONIC_VS_BOOT_HANDOFF"))
+                                         os.environ.get("SONIC_VS_BOOT_HANDOFF"),
+                                         set(os.environ.get("SONIC_VS_LAYOUT_INPUTS", "").split()))
         if archives:
             expected = {im.archive + "/image.json" for im in images if im.archive}
             results = build_target(repo, "archives", "metadata", expected, evidence, options)

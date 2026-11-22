@@ -110,11 +110,18 @@ image bundle. The default is `n`. The VS installer CI sets it to `y`.
 make target/sonic-vs.bin BUILD_WITH_BAZEL_WHEN_AVAILABLE=y DOCKER_LOAD_ON_BOOT=y
 ```
 
-For selected images with a Bazel `.boot-oci` output, the VS producer hands its
-OCI layout to the installer. A receipt ties the layout to the archive exported
-by the same Make invocation. The packager reads that layout directly and
-verifies its config, manifest, layer digests and uncompressed layer IDs. An
-archive without a matching, complete layout follows the existing archive path.
+For this installer, Bazel builds the selected `.boot-oci` layouts and publishes
+their blobs directly. A receipt ties each image name and OCI index digest to
+the current Make invocation. The packager verifies the manifest, config and
+layers and assembles one offline bundle. DHCP Relay and MACsec also install
+their service metadata and CLI plugins from the selected image. The installer
+skips Docker tar creation, per-image gzip and archive export.
+
+Make still builds a real `.gz` for an explicit archive goal, a legacy Docker
+dependency, an SBOM build, or an image without a native layout. For example,
+adding `target/docker-syncd-vs.gz` to the command above also exports Syncd.
+VS CI creates archives needed by installed-image tests after the installer
+build, using the same configured image selection.
 
 Bazel caches each verified layer and the complete offline archive, tag inventory
 and image labels. Rebuilding the same selection can restore all three files.

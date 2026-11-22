@@ -60,12 +60,13 @@ vs_required_bazel_images = $(foreach image,$(filter-out $(2),$(sort $(1))), \
         $(call vs_required_bazel_images,$(call vs_legacy_image_inputs,$(image)),$(2) $(image))))
 
 vs_installer_goals := $(filter $(addprefix $(TARGET_PATH)/,sonic-vs.bin sonic-vs.img.gz),$(SONIC_BUILD_TARGET) $(MAKECMDGOALS))
-unexport SONIC_VS_BOOT_HANDOFF
+unexport SONIC_VS_BOOT_HANDOFF SONIC_VS_LAYOUT_INPUTS
 SONIC_BAZEL_VS_BATCH_ARCHIVES :=
 ifeq ($(CONFIGURED_PLATFORM):$(BLDENV),vs:trixie)
 ifneq ($(and $(vs_installer_goals),$(bazel_docker_archives)),)
-vs_requested_images := $(foreach installer,$(notdir $(vs_installer_goals)),$($(installer)_DOCKERS)) \
-    $(SONIC_PACKAGES_LOCAL) $(notdir $(filter $(TARGET_PATH)/docker-%.gz,$(MAKECMDGOALS)))
+vs_shipped_images := $(foreach installer,$(notdir $(vs_installer_goals)),$($(installer)_DOCKERS)) $(SONIC_PACKAGES_LOCAL)
+vs_explicit_archives := $(notdir $(filter $(TARGET_PATH)/docker-%.gz,$(MAKECMDGOALS) $(SONIC_BUILD_TARGET)))
+vs_requested_images := $(vs_shipped_images) $(vs_explicit_archives)
 vs_required_images := $(sort $(call vs_required_bazel_images,$(vs_requested_images)))
 # Preserve the existing VS runtime/debug pair handoff, including when only one
 # variant goes into the installer. Singleton producers export just their archive.
@@ -105,9 +106,24 @@ ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(DOCKER_LOAD_ON_BOOT),y:y)
 vs_boot_handoff := $(shell cat /proc/sys/kernel/random/uuid)
 vs_handoff_archives := $(sort $(filter-out $(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(vs_required_images) $(vs_private_pair_archives)))
 $(sort $(vs_installer_goals)) $(TARGET_PATH)/vs-container-images $(addprefix $(TARGET_PATH)/,$(vs_handoff_archives)): private override export SONIC_VS_BOOT_HANDOFF := $(vs_boot_handoff)
+# A Make/Docker recipe may still load a Bazel-built base. Keep those archives,
+# explicit archive goals, and SBOM inputs even when they are also shipped.
+ifeq ($(sort $(notdir $(vs_installer_goals))),sonic-vs.bin)
+ifeq ($(filter-out $(vs_installer_goals) $(addprefix $(TARGET_PATH)/,$(vs_explicit_archives)),$(MAKECMDGOALS) $(SONIC_BUILD_TARGET)),)
+ifneq ($(ENABLE_SBOM),y)
+vs_legacy_bases := $(call vs_required_bazel_images,$(filter-out $(bazel_docker_archives),$(vs_requested_images)))
+vs_layout_only_images := $(sort $(filter-out $(vs_explicit_archives) $(vs_legacy_bases),$(filter $(bazel_docker_archives),$(vs_shipped_images))))
 endif
 endif
 endif
+$(sort $(vs_installer_goals)): private override export SONIC_VS_LAYOUT_INPUTS := $(vs_layout_only_images)
+endif
+endif
+endif
+
+# These small Make prerequisites change when the selected layout or fallback
+# archive changes. A real .gz target always denotes an actual Docker archive.
+vs_installer_inputs = $(foreach image,$(1),$(TARGET_PATH)/$(if $(filter $(image),$(vs_layout_only_images)),.vs-boot-inputs/)$(image))
 
 # One directory per recipe execution keeps parallel and repeated invocations separate.
 ifeq ($(SONIC_VS_IMAGE_TIMINGS),1)
@@ -146,16 +162,24 @@ define build_bazel_docker_images
 		boot_layouts=()
 		$(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),boot_targets="$$(python3 tools/bazel/build_helpers.py boot-layouts --bazel="$${BAZEL:-bazel}" $(foreach image,$(1),--label="$($(image)_BAZEL_TARGET)"))"
 		if [[ -n "$$boot_targets" ]]; then mapfile -t boot_layouts <<< "$$boot_targets"; fi)
-		$(call vs_time_phase,build) "$${BAZEL:-bazel}" build "$${bazel_options[@]}" $(foreach image,$(1),"$($(image)_BAZEL_TARGET)") "$${boot_layouts[@]}"
+		archive_fallbacks=()
+		$(foreach image,$(2),if ! grep -Fxq -- "$($(image)_BAZEL_TARGET).boot-oci" <<< "$$boot_targets"; then archive_fallbacks+=("$($(image)_BAZEL_TARGET)"); fi
+		)
+		$(call vs_time_phase,build) "$${BAZEL:-bazel}" build "$${bazel_options[@]}" $(foreach image,$(filter-out $(2),$(1)),"$($(image)_BAZEL_TARGET)") "$${archive_fallbacks[@]}" "$${boot_layouts[@]}"
 		$(foreach image,$(1),
-		bazel_output="$$($(call vs_time_phase,cquery-$(image)) "$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET)")"
+		layout=
 		layout_option=()
 		$(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),if grep -Fxq -- "$($(image)_BAZEL_TARGET).boot-oci" <<< "$$boot_targets"; then
 			layout="$$("$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET).boot-oci")"
 			[[ -d "$$layout" ]] || { echo "Missing native boot OCI layout for $(image)" >&2; exit 1; }
 			layout_option=(--layout-query-output="$$layout")
 		fi)
-		$(call vs_time_phase,export-$(image)) python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$(TARGET_PATH)/$(image)" "$${layout_option[@]}"
+		if [[ -n "$$layout" && -n "$(filter $(image),$(2))" ]]; then
+			python3 tools/bazel/build_helpers.py export-layout --output="$(TARGET_PATH)/$(image)" "$${layout_option[@]}"
+		else
+			bazel_output="$$($(call vs_time_phase,cquery-$(image)) "$${BAZEL:-bazel}" cquery "$${bazel_options[@]}" --output=files "$($(image)_BAZEL_TARGET)")"
+			$(call vs_time_phase,export-$(image)) python3 tools/bazel/build_helpers.py export --query-output="$$bazel_output" --output="$(TARGET_PATH)/$(image)" "$${layout_option[@]}" $(if $(filter $(image),$(2)),--installer-input)
+		fi
 		)
 	} $(LOG)
 	$(foreach image,$(1),$(call sbom_emit_fragment,$(TARGET_PATH)/$(image),DOCKER_IMAGE,$($(image)_PATH),,,,)
@@ -167,18 +191,34 @@ $(addprefix $(TARGET_PATH)/,$(filter-out $(SONIC_BAZEL_VS_BATCH_ARCHIVES) $(vs_p
         $$($$*.gz_BAZEL_DEPENDS)
 	$(call build_bazel_docker_images,$(@F))
 
+vs_private_layout_inputs := $(filter-out $(SONIC_BAZEL_VS_BATCH_ARCHIVES) $(vs_private_pair_archives),$(vs_layout_only_images))
+ifneq ($(vs_private_layout_inputs),)
+$(call vs_installer_inputs,$(vs_private_layout_inputs)): $(TARGET_PATH)/.vs-boot-inputs/%.gz: .platform bazel-docker-force \
+        $$($$*.gz_BAZEL_DEPENDS) $$(if $$(filter $$*.gz,$$(SONIC_BAZEL_SWITCHABLE_IMAGES)),$(TARGET_PATH)/.container-build-method/$$*.gz)
+	$(call build_bazel_docker_images,$(@F),$(@F))
+endif
+
+# Private producers receive the same per-invocation handoff as the installer.
+vs_private_layout_markers := $(call vs_installer_inputs,$(filter-out $(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(vs_layout_only_images)))
+ifneq ($(strip $(vs_private_layout_markers)),)
+$(TARGET_PATH)/.vs-boot-inputs:
+	mkdir -p "$@"
+$(vs_private_layout_markers): | $(TARGET_PATH)/.vs-boot-inputs
+$(vs_private_layout_markers): private override export SONIC_VS_BOOT_HANDOFF := $(vs_boot_handoff)
+endif
+
 define bazel_vs_private_pair_rule
-$(addprefix $(TARGET_PATH)/,$(1) $(2)) &: .platform bazel-docker-force \
+$(call vs_installer_inputs,$(1) $(2)) &: .platform bazel-docker-force \
         $$$$($(1)_BAZEL_DEPENDS) $$$$($(2)_BAZEL_DEPENDS) \
         $(addprefix $(TARGET_PATH)/.container-build-method/,$(filter $(SONIC_BAZEL_SWITCHABLE_IMAGES),$(1) $(2)))
-	$$(call build_bazel_docker_images,$(1) $(2))
+	$$(call build_bazel_docker_images,$(1) $(2),$(filter $(vs_layout_only_images),$(1) $(2)))
 endef
 $(foreach image,$(vs_private_pairs),$(eval $(call bazel_vs_private_pair_rule,$(image),$(image:.gz=-$(DBG_IMAGE_MARK).gz))))
 
 ifneq ($(SONIC_BAZEL_VS_BATCH_ARCHIVES),)
 # All consumers wait for the same Make target, even under -j and when an
 # archive already exists. The conductor publishes every variant before return.
-$(addprefix $(TARGET_PATH)/,$(SONIC_BAZEL_VS_BATCH_ARCHIVES)): $(TARGET_PATH)/vs-container-images ;
+$(call vs_installer_inputs,$(SONIC_BAZEL_VS_BATCH_ARCHIVES)): $(TARGET_PATH)/vs-container-images ;
 
 .PHONY: $(TARGET_PATH)/vs-container-images
 $(TARGET_PATH)/vs-container-images: .platform \
@@ -193,6 +233,7 @@ endif
 	python3 -B tools/bazel/build_container_batch.py --target-path="$(TARGET_PATH)" --architecture="$(CONFIGURED_ARCH)" \
 		$(if $(filter 1,$(SONIC_VS_VALIDATION_BUNDLES)),--validation-directory="artifacts/vs/containers" --validation-debug="$(SONIC_ENABLE_DEBUG_LAYER)" $(foreach image,$(SONIC_BAZEL_VALIDATION_ONLY_DBG_IMAGES),--validation-only-debug="$(image)") $(foreach image,$(SONIC_BAZEL_DBG_DOCKER_IMAGES),--registered-debug="$(image)")) \
 		--debug-image-mark="$(DBG_IMAGE_MARK)" $(if $(filter y,$(DOCKER_LOAD_ON_BOOT)),--boot-layouts) \
+		$(foreach image,$(filter $(vs_layout_only_images),$(SONIC_BAZEL_VS_BATCH_ARCHIVES)),--layout-only="$(image)") \
 		--shared-args=$(call bazel_quote_argument,$(bazel_make_image_options)) \
 		$(foreach image,$(SONIC_BAZEL_VS_BATCH_ARCHIVES),$(if $($(image)_BAZEL_SHARED_ARGS),--shared-args=$(call bazel_quote_argument,$($(image)_BAZEL_SHARED_ARGS)))) \
 		$(foreach image,$(SONIC_BAZEL_VS_BATCH_ARCHIVES),--archive="$(image)" --label="$($(image)_BAZEL_TARGET)" --owner-args=$(call bazel_quote_argument,$($(image)_BAZEL_ARGS))) $(LOG)

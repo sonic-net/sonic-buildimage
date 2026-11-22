@@ -1096,9 +1096,13 @@ if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
             --labels "$boot_work/labels.json" "${boot_images[@]}"
     }
     build_boot_bundle
-    sudo install -m 0644 "$boot_work/labels.json" "$FILESYSTEM_ROOT/tmp/sonic-image-labels.json"
-    sudo install -m 0644 scripts/build_boot_packages.py "$FILESYSTEM_ROOT/tmp/build_boot_packages.py"
-    boot_package_manager=(python3 /tmp/build_boot_packages.py /tmp/sonic-image-labels.json)
+    boot_helper=/tmp/sonic-boot-packages
+    sudo install -d "$FILESYSTEM_ROOT$boot_helper"
+    sudo install -m 0644 "$boot_work/labels.json" "$boot_work/inventory.json" scripts/build_boot_packages.py "$FILESYSTEM_ROOT$boot_helper/"
+    if [[ -n ${SONIC_VS_LAYOUT_INPUTS:-} ]]; then
+        sudo install -m 0644 tools/bazel/oci/oci_layout.py tools/bazel/image/merge_layers.py "$FILESYSTEM_ROOT$boot_helper/"
+    fi
+    boot_package_manager=(python3 -B "$boot_helper/build_boot_packages.py" "$boot_helper/labels.json" "$boot_helper/inventory.json")
 fi
 if [[ -n ${SONIC_IMAGE_TIMING_FILE:-} && ${IMAGE_TYPE:-} == onie ]]; then
     python3 ./scripts/image_timing.py switch assembly filesystem 2>/dev/null || true
@@ -1224,18 +1228,28 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT "${package_instal
 
 {% for package in sonic_local_packages.strip().split() -%}
 {% set name, path, set_owner, enabled = package.split('|') -%}
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT "${package_install[@]}" --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
-name_repo=$(basename {{name}} .gz)
-image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
-if echo "$image_tags" | grep -q "latest"; then
-    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
+name_repo=$(basename "{{name}}" .gz)
+package_input="{{path}}"
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y && " ${SONIC_VS_LAYOUT_INPUTS:-} " == *" {{name}} "* ]]; then
+    package_input=$(python3 tools/bazel/oci/boot_layout.py "{{path}}" "$SONIC_VS_BOOT_HANDOFF")
+fi
+if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y && -d "$package_input" ]]; then
+    # The bundle already includes both tags. Install the service and CLI from these same image layers.
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot "$FILESYSTEM_ROOT" "${package_install[@]}" \
+        --from-layout "$package_input" "$name_repo:latest" "linux/$CONFIGURED_ARCH" {{ get_install_options(set_owner, enabled) }}
 else
-    # If not tagged with latest, find existing tag and tag with latest
-    existing_tag=$(echo "$image_tags" | head -1)
-    if [ -n "$existing_tag" ]; then
-        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:$existing_tag $name_repo:latest
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT "${package_install[@]}" --from-tarball "$package_input" {{ get_install_options(set_owner, enabled) }}
+    image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
+    if echo "$image_tags" | grep -q "latest"; then
+        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
     else
-        echo "Warning: No existing tag found for image $name_repo, skipping version tagging"
+        # If not tagged with latest, find existing tag and tag with latest
+        existing_tag=$(echo "$image_tags" | head -1)
+        if [ -n "$existing_tag" ]; then
+            sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:$existing_tag $name_repo:latest
+        else
+            echo "Warning: No existing tag found for image $name_repo, skipping version tagging"
+        fi
     fi
 fi
 {% endfor -%}
@@ -1258,7 +1272,7 @@ if [[ ${DOCKER_LOAD_ON_BOOT:-n} == y ]]; then
     sudo install -m 0644 "$boot_work/inventory.json" "$FILESYSTEM_ROOT/usr/share/sonic/docker-image-inventory.json"
     sudo install -D -m 0755 files/docker/sonic-load-images "$FILESYSTEM_ROOT/usr/lib/docker/sonic-load-images"
     sudo install -D -m 0644 files/docker/load-images.conf "$FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/load-images.conf"
-    sudo rm -f "$FILESYSTEM_ROOT/tmp/sonic-image-labels.json" "$FILESYSTEM_ROOT/tmp/build_boot_packages.py"
+    sudo rm -rf "$FILESYSTEM_ROOT$boot_helper"
 fi
 sudo umount $FILESYSTEM_ROOT/target
 sudo rm -r $FILESYSTEM_ROOT/target
