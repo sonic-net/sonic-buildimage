@@ -190,7 +190,8 @@ jobs:
       (github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off') &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, linux, bazel-x64]
-    timeout-minutes: 90
+    # The first native build took 79 minutes; allow time for checks and cleanup.
+    timeout-minutes: 120
     container:
       image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
       # Use the existing native Sysmgr worker settings for nested Linux sandboxes.
