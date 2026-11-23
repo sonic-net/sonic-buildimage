@@ -2064,11 +2064,10 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             ('no key', base, dict(python), 'docker-pmon.supervisord.conf'),
             # The key: the Rust daemon, over the pyo3 bridge by default.
             ('use_rust', rust, {d: rust_command(d) for d in daemons}, 'docker-pmon-rust.supervisord.conf'),
-            # platform_api_<daemon> picks the bridge.
-            ('platform_api', dict(rust, platform_api_psud='native', platform_api_thermalctld='native'),
-             dict({d: rust_command(d) for d in daemons},
-                  psud=rust_command('psud', 'native'), thermalctld=rust_command('thermalctld', 'native')),
-             None),
+            # platform_api_<daemon> selects the provider. On an image without a
+            # native provider, selecting native makes the daemon exit at startup.
+            ('platform_api', dict(rust, **{'platform_api_' + d: 'native' for d in daemons}),
+             {d: rust_command(d, 'native') for d in daemons}, None),
             # Python 2 is never the Rust path, key or not, and the Python
             # daemon is not handed the Rust daemon's --platform-api.
             ('python2', dict(rust, python2_daemons=['psud', 'syseepromd', 'thermalctld']),

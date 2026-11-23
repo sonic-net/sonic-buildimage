@@ -57,35 +57,15 @@ startsecs=0
 dependent_startup=true
 {% endif %}
 
+{#
+    Set use_rust_<daemon> in pmon_daemon_control.json to select the Rust
+    daemon. The Python daemon is the default.
+
+    Emit command= with a plain expression. With trim_blocks enabled, a block
+    tag at the end of the line removes the newline before the next directive.
+#}
 {% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
-{#
-    The Python chassisd unless the platform asks for the Rust one by setting
-    "use_rust_chassisd": true in its pmon_daemon_control.json -- the same
-    file skip_chassisd comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one writes the same STATE_DB rows as the Python one and reaches
-    the platform through the generated facade in sonic-platform-common, which
-    calls whichever sonic_platform the image installs -- so a vendor opting in
-    changes nothing else.
-#}
-{#
-    The command is computed into a variable and emitted as a plain expression
-    rather than written inline.  A `command=` line that *ends* in a block tag
-    loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
-    which supervisord reports as `ERROR (no such file)` and never starts.  The
-    upstream lines ended in the binary path, so they never hit it; making the
-    Rust choice the last thing on the line did.
-#}
 {% set command = "/usr/bin/chassisd --platform-api " ~ (platform_api_chassisd | default("pyo3"))
    if use_rust_chassisd
    else "/usr/local/bin/chassisd" %}
@@ -227,35 +207,6 @@ dependent_startup_wait_for=rsyslogd:running
 
 {% if not skip_psud %}
 [program:psud]
-{#
-    The Python psud unless the platform asks for the Rust one by setting
-    "use_rust_psud": true in its pmon_daemon_control.json -- the same
-    file skip_psud comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one writes the same STATE_DB rows as the Python one and reaches
-    the platform through the generated facade in sonic-platform-common, which
-    calls whichever sonic_platform the image installs -- so a vendor opting in
-    changes nothing else.  Python 2 is never the Rust path: a
-    platform still on it is one the facade has not been exercised
-    against.
-#}
-{#
-    The command is computed into a variable and emitted as a plain expression
-    rather than written inline.  A `command=` line that *ends* in a block tag
-    loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
-    which supervisord reports as `ERROR (no such file)` and never starts.  The
-    upstream lines ended in the binary path, so they never hit it; making the
-    Rust choice the last thing on the line did.
-#}
 {% set py3 = API_VERSION == 3 and 'psud' not in python2_daemons %}
 {% set command = "/usr/bin/psud --platform-api " ~ (platform_api_psud | default("pyo3"))
    if use_rust_psud and py3
@@ -275,35 +226,6 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_syseepromd %}
 [program:syseepromd]
-{#
-    The Python syseepromd unless the platform asks for the Rust one by setting
-    "use_rust_syseepromd": true in its pmon_daemon_control.json -- the same
-    file skip_syseepromd comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one writes the same STATE_DB rows as the Python one and reaches
-    the platform through the generated facade in sonic-platform-common, which
-    calls whichever sonic_platform the image installs -- so a vendor opting in
-    changes nothing else.  Python 2 is never the Rust path: a
-    platform still on it is one the facade has not been exercised
-    against.
-#}
-{#
-    The command is computed into a variable and emitted as a plain expression
-    rather than written inline.  A `command=` line that *ends* in a block tag
-    loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
-    which supervisord reports as `ERROR (no such file)` and never starts.  The
-    upstream lines ended in the binary path, so they never hit it; making the
-    Rust choice the last thing on the line did.
-#}
 {% set py3 = API_VERSION == 3 and 'syseepromd' not in python2_daemons %}
 {% set command = "/usr/bin/syseepromd --platform-api " ~ (platform_api_syseepromd | default("pyo3"))
    if use_rust_syseepromd and py3
@@ -323,26 +245,6 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_thermalctld %}
 [program:thermalctld]
-{#
-    The Python daemon unless the platform asks for the Rust one by setting
-    "use_rust_thermalctld": true in its pmon_daemon_control.json -- the same
-    file skip_thermalctld comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one takes the same options as the Python one and writes the same
-    STATE_DB rows; it reaches the platform through the generated facade in
-    sonic-platform-common, which calls whichever sonic_platform the image
-    installs, so a vendor opting in changes nothing else.  Python 2 is never
-    the Rust path: a platform still on it is one the facade has not been
-    exercised against.
-#}
 {% set py3 = API_VERSION == 3 and 'thermalctld' not in python2_daemons %}
 {% set use_rust = use_rust_thermalctld and py3 %}
 {% set base_command = "/usr/bin/thermalctld"
@@ -399,33 +301,6 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_pcied %}
 [program:pcied]
-{#
-    The Python pcied unless the platform asks for the Rust one by setting
-    "use_rust_pcied": true in its pmon_daemon_control.json -- the same
-    file skip_pcied comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one writes the same STATE_DB rows as the Python one and reaches
-    the platform through the generated facade in sonic-platform-common, which
-    calls whichever sonic_platform the image installs -- so a vendor opting in
-    changes nothing else.
-#}
-{#
-    The command is computed into a variable and emitted as a plain expression
-    rather than written inline.  A `command=` line that *ends* in a block tag
-    loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
-    which supervisord reports as `ERROR (no such file)` and never starts.  The
-    upstream lines ended in the binary path, so they never hit it; making the
-    Rust choice the last thing on the line did.
-#}
 {% set command = "/usr/bin/pcied --platform-api " ~ (platform_api_pcied | default("pyo3"))
    if use_rust_pcied
    else "/usr/local/bin/pcied" %}
@@ -444,16 +319,7 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if include_sensormond %}
 [program:sensormond]
-{#
-    Python only.  sensormond was ported to Rust and then taken back out: no
-    NVIDIA platform starts it -- `include_sensormond` is set by micas, nexthop
-    and pensando and by nobody else -- and the opt-in default means those
-    vendors get the Python daemon anyway.  The Rust binary was therefore
-    unreachable on every platform in the tree while still shipping in every
-    pmon image, so it is not built.
-#}
-{% set command = "/usr/local/bin/sensormond" %}
-command={{ command }}
+command=/usr/local/bin/sensormond
 priority=10
 autostart=false
 autorestart=unexpected
@@ -468,33 +334,6 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_stormond %}
 [program:stormond]
-{#
-    The Python stormond unless the platform asks for the Rust one by setting
-    "use_rust_stormond": true in its pmon_daemon_control.json -- the same
-    file skip_stormond comes from, so it needs no rebuild.
-
-    Opt-in, not opt-out, because an absent key has to mean the implementation
-    that platform has always run.  The Rust debs are added to this image
-    unconditionally (rules/docker-platform-monitor.mk), so under an opt-out
-    default every arm64 platform in the tree -- BlueField, the four BMC
-    platforms, centec, marvell, micas, fs, pensando -- would silently start
-    Rust daemons that have never run on that architecture, and nothing in pmon
-    alarms when a daemon is wrong or missing (critical_processes is empty).
-
-    The Rust one writes the same STATE_DB rows as the Python one and reaches
-    the platform through the generated facade in sonic-platform-common, which
-    calls whichever sonic_platform the image installs -- so a vendor opting in
-    changes nothing else.
-#}
-{#
-    The command is computed into a variable and emitted as a plain expression
-    rather than written inline.  A `command=` line that *ends* in a block tag
-    loses the newline after it under sonic-cfggen's trim_blocks, so the next
-    directive is appended to the command: `command=/usr/bin/psudpriority=8`,
-    which supervisord reports as `ERROR (no such file)` and never starts.  The
-    upstream lines ended in the binary path, so they never hit it; making the
-    Rust choice the last thing on the line did.
-#}
 {% set command = "/usr/bin/stormond --platform-api " ~ (platform_api_stormond | default("pyo3"))
    if use_rust_stormond
    else "/usr/local/bin/stormond" %}
