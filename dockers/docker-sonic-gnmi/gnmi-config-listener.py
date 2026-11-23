@@ -5,10 +5,10 @@ import signal
 import sys
 from http.client import HTTPException
 from time import monotonic
-from xmlrpc.client import Error
 
 from sonic_py_common.logger import Logger
 from supervisor.childutils import getRPCInterface
+from supervisor.compat import xmlrpclib
 from swsscommon import swsscommon
 
 
@@ -79,7 +79,7 @@ class GnmiConfigListener:
                 )
                 supervisor.stopProcess(PROGRAM, True)
                 supervisor.startProcess(PROGRAM, True)
-        except (OSError, Error, HTTPException) as error:
+        except (OSError, xmlrpclib.Error, HTTPException) as error:
             self.config = config
             logger.log_error("gNMI supervisor restart failed: " + str(error))
 

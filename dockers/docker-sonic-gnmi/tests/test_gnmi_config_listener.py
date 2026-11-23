@@ -5,7 +5,7 @@ from collections import deque
 from http.client import HTTPException
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, call, patch
-from xmlrpc.client import Fault
+from xmlrpc import client as xmlrpclib
 
 import pytest
 
@@ -52,11 +52,12 @@ def env(monkeypatch):
         name: types.ModuleType(name)
         for name in (
             "swsscommon", "sonic_py_common", "sonic_py_common.logger",
-            "supervisor", "supervisor.childutils",
+            "supervisor", "supervisor.childutils", "supervisor.compat",
         )
     }
     modules["swsscommon"].swsscommon = swss
     modules["sonic_py_common.logger"].Logger = Mock(return_value=log)
+    modules["supervisor.compat"].xmlrpclib = xmlrpclib
     proxy = MagicMock()
     proxy.__enter__.return_value = types.SimpleNamespace(supervisor=rpc)
     modules["supervisor.childutils"].getRPCInterface = Mock(
@@ -208,8 +209,9 @@ def test_change_while_starting_waits_without_overriding_stop(env, final_state):
 @pytest.mark.parametrize("method,error", [
     ("getProcessInfo", OSError("socket unavailable")),
     ("getProcessInfo", HTTPException("invalid response")),
-    ("stopProcess", Fault(70, "NOT_RUNNING")),
-    ("startProcess", Fault(50, "SPAWN_ERROR")),
+    ("getProcessInfo", xmlrpclib.ProtocolError("local", 500, "error", {})),
+    ("stopProcess", xmlrpclib.Fault(70, "NOT_RUNNING")),
+    ("startProcess", xmlrpclib.Fault(50, "SPAWN_ERROR")),
 ])
 def test_supervisor_failure_is_logged_not_retried(env, method, error):
     getattr(env.rpc, method).side_effect = error
@@ -227,7 +229,7 @@ def test_supervisor_failure_is_logged_not_retried(env, method, error):
 
 
 def test_new_change_after_a_rejected_restart_can_request_restart(env):
-    env.rpc.stopProcess.side_effect = [Fault(70, "NOT_RUNNING"), True]
+    env.rpc.stopProcess.side_effect = [xmlrpclib.Fault(70, "NOT_RUNNING"), True]
     drive(env, [
         (0, "GNMI", "gnmi", {"port": "50052"}),
         (1, None, None, None),
