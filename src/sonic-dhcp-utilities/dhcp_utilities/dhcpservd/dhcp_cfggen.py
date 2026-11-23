@@ -646,7 +646,8 @@ class DhcpServCfgGenerator(object):
             syslog.syslog(syslog.LOG_WARNING, "Pool {}-{} of {} is not in an IPv4 subnet, skip".format(
                 start, end, dhcp_interface_name))
             return None
-        if len(matching_subnets) > 1:
+        # Several addresses on one prefix are a single subnet; only distinct overlapping prefixes are ambiguous.
+        if len({interface["network"] for interface in matching_subnets}) > 1:
             raise ValueError(
                 "Pool {}-{} matches multiple IPv4 subnets of {}".format(start, end, dhcp_interface_name)
             )

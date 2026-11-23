@@ -98,14 +98,22 @@ def get_vlan_subnets(dbconn, dhcp_interface):
     return subnets
 
 
-def add_pool_interval(intervals, subnets, start, end):
-    """Record an address interval under the first VLAN subnet that contains it."""
+class AmbiguousPoolError(click.UsageError):
+    """A pool fits more than one VLAN prefix, which dhcp_cfggen rejects for the whole configuration."""
+
+
+def add_pool_interval(intervals, subnets, start, end, dhcp_interface):
+    """Record an address interval under the single VLAN prefix that contains it."""
     start = ipaddress.ip_address(start)
     end = ipaddress.ip_address(end)
-    subnet = next((subnet for subnet in subnets if start in subnet and end in subnet), None)
-    if subnet is not None:
-        intervals.setdefault(subnet, []).append((int(start), int(end)))
-    return subnet is not None
+    matching = sorted({subnet for subnet in subnets if start in subnet and end in subnet}, key=str)
+    if len(matching) > 1:
+        raise AmbiguousPoolError(
+            "Pool {}-{} matches multiple IPv4 subnets of {}".format(start, end, dhcp_interface),
+            ctx=click.get_current_context())
+    if matching:
+        intervals.setdefault(matching[0], []).append((int(start), int(end)))
+    return bool(matching)
 
 
 def validate_ip_pool(ips, subnets, dhcp_interface, allow_off_subnet=False):
@@ -113,7 +121,7 @@ def validate_ip_pool(ips, subnets, dhcp_interface, allow_off_subnet=False):
     for ip in ips:
         if not validate_str_type("ipv4-address", ip):
             click.get_current_context().fail("Illegal IP address {}".format(ip))
-        if not add_pool_interval(intervals, subnets, ip, ip) and not allow_off_subnet:
+        if not add_pool_interval(intervals, subnets, ip, ip, dhcp_interface) and not allow_off_subnet:
             click.get_current_context().fail("IP {} is not in any subnet of vlan {}".format(ip, dhcp_interface))
     return intervals
 
@@ -140,7 +148,7 @@ def validate_range_pool(dbconn, ranges, subnets, dhcp_interface, range_overrides
             click.get_current_context().fail("Range {} has an invalid IPv4 address".format(range_name))
         if count_ipv4(ip_start, ip_end) < 1:
             click.get_current_context().fail("Range {} has an invalid address order".format(range_name))
-        if not add_pool_interval(intervals, subnets, ip_start, ip_end) and (
+        if not add_pool_interval(intervals, subnets, ip_start, ip_end, dhcp_interface) and (
                 not allow_off_subnet or (range_overrides and range_name in range_overrides)):
             click.get_current_context().fail(
                 "Range {} is not in any subnet of vlan {}".format(range_name, dhcp_interface))
@@ -292,6 +300,9 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
             # Existing bindings still serve their usable pools, as dhcp_cfggen does.
             if intervals:
                 predicates[binding_name], pools[binding_name] = conditions, intervals
+        except AmbiguousPoolError:
+            # dhcp_cfggen fails the whole generation here, not just this binding.
+            raise
         except click.UsageError:
             if is_candidate:
                 raise

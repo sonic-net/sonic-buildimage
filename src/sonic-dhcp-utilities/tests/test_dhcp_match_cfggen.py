@@ -628,3 +628,29 @@ def test_portchannel_added_after_start_is_resolved():
     parsed = json.loads(config)["Dhcp4"]
     assert parsed["subnet4"][0]["pools"][0]["pool"] == "192.168.0.50 - 192.168.0.50"
     assert "sonic-host:PortChannel5".encode("utf-8").hex() in parsed["client-classes"][0]["test"]
+
+
+def test_pool_in_overlapping_prefixes_is_rejected(mock_swsscommon_dbconnector_init, mock_get_render_template):
+    generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
+    interfaces = {"Vlan1000": [
+        {"network": ipaddress.ip_network("192.168.0.0/24"), "ip": "192.168.0.1/24"},
+        {"network": ipaddress.ip_network("192.168.0.128/25"), "ip": "192.168.0.129/25"}
+    ]}
+    bindings = {"Vlan1000|vendor-a": {"matches": ["port-etp7", "vendor-a"], "ips": ["192.168.0.130"]}}
+
+    with pytest.raises(ValueError, match="matches multiple IPv4 subnets of Vlan1000"):
+        parse_bindings(generator, bindings, interfaces=interfaces)
+
+
+def test_addresses_on_one_prefix_are_one_subnet(mock_swsscommon_dbconnector_init, mock_get_render_template):
+    generator = create_generator(mock_swsscommon_dbconnector_init, mock_get_render_template)
+    interfaces = {"Vlan1000": [
+        {"network": ipaddress.ip_network("192.168.0.0/24"), "ip": "192.168.0.1/24"},
+        {"network": ipaddress.ip_network("192.168.0.0/24"), "ip": "192.168.0.2/24"}
+    ]}
+    bindings = {"Vlan1000|vendor-a": {"matches": ["vendor-a"], "ips": ["192.168.0.130"]}}
+
+    pools, _, _, _ = parse_bindings(generator, bindings, interfaces=interfaces)
+
+    assert list(pools["Vlan1000"]) == ["192.168.0.1/24"]
+    assert pools["Vlan1000"]["192.168.0.1/24"][0]["range"] == "192.168.0.130 - 192.168.0.130"

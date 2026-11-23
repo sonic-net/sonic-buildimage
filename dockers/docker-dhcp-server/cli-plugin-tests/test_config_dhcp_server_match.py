@@ -1291,3 +1291,47 @@ class TestConfigDHCPServerMatch:
 
         assert result.exit_code == 2
         assert "is not a member of vlan Vlan100" in result.output
+
+
+@pytest.fixture
+def overlapping_prefix_db(prefix_db):
+    prefix_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+    prefix_db.hmset("CONFIG_DB", "VLAN_INTERFACE|Vlan100|100.1.1.129/25", {})
+    prefix_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|ambiguous", {"range@": "100.1.1.130,100.1.1.140"})
+    return prefix_db
+
+
+@pytest.mark.parametrize("operation", ["add-ip", "add-range", "existing-binding", "range-update"])
+def test_pool_in_overlapping_prefixes_rejected(overlapping_prefix_db, operation):
+    db = overlapping_prefix_db
+    if operation == "add-ip":
+        command, args = BINDING_COMMAND.commands["add"], ["Vlan100", "new", "100.1.1.130", "--match=port-etp2,vendor-a"]
+    elif operation == "add-range":
+        command, args = BINDING_COMMAND.commands["add"], ["Vlan100", "new", "--range=ambiguous", "--match=vendor-a"]
+    elif operation == "existing-binding":
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|old", {"matches@": "vendor-b", "ips@": "100.1.1.130"})
+        command, args = BINDING_COMMAND.commands["add"], ["Vlan100", "new", "100.1.1.30", "--match=vendor-a"]
+    else:
+        db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|old", {"matches@": "vendor-b", "ranges@": "range3"})
+        command, args = RANGE_COMMAND.commands["update"], ["range3", "100.1.1.130", "100.1.1.140"]
+    before = {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")}
+
+    result = invoke(db, command, args)
+
+    assert result.exit_code == 2, result.output
+    assert "matches multiple IPv4 subnets of Vlan100" in result.output
+    assert {key: dict(db.get_all("CONFIG_DB", key)) for key in db.keys("CONFIG_DB", "*")} == before
+
+
+@pytest.mark.parametrize("vlan_ip,pool_ip", [
+    ("100.1.1.129/25", "100.1.1.30"),
+    ("100.1.1.2/24", "100.1.1.130"),
+])
+def test_pool_in_single_prefix_accepted(prefix_db, vlan_ip, pool_ip):
+    prefix_db.set("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "mode", "MATCH")
+    prefix_db.hmset("CONFIG_DB", "VLAN_INTERFACE|Vlan100|" + vlan_ip, {})
+
+    result = invoke(prefix_db, BINDING_COMMAND.commands["add"], ["Vlan100", "new", pool_ip, "--match=vendor-a"])
+
+    assert result.exit_code == 0, result.output
+    assert prefix_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|new", "ips@") == pool_ip
