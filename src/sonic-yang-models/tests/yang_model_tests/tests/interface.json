@@ -23,6 +23,14 @@
         "eStrKey" : "Pattern",
         "eStr": ["drop|forward"]
     },
+    "INTERFACE_VALID_PROXY_ARP": {
+        "desc": "Configure valid proxy_arp value in INTERFACE table."
+    },
+    "INTERFACE_INVALID_PROXY_ARP": {
+        "desc": "Configure invalid proxy_arp value in INTERFACE table.",
+        "eStrKey" : "Pattern",
+        "eStr": ["enabled|disabled"]
+    },
     "INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
         "desc": "Enable the ipv6 link-local."
     },

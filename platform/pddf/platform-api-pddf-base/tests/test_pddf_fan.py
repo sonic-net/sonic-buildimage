@@ -4,7 +4,9 @@ import types
 import pytest
 
 
-if 'sonic_platform_base.fan_base' not in sys.modules:
+try:
+    import sonic_platform_base.fan_base  # noqa: F401
+except ImportError:
     sonic_platform_base = types.ModuleType('sonic_platform_base')
     sonic_platform_base.__path__ = []
     fan_base = types.ModuleType('sonic_platform_base.fan_base')

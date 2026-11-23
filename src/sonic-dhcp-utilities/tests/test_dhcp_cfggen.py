@@ -18,6 +18,9 @@ expected_dhcp_config = {
         ],
         "hooks-libraries": [
             {
+                "library": "/usr/local/lib/kea/hooks/libdhcp_lease_cmds.so"
+            },
+            {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                 "parameters": {
                     "name": "/etc/kea/lease_update.sh",
@@ -131,6 +134,9 @@ expected_dhcp_config_without_port_config = {
             }
         ],
         "hooks-libraries": [
+            {
+                "library": "/usr/local/lib/kea/hooks/libdhcp_lease_cmds.so"
+            },
             {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                 "parameters": {
