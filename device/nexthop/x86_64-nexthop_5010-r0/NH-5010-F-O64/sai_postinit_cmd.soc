@@ -251,4 +251,5 @@ INTeRrupt ENAble id=1529 p=7
 
 
 debug intr error
+cint /usr/share/sonic/hwsku/ecc_1b_log_off.cint
 

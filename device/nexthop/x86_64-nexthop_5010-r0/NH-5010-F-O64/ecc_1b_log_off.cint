@@ -1,0 +1,21 @@
+/*
+ * Q3D: stop syslog prints for corrected 1-bit MDB ECC interrupts
+ * (DDHA 521, DDHAB 524, DDHB 527, DDHC 530, DDHX 533).
+ * Clears only bcmSwitchEventLog; the interrupt stays enabled, the SDK still
+ * corrects the error and bcmSwitchEventStat still counts it. The flag is per
+ * interrupt id, so index 0 covers all cores. 2-bit ECC ids are left loud.
+ */
+int ecc1b_ids[5] = {521, 524, 527, 530, 533};
+int ecc1b_i;
+int ecc1b_rv;
+uint32 ecc1b_v;
+bcm_switch_event_control_t ecc1b_ec;
+for (ecc1b_i = 0; ecc1b_i < 5; ecc1b_i++) {
+    ecc1b_ec.event_id = ecc1b_ids[ecc1b_i];
+    ecc1b_ec.index = 0;
+    ecc1b_ec.action = bcmSwitchEventLog;
+    ecc1b_rv = bcm_switch_event_control_set(0, BCM_SWITCH_EVENT_DEVICE_INTERRUPT, ecc1b_ec, 0);
+    ecc1b_v = 99;
+    bcm_switch_event_control_get(0, BCM_SWITCH_EVENT_DEVICE_INTERRUPT, ecc1b_ec, &ecc1b_v);
+    printf("ecc1b_log_off id=%d set_rv=%d log_readback=%u\n", ecc1b_ids[ecc1b_i], ecc1b_rv, ecc1b_v);
+}
