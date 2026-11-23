@@ -50,5 +50,16 @@
     "TACPLUS_SERVER_INVALID_VRF_TEST" : {
         "desc": "Tacplus server configuration with invalid VRF in TACPLUS_SERVER table.",
         "eStr": "Invalid VRF name"
+    },
+    "TACPLUS_SRC_INTF_VLAN_TEST": {
+        "desc": "Tacplus global source interface on an existing VLAN."
+    },
+    "TACPLUS_SRC_INTF_VLAN_MISSING_TEST": {
+        "desc": "Tacplus global source interface naming a VLAN missing from VLAN.",
+        "eStrKey": "LeafRef"
+    },
+    "TACPLUS_SRC_INTF_VLAN_4095_TEST": {
+        "desc": "Tacplus global source interface of Vlan4095 is refused.",
+        "eStr": ["Vlan4095 is reserved"]
     }
 }

@@ -65,5 +65,16 @@
     "SFLOW_TEST_WITH_INCORRECT_POLLING_INTERVAL": {
         "desc": "Configure SFLOW table with an out of range polling interval.",
         "eStr": ["sFlow polling interval must be [0, 5-300]"]
+    },
+    "SFLOW_TEST_WITH_AGENT_ID_AS_VLAN": {
+        "desc": "Configure an existing VLAN as the sFlow agent ID."
+    },
+    "SFLOW_TEST_WITH_NON_EXIST_VLAN_AGENT_ID": {
+        "desc": "Configure a VLAN missing from VLAN as the sFlow agent ID.",
+        "eStrKey": "LeafRef"
+    },
+    "SFLOW_TEST_WITH_AGENT_ID_AS_VLAN_4095": {
+        "desc": "Configure Vlan4095 as the sFlow agent ID; it is refused.",
+        "eStr": ["Vlan4095 is reserved"]
     }
 }

@@ -23,6 +23,12 @@ module sonic-high-frequency-telemetry {
 
     description "Sub-second counter polling configuration for high-frequency telemetry in SONiC.";
 
+    revision 2026-11-19 {
+        description
+            "object_names in a PORT or BUFFER_POOL group names its object by leafref to
+             PORT or BUFFER_POOL, so the object's removal finds the groups that use it.";
+    }
+
     container sonic-high-frequency-telemetry {
         container HIGH_FREQUENCY_TELEMETRY_PROFILE {
             description "Sub-second counter polling profiles for high-frequency telemetry.";
@@ -91,8 +97,19 @@ module sonic-high-frequency-telemetry {
                 }
 
                 leaf-list object_names {
-                   description "SAI object instances to poll for this group.";
-                   type string;
+                   description
+                       "SAI object instances to poll for this group: a port in a PORT group, a
+                        buffer pool in a BUFFER_POOL group, '<port>|<index>' in a QUEUE or
+                        INGRESS_PRIORITY_GROUP group. The must ties each value to the group.";
+                   type union {
+                       type leafref {
+                           path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                       }
+                       type leafref {
+                           path "/bpl:sonic-buffer-pool/bpl:BUFFER_POOL/bpl:BUFFER_POOL_LIST/bpl:name";
+                       }
+                       type string;
+                   }
                    must "( ../group_name = 'PORT' and current() = /port:sonic-port/port:PORT/port:PORT_LIST/port:name )"
                         + " or ( ../group_name = 'BUFFER_POOL' and current() = /bpl:sonic-buffer-pool/bpl:BUFFER_POOL/bpl:BUFFER_POOL_LIST/bpl:name )"
                         + " or ( ../group_name = 'INGRESS_PRIORITY_GROUP' and substring-before(current(), '|') = /bpg:sonic-buffer-pg/bpg:BUFFER_PG/bpg:BUFFER_PG_LIST/bpg:port and re-match(substring-after(current(), '|'), '[0-9]+') )"
