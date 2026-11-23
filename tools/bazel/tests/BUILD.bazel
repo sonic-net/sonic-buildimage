@@ -12,11 +12,66 @@ load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
 load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
+load("//tools/bazel/oci:shared_runtime_layers.bzl", "shared_runtime_layers")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["integration/frr_python_wheel_probe.py"])
+
+py_test(
+    name = "shared_runtime_base_test",
+    srcs = ["shared_runtime_base_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:shared_runtime_base_lib",
+    ],
+)
+
+py_test(
+    name = "shared_runtime_layers_test",
+    srcs = ["shared_runtime_layers_test.py"],
+    args = [
+        "--action-first=$(rootpath :shared_apt_first.tar)",
+        "--action-second=$(rootpath :shared_apt_second.tar)",
+        "--action-common=$(rootpath :shared_runtime_action/common.tar.gz)",
+        "--action-left=$(rootpath :shared_runtime_action/first.tar.gz)",
+        "--action-right=$(rootpath :shared_runtime_action/second.tar.gz)",
+    ],
+    data = [
+        ":shared_apt_first.tar",
+        ":shared_apt_second.tar",
+        ":shared_runtime_action/common.tar.gz",
+        ":shared_runtime_action/first.tar.gz",
+        ":shared_runtime_action/second.tar.gz",
+    ],
+    deps = ["//tools/bazel/oci:shared_runtime_layers_lib"],
+)
+
+py_binary(
+    name = "shared_runtime_layers_fixture",
+    srcs = ["shared_runtime_layers_fixture.py"],
+)
+
+run_binary(
+    name = "shared_apt_inputs",
+    outs = [
+        "shared_apt_first.tar",
+        "shared_apt_second.tar",
+    ],
+    args = [
+        "$(execpath shared_apt_first.tar)",
+        "$(execpath shared_apt_second.tar)",
+    ],
+    tool = ":shared_runtime_layers_fixture",
+)
+
+shared_runtime_layers(
+    name = "shared_runtime_action",
+    base = ":oci-consumer-first",
+    first = ":shared_apt_first.tar",
+    second = ":shared_apt_second.tar",
+)
 
 # Preserve the old build label; CI executes the source owner's real test rule.
 alias(

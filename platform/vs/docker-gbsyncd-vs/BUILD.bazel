@@ -153,8 +153,13 @@ oci_image(
     env = "//tools/bazel/image/vs/metadata:docker-gbsyncd-vs.environment",
     labels = "//platform/vs/docker-gbsyncd-vs/config:labels",
     target_compatible_with = _COMPATIBLE_WITH,
-    tars = [
-        ":runtime_layer",
+    tars = select({
+        "//platform/vs/docker-syncd-vs:shared_runtime_apt_enabled": [
+            "//platform/vs/docker-syncd-vs:shared_apt_runtime/common.tar.gz",
+            "//platform/vs/docker-syncd-vs:shared_apt_runtime/second.tar.gz",
+        ],
+        "//conditions:default": [":runtime_layer"],
+    }) + [
         ":runtime_packages",
         ":installed_package_state",
         "//platform/vs/docker-syncd-vs:installation_links",

@@ -387,6 +387,8 @@ jobs:
             //tools/bazel/tests:prepare_oci_base_test \
             //tools/bazel/tests:oci_base_consumer_test \
             //tools/bazel/tests:select_apt_payloads_test \
+            //tools/bazel/tests:shared_runtime_base_test \
+            //tools/bazel/tests:shared_runtime_layers_test \
             //tools/bazel/tests:source_contract_test \
             //tools/bazel/tests:oci_license_filter_test \
             //tools/bazel/tests:test_dpkg_patterns_up_to_date \

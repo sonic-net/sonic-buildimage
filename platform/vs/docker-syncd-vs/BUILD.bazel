@@ -1,4 +1,5 @@
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_oci//oci:defs.bzl", "oci_image")
@@ -9,11 +10,22 @@ load("@tar.bzl", "tar")
 load("//dockers/docker-config-engine-trixie:validation.bzl", "service_images_policy")
 load("//tools/bazel/dpkg:defs.bzl", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:apt_layer.bzl", "apt_layer")
+load("//tools/bazel/oci:shared_runtime_layers.bzl", "shared_runtime_layers")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 load("//tools/bazel/oci:source_contract.bzl", "source_contract")
 load(":source_packages.bzl", "NATIVE_POLICY", "OWNER_METADATA", "SOURCE_MODULES", "SOURCE_PACKAGES")
 
 package(default_visibility = ["//visibility:public"])
+
+bool_flag(
+    name = "share_runtime_apt_layers",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "shared_runtime_apt_enabled",
+    flag_values = {":share_runtime_apt_layers": "true"},
+)
 
 # Export the original Make inputs directly to the OCI image and its tests.
 # Keeping the declarations beside the files avoids a second path via symlinks.
@@ -230,6 +242,14 @@ sonic_layer(
     tars = [":runtime_layer"],
 )
 
+shared_runtime_layers(
+    name = "shared_apt_runtime",
+    base = ":config_engine_base_layout",
+    first = ":apt_deps",
+    second = "//platform/vs/docker-gbsyncd-vs:runtime_layer",
+    target_compatible_with = _COMPATIBLE_WITH,
+)
+
 # The checked payload merges equivalent owner directory headers such as
 # ./usr/bin and usr/bin before Make's dpkg exclusions are applied.
 dpkg_filter(
@@ -297,8 +317,13 @@ oci_image(
     env = {"DEBIAN_FRONTEND": "noninteractive"},
     labels = "//platform/vs/docker-syncd-vs/config:labels",
     target_compatible_with = _COMPATIBLE_WITH,
-    tars = [
-        ":apt_deps",
+    tars = select({
+        ":shared_runtime_apt_enabled": [
+            ":shared_apt_runtime/common.tar.gz",
+            ":shared_apt_runtime/first.tar.gz",
+        ],
+        "//conditions:default": [":apt_deps"],
+    }) + [
         ":runtime_packages",
         ":installed_package_state",
         ":installation_links",
@@ -419,16 +444,17 @@ test_suite(
         "//tools/bazel/tests:oci_apt_overlay_test",
         "//tools/bazel/tests:oci_image_test",
         "//tools/bazel/tests:oci_inventory_test",
-        "//tools/bazel/tests:validation_inputs_test",
         "//tools/bazel/tests:oci_native_packages_test",
         "//tools/bazel/tests:oci_package_contract_test",
         "//tools/bazel/tests:oci_package_payloads_test",
         "//tools/bazel/tests:oci_package_receipts_test",
         "//tools/bazel/tests:oci_package_state_layer_test",
         "//tools/bazel/tests:select_apt_payloads_test",
+        "//tools/bazel/tests:shared_runtime_layers_test",
         "//tools/bazel/tests:source_base_validation_test",
         "//tools/bazel/tests:source_contract_test",
         "//tools/bazel/tests:syncd_manifest_labels_test",
+        "//tools/bazel/tests:validation_inputs_test",
     ],
 )
 

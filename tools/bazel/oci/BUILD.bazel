@@ -13,6 +13,29 @@ string_flag(
 exports_files(["apt_subset.jq"])
 
 py_library(
+    name = "shared_runtime_base_lib",
+    srcs = ["shared_runtime_base.py"],
+    deps = [":oci_layout"],
+)
+
+py_binary(
+    name = "shared_runtime_base",
+    srcs = ["shared_runtime_base.py"],
+    deps = [":oci_layout"],
+)
+
+py_library(
+    name = "shared_runtime_layers_lib",
+    srcs = ["shared_runtime_layers.py"],
+)
+
+py_binary(
+    name = "shared_runtime_layers",
+    srcs = ["shared_runtime_layers.py"],
+    main = "shared_runtime_layers.py",
+)
+
+py_library(
     name = "source_base_validation",
     srcs = ["source_base_validation.py"],
     deps = [
