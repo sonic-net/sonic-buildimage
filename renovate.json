@@ -29,9 +29,9 @@
       "extractVersionTemplate": "^(?<version>.+)~trixie$"
     },
     {
-      "description": "Rust toolchain in the trixie build container",
+      "description": "Rust toolchain in the trixie build container, and in the watchdog containers' builder stage, which install their own. Both move in one pull request",
       "customType": "regex",
-      "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/"],
+      "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/", "/^dockers/docker-[a-z]+-watchdog/Dockerfile\\.j2$/"],
       "matchStrings": ["--default-toolchain (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "rust-lang/rust",
       "datasourceTemplate": "github-releases"
