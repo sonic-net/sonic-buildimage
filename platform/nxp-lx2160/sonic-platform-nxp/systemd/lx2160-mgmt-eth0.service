@@ -1,0 +1,15 @@
+[Unit]
+Description=Apply the LX2160ARDB DPAA2 interface names (dpmacNN, eth0)
+DefaultDependencies=no
+After=systemd-udev-settle.service systemd-udev-trigger.service
+Wants=systemd-udev-settle.service
+Before=network-pre.target config-setup.service interfaces-config.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/bin/lx2160-mgmt-eth0
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

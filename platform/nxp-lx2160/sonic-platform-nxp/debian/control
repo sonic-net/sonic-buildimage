@@ -1,0 +1,14 @@
+Source: sonic-platform-nxp-lx2160ardb
+Section: main
+Priority: extra
+Maintainer: wrouwet <37880342+wrouwet@users.noreply.github.com>
+Build-Depends: debhelper (>= 10), python3-all, python3-setuptools, python3-wheel
+Standards-Version: 3.9.3
+
+Package: sonic-platform-nxp-lx2160ardb
+Architecture: arm64
+Description: SONiC platform support for the NXP LX2160ARDB
+ Stable names for the DPAA2 network interfaces, so the SAI-VS lane map
+ (device/nxp/arm64-nxp_lx2160ardb-r0) binds SONiC ports to the right DPMACs;
+ the SONiC platform API (system EEPROM, temperature sensors); and the U-Boot
+ environment location for fw_printenv/fw_setenv (sonic-installer).

@@ -1,0 +1,15 @@
+# Stable names for the LX2160ARDB DPAA2 interfaces. The DPNI numbers come
+# from the board's DPL, which must create these DPNIs (dpni.0-4 connected
+# to dpmac17, dpmac2, dpmac18, dpmac3, dpmac4):
+#   dpni.0 -> dpmac17 (RGMII 1G)        front-panel port, SONiC Ethernet0
+#   dpni.1 -> dpmac2  (40G QSFP)        SONiC management port eth0 (uncabled)
+#   dpni.2 -> dpmac18 (RGMII 1G)        front-panel port, SONiC Ethernet4
+#   dpni.3 -> dpmac3  (AQR107 10GBASE-T) front-panel port, SONiC Ethernet8
+#   dpni.4 -> dpmac4  (AQR107 10GBASE-T) front-panel port, SONiC Ethernet12
+# Front-panel ports get dpmacNN names (never ethN) so the kernel's ethN
+# probe-order names cannot collide; lanemap.ini binds these names to lanes.
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="dpni.0", NAME="dpmac17"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="dpni.2", NAME="dpmac18"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="dpni.3", NAME="dpmac3"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="dpni.4", NAME="dpmac4"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="dpni.1", NAME="eth0"

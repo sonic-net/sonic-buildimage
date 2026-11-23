@@ -1,0 +1,2 @@
+include $(PLATFORM_PATH)/syncd-vs.dep
+include $(PLATFORM_PATH)/docker-syncd-vs.dep

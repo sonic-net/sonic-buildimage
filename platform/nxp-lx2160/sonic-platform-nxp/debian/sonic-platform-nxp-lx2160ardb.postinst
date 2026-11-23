@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+	systemctl enable lx2160-mgmt-eth0.service >/dev/null 2>&1 || true
+	# U-Boot environment: FlexSPI NOR chip 0 (mtd0), CONFIG_ENV_OFFSET 0x500000,
+	# CONFIG_ENV_SIZE 0x10000 (lx2160ardb_tfa_onie_defconfig), 128 KiB sectors
+	echo "/dev/mtd0 0x500000 0x10000 0x20000" > /etc/fw_env.config
+	# SONiC platform API for host tools (system-health, watchdogutil,
+	# decode-syseeprom); pmon installs its own copy from the device dir
+	pip3 install --force-reinstall --no-deps -q --root-user-action=ignore \
+		/usr/share/sonic/device/arm64-nxp_lx2160ardb-r0/sonic_platform-1.0-py3-none-any.whl || true
+	# first install happens at runtime: fix the name now as well
+	/bin/sh /usr/bin/lx2160-mgmt-eth0 || true
+fi
+#DEBHELPER#
+exit 0

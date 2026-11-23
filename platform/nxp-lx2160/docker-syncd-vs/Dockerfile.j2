@@ -1,0 +1,40 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -f -y libcap2-bin
+
+# libnl dev packages (also listed in syncd-vs dependencies)
+
+COPY debs/libnl-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/libnl-route-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/
+RUN dpkg -i debs/libnl-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/libnl-route-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb
+
+# (No DASH engine on the LX2160ARDB: its p4/grpc/llvm runtime is not installed.)
+
+{% if docker_syncd_vs_debs.strip() -%}
+# Copy built Debian packages
+{{ copy_files("debs/", docker_syncd_vs_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_vs_debs.split(' ')) }}
+{%- endif %}
+
+COPY ["start.sh", "/usr/bin/"]
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/local/bin/supervisord"]

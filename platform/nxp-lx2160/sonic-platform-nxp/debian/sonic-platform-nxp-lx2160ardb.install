@@ -1,0 +1,3 @@
+udev/70-nxp-lx2160ardb-net.rules lib/udev/rules.d
+scripts/lx2160-mgmt-eth0 usr/bin
+systemd/lx2160-mgmt-eth0.service lib/systemd/system
