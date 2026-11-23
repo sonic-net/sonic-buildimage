@@ -1,0 +1,55 @@
+diff --git a/bazel/unpack.py b/bazel/unpack.py
+--- a/bazel/unpack.py
++++ b/bazel/unpack.py
+@@ -1,11 +1,12 @@
+ """Extract pinned target dependency payloads using the declared BSD tar tool."""
+ import os
++import runpy
+ from pathlib import Path
+ import subprocess
+ import sys
+ 
+-tool, destination, *archives = sys.argv[1:]
+-root = Path(destination)
++tool, destination, runtime_helpers, *archives = sys.argv[1:]
++root = Path(destination).resolve()
+ root.mkdir(parents=True, exist_ok=True)
+ for archive in sorted(archives):
+     subprocess.run([tool, "-xf", archive, "-C", str(root), "--no-same-owner"], check=True)
+@@ -14,3 +15,11 @@
+         target = root / os.readlink(path).lstrip("/")
+         path.unlink()
+         path.symlink_to(os.path.relpath(target, path.parent))
++
++# Reuse Infra's kernel-runtime handling for cache-safe directory aliases.
++runpy.run_path(runtime_helpers)["materialize_directory_aliases"](root, copy_function=os.link)
++# Use the same empty-leaf transport convention as prepare_rootfs.
++for directory, _, _ in os.walk(root, followlinks=False):
++    leaf = Path(directory)
++    if not any(leaf.iterdir()):
++        (leaf / ".bazel-keep-directory").touch()
+diff --git a/bazel/inputs.bzl b/bazel/inputs.bzl
+--- a/bazel/inputs.bzl
++++ b/bazel/inputs.bzl
+@@ -8,11 +8,12 @@
+     args = ctx.actions.args()
+     args.add(toolchain.tarinfo.binary)
+     args.add(output.path)
++    args.add(ctx.file._runtime_helpers.path)
+     args.add_all(ctx.files.archives)
+     ctx.actions.run(
+         executable = ctx.executable._unpack,
+         arguments = [args],
+-        inputs = ctx.files.archives,
++        inputs = ctx.files.archives + [ctx.file._runtime_helpers],
+         tools = toolchain.default.files,
+         outputs = [output],
+         mnemonic = "LldpdTargetLibraries",
+@@ -22,6 +23,7 @@
+ target_libraries = rule(
+     implementation = _impl,
+     attrs = {
++        "_runtime_helpers": attr.label(default = Label("@sonic_build_infra//tools/build_tools:prepare_runtime.py"), allow_single_file = True),
+         "archives": attr.label_list(allow_files = True, mandatory = True),
+         "_unpack": attr.label(default = Label("//:unpack"), executable = True, cfg = "exec"),
+     },

@@ -84,6 +84,11 @@ bazel_dep(
     version = "0.0.42-45b500f6e821df5ebe981abdbb82797ed3abd4fd",
     repo_name = "sonic_build_infra",
 )
+single_version_override(
+    module_name = "sonic-build-infra",
+    patches = ["//tools/bazel/registry:elf-runtime-cache-links.patch"],
+    patch_strip = 1,
+)
 bazel_dep(name = "grub", version = "2.12.sonic.1")
 bazel_dep(
     name = "sonic-dash-api",
@@ -657,6 +662,11 @@ apt_inputs(
 # LLDP runtime comes from lldpd and DBSyncd. Select its six external runtime
 # library roots from the reviewed native build dependencies.
 bazel_dep(name = "lldpd", version = "1.0.16.sonic.1")
+single_version_override(
+    module_name = "lldpd",
+    patches = ["//tools/bazel/registry:lldpd-runtime-cache.patch"],
+    patch_strip = 1,
+)
 bazel_dep(name = "sonic-dbsyncd", version = "2.0.0-8a3830704d3f6067823f7c10b3b31913965add81", repo_name = "sonic_dbsyncd")
 use_repo(apt, "lldpd_deps")
 
