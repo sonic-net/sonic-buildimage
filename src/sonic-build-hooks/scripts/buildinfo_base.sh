@@ -368,22 +368,40 @@ run_pip_command()
         parameters+=("--no-build-isolation")
     fi
 
-    if [ ! -z "$(get_version_cache_option)" ]; then
-        FLOCK ${PIP_CACHE_PATH}
-        $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}"
-        local result=$?
-        chmod -f -R 777 ${PIP_CACHE_PATH}
-        touch ${PIP_CACHE_PATH}
-        FUNLOCK ${PIP_CACHE_PATH}
-    else
-        $REAL_COMMAND "${parameters[@]}"
-        local result=$?
-    fi
+    local result attempt pins pin name before
+    local pip_log=$(mktemp)
+    for attempt in 1 2 3 4 5; do
+        if [ ! -z "$(get_version_cache_option)" ]; then
+            FLOCK ${PIP_CACHE_PATH}
+            { $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}" 2>&1 1>&3 | tee $pip_log 1>&2; } 3>&1
+            result=${PIPESTATUS[0]}
+            chmod -f -R 777 ${PIP_CACHE_PATH}
+            touch ${PIP_CACHE_PATH}
+            FUNLOCK ${PIP_CACHE_PATH}
+        else
+            { $REAL_COMMAND "${parameters[@]}" 2>&1 1>&3 | tee $pip_log 1>&2; } 3>&1
+            result=${PIPESTATUS[0]}
+        fi
+        [ "$result" == 0 ] || [ "$found" == "y" ] || [ "$install" != "y" ] && break
+        # The resolver names each frozen pin that blocks it, such as a pin whose newer
+        # dependents need a newer release, or one with no usable wheel on this architecture.
+        # Release only those, and try again.
+        pins=$(sed -n 's/.*The user requested (constraint) \([^ ]*==[^ ]*\).*/\1/p' $pip_log | sort -u)
+        before=$(wc -l < $tmp_version_file)
+        for pin in $pins; do
+            echo "pip build hook: the frozen $pin blocks the install, releasing it" 1>&2
+            name=$(echo "${pin%%==*}" | tr '[:upper:]' '[:lower:]' | sed 's/[-_.]\+/-/g')
+            awk -F'==' -v name="$name" '{ n = tolower($1); gsub(/[-_.]+/, "-", n); if (n != name) print }' \
+                $tmp_version_file > $tmp_version_file.new
+            mv -f $tmp_version_file.new $tmp_version_file
+        done
+        # Stop when nothing was released; the same install would fail the same way.
+        [ "$(wc -l < $tmp_version_file)" == "$before" ] && break
+    done
     if [ "$result" != 0 ] && [ "$install" == "y" ]; then
-        echo "pip build hook: the install failed with the frozen versions in $pip_version_file as constraints." \
-             "If a package it installs needs a newer version of a frozen package, state that requirement in the install." 1>&2
+        echo "pip build hook: the install failed with the frozen versions in $pip_version_file as constraints" 1>&2
     fi
-    rm $tmp_version_file
+    rm -f $tmp_version_file $pip_log
     return $result
 }
 
