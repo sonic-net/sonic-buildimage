@@ -776,7 +776,7 @@ use_repo(pip, "dhcp_relay_pip")
 
 # Existing DHCP CLI tests use the published utilities wheel and Make-pinned
 # SDK from config_engine_pip; this hub supplies only additional test imports.
-bazel_dep(name = "sonic-utilities", version = "1.2.0-331e19551e1d345e86b59f73be573487893d5af1", repo_name = "sonic_utilities")
+bazel_dep(name = "sonic-utilities", version = "1.2.0-6f1a8a16a947817d76b55dead8cce68e5a4536e4", repo_name = "sonic_utilities")
 pip.parse(
     hub_name = "dhcp_relay_cli_test_pip",
     python_version = "3.13",
@@ -906,3 +906,6 @@ single_version_override(
     patches = ["//tools/bazel/image/vs/patches:framework-selected-go-sdk.patch"],
     patch_strip = 1,
 )
+
+# Utilities owns its data package; the image supplies the declared CLI environment.
+register_toolchains("//tools/bazel/image/vs/utilities_data:toolchain")

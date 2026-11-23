@@ -1,15 +1,11 @@
-load(":defs.bzl", "utilities_data", "utilities_generator")
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@sonic_utilities//bazel/data:defs.bzl", "completion_toolchain", "utilities_generator")
 load("@vs_runtime_pip//:requirements.bzl", "all_requirements")
 load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tool", "build_tools_runtime")
-load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
-load("@tar.bzl", "tar")
+
 package(default_visibility = ["//visibility:public"])
 
 build_tools_runtime(name = "apt_runtime", architecture = "amd64", profile = "elf", elf_tools = {"python3": "usr/bin/python3.13"}, packages = ["//tools/bazel/image/vs/python:apt_python_payloads", "//tools/bazel/image/vs/python:runtime", "@base_debian//python3-setuptools:raw_packages", "@image_tools//bash/amd64:raw_packages", "@image_tools//dash/amd64:raw_packages", "@orchagent_debian//iproute2:raw_packages"])
 build_tool(name = "python", tool = "python3", runtime = ":apt_runtime")
-py_binary(name = "mtree_tool", srcs = ["mtree.py"], main = "mtree.py", python_version = "3.13")
-genrule(name = "changelog.gzip", srcs = ["@sonic_utilities//:sonic-utilities-data/debian/changelog"], outs = ["changelog.Debian.gz"], tools = ["@sonic_build_infra//tools/build_tools:pigz"], cmd = "$(execpath @sonic_build_infra//tools/build_tools:pigz) -n -9 -c $< > $@")
 utilities_generator(
     name = "generator",
     generator = "@sonic_utilities//:sonic-utilities-data/generate_completions.py",
@@ -24,14 +20,15 @@ utilities_generator(
     database_config = "@sonic_swss_common//common:database_config.json",
     python_deps = all_requirements + ["@sonic_swss_common//pyext:swsscommon", "@libyang_python//:libyang"],
 )
-utilities_data(
-    name = "generated",
+
+completion_toolchain(
+    name = "environment",
     generator = ":generator",
-    source_generator = "@sonic_utilities//:sonic-utilities-data/generate_completions.py",
-    templates = ["@sonic_utilities//:sonic-utilities-data/templates/" + name for name in ["sonic.service.j2", "service_mgmt.sh.j2", "dump.sh.j2"]],
     validation = ["//tools/bazel/image/vs/python:runtime_lock_check"],
-    docs = {"copyright": "@sonic_utilities//:sonic-utilities-data/debian/copyright", "changelog.Debian.gz": ":changelog.gzip"},
 )
-filegroup(name = "mtree", srcs = [":generated"], output_group = "mtree")
-tar(name = "runtime", srcs = [":generated"] + ["@sonic_utilities//:sonic-utilities-data/templates/" + name for name in ["sonic.service.j2", "service_mgmt.sh.j2", "dump.sh.j2"]] + [ "@sonic_utilities//:sonic-utilities-data/debian/copyright", ":changelog.gzip"], mtree = ":mtree")
-runtime_packages(name = "runtime_packages.json", control_file_helpers = [["dh_installdeb"]], packages = {"sonic-utilities-data": ":runtime"}, control = "@sonic_utilities//:sonic-utilities-data/debian/control", changelog = "@sonic_utilities//:sonic-utilities-data/debian/changelog", required_paths = {"sonic-utilities-data": ["etc/bash_completion.d/config", "etc/bash_completion.d/show", "usr/share/sonic/templates/sonic.service.j2"]})
+
+toolchain(
+    name = "toolchain",
+    toolchain = ":environment",
+    toolchain_type = "@sonic_utilities//bazel/data:toolchain_type",
+)
