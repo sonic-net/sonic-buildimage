@@ -8,9 +8,10 @@ import re
 import tarfile
 
 from sonic_apt import dependencies, selection
+from layer_assembly import assemble, read_patterns
 from tools.bazel.ci.artifact_validation import require
+from tools.bazel.oci import base_inventory as base_metadata
 from tools.bazel.oci.oci_inventory import apply_layer, assert_overlay_paths
-from tools.bazel.oci.oci_layout import validate_layout
 from tools.bazel.oci.package_contract import identity, receipt_records, source_identity
 
 
@@ -120,7 +121,7 @@ def check_runtime_manifest(metadata_path, *, variant, make):
 
 
 def select(base, lock, policy_path, mapping, *, variant, retained_manifest=None,
-           base_package_metadata=None):
+           base_package_metadata=None, base_inventory=None):
     """Apply a declarative policy without importing any container-owned Python."""
     require(variant in ("runtime", "debug"), "unsupported APT variant")
     policy = read_policy(policy_path)
@@ -144,12 +145,18 @@ def select(base, lock, policy_path, mapping, *, variant, retained_manifest=None,
     else:
         require(retained_manifest is None, "APT policy does not permit a retained manifest")
 
-    layout = validate_layout(base, "linux/" + policy["architecture"])
+    architecture = policy["architecture"]
+    base_state = base_metadata.read(base, architecture, inventory=base_inventory,
+                                    static_i386=policy.get("static_i386"))
+    base_digest = base_state["manifest_digest"]
     if policy["retained_source"] == "source" and variant == "runtime":
-        require(source["base_manifest_digest"] == layout.descriptor["digest"], "source receipt uses a different OCI base")
-    files = {}
-    for layer in layout.layers:
-        apply_layer(layer, files, static_i386=policy.get("static_i386"))
+        require(source["base_manifest_digest"] == base_digest, "source receipt uses a different OCI base")
+    files = base_metadata.installed_files(base_state["files"])
+    require(base_state["dpkg_status"] is not None, "OCI base lacks dpkg status")
+    installed = dependencies.installed_packages(base_state["dpkg_status"], origin="OCI base")
+    require(installed, "OCI base has no installed packages")
+    require(all(package.architecture in (architecture, "all") for package in installed.values()),
+            "invalid or foreign installed package in OCI base")
 
     def inspect_payload(path):
         entries = {}
@@ -158,11 +165,11 @@ def select(base, lock, policy_path, mapping, *, variant, retained_manifest=None,
 
     selected, receipt = selection.select(
         lock, mapping, group=variant, architecture=policy["architecture"],
-        installed=selection.base_packages(layout.layers, architecture=policy["architecture"]),
+        installed=installed,
         base_files=files, retained_packages=retained,
         inspect_payload=inspect_payload, check_overlay=assert_overlay_paths,
         base_package_metadata=base_package_metadata)
-    receipt["base_manifest_digest"] = layout.descriptor["digest"]
+    receipt["base_manifest_digest"] = base_digest
     # Keep the existing receipt contracts consumed by image/package-state checks.
     if policy["retained_source"] == "make":
         receipt["provided_package_replacements"] = []
@@ -203,14 +210,23 @@ def main():
     parser.add_argument("--mapping", required=True, type=Path)
     parser.add_argument("--base-package-metadata", type=Path)
     parser.add_argument("--variant", required=True, choices=("runtime", "debug"))
-    parser.add_argument("--out-dir", required=True, type=Path)
+    parser.add_argument("--base-inventory", type=Path)
+    parser.add_argument("--exclude", action="append", default=[], type=Path)
+    parser.add_argument("--include", action="append", default=[])
+    output = parser.add_mutually_exclusive_group(required=True)
+    output.add_argument("--out-dir", type=Path)
+    output.add_argument("--out-tar", type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
     args = parser.parse_args()
     try:
         selected, receipt = select(
             args.base, args.lock, args.policy, args.mapping, variant=args.variant,
-            retained_manifest=args.retained_manifest, base_package_metadata=args.base_package_metadata)
-        selection.stage_payloads(selected, args.out_dir)
+            retained_manifest=args.retained_manifest, base_package_metadata=args.base_package_metadata,
+            base_inventory=args.base_inventory)
+        if args.out_tar is not None:
+            assemble(selected, args.out_tar, **read_patterns(args.exclude, args.include))
+        else:
+            selection.stage_payloads(selected, args.out_dir)
         args.receipt.parent.mkdir(parents=True, exist_ok=True)
         args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, tarfile.TarError) as error:

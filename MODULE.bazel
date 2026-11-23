@@ -81,7 +81,7 @@ register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.42-da5f4c8d370f501572f435ade330ec209c9c0203",
+    version = "0.0.44-35726399908a3beb947174e9359f902077928289",
     repo_name = "sonic_build_infra",
 )
 bazel_dep(name = "grub", version = "2.12.sonic.1")

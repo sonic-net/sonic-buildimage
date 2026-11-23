@@ -1,4 +1,3 @@
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@orchagent_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
@@ -7,6 +6,7 @@ load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//oci:source_runtime.bzl", "source_runtime")
 load("@tar.bzl", "tar")
 load("//dockers/docker-config-engine-trixie:validation.bzl", "service_images_policy")
 load("//tools/bazel/dpkg:defs.bzl", "sonic_layer")
@@ -193,31 +193,23 @@ source_contract(
     sources = _SOURCE_PACKAGES,
 )
 
-run_binary(
+source_runtime(
     name = "checked_libteam_runtime",
-    srcs = [
-        ":config_engine_base_layout",
-        ":libteam_source_contract",
-        "@image_source_modules//:libteam.MODULE.bazel",
-        "@image_source_modules//:protobuf-legacy.MODULE.bazel",
-        "@image_source_modules//:sonic-sairedis.MODULE.bazel",
-    ] + _SOURCE_PACKAGES.values(),
-    outs = ["libteam_source_runtime.tar", "libteam_source_packages.receipt.json"],
-    args = [
-        "--contract=$(execpath :libteam_source_contract)",
-        "--base=$(execpath :config_engine_base_layout)",
-        "--module=libteam=$(execpath @image_source_modules//:libteam.MODULE.bazel)",
-        "--module=sonic-sairedis=$(execpath @image_source_modules//:sonic-sairedis.MODULE.bazel)",
-        "--module=protobuf-legacy=$(execpath @image_source_modules//:protobuf-legacy.MODULE.bazel)",
-        "--out-tar=$(execpath libteam_source_runtime.tar)",
-        "--receipt=$(execpath libteam_source_packages.receipt.json)",
-    ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in _SOURCE_PACKAGES.items()] +
-           ["--package-target=" + name + "=" + target for name, target in _SOURCE_PACKAGES.items()],
+    archive = "libteam_source_runtime.tar",
+    base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
+    contract = ":libteam_source_contract",
     mnemonic = "ValidateOrchagentLibteamRuntime",
+    modules = {
+        "libteam": "@image_source_modules//:libteam.MODULE.bazel",
+        "protobuf-legacy": "@image_source_modules//:protobuf-legacy.MODULE.bazel",
+        "sonic-sairedis": "@image_source_modules//:sonic-sairedis.MODULE.bazel",
+    },
+    packages = _SOURCE_PACKAGES,
+    receipt = "libteam_source_packages.receipt.json",
     target_compatible_with = _COMPATIBLE_WITH,
     tool = "//tools/bazel/oci:package_contract",
 )
-
 filegroup(
     name = "libteam_source_receipt",
     srcs = ["libteam_source_packages.receipt.json"],
@@ -228,11 +220,13 @@ filegroup(
 apt_layer(
     name = "runtime_layer",
     base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
     dependency_set = "orchagent_debian",
     lock = "@sonic_build_infra//apt:apt.lock.json",
     packages = APT_INPUTS["orchagent_debian"]["amd64"],
     policy = _APT_POLICY,
     source_receipt = ":libteam_source_receipt",
+    filter_layer = True,
     variant = "runtime",
 )
 
@@ -242,9 +236,9 @@ filegroup(
     output_group = "selection",
 )
 
-sonic_layer(
+alias(
     name = "apt_deps",
-    tars = [":runtime_layer"],
+    actual = ":runtime_layer",
 )
 
 # Share the same complete source payload with the SWSS parent and its consumers.

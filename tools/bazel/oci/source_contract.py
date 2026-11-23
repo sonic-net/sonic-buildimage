@@ -33,11 +33,10 @@ def generate(owners, modules, sources, public_sources, output, payloads, *, imag
     records, identities = resolve(policy, owners, modules, sources, architecture)
     packages = []
     for name, item in records["packages"].items():
-        if "payload_sha256" in item:
-            with payloads[name].open("rb") as stream:
-                digest = hashlib.file_digest(stream, "sha256").hexdigest()
-            if digest != item["payload_sha256"]:
-                raise ValueError("generated metadata differs from runtime TAR: " + name)
+        with payloads[name].open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if item.get("payload_sha256", digest) != digest:
+            raise ValueError("generated metadata differs from runtime TAR: " + name)
         files = inventories[name]
         paths = {}
         for path in sorted(expand_required_paths(item.get("producer_required_paths", []), architecture)):
@@ -65,7 +64,8 @@ def generate(owners, modules, sources, public_sources, output, payloads, *, imag
         controls.update(item["control_fields"])
         packages.append({"required_paths": paths, "package": name,
                          "version": controls["Version"], "architecture": architecture,
-                         "control_fields": controls, "source": source})
+                         "control_fields": controls, "source": source,
+                         "payload_sha256": digest, "payload_inventory": files})
     result = {**policy, "_generated": "AUTO-GENERATED from source-owner metadata. Required paths are producer guarantees only. DO NOT EDIT.",
               "packages": packages}
     output.write_bytes(json_bytes(result))

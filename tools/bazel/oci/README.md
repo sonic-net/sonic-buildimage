@@ -29,7 +29,8 @@ Syncd consumes the public source TAR targets listed in its `BUILD.bazel`.
 Each producer owns its installed paths, permissions, ownership and service
 links. The generated `source_contract` reads producer metadata and selected
 module declarations, checks their target bindings and measured TAR hashes, and
-supplies package identity and dependency receipts. There is no image-side
+supplies package identity and dependency receipts. The assembly action reuses
+the generated per-package TAR digest and file inventory. There is no image-side
 source-path catalog or permission repair. SWSS's source install lists likewise
 remain in the SWSS repository.
 
@@ -84,9 +85,12 @@ apt_layer(
 
 The macro writes `runtime_layer_policy.json` and passes it as a declared
 input to `//tools/bazel/oci:select_apt_payloads`. That shared Python tool runs
-when OCI layouts and package archives exist: it checks the platform, inventories
-the inherited files/packages, applies the policy, invokes dependency/collision
-validation in `sonic-build-infra`, and stages selected TARs plus a receipt.
+when OCI layouts and package archives exist. It checks the platform, reads the
+inherited file inventory and installed package state, applies the policy, and
+invokes dependency and collision validation in `sonic-build-infra`. The two
+published Trixie base images provide shared inventories to their consumers.
+The selector writes the selected payloads directly to one layer TAR and emits
+its receipt alongside it.
 Starlark declares those actions; it cannot inspect their generated OCI/TAR
 contents during analysis. Container tests can consume the generated
 `:runtime_layer_policy` target to verify the real BUILD policy.
@@ -302,13 +306,11 @@ this fixture coverage does not establish production ARM64 container support.
 
 ## Reproducible Docker archives
 
-`sonic_docker_archive` uses published `rules_gzip` to compress the Docker-save
-tar produced by `oci_load`. Its execution toolchain uses pinned `pigz` with
-`--no-name`, configured through standard `rules_multirun` and `toolchain_utils`
-rules. Compression stays at level 6; source filenames and timestamps are omitted
-from the gzip header. A standard Skylib `copy_file` gives each input the basename
-needed to retain Make's `<container>.gz` filename. The intermediate copy lives in
-a separate directory so it cannot collide with the OCI image directory.
+`sonic_docker_archive` uses the Docker-save specification from `oci_load` and
+streams the resulting TAR directly to the pinned `pigz` from
+`sonic-build-infra`. It uses level 6 and `--no-name` to omit source filenames
+and timestamps from the gzip header. Make still receives `<container>.gz`.
+The explicit `.tar` target uses the standard `oci_load` tarball output.
 
 The `//tools/bazel/tests:sonic_docker_archive_test` fixture exercises this macro and
 checks its Docker tag, configuration and layer contents, zero gzip timestamp,

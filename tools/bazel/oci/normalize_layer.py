@@ -71,7 +71,13 @@ def normalized_member(member, *, directory_aliases=DIRECTORY_ALIASES, root_owned
 
 def base_aliases(base, *, expected_platform, directory_aliases=DIRECTORY_ALIASES):
     """Require aliases and their target directories to exist in the final checked base."""
-    descriptor, _, _, layers = validate_layout(base, expected_platform)
+    layout = validate_layout(base, expected_platform)
+    check_layer_aliases(layout.layers, directory_aliases)
+    return layout.descriptor['digest']
+
+
+def check_layer_aliases(layers, directory_aliases=DIRECTORY_ALIASES):
+    """Check directory aliases in the layers of an already validated layout."""
     targets = set(directory_aliases) | {entry['target'] for entry in directory_aliases.values()}
     observed = {}
     for layer in layers:
@@ -92,11 +98,19 @@ def base_aliases(base, *, expected_platform, directory_aliases=DIRECTORY_ALIASES
         for name in removals:
             observed.pop(name, None)
         observed.update(additions)
+    check_alias_inventory(observed, directory_aliases)
+
+
+def check_alias_inventory(observed, directory_aliases=DIRECTORY_ALIASES):
+    """Validate directory aliases against a final inventory with raw TAR modes."""
     for name, entry in directory_aliases.items():
-        require(observed.get(name) == {'kind': 'symlink', 'linkname': entry['linkname'], 'uid': 0, 'gid': 0, 'mode': 0o777} and
-                observed.get(entry['target']) == {'kind': 'directory', 'linkname': '', 'uid': 0, 'gid': 0, 'mode': 0o755},
+        alias = observed.get(name, {})
+        target = observed.get(entry['target'], {})
+        require(all(alias.get(key) == value for key, value in
+                    {'kind': 'symlink', 'linkname': entry['linkname'], 'uid': 0, 'gid': 0, 'mode': 0o777}.items()) and
+                all(target.get(key) == value for key, value in
+                    {'kind': 'directory', 'uid': 0, 'gid': 0, 'mode': 0o755}.items()),
                 'OCI base has an unsupported directory alias: ' + name)
-    return descriptor['digest']
 
 
 def normalize(payload_path, base, output_path, *, expected_platform, directory_aliases=DIRECTORY_ALIASES,

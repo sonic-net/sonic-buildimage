@@ -1,10 +1,10 @@
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//oci:source_runtime.bzl", "source_runtime")
 load("@syncd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@tar.bzl", "tar")
 load("//dockers/docker-config-engine-trixie:validation.bzl", "service_images_policy")
@@ -158,40 +158,16 @@ source_contract(
     sources = SOURCE_PACKAGES,
 )
 
-run_binary(
+source_runtime(
     name = "checked_source_runtime",
-    srcs = [
-        "//platform/vs/docker-syncd-vs:config_engine_base_layout",
-        "//platform/vs/docker-syncd-vs:source_contract",
-        "@syncd_source_modules//:libnl3.MODULE.bazel",
-        "@syncd_source_modules//:p4c.MODULE.bazel",
-        "@syncd_source_modules//:p4lang-bmv2.MODULE.bazel",
-        "@syncd_source_modules//:p4lang-pi.MODULE.bazel",
-        "@syncd_source_modules//:sonic-dash.MODULE.bazel",
-        "@syncd_source_modules//:sonic-fips.MODULE.bazel",
-        "@syncd_source_modules//:sonic-sairedis.MODULE.bazel",
-        "@syncd_source_modules//:sonic-swss-common.MODULE.bazel",
-    ] + SOURCE_PACKAGES.values(),
-    outs = [
-        "source_packages.receipt.json",
-        "source_runtime.tar",
-    ],
-    args = [
-               "--contract=$(execpath //platform/vs/docker-syncd-vs:source_contract)",
-               "--base=$(execpath //platform/vs/docker-syncd-vs:config_engine_base_layout)",
-               "--module=sonic-swss-common=$(execpath @syncd_source_modules//:sonic-swss-common.MODULE.bazel)",
-               "--module=sonic-sairedis=$(execpath @syncd_source_modules//:sonic-sairedis.MODULE.bazel)",
-               "--module=sonic-fips=$(execpath @syncd_source_modules//:sonic-fips.MODULE.bazel)",
-               "--module=libnl3=$(execpath @syncd_source_modules//:libnl3.MODULE.bazel)",
-               "--module=p4lang-pi=$(execpath @syncd_source_modules//:p4lang-pi.MODULE.bazel)",
-               "--module=p4lang-bmv2=$(execpath @syncd_source_modules//:p4lang-bmv2.MODULE.bazel)",
-               "--module=p4c=$(execpath @syncd_source_modules//:p4c.MODULE.bazel)",
-               "--module=sonic-dash=$(execpath @syncd_source_modules//:sonic-dash.MODULE.bazel)",
-               "--out-tar=$(execpath source_runtime.tar)",
-               "--receipt=$(execpath source_packages.receipt.json)",
-           ] + ["--package=" + name + "=$(execpath " + target + ")" for name, target in SOURCE_PACKAGES.items()] +
-           ["--package-target=" + name + "=" + target for name, target in SOURCE_PACKAGES.items()],
+    archive = "source_runtime.tar",
+    base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
+    contract = ":source_contract",
     mnemonic = "ValidateSyncdSourceRuntime",
+    modules = SOURCE_MODULES,
+    packages = SOURCE_PACKAGES,
+    receipt = "source_packages.receipt.json",
     target_compatible_with = [
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
@@ -201,7 +177,6 @@ run_binary(
     }),
     tool = "//tools/bazel/oci:package_contract",
 )
-
 [
     filegroup(
         name = name,
@@ -223,11 +198,13 @@ alias(
 apt_layer(
     name = "runtime_layer",
     base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
     dependency_set = "syncd_vs_debian",
     lock = "@sonic_build_infra//apt:apt.lock.json",
     packages = APT_INPUTS["syncd_vs_debian"]["amd64"],
     policy = _APT_POLICY,
     source_receipt = ":source_package_receipt",
+    filter_layer = True,
     variant = "runtime",
 )
 
@@ -237,9 +214,9 @@ filegroup(
     output_group = "selection",
 )
 
-sonic_layer(
+alias(
     name = "apt_deps",
-    tars = [":runtime_layer"],
+    actual = ":runtime_layer",
 )
 
 shared_runtime_layers(
@@ -263,11 +240,9 @@ debug_symbols_layer(
     image = ":rdeps",
 )
 
-sonic_layer(
+alias(
     name = "runtime_packages",
-    tars = [
-        ":rdeps",
-    ],
+    actual = ":rdeps",
 )
 
 installed_packages(
