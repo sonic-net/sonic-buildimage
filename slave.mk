@@ -1715,6 +1715,7 @@ vs_boot_mode_stamp := $(TARGET_PATH)/.installer-docker-load-on-boot
 ifeq ($(DOCKER_LOAD_ON_BOOT),y)
 vs_boot_bundle_inputs := files/docker/docker files/docker/load-images.conf files/docker/sonic-load-images \
                         installer/install.sh onie-mk-demo.sh scripts/build_boot_packages.py \
+                        installer/sharch_body.sh scripts/stream_onie_payload.py \
                         tools/bazel/image/boot_image_bundle.py tools/bazel/image/image_config.py \
                         tools/bazel/oci/boot_layout.py tools/bazel/oci/oci_layout.py
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
@@ -1727,8 +1728,8 @@ endif
 .PHONY: check-vs-boot-mode
 $(vs_boot_mode_stamp): check-vs-boot-mode
 	@mkdir -p "$(@D)"
-	@printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' | cmp -s - "$@" || \
-	    printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' > "$@"
+	@printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' '$(SONIC_VS_STREAM_ONIE)' | cmp -s - "$@" || \
+	    printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' '$(SONIC_VS_STREAM_ONIE)' > "$@"
 endif
 
 # targets for building installers with base image

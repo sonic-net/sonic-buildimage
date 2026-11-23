@@ -1,5 +1,27 @@
 # Shared Bazel CI helpers
 
+## Unsigned VS ONIE payload streaming
+
+The existing `SONIC_VS_FAST_ASSEMBLY=1` profile enables
+`SONIC_VS_STREAM_ONIE=1`; set `SONIC_VS_STREAM_ONIE=0` to retain the original
+wrapper. Without the profile or explicit flag, behavior is unchanged.
+Streaming applies only to native AMD64 VS OS installers using
+`DOCKER_LOAD_ON_BOOT=y`, with unsigned mode `none`, empty or `no_sign`.
+Signed, cross-built, other-platform and legacy Docker-store installers retain
+their original wrapping path.
+
+The wrapper keeps its normal private staging copies, then writes the tar
+payload once while computing its SHA1 checksum and byte count. It backfills
+a 4096-byte, comment-padded shell header and atomically publishes the completed
+image. The existing `exit_marker` reader, tar metadata, embedded/sidecar bundle
+handling and source-file ownership remain unchanged. The streaming path
+expands the stock `TARGET_MACHINE` raw-image placeholder without shell evaluation;
+other shell substitutions require the original wrapper.
+
+This removes the intermediate tar, checksum reread and final tar-to-image copy.
+It does not change package registrations, filesystem scheduling, bundle
+contents, signing or shared cache permissions.
+
 ## Transient repository fetch retries
 
 The shared action-audit query, archive/filegroup collectors and container
