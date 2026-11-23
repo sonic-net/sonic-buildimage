@@ -143,6 +143,7 @@ if [ "$install_env" = "onie" ]; then
 fi
 
 arch="%%ARCH%%"
+kversion="%%KVERSION%%"
 
 # The build system prepares this script by replacing %%DEMO-TYPE%%
 # with "OS" or "DIAG".

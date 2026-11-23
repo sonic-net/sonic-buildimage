@@ -38,7 +38,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
-LINUX_KERNEL_VERSION=6.12.94+deb13
+LINUX_KERNEL_VERSION=${KERNEL_VERSION}${KERNEL_ABISUFFIX}
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -845,6 +845,7 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
 
                 # Substitute placeholders in sonic_fit.its template
                 sed -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
+                    -e "s|__KERNEL_VERSION__|${KERNEL_VERSION_FULL}|g" \
                     -e "s|__INITRD_PATH__|${INITRD_PATH}|g" \
                     -e "s|__DTB_PATH_ASPEED__|${DTB_DIR_PATH}|g" \
                     $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its > /tmp/sonic_fit.its.tmp
