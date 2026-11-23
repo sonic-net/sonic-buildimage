@@ -78,10 +78,16 @@ def env(monkeypatch):
 
 
 def drive(env, events):
-    events = iter(events)
+    events = deque(events)
 
     def select(timeout):
-        now, table, key, values = next(events)
+        if any(subscriber.events for subscriber in env.subscribers.values()):
+            return env.module.swsscommon.Select.OBJECT, None
+        if not events:
+            raise StopIteration
+        if timeout == 0 and events[0][0] > env.clock[0]:
+            return env.module.swsscommon.Select.TIMEOUT, None
+        now, table, key, values = events.popleft()
         env.clock[0] = now
         if table is None:
             return env.module.swsscommon.Select.TIMEOUT, None
@@ -174,6 +180,70 @@ def test_change_during_restart_is_handled_after_restart_finishes(env):
         call.startProcess("gnmi-native", True),
     ] * 2
     assert env.listener.config["GNMI", "gnmi"] == {"port": "50053"}
+
+
+@pytest.mark.parametrize("followup_states,expected_ports", [
+    (["RUNNING"], ["50053", "50052"]),
+    (["STARTING", "RUNNING"], ["50053", "50052"]),
+    (["STARTING", "STOPPED"], ["50053"]),
+    ([OSError("socket unavailable")], ["50053"]),
+])
+def test_revert_during_restart_preserves_followup(
+        env, followup_states, expected_ports):
+    env.rpc.getProcessInfo.side_effect = [
+        {"statename": "RUNNING"},
+        *({"statename": state} if isinstance(state, str) else state
+          for state in followup_states),
+    ]
+    launched_ports = []
+
+    def stop(program, wait):
+        if env.rpc.stopProcess.call_count == 1:
+            env.data["GNMI", "gnmi"] = {"port": "50053"}
+            env.subscribers["GNMI"].events.append(("gnmi", "SET", ()))
+
+    def start(program, wait):
+        launched_ports.append(env.data["GNMI", "gnmi"]["port"])
+        if env.rpc.startProcess.call_count == 1:
+            env.data["GNMI", "gnmi"] = {"port": "50052"}
+            env.subscribers["GNMI"].events.append(("gnmi", "SET", ()))
+
+    env.rpc.stopProcess.side_effect = stop
+    env.rpc.startProcess.side_effect = start
+    drive(env, [
+        (0, "GNMI", "gnmi", {"port": "50052"}),
+        (1, None, None, None),
+        (2, None, None, None),
+        (3, None, None, None),
+        (4, None, None, None),
+        (5, "GNMI", "gnmi", {"port": "50052"}),
+        (6, None, None, None),
+    ])
+    assert launched_ports == expected_ports
+    assert env.rpc.getProcessInfo.call_count == len(followup_states) + 1
+
+
+def test_noop_after_restart_queue_drains_is_ignored(env):
+    drive(env, [
+        (0, "GNMI", "gnmi", {"port": "50052"}),
+        (1, None, None, None),
+        (2, "GNMI", "gnmi", {"port": "50052"}),
+        (3, None, None, None),
+    ])
+    env.rpc.startProcess.assert_called_once_with("gnmi-native", True)
+
+
+def test_unrelated_event_queued_during_restart_is_ignored(env):
+    def start(program, wait):
+        env.subscribers["DEVICE_METADATA"].events.append(("other", "SET", ()))
+
+    env.rpc.startProcess.side_effect = start
+    drive(env, [
+        (0, "GNMI", "gnmi", {"port": "50052"}),
+        (1, None, None, None),
+        (2, None, None, None),
+    ])
+    env.rpc.startProcess.assert_called_once_with("gnmi-native", True)
 
 
 @pytest.mark.parametrize("state", [

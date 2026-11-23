@@ -42,6 +42,8 @@ class GnmiConfigListener:
         # Subscribe before the baseline; initial table dumps are not changes.
         self.config = self.read_config()
         self.deadline = None
+        self.force_restart = False
+        self.drain_after_restart = False
 
     def read_config(self):
         config = {}
@@ -60,8 +62,9 @@ class GnmiConfigListener:
     def restart_if_changed(self):
         self.deadline = None
         config = self.read_config()
-        if config == self.config:
+        if config == self.config and not self.force_restart:
             return
+        self.drain_after_restart = False
         try:
             with getRPCInterface(os.environ) as proxy:
                 supervisor = proxy.supervisor
@@ -69,8 +72,9 @@ class GnmiConfigListener:
                 if state == "STARTING":
                     self.deadline = monotonic() + COALESCE_SECONDS
                     return
-                # Retain this snapshot to detect updates during stop/start.
+                # Queued mutations can revert to this snapshot during stop/start.
                 self.config = config
+                self.force_restart = False
                 if state != "RUNNING":
                     logger.log_notice("Skipping gNMI config restart: " + state)
                     return
@@ -79,20 +83,29 @@ class GnmiConfigListener:
                 )
                 supervisor.stopProcess(PROGRAM, True)
                 supervisor.startProcess(PROGRAM, True)
+                self.drain_after_restart = True
         except (OSError, xmlrpclib.Error, HTTPException) as error:
             self.config = config
+            self.force_restart = False
             logger.log_error("gNMI supervisor restart failed: " + str(error))
 
     def run(self):
         while True:
-            state, _ = self.selector.select(1000)
+            state, _ = self.selector.select(
+                0 if self.drain_after_restart else 1000
+            )
             if state == swsscommon.Select.ERROR:
                 raise RuntimeError("gNMI config subscription select failed")
             if state == swsscommon.Select.OBJECT:
                 for name, subscriber in self.subscribers.items():
                     key, _, _ = subscriber.pop()
-                    if key in WATCHED[name] and self.deadline is None:
-                        self.deadline = monotonic() + COALESCE_SECONDS
+                    if key in WATCHED[name]:
+                        if self.drain_after_restart:
+                            self.force_restart = True
+                        if self.deadline is None:
+                            self.deadline = monotonic() + COALESCE_SECONDS
+            elif state == swsscommon.Select.TIMEOUT:
+                self.drain_after_restart = False
             if self.deadline is not None and monotonic() >= self.deadline:
                 self.restart_if_changed()
 
