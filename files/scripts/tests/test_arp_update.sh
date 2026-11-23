@@ -38,6 +38,13 @@ timeout() {
 
 APPL_DB_MAC=""
 DB_READ_STATUS=0
+APPL_DB_KEYS=""
+DB_KEYS_READ_STATUS=0
+CONFIG_DB_KEYS=""
+CONFIG_KEYS_READ_STATUS=0
+KERNEL_SNAPSHOT4=""
+KERNEL_SNAPSHOT6=""
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
 RECHECK_AFTER_SLEEP=false
 KERNEL_RECHECK_IP="192.0.2.1"
 KERNEL_RECHECK_INTF="Vlan1000"
@@ -56,10 +63,18 @@ sonic-db-cli() {
         printf '%s' "$MOCK_SUBTYPE"
         return
     fi
+    if [[ "$*" == "-s CONFIG_DB keys NEIGH*" ]]; then
+        printf '%s' "$CONFIG_DB_KEYS"
+        return "$CONFIG_KEYS_READ_STATUS"
+    fi
     printf '%s\n' "$*" > "$DB_CALL_LOG"
     printf '%s\n' "$4" > "$DB_KEY_LOG"
     assert_eq "neighbor lookup uses the local Unix socket" "-s" "$1"
     assert_eq "neighbor lookup uses APPL_DB" "APPL_DB" "$2"
+    if [[ "$3" == keys ]]; then
+        printf '%s' "$APPL_DB_KEYS"
+        return "$DB_KEYS_READ_STATUS"
+    fi
     if [[ "$RECHECK_AFTER_SLEEP" == true ]]; then
         assert_eq "recheck follows the existing wait" "120" "${SLEEP_ARGS[*]}"
     fi
@@ -73,6 +88,15 @@ ip() {
     case "$*" in
         "neigh show")
             printf '%s\n' "$KERNEL_NEIGH_OUTPUT"
+            ;;
+        "-4 neigh show"|"-6 neigh show")
+            printf '%s\n' "$*" >> "$KERNEL_CALL_LOG"
+            if [[ "$1" == -4 ]]; then
+                printf '%s\n' "$KERNEL_SNAPSHOT4"
+            else
+                printf '%s\n' "$KERNEL_SNAPSHOT6"
+            fi
+            [[ "$1" != "$KERNEL_SNAPSHOT_FAIL_FAMILY" ]]
             ;;
         "-4 neigh show to "*|"-6 neigh show to "*)
             printf '%s\n' "$*" >> "$KERNEL_CALL_LOG"
@@ -557,6 +581,96 @@ for neighbor_ip in "192.0.2.1" "2001:db8::1"; do
         printf -v "$failure" 0
     done
 done
+
+sed -n '/^  # Record APPL_DB neighbors/,/^  # sleep here/{
+    /^  # sleep here/d
+    p
+}' "$SCRIPT" > "$SOURCE_SCRIPT"
+
+APPL_DB_KEYS="NEIGH_TABLE:Vlan1000:192.0.2.1"
+for SUBTYPE in dualtor ""; do
+    for KERNEL_SNAPSHOT_FAIL_FAMILY in -4 -6; do
+        KERNEIGH4="stale"
+        KERNEIGH6="stale"
+        DB_NEIGH_MISSING_FROM_KERNEL="192.0.2.1,Vlan1000"
+        LOGGER_MESSAGES=()
+        : > "$DB_CALL_LOG"
+        set +o pipefail
+        source "$SOURCE_SCRIPT"
+        set -o pipefail
+        assert_eq "a failed snapshot clears queued candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+        assert_eq "a failed snapshot invalidates both families" "" "$KERNEIGH4$KERNEIGH6"
+        assert_eq "a failed snapshot does not collect DB keys" "" "$(<"$DB_CALL_LOG")"
+        assert_eq "a failed snapshot is logged" \
+            "-p error Failed to read IPv${KERNEL_SNAPSHOT_FAIL_FAMILY#-} kernel neighbor snapshot" "${LOGGER_MESSAGES[0]}"
+    done
+done
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
+
+DB_KEYS_READ_STATUS=1
+LOGGER_MESSAGES=()
+DB_NEIGH_MISSING_FROM_KERNEL="192.0.2.1,Vlan1000"
+source "$SOURCE_SCRIPT"
+assert_eq "a failed DB keys query discards partial results and old candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a failed DB keys query is logged" \
+    "-p error Failed to read APPL_DB neighbor keys during initial kernel check" "${LOGGER_MESSAGES[0]}"
+DB_KEYS_READ_STATUS=0
+
+LOGGER_MESSAGES=()
+source "$SOURCE_SCRIPT"
+assert_eq "a valid empty kernel snapshot permits candidate collection" \
+    "192.0.2.1,Vlan1000" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a valid empty kernel snapshot is not an error" "0" "${#LOGGER_MESSAGES[@]}"
+APPL_DB_KEYS=""
+source "$SOURCE_SCRIPT"
+assert_eq "a valid empty DB snapshot clears prior candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a valid empty DB snapshot is not an error" "0" "${#LOGGER_MESSAGES[@]}"
+
+KERNEL_SNAPSHOT4=$'192.0.2.1 dev Vlan1000 REACHABLE\n192.0.2.2 dev Vlan1000 FAILED\n192.0.2.3 dev Ethernet0 REACHABLE'
+KERNEL_SNAPSHOT6=$'2001:db8::1 dev Vlan1000 REACHABLE\n2001:db8::2 dev Vlan1000 INCOMPLETE\nfe80::1 dev Vlan1000 REACHABLE'
+for SUBTYPE in dualtor ""; do
+    load_kernel_vlan_neighbors "$SUBTYPE"
+    expected4="192.0.2.1,Vlan1000"
+    expected6="2001:db8::1,Vlan1000"
+    if [[ "$SUBTYPE" == dualtor ]]; then
+        expected4+=$'\n192.0.2.2,Vlan1000'
+        expected6+=$'\n2001:db8::2,Vlan1000'
+    fi
+    assert_eq "IPv4 snapshot keeps the existing subtype and VLAN filters" "$expected4" "$KERNEIGH4"
+    assert_eq "IPv6 snapshot keeps the existing subtype and link-local filters" "$expected6" "$KERNEIGH6"
+done
+KERNEL_SNAPSHOT4=""
+KERNEL_SNAPSHOT6=""
+
+sed -n '/^  # refresh neighbor entries/,${
+    /^done$/d
+    p
+}' "$SCRIPT" > "$SOURCE_SCRIPT"
+
+CONFIG_DB_KEYS="NEIGH|Vlan1000|192.0.2.1"
+for KERNEL_SNAPSHOT_FAIL_FAMILY in -4 -6; do
+    LOGGER_MESSAGES=()
+    TIMEOUT_ARGS=()
+    set +o pipefail
+    source "$SOURCE_SCRIPT"
+    set -o pipefail
+    assert_eq "a failed static refresh snapshot does not authorize pinging" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "a failed static refresh snapshot is logged" \
+        "-p error Failed to read IPv${KERNEL_SNAPSHOT_FAIL_FAMILY#-} kernel neighbor snapshot" "${LOGGER_MESSAGES[0]}"
+done
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
+
+CONFIG_KEYS_READ_STATUS=1
+LOGGER_MESSAGES=()
+TIMEOUT_ARGS=()
+source "$SOURCE_SCRIPT"
+assert_eq "a failed CONFIG_DB keys query does not authorize pinging" "0" "${#TIMEOUT_ARGS[@]}"
+assert_eq "a failed CONFIG_DB keys query is logged" \
+    "-p error Failed to read CONFIG_DB neighbor keys during kernel refresh" "${LOGGER_MESSAGES[0]}"
+CONFIG_KEYS_READ_STATUS=0
+source "$SOURCE_SCRIPT"
+assert_eq "static neighbors still refresh immediately after successful snapshots" \
+    "0.2 ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 192.0.2.1" "${TIMEOUT_ARGS[*]}"
 
 [[ ! -e "$MARKER_FILE" ]]
 
