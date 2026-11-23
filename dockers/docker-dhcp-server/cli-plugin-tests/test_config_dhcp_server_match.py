@@ -1133,6 +1133,12 @@ class TestConfigDHCPServerMatch:
         key = "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a"
         assert mock_db.get("CONFIG_DB", key, "ranges@") == "range1"
         assert not mock_db.get("CONFIG_DB", key, "ips@")
+        # Replaced in one transaction so dhcpservd never sees the binding missing
+        assert mock_db.transactions == [[
+            ["DEL", key], ["HSET", key, "matches@", "port-etp2,vendor-a", "ranges@", "range1"]
+        ]]
+        mock_db.delete.assert_not_called()
+        mock_db.hmset.assert_not_called()
 
     def test_binding_update_switch_range_to_ips(self, mock_db):
         result = invoke(

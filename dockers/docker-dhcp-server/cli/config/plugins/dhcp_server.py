@@ -5,6 +5,8 @@ import ipaddress
 import string
 import unicodedata
 
+from swsscommon import swsscommon
+
 
 SUPPORTED_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
 SUPPORTED_MODE = ["PORT", "MATCH"]
@@ -96,6 +98,23 @@ def get_vlan_subnets(dbconn, dhcp_interface):
     if not subnets:
         click.get_current_context().fail("Vlan {} has no IPv4 subnet".format(dhcp_interface))
     return subnets
+
+
+REDIS_REPLY_INTEGER = 3
+
+
+def replace_config_db_entry(dbconn, key, entry):
+    """Replace a Config DB hash in one MULTI/EXEC so subscribers never read it missing or half-written."""
+    transaction = swsscommon.RedisTransactioner(dbconn.get_redis_client("CONFIG_DB"))
+    transaction.multi()
+    fields = [item for field in sorted(entry) for item in (field, entry[field])]
+    for command in (["DEL", key], ["HSET", key] + fields):
+        redis_command = swsscommon.RedisCommand()
+        redis_command.format(command)
+        transaction.enqueue(redis_command, REDIS_REPLY_INTEGER)
+    # SWIG exposes RedisTransactioner::exec() as _exec()
+    if not transaction._exec():
+        click.get_current_context().fail("Failed to update {}".format(key))
 
 
 class AmbiguousPoolError(click.UsageError):
@@ -765,8 +784,9 @@ def dhcp_server_ipv4_binding_update(db, dhcp_interface, binding_name, match_list
         entry["ranges@"] = existing.get("ranges@", "")
 
     validate_vlan_bindings(dbconn, dhcp_interface, candidate=(binding_name, entry))
-    dbconn.delete("CONFIG_DB", key)
-    dbconn.hmset("CONFIG_DB", key, entry)
+    # A separate delete would let dhcpservd briefly generate without this binding,
+    # dropping its exclusion from less specific classes.
+    replace_config_db_entry(dbconn, key, entry)
 
 
 @dhcp_server_ipv4_binding.command(name="del")

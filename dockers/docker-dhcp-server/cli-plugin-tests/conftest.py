@@ -6,6 +6,7 @@ import json
 import sys
 
 import mock_tables
+from swsscommon import swsscommon
 
 TEST_DATA_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -102,4 +103,32 @@ def mock_db():
     redis_client_config_db.hdel = mock.Mock(side_effect=config_db_hdel)
     redis_client_state_db.hdel = mock.Mock(side_effect=state_db_hdel)
 
-    yield db
+    class RedisCommand:
+        def format(self, command):
+            self.command = list(command)
+
+    class RedisTransactioner:
+        def __init__(self, client):
+            assert client is redis_client_config_db
+            self.commands = None
+
+        def multi(self):
+            self.commands = []
+
+        def enqueue(self, command, expected_type):
+            self.commands.append(command.command)
+
+        def _exec(self):
+            for name, key, *args in self.commands:
+                if name == "DEL":
+                    mock_config_db.pop(key, None)
+                else:
+                    assert name == "HSET"
+                    mock_config_db.setdefault(key, {}).update(zip(args[::2], args[1::2]))
+            db.transactions.append(self.commands)
+            return True
+
+    db.transactions = []
+    with mock.patch.object(swsscommon, "RedisCommand", RedisCommand), \
+            mock.patch.object(swsscommon, "RedisTransactioner", RedisTransactioner):
+        yield db
