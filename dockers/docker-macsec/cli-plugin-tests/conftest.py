@@ -1,6 +1,10 @@
 import pytest
-import mock_tables # lgtm [py/unused-import]
-import mock_single_asic # lgtm[py/unused-import]
+# Imported for side effects: installs fake Redis/SWSS connector patches
+# before pytest imports the CLI plugin modules.
+import mock_tables  # lgtm [py/unused-import]
+# Imported for side effects: configures the single-ASIC test environment
+# before pytest imports the CLI plugin modules.
+import mock_single_asic  # lgtm [py/unused-import]
 from unittest import mock
 
 
