@@ -109,18 +109,23 @@ wheel_layer(
 )
 
 # Source-owned runtime and development payloads that Make installs in this base.
-_SOURCE_TARS = {
+_NON_FIPS_SOURCE_TARS = {
     "socat": "@socat//:socat_pkg",
     "iproute2": "@iproute2//:iproute2_pkg",
-    "libssl3t64": "@sonic_fips//openssl:libssl3t64_pkg",
-    "libssl-dev": "@sonic_fips//openssl:libssl_dev_pkg",
-    "openssl": "@sonic_fips//openssl:openssl_pkg",
-    "libk5crypto3": "@sonic_fips//krb5:libk5crypto3_pkg",
-    "libkrb5support0": "@sonic_fips//krb5:libkrb5support0_pkg",
-    "libkrb5-3": "@sonic_fips//krb5:libkrb5_3_pkg",
-    "libgssapi-krb5-2": "@sonic_fips//krb5:libgssapi_krb5_2_pkg",
-    "symcrypt-openssl": "@sonic_fips//symcrypt:runtime",
 }
+
+_FIPS_SOURCE_TARS = {
+    "libssl3t64": "@sonic_fips//openssl:libssl3t64.runtime",
+    "libssl-dev": "@sonic_fips//openssl:libssl-dev.runtime",
+    "openssl": "@sonic_fips//openssl:openssl.runtime",
+    "libk5crypto3": "@sonic_fips//krb5:libk5crypto3.runtime",
+    "libkrb5support0": "@sonic_fips//krb5:libkrb5support0.runtime",
+    "libkrb5-3": "@sonic_fips//krb5:libkrb5-3.runtime",
+    "libgssapi-krb5-2": "@sonic_fips//krb5:libgssapi-krb5-2.runtime",
+    "symcrypt-openssl": "@sonic_fips//symcrypt:symcrypt-openssl.runtime",
+}
+
+_SOURCE_TARS = _NON_FIPS_SOURCE_TARS | _FIPS_SOURCE_TARS
 
 sonic_layer(
     name = "source_runtime",
@@ -142,8 +147,7 @@ installed_packages(
     owner_metadata = [
         "@socat//:runtime_packages.json",
         "@iproute2//:runtime_packages.json",
-        "@sonic_fips//:runtime_packages.json",
-    ],
+    ] + [tar + "_metadata" for tar in _FIPS_SOURCE_TARS.values()],
     source_modules = {
         "socat": "@image_source_modules//:socat.MODULE.bazel",
         "iproute2": "@image_source_modules//:iproute2.MODULE.bazel",

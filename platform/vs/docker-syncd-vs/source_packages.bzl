@@ -14,7 +14,7 @@ SOURCE_PACKAGES = {
     "libsaimetadata": "@sonic_sairedis//meta:libsaimetadata_pkg",
     "libsaivs": "@sonic_sairedis//vslib:libsaivs_pkg",
     "syncd-vs": "@sonic_sairedis//syncd:syncd_pkg",
-    "openssh-client": "@sonic_fips//openssh:openssh_client_pkg",
+    "openssh-client": "@sonic_fips//openssh:openssh-client.runtime",
     "libnl-3-dev": "@libnl3//:libnl-3-dev_files",
     "libnl-route-3-dev": "@libnl3//:libnl-route-3-dev_files",
 }
@@ -22,7 +22,7 @@ SOURCE_PACKAGES = {
 OWNER_METADATA = [
     "@sonic_swss_common//:runtime_packages.json",
     "@sonic_sairedis//:runtime_packages.json",
-    "@sonic_fips//:runtime_packages.json",
+    "@sonic_fips//openssh:openssh-client.runtime_metadata",
     "@libnl3//:runtime_packages.json",
     "@p4lang_pi//:p4lang-pi.runtime_metadata",
     "@p4lang_bmv2//:p4lang-bmv2.runtime_metadata",

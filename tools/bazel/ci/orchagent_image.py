@@ -34,7 +34,7 @@ TARGETS = {
     "source-runtime.tar": OWNER + "rdeps",
     "source-debug.tar": OWNER + "rdeps_debug_symbols",
     "image-debug.tar": OWNER + "all_debug_symbols",
-    "openssh.source.tar": "@sonic_fips//openssh:openssh_client_pkg",
+    "openssh.source.tar": "@sonic_fips//openssh:openssh-client.runtime",
     "runtime.alternatives.tar": OWNER + "runtime_alternatives",
     "runtime.status": OWNER + "installed_packages",
     "runtime.packages.json": OWNER + "runtime_package_metadata",

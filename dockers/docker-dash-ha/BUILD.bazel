@@ -176,7 +176,7 @@ sonic_layer(
 
 sonic_layer(
     name = "debug_client",
-    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+    tars = ["@sonic_fips//openssh:openssh-client.runtime"],
 )
 
 debug_symbols_layer(
@@ -208,10 +208,10 @@ installed_packages(
     architecture = "amd64",
     base = ":docker-dash-ha",
     controls = [label + ":control" for label in APT_INPUTS["dash_ha_debug_debian"]["amd64"].values()],
-    owner_metadata = ["@sonic_fips//:runtime_packages.json"],
+    owner_metadata = ["@sonic_fips//openssh:openssh-client.runtime_metadata"],
     source_modules = {"sonic-fips": "@image_source_modules//:sonic-fips.MODULE.bazel"},
     source_spec = "//dockers/docker-dash-ha/bazel:debug_source_paths.json",
-    sources = {"openssh-client": "@sonic_fips//openssh:openssh_client_pkg"},
+    sources = {"openssh-client": "@sonic_fips//openssh:openssh-client.runtime"},
 )
 
 filegroup(

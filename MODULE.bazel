@@ -63,7 +63,7 @@ bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "net-snmp", version = "5.9.3.sonic.1", repo_name = "net_snmp")
 
 # Share APT lock metadata across dependency sets.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.25")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.26")
 # Preserve system and quote headers in the P4/DASH Make builds.
 bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
@@ -369,8 +369,15 @@ single_version_override(
     version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
 )
 
-bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")
 bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", repo_name = "sonic_wpa_supplicant")
+single_version_override(
+    module_name = "sonic-wpa-supplicant",
+    version = "2.9.0.sonic.1",
+    patches = ["//tools/bazel/registry:wpa-supplicant-fips-openssl.patch"],
+    patch_strip = 1,
+)
+
 
 # MACsec runtime/debug and private Redis checks share the production APT lock.
 use_repo(apt, "macsec_debian")

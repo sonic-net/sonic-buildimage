@@ -15,7 +15,7 @@ installed HA package file.
 | Config-engine, Common Python/native bindings, YANG and utilities | Source-owned outputs in the inherited config-engine image |
 | FIPS OpenSSL/Kerberos/SymCrypt, iproute2, socat and libnl | Source-owned outputs in the inherited base image |
 | External Debian runtime libraries and debug tools | Reviewed AMD64 APT lock and shared checked `apt_layer` selection |
-| FIPS OpenSSH client in the debug image | `@sonic_fips//openssh:openssh_client_pkg` with matching symbols |
+| FIPS OpenSSH client in the debug image | `@sonic_fips//openssh:openssh-client.runtime` with matching symbols |
 
 The debug image extends the exact runtime layers. It adds the inherited Make
 debug tool set, the source-built FIPS OpenSSH client, the `_ssh` group used by

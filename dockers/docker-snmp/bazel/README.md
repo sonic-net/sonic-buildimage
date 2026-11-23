@@ -13,7 +13,7 @@ It does not build Debian packages or import Make-produced project artifacts.
 | Common, py-common and config-engine | Inherited config-engine container | Existing public config-engine OCI target and its source dependency graph |
 | External SNMP tools | Trixie APT repositories | SNMP runtime set in the shared Trixie APT lock |
 | Third-party Python modules | Make’s per-image version list and inherited base wheels | Hashed lock compiled from the same list for hiredis, psutil, python-arptable and smbus. YAML and natsort come from config-engine |
-| Debug OpenSSH client | `FIPS_OPENSSH_CLIENT` | Existing `@sonic_fips//openssh:openssh_client_pkg`, with its matching symbols |
+| Debug OpenSSH client | `FIPS_OPENSSH_CLIENT` | Existing `@sonic_fips//openssh:openssh-client.runtime`, with its matching symbols |
 | Final output | Docker archive | Reproducible `docker-snmp.gz` and `docker-snmp-dbg.gz`, exported through the shared archive rule |
 
 Regenerate the external Python wheel lock with uv 0.12.18 from the repository root:
