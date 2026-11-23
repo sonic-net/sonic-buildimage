@@ -3,7 +3,7 @@ programs=
 {%- set add_preceding_comma = { 'flag': False } %}
 {% set vlan_v4_list = [] %}
 {% set vlan_v6_list = [] %}
-{# Go through Vlan interfaces. Generate dhcpmon for any vlan with either dhcpv4 or dhcpv6 relay configured. #}
+{# Generate dhcpmon for VLANs with a configured DHCP server and a VLAN address in the same family. #}
 {% for (vlan_name, prefix) in VLAN_INTERFACE | pfx_filter %}
     {%- if prefix | ipv4 and vlan_name not in vlan_v4_list and 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' and DHCPV4_RELAY and vlan_name in DHCPV4_RELAY and 'dhcpv4_servers' in DHCPV4_RELAY[vlan_name] and DHCPV4_RELAY[vlan_name]['dhcpv4_servers']|length > 0 %}
         {%- for dhcp_server in DHCPV4_RELAY[vlan_name]['dhcpv4_servers'] %}
@@ -18,7 +18,7 @@ programs=
             {%- endif %}
         {%- endfor %}
     {%- endif %}
-    {%- if vlan_name not in vlan_v6_list and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
+    {%- if prefix | ipv6 and vlan_name not in vlan_v6_list and DHCP_RELAY and vlan_name in DHCP_RELAY and 'dhcpv6_servers' in DHCP_RELAY[vlan_name] and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
         {%- for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
             {%- if dhcpv6_server | ipv6 %}
                 {%- set _ = vlan_v6_list.append(vlan_name | validate_interface_name) %}
@@ -40,16 +40,16 @@ dhcpmon-{{ vlan_name | validate_interface_name }}
 command=/usr/sbin/dhcpmon -id {{ vlan_name | validate_interface_name | shellquote }}
 {#- Dual ToR Option #}
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif -%}
-{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers. Include IPv6 uplinks for IPv6 monitoring and emit each interface once. #}
+{#- Keep sibling VLANs as upstreams for cross-VLAN DHCP servers. Match configured monitoring families and emit each interface once. #}
 {% set upstream_interfaces = [] %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name != vlan_name and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
+{% if ((vlan_name in vlan_v4_list and prefix | ipv4) or (vlan_name in vlan_v6_list and prefix | ipv6)) and name != vlan_name and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
+{% if ((vlan_name in vlan_v4_list and prefix | ipv4) or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
+{% if ((vlan_name in vlan_v4_list and prefix | ipv4) or (vlan_name in vlan_v6_list and prefix | ipv6)) and name not in upstream_interfaces %} -iu {{ name | validate_interface_name | shellquote }}{% set _ = upstream_interfaces.append(name) %}{% endif -%}
 {% endfor %}
 {% if MGMT_INTERFACE %}
 {% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}

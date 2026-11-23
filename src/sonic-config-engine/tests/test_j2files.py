@@ -542,10 +542,10 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                 }
                 for table, name, prefixes in interfaces:
                     data[table][name] = {}
-                    for family, prefix in zip(("ipv4", "ipv6"), prefixes):
-                        if family in families:
-                            data[table]["{}|{}".format(name, prefix)] = {}
+                    for prefix in prefixes:
+                        data[table]["{}|{}".format(name, prefix)] = {}
                 data["INTERFACE"]["Ethernet4|2001:db8:5::1/64"] = {}
+                data["INTERFACE"]["Ethernet8|198.51.100.2/24"] = {}
                 if "ipv4" in families:
                     table, field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
                         "VLAN", "dhcp_servers")
@@ -569,10 +569,33 @@ assert config == original, 'Rendering mutated the ConfigDB input'
                     command[index + 1] for index, arg in enumerate(command[:-1]) if arg == "-iu"
                 ]
                 expected_upstreams = ["Vlan2000", "Ethernet0", "PortChannel01"]
+                if "ipv4" in families:
+                    expected_upstreams.append("Ethernet8")
                 if "ipv6" in families:
                     expected_upstreams.append("Ethernet4")
                 self.assertEqual(sorted(upstreams), sorted(expected_upstreams), case)
                 self.assertEqual(command[-2:], ["-im", "eth0"], case)
+
+    def test_dhcpmon_requires_matching_vlan_address(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        for sonic_backend in (False, True):
+            v4_table, v4_field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                "VLAN", "dhcp_servers")
+            for table, field, server, prefix in (
+                (v4_table, v4_field, "198.18.0.10", "2001:db8:1000::1/64"),
+                ("DHCP_RELAY", "dhcpv6_servers", "2001:db8:6::10", "192.0.2.1/24"),
+            ):
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN_INTERFACE": {"Vlan1000|{}".format(prefix): {}},
+                    table: {"Vlan1000": {field: [server]}},
+                }
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+                self.assertNotIn("dhcpmon-Vlan1000", rendered, repr(data))
 
     def test_dhcp_relay(self):
         # Test generation of wait_for_intf.sh
@@ -614,7 +637,7 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertIn("programs=dhcprelayd,dhcp6relay,dhcp4relay", rendered)
         self.assertIn("[program:dhcp6relay]", rendered)
         self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
-        self.assertIn("[program:dhcpmon-Vlan2000]", rendered)
+        self.assertNotIn("[program:dhcpmon-Vlan2000]", rendered)
 
         # Test generation when only SONiC DHCPv4 relay servers are configured.
         sonic_dhcpv4_only_data = {
