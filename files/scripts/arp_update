@@ -59,12 +59,19 @@ run_ipv6_multicast_ping() {
         timeout "$wait_time" ping6 -I "$ifname" -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null 2>&1
 }
 
+is_missing_neighbor_cleanup_candidate() {
+    local neighbor_ip="$1" intf="$2"
+    [[ "$intf" == Vlan* && "$neighbor_ip" != 169.254.* &&
+        ! "$neighbor_ip" =~ ^[fF][eE][89aAbB][[:xdigit:]]: ]]
+}
+
 recheck_missing_neighbors() {
     local neighbors="$1"
     local neighbor_ip intf appl_db_mac kernel_neighbor ip_family failed=0
 
     while IFS=, read -r neighbor_ip intf; do
         [[ -z "$neighbor_ip" ]] && continue
+        is_missing_neighbor_cleanup_candidate "$neighbor_ip" "$intf" || continue
         if ! appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${neighbor_ip}" neigh)"; then
             logger -p error "Failed to read APPL_DB neighbor ${neighbor_ip} on ${intf} during recheck"
             failed=1
@@ -82,9 +89,9 @@ recheck_missing_neighbors() {
             failed=1
             continue
         fi
-        if [[ -n "$kernel_neighbor" ]]; then
+        if [[ -n "$kernel_neighbor" && ! "$kernel_neighbor" =~ [[:space:]](PERMANENT|NOARP)([[:space:]]|$) ]]; then
             logger -p warning "Neighbor ${neighbor_ip} on ${intf} present in kernel but still missing from APPL_DB after recheck; flushing without probing"
-            if ! ip "$ip_family" neigh flush to "$neighbor_ip" dev "$intf" nud all; then
+            if ! ip "$ip_family" neigh flush to "$neighbor_ip" dev "$intf"; then
                 logger -p error "Failed to flush kernel neighbor ${neighbor_ip} on ${intf} during recheck"
                 failed=1
             fi
@@ -228,6 +235,7 @@ while /bin/true; do
             # Neighbor is missing in APPL_DB, which could indicate it is in the process of being deleted.
             # Only defer neighbors that still exist in the live kernel.
             if [[ -z "$appl_db_mac" ]]; then
+                is_missing_neighbor_cleanup_candidate "$ip" "$intf" || continue
                 if [[ "$ip" == *":"* ]]; then
                     ip_family=-6
                 else
@@ -237,7 +245,7 @@ while /bin/true; do
                     logger -p error "Failed to read kernel neighbor ${ip} on ${intf} during MAC check"
                     continue
                 fi
-                [[ -z "$kernel_neighbor" ]] && continue
+                [[ -z "$kernel_neighbor" || "$kernel_neighbor" =~ [[:space:]](PERMANENT|NOARP)([[:space:]]|$) ]] && continue
                 MISSING_APPL_DB_NEIGH+="${ip},${intf}"$'\n'
                 continue
             fi
