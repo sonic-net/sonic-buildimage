@@ -134,7 +134,7 @@ oci_image(
     name = "docker-dhcp-relay",
     base = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie",
     entrypoint = ["/usr/bin/docker_init.sh"],
-    env = "//:target/bazel-manifests/docker-dhcp-relay/image.env",
+    env = "//tools/bazel/image/vs/metadata:docker-dhcp-relay.environment",
     labels = "//dockers/docker-dhcp-relay/config:labels",
     target_compatible_with = _COMPATIBLE,
     tars = [

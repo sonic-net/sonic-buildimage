@@ -1,4 +1,4 @@
-"""Original DHCP relay startup files, CLI plugins and Make metadata."""
+"""Original DHCP relay startup files, CLI plugins and container metadata."""
 
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@tar.bzl", "tar")
@@ -44,7 +44,7 @@ tar(
     manifest_labels(
         name = "labels" if suffix == "" else "debug_labels",
         out = "manifest" + suffix + ".labels",
-        manifest = "//:target/bazel-manifests/docker-dhcp-relay" + suffix + "/manifest.json",
+        manifest = "//tools/bazel/image/vs/metadata:docker-dhcp-relay" + suffix + ".manifest",
         package_receipt = "//dockers/docker-dhcp-relay:runtime_package_metadata",
         # Match Make's cross-image component contract. Relay-owned programs
         # are not components supplied by the database package dependency.

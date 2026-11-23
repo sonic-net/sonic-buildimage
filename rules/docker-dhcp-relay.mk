@@ -69,6 +69,7 @@ $(DOCKER_DHCP_RELAY)_BAZEL_TARGET = //dockers/docker-dhcp-relay:$(DOCKER_DHCP_RE
 $(DOCKER_DHCP_RELAY_DBG)_PATH = $($(DOCKER_DHCP_RELAY)_PATH)
 $(DOCKER_DHCP_RELAY_DBG)_BAZEL_TARGET = //dockers/docker-dhcp-relay:$(DOCKER_DHCP_RELAY_DBG)
 SONIC_BAZEL_MANIFESTS += docker-dhcp-relay docker-dhcp-relay-dbg
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-dhcp-relay
 docker-dhcp-relay_MANIFEST_IMAGE = $(DOCKER_DHCP_RELAY)
 docker-dhcp-relay-dbg_MANIFEST_IMAGE = $(DOCKER_DHCP_RELAY)
 docker-dhcp-relay-dbg_MANIFEST_SUFFIX = dbg
@@ -79,11 +80,6 @@ $(DOCKER_DHCP_RELAY)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-
 $(DOCKER_DHCP_RELAY_DBG)_BAZEL_DEPENDS = $($(DOCKER_DHCP_RELAY)_BAZEL_DEPENDS) \
     $(TARGET_PATH)/bazel-manifests/docker-dhcp-relay-dbg/manifest.json
 
-# Pass the exact Make setting as data. Unchanged values keep their timestamps,
-# and an invalid value cannot replace a previously prepared input.
-export SONIC_IMAGE_VERSION
-$(TARGET_PATH)/bazel-manifests/docker-dhcp-relay/image.env: tools/bazel/oci/prepare_image_version.py bazel-manifests-force
-	python3 -B tools/bazel/oci/prepare_image_version.py --output "$@"
 endif
 endif
 endif
