@@ -46,6 +46,8 @@ KERNEL_READ_STATUS=0
 KERNEL_FLUSH_STATUS=0
 KERNEL_FLUSH_FAIL_INTF=""
 SCOPED_FLUSH_CALLS=()
+DB_NEIGH_MISSING_FROM_KERNEL=""
+SUBTYPE="dualtor"
 
 MOCK_SUBTYPE=""
 
@@ -479,6 +481,82 @@ assert_eq "non-DualToR IPv4 link-local neighbor is flushed" "169.254.1.1" "${IP_
 assert_eq "non-DualToR IPv4 link-local mismatch is logged" \
     "-p warning MAC mismatch for 169.254.1.1 on Vlan1000 - kernel: 02:00:00:00:00:01, APPL_DB: 02:00:00:00:00:02" \
     "${LOGGER_MESSAGES[0]}"
+
+SUBTYPE="dualtor"
+for neighbor_ip in "192.0.2.1" "2001:db8::1"; do
+    if [[ "$neighbor_ip" == *":"* ]]; then
+        expected_family=-6
+        expected_ping=ping6
+    else
+        expected_family=-4
+        expected_ping=ping
+    fi
+    KERNEL_RECHECK_IP="$neighbor_ip"
+    KERNEL_RECHECK_INTF="Vlan1000"
+    db_keys="NEIGH_TABLE:Vlan1000:$neighbor_ip NEIGH_TABLE:Ethernet0:$neighbor_ip"
+
+    KERNEIGH4=""
+    KERNEIGH6=""
+    assert_eq "a VLAN DB neighbor missing from the kernel is recorded" \
+        "$neighbor_ip,Vlan1000" "$(collect_db_neighbors_missing_from_kernel "$db_keys")"
+    KERNEIGH4="$neighbor_ip,Vlan1000"
+    KERNEIGH6="$neighbor_ip,Vlan1000"
+    assert_eq "a neighbor flushed after collection is not recorded" \
+        "" "$(collect_db_neighbors_missing_from_kernel "$db_keys")"
+
+    run_db_recheck() {
+        LOGGER_MESSAGES=()
+        TIMEOUT_ARGS=()
+        SLEEP_ARGS=()
+        MISSING_APPL_DB_NEIGH=""
+        DB_NEIGH_MISSING_FROM_KERNEL="$neighbor_ip,Vlan1000"$'\n'
+        : > "$KERNEL_CALL_LOG"
+        RECHECK_AFTER_SLEEP=true
+        source "$RECHECK_SCRIPT"
+        RECHECK_AFTER_SLEEP=false
+        DB_NEIGH_MISSING_FROM_KERNEL=""
+    }
+
+    APPL_DB_MAC="00:11:22:33:44:55"
+    KERNEL_RECHECK_OUTPUT=""
+    run_db_recheck
+    assert_eq "a persistent DB/kernel mismatch is pinged after the existing wait" \
+        "0.2 $expected_ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 $neighbor_ip" "${TIMEOUT_ARGS[*]}"
+    assert_eq "the persistent mismatch is checked in the kernel by exact family, IP and interface" \
+        "$expected_family neigh show to $neighbor_ip dev Vlan1000" "$(<"$KERNEL_CALL_LOG")"
+
+    APPL_DB_MAC=""
+    run_db_recheck
+    assert_eq "a neighbor deleted from APPL_DB during the wait is not pinged" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "a neighbor deleted from APPL_DB needs no kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+
+    APPL_DB_MAC="00:11:22:33:44:55"
+    KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+    run_db_recheck
+    assert_eq "a neighbor relearned in the kernel during the wait is not pinged" "0" "${#TIMEOUT_ARGS[@]}"
+
+    KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 FAILED"
+    run_db_recheck
+    assert_eq "dualtor treats an unresolved kernel neighbor as present" "0" "${#TIMEOUT_ARGS[@]}"
+    SUBTYPE=""
+    run_db_recheck
+    assert_eq "other devices still ping an unresolved kernel neighbor" \
+        "0.2 $expected_ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 $neighbor_ip" "${TIMEOUT_ARGS[*]}"
+    SUBTYPE="dualtor"
+
+    KERNEL_RECHECK_OUTPUT=""
+    for failure in DB_READ_STATUS KERNEL_READ_STATUS; do
+        printf -v "$failure" 1
+        LOGGER_MESSAGES=()
+        TIMEOUT_ARGS=()
+        if recheck_db_neighbors_missing_from_kernel "$neighbor_ip,Vlan1000" "$SUBTYPE"; then
+            echo "FAIL: ${failure} passed the DB/kernel recheck" >&2
+            exit 1
+        fi
+        assert_eq "a ${failure} failure does not ping" "0" "${#TIMEOUT_ARGS[@]}"
+        printf -v "$failure" 0
+    done
+done
 
 [[ ! -e "$MARKER_FILE" ]]
 
