@@ -235,10 +235,14 @@ jobs:
           sha256sum bazel-bin/tools/bazel/image/vs/sonic-vs.bin > artifacts/native-vs/sonic-vs.bin.sha256
       - name: Verify the produced installer contents and installation layout
         run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
           bazel test --remote_upload_local_results=true --config=syncd-dash \
             //tools/bazel/image/vs:sonic_vs_test
       - name: Verify debug selection without producing a second installer
         run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
           bazel build --nobuild --config=syncd-dash \
             --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
       - name: Retain the acceptance results
