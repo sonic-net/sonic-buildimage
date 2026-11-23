@@ -170,7 +170,7 @@ sonic_layer(
 
 sonic_layer(
     name = "debug_client",
-    tars = ["@sonic_fips//openssh:openssh_client_pkg"],
+    tars = ["@sonic_fips//openssh:openssh-client.runtime"],
 )
 
 debug_symbols_layer(
@@ -222,7 +222,7 @@ installed_packages(
     base = ":docker-sonic-p4rt",
     controls = [label + ":control" for label in APT_INPUTS["p4rt_debug_debian"]["amd64"].values()],
     owner_metadata = [
-        "@sonic_fips//:runtime_packages.json",
+        "@sonic_fips//openssh:openssh-client.runtime_metadata",
         "@sonic_sairedis//:library_runtime_packages.json",
     ],
     source_modules = {
@@ -231,7 +231,7 @@ installed_packages(
     },
     source_spec = "//dockers/docker-sonic-p4rt/bazel:debug_source_paths.json",
     sources = {
-        "openssh-client": "@sonic_fips//openssh:openssh_client_pkg",
+        "openssh-client": "@sonic_fips//openssh:openssh-client.runtime",
         "libsairedis": "@sonic_sairedis//lib:libsairedis_pkg",
         "libsaimetadata": "@sonic_sairedis//meta:libsaimetadata_pkg",
     },

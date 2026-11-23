@@ -86,6 +86,7 @@ HOST_SOURCE_METADATA = {
     "//src/syslog-counter:runtime_packages.json": ["syslog-counter"],
 }
 
+# The default Make installation contract; each adapter must use a native producer.
 FIPS_HOST_PACKAGES = [
     "openssl", "libssl3t64", "libssl-dev", "symcrypt-openssl",
     "ssh", "openssh-client", "openssh-server", "openssh-sftp-server",
