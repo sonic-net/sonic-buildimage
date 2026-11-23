@@ -3,6 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 test:
+	python3 -B ../tests/test_vs_hwsku_order.py
 	# Execute Broadcom config file test
 	pushd ../tests/
 	for f in $$(find ../../../device -name "*.config.bcm"); do

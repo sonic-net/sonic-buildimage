@@ -86,6 +86,8 @@
 #  * SONIC_HOSTBASE_CACHE_SOURCE: Existing private (0700) directory for the
 #  *                 stock native AMD64/Trixie VS host base. Empty disables
 #  *                 reuse. Requires BUILD_WITH_BAZEL_WHEN_AVAILABLE=y.
+#  * SONIC_VS_CONFIGURED_HOST_CACHE: Set to y with SONIC_HOSTBASE_CACHE_SOURCE
+#  *                 to reuse the stock VS host after package installation.
 #  * SONIC_BAZEL_CACHE_SOURCE: Host directory for persistent Bazel repository,
 #  *                 action and Bazelisk caches for all Bazel builds.
 #  *                 Default: $(SONIC_DPKG_CACHE_SOURCE)/bazel, independent of
@@ -538,6 +540,9 @@ ifeq ($(BLDENV):$(CONFIGURED_ARCH):$(CONFIGURED_PLATFORM):$(BUILD_WITH_BAZEL_WHE
 vs_hostbase_dir := '$(subst ','"'"',$(abspath $(SONIC_HOSTBASE_CACHE_SOURCE)))'
 vs_hostbase_setup = SONIC_HOSTBASE_BUILDER_ID=$$(docker image inspect --format '{{.Id}}' $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)) && export SONIC_HOSTBASE_BUILDER_ID &&
 vs_hostbase_args = --mount type=bind,src=$(vs_hostbase_dir),dst=/vs_host_base_cache -e SONIC_HOSTBASE_CACHE_DIR=/vs_host_base_cache -e SONIC_HOSTBASE_BUILDER_ID
+ifeq ($(SONIC_VS_CONFIGURED_HOST_CACHE),y)
+vs_hostbase_args += -e SONIC_VS_CONFIGURED_HOST_CACHE=y
+endif
 vs_build_slave_image = "$$SONIC_HOSTBASE_BUILDER_ID"
 # This DEB is rebuilt on the host. Its content must not change just because
 # checkout times or the timestamp of an unrelated commit changed.

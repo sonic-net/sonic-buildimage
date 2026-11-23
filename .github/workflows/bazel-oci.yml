@@ -1207,7 +1207,7 @@ jobs:
           set -euo pipefail
           snapshot="${GITHUB_WORKSPACE:?}/.sonic-vs-host-base-cache"
           rm -rf --one-file-system -- "$snapshot"
-          install -d -m 0700 -- "$snapshot" artifacts/vs/host-base-transfer
+          install -d -m 0700 -- "$snapshot" artifacts/vs/host-base-transfer/configured
 
       - name: Find a retained host base from this PR or master
         id: host_base_source
@@ -1235,6 +1235,33 @@ jobs:
         run: |
           python3 -B tools/bazel/ci/vs_host_base_transfer.py restore \
             "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer/download
+
+      - name: Find the configured VS host from master
+        id: configured_host_source
+        if: steps.host_base_dir.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -B tools/bazel/ci/vs_host_base_snapshot.py --configured-host
+
+      - name: Download the configured VS host
+        id: configured_host_download
+        if: steps.configured_host_source.outputs.read_artifact_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.configured_host_source.outputs.read_run_id }}
+          artifact-ids: ${{ steps.configured_host_source.outputs.read_artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/configured/download
+
+      - name: Restore the configured VS host cache for Make
+        if: steps.configured_host_download.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py restore \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer/configured/download
 
       - name: Find the VS kernel index from a master push
         id: kernel_index_source
@@ -1283,6 +1310,7 @@ jobs:
           fi
           if [[ ${HOST_BASE_DIR:-} == success ]]; then
             export SONIC_HOSTBASE_CACHE_SOURCE="$GITHUB_WORKSPACE/.sonic-vs-host-base-cache"
+            export SONIC_VS_CONFIGURED_HOST_CACHE=y
           fi
           mkdir -p artifacts/vs/image-timings
           bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
@@ -1325,6 +1353,31 @@ jobs:
         with:
           name: ${{ steps.host_base_source.outputs.write_name }}
           path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/publish
+          include-hidden-files: true
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Prepare the configured VS host for subsequent builds
+        id: configured_host_publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.native_build.outcome == 'success' && steps.host_base_dir.outcome == 'success'
+        run: |
+          set -euo pipefail
+          receipt=artifacts/vs/configured-host-cache.json
+          [[ -f "$receipt" ]] || exit 0
+          jq -e '.cache_hit == false' "$receipt" > /dev/null || exit 0
+          key=$(jq -er '.identity_sha256 | select(test("^[0-9a-f]{64}$"))' "$receipt")
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py pack \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" "$key" artifacts/vs/host-base-transfer/configured/publish
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Retain the configured VS host from master
+        if: steps.configured_host_publish.outputs.ready == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-configured-host-v1-master
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/configured/publish
           include-hidden-files: true
           retention-days: 14
           compression-level: 0

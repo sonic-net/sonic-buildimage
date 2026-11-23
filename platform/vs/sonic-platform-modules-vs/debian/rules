@@ -4,7 +4,8 @@
 # As a special exception, when this file is copied by dh-make into a
 # dh-make output file, you may use that output file without restriction.
 
-include /usr/share/dpkg/pkg-info.mk
+# This package has its own release date, independent of the installer build.
+override export SOURCE_DATE_EPOCH := $(shell dpkg-parsechangelog -STimestamp)
 
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
@@ -54,5 +55,7 @@ binary-indep:
 	dh_installdeb
 	dh_gencontrol
 	dh_md5sums
+	# dpkg-deb only clamps newer mtimes. Set older checkout mtimes too.
+	find debian/$(PACKAGE_PRE_NAME) -exec touch -h -d @$(SOURCE_DATE_EPOCH) {} +
 	dh_builddeb
 .PHONY: build binary binary-arch binary-indep clean

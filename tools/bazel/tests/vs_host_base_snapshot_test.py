@@ -127,6 +127,24 @@ class HostBaseSnapshotTest(unittest.TestCase):
             self.assertEqual(output.read_text().splitlines(),
                              ["write_name=" + PR_NAME, "read_artifact_id=65", "read_run_id=62"])
 
+    def test_configured_host_reads_only_master_and_prs_cannot_publish(self):
+        name = snapshot.CONFIGURED_MASTER
+        self.add(61, 70, name)
+        self.runs[70].update(head_branch="master", event="push")
+        self.add(62, 71, name, created_at="2026-11-22T09:12:13Z")
+        with tempfile.TemporaryDirectory() as work:
+            event = Path(work) / "event.json"
+            event.write_text(json.dumps(self.event))
+            output = Path(work) / "output"
+            with patch.dict(os.environ, dict(self.env, GITHUB_OUTPUT=str(output), GITHUB_EVENT_PATH=str(event))), \
+                    patch.object(snapshot, "github_api", self.api):
+                snapshot.main(configured_host=True)
+                self.assertEqual(output.read_text().splitlines(), ["read_artifact_id=61", "read_run_id=70"])
+                output.unlink()
+                with patch.dict(os.environ, GITHUB_EVENT_NAME="push", GITHUB_REF="refs/heads/master"):
+                    snapshot.main(configured_host=True)
+                self.assertIn("write_name=" + name, output.read_text().splitlines())
+
     def test_api_never_forwards_authorization_on_redirect(self):
         with patch.dict(os.environ, GITHUB_REPOSITORY=REPO, GITHUB_TOKEN="fixture-secret",
                         GITHUB_API_URL="https://api.github.com"), \

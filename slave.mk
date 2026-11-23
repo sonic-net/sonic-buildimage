@@ -1732,6 +1732,17 @@ $(vs_boot_mode_stamp): check-vs-boot-mode
 	    printf '%s\n' '$(DOCKER_LOAD_ON_BOOT)' '$(SONIC_BOOT_LAYER_GZIP_LEVEL)' '$(SONIC_SQUASHFS_ZSTD_LEVEL)' '$(SONIC_VS_BATCH_PACKAGES)' '$(vs_device_data_tar)' '$(SONIC_VS_STREAM_ONIE)' > "$@"
 endif
 
+ifeq ($(CONFIGURED_PLATFORM):$(SONIC_VS_CONFIGURED_HOST_CACHE),vs:y)
+vs_configured_release := $(TARGET_PATH)/.vs-configured-host-release
+$(vs_configured_release): check-vs-boot-mode
+	@mkdir -p "$(@D)"
+	@printf '%s\n' "$$SONIC_IMAGE_VERSION" | cmp -s - "$@" || printf '%s\n' "$$SONIC_IMAGE_VERSION" > "$@"
+
+$(TARGET_PATH)/sonic-vs.bin: $(vs_configured_release) scripts/build_vs_configured_host.sh \
+        tools/bazel/ci/vs_configured_host.py tools/bazel/ci/vs_configured_host.bzl \
+        tools/bazel/ci/vs_host_pypi.py tools/bazel/ci/vs_host_pypi.lock
+endif
+
 # targets for building installers with base image
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export PASSWORD := $(PASSWORD)
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : private export BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD := $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
@@ -1830,6 +1841,9 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export SONIC_BOOT_LAYER_GZIP_LEVEL="$(or $(SONIC_BOOT_LAYER_GZIP_LEVEL),6)"
 	export SONIC_SQUASHFS_ZSTD_LEVEL="$(SONIC_SQUASHFS_ZSTD_LEVEL)"
 	export SONIC_VS_BATCH_PACKAGES="$(or $(SONIC_VS_BATCH_PACKAGES),0)"
+	if [[ "$@" == "target/sonic-vs.bin" && "$${SONIC_VS_CONFIGURED_HOST_CACHE:-}" == y ]]; then
+		export SONIC_CONFIGURED_HOST_PACKAGES="$(filter %.deb %.whl,$^)"
+	fi
 	# The receipt is private; only the completed summary bypasses the target log.
 	unset SONIC_IMAGE_TIMING_FILE SONIC_IMAGE_TIMING_CONTEXT
 	if [[ "$@" = "target/sonic-vs.img.gz" || ( "$@" = "target/sonic-vs.bin" && "$${SONIC_VS_IMAGE_TIMINGS:-}" = 1 ) ]]; then

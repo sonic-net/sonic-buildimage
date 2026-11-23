@@ -170,7 +170,7 @@ class InstallerRootfsHandoffTest(unittest.TestCase):
 
     def test_production_restore_block_falls_back_only_on_a_miss(self):
         source = (ROOT / "build_debian.sh").read_text()
-        start = source.index("    if [[ $installer_rootfs_handoff != y ]]")
+        start = source.index('    rootfs_archive="$TARGET_PATH/$RFS_SQUASHFS_NAME"')
         end = source.index("\n    ## make /", start)
         block = source[start:end]
         (self.work / "scripts").mkdir()
@@ -184,7 +184,7 @@ sudo() {
     fi
 }
 ''' + timing + block
-        env = dict(os.environ, installer_rootfs_handoff="y",
+        env = dict(os.environ, installer_rootfs_handoff="y", SONIC_VS_CONFIGURED_HOST_CACHE="n",
                    SONIC_VS_RFS_HANDOFF_SESSION=str(self.session),
                    FILESYSTEM_ROOT=str(self.root), TARGET_PATH=str(self.archive.parent),
                    RFS_SQUASHFS_NAME=self.archive.name)
@@ -192,12 +192,13 @@ sudo() {
         result = subprocess.run(["bash", "-c", shell], cwd=self.work, env=env,
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse((self.work / "fallback-events").exists())
+        events = self.work / "fallback-events"
+        self.assertEqual(events.read_text().splitlines(), ["mount"])
+        events.unlink()
         result = subprocess.run(["bash", "-c", shell], cwd=self.work, env=env,
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual((self.work / "fallback-events").read_text().splitlines(),
-                         ["fuser", "rm", "unsquashfs"])
+        self.assertEqual(events.read_text().splitlines(), ["mount", "fuser", "rm", "unsquashfs"])
 
     def test_handoff_profile_excludes_other_images_and_cross_builds(self):
         source = (ROOT / "build_debian.sh").read_text()

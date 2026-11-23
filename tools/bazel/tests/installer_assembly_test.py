@@ -116,6 +116,19 @@ sudo() {
         self.assertEqual((self.work / "builds").read_text().splitlines(), ["built"] * 3)
         self.assertEqual((self.work / "producers").read_text().splitlines(), ["producer"])
 
+    def test_configured_host_reassembles_on_release_change(self):
+        source = (ROOT / "slave.mk").read_text()
+        start = source.index("ifeq ($(CONFIGURED_PLATFORM):$(SONIC_VS_CONFIGURED_HOST_CACHE),vs:y)")
+        block = source[start:source.index("\n$(TARGET_PATH)/sonic-vs.bin:", start)]
+        (self.work / "Makefile").write_text(
+            "TARGET_PATH=target\nCONFIGURED_PLATFORM=vs\nSONIC_VS_CONFIGURED_HOST_CACHE=y\n"
+            ".PHONY: check-vs-boot-mode\nexport SONIC_IMAGE_VERSION\n" + block + "\nendif\n"
+            "target/image: $(vs_configured_release)\n\t@echo built >> builds\n\t@touch $@\n")
+        for release in ("release-a", "release-a", "release-b", "release-b"):
+            subprocess.run(["make", "target/image", "SONIC_IMAGE_VERSION=" + release],
+                           cwd=self.work, check=True, capture_output=True, timeout=10)
+        self.assertEqual((self.work / "builds").read_text().splitlines(), ["built", "built"])
+
 
 if __name__ == "__main__":
     unittest.main()
