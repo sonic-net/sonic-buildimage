@@ -79,7 +79,7 @@ class SourceBaseTest(unittest.TestCase):
             self.symbols["usr/lib/debug/.build-id/" + identifier[:2] + "/" + identifier[2:] + ".debug"] = symbols
             packages.append({"package": "symcrypt-openssl" if key == "sealed" else "libswsscommon",
                              "version": "1.11.0" if key == "sealed" else "1.0",
-                             "target": "@sonic_fips//symcrypt:runtime" if key == "sealed" else "@common//:runtime",
+                             "target": "@sonic_fips//symcrypt:symcrypt-openssl.runtime" if key == "sealed" else "@common//:runtime",
                              "source_revision": "a" * 40, "payload_sha256": "b" * 64,
                              "native_files": [{"path": name, "sha256": sha(binary), "mode": 0o644, "uid": 0, "gid": 0}]})
         self.reports = [{"schema": 1, "architecture": self.native,
@@ -210,7 +210,7 @@ class SourceBaseTest(unittest.TestCase):
                     self.run_validation()
 
     def test_canonical_symcrypt_owner(self):
-        self.reports[1]["source_packages"][0]["target"] = "@@sonic-fips+//symcrypt:runtime"
+        self.reports[1]["source_packages"][0]["target"] = "@@sonic-fips+//symcrypt:symcrypt-openssl.runtime"
         self.assertEqual(self.run_validation()["status"], "passed")
 
     def test_sealed_exception_rejects_other_canonical_owners(self):

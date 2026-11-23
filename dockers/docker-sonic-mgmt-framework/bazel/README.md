@@ -12,7 +12,7 @@ Make package producer remains available for other configurations.
 | CVL schema and YANG data | `@sonic_mgmt_common//dist:runtime` |
 | REST, UI and CLI | `@sonic_mgmt_framework//dist:runtime` |
 | REST/CLI symbols | `@sonic_mgmt_framework//dist:runtime.debug_symbols` |
-| Debug OpenSSH client | `@sonic_fips//openssh:openssh_client_pkg` |
+| Debug OpenSSH client | `@sonic_fips//openssh:openssh-client.runtime` |
 | Requests and its dependencies | Framework's canonical `requirements_lock.txt`, imported through upstream pip rules |
 | Unmodified Debian libraries and debug tools | The shared build-infra Trixie APT lock selected by the image root |
 | Startup scripts, supervisor settings and management template | This Docker directory, copied with their existing paths and modes |

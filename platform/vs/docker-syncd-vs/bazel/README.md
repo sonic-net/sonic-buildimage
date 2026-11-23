@@ -112,7 +112,7 @@ Rollback selects the original layer inputs and does not run the partition action
 | sairedis and SAI metadata | `@sonic_sairedis//lib:libsairedis_pkg` and `//meta:libsaimetadata_pkg` |
 | VS SAI | `@sonic_sairedis//vslib:libsaivs_pkg` |
 | Syncd and the DASH-enabled daemon | `@sonic_sairedis//syncd:syncd_pkg` |
-| FIPS OpenSSH client | `@sonic_fips//openssh:openssh_client_pkg` |
+| FIPS OpenSSH client | `@sonic_fips//openssh:openssh-client.runtime` |
 | libnl development files | Source-owned headers, static libraries and link/pkg-config files matching the two Make development packages. |
 | PI | `@p4lang_pi//:p4lang-pi.runtime` |
 | BMv2 | `@p4lang_bmv2//:p4lang-bmv2.runtime` |

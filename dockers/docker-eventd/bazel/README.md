@@ -13,7 +13,7 @@ It consumes owner TARs and imports locked Debian packages; it generates no DEBs.
 | Service scripts and supervisor configuration | `//dockers/docker-eventd/config:files` |
 | Five host rsyslog configs | Original JSON files and `//files/build_templates:rsyslog_plugin.conf.j2`, rendered by the locked upstream `jinjanator` entry point |
 | Image version | Make's `SONIC_IMAGE_VERSION`, prepared as the declared `target/bazel-manifests/docker-eventd/image.env` |
-| Debug OpenSSH client | `@sonic_fips//openssh:openssh_client_pkg` and matching owner symbols |
+| Debug OpenSSH client | `@sonic_fips//openssh:openssh-client.runtime` and matching owner symbols |
 | Debug tools | `sysmgr_debug_debian` from the shared build-infra Trixie APT lock |
 | Redis server for installed-service tests | `@eventd_deps//redis-server`, packaged only in the test fixture |
 

@@ -229,7 +229,7 @@ def validate_source_base(runtime_path, debug_path, *, metadata_paths, source_deb
             sealed = name == "usr/lib/" + triplet + "/libsymcrypt.so.103.13.0"
             if sealed:
                 require(source["package"] == "symcrypt-openssl" and source["version"] == "1.11.0" and
-                        source["target"] in ("@sonic_fips//symcrypt:runtime", "@@sonic-fips+//symcrypt:runtime") and
+                        source["target"] in ("@sonic_fips//symcrypt:symcrypt-openssl.runtime", "@@sonic-fips+//symcrypt:symcrypt-openssl.runtime") and
                         SOURCE_REVISION.fullmatch(source["source_revision"]),
                         "sealed core lacks the reviewed source identity")
                 require(not info["has_debuglink"], "sealed core was modified with a debuglink")
