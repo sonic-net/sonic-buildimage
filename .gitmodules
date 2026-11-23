@@ -158,3 +158,11 @@
 	path = platform/broadcom/saibcm-modules
 	url = https://github.com/sonic-net/saibcm-modules.git
 	branch = sdk-6.5.35-xgs
+[submodule "platform/broadcom/sonic-platform-modules-juniper"]
+	path = platform/broadcom/sonic-platform-modules-juniper
+	url = https://github.com/Juniper/sonic-platform-modules-juniper
+	branch = master
+[submodule "device/juniper"]
+	path = device/juniper
+	url = https://github.com/Juniper/sonic-platform-metadata
+	branch = main
