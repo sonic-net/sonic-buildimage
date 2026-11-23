@@ -49,7 +49,10 @@ mkdir -p $REDIS_DIR/sonic-db
 mkdir -p /etc/supervisor/conf.d/
 
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
-    cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
+    # Copy into a temp file first and atomically move it into place, for the same reason
+    # as the rendered branch below.
+    cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json.new
+    mv $REDIS_DIR/sonic-db/database_config.json.new $REDIS_DIR/sonic-db/database_config.json
 else
     # Render into a temp file first and atomically move it into place, so that any
     # process racing to read database_config.json (e.g. waitForAllInstanceDatabaseConfigJsonFilesReady)
@@ -76,6 +79,9 @@ chassis_db_address=""
 chassis_db_port=""
 chassisdb_config="/usr/share/sonic/platform/chassisdb.conf"
 [ -f $chassisdb_config ] && source $chassisdb_config
+chassisdb_address_file="/etc/sonic/chassisdb_address"
+# source the chassisdb_address_file, if the file exists
+[ -f $chassisdb_address_file ] && source $chassisdb_address_file
 
 db_cfg_file="/var/run/redis/sonic-db/database_config.json"
 db_cfg_file_tmp="/var/run/redis/sonic-db/database_config.json.tmp"
@@ -149,11 +155,13 @@ sonic-cfggen -j "$db_cfg_file_tmp" -a "$additional_data_json" \
 -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
 
 if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
-     cp $db_cfg_file_tmp $db_cfg_file
+     # $db_cfg_file is already visible to readers on the host, so rename onto it instead
+     # of copying, which would leave it truncated for the duration of the copy.
+     mv $db_cfg_file_tmp $db_cfg_file
 else
      update_chassisdb_config -j $db_cfg_file -p $chassis_db_port
 fi
-rm $db_cfg_file_tmp
+rm -f $db_cfg_file_tmp
 
 # copy dump.rdb file to each instance for restoration
 DUMPFILE=/var/lib/redis/dump.rdb

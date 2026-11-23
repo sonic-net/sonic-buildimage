@@ -238,14 +238,8 @@ exit:
 
 static void board_i2c_cpld_remove(struct i2c_client *client)
 {
-	/* Platform data is just a char string */
-	char *platdata = (char *)client->dev.platform_data;
 	sysfs_remove_group(&client->dev.kobj, &cpld_attribute_group);
 	board_i2c_cpld_remove_client(client);
-	if (platdata)
-	{
-	    kfree(platdata);
-	}
 
 }
 

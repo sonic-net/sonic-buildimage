@@ -106,6 +106,7 @@ module sonic-gnmi {
                     type string {
                         pattern 'password|jwt|cert|none';
                     }
+                    default "cert";
                     description "GNMI service user authorization type.";
                 }
 

@@ -1,0 +1,260 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "index": "0,0,0,0,0,0,0,0",
+            "lanes": "1,2,3,4,5,6,7,8",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/0"],
+                "8x50G": ["fortyGigE0/0", "fortyGigE0/1", "fortyGigE0/2", "fortyGigE0/3", "fortyGigE0/4", "fortyGigE0/5", "fortyGigE0/6", "fortyGigE0/7"]
+            }
+        },
+        "Ethernet8": {
+            "index": "1,1,1,1,1,1,1,1",
+            "lanes": "9,10,11,12,13,14,15,16",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/8"],
+                "8x50G": ["fortyGigE0/8", "fortyGigE0/9", "fortyGigE0/10", "fortyGigE0/11", "fortyGigE0/12", "fortyGigE0/13", "fortyGigE0/14", "fortyGigE0/15"]
+            }
+        },
+        "Ethernet16": {
+            "index": "2,2,2,2,2,2,2,2",
+            "lanes": "17,18,19,20,21,22,23,24",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/16"],
+                "8x50G": ["fortyGigE0/16", "fortyGigE0/17", "fortyGigE0/18", "fortyGigE0/19", "fortyGigE0/20", "fortyGigE0/21", "fortyGigE0/22", "fortyGigE0/23"]
+            }
+        },
+        "Ethernet24": {
+            "index": "3,3,3,3,3,3,3,3",
+            "lanes": "25,26,27,28,29,30,31,32",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/24"],
+                "8x50G": ["fortyGigE0/24", "fortyGigE0/25", "fortyGigE0/26", "fortyGigE0/27", "fortyGigE0/28", "fortyGigE0/29", "fortyGigE0/30", "fortyGigE0/31"]
+            }
+        },
+        "Ethernet32": {
+            "index": "4,4,4,4,4,4,4,4",
+            "lanes": "33,34,35,36,37,38,39,40",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/32"],
+                "8x50G": ["fortyGigE0/32", "fortyGigE0/33", "fortyGigE0/34", "fortyGigE0/35", "fortyGigE0/36", "fortyGigE0/37", "fortyGigE0/38", "fortyGigE0/39"]
+            }
+        },
+        "Ethernet40": {
+            "index": "5,5,5,5,5,5,5,5",
+            "lanes": "41,42,43,44,45,46,47,48",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/40"],
+                "8x50G": ["fortyGigE0/40", "fortyGigE0/41", "fortyGigE0/42", "fortyGigE0/43", "fortyGigE0/44", "fortyGigE0/45", "fortyGigE0/46", "fortyGigE0/47"]
+            }
+        },
+        "Ethernet48": {
+            "index": "6,6,6,6,6,6,6,6",
+            "lanes": "49,50,51,52,53,54,55,56",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/48"],
+                "8x50G": ["fortyGigE0/48", "fortyGigE0/49", "fortyGigE0/50", "fortyGigE0/51", "fortyGigE0/52", "fortyGigE0/53", "fortyGigE0/54", "fortyGigE0/55"]
+            }
+        },
+        "Ethernet56": {
+            "index": "7,7,7,7,7,7,7,7",
+            "lanes": "57,58,59,60,61,62,63,64",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/56"],
+                "8x50G": ["fortyGigE0/56", "fortyGigE0/57", "fortyGigE0/58", "fortyGigE0/59", "fortyGigE0/60", "fortyGigE0/61", "fortyGigE0/62", "fortyGigE0/63"]
+            }
+        },
+        "Ethernet64": {
+            "index": "8,8,8,8,8,8,8,8",
+            "lanes": "65,66,67,68,69,70,71,72",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/64"],
+                "8x50G": ["fortyGigE0/64", "fortyGigE0/65", "fortyGigE0/66", "fortyGigE0/67", "fortyGigE0/68", "fortyGigE0/69", "fortyGigE0/70", "fortyGigE0/71"]
+            }
+        },
+        "Ethernet72": {
+            "index": "9,9,9,9,9,9,9,9",
+            "lanes": "73,74,75,76,77,78,79,80",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/72"],
+                "8x50G": ["fortyGigE0/72", "fortyGigE0/73", "fortyGigE0/74", "fortyGigE0/75", "fortyGigE0/76", "fortyGigE0/77", "fortyGigE0/78", "fortyGigE0/79"]
+            }
+        },
+        "Ethernet80": {
+            "index": "10,10,10,10,10,10,10,10",
+            "lanes": "81,82,83,84,85,86,87,88",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/80"],
+                "8x50G": ["fortyGigE0/80", "fortyGigE0/81", "fortyGigE0/82", "fortyGigE0/83", "fortyGigE0/84", "fortyGigE0/85", "fortyGigE0/86", "fortyGigE0/87"]
+            }
+        },
+        "Ethernet88": {
+            "index": "11,11,11,11,11,11,11,11",
+            "lanes": "89,90,91,92,93,94,95,96",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/88"],
+                "8x50G": ["fortyGigE0/88", "fortyGigE0/89", "fortyGigE0/90", "fortyGigE0/91", "fortyGigE0/92", "fortyGigE0/93", "fortyGigE0/94", "fortyGigE0/95"]
+            }
+        },
+        "Ethernet96": {
+            "index": "12,12,12,12,12,12,12,12",
+            "lanes": "97,98,99,100,101,102,103,104",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/96"],
+                "8x50G": ["fortyGigE0/96", "fortyGigE0/97", "fortyGigE0/98", "fortyGigE0/99", "fortyGigE0/100", "fortyGigE0/101", "fortyGigE0/102", "fortyGigE0/103"]
+            }
+        },
+        "Ethernet104": {
+            "index": "13,13,13,13,13,13,13,13",
+            "lanes": "105,106,107,108,109,110,111,112",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/104"],
+                "8x50G": ["fortyGigE0/104", "fortyGigE0/105", "fortyGigE0/106", "fortyGigE0/107", "fortyGigE0/108", "fortyGigE0/109", "fortyGigE0/110", "fortyGigE0/111"]
+            }
+        },
+        "Ethernet112": {
+            "index": "14,14,14,14,14,14,14,14",
+            "lanes": "113,114,115,116,117,118,119,120",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/112"],
+                "8x50G": ["fortyGigE0/112", "fortyGigE0/113", "fortyGigE0/114", "fortyGigE0/115", "fortyGigE0/116", "fortyGigE0/117", "fortyGigE0/118", "fortyGigE0/119"]
+            }
+        },
+        "Ethernet120": {
+            "index": "15,15,15,15,15,15,15,15",
+            "lanes": "121,122,123,124,125,126,127,128",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/120"],
+                "8x50G": ["fortyGigE0/120", "fortyGigE0/121", "fortyGigE0/122", "fortyGigE0/123", "fortyGigE0/124", "fortyGigE0/125", "fortyGigE0/126", "fortyGigE0/127"]
+            }
+        },
+        "Ethernet128": {
+            "index": "16,16,16,16,16,16,16,16",
+            "lanes": "129,130,131,132,133,134,135,136",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/128"],
+                "8x50G": ["fortyGigE0/128", "fortyGigE0/129", "fortyGigE0/130", "fortyGigE0/131", "fortyGigE0/132", "fortyGigE0/133", "fortyGigE0/134", "fortyGigE0/135"]
+            }
+        },
+        "Ethernet136": {
+            "index": "17,17,17,17,17,17,17,17",
+            "lanes": "137,138,139,140,141,142,143,144",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/136"],
+                "8x50G": ["fortyGigE0/136", "fortyGigE0/137", "fortyGigE0/138", "fortyGigE0/139", "fortyGigE0/140", "fortyGigE0/141", "fortyGigE0/142", "fortyGigE0/143"]
+            }
+        },
+        "Ethernet144": {
+            "index": "18,18,18,18,18,18,18,18",
+            "lanes": "145,146,147,148,149,150,151,152",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/144"],
+                "8x50G": ["fortyGigE0/144", "fortyGigE0/145", "fortyGigE0/146", "fortyGigE0/147", "fortyGigE0/148", "fortyGigE0/149", "fortyGigE0/150", "fortyGigE0/151"]
+            }
+        },
+        "Ethernet152": {
+            "index": "19,19,19,19,19,19,19,19",
+            "lanes": "153,154,155,156,157,158,159,160",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/152"],
+                "8x50G": ["fortyGigE0/152", "fortyGigE0/153", "fortyGigE0/154", "fortyGigE0/155", "fortyGigE0/156", "fortyGigE0/157", "fortyGigE0/158", "fortyGigE0/159"]
+            }
+        },
+        "Ethernet160": {
+            "index": "20,20,20,20,20,20,20,20",
+            "lanes": "161,162,163,164,165,166,167,168",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/160"],
+                "8x50G": ["fortyGigE0/160", "fortyGigE0/161", "fortyGigE0/162", "fortyGigE0/163", "fortyGigE0/164", "fortyGigE0/165", "fortyGigE0/166", "fortyGigE0/167"]
+            }
+        },
+        "Ethernet168": {
+            "index": "21,21,21,21,21,21,21,21",
+            "lanes": "169,170,171,172,173,174,175,176",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/168"],
+                "8x50G": ["fortyGigE0/168", "fortyGigE0/169", "fortyGigE0/170", "fortyGigE0/171", "fortyGigE0/172", "fortyGigE0/173", "fortyGigE0/174", "fortyGigE0/175"]
+            }
+        },
+        "Ethernet176": {
+            "index": "22,22,22,22,22,22,22,22",
+            "lanes": "177,178,179,180,181,182,183,184",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/176"],
+                "8x50G": ["fortyGigE0/176", "fortyGigE0/177", "fortyGigE0/178", "fortyGigE0/179", "fortyGigE0/180", "fortyGigE0/181", "fortyGigE0/182", "fortyGigE0/183"]
+            }
+        },
+        "Ethernet184": {
+            "index": "23,23,23,23,23,23,23,23",
+            "lanes": "185,186,187,188,189,190,191,192",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/184"],
+                "8x50G": ["fortyGigE0/184", "fortyGigE0/185", "fortyGigE0/186", "fortyGigE0/187", "fortyGigE0/188", "fortyGigE0/189", "fortyGigE0/190", "fortyGigE0/191"]
+            }
+        },
+        "Ethernet192": {
+            "index": "24,24,24,24,24,24,24,24",
+            "lanes": "193,194,195,196,197,198,199,200",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/192"],
+                "8x50G": ["fortyGigE0/192", "fortyGigE0/193", "fortyGigE0/194", "fortyGigE0/195", "fortyGigE0/196", "fortyGigE0/197", "fortyGigE0/198", "fortyGigE0/199"]
+            }
+        },
+        "Ethernet200": {
+            "index": "25,25,25,25,25,25,25,25",
+            "lanes": "201,202,203,204,205,206,207,208",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/200"],
+                "8x50G": ["fortyGigE0/200", "fortyGigE0/201", "fortyGigE0/202", "fortyGigE0/203", "fortyGigE0/204", "fortyGigE0/205", "fortyGigE0/206", "fortyGigE0/207"]
+            }
+        },
+        "Ethernet208": {
+            "index": "26,26,26,26,26,26,26,26",
+            "lanes": "209,210,211,212,213,214,215,216",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/208"],
+                "8x50G": ["fortyGigE0/208", "fortyGigE0/209", "fortyGigE0/210", "fortyGigE0/211", "fortyGigE0/212", "fortyGigE0/213", "fortyGigE0/214", "fortyGigE0/215"]
+            }
+        },
+        "Ethernet216": {
+            "index": "27,27,27,27,27,27,27,27",
+            "lanes": "217,218,219,220,221,222,223,224",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/216"],
+                "8x50G": ["fortyGigE0/216", "fortyGigE0/217", "fortyGigE0/218", "fortyGigE0/219", "fortyGigE0/220", "fortyGigE0/221", "fortyGigE0/222", "fortyGigE0/223"]
+            }
+        },
+        "Ethernet224": {
+            "index": "28,28,28,28,28,28,28,28",
+            "lanes": "225,226,227,228,229,230,231,232",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/224"],
+                "8x50G": ["fortyGigE0/224", "fortyGigE0/225", "fortyGigE0/226", "fortyGigE0/227", "fortyGigE0/228", "fortyGigE0/229", "fortyGigE0/230", "fortyGigE0/231"]
+            }
+        },
+        "Ethernet232": {
+            "index": "29,29,29,29,29,29,29,29",
+            "lanes": "233,234,235,236,237,238,239,240",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/232"],
+                "8x50G": ["fortyGigE0/232", "fortyGigE0/233", "fortyGigE0/234", "fortyGigE0/235", "fortyGigE0/236", "fortyGigE0/237", "fortyGigE0/238", "fortyGigE0/239"]
+            }
+        },
+        "Ethernet240": {
+            "index": "30,30,30,30,30,30,30,30",
+            "lanes": "241,242,243,244,245,246,247,248",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/240"],
+                "8x50G": ["fortyGigE0/240", "fortyGigE0/241", "fortyGigE0/242", "fortyGigE0/243", "fortyGigE0/244", "fortyGigE0/245", "fortyGigE0/246", "fortyGigE0/247"]
+            }
+        },
+        "Ethernet248": {
+            "index": "31,31,31,31,31,31,31,31",
+            "lanes": "249,250,251,252,253,254,255,256",
+            "breakout_modes": {
+                "1x400G": ["fortyGigE0/248"],
+                "8x50G": ["fortyGigE0/248", "fortyGigE0/249", "fortyGigE0/250", "fortyGigE0/251", "fortyGigE0/252", "fortyGigE0/253", "fortyGigE0/254", "fortyGigE0/255"]
+            }
+        }
+    }
+}

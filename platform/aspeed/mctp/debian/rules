@@ -7,3 +7,17 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 override_dh_auto_configure:
 	dh_auto_configure -- -Dtests=false
+
+# Install the SONiC BMC mctpd systemd unit and dbus policy alongside the
+# upstream-built binaries. Upstream meson does not install these from
+# conf/, so we ship our own copies from this debian/ directory.
+#
+# The unit lands in /lib/systemd/system/ so dh_installsystemd picks it
+# up automatically and generates the standard enable/start/stop/purge
+# maintainer-script snippets via the [Install] section in mctpd.service.
+override_dh_auto_install:
+	dh_auto_install
+	install -D -m 0644 debian/mctpd.service \
+	        debian/mctp/lib/systemd/system/mctpd.service
+	install -D -m 0644 debian/mctpd.conf \
+	        debian/mctp/usr/share/dbus-1/system.d/mctpd.conf

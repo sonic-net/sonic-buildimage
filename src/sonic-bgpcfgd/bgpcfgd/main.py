@@ -28,6 +28,7 @@ from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
+from .managers_vrf import VRFMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
@@ -56,7 +57,7 @@ def do_work():
     thr = threading.Thread(target = st_rt_timer.run)
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
-    frr.wait_for_daemons(seconds=20)
+    frr.wait_for_daemons(seconds=120)
 
     # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
     log_notice("Checking mgmtd datastore readiness...")
@@ -80,12 +81,13 @@ def do_work():
         'cfg_mgr':   ConfigMgr(frr),
         'tf':        TemplateFabric(),
         'constants': read_constants(),
-        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0)
+        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0, False)
     }
     managers = [
         # Config DB managers
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
+        BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_PORT_TABLE_NAME),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),
@@ -116,6 +118,8 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # Bgp Aggregate Address Manager
         AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
+        # VRF Manager
+        VRFMgr(common_objs, "APPL_DB", "VRF_TABLE"),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
@@ -124,7 +128,7 @@ def do_work():
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
-    config_db = ConfigDBConnector()
+    config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
     sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
     if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':

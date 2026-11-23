@@ -1,6 +1,9 @@
 #!/bin/bash
 ## This script is to generate an ONIE installer image based on a file system overload
 
+image_password=$PASSWORD
+unset PASSWORD
+
 ## Enable debug output for script
 set -x -e
 
@@ -53,9 +56,15 @@ generate_kvm_image()
     fi
     sudo rm -f $KVM_IMAGE_DISK $KVM_IMAGE_DISK.gz
 
-    SONIC_USERNAME=$USERNAME PASSWD=$PASSWORD sudo -E ./scripts/build_kvm_image.sh $KVM_IMAGE_DISK $RECOVERY_ISO $OUTPUT_ONIE_IMAGE $KVM_IMAGE_DISK_SIZE ${BOOT_FIRMWARE}
+    set +x
+    if SONIC_USERNAME="$USERNAME" PASSWD="$image_password" sudo -E ./scripts/build_kvm_image.sh "$KVM_IMAGE_DISK" "$RECOVERY_ISO" "$OUTPUT_ONIE_IMAGE" "$KVM_IMAGE_DISK_SIZE" "${BOOT_FIRMWARE}"; then
+        build_status=0
+    else
+        build_status=$?
+    fi
+    set -x
 
-    if [ $? -ne 0 ]; then
+    if [ "$build_status" -ne 0 ]; then
         echo "Error : build kvm image failed"
         exit 1
     fi
@@ -87,6 +96,11 @@ generate_onie_installer_image()
             if [ -f ./device/$VENDOR/$PLATFORM/installer.conf ]; then
                 cp ./device/$VENDOR/$PLATFORM/installer.conf ./installer/platforms/$PLATFORM
             fi
+            # Optional per-platform override drop-in. When present it is sourced
+            # after installer.conf so it can override or extend the base values.
+            if [ -f ./device/$VENDOR/$PLATFORM/installer.conf.override ]; then
+                cp ./device/$VENDOR/$PLATFORM/installer.conf.override ./installer/platforms/$PLATFORM.override
+            fi
 
         done
     done
@@ -95,6 +109,13 @@ generate_onie_installer_image()
     if [ ! -f $platform_conf_file ]; then
         platform_conf_file="platform/$TARGET_MACHINE/platform.conf"
     fi
+
+    # Optional platform metadata header for installer images.
+    if [ -z "${INSTALLER_PLATFORM_METADATA:-}" ] && [ -n "$TARGET_MACHINE" ] && [ -f "platform/${TARGET_MACHINE}/platform_metadata" ]; then
+        INSTALLER_PLATFORM_METADATA="$(pwd)/platform/${TARGET_MACHINE}/platform_metadata"
+    fi
+    export INSTALLER_PLATFORM_METADATA
+
     ## Generate an ONIE installer image
     ## Note: Don't leave blank between lines. It is single line command.
     ./onie-mk-demo.sh $CONFIGURED_ARCH $TARGET_MACHINE $TARGET_PLATFORM-$TARGET_MACHINE-$ONIEIMAGE_VERSION \

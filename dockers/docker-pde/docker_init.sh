@@ -23,13 +23,16 @@ fi
 . /usr/bin/syncd_init_common.sh
 config_syncd
 
-# If the Python 3 sonic-platform package is not installed, try to install it
+# If the Python 3 sonic-platform package is not installed, try to install it.
+# A platform wheel may depend on further wheels shipped next to it, which need
+# not be on any package index; resolve dependencies from the platform
+# directory only.
 python3 -c "import sonic_platform" > /dev/null 2>&1 || pip3 show sonic-platform > /dev/null 2>&1
 if [ $? -ne 0 ]; then
     SONIC_PLATFORM_WHEEL="/usr/share/sonic/platform/sonic_platform-1.0-py3-none-any.whl"
     echo "sonic-platform package not installed, attempting to install..."
     if [ -e ${SONIC_PLATFORM_WHEEL} ]; then
-       pip3 install ${SONIC_PLATFORM_WHEEL}
+       pip3 install --no-index --find-links ${PLATFORM_DIR} ${SONIC_PLATFORM_WHEEL}
        if [ $? -eq 0 ]; then
           echo "Successfully installed ${SONIC_PLATFORM_WHEEL}"
           SONIC_PLATFORM_API_PYTHON_VERSION=3

@@ -22,7 +22,7 @@ Description=Mellanox Firmware Manager Service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecCondition=/bin/grep -qv '\\<SONIC_BOOT_TYPE=fastfast\\>' /proc/cmdline
+ExecCondition=/bin/bash -c '! grep -qE "(^|[[:space:]])SONIC_BOOT_TYPE=(fastfast|warm)([[:space:]]|$)" /proc/cmdline'
 ExecStart=/usr/local/bin/mlnx-fw-manager --clear-semaphore --verbose
 TimeoutSec=300
 User=root

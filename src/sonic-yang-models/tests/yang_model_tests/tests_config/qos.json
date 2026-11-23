@@ -103,6 +103,20 @@
         }
     },
 
+    "SCHEDULER_PIR_ONLY_PORT_SHAPER": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"port_scheduler",
+                    "type": "STRICT",
+                    "pir": 625000000
+                }
+                ]
+            }
+        }
+    },
+
     "SCHEDULER_PIR_VS_CIR": {
         "sonic-scheduler:sonic-scheduler":{
             "sonic-scheduler:SCHEDULER": {
@@ -110,6 +124,20 @@
                 {
                     "name":"Test@0",
                     "cir": 2048,
+                    "pir": 1024
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_PIR_EQUAL_CIR": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cir": 1024,
                     "pir": 1024
                 }
                 ]

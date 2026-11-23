@@ -1,0 +1,21 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "65001"
+        }
+    },
+    "BGP_AGGREGATE_ADDRESS": {
+        "192.168.0.1/24": {
+            "summary-only": "true"
+        },
+        "fc00:10::1/64": {
+            "as-set": "true"
+        },
+        "192.0.2.0": {
+            "summary-only": "true"
+        },
+        "not-a-prefix/64": {
+            "summary-only": "true"
+        }
+    }
+}
