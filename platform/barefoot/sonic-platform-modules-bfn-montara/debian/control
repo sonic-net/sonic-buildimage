@@ -7,5 +7,6 @@ Standards-Version: 3.9.3
 
 Package: sonic-platform-modules-bfn-montara
 Architecture: amd64
+Depends: ${kernel:Depends}
 Description: kernel modules for platform devices such as fan, led, sfp
 

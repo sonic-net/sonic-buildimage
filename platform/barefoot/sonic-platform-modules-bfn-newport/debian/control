@@ -7,9 +7,11 @@ Standards-Version: 3.9.3
 
 Package: sonic-platform-modules-bfn-newport-as9516
 Architecture: amd64
+Depends: ${kernel:Depends}
 Description: kernel module for bfn platform fpga and scripts for the devices such as fan, led, sfp
 
 Package: sonic-platform-modules-bfn-newport-as9516bf
 Architecture: amd64
+Depends: ${kernel:Depends}
 Description: kernel module for bfn platform fpga and scripts for the devices such as fan, led, sfp
 

@@ -7,4 +7,5 @@ Standards-Version: 3.9.3
 
 Package: tsingma-bsp
 Architecture: arm64
+Depends: ${kernel:Depends}
 Description: kernel modules for tsingma bsp

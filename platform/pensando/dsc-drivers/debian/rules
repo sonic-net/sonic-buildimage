@@ -61,6 +61,7 @@ binary-indep: build
 	dh_compress
 	dh_strip
 	dh_installdeb
+	dh_kerneldeps
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb

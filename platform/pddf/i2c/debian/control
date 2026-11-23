@@ -8,7 +8,7 @@ Standards-Version: 4.7.2
 
 Package: sonic-platform-pddf
 Architecture: amd64
-Depends: ${python3:Depends}
+Depends: ${kernel:Depends}, ${python3:Depends}
 Description: kernel modules for platform devices such as psu, fan, sfp, led
 
 Package: sonic-platform-pddf-sym

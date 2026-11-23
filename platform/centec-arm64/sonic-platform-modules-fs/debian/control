@@ -7,4 +7,5 @@ Standards-Version: 3.9.3
 
 Package: platform-modules-s5800-48t4s
 Architecture: arm64
+Depends: ${kernel:Depends}
 Description: kernel modules for platform devices such as fan, led, sfp
