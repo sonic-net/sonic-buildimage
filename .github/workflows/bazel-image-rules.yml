@@ -218,8 +218,12 @@ jobs:
           test "$(uname -m)" = x86_64
           test "$(bazel --version)" = 'bazel 8.5.1'
           python3 -B tools/bazel/ci/resources.py --configure
-          python3 -B tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
-          python3 -B tools/bazel/ci/repair_bazel_startup.py
+      - name: Preserve standard native repository and remote caches
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+      - name: Configure source download mirrors
+        run: |
           mkdir -p artifacts/native-vs
           python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/native-vs-mirrors.cfg"
           printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/native-vs-mirrors.cfg" >> .bazelrc.user
