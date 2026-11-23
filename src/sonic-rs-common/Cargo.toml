@@ -12,7 +12,7 @@ edition = "2021"
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }
 thiserror = "1"
 tracing = "0.1"
-syslog = "6.1"
+syslog = "7.0"
 
 [dev-dependencies]
 mockall = "0.12"
