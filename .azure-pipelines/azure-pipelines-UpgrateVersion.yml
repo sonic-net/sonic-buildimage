@@ -74,7 +74,7 @@ stages:
   - template: azure-pipelines-build.yml
     parameters:
       jobFilters: ${{ parameters.jobFilters }}
-      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y NOBUSTER=1 NOBULLSEYE=1'
+      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y NOBULLSEYE=1'
       preSteps:
       - template: .azure-pipelines/template-clean-sonic-slave.yml@buildimage
       - checkout: self
@@ -198,3 +198,58 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/files/build/versions
       artifact: 'sonic-buildimage.versions'
       displayName: 'Archive SONiC versions'
+
+- stage: NotifyFailure
+  displayName: Notify version upgrade pipeline failure
+  dependsOn:
+  - Prepare
+  - Build
+  - UpgradeVersions
+  condition: failed()
+  pool: sonic-ubuntu-1c
+  variables:
+  - group: sonicbld
+  jobs:
+  - job: Notify
+    displayName: Send failure notification
+    timeoutInMinutes: 5
+    steps:
+    - checkout: none
+    - bash: |
+        set +x
+        set -euo pipefail
+
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jq
+        fi
+
+        cert=$(printf '%s' "$CERT" | base64 -d |
+          openssl pkcs12 -nokeys -nodes -passin pass: |
+          openssl x509 -noout -fingerprint -sha1 |
+          sed 's/^.*=//' | tr -d ':' | tr 'A-Z' 'a-z')
+        if [[ ! "$cert" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "##vso[task.logissue type=error]Invalid notification certificate thumbprint"
+          exit 1
+        fi
+
+        payload=$(jq -cn \
+          --arg name "version_upgrade_pipeline_failure" \
+          --arg branch "$BUILD_SOURCEBRANCH" \
+          --arg pipeline "$BUILD_DEFINITIONNAME" \
+          --arg url "${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECTID}/_build/results?buildId=${BUILD_BUILDID}" \
+          '{name: $name, branch: $branch, pipeline: $pipeline, url: $url}')
+        response=$(curl --fail-with-body --silent --show-error \
+          --connect-timeout 10 --max-time 60 \
+          -H 'Content-Type: application/json' \
+          -H "thumbprint: $cert" \
+          -X POST https://notice-center.azurewebsites.net/noti_center/notice \
+          -d "$payload")
+        if ! printf '%s' "$response" | jq -e '.success == true' >/dev/null; then
+          echo "##vso[task.logissue type=error]Notice-center did not confirm the failure notification"
+          printf 'Notice-center response: %s\n' "$response" >&2
+          exit 1
+        fi
+      displayName: Notify notice-center
+      env:
+        CERT: $(cert-noti)

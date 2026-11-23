@@ -1,0 +1,187 @@
+{
+    "acl_key_profiles": [
+        {
+            "ingress": [
+                {
+                    "profile_name": "ipv4",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE"]
+                },
+                {
+                    "profile_name": "ipv6",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE"]
+                },
+                {
+                    "profile_name": "vnet_local_endpoint_redirect",
+                    "sai_attributes":["SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                      "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                      "SAI_ACL_TABLE_ATTR_FIELD_TC",
+                                      "SAI_ACL_TABLE_ATTR_FIELD_TUNNEL_TERMINATED"]
+                },
+                {
+                    "profile_name": "mirror",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IN_PORTS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                },
+                {
+                    "profile_name": "mirrorv6",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                },
+                {
+                    "profile_name": "mirror_dscp",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                },
+                {
+                    "profile_name": "drop",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_TC",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IN_PORTS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ROUTE_DST_USER_META"]
+                },
+                {
+                    "profile_name": "ipv4v6",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IN_PORTS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER"]
+                }
+            ]
+        },
+        {
+            "egress": [
+                {
+                    "profile_name": "ipv4",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE"]
+                },
+                {
+                    "profile_name": "inner_src_mac_rewrite_and_dscp_rewrite",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_INNER_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TUNNEL_VNI",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_USER_META"]
+                },
+                {
+                    "profile_name": "ipv6",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE"]
+                },
+                {
+                    "profile_name": "inner_src_mac_rewrite_ipv6_and_dscp_rewrite",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_INNER_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TUNNEL_VNI",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_USER_META"]
+                },
+                {
+                    "profile_name": "mirror",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                },
+                {
+                    "profile_name": "mirrorv6",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DST_IPV6",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ICMPV6_CODE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_SRC_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_L4_DST_PORT",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_TCP_FLAGS",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
+                                       "SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                },
+                {
+                    "profile_name": "mirror_dscp",
+                    "sai_attributes": ["SAI_ACL_TABLE_ATTR_FIELD_DSCP"]
+                }
+            ]
+        }
+    ]
+}
