@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location(
-    "image_version", ROOT / "tools/bazel/oci/prepare_image_version.py"
+    "image_version", ROOT / "tools/bazel/prepare_image_environment.py"
 )
 VERSION = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERSION)
