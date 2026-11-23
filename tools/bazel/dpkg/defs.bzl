@@ -1,12 +1,7 @@
-"""Assemble OCI layers with Make's file exclusions while retaining legal notices.
+"""Apply SONiC's dpkg exclusions when assembling OCI layers."""
 
-TODO(bazel-ready): move this to sonic-build-infra/tar once dpkg_01_drop can be inlined there.
-It lives here for now because the file is in //dockers/docker-base-trixie.
-"""
-
-load("@rules_distroless//distroless:defs.bzl", "flatten")
 load("@sonic_build_infra//binary:debug_symbols.bzl", "DebugSymbolsInfo")
-load("@tar.bzl//tar:tar.bzl", "tar_lib")
+load("@sonic_build_infra//oci:layer.bzl", "assemble_layer")
 
 _EXCLUDES = "//tools/bazel/dpkg:dpkg_excludes.txt"
 
@@ -43,152 +38,48 @@ _OCI_NOTICE_INCLUDES = [
 # The layer producer and receipt validator consume this same include policy.
 OCI_INCLUDES = PATH_INCLUDES + _OCI_NOTICE_INCLUDES
 
-_TAR_ARGS = ["--format", "gnutar"]
-
-def _copy(ctx, mnemonic, bsdtar, output, srcs, add_extra_args = lambda args: args):
-    """Use bsdtar to copy `srcs` into `output`, using `add_extra_args` to keep or discard entries."""
-    args = ctx.actions.args()
-    args.add_all(_TAR_ARGS)
-    args.add("--create")
-    args.add("--file", output)
-    add_extra_args(args)
-    args.add_all(srcs, format_each = "@%s")
-
-    ctx.actions.run(
-        executable = bsdtar.tarinfo.binary,
-        arguments = [args],
-        inputs = srcs + ctx.files.excludes,
-        outputs = [output],
-        tools = bsdtar.default.files,
-        mnemonic = mnemonic,
-        progress_message = mnemonic + " %%{label}",
-    )
-
-def _dpkg_filter_impl(ctx):
-    bsdtar = ctx.toolchains[tar_lib.toolchain_type]
-
-    def add_excludes(args):
-        for pattern_file in ctx.files.excludes:
-            args.add("--exclude-from", pattern_file)
-
-    excluded = ctx.actions.declare_file(ctx.attr.name + "_excluded.tar")
-    _copy(ctx, "DpkgExclude", bsdtar, excluded, [ctx.file.src], add_excludes)
-
-    included = ctx.actions.declare_file(ctx.attr.name + "_included.tar")
-    _copy(
-        ctx,
-        "DpkgInclude",
-        bsdtar,
-        included,
-        [ctx.file.src],
-        lambda args: args.add_all(ctx.attr.includes, format_each = "--include=%s"),
-    )
-
-    output = ctx.actions.declare_file(ctx.attr.name + ".tar")
-    merged = ctx.actions.declare_file(ctx.attr.name + "_merged.tar")
-    _copy(ctx, "DpkgMerge", bsdtar, merged, [excluded, included])
-    # Producers use both ./usr and usr. Docker treats these as one path, while
-    # flatten's spelling-based deduplication and the include merge retain both.
-    unique = ctx.actions.declare_file(ctx.attr.name + "_unique.tar") if ctx.attr.root_owned else output
-    ctx.actions.run(
-        executable = ctx.executable._unique_tar,
-        arguments = [merged.path, unique.path],
-        inputs = [merged],
-        outputs = [unique],
-        mnemonic = "UniqueLayerPaths",
-    )
-    if ctx.attr.root_owned:
-        ctx.actions.run(
-            executable = ctx.executable._root_owned_tar,
-            arguments = [unique.path, output.path],
-            inputs = [unique],
-            outputs = [output],
-            mnemonic = "RootOwnedLayer",
-        )
-
-    # flatten and this filter must not hide the original archives' debug trees.
-    # The image collector traverses base/tars edges, so it stops at our src edge
-    # and relies on this provider to retain the corresponding deployed symbols.
-    debug_deps = [ctx.attr.src] + ctx.attr.debug_symbol_deps + ctx.attr.tars
+def _layer_with_debug_impl(ctx):
     return [
-        DefaultInfo(files = depset([output])),
-        DebugSymbolsInfo(symbols = depset(transitive = [
-            dep[DebugSymbolsInfo].symbols
-            for dep in debug_deps
-            if DebugSymbolsInfo in dep
-        ])),
+        DefaultInfo(files = ctx.attr.archive[DefaultInfo].files),
+        ctx.attr.archive[DebugSymbolsInfo],
     ]
 
-dpkg_filter = rule(
-    doc = """Apply the base image's dpkg exclusions, preserving OCI license notices.
-
-dpkg applies path-include after path-exclude and lets the last match win.
-In bsdtar, however, --exclude always wins over --include, regardless of the order.
-So we need to build the excluded first, then the included, and then merge them.
-""",
-    implementation = _dpkg_filter_impl,
+_layer_with_debug = rule(
+    implementation = _layer_with_debug_impl,
     attrs = {
-        "src": attr.label(
-            doc = "The layer to filter.",
-            allow_single_file = tar_lib.common.accepted_tar_extensions,
-            mandatory = True,
-        ),
-        # Retain the original tars edge for debug_symbols_layer's transitive
-        # traversal, including dependency packages assembled with flatten().
+        "archive": attr.label(mandatory = True, providers = [DebugSymbolsInfo]),
+        # The Infra debug-symbol aspect follows tars edges to package targets
+        # whose symbol providers are attached to nested archives.
         "tars": attr.label_list(allow_files = True),
-        "root_owned": attr.bool(
-            default = False,
-            doc = "Normalize component runtime ownership; preserve Debian package ownership by default.",
-        ),
-        "_root_owned_tar": attr.label(
-            default = Label("@sonic_build_infra//tar:root_owned_tar"),
-            executable = True,
-            cfg = "exec",
-        ),
-        "_unique_tar": attr.label(
-            default = Label("//tools/bazel/dpkg:unique_tar"),
-            executable = True,
-            cfg = "exec",
-        ),
-        "debug_symbol_deps": attr.label_list(
-            doc = "Original archives whose debug metadata must survive flattening and filtering.",
-            allow_files = True,
-        ),
-        "excludes": attr.label_list(
-            doc = "Files of bsdtar exclude patterns, one per line.",
-            allow_files = True,
-            default = [_EXCLUDES],
-        ),
-        "includes": attr.string_list(
-            doc = "bsdtar include patterns, carving back out of the excludes.",
-            default = OCI_INCLUDES,
-        ),
     },
-    toolchains = [tar_lib.toolchain_type],
 )
 
-def sonic_layer(name, tars, deduplicate = True, **kwargs):
-    """Flatten `tars` into one layer, minus whatever dpkg would have filtered out (e.g. man pages).
-
-    Use this for source or Debian payload TARs. Apply Make's documentation and
-    locale exclusions while also keeping upstream source license/notice names.
-
-    Args:
-        name: the filtered layer.
-        tars: the archives to flatten, as interpreted by rules_distroless' flatten().
-        deduplicate: drop duplicate directory entries after flattening.
-        **kwargs: passed to the final, filtered layer (e.g. visibility).
-    """
-    flatten(
-        name = name + "_unfiltered",
-        tars = tars,
-        deduplicate = deduplicate,
+def _filtered_layer(name, archives, debug_symbol_deps, excludes, includes, root_owned = False, **kwargs):
+    assembled = name + "_assembled"
+    assemble_layer(
+        name = assembled,
+        archives = archives,
+        debug_symbol_deps = debug_symbol_deps,
+        excludes = excludes,
+        includes = includes,
+        root_owned = root_owned,
+        testonly = kwargs.get("testonly", False),
         visibility = ["//visibility:private"],
     )
-
-    dpkg_filter(
+    _layer_with_debug(
         name = name,
-        src = name + "_unfiltered",
-        tars = tars,
+        archive = ":" + assembled,
+        tars = archives + debug_symbol_deps,
         **kwargs
     )
+
+def dpkg_filter(name, src, tars = [], debug_symbol_deps = [], excludes = [_EXCLUDES], includes = OCI_INCLUDES, **kwargs):
+    """Filter a single layer while propagating debug metadata from its owners."""
+    _filtered_layer(name, [src], tars + debug_symbol_deps, excludes, includes, **kwargs)
+
+def sonic_layer(name, tars, deduplicate = True, excludes = [_EXCLUDES], includes = OCI_INCLUDES, debug_symbol_deps = [], **kwargs):
+    """Assemble package archives using the SONiC container filter policy."""
+    # The final OCI layer always has unique paths. Keep the legacy argument
+    # for callers that previously disabled deduplication only during flatten.
+    _ = deduplicate
+    _filtered_layer(name, tars, debug_symbol_deps, excludes, includes, **kwargs)

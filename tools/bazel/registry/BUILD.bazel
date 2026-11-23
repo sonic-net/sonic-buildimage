@@ -15,4 +15,4 @@ py_test(
     deps = [":registry_lib"],
 )
 
-exports_files(["elf-runtime-cache-links.patch", "lldpd-runtime-cache.patch"])
+exports_files(["elf-runtime-cache-links.patch"])

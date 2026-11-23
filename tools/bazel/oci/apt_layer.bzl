@@ -8,6 +8,12 @@ Make manifest. Conflicting inherited package records are rejected.
 
 load("@aspect_bazel_lib//lib:jq.bzl", "jq")
 load("@sonic_build_infra//apt:apt_layer.bzl", _apt_layer = "apt_layer")
+load("//tools/bazel/dpkg:defs.bzl", "OCI_INCLUDES")
+
+_SHARED_BASE_INVENTORIES = {
+    "//dockers/docker-base-trixie:docker-base-trixie": "//dockers/docker-base-trixie:base_inventory",
+    "//dockers/docker-config-engine-trixie:docker-config-engine-trixie": "//dockers/docker-config-engine-trixie:base_inventory",
+}
 
 def apt_subset_lock(name, selection, dependency_set, out):
     """Expose one selected closure to the OCI selector with its original lock metadata."""
@@ -50,8 +56,10 @@ def apt_layer(
         retained_manifest = None,
         base_package_metadata = None,
         source_receipt = None,
+        base_inventory = None,
+        filter_layer = False,
         **kwargs):
-    """Generate a declared policy input and select/flatten checked APT payloads.
+    """Generate a declared policy input and assemble selected APT payloads.
 
     The generated <name>_policy target can also be used by container policy
     tests. Runtime/debug layers share the same policy; dynamic package controls
@@ -64,12 +72,20 @@ def apt_layer(
         document = json.encode(policy),
         visibility = kwargs.get("visibility", None),
     )
+    # These published bases are common to many image owners. A policy carrying
+    # extra architecture exceptions must inventory its exact inputs separately.
+    if base_inventory == None and not policy.get("static_i386") and type(base) == "string":
+        base_inventory = _SHARED_BASE_INVENTORIES.get(base)
     _apt_layer(
         name = name,
         packages = packages,
         lock = lock,
         dependency_set = dependency_set,
         base = base,
+        base_inventory = base_inventory,
+        direct_layer = True,
+        layer_excludes = ["//tools/bazel/dpkg:dpkg_excludes.txt"] if filter_layer else [],
+        layer_includes = OCI_INCLUDES if filter_layer else [],
         policy = ":" + name + "_policy",
         selector = "//tools/bazel/oci:select_apt_payloads",
         architecture = policy["architecture"],

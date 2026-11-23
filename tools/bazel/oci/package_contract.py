@@ -15,13 +15,13 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 import tarfile
-
-from tools.bazel.ci.validation_inputs import cached_inventory
 import tempfile
 
+from tools.bazel.ci.validation_inputs import cached_inventory
+
 from tools.bazel.ci.artifact_validation import file_metadata, metadata, path_name, require, sha
-from tools.bazel.oci.oci_inventory import apply_layer, assert_overlay_paths, resolve_path
-from tools.bazel.oci.oci_layout import validate_layout
+from tools.bazel.oci.oci_inventory import assert_overlay_paths, resolve_path
+from tools.bazel.oci import base_inventory as base_metadata
 from tools.bazel.oci import normalize_layer as normalization
 
 
@@ -252,20 +252,27 @@ def _inventory(path):
     return files
 
 
-def combine_tars(contract, paths, output_path, base_files):
+def combine_tars(contract, paths, output_path, base_files, *, reuse_inventory=False):
     """Normalize declared owner tars, preserving per-package inventories and bytes."""
     require(set(paths) == package_names(contract), "missing or unexpected shared-library tar inputs")
     inputs = {record["package"]: paths[record["package"]] for record in contract["packages"]}
     required = {record["package"]: record["required_paths"] for record in contract["packages"]}
-    return combine_source_payloads(inputs, output_path, contract["architecture"], base_files, required)
+    inventories = {
+        record["package"]: (record["payload_sha256"], record["payload_inventory"])
+        for record in contract["packages"]
+        if reuse_inventory and "payload_inventory" in record
+    }
+    return combine_source_payloads(inputs, output_path, contract["architecture"], base_files, required,
+                                   inventories=inventories)
 
 
-def combine_source_payloads(paths, output_path, architecture, base_files, required_paths):
+def combine_source_payloads(paths, output_path, architecture, base_files, required_paths, *, inventories=None):
     """Assemble owner TARs with one canonical header per installed path."""
     files, records = {}, {}
     with tarfile.open(output_path, "w", format=tarfile.PAX_FORMAT) as output:
         for name, source_path in paths.items():
-            before = sha(source_path)
+            cached = (inventories or {}).get(name)
+            input_digest = cached[0] if cached else sha(source_path)
             package_files = {}
             with tarfile.open(source_path, "r:*") as source:
                 for member in source:
@@ -274,7 +281,9 @@ def combine_source_payloads(paths, output_path, architecture, base_files, requir
                         continue
                     path = path_name(normalized.name)
                     item = metadata(normalized)
-                    if member.isfile():
+                    if cached:
+                        item = cached[1][path]
+                    elif member.isfile():
                         item.update(file_metadata(source.extractfile(member), path))
                     require(path not in package_files or
                             (item["kind"] == "directory" and package_files[path] == item),
@@ -288,13 +297,12 @@ def combine_source_payloads(paths, output_path, architecture, base_files, requir
                         continue
                     files[path] = item
                     output.addfile(normalized, source.extractfile(member) if member.isfile() else None)
-            require(sha(source_path) == before, "source package tar changed during assembly: " + name)
             for path, kind in required_paths.get(name, {}).items():
                 item = package_files.get(path, {})
                 require(item.get("kind") == ("file" if kind == "elf" else kind) and
                         (kind != "elf" or item.get("elf_machine") == elf_machine(architecture)),
                         "source package lacks a required installed path: " + name + ":" + path)
-            records[name] = {"input_tar_sha256": before, "files": package_files}
+            records[name] = {"input_tar_sha256": input_digest, "files": package_files}
     assert_overlay_paths(files, base_files)
     installed = base_files | files
     for path, item in files.items():
@@ -304,7 +312,7 @@ def combine_source_payloads(paths, output_path, architecture, base_files, requir
     return records, {"sha256": sha(output_path), "size": output_path.stat().st_size, "members": len(files)}
 
 
-def assemble(contract_path, packages, module_files, base, runtime_tar, *, package_targets):
+def assemble(contract_path, packages, module_files, base, runtime_tar, *, package_targets, reuse_inventory=False, base_inventory=None):
     """Normalize runtime owner archives and record their dependency metadata.
 
     Debug symbols follow the owners' DebugSymbolsInfo graph independently;
@@ -314,10 +322,10 @@ def assemble(contract_path, packages, module_files, base, runtime_tar, *, packag
     expected_targets = {record["package"]: record["source"]["target"] for record in contract["packages"]}
     require(package_targets == expected_targets, "source inputs differ from the declared public owner targets")
     modules = verify_modules(contract, module_files)
-    base_digest = normalization.base_aliases(base, expected_platform="linux/" + contract["architecture"])
-    base_files = {}
-    for layer in validate_layout(base, "linux/" + contract["architecture"]).layers:
-        apply_layer(layer, base_files)
+    base_state = base_metadata.read(base, contract["architecture"], inventory=base_inventory)
+    base_digest = base_state["manifest_digest"]
+    normalization.check_alias_inventory(base_state["files"])
+    base_files = base_metadata.installed_files(base_state["files"])
     inherited = {}
     for record in contract["packages"]:
         for path, expected in record.get("required_inherited_files", {}).items():
@@ -328,9 +336,12 @@ def assemble(contract_path, packages, module_files, base, runtime_tar, *, packag
     runtime_tar.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".source-packages-", dir=runtime_tar.parent) as temporary:
         runtime_output = Path(temporary) / "runtime.tar"
-        runtime_records, payload = combine_tars(contract, packages, runtime_output, base_files)
-        runtime_files = dict(base_files)
-        apply_layer(runtime_output, runtime_files, checked_overlay=True)
+        runtime_records, payload = combine_tars(contract, packages, runtime_output, base_files,
+                                                reuse_inventory=reuse_inventory)
+        runtime_files = base_files | {
+            path: {**item, "mode": 0o777} if item["kind"] == "symlink" else item
+            for record in runtime_records.values() for path, item in record["files"].items()
+        }
         require(all(runtime_files.get(path) == expected for path, expected in inherited.items()),
                 "source package changes required inherited content")
         records = []
@@ -614,6 +625,8 @@ def main():
         parser.add_argument("--" + name, type=Path)
     for name in ("package", "package-target", "module"):
         parser.add_argument("--" + name, action="append", default=[])
+    parser.add_argument("--base-inventory", type=Path)
+    parser.add_argument("--reuse-inventory", action="store_true")
     args = parser.parse_args()
     try:
         if args.merge_manifest is not None:
@@ -632,7 +645,8 @@ def main():
                 all((args.contract, args.base, args.out_tar, args.receipt)),
                 "source assembly requires its contract, base, runtime archive and receipt")
         result = assemble(args.contract, bindings(args.package), bindings(args.module), args.base, args.out_tar,
-                          package_targets=bindings(args.package_target, paths=False))
+                          package_targets=bindings(args.package_target, paths=False),
+                          reuse_inventory=args.reuse_inventory, base_inventory=args.base_inventory)
         args.receipt.parent.mkdir(parents=True, exist_ok=True)
         args.receipt.write_bytes(json_bytes(result))
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError, tarfile.TarError) as error:

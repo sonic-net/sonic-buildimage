@@ -49,9 +49,26 @@ py_library(
 # Container owners pass policy and source-package declarations as inputs. These
 # helpers never discover a container directory or select expectations by name.
 py_library(
+    name = "base_inventory_lib",
+    srcs = ["base_inventory.py"],
+    deps = [
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "base_inventory",
+    srcs = ["base_inventory.py"],
+    deps = [":base_inventory_lib"],
+)
+
+py_library(
     name = "package_contract_lib",
     srcs = ["package_contract.py"],
     deps = [
+        ":base_inventory_lib",
         ":normalize_layer_lib",
         ":oci_inventory",
         ":oci_layout",
@@ -166,6 +183,8 @@ py_library(
     name = "apt_selection",
     srcs = ["apt_selection.py"],
     deps = [
+        "@sonic_build_infra//oci:layer_assembly_lib",
+        ":base_inventory_lib",
         ":oci_inventory",
         ":oci_layout",
         ":package_contract_lib",

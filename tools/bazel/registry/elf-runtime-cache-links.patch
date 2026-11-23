@@ -1,9 +1,7 @@
 diff --git a/tools/build_tools/prepare_elf_runtime.py b/tools/build_tools/prepare_elf_runtime.py
 --- a/tools/build_tools/prepare_elf_runtime.py
 +++ b/tools/build_tools/prepare_elf_runtime.py
-@@ -56,6 +56,12 @@
-     omitted = [{"path": str(path.relative_to(root)), "target": os.readlink(path)} for path in dangling]
-     for path in dangling:
+@@ -58,2 +58,8 @@
          path.unlink()
 +    # Use prepare_rootfs.preserve_empty_directories' cache transport convention.
 +    # Keep directory aliases valid after restoring a file-only cached tree.
@@ -12,17 +10,3 @@ diff --git a/tools/build_tools/prepare_elf_runtime.py b/tools/build_tools/prepar
 +        if not any(leaf.iterdir()):
 +            (leaf / ".bazel-keep-directory").touch()
      (root / "toolchain.json").write_text(json.dumps({"format_version": 1, "profile": "elf", "architecture": architecture, "loader": str(loader.relative_to(root)), "library_directories": [str(path.relative_to(root)) for path in libraries], "tools": paths, "omitted_unresolved_symlinks": omitted}, indent=2) + "\n")
- 
- 
-diff --git a/tools/build_tools/BUILD.bazel b/tools/build_tools/BUILD.bazel
---- a/tools/build_tools/BUILD.bazel
-+++ b/tools/build_tools/BUILD.bazel
-@@ -12,6 +12,8 @@
- load(":kernel_roots.bzl", "KERNEL_TOOL_ROOTS")
- load(":elf_runtime_tool.bzl", "elf_runtime_tool")
- load("@tar.bzl//tar/toolchain:toolchain.bzl", "tar_toolchain")
-+
-+exports_files(["prepare_runtime.py"], visibility = ["//visibility:public"])
- 
- python_runtime(name = "python_runtime", visibility = ["//visibility:public"])
- 

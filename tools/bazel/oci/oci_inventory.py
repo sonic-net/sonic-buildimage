@@ -63,15 +63,17 @@ def assert_overlay_paths(entries, files):
                     "added OCI layer path crosses a non-directory: " + name + " via " + parent)
 
 
-def apply_layer(path, files, *, checked_overlay=False, normalize_member=None, static_i386=None):
+def apply_layer(path, files, *, checked_overlay=False, normalize_member=None, static_i386=None,
+                preserve_symlink_mode=False, capture_contents=()):
     """Apply tar metadata, contents and OCI whiteouts to an in-memory inventory.
 
     Owners may normalize known legacy paths before inspection. Added package
     layers may not contain whiteouts or cross inherited directory symlinks.
     """
     entries, whiteouts = cached_inventory(
-        path, ("oci_layer", normalize_member, tuple(sorted((static_i386 or {}).items()))),
-        lambda: _layer_entries(path, normalize_member, static_i386))
+        path, ("oci_layer", normalize_member, tuple(sorted((static_i386 or {}).items())),
+               preserve_symlink_mode, capture_contents),
+        lambda: _layer_entries(path, normalize_member, static_i386, preserve_symlink_mode, capture_contents))
     if checked_overlay:
         require(not whiteouts, "added OCI layer contains a whiteout")
         assert_overlay_paths(entries, files)
@@ -84,7 +86,7 @@ def apply_layer(path, files, *, checked_overlay=False, normalize_member=None, st
     return entries
 
 
-def _layer_entries(path, normalize_member, static_i386=None):
+def _layer_entries(path, normalize_member, static_i386=None, preserve_symlink_mode=False, capture_contents=()):
     entries, whiteouts = {}, []
     with tarfile.open(path, "r:*") as archive:
         for member in archive:
@@ -100,7 +102,7 @@ def _layer_entries(path, normalize_member, static_i386=None):
                 whiteouts.append((str(pure.parent / pure.name[4:]), False))
                 continue
             item = metadata(normalized)
-            if normalized.issym():
+            if normalized.issym() and not preserve_symlink_mode:
                 # Ordinary Linux symlinks always have mode 0777 (symlink(7)),
                 # even when the TAR header stores 0000, as protobuf's source
                 # package does. Compare installed semantics; retain the link's
@@ -109,5 +111,8 @@ def _layer_entries(path, normalize_member, static_i386=None):
             if member.isfile():
                 with archive.extractfile(member) as stream:
                     item.update(file_metadata(stream, name, static_i386=static_i386))
+                    if name in capture_contents:
+                        stream.seek(0)
+                        item["contents"] = stream.read().decode("utf-8")
             entries[name] = item
     return entries, whiteouts

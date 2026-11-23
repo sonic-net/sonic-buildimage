@@ -2,6 +2,7 @@ load("@base_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@config_engine_pip//:requirements.bzl", "whl_requirement")
 load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@sonic_build_infra//oci:base_inventory.bzl", "oci_base_inventory")
 load("@sonic_build_infra//oci:debug_symbols_layer.bzl", "debug_symbols_layer")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
 load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
@@ -219,6 +220,16 @@ oci_image(
         "//dockers/docker-config-engine-trixie/config:files",
         ":installed_package_state",
     ],
+)
+
+oci_base_inventory(
+    name = "base_inventory",
+    architecture = select({
+        "@platforms//cpu:aarch64": "arm64",
+        "//conditions:default": "amd64",
+    }),
+    base = ":docker-config-engine-trixie",
+    tool = "//tools/bazel/oci:base_inventory",
 )
 
 debug_symbols_layer(

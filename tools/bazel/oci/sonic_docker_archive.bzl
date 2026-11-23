@@ -6,9 +6,9 @@ gzipped `docker save` archive.
 This macro replicates that process in Bazel, creating intermediary targets when necessary.
 """
 
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
 load("@rules_oci//oci:defs.bzl", "oci_load")
+
+load("@sonic_build_infra//oci:compressed_archive.bzl", "compressed_docker_archive")
 
 def sonic_docker_archive(name, image, visibility = None):
     """Packages an `oci_image` into `target/<name>`, where the Make build expects it.
@@ -54,19 +54,8 @@ def sonic_docker_archive(name, image, visibility = None):
         visibility = visibility,
     )
 
-    # gzip_compress names its output <input basename>.gz. Give each input the
-    # expected stem so runtime/debug archives keep their Make-compatible names.
-    copy_file(
-        name = stem + ".gzip_input",
-        src = stem + ".tar",
-        out = stem + ".gzip_input/" + stem,
-        allow_symlink = True,
-        visibility = ["//visibility:private"],
-    )
-
-    gzip_compress(
+    compressed_docker_archive(
         name = name,
-        src = stem + ".gzip_input",
-        level = 6,
+        loader = stem + ".load",
         visibility = visibility,
     )

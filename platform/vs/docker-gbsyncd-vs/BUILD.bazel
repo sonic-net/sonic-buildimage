@@ -1,9 +1,9 @@
 """VS gearbox images reuse the Syncd package graph and own their service setup."""
 
-load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@sonic_build_infra//oci:installed_packages.bzl", "installed_packages")
+load("@sonic_build_infra//oci:source_runtime.bzl", "source_runtime")
 load("@syncd_apt_inputs//:apt_inputs.bzl", "APT_INPUTS")
 load("@tar.bzl", "tar")
 load("//platform/vs/docker-syncd-vs:source_packages.bzl", "NATIVE_POLICY", "OWNER_METADATA", "SOURCE_MODULES", "SOURCE_PACKAGES")
@@ -56,29 +56,19 @@ source_contract(
     sources = SOURCE_PACKAGES,
 )
 
-run_binary(
+source_runtime(
     name = "checked_source_runtime",
-    srcs = [
-        ":config_engine_base_layout",
-        ":source_contract",
-    ] + SOURCE_PACKAGES.values() + SOURCE_MODULES.values(),
-    outs = [
-        "source_packages.receipt.json",
-        "source_runtime.tar",
-    ],
-    args = [
-               "--contract=$(execpath :source_contract)",
-               "--base=$(execpath :config_engine_base_layout)",
-               "--out-tar=$(execpath source_runtime.tar)",
-               "--receipt=$(execpath source_packages.receipt.json)",
-           ] + ["--module=" + name + "=$(execpath " + label + ")" for name, label in SOURCE_MODULES.items()] +
-           ["--package=" + name + "=$(execpath " + label + ")" for name, label in SOURCE_PACKAGES.items()] +
-           ["--package-target=" + name + "=" + label for name, label in SOURCE_PACKAGES.items()],
+    archive = "source_runtime.tar",
+    base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
+    contract = ":source_contract",
     mnemonic = "ValidateGearboxSourceRuntime",
+    modules = SOURCE_MODULES,
+    packages = SOURCE_PACKAGES,
+    receipt = "source_packages.receipt.json",
     target_compatible_with = _COMPATIBLE_WITH,
     tool = "//tools/bazel/oci:package_contract",
 )
-
 filegroup(
     name = "source_runtime",
     srcs = ["source_runtime.tar"],
@@ -92,6 +82,7 @@ filegroup(
 apt_layer(
     name = "runtime_layer",
     base = ":config_engine_base_layout",
+    base_inventory = "//dockers/docker-config-engine-trixie:base_inventory",
     dependency_set = "syncd_vs_debian",
     lock = "@sonic_build_infra//apt:apt.lock.json",
     packages = APT_INPUTS["syncd_vs_debian"]["amd64"],

@@ -1,11 +1,5 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "OCI_INCLUDES")
-
-py_binary(
-    name = "unique_tar",
-    srcs = ["unique_tar.py"],
-)
 
 write_file(
     name = "oci_includes",
