@@ -28,6 +28,14 @@ if [[ ${SONIC_VS_FAST_ASSEMBLY:-0} == 1 ]]; then
     export SONIC_BOOT_LAYER_GZIP_LEVEL=${SONIC_BOOT_LAYER_GZIP_LEVEL:-1}
     export SONIC_SQUASHFS_ZSTD_LEVEL=${SONIC_SQUASHFS_ZSTD_LEVEL:-3}
     export SONIC_VS_BATCH_PACKAGES=${SONIC_VS_BATCH_PACKAGES:-1}
+    export SONIC_VS_STREAM_ONIE=${SONIC_VS_STREAM_ONIE:-1}
+fi
+if [[ -n ${SONIC_VS_STREAM_ONIE:-} ]]; then
+    [[ $SONIC_VS_STREAM_ONIE =~ ^[01]$ ]] || {
+        echo 'SONIC_VS_STREAM_ONIE must be 0 or 1' >&2
+        exit 2
+    }
+    builder_args+=" -e SONIC_VS_STREAM_ONIE"
 fi
 if [[ -n ${SONIC_VS_BATCH_PACKAGES:-} ]]; then
     [[ $SONIC_VS_BATCH_PACKAGES =~ ^[01]$ ]] || {

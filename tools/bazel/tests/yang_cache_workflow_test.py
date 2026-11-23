@@ -30,7 +30,7 @@ class YangCacheWorkflowTest(unittest.TestCase):
         self.assertTrue(steps[1]["uses"].startswith("actions/checkout@"))
         self.assertEqual(
             steps[1]["with"]["ref"],
-            "${{ github.event.pull_request.head.sha || github.sha }}",
+            "${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}",
         )
 
     def copy_helper(self, work):
@@ -47,6 +47,16 @@ class YangCacheWorkflowTest(unittest.TestCase):
         self.assertLess(steps.index(setup), steps.index(cache))
         self.assertLess(steps.index(cache), steps.index(build))
         return cache["run"], build["run"]
+
+    def test_staged_yang_tools_run_on_the_architecture_assigned_to_the_job(self):
+        """The image root defaults to AMD64, so both the test and its copy tool need the native platform."""
+        job = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]
+        step = next(step for step in job["steps"] if step.get("id") == "yang_build")
+        self.assertEqual(step["env"]["NATIVE_PLATFORM"], "@sonic_build_infra//platforms:${{ matrix.machine }}_trixie")
+        machines = {row["architecture"]: row["machine"] for row in job["strategy"]["matrix"]["include"]}
+        self.assertEqual(machines, {"amd64": "x86_64", "arm64": "aarch64"})
+        self.assertIn('libteam_draft_bazel.sh test --platforms="$NATIVE_PLATFORM" --host_platform="$NATIVE_PLATFORM"',
+                      step["run"])
 
     def test_actual_setup_reaches_root_query_without_other_home_options(self):
         setup, build = self.steps()
@@ -87,7 +97,8 @@ for line in texts[0].splitlines():
 Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': texts}))
 """)
             recorder.chmod(0o755)
-            env = dict(os.environ, HOME=str(home), PATH=str(binary) + os.pathsep + os.environ["PATH"], RECORD=str(record), BASH_ENV="/dev/null")
+            env = dict(os.environ, HOME=str(home), PATH=str(binary) + os.pathsep + os.environ["PATH"], RECORD=str(record),
+                       BASH_ENV="/dev/null", NATIVE_PLATFORM="@sonic_build_infra//platforms:aarch64_trixie")
             subprocess.run(["bash", "-euc", setup], cwd=work, env=env, check=True)
             user = (work / ".bazelrc.user").read_text()
             self.assertEqual(user.strip().splitlines(), [
@@ -104,6 +115,8 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             observed = json.loads(record.read_text())
             self.assertIn("--nohome_rc", observed["argv"])
             self.assertIn("cquery", observed["argv"])
+            self.assertIn("--platforms=" + env["NATIVE_PLATFORM"], observed["argv"])
+            self.assertIn("--host_platform=" + env["NATIVE_PLATFORM"], observed["argv"])
             self.assertIn("//src/sonic-yang-models:yang_models_package_test", observed["argv"])
             self.assertIn("--lockfile_mode=update", observed["argv"])
             selected_rc = "\n".join(observed["explicit_rc"])

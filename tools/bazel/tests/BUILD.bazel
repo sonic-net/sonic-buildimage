@@ -12,11 +12,66 @@ load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
 load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
 load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
+load("//tools/bazel/oci:shared_runtime_layers.bzl", "shared_runtime_layers")
 load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["integration/frr_python_wheel_probe.py"])
+
+py_test(
+    name = "shared_runtime_base_test",
+    srcs = ["shared_runtime_base_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:shared_runtime_base_lib",
+    ],
+)
+
+py_test(
+    name = "shared_runtime_layers_test",
+    srcs = ["shared_runtime_layers_test.py"],
+    args = [
+        "--action-first=$(rootpath :shared_apt_first.tar)",
+        "--action-second=$(rootpath :shared_apt_second.tar)",
+        "--action-common=$(rootpath :shared_runtime_action/common.tar.gz)",
+        "--action-left=$(rootpath :shared_runtime_action/first.tar.gz)",
+        "--action-right=$(rootpath :shared_runtime_action/second.tar.gz)",
+    ],
+    data = [
+        ":shared_apt_first.tar",
+        ":shared_apt_second.tar",
+        ":shared_runtime_action/common.tar.gz",
+        ":shared_runtime_action/first.tar.gz",
+        ":shared_runtime_action/second.tar.gz",
+    ],
+    deps = ["//tools/bazel/oci:shared_runtime_layers_lib"],
+)
+
+py_binary(
+    name = "shared_runtime_layers_fixture",
+    srcs = ["shared_runtime_layers_fixture.py"],
+)
+
+run_binary(
+    name = "shared_apt_inputs",
+    outs = [
+        "shared_apt_first.tar",
+        "shared_apt_second.tar",
+    ],
+    args = [
+        "$(execpath shared_apt_first.tar)",
+        "$(execpath shared_apt_second.tar)",
+    ],
+    tool = ":shared_runtime_layers_fixture",
+)
+
+shared_runtime_layers(
+    name = "shared_runtime_action",
+    base = ":oci-consumer-first",
+    first = ":shared_apt_first.tar",
+    second = ":shared_apt_second.tar",
+)
 
 # Preserve the old build label; CI executes the source owner's real test rule.
 alias(
@@ -277,6 +332,11 @@ label_flag(
 )
 
 label_flag(
+    name = "sonic_dhcp_utilities_test_wheel",
+    build_setting_default = "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
+)
+
+label_flag(
     name = "sonic_frr_mgmt_framework_test_wheel",
     build_setting_default = "//src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel",
 )
@@ -420,14 +480,14 @@ py_test(
     srcs = ["integration/component_pytest_runner.py"],
     args = [
         "--component-setup=$(rootpath //src/sonic-yang-mgmt:setup.py)",
-        "--models=$(rootpath @sonic_yang_models//:yang_models)",
+        "--models=$(rootpath @sonic_yang_models//:test_models)",
         "--yang-config=$(rootpath //src/sonic-yang-models:tests/files/sample_config_db.json)",
     ],
     data = [
         "//src/sonic-yang-mgmt:setup.py",
         "//src/sonic-yang-mgmt:test_sources",
         "//src/sonic-yang-models:tests/files/sample_config_db.json",
-        "@sonic_yang_models//:yang_models",
+        "@sonic_yang_models//:test_models",
     ],
     legacy_create_init = False,
     main = "integration/component_pytest_runner.py",
@@ -444,13 +504,13 @@ py_test(
     args = [
         "$(rootpath :sonic_yang_mgmt_test_wheel)",
         "$(rootpath //src/sonic-yang-mgmt:setup.py)",
-        "$(rootpath @sonic_yang_models//:yang_models)",
+        "$(rootpath @sonic_yang_models//:test_models)",
     ],
     data = [
         "//src/sonic-yang-mgmt:setup.py",
         ":sonic_yang_mgmt_test_wheel",
         "//src/sonic-yang-mgmt:test_sources",
-        "@sonic_yang_models//:yang_models",
+        "@sonic_yang_models//:test_models",
     ],
     legacy_create_init = False,
     main = "integration/yang_mgmt_wheel_test.py",
@@ -471,7 +531,7 @@ py_test(
     srcs = ["integration/component_pytest_runner.py"],
     args = [
         "--component-setup=$(rootpath //src/sonic-config-engine:setup.py)",
-        "--models=$(rootpath @sonic_yang_models//:yang_models)",
+        "--models=$(rootpath @sonic_yang_models//:test_models)",
         "--cfggen=$(rootpath //src/sonic-config-engine:sonic_cfggen)",
     ],
     data = [
@@ -482,7 +542,7 @@ py_test(
         "//src/sonic-config-engine:setup.py",
         "//src/sonic-config-engine:sonic_cfggen",
         "//src/sonic-config-engine:test_sources",
-        "@sonic_yang_models//:yang_models",
+        "@sonic_yang_models//:test_models",
     ],
     legacy_create_init = False,
     main = "integration/component_pytest_runner.py",

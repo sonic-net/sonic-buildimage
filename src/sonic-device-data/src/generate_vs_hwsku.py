@@ -9,6 +9,31 @@ import shutil
 import sys
 from pathlib import Path
 
+
+# The original generator keeps the first copy of a shared SKU. Filesystem
+# enumeration varies between workers. These choices preserve the installed
+# VS configuration from sonic-buildimage PR #251; other ties use lexical order.
+PREFERRED_PLATFORM = {
+    "Arista-7060X6-64PE-O128": "x86_64-arista_7060x6_64pe_b",
+    "Arista-7060X6-64PE-P32O64": "x86_64-arista_7060x6_64pe_b",
+    "Arista-7060X6-64PE-P64": "x86_64-arista_7060x6_64pe_b",
+    "Arista-7280CR3-32P4": "x86_64-arista_7280cr3mk_32p4",
+    "Arista-7280CR3-C32P4": "x86_64-arista_7280cr3mk_32p4",
+    "Arista-7280CR3-C40": "x86_64-arista_7280cr3mk_32p4",
+    "FALCON32X25G": "x86_64-marvell_db98cx8580_32cd-r0",
+    "FALCON_DB": "x86_64-marvell_db98cx8580_32cd-r0",
+    "M2-W6940-128X1-FR4": "x86_64-micas_m2-w6940-128x1-fr4-r0",
+    "M2-W6940-64X1-FR4": "x86_64-micas_m2-w6940-128x1-fr4-r0",
+    "Mellanox-SN5640-C512S2": "x86_64-nvidia_sn5640_simx-r0",
+    "NH-4010": "x86_64-nexthop_4010-r1",
+    "NH-4010-128x400G-2x25G": "x86_64-nexthop_4010-r1",
+    "NH-4010-256x200G-2x25G": "x86_64-nexthop_4010-r1",
+    "Pensando-elba": "arm64-elba-asic-r0",
+    "db98cx8580_32cd": "x86_64-marvell_db98cx8580_32cd-r0",
+    "pddf": "x86_64-cel_ds1000-r0",
+}
+
+
 def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_64-r0",
                   *, templates=None, copy_file=shutil.copy2):
     """Process a single HwSKU directory for VS mapping."""
@@ -179,6 +204,8 @@ def generate_lanemap(target_dir, port_config_path, has_chassis, reserve_midplane
                 f.write("Cpu0:0,0\n")
 
 def hwsku_directories(device_base):
+    """Order source directories so each duplicate SKU has a stable first provider."""
+    directories = []
     for platform_dir in Path(device_base).iterdir():
         if not platform_dir.is_dir():
             continue
@@ -192,7 +219,9 @@ def hwsku_directories(device_base):
                 name = hwsku_dir.name
                 if "plugins" in name or "led-code" in name or "sonic_platform" in name:
                     continue
-                yield hwsku_dir
+                directories.append(hwsku_dir)
+
+    return sorted(directories, key=lambda sku: (sku.parent.name != PREFERRED_PLATFORM.get(sku.name), sku))
 
 
 def main():
@@ -200,7 +229,7 @@ def main():
     device_base = sys.argv[1] if len(sys.argv) > 1 else str(script_dir / ".." / ".." / ".." / "device")
     src_dir = str(script_dir)
 
-    hwsku_dirs = list(hwsku_directories(device_base))
+    hwsku_dirs = hwsku_directories(device_base)
 
     print(f"Processing {len(hwsku_dirs)} HwSKUs...", file=sys.stderr)
     for hwsku_dir in hwsku_dirs:

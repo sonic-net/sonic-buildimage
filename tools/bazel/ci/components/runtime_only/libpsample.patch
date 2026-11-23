@@ -1,0 +1,43 @@
+--- a/package_test.py
++++ b/package_test.py
+@@ -18,7 +18,7 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     for name in ("runtime", "debug", "fixture", "sdk", "copyright", "readelf", "objcopy", "mnl", "manual", "metadata"):
+-        parser.add_argument("--" + name, type=Path, required=True)
++        parser.add_argument("--" + name, type=Path, required=name != "debug")
+     args = parser.parse_args()
+     expected_arch, multiarch_libdir, expected_machine, libc_needed = {
+         "x86_64": ("amd64", "usr/lib/x86_64-linux-gnu", "Advanced Micro Devices X86-64", {"libc.so.6"}),
+@@ -51,6 +51,8 @@
+                     assert member.isfile() and member.mode == contract, name
+             archive.extractall(runtime, filter="data")
+         for source, destination in ((args.debug, debug), (args.mnl, runtime)):
++            if source is None:
++                continue
+             with tarfile.open(source) as archive:
+                 archive.extractall(destination, filter="data")
+         assert (runtime / "usr/share/doc/psample/copyright").read_bytes() == args.copyright.read_bytes()
+@@ -87,9 +89,12 @@
+                 assert "Library soname: [libpsample.so.1]" in dynamic
+             build_id = re.search(r"Build ID: ([0-9a-f]+)", elf(installed, "-n")).group(1)
+             build_ids[installed.name] = build_id
++            assert ".debug_info" not in elf(installed, "-SW")
++            if args.debug is None:
++                continue
+             symbols = debug / "usr/lib/debug/.build-id" / build_id[:2] / (build_id[2:] + ".debug")
+             assert re.search(r"Build ID: ([0-9a-f]+)", elf(symbols, "-n")).group(1) == build_id
+-            assert ".debug_info" not in elf(installed, "-SW") and ".debug_info" in elf(symbols, "-SW")
++            assert ".debug_info" in elf(symbols, "-SW")
+             section = root / "debuglink.bin"
+             inspection_env = {key: value for key, value in env.items() if key != "LD_LIBRARY_PATH"}
+             subprocess.run([args.objcopy.absolute(), "--dump-section", ".gnu_debuglink=" + str(section), installed, root / "inspection-copy"], check=True, env=inspection_env)
+@@ -129,7 +134,7 @@
+                     "runtime_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (binary, library)},
+                     "sample": {"group": 7, "iif": 11, "oif": 12, "original_size": 64, "rate": 1000, "sequence": 42, "payload_hex": "00010203534f4e6943"},
+                     "config": ["new_group:7:43", "del_group:7:44"], "open_failure": "rejected",
+-                    "sdk": "linked header consumer uses installed library", "gdb": "both ELFs, source/type and negative control",
++                    "sdk": "linked header consumer uses installed library", "gdb": "both ELFs, source/type and negative control" if args.debug else "disabled",
+                     "scope": "installed CLI and library parser with declared kernel-transport fixture; no live kernel/ASIC sampling claim"}
+         print(json.dumps(evidence, sort_keys=True))
+         if os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR"):

@@ -131,7 +131,9 @@ class VerificationWorkflowTest(unittest.TestCase):
             row, = job["strategy"]["matrix"]["include"]
             self.assertIn("${{ matrix.name }}", job["name"])  # A literal name makes Actions append every matrix value.
             self.assertEqual(job["name"].replace("${{ matrix.name }}", row["name"]), required)
-        self.assertNotIn("needs", jobs["archive"])  # ARM64 has its own native inputs.
+        arm64 = jobs["archive"]
+        self.assertIn("vs_container", arm64["needs"])
+        self.assertEqual(arm64["env"]["VS_WHEELS_ARTIFACT_ID"], amd64["env"]["VS_WHEELS_ARTIFACT_ID"])
         steps = {s["name"]: s for s in amd64["steps"]}
         download = steps["Download wheels used by VS"]["with"]
         self.assertEqual(download["artifact-ids"], "${{ env.VS_WHEELS_ARTIFACT_ID }}")
@@ -141,17 +143,29 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertIn('"$BAZEL" test "${wheel_flags[@]}"', installed)
         self.assertIn('--vs-packages "$VS_WHEELS"', steps["Retain wheels and required Python test evidence"]["run"])
 
-    def test_dhcp_runtime_waits_for_the_amd64_incremental_test_artifact(self):
-        """The ARM64 archive job cannot publish the images for the installed DHCP relay probe."""
+    def test_dhcp_source_builds_are_confined_to_the_dedicated_worker(self):
+        """The normal relay probe uses the installer; only a source qualification builds both variants."""
         jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        self.assertEqual(FAMILIES["docker-dhcp-relay"], "dhcp_relay")
+        self.assertNotIn("docker-dhcp-relay", STANDALONE_IMAGES)
+        for job in ("package_amd64", "archive", "validate_container"):
+            steps = jobs[job]["steps"]
+            self.assertFalse(any("dhcp_relay_image.py" in step.get("run", "") for step in steps))
+            self.assertFalse(any(step.get("with", {}).get("name") == "dhcp-relay-image-amd64" for step in steps))
+        steps = {step["name"]: step for step in jobs["package_amd64"]["steps"]}
+        check = steps["Check DHCP utilities and CLI tests without DEB generation"]
+        self.assertLess(list(steps).index("Test Python packages and check startup generation"), list(steps).index(check["name"]))
+        self.assertEqual(check["env"]["VS_PACKAGE"], "${{ steps.wheel_inputs.outputs.package }}")
+        self.assertIn("flags --group dhcp", check["run"])
+        self.assertIn('"$BAZEL" test "${wheel_flags[@]}"', check["run"])
         runtime = jobs["dhcp_relay_runtime"]
-        self.assertEqual(set(runtime["needs"]), {"package_amd64", "dhcp_relay_source_image"})
-        self.assertIn("needs.package_amd64.result == 'success'", runtime["if"])
-        download, = (step["with"]["name"] for step in runtime["steps"]
-                     if step.get("uses", "").startswith("actions/download-artifact@"))
-        for producer in runtime["needs"]:
-            upload, = (step for step in jobs[producer]["steps"] if step.get("id") == "bazel_upload_dhcp_relay_public")
-            self.assertEqual(upload["with"]["name"], download)
+        self.assertEqual(runtime["needs"], "dhcp_relay_source_image")
+        worker = jobs[runtime["needs"]]
+        self.assertIn("inputs.source_image == 'dhcp-relay'", worker["if"])
+        self.assertTrue(any("dhcp_relay_image.py incremental" in step.get("run", "") for step in worker["steps"]))
+        upload, = (step for step in worker["steps"] if step.get("id") == "bazel_upload_dhcp_relay_public")
+        download, = (step for step in runtime["steps"] if step.get("uses", "").startswith("actions/download-artifact@"))
+        self.assertEqual(upload["with"]["name"], download["with"]["name"])
 
     def test_required_archive_status_propagates_each_validation_failure(self):
         """A bad installer, an incomplete production job or any failed image row must block acceptance."""
@@ -159,17 +173,23 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(job["name"], "Container archive (AMD64)")
         self.assertEqual(set(job["needs"]), {
             "archive", "package_amd64", "kernel_packages_amd64", "frr_python_amd64",
-            "vs_container", "installer_validation", "validate_container",
+            "vs_container", "installer_validation", "validate_container", "validate_component", "native_sysmgr_amd64", "yang_models",
         })
         gate, = job["steps"]
-        self.assertEqual(set(gate["env"].values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
-        success = dict.fromkeys(gate["env"], "success")
-        self.assertEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=success).returncode, 0)
-        for dependency in success:
+        results = {name: expression for name, expression in gate["env"].items() if name not in ("EXPECT_COMPONENTS", "EXPECT_SYSMGR")}
+        self.assertEqual(set(results.values()), {"${{ needs." + need + ".result }}" for need in job["needs"]})
+        success = {**dict.fromkeys(results, "success"), "EXPECT_COMPONENTS": "true", "EXPECT_SYSMGR": "true"}
+        def status(env):
+            return subprocess.run(["bash", "-eu", "-c", gate["run"]], env=env).returncode
+        self.assertEqual(status(success), 0)
+        for dependency in results:
             for outcome in ("failure", "skipped", "cancelled"):
                 with self.subTest(dependency=dependency, outcome=outcome):
-                    env = dict(success, **{dependency: outcome})
-                    self.assertNotEqual(subprocess.run(["bash", "-eu", "-c", gate["run"]], env=env).returncode, 0)
+                    self.assertNotEqual(status(dict(success, **{dependency: outcome})), 0)
+        for dependency in ("COMPONENTS", "SYSMGR"):
+            unselected = dict(success, **{dependency: "skipped", "EXPECT_" + dependency: "false"})
+            self.assertEqual(status(unselected), 0)
+            self.assertNotEqual(status(dict(unselected, **{dependency: "failure"})), 0)
 
     def test_runtime_pruning_commands_stop_on_errors_without_using_a_real_daemon(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())

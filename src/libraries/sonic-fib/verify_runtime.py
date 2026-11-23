@@ -39,11 +39,15 @@ def verify(runtime, development, symbols):
     for path in (runtime, development):
         with tarfile.open(path) as archive:
             artifacts.require(all(member.mtime == 0 for member in archive), "noncanonical TAR timestamp")
-    debug = artifacts.debug_archives(runtime, symbols, expected_machine=62)
-    artifacts.require(len(debug["debug_pairs"]) == 1, "expected one installed libFIB symbol pair")
+    archives = [runtime, development]
+    debug = None
+    if symbols:
+        archives.append(symbols)
+        debug = artifacts.debug_archives(runtime, symbols, expected_machine=62)
+        artifacts.require(len(debug["debug_pairs"]) == 1, "expected one installed libFIB symbol pair")
     with tempfile.TemporaryDirectory(prefix="sonic-fib-installed-") as name:
         root = Path(name)
-        for path in (runtime, development, symbols):
+        for path in archives:
             with tarfile.open(path) as archive:
                 archive.extractall(root, filter="data")
         binary = root / library
@@ -62,19 +66,21 @@ def verify(runtime, development, symbols):
                                 timeout=30, check=True)
         artifacts.require("calling init: " + str(binary.parent / "libnexthopgroup.so.0") in result.stderr,
                           "C consumer did not load the extracted libFIB")
-        isolated = root / "isolated"
-        isolated.mkdir()
-        shutil.copyfile(binary, isolated / binary.name)
-        empty = root / "empty-symbols"
-        empty.mkdir()
-        without = gdb_lookup(isolated / binary.name, root, str(empty), "nexthopgroup_version")
-        artifacts.require(not without.get("found"), "debug lookup escaped the isolated symbol directory")
-        with_symbols = gdb_lookup(binary, root, str(root / "usr/lib/debug"), "nexthopgroup_version")
-        artifacts.require(with_symbols.get("found") and
-                          with_symbols.get("source", "").endswith("nexthopgroup_capi.cpp"),
-                          "packaged symbols do not resolve the owner C API source")
+        without = with_symbols = None
+        if symbols:
+            isolated = root / "isolated"
+            isolated.mkdir()
+            shutil.copyfile(binary, isolated / binary.name)
+            empty = root / "empty-symbols"
+            empty.mkdir()
+            without = gdb_lookup(isolated / binary.name, root, str(empty), "nexthopgroup_version")
+            artifacts.require(not without.get("found"), "debug lookup escaped the isolated symbol directory")
+            with_symbols = gdb_lookup(binary, root, str(root / "usr/lib/debug"), "nexthopgroup_version")
+            artifacts.require(with_symbols.get("found") and
+                              with_symbols.get("source", "").endswith("nexthopgroup_capi.cpp"),
+                              "packaged symbols do not resolve the owner C API source")
         return {"scope": "Installed AMD64 C ABI/header and isolated symbol lookup; no Docker or VS image run",
-                "archives": {str(path): artifacts.sha(path) for path in (runtime, development, symbols)},
+                "archives": {str(path): artifacts.sha(path) for path in archives},
                 "library": identity, "debug": debug, "consumer_exit_code": result.returncode,
                 "without_symbols": without, "with_symbols": with_symbols}
 

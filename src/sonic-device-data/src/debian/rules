@@ -1,5 +1,8 @@
 #!/usr/bin/make -f
 
+# The installer supplies its own release epoch. This package uses its changelog.
+override export SOURCE_DATE_EPOCH := $(shell dpkg-parsechangelog -STimestamp)
+
 build:
 
 %:
@@ -11,3 +14,8 @@ override_dh_auto_test:
 # The build only copies device files and writes VS lane maps, so there is no
 # build-time metadata to strip, and the scan forks file(1) for every file.
 override_dh_strip_nondeterminism:
+
+override_dh_builddeb:
+	# dpkg-deb only clamps newer files; copy2 preserves older source mtimes.
+	find debian/sonic-device-data -exec touch -h -d '@$(SOURCE_DATE_EPOCH)' {} +
+	dh_builddeb

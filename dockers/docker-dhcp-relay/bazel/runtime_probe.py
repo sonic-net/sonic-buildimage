@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import xmlrpc.client
+import zlib
 
 import redis
 from supervisor.xmlrpc import SupervisorTransport
@@ -185,13 +186,46 @@ def installed_startup(name, data, programs, config_db, counter_db, state_db):
                     process.wait()
 
 
+def verify_installed_symbols(native):
+    """Verify each SONiC source ELF against the selected VS debug image, including the sealed core."""
+    from tools.bazel.oci.elf import inspect_elf
+
+    sealed = []
+    for name, owner in native.items():
+        path = Path("/") / name
+        with path.open("rb") as stream:
+            binary = inspect_elf(stream)
+        build_id = owner["build_id"]
+        require(build_id and binary["build_id"] == build_id and not binary["has_dwarf"],
+                "unexpected installed runtime ELF: " + name)
+        symbols = Path("/usr/lib/debug/.build-id") / build_id[:2] / (build_id[2:] + ".debug")
+        with symbols.open("rb") as stream:
+            debug = inspect_elf(stream)
+            require(debug["machine"] == binary["machine"] == 62 and debug["has_dwarf"]
+                    and debug["build_id"] == build_id, "detached symbols differ: " + name)
+            if owner["source_package"] == "symcrypt-openssl" and path.name == "libsymcrypt.so.103.13.0":
+                require(binary["debuglink"] is None, "sealed SymCrypt core has a debuglink")
+                sealed.append(path)
+            else:
+                stream.seek(0)
+                crc = 0
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    crc = zlib.crc32(chunk, crc)
+                require(binary["debuglink"] == {"name": symbols.name, "crc": crc}, "GNU debuglink differs: " + name)
+    require(len(sealed) == 1, "missing or ambiguous sealed SymCrypt core")
+    lookup = command(["gdb", "-nx", "-batch", "-ex", "set debuginfod enabled off",
+                      "-ex", "file " + str(sealed[0]), "-ex", "info line SymCryptModuleMain"])
+    require("Line " in lookup and ".c" in lookup, "GDB cannot resolve the SymCrypt source line")
+
+
 def main():
     report = json.loads(Path(sys.argv[1]).read_text())
     variant = sys.argv[2]
     expected = report["images"][variant]
+    native = expected.get("native", report["native"])
     for name in expected["native_paths"]:
         path = Path("/") / name
-        require(hashlib.sha256(path.read_bytes()).hexdigest() == report["native"][name]["sha256"],
+        require(hashlib.sha256(path.read_bytes()).hexdigest() == native[name]["sha256"],
                 "native installed bytes differ: " + name)
         require("not found" not in command(["/lib64/ld-linux-x86-64.so.2", "--list", str(path)]),
                 "native loader failed: " + name)
@@ -206,6 +240,8 @@ def main():
             "DHCP option resource missing")
     debug_checks = []
     if variant.endswith("-dbg"):
+        if "debug_enabled" in report:
+            verify_installed_symbols(native)
         required = {"usr/sbin/" + name for name in ("dhcrelay", "dhcp4relay", "dhcp6relay", "dhcpmon")}
         selected = [pair for pair in report["source_debug_pairs"] if pair["path"] in required]
         require({pair["path"] for pair in selected} == required, "relay debug symbols incomplete")

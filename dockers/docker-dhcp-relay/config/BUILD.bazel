@@ -1,4 +1,4 @@
-"""Original DHCP relay startup files, CLI plugins and Make metadata."""
+"""Original DHCP relay startup files, CLI plugins and container metadata."""
 
 load("@sonic_build_infra//oci:accounts.bzl", "account_layer")
 load("@tar.bzl", "tar")

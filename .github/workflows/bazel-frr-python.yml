@@ -17,18 +17,17 @@ permissions:
 
 jobs:
   packages:
+    # Trusted PRs and master receive both native test jobs from the VS workflow.
+    if: >-
+      inputs.vs_artifact_id != '' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
     name: FRR Python packages (${{ matrix.architecture == 'amd64' && 'AMD64' || 'ARM64' }})
     runs-on: [self-hosted, linux, "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        # VS supplies AMD64 for trusted PRs and master. Forks and explicit standalone runs keep both lanes.
-        architecture: >-
-          ${{ fromJSON(inputs.vs_artifact_id != '' && '["amd64"]' ||
-            ((github.event_name == 'push' || (github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository)) && '["arm64"]' ||
-            '["amd64","arm64"]')) }}
+        architecture: [amd64, arm64]
     env:
       NATIVE_ARCHITECTURE: ${{ matrix.architecture }}
       NATIVE_PLATFORM: ${{ matrix.architecture == 'amd64' && 'x86_64_trixie' || 'aarch64_trixie' }}
@@ -130,7 +129,7 @@ jobs:
           installed_inputs=()
           if [[ -n "${VS_PACKAGES:-}" ]]; then
             flags="$VS_BAZEL_PACKAGE/probe-flags.txt"
-            python3 -m tools.bazel.ci.vs_python_packages flags --group frr --package "$VS_BAZEL_PACKAGE" > "$flags"
+            python3 -m tools.bazel.ci.vs_python_packages flags --group frr --architecture "$NATIVE_ARCHITECTURE" --package "$VS_BAZEL_PACKAGE" > "$flags"
             mapfile -t installed_inputs < "$flags"
           else
             bazel build "${options[@]}" \

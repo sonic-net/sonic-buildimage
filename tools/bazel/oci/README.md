@@ -171,6 +171,9 @@ Images that declare `IMAGE_VERSION` use the same value in their native
 environment. For the native database image, set
 `--//tools/bazel/image/vs/metadata:include_system_eventd=false` to disable
 system Eventd, matching Make's `INCLUDE_SYSTEM_EVENTD=n`.
+DHCP Relay uses these manifest and environment aliases for both build modes.
+Its Make environment input is registered through
+`SONIC_BAZEL_IMAGE_ENVIRONMENTS`; direct Bazel builds generate it natively.
 Make selects `--//tools/bazel/image/vs/metadata:use_make_metadata=true`
 for individual and batched archives, so an empty Make release emits `Tag=`.
 Owners can also pass `package_receipt` from their installed package receipt and

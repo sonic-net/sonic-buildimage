@@ -206,6 +206,11 @@ def bazel_build(work, binary, cache, identity):
     (ws / "BUILD").write_text(
         'load(":host.bzl", "vs_host_base")\nplatform(name = "native")\n'
         'vs_host_base(name = "base", driver = ":driver.py", identity = ":identity.json")\n')
+    return run_private_action(work, binary, cache, "//:base", "SonicVsHostBase")
+
+
+def run_private_action(work, binary, cache, target, mnemonic):
+    ws = work / "workspace"
     log = work / "actions.json"
     subprocess.run([
         binary, "--batch", "--ignore_all_rc_files", f"--output_user_root={work}/user", f"--output_base={work}/base",
@@ -213,13 +218,13 @@ def bazel_build(work, binary, cache, identity):
         "--incompatible_autoload_externally=", f"--experimental_resolved_file_instead_of_workspace={ws}/resolved.bzl",
         "--repository_disable_download", "--platforms=//:native", "--host_platform=//:native", "--spawn_strategy=local",
         "--bes_backend=", "--remote_cache=", "--remote_executor=", f"--disk_cache={cache}",
-        f"--execution_log_json_file={log}", "//:base",
+        f"--execution_log_json_file={log}", target,
     ], cwd=ws, check=True, env={"HOME": str(work), "PATH": "/usr/bin:/bin", "LANG": "C"})
     event = json.loads(log.read_bytes())
-    check(event["mnemonic"] == "SonicVsHostBase", "missing Bazel host-base action")
+    check(event["mnemonic"] == mnemonic, f"missing Bazel {mnemonic} action")
     hit = bool(event.get("cacheHit", False))
     check(event.get("runner") == ("disk cache hit" if hit else "local") and hit != (work / "started").exists(),
-          "unexpected Bazel executor for host-base action")
+          f"unexpected Bazel executor for {mnemonic}")
     return ws / "bazel-bin", hit
 
 

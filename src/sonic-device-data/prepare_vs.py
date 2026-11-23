@@ -16,29 +16,6 @@ KVM = "x86_64-kvm_x86_64-r0"
 INSTALL = Path("usr/share/sonic/device")
 DOC = Path("usr/share/doc/sonic-device-data")
 
-# The original generator keeps the first copy of a shared SKU. Filesystem
-# enumeration varies between workers. These choices preserve the installed
-# VS configuration from sonic-buildimage PR #251; other ties use lexical order.
-PREFERRED_PLATFORM = {
-    "Arista-7060X6-64PE-O128": "x86_64-arista_7060x6_64pe_b",
-    "Arista-7060X6-64PE-P32O64": "x86_64-arista_7060x6_64pe_b",
-    "Arista-7060X6-64PE-P64": "x86_64-arista_7060x6_64pe_b",
-    "Arista-7280CR3-32P4": "x86_64-arista_7280cr3mk_32p4",
-    "Arista-7280CR3-C32P4": "x86_64-arista_7280cr3mk_32p4",
-    "Arista-7280CR3-C40": "x86_64-arista_7280cr3mk_32p4",
-    "FALCON32X25G": "x86_64-marvell_db98cx8580_32cd-r0",
-    "FALCON_DB": "x86_64-marvell_db98cx8580_32cd-r0",
-    "M2-W6940-128X1-FR4": "x86_64-micas_m2-w6940-128x1-fr4-r0",
-    "M2-W6940-64X1-FR4": "x86_64-micas_m2-w6940-128x1-fr4-r0",
-    "Mellanox-SN5640-C512S2": "x86_64-nvidia_sn5640_simx-r0",
-    "NH-4010": "x86_64-nexthop_4010-r1",
-    "NH-4010-128x400G-2x25G": "x86_64-nexthop_4010-r1",
-    "NH-4010-256x200G-2x25G": "x86_64-nexthop_4010-r1",
-    "Pensando-elba": "arm64-elba-asic-r0",
-    "db98cx8580_32cd": "x86_64-marvell_db98cx8580_32cd-r0",
-    "pddf": "x86_64-cel_ds1000-r0",
-}
-
 
 def files_below(root):
     for directory, _, files in os.walk(root, followlinks=True):
@@ -113,10 +90,6 @@ def prepare(device, owner, meta, changelog, generated, output):
         Path(dst).chmod(mode(src))
         return dst
 
-    def sku_order(sku):
-        # The first platform wins when the same SKU appears in multiple trees.
-        return (sku.parent.name != PREFERRED_PLATFORM.get(sku.name), sku)
-
     with tempfile.TemporaryDirectory() as temp:
         stage = Path(temp)
         virtual = stage / "device" / KVM
@@ -124,7 +97,7 @@ def prepare(device, owner, meta, changelog, generated, output):
         vs_asic = virtual / "platform_asic"
         vs_asic.write_text("vs\n")
         validate(device, owner / "tests", metadata["platforms"], vs_asic)
-        for sku in sorted(hwsku_directories(device), key=sku_order):
+        for sku in hwsku_directories(device):
             process_hwsku(sku, stage, device, templates=owner / "src", copy_file=copy_file)
 
         # Most virtual profiles are identical to a declared physical input.

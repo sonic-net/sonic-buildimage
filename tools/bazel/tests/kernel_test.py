@@ -1322,6 +1322,15 @@ class KernelWorkflowTest(unittest.TestCase):
         self.assertIn("--from-vs-handoff", self.steps["Verify the downloaded package set before exercising Make reuse"])
         self.assertLess(self.workflow.index("name: Verify the downloaded package set"), self.workflow.index("name: Reject an unsupported kernel configuration"))
 
+    def test_standalone_make_reuses_the_package_build_cache_but_vs_checks_only_the_handoff(self):
+        """A Make consumer must retain the standalone producer's remote CAS to reuse lazy kernel outputs."""
+        step = self.steps["Verify registry package publication and repeated Make consumption"]
+        standalone = "inputs.vs_artifact_id == ''"
+        self.assertIn("SONIC_BAZEL_KERNEL_REMOTE_CACHE: ${{ " + standalone + " && env.KERNEL_REMOTE_CACHE || '' }}", step)
+        self.assertIn("SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ " + standalone
+                      + " && env.UPLOAD_KERNEL_CACHE == 'true' && 'y' || 'n' }}", step)
+        self.assertIn("SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256: ${{ steps.vs_handoff.outputs.receipt_sha256 }}", step)
+
     def test_shared_cache_defaults_and_optional_cold_proof(self):
         self.assertIn("runs-on: [self-hosted, linux,", self.workflow)
         self.assertIn("matrix.arch == 'amd64' && 'bazel-x64' || 'bazel-arm64'", self.workflow)
@@ -1338,6 +1347,24 @@ class KernelWorkflowTest(unittest.TestCase):
         self.assertIn("if: always() && steps.kernel_state.outcome == 'success' && " + cold,
                       self.steps["Stop the disposable verification cache"])
         self.assertNotIn("sudo rm", self.workflow)
+
+    def test_shared_cache_fallback_applies_to_make_and_bazel_outside_the_cold_cache_proof(self):
+        """A cache outage can run the ordinary kernel actions locally while the cold proof requires a hit."""
+        step = self.steps["Allow local kernel actions when the shared cache is unavailable"]
+        self.assertIn("if: inputs.vs_artifact_id == '' && !(github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache)", step)
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = Path(tmp) / ".bazelrc.user"
+            rc.write_text("build --jobs=2")
+            subprocess.run(["bash", "-eu", "-c", script], cwd=tmp, check=True)
+            self.assertEqual(rc.read_text().splitlines(), [
+                "build --jobs=2", "build --remote_local_fallback",
+                "build --incompatible_remote_local_fallback_for_remote_cache",
+            ])
+        self.assertIn("try-import %workspace%/.bazelrc.user", (ROOT / "tools/bazel/common.bazelrc").read_text())
+        proof = self.steps["Verify a fresh output base reuses the registered kernel action"]
+        self.assertIn("actions[0].get('cacheHit') is True", proof)
+        self.assertIn("actions[0].get('runner') == 'remote cache hit'", proof)
 
     def test_fixed_state_is_cleaned_before_build_and_after_artifact_upload(self):
         before = self.steps["Remove stale fixed kernel state"]
@@ -1789,16 +1816,19 @@ class KernelWorkflowTest(unittest.TestCase):
                         "sys.exit(int(os.environ['BUILD_EXIT']))\n")
                     executable.chmod(0o755)
                     python = root / "python3"
-                    python.write_text("#!/bin/sh\nexit 0\n")
+                    python.write_text('#!/bin/sh\nif [ "$3" = bazel-config ]; then echo "{}"; fi\n')
                     python.chmod(0o755)
                     calls = root / "calls.json"
                     result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
                         cwd=root, capture_output=True, text=True,
                         env=dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
                                  KERNEL_REMOTE_CACHE="grpc://cache:9092", UPLOAD_KERNEL_CACHE=upload,
-                                 KERNEL_RUN_TEMP=str(root), CALLS=str(calls), BUILD_EXIT=str(exit_code)))
+                                 KERNEL_RUN_TEMP=str(root), GITHUB_OUTPUT=str(root / "step-output"),
+                                 CALLS=str(calls), BUILD_EXIT=str(exit_code)))
                     self.assertEqual(result.returncode, exit_code, result.stdout + result.stderr)
                     argv = json.loads(calls.read_text())
+                    self.assertIn("--@sonic_linux_kernel//tools/bazel:kernel_config={}", argv)
+                    self.assertEqual((root / "step-output").read_text(), "kernel_config={}\n")
                     self.assertIn("--remote_cache=grpc://cache:9092", argv)
                     self.assertIn("--remote_upload_local_results=" + upload, argv)
                     self.assertIn("--platforms=@sonic_build_infra//platforms:aarch64_trixie", argv)

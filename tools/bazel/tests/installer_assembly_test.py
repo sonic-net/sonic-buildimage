@@ -102,6 +102,33 @@ sudo() {
                 capture_output=True, timeout=10)
         self.assertEqual((self.work / "builds").read_text().splitlines(), ["built"] * 3)
 
+    def test_streaming_changes_rebuild_only_the_final_installer(self):
+        source = (ROOT / "slave.mk").read_text()
+        start = source.index("ifeq ($(CONFIGURED_PLATFORM),vs)\nvs_boot_mode_stamp :=")
+        block = source[start:source.index("\n# targets for building installers with base image", start)]
+        (self.work / "Makefile").write_text("SHELL=/bin/bash\nTARGET_PATH=target\nCONFIGURED_PLATFORM=vs\n"
+            + block + "\ntarget/producer:\n\t@mkdir -p $(@D)\n\t@echo producer >> producers\n\t@touch $@\n"
+            "\ntarget/image: target/producer $(vs_boot_mode_stamp)\n\t@echo built >> builds\n\t@touch $@\n")
+        for streaming in ("", "", "1", "1", "0", "0"):
+            subprocess.run(["make", "--no-print-directory", "target/image",
+                            f"SONIC_VS_STREAM_ONIE={streaming}"], cwd=self.work, check=True,
+                           capture_output=True, timeout=10)
+        self.assertEqual((self.work / "builds").read_text().splitlines(), ["built"] * 3)
+        self.assertEqual((self.work / "producers").read_text().splitlines(), ["producer"])
+
+    def test_configured_host_reassembles_on_release_change(self):
+        source = (ROOT / "slave.mk").read_text()
+        start = source.index("ifeq ($(CONFIGURED_PLATFORM):$(SONIC_VS_CONFIGURED_HOST_CACHE),vs:y)")
+        block = source[start:source.index("\n$(TARGET_PATH)/sonic-vs.bin:", start)]
+        (self.work / "Makefile").write_text(
+            "TARGET_PATH=target\nCONFIGURED_PLATFORM=vs\nSONIC_VS_CONFIGURED_HOST_CACHE=y\n"
+            ".PHONY: check-vs-boot-mode\nexport SONIC_IMAGE_VERSION\n" + block + "\nendif\n"
+            "target/image: $(vs_configured_release)\n\t@echo built >> builds\n\t@touch $@\n")
+        for release in ("release-a", "release-a", "release-b", "release-b"):
+            subprocess.run(["make", "target/image", "SONIC_IMAGE_VERSION=" + release],
+                           cwd=self.work, check=True, capture_output=True, timeout=10)
+        self.assertEqual((self.work / "builds").read_text().splitlines(), ["built", "built"])
+
 
 if __name__ == "__main__":
     unittest.main()

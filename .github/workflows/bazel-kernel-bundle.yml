@@ -140,6 +140,11 @@ jobs:
         with:
           bazelisk-version: 1.29.0
           output-base: ${{ env.KERNEL_RUN_TEMP }}/kernel-bundle-state/build/output
+      - name: Allow local kernel actions when the shared cache is unavailable
+        if: inputs.vs_artifact_id == '' && !(github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache)
+        run: |
+          printf '%s\n' '' 'build --remote_local_fallback' \
+            'build --incompatible_remote_local_fallback_for_remote_cache' >> .bazelrc.user
       - name: Start a disposable cache for optional cold-build verification
         if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
         env:
@@ -178,12 +183,16 @@ jobs:
             --output "$KERNEL_RUN_TEMP/kernel-bundle-artifacts"
           echo "receipt_sha256=${receipt%% *}" >> "$GITHUB_OUTPUT"
       - name: Build registry kernel outputs in the root module graph
+        id: registry_build
         if: inputs.vs_artifact_id == ''
         shell: bash
         run: |
           set -euo pipefail
           platform="@sonic_build_infra//platforms:${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}_trixie"
+          kernel_config="$(python3 -B tools/bazel/kernel/packages.py bazel-config --architecture "${{ matrix.arch }}")"
+          echo "kernel_config=$kernel_config" >> "$GITHUB_OUTPUT"
           bazel build --platforms="$platform" --host_platform="$platform" \
+            "--@sonic_linux_kernel//tools/bazel:kernel_config=$kernel_config" \
             --remote_cache="$KERNEL_REMOTE_CACHE" --remote_upload_local_results="$UPLOAD_KERNEL_CACHE" \
             --execution_log_json_file="$KERNEL_RUN_TEMP/kernel-runtime-actions.json" \
             @sonic_linux_kernel//:linux-image.runtime \
@@ -220,18 +229,21 @@ jobs:
       - name: Verify registry package publication and repeated Make consumption
         env:
           SONIC_BAZEL_KERNEL_VS_HANDOFF_SHA256: ${{ steps.vs_handoff.outputs.receipt_sha256 }}
-          SONIC_BAZEL_KERNEL_REMOTE_CACHE: ${{ env.KERNEL_REMOTE_CACHE }}
-          SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ env.UPLOAD_KERNEL_CACHE == 'true' && 'y' || 'n' }}
+          SONIC_BAZEL_KERNEL_REMOTE_CACHE: ${{ inputs.vs_artifact_id == '' && env.KERNEL_REMOTE_CACHE || '' }}
+          SONIC_BAZEL_KERNEL_REMOTE_UPLOAD: ${{ inputs.vs_artifact_id == '' && env.UPLOAD_KERNEL_CACHE == 'true' && 'y' || 'n' }}
         run: |
           python3 -B tools/bazel/kernel/packages.py verify --architecture "${{ matrix.arch }}"
           python3 -B tools/bazel/ci/kernel_make_smoke.py --architecture "${{ matrix.arch }}"
       - name: Verify a fresh output base reuses the registered kernel action
+        env:
+          KERNEL_CONFIG: ${{ steps.registry_build.outputs.kernel_config }}
         if: github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache
         shell: bash
         run: |
           set -euo pipefail
           platform="@sonic_build_infra//platforms:${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}_trixie"
           bazel --output_base="$KERNEL_RUN_TEMP/kernel-cache-hit" build \
+            "--@sonic_linux_kernel//tools/bazel:kernel_config=$KERNEL_CONFIG" \
             --platforms="$platform" --host_platform="$platform" \
             --remote_cache="$KERNEL_REMOTE_CACHE" --remote_upload_local_results=false \
             --execution_log_json_file="$KERNEL_RUN_TEMP/kernel-cache-hit.json" \

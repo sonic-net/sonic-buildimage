@@ -31,9 +31,11 @@ def verify(source, runtime, symbols, policy_path, graph_path):
     policy = package_contract.read_policy(policy_path)
     programs = package_contract.validate_install_inventory(
         source, artifacts.payload(runtime), policy["install_inventory"])
-    debug = artifacts.debug_archives(runtime, symbols, expected_machine=62)
-    artifacts.require(set(programs) == {p["path"] for p in debug["debug_pairs"]},
-                      "runtime/debug archives do not cover the complete SWSS program set")
+    debug = {}
+    if symbols is not None:
+        debug = artifacts.debug_archives(runtime, symbols, expected_machine=62)
+        artifacts.require(set(programs) == {p["path"] for p in debug["debug_pairs"]},
+                          "runtime/debug archives do not cover the complete SWSS program set")
 
     # This intentionally fails when a future source introduces libFIB usage:
     # the legacy Make dependency then needs reclassification, not an allowlist.
@@ -101,24 +103,25 @@ def verify(source, runtime, symbols, policy_path, graph_path):
                           set(elfs["usr/bin/teamsyncd"]["needed"]), "teamsyncd lost its team libraries")
         artifacts.require("libteamdctl.so.0" in elfs["usr/bin/tlm_teamd"]["needed"],
                           "tlm_teamd lost its teamdctl library")
-        with tarfile.open(symbols) as archive:
-            archive.extractall(staging, filter="data")
-        isolated, empty = staging / "isolated", staging / "empty-symbols"
-        isolated.mkdir()
-        empty.mkdir()
-        for name, symbol, source_path in (("orchagent", "main", "orchagent/main.cpp"),
-                                          ("countersyncd", "countersyncd::main", "crates/countersyncd/src/main.rs")):
-            binary = staging / "usr/bin" / name
-            shutil.copyfile(binary, isolated / name)
-            without = gdb_lookup(isolated / name, staging, str(empty), symbol)
-            with_symbols = gdb_lookup(binary, staging, str(staging / "usr/lib/debug"), symbol)
-            artifacts.require(not without.get("found"), "GDB escaped isolated symbol directory: " + name)
-            artifacts.require(with_symbols.get("found") and with_symbols.get("source", "").endswith(source_path),
-                              "GDB did not resolve the packaged owner source: " + name)
-            lookups[name] = {"without_symbols": without, "with_symbols": with_symbols}
+        if symbols is not None:
+            with tarfile.open(symbols) as archive:
+                archive.extractall(staging, filter="data")
+            isolated, empty = staging / "isolated", staging / "empty-symbols"
+            isolated.mkdir()
+            empty.mkdir()
+            for name, symbol, source_path in (("orchagent", "main", "orchagent/main.cpp"),
+                                              ("countersyncd", "countersyncd::main", "crates/countersyncd/src/main.rs")):
+                binary = staging / "usr/bin" / name
+                shutil.copyfile(binary, isolated / name)
+                without = gdb_lookup(isolated / name, staging, str(empty), symbol)
+                with_symbols = gdb_lookup(binary, staging, str(staging / "usr/lib/debug"), symbol)
+                artifacts.require(not without.get("found"), "GDB escaped isolated symbol directory: " + name)
+                artifacts.require(with_symbols.get("found") and with_symbols.get("source", "").endswith(source_path),
+                                  "GDB did not resolve the packaged owner source: " + name)
+                lookups[name] = {"without_symbols": without, "with_symbols": with_symbols}
     return {
         "scope": "Native AMD64 source/link/ELF and runtime/debug TAR parity. Full image loader and daemon fixtures are separate integration checks.",
-        "runtime_sha256": artifacts.sha(runtime), "debug_sha256": artifacts.sha(symbols),
+        "runtime_sha256": artifacts.sha(runtime), "debug_sha256": artifacts.sha(symbols) if symbols else None,
         "source_files": inputs, "source_inventory_sha256": hashlib.sha256(
             json.dumps(inputs, sort_keys=True).encode()).hexdigest(),
         "links": links, "elfs": elfs, "debug": debug, "gdb": lookups,

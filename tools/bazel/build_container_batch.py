@@ -212,7 +212,9 @@ def build(args):
             validation_labels = validation.extra_targets(families)
         # Publish the package artifacts from the original configured VS build.
         if args.architecture == "amd64":
-            validation_labels.extend(vs_python_packages.PACKAGES.values())
+            pddf_enabled = (validation.PMON + ".gz" in owners
+                            and validation.make_features(validation.PMON, shared)["pddf_enabled"])
+            validation_labels.extend(vs_python_packages.package_targets(pddf_enabled).values())
     options = build_options(shared, args.architecture)
     directory = settings.get("SONIC_VS_CONTAINER_BATCH_TIMING_DIR")
     build_timing = Path(directory) if directory else None
@@ -269,7 +271,8 @@ def build(args):
                 validation.write_bundles(args, families, paths, shared)
             if args.architecture == "amd64":
                 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-                vs_python_packages.publish(args.validation_directory.parent / "python-packages", revision, paths)
+                vs_python_packages.publish(args.validation_directory.parent / "python-packages", revision, paths,
+                                           pddf_enabled=pddf_enabled)
 
 
 def main():

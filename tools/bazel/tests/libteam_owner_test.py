@@ -21,7 +21,7 @@ class LibteamOwnerTest(unittest.TestCase):
         step = next(step for step in workflow["jobs"]["native"]["steps"]
                     if step.get("name") == "Build source outputs and execute native tests")
         setup = re.search(r'(?ms)^options=\(.*?^\}', step["run"])[0]
-        invocation = re.search(r'(?ms)^run_bazel test .*?tee artifacts/test.log', step["run"])[0]
+        invocation = re.search(r'(?ms)^ *run_bazel test .*?tee artifacts/test.log', step["run"])[0]
         with tempfile.TemporaryDirectory(prefix="owner native test ") as temporary:
             work = Path(temporary)
             (work / "artifacts").mkdir()
@@ -88,8 +88,7 @@ with open(os.environ["CALLS"], "a") as output:
             output_base = Path(temporary) / "Bazel output base"
             execution = output_base / "execroot/_main"
             probe = execution / "external/libteam+/bazel/verify_rebuild.py"
-            probe.parent.mkdir(parents=True)
-            probe.write_text("# selected owner source\n")
+
             commands = Path(temporary) / "bin"
             commands.mkdir()
             calls = Path(temporary) / "commands.jsonl"
@@ -100,7 +99,12 @@ import json, os, pathlib, sys
 with open(os.environ["CALLS"], "a") as output:
     output.write(json.dumps([pathlib.Path(sys.argv[0]).name, *sys.argv[1:]]) + "\\n")
 if pathlib.Path(sys.argv[0]).name == "bazel":
-    if "info" in sys.argv:
+    if "build" in sys.argv:
+        assert sys.argv[-1] == "@libteam//:bazel/verify_rebuild.py"
+        probe = pathlib.Path(os.environ["EXPECTED_PROBE"])
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        probe.touch()
+    elif "info" in sys.argv:
         assert sys.argv[-1] == "output_base"
         print(os.environ["OUTPUT_BASE"])
     elif "cquery" in sys.argv:
@@ -108,7 +112,7 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
 ''')
                 recorder.chmod(0o755)
             environment = dict(os.environ, PATH=str(commands) + ":/usr/bin:/bin",
-                               CALLS=str(calls), OUTPUT_BASE=str(output_base),
+                               CALLS=str(calls), OUTPUT_BASE=str(output_base), EXPECTED_PROBE=str(probe),
                                CI_CPU=cpu, CI_DISTRIBUTION="trixie", RUNNER_TEMP=temporary)
             for result in ("external/libteam+/bazel/verify_rebuild.py", str(probe)):
                 with self.subTest(path=result):
@@ -117,7 +121,10 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
                                    env={**environment, "PROBE_RESULT": result}, check=True,
                                    capture_output=True, text=True)
                     recorded = [json.loads(line) for line in calls.read_text().splitlines()]
-                    self.assertEqual(len(recorded), 3)
+                    self.assertEqual(len(recorded), 4)
+                    materialize = recorded.pop(0)
+                    self.assertIn("build", materialize)
+                    self.assertEqual(materialize[-1], "@libteam//:bazel/verify_rebuild.py")
                     self.assertIn("info", recorded[0])
                     self.assertEqual(recorded[0][-1], "output_base")
                     self.assertIn("@libteam//:bazel/verify_rebuild.py", recorded[1])
@@ -142,8 +149,8 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
                         capture_output=True, text=True)
                     self.assertNotEqual(failed.returncode, 0)
                     recorded = [json.loads(line) for line in calls.read_text().splitlines()]
-                    self.assertEqual(len(recorded), 1)
-                    self.assertIn("info", recorded[0])
+                    self.assertEqual(len(recorded), 2)
+                    self.assertIn("info", recorded[-1])
                     self.assertIn("Bazel", failed.stderr)
             for result in ("", "missing.py", "one.py\ntwo.py"):
                 with self.subTest(invalid=result):

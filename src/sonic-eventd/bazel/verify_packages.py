@@ -56,7 +56,8 @@ def verify(root, archives, architecture):
     with tempfile.TemporaryDirectory(prefix='eventd-packages-') as temp:
         directory = Path(temp)
         for package, (runtime_tar, debug_tar) in archives.items():
-            runtime, debug = read_archive(runtime_tar), read_archive(debug_tar)
+            runtime = read_archive(runtime_tar)
+            debug = read_archive(debug_tar) if debug_tar else {}
             expected = PACKAGES[package]
             manifest = root/'debian'/('sonic-eventd.install' if package == 'eventd' else 'sonic-rsyslog-plugin.install')
             if set(manifest.read_text().splitlines()) != set(expected):
@@ -80,6 +81,8 @@ def verify(root, archives, architecture):
                 if '.debug_info' in sections or '.gnu_debuglink' not in sections:
                     raise ValueError('Runtime binary is not correctly split: ' + name)
                 identifier = build_id(binary)
+                if debug_tar is None:
+                    continue
                 symbol_path = 'usr/lib/debug/.build-id/' + identifier[:2] + '/' + identifier[2:] + '.debug'
                 symbols, unused_mode = debug[symbol_path]; debug_used.add(symbol_path)
                 symbol = directory/(binary.name + '.debug'); symbol.write_bytes(symbols)
@@ -96,7 +99,7 @@ def verify(root, archives, architecture):
             if set(debug) != debug_used:
                 raise ValueError('Unexpected debug payload: ' + repr(set(debug) ^ debug_used))
             result['packages'][package] = {'runtime_sha256':hashlib.sha256(runtime_tar.read_bytes()).hexdigest(),
-                                           'debug_sha256':hashlib.sha256(debug_tar.read_bytes()).hexdigest(),
+                                           'debug_sha256':hashlib.sha256(debug_tar.read_bytes()).hexdigest() if debug_tar else None,
                                            'installed_paths':sorted(runtime)}
     return result
 
@@ -105,15 +108,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--architecture', choices=['amd64','arm64'], required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--plugin-only', action='store_true')
     for name in ['eventd-runtime','eventd-debug','rsyslog-runtime','rsyslog-debug']:
-        parser.add_argument('--'+name, type=Path, required=True)
+        parser.add_argument('--'+name, type=Path)
     args = parser.parse_args()
-    result = verify(Path(__file__).resolve().parents[1], {
-        'eventd':(args.eventd_runtime,args.eventd_debug),
-        'rsyslog_plugin':(args.rsyslog_runtime,args.rsyslog_debug)}, args.architecture)
+    packages = {'rsyslog_plugin': (args.rsyslog_runtime, args.rsyslog_debug)}
+    if not args.plugin_only:
+        packages['eventd'] = (args.eventd_runtime, args.eventd_debug)
+    if any(path is None for pair in packages.values() for path in pair):
+        parser.error('Each selected owner package requires runtime and debug TARs')
+    result = verify(Path(__file__).resolve().parents[1], packages, args.architecture)
     result['_generated'] = {'notice':'AUTO-GENERATED. DO NOT EDIT MANUALLY.','generator':'src/sonic-eventd/bazel/verify_packages.py'}
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True)+'\n')
-    print('Verified four position-independent programs, matching split symbols and both install manifests')
+    print('Verified installed payload and split symbols for ' + ', '.join(packages))
 
 
 if __name__ == '__main__':

@@ -100,6 +100,22 @@ SERVICES := swss.service swss@.service
         self.assertIn('install_pip_package target/python-wheels/sonic_config_engine.whl', rendered)
         self.assertIn('docker-orchagent-dbg.gz', rendered)
 
+    def test_configured_host_contains_packages_and_defers_image_registration_and_fips(self):
+        rendered, _ = self.render("FIPS_BASEIMAGE_PYTHON_INSTALLERS := python-fips.deb\n")
+        setup, final = rendered.split("fi # host package and configuration setup", 1)
+        self.assertIn("if [[ $host_phase != finish-host ]]; then", setup)
+        self.assertIn("install_deb_package target/debs/trixie/fixture.deb", setup)
+        self.assertIn("install_pip_package target/python-wheels/sonic_config_engine.whl", setup)
+        self.assertNotIn("SONIC_IMAGE_VERSION", setup)
+        self.assertNotIn("docker-image-inventory.json", setup)
+        self.assertRegex(final, r"if \[\[ \$host_phase == configure-host \]\]; then\s+purge_host_build_packages\s+exit 0\s+fi")
+        self.assertRegex(final, r"if \[\[ \$host_phase == all \]\]; then\s+purge_host_build_packages\s+fi")
+        self.assertLess(final.index("exit 0"), final.index("docker-image-inventory.json"))
+        fips_install = final.index("install_deb_package target/debs/trixie/python-fips.deb")
+        self.assertLess(final.index("docker-image-inventory.json"), fips_install)
+        self.assertLess(final.index("if [[ $host_phase == all ]]; then"), fips_install)
+        self.assertLess(fips_install, final.index("apt-mark unhold"))
+
     def test_make_settings_and_command_line_overrides(self):
         # File assignments do not automatically export their values, unlike
         # Make command-line assignments; this detects a missing recipe export.

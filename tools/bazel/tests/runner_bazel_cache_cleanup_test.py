@@ -260,3 +260,54 @@ class RunnerBazelCacheCleanupTest(unittest.TestCase):
                 subject.cleanup(self.root, self.workspace, remove_package_cache=True)
             run.assert_not_called()
         self.assertEqual((outside / "sentinel").read_text(), "retain")
+
+    def test_opt_in_retention_runs_after_selected_cache_cleanup(self):
+        self.populate()
+        policy = dict(max_bytes=70 * subject.GIB, max_age_days=14,
+                      min_free_bytes=220 * subject.GIB)
+
+        def retain(workspace, **limits):
+            self.assertEqual(workspace, self.workspace)
+            self.assertEqual(limits, policy)
+            self.assertTrue(all(not path.exists() for path in self.paths))
+            return {"evicted_entries": 1}
+
+        def remove(command, check):
+            shutil.rmtree(Path(command[-1]))
+
+        with mock.patch.object(subject, "check_container_users"), \
+                mock.patch.object(subject, "check_mounts"), \
+                mock.patch.object(subject.subprocess, "run", side_effect=remove), \
+                mock.patch.object(subject, "retain", side_effect=retain) as retention:
+            report = subject.cleanup(self.root, self.workspace, repo_contents_policy=policy)
+        retention.assert_called_once()
+        self.assertEqual(report["evicted_entries"], 1)
+
+    def test_retention_opt_in_applies_even_when_old_full_wipe_targets_are_absent(self):
+        policy = dict(max_bytes=70 * subject.GIB, max_age_days=14,
+                      min_free_bytes=220 * subject.GIB)
+        with mock.patch.object(subject, "retain") as retention:
+            subject.cleanup(self.root, self.workspace)
+            retention.assert_not_called()
+            subject.cleanup(self.root, self.workspace, repo_contents_policy=policy)
+            retention.assert_called_once_with(self.workspace, **policy)
+
+    def test_cli_maps_explicit_retention_limits_and_rejects_invalid_values(self):
+        arguments = [
+            subject.__name__, "--runner-workspace", str(self.workspace),
+            "--retain-repo-contents", "--repo-contents-max-gib", "70",
+            "--repo-contents-max-age-days", "14", "--repo-contents-min-free-gib", "220"]
+        with mock.patch.dict(os.environ, RUNNER_TEMP=str(self.root)), \
+                mock.patch.object(sys, "argv", arguments), \
+                mock.patch.object(subject, "retain") as retention:
+            subject.main()
+            retention.assert_called_once_with(
+                self.workspace, max_bytes=70 * subject.GIB,
+                max_age_days=14, min_free_bytes=220 * subject.GIB)
+        arguments[-1] = "0"
+        with mock.patch.object(sys, "argv", arguments), \
+                mock.patch.object(subject, "cleanup") as cleanup:
+            with self.assertRaises(SystemExit) as error:
+                subject.main()
+            self.assertEqual(error.exception.code, 2)
+            cleanup.assert_not_called()

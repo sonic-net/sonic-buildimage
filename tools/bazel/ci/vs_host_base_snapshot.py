@@ -1,5 +1,6 @@
 """Select a VS host-base artifact from the same PR or from master."""
 
+import argparse
 import http.client
 import json
 import os
@@ -10,6 +11,7 @@ from urllib.parse import urlencode, urlsplit
 
 PREFIX = "sonic-vs-host-base-v1-"
 MASTER = PREFIX + "master"
+CONFIGURED_MASTER = "sonic-vs-configured-host-v1-master"
 
 
 def scopes(env, event):
@@ -34,7 +36,7 @@ def eligible_run(run, name, workflow_id, repo, pr):
     if (run["workflow_id"] != workflow_id or run["repository"]["full_name"] != repo
             or (run["head_repository"] or {}).get("full_name") != repo):
         return False
-    if name == MASTER:
+    if name in (MASTER, CONFIGURED_MASTER):
         return run["event"] == "push" and run["head_branch"] == "master"
     repo_id = run["repository"]["id"]
     return (run["event"] == "pull_request" and run["head_branch"] == pr["head"]["ref"]
@@ -101,9 +103,13 @@ def github_api(endpoint):
         connection.close()
 
 
-def main():
+def main(configured_host=False):
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
     names, write_name = scopes(os.environ, event)
+    if configured_host:
+        # A configured host is shared only by a push from this repository's master.
+        names = [CONFIGURED_MASTER] if MASTER in names else []
+        write_name = CONFIGURED_MASTER if write_name == MASTER else None
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
         if write_name:
             print("write_name=" + write_name, file=output)
@@ -113,4 +119,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--configured-host", action="store_true")
+    main(parser.parse_args().configured_host)

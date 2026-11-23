@@ -610,6 +610,36 @@ Omit `SONIC_HOSTBASE_CACHE_SOURCE` to use the native Make recipe. Builds
 with unsupported site settings, including organization hooks or custom mirrors,
 also use the native recipe.
 
+### Reusing the configured VS host
+
+The native AMD64 Trixie CI build also sets `SONIC_VS_CONFIGURED_HOST_CACHE=y`
+with the private host-base cache directory and `DOCKER_LOAD_ON_BOOT=y`.
+The `SonicVsConfiguredHost` action consumes the sealed base and installs the
+selected host packages and wheels, applies the host configuration and removes
+build dependencies. The installer restores that snapshot before applying its
+account settings, SONiC version and runtime image inventory. Local builds can
+use the same variables. A build with unsupported site or installer settings
+uses the original host extension.
+
+The key covers the base bytes, build-slave identity, host package bytes,
+host scripts, configuration and selected options. When the installer selects
+the VS device-data TAR, the key includes that TAR, its installation script and
+the Debian metadata used to register its files. The legacy path keys on the
+device-data DEB. On a miss the producer uses
+the dated Debian snapshots and a private wheelhouse. The VS-specific
+`tools/bazel/ci/vs_host_pypi.lock` records the SHA-256 and download URL for the
+public Python archives consumed by the host. When updating a host Python
+dependency, select the CPython 3.13 Linux x86-64 distribution for the pinned
+host version, or its source distribution when a compatible wheel is unavailable.
+The producer verifies the locked bytes before pip uses them.
+
+CI retains the configured snapshot from master pushes. PRs can restore it.
+The existing base cache continues to cover debootstrap. The fresh-rootfs
+handoff saves an extraction within a single job that freshly built a base.
+Neither requires rebuilding the configured host when only the release changes.
+Look in `artifacts/vs/configured-host-cache.json` for the actual configured-host
+hit, input key and timing. A fresh miss also records the native producer time.
+
 ## Kernel Debian packages in the Make VS flow
 
 The opt-in kernel runtime/debug/header DEB producer and installer handoff are documented

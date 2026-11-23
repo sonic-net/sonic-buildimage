@@ -14,6 +14,7 @@ from tools.bazel.oci.image_validation import verify_directory_aliases
 # original image. Only a matching file from one of these may replace its parent.
 CONFIG_TAR = {
     "dash_engine": "engine.files.tar", "dash_ha": "dash_ha.files.tar",
+    "dhcp_relay": "config-files.tar",
     "eventd": "config-files.tar", "gnmi": "config-files.tar", "lldp": "config-files.tar",
     "macsec": "macsec.files.tar", "mgmt_framework": "config-files.tar",
     "mux": "config-files.tar", "orchagent": "config.tar", "otel": "otel.files.tar",
@@ -108,7 +109,7 @@ def verify_files(family, variant, parent, child, owners):
     mutable = {DPKG}
     if family == "eventd" and not debug:
         mutable.clear()
-    if family in {"lldp", "mux", "radv"}:
+    if family in {"dhcp_relay", "lldp", "mux", "radv"}:
         mutable |= ACCOUNTS
     if family == "lldp":
         mutable.add(STATOVERRIDE)

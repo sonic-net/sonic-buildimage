@@ -30,6 +30,15 @@ IMAGE_DISTRO=$3
 ## Enable debug output for script
 set -x -e
 
+# A configured host contains the release-independent packages and configuration.
+# The final invocation still needs its image manifest and package registrations.
+host_phase=${4:-all}
+case $host_phase in
+    all|finish-host) ;;
+    configure-host) set -o pipefail ;;
+    *) echo "Unknown host extension phase: $host_phase" >&2; exit 1 ;;
+esac
+
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 CONFIGURED_PLATFORM=$([ -f .platform ] && cat .platform || echo generic)
 
@@ -72,15 +81,17 @@ clean_sys() {
 trap_push clean_sys
 sudo LANG=C chroot $FILESYSTEM_ROOT mount sysfs /sys -t sysfs
 
-sudo bash -c "echo \"DOCKER_OPTS=\"--storage-driver=overlay2\"\" >> $FILESYSTEM_ROOT/etc/default/docker"
-# Copy docker start script to be able to start docker in chroot
-sudo mkdir -p "$FILESYSTEM_ROOT/$DOCKER_CTL_DIR"
-sudo cp $DOCKER_SCRIPTS_DIR/docker "$FILESYSTEM_ROOT/$DOCKER_CTL_SCRIPT"
-if [[ $MULTIARCH_QEMU_ENVIRON == y  || $CROSS_BUILD_ENVIRON == y ]]; then
-    DOCKER_HOST="unix:///dockerfs/var/run/docker.sock"
-    SONIC_NATIVE_DOCKERD_FOR_DOCKERFS_PID="cat `pwd`/dockerfs/var/run/docker.pid"
-else
-    sudo chroot $FILESYSTEM_ROOT $DOCKER_CTL_SCRIPT start
+if [[ $host_phase != configure-host ]]; then
+    sudo bash -c "echo \"DOCKER_OPTS=\"--storage-driver=overlay2\"\" >> $FILESYSTEM_ROOT/etc/default/docker"
+    # Copy docker start script to be able to start docker in chroot
+    sudo mkdir -p "$FILESYSTEM_ROOT/$DOCKER_CTL_DIR"
+    sudo cp $DOCKER_SCRIPTS_DIR/docker "$FILESYSTEM_ROOT/$DOCKER_CTL_SCRIPT"
+    if [[ $MULTIARCH_QEMU_ENVIRON == y  || $CROSS_BUILD_ENVIRON == y ]]; then
+        DOCKER_HOST="unix:///dockerfs/var/run/docker.sock"
+        SONIC_NATIVE_DOCKERD_FOR_DOCKERFS_PID="cat `pwd`/dockerfs/var/run/docker.pid"
+    else
+        sudo chroot $FILESYSTEM_ROOT $DOCKER_CTL_SCRIPT start
+    fi
 fi
 
 install_pip_package() {
@@ -136,6 +147,19 @@ install_deb_package_lazy() {
     ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 }
 
+purge_host_build_packages() {
+    # All Python development packages must be removed, as they will conflict with the dependencies of the Python FIPS packages
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libpython3-dev
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^python3\.[0-9]+-dev'
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^libpython3\.[0-9]+-dev'
+
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsystemd-dev pkg-config
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get clean -y
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get autoremove -y
+}
+
+if [[ $host_phase != finish-host ]]; then
 # Update apt's snapshot of its repos
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get update
 
@@ -882,15 +906,17 @@ sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 # present. The overlay carries only its deltas and is deep-merged on top of the
 # base template, so downstreams need not fork the whole file. Without an overlay
 # this is equivalent to rendering the base template directly.
-j2 files/build_templates/constants.yml.j2 > /tmp/constants.yml
-if [ -f files/build_templates/constants.yml.overlay.j2 ]; then
-    j2 files/build_templates/constants.yml.overlay.j2 > /tmp/constants.overlay.yml
-    scripts/deep_merge_yaml.py /tmp/constants.yml /tmp/constants.overlay.yml > /tmp/constants.merged.yml
-    mv /tmp/constants.merged.yml /tmp/constants.yml
-    rm -f /tmp/constants.overlay.yml
-fi
-sudo tee $FILESYSTEM_ROOT/etc/sonic/constants.yml < /tmp/constants.yml > /dev/null
-rm -f /tmp/constants.yml
+(
+    constants_work=$(mktemp -d)
+    trap 'rm -rf -- "$constants_work"' EXIT
+    j2 files/build_templates/constants.yml.j2 > "$constants_work/base.yml"
+    if [ -f files/build_templates/constants.yml.overlay.j2 ]; then
+        j2 files/build_templates/constants.yml.overlay.j2 > "$constants_work/overlay.yml"
+        scripts/deep_merge_yaml.py "$constants_work/base.yml" "$constants_work/overlay.yml" > "$constants_work/merged.yml"
+        mv "$constants_work/merged.yml" "$constants_work/base.yml"
+    fi
+    sudo tee "$FILESYSTEM_ROOT/etc/sonic/constants.yml" < "$constants_work/base.yml" > /dev/null
+)
 
 # Copy BMC network configuration file to share templates
 sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -1022,6 +1048,16 @@ sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
 mpls_router
 EOF
 {% endif %}
+
+fi # host package and configuration setup
+
+# The stock VS boot-bundle registration consumes image labels and updates JSON
+# and services. Its package set is fixed before registration. Optional package
+# installations and Kubernetes take the regular, ordered extension path.
+if [[ $host_phase == configure-host ]]; then
+    purge_host_build_packages
+    exit 0
+fi
 
 ## Bind docker path
 if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then
@@ -1363,15 +1399,9 @@ sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_S
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
 
-# All Python development packages must be removed, as they will conflict with the dependencies of the Python FIPS packages
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libpython3-dev
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^python3\.[0-9]+-dev'
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^libpython3\.[0-9]+-dev'
-
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsystemd-dev pkg-config
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get clean -y
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get autoremove -y
+if [[ $host_phase == all ]]; then
+    purge_host_build_packages
+fi
 
 {% for file in installer_extra_files.split(' ') -%}
 {% if file.strip() -%}

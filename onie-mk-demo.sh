@@ -61,6 +61,26 @@ case $demo_type in
 esac
 
 tmp_dir=
+stream_payload=n
+case "${SONIC_VS_STREAM_ONIE:-0}" in
+    0) ;;
+    1)
+        case "$arch:$machine:$demo_type:${DOCKER_LOAD_ON_BOOT:-n}:${SECURE_UPGRADE_MODE:-none}" in
+            amd64:vs:OS:y:none|amd64:vs:OS:y:no_sign|amd64:vs:OS:y:)
+                if [ "$(uname -m)" = x86_64 ] && \
+                   [ "${CROSS_BUILD_ENVIRON:-n}" != y ] && \
+                   [ "${MULTIARCH_QEMU_ENVIRON:-n}" != y ] && \
+                   [ "${TARGET_MACHINE:-vs}" = vs ]; then
+                    stream_payload=y
+                fi
+                ;;
+        esac
+        ;;
+    *)
+        echo "SONIC_VS_STREAM_ONIE must be 0 or 1" >&2
+        exit 1
+        ;;
+esac
 clean_up()
 {
     rm -rf $tmp_dir
@@ -92,8 +112,19 @@ fi
 EXTRA_CMDLINE_LINUX=`echo $EXTRA_CMDLINE_LINUX | sed -e 's/[\/&]/\\\&/g'`
 
 output_raw_image=$(cat onie-image.conf | grep OUTPUT_RAW_IMAGE | cut -f2 -d"=")
-[ -z "$TARGET_MACHINE" ] && output_raw_image=$(echo $output_raw_image | sed -e 's/$TARGET_MACHINE/$machine/g')
-output_raw_image=$(eval echo $output_raw_image)
+if [ "$stream_payload" = y ]; then
+    output_raw_image=$(printf '%s\n' "$output_raw_image" | \
+        sed -e 's/${TARGET_MACHINE}/vs/g' -e 's/$TARGET_MACHINE/vs/g')
+    case "$output_raw_image" in
+        *'$'*|*'`'*)
+            echo "Streaming VS requires a literal OUTPUT_RAW_IMAGE or TARGET_MACHINE placeholder" >&2
+            clean_up 1
+            ;;
+    esac
+else
+    [ -z "$TARGET_MACHINE" ] && output_raw_image=$(echo $output_raw_image | sed -e 's/$TARGET_MACHINE/$machine/g')
+    output_raw_image=$(eval echo $output_raw_image)
+fi
 
 # Tailor the demo installer for OS mode or DIAG mode
 sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
@@ -127,6 +158,13 @@ echo "machine=$machine" > $tmp_installdir/machine.conf
 echo "platform=$platform" >> $tmp_installdir/machine.conf
 echo -n "."
 
+case "${DOCKER_LOAD_ON_BOOT:-n}:${SECURE_UPGRADE_MODE:-none}" in
+    y:none|y:no_sign|y:) ;;
+    *) stream_payload=n ;;
+esac
+if [ "$stream_payload" = y ]; then
+    python3 scripts/stream_onie_payload.py "$tmp_dir" "$installer_dir/sharch_body.sh" "$output_file" || clean_up 1
+else
 sharch="$tmp_dir/sharch.tar"
 tar -C $tmp_dir -cf $sharch installer || {
     echo "Error: Problems creating $sharch archive"
@@ -151,6 +189,7 @@ echo -n "."
 tar_size="$(wc -c < "${sharch}")"
 sed -i -e "s|%%PAYLOAD_IMAGE_SIZE%%|${tar_size}|" ${output_file}
 cat $sharch >> $output_file
+fi
 echo "secure upgrade flags: SECURE_UPGRADE_MODE = $SECURE_UPGRADE_MODE, \
 SECURE_UPGRADE_DEV_SIGNING_KEY = $SECURE_UPGRADE_DEV_SIGNING_KEY, SECURE_UPGRADE_SIGNING_CERT = $SECURE_UPGRADE_SIGNING_CERT"
 

@@ -725,6 +725,21 @@ fi
 if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
     echo '[INFO] RFS build: second stage'
 
+    rootfs_archive="$TARGET_PATH/$RFS_SQUASHFS_NAME"
+    host_extension_phase=all
+    if [[ ${SONIC_VS_CONFIGURED_HOST_CACHE:-n} == y && -n ${SONIC_HOSTBASE_CACHE_DIR:-} &&
+          $TARGET_MACHINE == vs && $CONFIGURED_ARCH == amd64 && $IMAGE_TYPE == onie ]]; then
+        if python3 -B tools/bazel/ci/vs_configured_host.py; then
+            rootfs_archive="$TARGET_PATH/sonic-vs.configured-host.squashfs"
+            host_extension_phase=finish-host
+            # The optional fresh-tree handoff contains only the first-stage base.
+            installer_rootfs_handoff=n
+        else
+            rc=$?
+            [[ $rc == 75 ]] || exit "$rc"
+        fi
+    fi
+
     ## ensure proc is mounted
     sudo mount proc /proc -t proc || true
 
@@ -734,7 +749,14 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
             --archive "$TARGET_PATH/$RFS_SQUASHFS_NAME"; then
         sudo fuser -vm $FILESYSTEM_ROOT || true
         sudo rm -rf $FILESYSTEM_ROOT
-        installer_timed rootfs-extract sudo unsquashfs -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
+        installer_timed rootfs-extract sudo unsquashfs -d "$FILESYSTEM_ROOT" "$rootfs_archive"
+    fi
+
+    if [[ $host_extension_phase == finish-host ]]; then
+        [[ -f "$FILESYSTEM_ROOT/etc/sonic/.vs-host-base-v1" ]] &&
+            sudo grep -qx vs-configured-host-v1 "$FILESYSTEM_ROOT/etc/sonic/.vs-configured-host-v1" ||
+            die "Configured VS host is missing its preparation markers"
+        sudo rm -- "$FILESYSTEM_ROOT/etc/sonic/.vs-configured-host-v1"
     fi
 
     ## make / as a mountpoint in chroot env, needed by dockerd
@@ -750,6 +772,9 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
             die "Cached host base requires the stock VS installer and admin account"
         install_slave_initramfs_hooks
         sudo bash scripts/vs_host_base_state.sh restore "$FILESYSTEM_ROOT" "$kversion"
+        if [[ $host_extension_phase == finish-host ]]; then
+            sudo scripts/build_vs_configured_host.sh --restore-nvme "$FILESYSTEM_ROOT"
+        fi
         set_admin_password
         write_account_config
     fi
@@ -780,7 +805,7 @@ sudo install -o root -g root -m 0644 "$sonic_version_tmp" \
 rm -f "$sonic_version_tmp"
 
 if [ -f sonic_debian_extension.sh ]; then
-    installer_timed extensions ./sonic_debian_extension.sh $FILESYSTEM_ROOT $PLATFORM_DIR $IMAGE_DISTRO
+    installer_timed extensions ./sonic_debian_extension.sh "$FILESYSTEM_ROOT" "$PLATFORM_DIR" "$IMAGE_DISTRO" "${host_extension_phase:-all}"
 fi
 
 ## Organization specific extensions such as Configuration & Scripts for features like AAA, ZTP...

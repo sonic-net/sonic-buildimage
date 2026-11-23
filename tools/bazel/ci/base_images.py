@@ -68,8 +68,13 @@ def verify_source_files(files, metadata, machine):
 
 def verify_installed_layer(files, archive):
     """Require final installed Python, model and startup files to match their owner TAR."""
+    return verify_installed_payload(files, validation.payload(archive))
+
+
+def verify_installed_payload(files, payload):
+    """Compare the installed filesystem with an independently indexed owner archive."""
     checked = {}
-    for name, expected in validation.payload(archive).items():
+    for name, expected in payload.items():
         if expected["kind"] == "directory":
             continue
         validation.require(expected["kind"] in ("file", "symlink"),

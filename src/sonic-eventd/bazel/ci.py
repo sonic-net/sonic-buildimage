@@ -31,7 +31,9 @@ def main():
     parser.add_argument('--bazel-arg', action='append', default=[])
     parser.add_argument('--artifacts', required=True, type=Path)
     parser.add_argument('--architecture', choices=['amd64','arm64'], required=True)
+    parser.add_argument('--plugin-only', action='store_true', help='VS validates its eventd archive separately')
     args = parser.parse_args()
+    packages = {name: target for name, target in TARS.items() if not args.plugin_only or name.startswith('rsyslog-')}
     machine, selected = {'amd64':('x86_64','x86_64_trixie'),'arm64':('aarch64','aarch64_trixie')}[args.architecture]
     if platform.machine() != machine or platform.freedesktop_os_release().get('VERSION_CODENAME') != 'trixie':
         raise ValueError('This job requires native Debian Trixie of the selected architecture')
@@ -39,7 +41,7 @@ def main():
     options = ['--platforms=@sonic_build_infra//platforms:'+selected,
                '--host_platform=@sonic_build_infra//platforms:'+selected,
                *args.bazel_arg]
-    audit_targets(args.bazel,options,[*TESTS,*TARS.values()],workspace=ROOT,output=output/'action-audit.json')
+    audit_targets(args.bazel,options,[*TESTS,*packages.values()],workspace=ROOT,output=output/'action-audit.json')
     resolution_flags = [value for value in args.bazel_arg if value.startswith(
         ('--override_module=', '--override_repository=', '--registry=', '--repository_cache='))]
     graph = json.loads(subprocess.check_output([args.bazel,'mod','graph',*resolution_flags,'--output=json'],cwd=ROOT,text=True))
@@ -54,10 +56,12 @@ def main():
         raise ValueError('Bazel/Make C++ source lists differ: '+repr(actual ^ expected))
     subprocess.run([args.bazel,'test',*options,'--nocache_test_results','--test_output=all',
                     '--build_event_json_file='+str(output/'test-events.jsonl'),*TESTS],cwd=ROOT,check=True)
-    subprocess.run([args.bazel,'build',*options,*TARS.values()],cwd=ROOT,check=True)
+    subprocess.run([args.bazel,'build',*options,*packages.values()],cwd=ROOT,check=True)
     command = [sys.executable,str(ROOT/'src/sonic-eventd/bazel/verify_packages.py'),
                '--architecture',args.architecture,'--output',str(output/'packages.json')]
-    for name,target in TARS.items():
+    if args.plugin_only:
+        command.append('--plugin-only')
+    for name,target in packages.items():
         files = subprocess.check_output([args.bazel,'cquery',*options,'--output=files',target],cwd=ROOT,text=True).splitlines()
         if len(files)!=1: raise ValueError('Expected one TAR output: '+target)
         dest = output/(name+'.tar');shutil.copyfile(ROOT/files[0],dest)

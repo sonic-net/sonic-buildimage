@@ -174,8 +174,8 @@ filegroup(
 py_test(
     name = "sonic_yang_mgmt_runtime_test",
     srcs = ["sonic_yang_mgmt_runtime_test.py"],
-    args = ["$(rootpath @sonic_yang_models//:yang_models)"],
-    data = ["@sonic_yang_models//:yang_models"],
+    args = ["$(rootpath @sonic_yang_models//:test_models)"],
+    data = ["@sonic_yang_models//:test_models"],
     python_version = "3.13",
     deps = [":sonic_yang_mgmt"],
 )

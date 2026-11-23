@@ -51,10 +51,13 @@ def verify(archives, development, dependency_development):
         with tarfile.open(dependency_development) as archive:
             archive.extractall(root, filter="data")
         for name, (runtime, symbols) in archives.items():
-            result = artifacts.debug_archives(runtime, symbols, expected_machine=machine)
+            result = {}
+            if symbols is not None:
+                result = artifacts.debug_archives(runtime, symbols, expected_machine=machine)
             payload = artifacts.payload(runtime)
-            artifacts.require({p["path"] for p in result["debug_pairs"]} ==
-                              {p[0] for p in expected[name]}, "unexpected installed ELF set: " + name)
+            native = {path: row["elf_machine"] for path, row in payload.items() if "elf_machine" in row}
+            artifacts.require(native == {path: machine for path, _, _ in expected[name]},
+                              "unexpected installed ELF set or architecture: " + name)
             for path, _, _ in expected[name]:
                 artifacts.require(payload[path]["mode"] == (0o755 if path.startswith("usr/bin/") else 0o644),
                                   "incorrect installed ELF mode: " + path)
@@ -63,10 +66,11 @@ def verify(archives, development, dependency_development):
                 link = payload[libdir + "/" + name + ".so." + version.split(".")[0]]
                 artifacts.require(link["kind"] == "symlink" and link["linkname"] == name + ".so." + version,
                                   "incorrect runtime SONAME link")
-            for archive_path in (runtime, symbols):
+            paths = [runtime, symbols] if symbols else [runtime]
+            for archive_path in paths:
                 with tarfile.open(archive_path) as archive:
                     archive.extractall(root, filter="data")
-            result["archives"] = {str(p): artifacts.sha(p) for p in (runtime, symbols)}
+            result["archives"] = {str(p): artifacts.sha(p) for p in paths}
             results[name] = result
 
         sdk = artifacts.payload(development)
@@ -107,14 +111,16 @@ def verify(archives, development, dependency_development):
             checks = []
             for path, symbol, source in binaries:
                 binary = root / path
-                isolated = root / "isolated" / name
-                isolated.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(binary, isolated / binary.name)
-                negative = gdb_lookup(isolated / binary.name, root, str(empty), symbol)
-                artifacts.require(not negative.get("found"), "debug lookup escaped its isolated directory")
-                positive = gdb_lookup(binary, root, str(root / "usr/lib/debug"), symbol)
-                artifacts.require(positive.get("found") and positive.get("source", "").endswith(source),
-                                  "packaged symbols do not resolve owner source: " + path)
+                negative = positive = None
+                if archives[name][1] is not None:
+                    isolated = root / "isolated" / name
+                    isolated.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(binary, isolated / binary.name)
+                    negative = gdb_lookup(isolated / binary.name, root, str(empty), symbol)
+                    artifacts.require(not negative.get("found"), "debug lookup escaped its isolated directory")
+                    positive = gdb_lookup(binary, root, str(root / "usr/lib/debug"), symbol)
+                    artifacts.require(positive.get("found") and positive.get("source", "").endswith(source),
+                                      "packaged symbols do not resolve owner source: " + path)
                 identity = artifacts.elf_info(binary, dynamic=True)
                 if name != "libteam_utils":
                     soname = "libteam.so.5" if name == "libteam" else "libteamdctl.so.0"

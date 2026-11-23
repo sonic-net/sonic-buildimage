@@ -1,5 +1,6 @@
 """Require complete native test evidence for the Python wheels retained by CI."""
 
+from contextlib import chdir, redirect_stdout
 import hashlib
 import io
 import json
@@ -83,18 +84,32 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         self.assertEqual(receipt["status"], "failed")
         self.assertRegex(receipt["error"], message)
 
-    def vs_bundle(self):
+    def vs_bundle(self, *, pddf_enabled=False):
         self.revision["tested_head"] = "a" * 40
         sources = self.workspace / "sources"
         sources.mkdir()
         outputs = {}
-        for name, target in vs_python_packages.PACKAGES.items():
+        for name, target in vs_python_packages.package_targets(pddf_enabled).items():
             source = sources / name
-            source.write_bytes(name.encode())
+            if name == vs_python_packages.YANG_TREE:
+                source.mkdir()
+                (source / "sonic-port.yang").write_text("module sonic-port {}")
+            else:
+                source.write_bytes(name.encode())
             outputs[target] = source
         bundle = self.workspace / "vs"
-        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs)
+        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs, pddf_enabled=pddf_enabled)
         return bundle
+
+    def test_enabled_pddf_requires_the_original_wheel(self):
+        """The VS PMON selection decides whether the PDDF wheel is a required artifact."""
+        self.assertNotIn(vs_python_packages.PDDF_WHEEL, vs_python_packages.package_targets(False))
+        bundle = self.vs_bundle(pddf_enabled=True)
+        wheel = bundle / vs_python_packages.PDDF_WHEEL
+        self.assertTrue(wheel.is_file())
+        wheel.unlink()
+        with self.assertRaisesRegex(ValueError, "files"):
+            vs_python_packages.verify(bundle, self.revision["tested_head"])
 
     def test_installer_wheels_are_retained_without_a_collection_build(self):
         """The six shipped wheels must match the actual installed-test receipts byte for byte."""
@@ -107,6 +122,17 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         self.assertEqual(set(result["artifacts"]), set(python_packages.WHEELS))
         for name in result["artifacts"]:
             self.assertEqual((self.directory / name).read_bytes(), (bundle / name).read_bytes())
+
+    def test_dhcp_probe_selects_the_installer_wheel(self):
+        """The installed utility test receives the exact wheel used for the relay's Python layer."""
+        bundle = self.vs_bundle()
+        package = Path("target/validation/inputs")
+        with chdir(self.workspace), mock.patch("builtins.print") as output:
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            vs_python_packages.flags("dhcp", package, "amd64")
+        name, = vs_python_packages.DHCP
+        self.assertEqual((self.workspace / package / name).read_bytes(), (bundle / name).read_bytes())
+        output.assert_called_once_with(f"--//tools/bazel/tests:sonic_dhcp_utilities_test_wheel=//{package}:{name}")
 
     def test_vs_bundle_rejects_stale_or_modified_products(self):
         """A changed SHA, target, archive or unexpected build file invalidates the handoff."""
@@ -131,6 +157,46 @@ class PythonPackageEvidenceTest(unittest.TestCase):
         manifest_path.write_text(json.dumps(manifest))
         with self.assertRaisesRegex(ValueError, "target"):
             vs_python_packages.verify(bundle, revision)
+
+    def test_arm64_reuse_rejects_a_native_member_in_a_universal_wheel_or_tar(self):
+        """A py3-none-any filename alone cannot authorize an AMD64 binary on ARM64."""
+        wheel = self.workspace / "sample-1-py3-none-any.whl"
+        runtime = self.workspace / "sample.runtime.tar"
+        for tag, payload, error in (("py3-none-any", b"import sys", None),
+                                    ("py3-none-linux_x86_64", b"import sys", "pure py3"),
+                                    ("py3-none-any", b"\x7fELFtest", "Native file")):
+            with self.subTest(tag=tag, payload=payload):
+                with zipfile.ZipFile(wheel, "w") as archive:
+                    archive.writestr("sample-1.dist-info/WHEEL", "Root-Is-Purelib: true\nTag: " + tag + "\n")
+                    archive.writestr("sample/tool", payload)
+                if error:
+                    with self.assertRaisesRegex(ValueError, error):
+                        vs_python_packages.verify_portable(self.workspace, [wheel.name])
+                else:
+                    vs_python_packages.verify_portable(self.workspace, [wheel.name])
+        with tarfile.open(runtime, "w") as archive:
+            file = tarfile.TarInfo("usr/bin/tool")
+            payload = b"\x7fELFtest"
+            file.size = len(payload)
+            archive.addfile(file, io.BytesIO(payload))
+        with self.assertRaisesRegex(ValueError, "Native file"):
+            vs_python_packages.verify_portable(self.workspace, [runtime.name])
+
+    def test_yang_probes_use_the_producers_model_tree_separately_from_the_wheel_and_layer(self):
+        """The owner must compare three independent VS outputs on the validation runner."""
+        bundle = self.vs_bundle()
+        with chdir(self.workspace):
+            package = Path("target/ytest")
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            self.assertEqual((package / "models/sonic-port.yang").read_text(), "module sonic-port {}")
+            output = io.StringIO()
+            with redirect_stdout(output):
+                vs_python_packages.flags("yang-models", package, "amd64")
+            self.assertEqual(set(output.getvalue().splitlines()), {
+                "--//src/sonic-yang-models:test_layer=//target/ytest:yang_models_pkg.tar",
+                "--//src/sonic-yang-models:test_models=//target/ytest:test_models",
+                "--//src/sonic-yang-models:test_wheel=//target/ytest:sonic_yang_models-1.0-py3-none-any.whl",
+            })
 
     def test_frr_runtime_tar_contains_the_shipped_code_and_templates(self):
         """A separately published FRR TAR must install the original wheel modules, metadata and templates."""

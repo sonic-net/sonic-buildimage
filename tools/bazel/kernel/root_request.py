@@ -45,6 +45,7 @@ INFRA = "0.0.42-da5f4c8d370f501572f435ade330ec209c9c0203"
 BAZEL_SHA256 = "61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e"
 PLATFORM = "@sonic_build_infra//platforms:x86_64_trixie"
 VS_REMOTE_CACHE = "grpc://172.16.0.4:9092"
+CACHE_FALLBACK_FLAGS = {"--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache"}
 # resources.py --configure emits these two lines into the VS workspace before
 # the slave starts. They only budget the JVM heap and local action scheduler.
 VS_RESOURCE_RC = re.compile(rb"startup --host_jvm_args=-Xmx2048m\nbuild --local_ram_resources=[1-9][0-9]*\n")
@@ -219,6 +220,14 @@ def _execution(workspace, environment, bazel):
             "system": platform.release(), "path": environment["PATH"]}
 
 
+def is_cache_fallback_option(option):
+    """These two Bazel booleans change how a cache outage is handled."""
+    flag, equals, value = option.partition("=")
+    if flag in CACHE_FALLBACK_FLAGS:
+        return not equals or value.lower() in ("true", "1", "yes", "t", "y", "false", "0", "no", "f", "n")
+    return option.startswith("--no") and "--" + option[4:] in CACHE_FALLBACK_FLAGS
+
+
 def request_key(workspace, architecture, kernel_config, *, environment=None, options=(), bazel="bazel"):
     """Return a pre-launch identity or raise ValueError/OSError for ordinary Bazel fallback."""
     workspace = Path(workspace).resolve(strict=True)
@@ -234,6 +243,8 @@ def request_key(workspace, architecture, kernel_config, *, environment=None, opt
     require(list(options[:3]) == flags, "root kernel Bazel configuration differs from its arguments")
     endpoints = set()
     for option in options[3:]:
+        if is_cache_fallback_option(option):
+            continue
         flag, _, value = option.partition("=")
         if flag == "--remote_cache":
             require(value == VS_REMOTE_CACHE, "unsupported root kernel cache endpoint")

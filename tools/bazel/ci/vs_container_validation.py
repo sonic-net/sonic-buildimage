@@ -22,6 +22,7 @@ ENTRYPOINTS = {
     "docker-base-trixie": None, "docker-config-engine-trixie": None,
     "docker-dash-engine": "/usr/bin/start.sh", "docker-dash-ha": SUPERVISORD,
     "docker-database": "/usr/local/bin/docker-database-init.sh", "docker-eventd": SUPERVISORD,
+    "docker-dhcp-relay": "/usr/bin/docker_init.sh",
     "docker-fpm-frr": "/usr/bin/docker_init.sh", "docker-gbsyncd-vs": SUPERVISORD,
     "docker-lldp": "/usr/bin/docker-lldp-init.sh", "docker-macsec": SUPERVISORD,
     "docker-mux": "/usr/bin/docker-init.sh", "docker-nat": SUPERVISORD,
@@ -151,7 +152,8 @@ def validate_artifacts(directory, image, revision, debug_enabled, build_version)
             require(re.fullmatch(r"sha256:[a-f0-9]{64}", layer["digest"]) and layer["size"] >= 0,
                     "Invalid VS layer descriptor for " + name)
         archive = bundle_file(directory, spec["file"])
-        result = docker_archive(archive, name + ":latest", spec["config_digest"], layers)
+        result = docker_archive(archive, name + ":latest", spec["config_digest"], layers,
+                                unique_layer_paths=image == "docker-dhcp-relay")
         require(result["sha256"] == spec["sha256"], "VS archive checksum differs: " + name)
     if "debug" in archives:
         runtime = archives["runtime"]

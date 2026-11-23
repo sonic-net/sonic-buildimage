@@ -29,8 +29,8 @@ from the original locations or the configured mirrors.
 and [compiler](https://registry.bazel.build/modules/toolchains_musl/0.2.0).
 
 When several physical platforms define the same HwSKU, the virtual platform
-needs one source for its profile. The Bazel target uses lexical path order,
-with the choices in `prepare_vs.py` preserving the installed profiles from the
+needs one source for its profile. Both the Bazel TAR and the Debian package use
+lexical path order, with the choices in `src/generate_vs_hwsku.py` preserving the installed profiles from the
 [reference VS installer](https://github.com/securely1g/sonic-buildimage/pull/251).
 Installed files use Git executable modes; stage an executable-bit change with
 `git add` before building a modified checkout.

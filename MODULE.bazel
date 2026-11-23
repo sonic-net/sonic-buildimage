@@ -511,6 +511,8 @@ apt_inputs(
 # sFlow adds only locked distro runtime tools to its source-built parent and
 # reuses the shared debug and test collections from the canonical lock.
 use_repo(apt, "sflow_debian")
+# Inputs of the registered hsflowd and psample installed-package suites.
+use_repo(apt, "hsflowd_deps", "psample_deps")
 
 apt_inputs(
     name = "sflow_apt_inputs",
@@ -736,7 +738,8 @@ use_repo(apt, "otel_debian")
 # Native nnpy is source-built for the BMv2 clients installed by its owner.
 bazel_dep(name = "nnpy", version = "1.4.2.sonic.1")
 
-use_repo(apt, "dash_engine_debian", "dash_engine_debug_debian")
+use_repo(apt, "dash_engine_debian", "dash_engine_debug_debian", "nnpy_deps")
+use_repo(pip, "nnpy_tools")
 
 apt_inputs(
     name = "dash_engine_apt_inputs",
