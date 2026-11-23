@@ -858,6 +858,7 @@ showtag:
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
 init :
+	$(Q)git submodule foreach --recursive 'git remote update || true'
 	$(Q)git submodule update --init --recursive
 	$(Q)git submodule foreach --recursive '[ -f .git ] && echo "gitdir: $$(realpath --relative-to=. $$(cut -d" " -f2 .git))" > .git'
 
