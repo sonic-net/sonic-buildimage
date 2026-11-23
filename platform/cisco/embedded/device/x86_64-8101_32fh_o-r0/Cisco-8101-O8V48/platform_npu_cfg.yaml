@@ -1,0 +1,43 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+# Gibraltor device property Configuration
+#
+# npu_cfg:
+#   device_property:
+#     "device_frequency": 900000
+#     "ipinip_tunnel_lpbk_pkt_drop": true
+
+
+npu_cfg:
+  device_property:
+    enable_mbist_repair: true
+    pfc_support : true
+    ecn_dequeue_marking : true
+    ecn_latency_marking : true
+    voq_allocation_mode: "src_port_flow_hash"
+    tc_to_queue_mode: "voq_to_oq"
+    ingress_wmk_polling_interval_ms : 100
+    add_fc_to_if_in_discards: false
+    device_frequency: 1325000
+    ipinip_tunnel_lpbk_pkt_drop: true
+    enable_ip_over_ipv6_tunnel_scale_mode: true
+    disable_acl_mirror_entry_counters: true
+    lpts_max_entry_counters: 32
+    acl_ignore_field_outer_vlan_id: true
+    mac_port_bad_link_check_iterations :  0
+    enable_mac_port_bad_link_check : false    
+    enable_health_category_asic_hw: false
+    online_diag_interval_ms: 1000
+    online_diag_max_consecutive_loss: 3
+    enable_online_diag: true
+    online_diag_start_delay: 200
+    tunnel_manager_enabled: true
+    lpm_defragmentation_interval: 4000
+    enable_tunnel_encap_egress_acl: true
+    enable_l3_port_counter_uc_only: true
+    mux_p2p_tunnel_port_sharing: true
+    enable_ip_over_ip_p2p_p2mp_support_for_same_dip: true
+    enable_ipv6_128_subnet_mask_in_em: false
+    mac_port_link_up_debounce_period_milliseconds: 20

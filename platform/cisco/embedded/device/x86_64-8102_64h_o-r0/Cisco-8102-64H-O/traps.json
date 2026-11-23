@@ -1,0 +1,11 @@
+{
+   "traps":[
+      {
+         "la_events":[
+            "ETHERNET_PTP_OVER_ETH"
+         ],
+         "action":"trap",
+         "punt_dest":"cpu"
+      }
+   ]
+}
