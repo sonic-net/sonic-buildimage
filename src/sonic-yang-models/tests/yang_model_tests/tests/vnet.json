@@ -25,6 +25,38 @@
         "desc": "An empty vxlan_tunnel_list without vxlan_tunnel is rejected.",
         "eStr": ["Either vxlan_tunnel or a non-empty vxlan_tunnel_list must be configured."]
     },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_MISSING_TABLE": {
+        "desc": "A tunnel name in vxlan_tunnel_list requires a matching VXLAN_TUNNEL entry.",
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_FIRST_REFERENCE": {
+        "desc": "The first tunnel name in vxlan_tunnel_list must exist.",
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_SECOND_REFERENCE": {
+        "desc": "The second tunnel name must exist even when a valid legacy vxlan_tunnel is configured.",
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_PARTIAL_REFERENCE": {
+        "desc": "Referencing vtep1 must not match an existing tunnel named vtep10.",
+        "eStr": ["vxlan_tunnel_list must reference existing VXLAN tunnels."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_LEADING_COMMA": {
+        "desc": "vxlan_tunnel_list must not start with an empty tunnel name.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_TRAILING_COMMA": {
+        "desc": "vxlan_tunnel_list must not end with an empty tunnel name.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_EMPTY_ENTRY": {
+        "desc": "vxlan_tunnel_list must not contain an empty entry between tunnel names.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
+    },
+    "VNET_INVALID_VXLAN_TUNNEL_LIST_TOO_MANY": {
+        "desc": "Three names are rejected by the list format constraint without exceeding the VXLAN_TUNNEL table limit.",
+        "eStr": ["vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names."]
+    },
     "VNET_INVALID_VALUE_TEST1": {
         "desc": "Invalid values in parameters.",
         "eStr": "Invalid VRF name"

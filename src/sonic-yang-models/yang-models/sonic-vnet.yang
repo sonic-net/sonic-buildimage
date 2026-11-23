@@ -27,6 +27,11 @@ module sonic-vnet {
     description
         "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
+    revision 2026-11-23 {
+        description
+            "Validate comma-separated vxlan_tunnel_list names against VXLAN_TUNNEL.";
+    }
+
     revision 2023-04-25 {
         description
             "First revision.";
@@ -63,8 +68,19 @@ module sonic-vnet {
                 }
 
                 leaf vxlan_tunnel_list {
-                    description "Comma-separated VXLAN tunnel names. Takes precedence over vxlan_tunnel when non-empty.";
-                    type string;
+                    description "Comma-separated names of existing VXLAN tunnels. Takes precedence over vxlan_tunnel when non-empty.";
+                    type string {
+                        pattern '([^,]+(,[^,]+)?)?' {
+                            error-message "vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names.";
+                        }
+                    }
+                    must ". = '' or " +
+                         "(substring-before(concat(., ','), ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name and " +
+                         "(not(contains(., ',')) or substring-after(., ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name))" {
+                        error-message "vxlan_tunnel_list must reference existing VXLAN tunnels.";
+                    }
                 }
 
                 leaf vni {
