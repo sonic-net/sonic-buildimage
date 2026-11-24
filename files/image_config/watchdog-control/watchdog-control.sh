@@ -5,7 +5,7 @@ WATCHDOG_UTIL="/usr/local/bin/watchdogutil"
 
 # read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
-PLATFORM=${PLATFORM:-$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)}
+PLATFORM=${PLATFORM:-$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)}
 PLATFORM_JSON="/usr/share/sonic/device/$PLATFORM/platform.json"
 
 function debug()

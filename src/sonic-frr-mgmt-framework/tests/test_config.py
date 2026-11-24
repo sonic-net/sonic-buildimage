@@ -1,5 +1,6 @@
 import copy
 import re
+import threading
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
 def mock_is_vrf_name_valid(name):
@@ -20,14 +21,29 @@ mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 def test_contructor():
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
+    subscribed = threading.Event()
+    stop_reader = threading.Event()
+    pubsub = daemon.config_db.get_redis_client.return_value.pubsub.return_value
+    pubsub.psubscribe.side_effect = lambda *_args, **_kwargs: subscribed.set()
+
+    def read_message(*_args, **_kwargs):
+        if stop_reader.wait(5):
+            daemon.config_db.stop_listen()
+        return None
+
+    pubsub.get_message.side_effect = read_message
     daemon.start()
-    for table, hdlr in daemon.table_handler_list:
-        daemon.config_db.subscribe.assert_any_call(table, hdlr)
-    daemon.config_db.pubsub.psubscribe.assert_called_once()
-    assert(daemon.config_db.sub_thread.is_alive() == True)
-    daemon.stop()
+    try:
+        assert subscribed.wait(5), 'Redis listener did not subscribe'
+        for table, hdlr in daemon.table_handler_list:
+            daemon.config_db.subscribe.assert_any_call(table, hdlr)
+        daemon.config_db.pubsub.psubscribe.assert_called_once()
+        assert daemon.config_db.sub_thread.is_alive()
+    finally:
+        stop_reader.set()
+        daemon.stop()
     daemon.config_db.pubsub.punsubscribe.assert_called_once()
-    assert(daemon.config_db.sub_thread.is_alive() == False)
+    assert not daemon.config_db.sub_thread.is_alive()
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')

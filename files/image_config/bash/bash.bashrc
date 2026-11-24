@@ -114,7 +114,7 @@ generate_sonic_redis_aliases() {
     fi
 
     # Parse output and create aliases
-    while IFS=: read -r db_name db_id db_port; do
+    while IFS=: read -r db_name db_id db_port db_socket; do
         # Skip lines that contain errors printed by the python script
         if [[ "$db_name" == "ERROR" ]]; then
             echo "$db_name:$db_id:$db_port" >&2
@@ -124,7 +124,13 @@ generate_sonic_redis_aliases() {
         if [ -n "$db_name" ] && [ -n "$db_id" ] && [ -n "$db_port" ]; then
             local alias_name="redis-${SONIC_DBS[$db_name]}"
             if [ -n "$alias_name" ]; then
-                eval "alias $alias_name='redis-cli -n $db_id -p $db_port'"
+                local alias_command
+                printf -v alias_command 'redis-cli -n %q -p %q' "$db_id" "$db_port"
+                alias "$alias_name=$alias_command"
+                if [ -n "$db_socket" ]; then
+                    printf -v alias_command 'redis-cli -n %q -s %q' "$db_id" "$db_socket"
+                    alias "${alias_name}-unix=$alias_command"
+                fi
             fi
         fi
     done <<< "$python_output"

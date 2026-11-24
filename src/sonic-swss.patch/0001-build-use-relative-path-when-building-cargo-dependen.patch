@@ -1,23 +1,23 @@
-From 53a4bf4324752b7e9e246a7f8a53db189cc938d0 Mon Sep 17 00:00:00 2001
-From: Liu Shilong <shilongliu@microsoft.com>
-Date: Wed, 10 Dec 2025 13:27:33 +0800
-Subject: [PATCH] [build] use relative path when building cargo dependency
- swss-common.
+From: Ashutosh Agrawal <ashu@cisco.com>
+Subject: [PATCH] build: select local swss-common for branch and revision dependencies
+
+Use a Cargo patch table so the image selects its checked-out provider
+for workspaces that declare either a Git revision or a branch.
 
 ---
- Cargo.toml | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ Cargo.toml | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/Cargo.toml b/Cargo.toml
-index a2db894e..7484110a 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -64,7 +64,7 @@ itertools = "0.13"
- uuid = { version = "1.15", features = ["v4"] }
- 
- # SONiC specific dependencies
--swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
+@@ -19,6 +19,9 @@
+ trivial_numeric_casts = 'warn'
+ unstable_features = 'warn'
+ unused_import_braces = 'warn'
++
++[patch."https://github.com/sonic-net/sonic-swss-common.git"]
 +swss-common = { path = "../sonic-swss-common/crates/swss-common" }
  
- # Development dependencies
- tempfile = "3.12"
+ [workspace.dependencies]
+ # Async runtime

@@ -137,7 +137,7 @@ config_syncd_mlnx()
     [ -e /dev/sxdevs/sxcdev ] || ( mkdir -p /dev/sxdevs && mknod /dev/sxdevs/sxcdev c 231 193 )
 
     # Read MAC address
-    MAC_ADDRESS="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.mac)"
+    MAC_ADDRESS="$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.mac)"
 
     # Write MAC address into /tmp/profile file.
     cat $HWSKU_DIR/sai.profile > /tmp/sai.profile
@@ -172,7 +172,7 @@ config_syncd_barefoot()
     CMD_ARGS+=" -p $PROFILE_FILE"
 
     # Check and load SDE profile
-    P4_PROFILE=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["p4_profile"]')
+    P4_PROFILE=$(sonic-cfggen -d --redis-unix-socket -v 'DEVICE_METADATA["localhost"]["p4_profile"]')
     if [[ -n "$P4_PROFILE" ]]; then
         if [[ ( -d /opt/bfn/install_${P4_PROFILE} ) && ( -L /opt/bfn/install || ! -e /opt/bfn/install ) ]]; then
             ln -srfn /opt/bfn/install_${P4_PROFILE} /opt/bfn/install

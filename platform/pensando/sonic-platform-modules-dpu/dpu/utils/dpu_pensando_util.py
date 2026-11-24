@@ -91,8 +91,12 @@ def setup_platform_components_json(slot_id):
 def disable_unused_containers():
     try:
         import redis
+        from swsscommon import swsscommon
+        from swsscommon.redis import connection_pool
 
-        r = redis.StrictRedis(host=LOCALHOST, port=REDIS_PORT, db=CONFIG_DB, decode_responses=True)
+        r = redis.StrictRedis(connection_pool=connection_pool(
+            unix_socket_path=swsscommon.SonicDBConfig.getDbSock("CONFIG_DB"),
+            db=swsscommon.SonicDBConfig.getDbId("CONFIG_DB"), decode_responses=True))
 
         for feature in DISABLE_CONTAINER_LIST:
             key = f"FEATURE|{feature}"

@@ -84,7 +84,7 @@ if [ -f /etc/swss/config.d/default_config.json ]; then
 fi
 
 # Start arp_update when VLAN exists
-VLAN=`sonic-cfggen -d -v 'VLAN.keys() | join(" ") if VLAN'`
+VLAN=`sonic-cfggen -d --redis-unix-socket -v 'VLAN.keys() | join(" ") if VLAN'`
 if [ "$VLAN" != "" ]; then
     echo "Start arp_update"
     supervisorctl start arp_update

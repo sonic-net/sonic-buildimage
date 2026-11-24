@@ -251,7 +251,8 @@ class Sysmonitor(ThreadTaskBase):
                 feature_table = self.config_db.get_table("FEATURE")
                 device_config = {}
                 device_config['DEVICE_METADATA'] = self.config_db.get_table('DEVICE_METADATA')
-                device_config.update(device_info.get_device_runtime_metadata())
+                hwsku = device_config['DEVICE_METADATA'].get('localhost', {}).get('hwsku')
+                device_config.update(device_info.get_device_runtime_metadata(hwsku=hwsku))
                 for srv, fields in feature_table.items():
                     if 'state' not in fields:
                         success = False

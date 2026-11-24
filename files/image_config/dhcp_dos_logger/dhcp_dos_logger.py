@@ -20,7 +20,7 @@ if is_multi_asic:
     SonicDBConfig.initializeGlobalConfig()
     ports_table = multi_asic.get_table('PORT')
 else:
-    config_db = ConfigDBConnector()
+    config_db = ConfigDBConnector(use_unix_socket_path=True)
     config_db.connect()
     ports_table = config_db.get_table('PORT')
 
@@ -86,7 +86,7 @@ def wait_for_port_init_done():
         None (blocks until PortInitDone is received or timeout occurs)
     """
     MAX_WAIT_SECONDS = 300
-    appl_db = daemon_base.db_connect("APPL_DB")
+    appl_db = daemon_base.db_connect("APPL_DB", use_tcp=False)
 
     sel = swsscommon.Select()
     sst = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)

@@ -25,7 +25,7 @@ fi
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
-SWSS_VARS=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
+SWSS_VARS=$(sonic-cfggen -d --redis-unix-socket -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
 
 MAC_ADDRESS=$(echo $SWSS_VARS | jq -r '.mac')
 if [ "$MAC_ADDRESS" == "None" ] || [ -z "$MAC_ADDRESS" ]; then
@@ -60,18 +60,18 @@ elif [ "$SYNC_MODE" == "enable" ]; then
 fi
 
 # Enable async swss recorder when explicitly configured
-ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
+ASYNC_SWSS_REC=$(sonic-db-cli -s CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
 if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
     ORCHAGENT_ARGS+="-A "
 fi
 
 # Enable ring buffer
-ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+="-R "
 fi
 
-SUPPRESS_FIB_CONFIG=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
+SUPPRESS_FIB_CONFIG=`sonic-db-cli -s CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
 if [ "$SUPPRESS_FIB_CONFIG" == "enabled" ]; then
     ORCHAGENT_ARGS+="-F "
 fi

@@ -72,11 +72,11 @@ sonic_ver_info = {}
 hw_info_dict = {}
 hwsku_info = None
 
-def get_localhost_info(field, config_db=None):
+def get_localhost_info(field, config_db=None, use_tcp=True):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')
@@ -89,8 +89,8 @@ def get_localhost_info(field, config_db=None):
     return None
 
 
-def get_hostname():
-    return get_localhost_info('hostname')
+def get_hostname(use_tcp=True):
+    return get_localhost_info('hostname', use_tcp=use_tcp)
 
 
 def get_machine_info():
@@ -696,7 +696,7 @@ def get_sonic_version_file():
 
 
 # Get hardware information
-def get_platform_info(config_db=None):
+def get_platform_info(config_db=None, use_tcp=True):
     """
     This function is used to get the HW info helper function
     """
@@ -721,7 +721,7 @@ def get_platform_info(config_db=None):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
@@ -734,7 +734,7 @@ def get_platform_info(config_db=None):
     return hw_info_dict
 
 
-def get_chassis_info():
+def get_chassis_info(use_tcp=True):
     """
     This function is used to get the Chassis serial / model / rev number
     """
@@ -743,7 +743,7 @@ def get_chassis_info():
 
     try:
         # Init statedb connection
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=not use_tcp)
         db.connect(db.STATE_DB)
         table = CHASSIS_INFO_TABLE.format(1)
 
@@ -1006,13 +1006,13 @@ def get_smartswitch_midplane_ip():
     return None
 
 
-def get_device_runtime_metadata():
+def get_device_runtime_metadata(hwsku=None):
     chassis_metadata = {}
     if is_chassis():
         chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
                                                 'chassis_type': 'voq' if is_voq_chassis() else 'packet'}}
 
-    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
+    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=hwsku, asic="0" if is_multi_npu() else None) else False}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)
@@ -1239,8 +1239,8 @@ def get_system_routing_stack():
 
 
 # Check if System warm reboot or Container warm restart is enabled.
-def is_warm_restart_enabled(container_name):
-    state_db = SonicV2Connector(host='127.0.0.1')
+def is_warm_restart_enabled(container_name, use_tcp=True):
+    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'
@@ -1350,8 +1350,8 @@ def get_bmc_build_config():
 
 
 # Check if System fast reboot is enabled.
-def is_fast_reboot_enabled():
-    state_db = SonicV2Connector(host='127.0.0.1')
+def is_fast_reboot_enabled(use_tcp=True):
+    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'

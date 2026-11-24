@@ -3,6 +3,27 @@
 
 command_name=$0
 
+# Keep redis-cli output for the shell parsers while selecting the configured socket.
+config_db_read() {
+    local settings
+    settings=$(python3 - <<'PY_CONFIG'
+import json
+with open('/var/run/redis/sonic-db/database_config.json') as stream:
+    config = json.load(stream)
+database = config['DATABASES']['CONFIG_DB']
+instance = config['INSTANCES'][database['instance']]
+if not instance.get('unix_socket_path'):
+    raise ValueError('CONFIG_DB has no configured Unix socket')
+print(instance['unix_socket_path'])
+print(database['id'])
+PY_CONFIG
+    ) || return 1
+    local -a endpoint
+    mapfile -t endpoint <<< "$settings"
+    redis-cli --raw -s "${endpoint[0]}" -n "${endpoint[1]}" "$@"
+}
+
+
 usage(){
     echo "Syntax: $command_name inbound/outbound -e|--enable -d|--disable [--dpus,--ports,--nofwctrl]"
     echo "Arguments:"
@@ -120,7 +141,7 @@ inbound_validation(){
     while IFS= read -r line; do
         dpu_name=$( echo "$line" | sed 's/.*|//;s/"//g')
         dpu_l+=("$dpu_name")
-    done < <(redis-cli -n 4 keys DPUS*)
+    done < <(config_db_read keys 'DPUS*')
     len1=${#dpu_name[@]}
     if [ "$len1" -eq 0 ]; then
         echo "No dpus detected on device!"
@@ -157,7 +178,7 @@ inbound_validation(){
     done
     port_use_validation "${provided_ports[@]}"
     for dpu in "${sel_dpu_names[@]}"; do
-        midplane_int_name=$(redis-cli -n 4 hget "DPUS|$dpu" "midplane_interface")
+        midplane_int_name=$(config_db_read hget "DPUS|$dpu" "midplane_interface")
         if [ -z "$midplane_int_name" ]; then
             echo "Cannot obtain midplane interface for $dpu"
             exit 1
@@ -166,7 +187,7 @@ inbound_validation(){
     done
 
     for dpu in "${!midplane_dict[@]}"; do
-        midplane_ip=$(redis-cli -n 4 hget "DHCP_SERVER_IPV4_PORT|$midplane_iface|${midplane_dict[$dpu]}" "ips@")
+        midplane_ip=$(config_db_read hget "DHCP_SERVER_IPV4_PORT|$midplane_iface|${midplane_dict[$dpu]}" "ips@")
         if [ -z "$midplane_ip" ]; then
             echo "Cannot obtain midplane ip for $dpu"
             exit 1

@@ -86,10 +86,10 @@ DEBUGLOG="/tmp/bgp-debug$DEV.log"
 NAMESPACE_PREFIX="asic"
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
-    SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
+    SONIC_DB_CLI="sonic-db-cli -s -n $NET_NS"
 else
     NET_NS=""
-    SONIC_DB_CLI="sonic-db-cli"
+    SONIC_DB_CLI="sonic-db-cli -s"
 fi
 
 case "$1" in

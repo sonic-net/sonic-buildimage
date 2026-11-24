@@ -1,5 +1,7 @@
 [Unit]
 Description=Database container
+Requires=redis-auth-prepare.service
+After=redis-auth-prepare.service
 {% if multi_instance == 'true' %}
 Requires=database.service
 After=database.service

@@ -516,6 +516,8 @@ def main():
     parser.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
     parser.add_argument("-H", "--platform-info", help="read platform and hardware info", action='store_true')
     parser.add_argument("-s", "--redis-unix-sock-file", help="unix sock file for redis connection")
+    parser.add_argument("--redis-unix-socket", action="store_true",
+                        help="use the configured Redis Unix socket for database reads")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--template", help="render the data with the template file", action="append", default=[],
                        type=lambda opt_value: tuple(opt_value.split(',')) if ',' in opt_value else (opt_value, sys.stdout))
@@ -606,11 +608,12 @@ def main():
         deep_update(data, FormatConverter.to_deserialized(json.loads(args.additional_data)))
 
     if args.from_db:
-        use_unix_sock = True if os.getuid() == 0 else False
+        if args.namespace is not None:
+            load_namespace_config()
+        use_unix_sock = args.redis_unix_socket or bool(args.redis_unix_sock_file)
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
         else:
-            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
 
         configdb.connect()
@@ -700,10 +703,10 @@ def main():
 
     if args.write_to_db:
         if args.namespace is None:
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, **db_kwargs)
         else:
             load_namespace_config()
-            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, authenticate=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)
         configdb.mod_config(FormatConverter.output_to_db(data))

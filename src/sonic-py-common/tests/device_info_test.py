@@ -102,9 +102,11 @@ class TestDeviceInfo(object):
             result = device_info.get_platform()
             assert result == "x86_64-mlnx_msn2700-r0"
 
-    def test_get_chassis_info(self):
-        with mock.patch("sonic_py_common.device_info.SonicV2Connector", new=SonicV2Connector):
-            result = device_info.get_chassis_info()
+    @pytest.mark.parametrize("options,native_options", [({}, False), ({"use_tcp": False}, True)])
+    def test_get_chassis_info(self, options, native_options):
+        with mock.patch.object(device_info, "SonicV2Connector", return_value=SonicV2Connector()) as connector:
+            result = device_info.get_chassis_info(**options)
+            connector.assert_called_once_with(use_unix_socket_path=native_options)
             truth = {"serial": SonicV2Connector.TEST_SERIAL,
                      "model": SonicV2Connector.TEST_MODEL,
                      "revision": SonicV2Connector.TEST_REV,
@@ -743,3 +745,19 @@ liquid_cooled=true
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
+
+
+def test_runtime_metadata_uses_supplied_hwsku(monkeypatch, tmp_path):
+    monkeypatch.setattr(device_info, "is_chassis", lambda: False)
+    monkeypatch.setattr(device_info, "is_multi_npu", lambda: False)
+    monkeypatch.setattr(device_info, "is_macsec_supported", lambda: 0)
+    monkeypatch.setattr(device_info, "get_platform", lambda: "test-platform")
+    monkeypatch.setattr(device_info, "get_path_to_platform_dir", lambda: str(tmp_path))
+    sku_path = tmp_path / "test-sku"
+    sku_path.mkdir()
+    (sku_path / "port_config.ini").touch()
+
+    with mock.patch.object(device_info, "get_hwsku", side_effect=AssertionError("Unexpected CONFIG_DB read")):
+        metadata = device_info.get_device_runtime_metadata(hwsku="test-sku")
+
+    assert metadata["DEVICE_RUNTIME_METADATA"]["ETHERNET_PORTS_PRESENT"] is True
