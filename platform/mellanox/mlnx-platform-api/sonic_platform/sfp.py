@@ -523,7 +523,7 @@ class SFP(NvidiaSFPCommon):
     def read_eeprom(self, offset, num_bytes, log_on_error=True):
         """
         Read eeprom specific bytes beginning from a random offset with size as num_bytes.
-        Retries up to 50 times in total (every 0.1s), but only if previous attempts failed due to I2C errors
+        Retries up to 5 times in total (every 0.1s), but only if previous attempts failed due to I2C errors
         (errno.EIO, typically reported as -5 from the kernel).
 
         Returns:
@@ -639,7 +639,7 @@ class SFP(NvidiaSFPCommon):
     def write_eeprom(self, offset, num_bytes, write_buffer):
         """
         Write EEPROM specific bytes beginning from a random offset with size as num_bytes
-        and write_buffer as the required bytes. Retries up to 50 times (every 0.1s) only if
+        and write_buffer as the required bytes. Retries up to 5 times (every 0.1s) only if
         previous attempts failed due to I2C errors (errno.EIO).
 
         Returns:
