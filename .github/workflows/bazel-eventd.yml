@@ -85,8 +85,8 @@ jobs:
         run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
-      - name: Restore default Bazel startup ownership
-        run: python3 tools/bazel/ci/repair_bazel_startup.py
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --configure-startup
       - name: Configure shared source download mirrors
         run: |
           python3 -B tools/bazel/ci/source_mirrors.py \
@@ -99,9 +99,10 @@ jobs:
           set -euo pipefail
           id
           printf 'HOME=%s\nRUNNER_TEMP=%s\n' "$HOME" "$RUNNER_TEMP"
-          printf 'Default Bazel startup directory=%s\n' "$HOME/.cache/bazel/_bazel_root"
-          for path in / /github "$HOME" "$HOME/.cache" "$HOME/.cache/bazel" \
-            "$HOME/.cache/bazel/_bazel_root" "$RUNNER_TEMP"; do
+          startup="$SONIC_BAZEL_JOB_TEMP/bazel-startup/user-root"
+          printf 'Private Bazel startup directory=%s\n' "$startup"
+          for path in / /github "$HOME" "$SONIC_BAZEL_JOB_TEMP" \
+            "$startup" "$RUNNER_TEMP"; do
             if [[ -e "$path" || -L "$path" ]]; then
               stat -L -c '%A mode=%a owner=%u:%g path=%n' -- "$path"
             else
@@ -115,7 +116,7 @@ jobs:
           grep -E '^(Uid|Gid|CapEff|NoNewPrivs|Seccomp):' /proc/self/status
           awk -v home="$HOME" -v temp="$RUNNER_TEMP" \
             '$5 == "/" || $5 == home || $5 == temp { print }' /proc/self/mountinfo
-          if ! probe="$(mktemp -d "$HOME/.cache/bazel/.write-probe.XXXXXX")"; then
+          if ! probe="$(mktemp -d "$startup/.write-probe.XXXXXX")"; then
             echo 'Bazel cache-parent write probe failed; see permissions above.' >&2
             exit 1
           fi

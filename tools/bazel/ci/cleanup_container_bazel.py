@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import tempfile
 
@@ -89,6 +90,41 @@ def job_identity(workspace, runner_temp, directory):
                 (report.get("device"), report.get("inode")) != (current.st_dev, current.st_ino)):
             raise ValueError("Runner job directory identity changed")
     return current.st_dev, current.st_ino
+
+
+def configure_startup(workspace, home, runner_temp, directory):
+    job_identity(workspace, runner_temp, directory)
+    state = directory / "bazel-startup"
+    with ExitStack() as descriptors:
+        parent = open_directory(directory, descriptors)
+        os.mkdir(state.name, 0o700, dir_fd=parent)
+    settings = f"startup --output_user_root={shlex.quote(str(state / 'user-root'))}\n"
+    for rc in (home / ".bazelrc", workspace / ".bazelrc.user"):
+        lines = []
+        for line in rc.read_text().splitlines() if rc.exists() else []:
+            tokens = shlex.split(line, comments=True)
+            if tokens and tokens[0] == "startup":
+                options = iter(tokens[1:])
+                retained = []
+                for option in options:
+                    if option == "--output_base":
+                        if next(options, None) is None:
+                            raise ValueError("Startup output_base is missing its value")
+                    elif not option.startswith("--output_base="):
+                        retained.append(option)
+                if len(retained) != len(tokens) - 1:
+                    # Drop setup-bazel's fixed base; nested workspaces need separate hashes.
+                    line = shlex.join(["startup", *retained]) if retained else ""
+            lines.append(line)
+        rc.write_text("\n".join(lines) + "\n" + settings)
+    result = subprocess.run(
+        ["bazel", "info", "output_base"], cwd=workspace, text=True,
+        stdout=subprocess.PIPE, check=True, timeout=120)
+    base = Path(result.stdout.strip())
+    if (base.parent != state / "user-root" or
+            not re.fullmatch(r"[0-9a-f]{32}", base.name)):
+        raise ValueError(f"Bazel did not select the registered job-private output base: {base}")
+    print(f"Verified job-private Bazel startup: {state}")
 
 
 def publication_status(steps):
@@ -346,6 +382,7 @@ def repair_workspace(workspace, runner_temp, host):
 def cleanup(home, workspace, runner_temp, directory, bazel="bazel", host=False, migrated=False):
     job_identity(workspace, runner_temp, directory)
     stop_servers(workspace.resolve(strict=True), home, directory, bazel, private_home=not host)
+    remove_selected(directory, ("bazel-startup",))
     if migrated:
         repair_workspace(workspace, runner_temp, host)
     if not host:
@@ -381,6 +418,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--prepare", action="store_true")
+    mode.add_argument("--configure-startup", action="store_true")
     mode.add_argument("--mark-artifacts", action="store_true")
     parser.add_argument("--migrated-job", action="store_true")
     parser.add_argument("--job-directory", type=Path)
@@ -418,6 +456,9 @@ def main():
             workspace, runner_temp = host_paths(workspace, runner_temp)
         if args.prepare:
             print(json.dumps({"directory": str(prepare(workspace, runner_temp))}))
+        elif args.configure_startup:
+            configure_startup(workspace, home, runner_temp,
+                              Path(os.environ["SONIC_BAZEL_JOB_TEMP"]))
         elif args.mark_artifacts:
             mark_artifacts(workspace, runner_temp, Path(os.environ["SONIC_BAZEL_JOB_TEMP"]),
                            json.loads(os.environ["BAZEL_CLEANUP_STEPS"]), migrated=args.migrated_job)

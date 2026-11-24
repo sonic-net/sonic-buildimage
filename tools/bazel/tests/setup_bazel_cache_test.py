@@ -149,14 +149,14 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
             self.assertEqual([arg for arg in args if arg.startswith("--startup-arg=")],
                              ["--startup-arg=--bazelrc=" + str(root / ".bazelrc.user")])
 
-    def test_container_jobs_repair_default_startup_state_and_keep_cache_handoff(self):
+    def test_container_jobs_isolate_startup_state_and_keep_cache_handoff(self):
         jobs = [
             ("bazel-eventd.yml", "native", "architecture"),
             ("bazel-supervisor-rust.yml", "native", "arch"),
             ("bazel-oci.yml", "archive", "architecture"),
             ("bazel-oci.yml", "package_amd64", "architecture"),
         ]
-        repair_helper = "tools/bazel/ci/repair_bazel_startup.py"
+        startup_helper = "tools.bazel.ci.cleanup_container_bazel"
         for filename, name, architecture in jobs:
             with self.subTest(workflow=filename), tempfile.TemporaryDirectory() as temporary:
                 document = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
@@ -167,15 +167,15 @@ Path(os.environ['RECORD']).write_text(json.dumps(sys.argv[1:]))
                 self.assertNotIn("BAZEL_OUTPUT_USER_ROOT", str(job))
                 self.assertNotIn("--output_user_root=", str(job))
                 handoff = next(step for step in job["steps"] if HELPER in step.get("run", ""))
-                repairs = [step for step in job["steps"] if repair_helper in step.get("run", "")]
+                repairs = [step for step in job["steps"] if "--configure-startup" in step.get("run", "")]
                 self.assertEqual(len(repairs), 1)
-                self.assertEqual(repairs[0]["run"], "python3 " + repair_helper)
+                self.assertEqual(repairs[0]["run"], "python3 -B -m " + startup_helper + " --configure-startup")
                 self.assertEqual(handoff["run"], "python3 " + HELPER + " --private-remote-cache")
                 self.assertEqual(job["steps"].index(repairs[0]), job["steps"].index(handoff) + 1)
                 if filename != "bazel-oci.yml":
                     events = document.get("on", document.get(True))
                     for event in ("pull_request", "push"):
-                        self.assertIn(repair_helper, events[event]["paths"])
+                        self.assertIn("tools/bazel/ci/cleanup_container_bazel.py", events[event]["paths"])
                 root = Path(temporary)
                 env = self.prepare(root, "build --disk_cache=/disk\ncommon --repository_cache=/repo\n")
                 subprocess.run(["bash", "-euc", handoff["run"]], cwd=root, env=env, check=True)

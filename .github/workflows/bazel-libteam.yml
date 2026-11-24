@@ -77,6 +77,8 @@ jobs:
         run: python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve setup-bazel caches for source checks
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
       - name: Fetch the verified shared downloader configuration
         run: |
           set -euo pipefail

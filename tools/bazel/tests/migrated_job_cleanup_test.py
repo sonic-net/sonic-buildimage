@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import shlex
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -308,6 +309,103 @@ class MigratedCleanupTest(unittest.TestCase):
     def test_host_cli_runs_the_complete_lifecycle(self):
         self.run_host_lifecycle()
 
+    def test_private_startup_overrides_old_state_and_preserves_cache_settings(self):
+        (self.home / ".bazelrc").write_text(
+            "startup --output_base=/github/home/.bazel\nbuild --disk_cache=/retained/disk\n")
+        rc = self.workspace / ".bazelrc.user"
+        rc.write_text("common --repository_cache=/retained/repository\n")
+        state = self.directory / "bazel-startup"
+        with mock.patch.object(subject.subprocess, "run", return_value=subprocess.CompletedProcess(
+                [], 0, str(state / "user-root" / ("a" * 32)) + "\n")) as probe:
+            subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+        probe.assert_called_once_with(
+            ["bazel", "info", "output_base"], cwd=self.workspace, text=True,
+            stdout=subprocess.PIPE, check=True, timeout=120)
+        for path, cache_setting in (
+                (self.home / ".bazelrc", "build --disk_cache=/retained/disk"),
+                (rc, "common --repository_cache=/retained/repository")):
+            self.assertIn(cache_setting, path.read_text())
+            flags = [shlex.split(line) for line in path.read_text().splitlines() if line.startswith("startup")]
+            self.assertEqual(flags, [
+                ["startup", "--output_user_root=" + str(state / "user-root")]])
+        self.assertEqual(state.stat().st_mode & 0o777, 0o700)
+
+    def test_private_startup_requires_registered_identity_and_fresh_state(self):
+        with mock.patch.dict(os.environ, GITHUB_RUN_ID="999"), \
+                mock.patch.object(subject.subprocess, "run") as probe:
+            with self.assertRaises(ValueError):
+                subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+            probe.assert_not_called()
+        outside = self.root / "outside"
+        outside.mkdir()
+        (self.directory / "bazel-startup").symlink_to(outside, target_is_directory=True)
+        with mock.patch.object(subject.subprocess, "run") as probe:
+            with self.assertRaises(FileExistsError):
+                subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+            probe.assert_not_called()
+        self.assertEqual(list(outside.iterdir()), [])
+
+    def test_private_startup_must_verify_effective_bazel_path(self):
+        with mock.patch.object(subject.subprocess, "run", return_value=subprocess.CompletedProcess(
+                [], 0, "/github/home/.bazel\n")):
+            with self.assertRaisesRegex(ValueError, "did not select"):
+                subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+
+    @unittest.skipUnless(os.environ.get("SONIC_PRIVATE_STARTUP_TEST") == "1",
+                         "Opt-in real Bazel startup smoke")
+    def test_real_private_startup_bypasses_inaccessible_previous_output_base(self):
+        blocked = self.home / ".bazel"
+        blocked.symlink_to("/proc", target_is_directory=True)
+        (self.home / ".bazelrc").write_text(
+            "startup --output_base=" + shlex.quote(str(blocked)) + "\n")
+        (self.workspace / ".bazelversion").write_text("8.5.1\n")
+        (self.workspace / "MODULE.bazel").write_text("")
+        (self.workspace / ".bazelrc").write_text("try-import %workspace%/.bazelrc.user\n")
+        state = self.directory / "bazel-startup"
+        base = None
+        with mock.patch.dict(os.environ, HOME=str(self.home)):
+            try:
+                subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+                result = subprocess.run(
+                    ["bazel", "info", "output_base"], cwd=self.workspace,
+                    text=True, capture_output=True, check=True, timeout=120)
+                base = Path(result.stdout.strip())
+                self.assertEqual(base.parent, state / "user-root")
+                result = subprocess.run(
+                    ["bazel", "info", "install_base"], cwd=self.workspace,
+                    text=True, capture_output=True, check=True, timeout=120)
+                self.assertTrue(Path(result.stdout.strip()).is_relative_to(state / "user-root"))
+                self.assertTrue((base / "server").is_dir())
+                self.assertTrue(blocked.is_symlink())
+                nested = self.workspace / "nested"
+                nested.mkdir()
+                (nested / "MODULE.bazel").write_text("")
+                result = subprocess.run(
+                    ["bazel", "info", "output_base"], cwd=nested,
+                    text=True, capture_output=True, check=True, timeout=120)
+                nested_base = Path(result.stdout.strip())
+                self.assertEqual(nested_base.parent, state / "user-root")
+                self.assertNotEqual(nested_base, base)
+                result = subprocess.run(
+                    ["bazel", "--nosystem_rc", "--nohome_rc", "--noworkspace_rc",
+                     "--bazelrc=" + str(self.workspace / ".bazelrc.user"), "info", "output_base"],
+                    cwd=nested, text=True, capture_output=True, check=True, timeout=120)
+                self.assertEqual(Path(result.stdout.strip()), nested_base)
+                subprocess.run(["bazel", "shutdown"], cwd=nested, check=True, timeout=120)
+            finally:
+                subject.stop_servers(self.workspace, self.home, self.directory, "bazel")
+
+    def test_failed_job_reclaims_private_startup_but_preserves_evidence(self):
+        state = self.directory / "bazel-startup"
+        state.mkdir()
+        (state / "server").write_text("private startup state")
+        with mock.patch.dict(os.environ, BAZEL_CLEANUP_JOB_STATUS="failure"):
+            self.authorize()
+        self.cleanup()
+        self.assertFalse(state.exists())
+        self.assertTrue((self.artifacts / "evidence").is_file())
+        self.assertTrue(self.directory.is_dir())
+
     def test_dhcp_runtime_publication_cleanup_preserves_shared_cache(self):
         with mock.patch.dict(os.environ, {
                 "GITHUB_JOB": "dhcp_relay_runtime",
@@ -319,6 +417,35 @@ class MigratedCleanupTest(unittest.TestCase):
 
 
 class MigratedWorkflowCleanupTest(unittest.TestCase):
+    def test_every_bazel_job_container_verifies_private_startup_after_cache_setup(self):
+        covered = set()
+        for path in (ROOT / ".github/workflows").glob("*.yml"):
+            for name, job in yaml.safe_load(path.read_text()).get("jobs", {}).items():
+                steps = job.get("steps", [])
+                setup = [i for i, step in enumerate(steps) if "setup-bazel@" in step.get("uses", "")]
+                if "container" not in job or not setup:
+                    continue
+                with self.subTest(workflow=path.name, job=name):
+                    startup = [i for i, step in enumerate(steps)
+                               if "--configure-startup" in step.get("run", "")]
+                    self.assertEqual(len(startup), 1)
+                    handoff = next(i for i, step in enumerate(steps)
+                                   if "preserve_setup_bazel_cache.py" in step.get("run", ""))
+                    self.assertEqual(startup[0], handoff + 1)
+                    self.assertGreater(startup[0], setup[-1])
+                    register = next(step for step in steps
+                                    if step.get("uses") == "./.github/actions/bazel-post-job-cleanup")
+                    self.assertEqual("--migrated-job" in steps[startup[0]]["run"],
+                                     register.get("with", {}).get("migrated-job") == "true")
+                    covered.add((path.name, name))
+        self.assertEqual(covered, {
+            ("bazel-eventd.yml", "native"), ("bazel-supervisor-rust.yml", "native"),
+            ("bazel-frr.yml", "native"), ("bazel-frr-python.yml", "packages"),
+            ("bazel-libteam.yml", "native"), ("bazel-sysmgr.yml", "native"),
+            ("bazel-oci.yml", "archive"), ("bazel-oci.yml", "package_amd64"),
+            ("bazel-oci.yml", "checks"),
+        })
+
     def test_every_stateful_migrated_job_registers_before_cache_setup(self):
         self.assertEqual(subject.MIGRATED_JOBS["bazel-oci.yml"], {"checks", "dhcp_relay_runtime"})
         for filename, names in subject.MIGRATED_JOBS.items():

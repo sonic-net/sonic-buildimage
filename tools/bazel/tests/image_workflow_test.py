@@ -395,6 +395,9 @@ class VerificationWorkflowTest(unittest.TestCase):
                 cache.mkdir(parents=True)
                 retained = cache / "retained-cache"
                 retained.write_text("keep")
+                job_temp = root / "job-temp"
+                startup = job_temp / "bazel-startup/user-root"
+                startup.mkdir(parents=True)
                 wrapper = root / "tools/bazel/ci/libteam_draft_bazel.sh"
                 wrapper.parent.mkdir(parents=True)
                 wrapper.write_text(
@@ -406,13 +409,15 @@ class VerificationWorkflowTest(unittest.TestCase):
                 wrapper.chmod(0o755)
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", diagnostic["run"]],
-                    cwd=root, env=dict(os.environ, HOME=str(home), RUNNER_TEMP=str(root)),
+                    cwd=root, env=dict(os.environ, HOME=str(home), RUNNER_TEMP=str(root),
+                                       SONIC_BAZEL_JOB_TEMP=str(job_temp)),
                     capture_output=True, text=True,
                 )
                 self.assertEqual(result.returncode, status, result.stdout + result.stderr)
                 self.assertIn("Bazel cache-parent write probe passed.", result.stdout)
                 self.assertIn("fixture Bazel startup probe", result.stdout)
-                self.assertIn(str(cache), result.stdout)
+                self.assertIn(str(startup), result.stdout)
+                self.assertEqual(list(startup.iterdir()), [])
                 self.assertEqual(list(cache.iterdir()), [retained])
                 self.assertEqual(retained.read_text(), "keep")
 
