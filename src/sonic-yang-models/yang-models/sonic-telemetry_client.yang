@@ -16,7 +16,7 @@ module sonic-telemetry_client {
         "SONiC";
 
     description
-        "TELEMETRY_CLIENT yang Module for SONiC OS";
+        "TELEMETRY_CLIENT configuration";
 
     revision 2023-01-12 {
         description
@@ -32,7 +32,7 @@ module sonic-telemetry_client {
         }
     }
     typedef path_target {
-        description "SONiC database target for telemetry subscriptions.";
+        description "Database target for telemetry subscriptions.";
         type enumeration {
             enum APPL_DB;
             enum CONFIG_DB;

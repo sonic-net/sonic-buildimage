@@ -9,7 +9,7 @@ module sonic-hash {
         prefix stypes;
     }
 
-    description "HASH YANG Module for SONiC OS";
+    description "HASH configuration";
 
     revision 2023-09-25 {
         description "Added hashing algorithm configuration";

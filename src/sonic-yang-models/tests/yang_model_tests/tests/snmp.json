@@ -22,7 +22,7 @@
         "eStrKey": "Length"
     },
     "SNMP_COMMUNITY_MAX_NEG_TEST": {
-        "desc": "Load SNMP community string of lenth > 32.",
+        "desc": "Load SNMP community string of length > 32.",
         "eStrKey": "Length"
     },
     "SNMP_COMMUNITY_WRONG_TYPE_TEST": {

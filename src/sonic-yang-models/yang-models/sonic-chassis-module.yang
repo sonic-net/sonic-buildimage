@@ -7,7 +7,7 @@ module sonic-chassis-module {
     import sonic-types {
         prefix stypes;
     }
-    description "CHASSIS_MODULE YANG to administratively set SONIC modules state";
+    description "CHASSIS_MODULE configuration to administratively set module state";
 
     revision 2026-04-17 {
         description "Add SWITCH-HOST to name pattern; add power_on_delay and graceful_shutdown_timeout leaves for BMC support";

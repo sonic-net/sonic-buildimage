@@ -13,7 +13,7 @@ module sonic-snmp {
     "SONiC";
 
   description
-    "Simple Network Management Protocol (SNMP) agent configuration YANG module for SONiC OS.";
+    "Simple Network Management Protocol (SNMP) agent configuration";
 
   revision 2022-05-13 {
     description

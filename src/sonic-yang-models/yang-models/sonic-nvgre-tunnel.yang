@@ -16,7 +16,7 @@ module sonic-nvgre-tunnel {
         "SONiC";
 
     description
-        "NVGRE Tunnel YANG Module for SONiC OS";
+        "NVGRE Tunnel configuration";
 
     revision 2021-10-31 {
         description

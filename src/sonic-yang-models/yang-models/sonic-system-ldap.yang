@@ -7,7 +7,7 @@ module sonic-system-ldap {
         prefix inet;
     }
 
-    description "Lightweight Directory Access Protocol (LDAP) authentication YANG module for SONiC OS.";
+    description "Lightweight Directory Access Protocol (LDAP) authentication configuration";
 
     revision 2023-10-01 {
         description "First Revision";

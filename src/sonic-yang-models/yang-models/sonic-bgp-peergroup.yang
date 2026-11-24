@@ -22,7 +22,7 @@ module sonic-bgp-peergroup {
         "SONiC";
 
     description
-        "SONIC BGP Peer Group YANG";
+        "BGP Peer Group configuration";
 
     revision 2021-02-26 {
         description

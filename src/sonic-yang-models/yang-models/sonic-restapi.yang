@@ -11,7 +11,7 @@ module sonic-restapi {
     contact
         "SONiC";
 
-    description "RESTAPI YANG Module for SONiC OS";
+    description "RESTAPI configuration";
 
     revision 2022-10-05 {
         description "First Revision";

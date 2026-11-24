@@ -13,7 +13,7 @@ module sonic-suppress-asic-sdk-health-event {
         "SONiC";
 
     description
-        "Suppress ASIC/SDK health event yang Module for SONiC OS";
+        "Suppress ASIC/SDK health event configuration";
 
     revision 2023-11-29 {
         description

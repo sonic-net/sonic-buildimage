@@ -10,7 +10,7 @@ module sonic-fips {
         prefix stypes;
     }
 
-    description "Federal Information Processing Standards (FIPS) 140-3 compliance YANG module for SONiC OS.";
+    description "Federal Information Processing Standards (FIPS) 140-3 compliance configuration";
 
     revision 2023-06-20 {
         description "First Revision";

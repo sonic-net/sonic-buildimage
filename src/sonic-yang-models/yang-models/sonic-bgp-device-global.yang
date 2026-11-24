@@ -10,7 +10,7 @@ module sonic-bgp-device-global {
         "SONiC";
 
     description
-        "SONIC Device-specific BGP global data";
+        "Device-specific BGP global data";
 
     revision 2026-04-28 {
         description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";

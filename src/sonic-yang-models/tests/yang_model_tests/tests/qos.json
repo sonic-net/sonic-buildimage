@@ -15,7 +15,7 @@
     },
 
     "SCHEDULER_INVALID_METER_TYPE": {
-        "desc": "Configure unsuported meter type in SCHEDULER table.",
+        "desc": "Configure unsupported meter type in SCHEDULER table.",
         "eStrKey": "InvalidValue",
         "eStr": ["meter_type"]
     },

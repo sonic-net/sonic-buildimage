@@ -14,7 +14,7 @@ module sonic-events-common {
         "SONiC";
 
     description
-        "SONIC Events common definition";
+        "Events common definition";
 
     revision 2022-12-01 {
         description

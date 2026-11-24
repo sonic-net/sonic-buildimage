@@ -10,7 +10,7 @@ module sonic-mux-linkmgr {
         "SONiC";
 
     description
-        "SONiC DualToR Linkmgrd configuration data";
+        "DualToR Linkmgrd configuration data";
 
     revision 2023-06-07 {
         description

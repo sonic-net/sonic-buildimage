@@ -10,7 +10,7 @@ module sonic-cable-length {
         prefix port;
     }
 
-    description "CABLE_LENGTH YANG module for SONiC OS";
+    description "CABLE_LENGTH configuration";
 
     revision 2021-11-11 {
         description "Initial version";

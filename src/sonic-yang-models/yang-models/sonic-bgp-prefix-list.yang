@@ -14,7 +14,7 @@ module sonic-bgp-prefix-list {
         prefix rpolsets;
     }
 
-    description "SONIC Device-specfifc BGP prefix lists data";
+    description "Device-specific BGP prefix lists data";
 
     revision 2026-07-15 {
         description "Restrict prefix_type to safe identifier characters to prevent command injection via vtysh";
