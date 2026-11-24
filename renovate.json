@@ -37,6 +37,14 @@
       "datasourceTemplate": "github-releases"
     },
     {
+      "description": "OpenTelemetry Collector (contrib) in docker-sonic-otel, one dependency per architecture. Renovate takes the new release's sha256 for each package and updates OTEL_SHA256 with OTEL_TAG, so the new hash is reviewed in the PR",
+      "customType": "regex",
+      "managerFilePatterns": ["/^dockers/docker-sonic-otel/Dockerfile\\.j2$/"],
+      "matchStrings": ["ARG OTEL_TAG=(?<currentValue>v\\d+\\.\\d+\\.\\d+)\\nARG OTEL_SHA256=(?<currentDigest>[0-9a-f]{64})"],
+      "depNameTemplate": "open-telemetry/opentelemetry-collector-releases",
+      "datasourceTemplate": "github-release-attachments"
+    },
+    {
       "description": "FIPS Go for trixie. SONiC builds and publishes the package, so the preset lists it on the Dependency Dashboard only",
       "customType": "regex",
       "managerFilePatterns": ["/^rules/sonic-fips\\.mk$/"],
