@@ -297,17 +297,17 @@ def get_port_entry(port, namespace):
     return all_ports
 
 
-def get_port_table(namespace=None):
+def get_port_table(namespace=None, use_tcp=True):
     """
     Retrieves the ports from all the asic present on the devices
 
     Returns:
         a dict of all the ports
     """
-    return get_table(PORT_CFG_DB_TABLE, namespace)
+    return get_table(PORT_CFG_DB_TABLE, namespace, use_tcp=use_tcp)
 
 
-def get_table(table, namespace=None):
+def get_table(table, namespace=None, use_tcp=True):
     """
     Retrieves a merged table containing all entries across specified namespaces
 
@@ -318,7 +318,7 @@ def get_table(table, namespace=None):
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        ns_table = get_table_for_asic(table, ns)
+        ns_table = get_table_for_asic(table, ns, use_tcp=use_tcp)
         merged_table.update(ns_table)
 
     return merged_table
@@ -339,9 +339,9 @@ def get_port_table_for_asic(namespace):
     return get_table_for_asic(PORT_CFG_DB_TABLE, namespace)
 
 
-def get_table_for_asic(table, namespace):
+def get_table_for_asic(table, namespace, use_tcp=True):
 
-    config_db = connect_config_db_for_ns(namespace)
+    config_db = connect_config_db_for_ns(namespace, use_tcp=use_tcp)
     return config_db.get_table(table)
 
 
