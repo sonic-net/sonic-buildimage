@@ -21,7 +21,7 @@ def _pass_writer_db(function):
     def wrapper(ctx, *args, **kwargs):
         db = ctx.find_object(Db)
         if db is None:
-            db = Db(authenticate=True)
+            db = Db(authenticate=True, use_tcp=False)
             ctx.obj = db
         return ctx.invoke(function, db, *args, **kwargs)
     return wrapper

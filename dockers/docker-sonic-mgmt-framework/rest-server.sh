@@ -10,7 +10,7 @@ if [ ! -f "$MGMT_VARS_FILE" ]; then
 fi
 
 # Read basic server settings from mgmt vars entries
-MGMT_VARS=$(sonic-cfggen -d -t $MGMT_VARS_FILE)
+MGMT_VARS=$(sonic-cfggen -d --redis-unix-socket -t $MGMT_VARS_FILE)
 MGMT_VARS=${MGMT_VARS//[\']/\"}
 
 REST_SERVER=$(echo $MGMT_VARS | jq -r '.rest_server')

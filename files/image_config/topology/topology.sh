@@ -8,7 +8,7 @@
 get_hwsku() {
     # Get HWSKU from config_db. If HWSKU is not available in config_db
     # get HWSKU from minigraph.xml if minigraph file exists.
-    HWSKU=`sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]' 2>&1`
+    HWSKU=`sonic-cfggen -d --redis-unix-socket -v 'DEVICE_METADATA["localhost"]["hwsku"]' 2>&1`
     if [[ $? -ne 0 || $HWSKU == "" ]]; then
             if [[ -f "/etc/sonic/minigraph.xml" ]]; then
                 HWSKU=`sonic-cfggen -m /etc/sonic/minigraph.xml -v "DEVICE_METADATA['localhost']['hwsku']" 2>&1`

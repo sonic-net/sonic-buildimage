@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export platform=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml --var asic_type)
+export platform=$(sonic-cfggen -d --redis-unix-socket -y /etc/sonic/sonic_version.yml --var asic_type)
 
 function start_app {
     rm -f /var/run/iccpd/*

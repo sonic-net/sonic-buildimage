@@ -14,7 +14,6 @@ import signal
 import sys
 import logging
 import os
-from sonic_py_common._redis_transport import use_local_redis_socket
 from swsscommon.swsscommon import SonicDBConfig
 from typing import Dict, List, Tuple, Optional
 
@@ -47,13 +46,9 @@ SPECIAL_PORT = "Ethernet1024"
 
 
 def _get_db_client(db_name):
-    if use_local_redis_socket(db_name):
-        endpoint = {'unix_socket_path': SonicDBConfig.getDbSock(db_name)}
-    else:
-        endpoint = {'host': SonicDBConfig.getDbHostname(db_name),
-                    'port': SonicDBConfig.getDbPort(db_name)}
     return redis.Redis(db=SonicDBConfig.getDbId(db_name),
-                       decode_responses=True, **endpoint)
+                       unix_socket_path=SonicDBConfig.getDbSock(db_name),
+                       decode_responses=True)
 
 
 PORT_TO_REG = {

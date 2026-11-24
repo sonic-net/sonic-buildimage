@@ -7,7 +7,6 @@ import re
 import subprocess
 from typing import List, Optional
 from sonic_py_common.general import getstatusoutput_noshell_pipe
-from sonic_py_common._redis_transport import use_local_redis_socket
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
 
@@ -73,11 +72,11 @@ sonic_ver_info = {}
 hw_info_dict = {}
 hwsku_info = None
 
-def get_localhost_info(field, config_db=None):
+def get_localhost_info(field, config_db=None, use_tcp=True):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector(use_unix_socket_path=use_local_redis_socket('CONFIG_DB'))
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')
@@ -90,8 +89,8 @@ def get_localhost_info(field, config_db=None):
     return None
 
 
-def get_hostname():
-    return get_localhost_info('hostname')
+def get_hostname(use_tcp=True):
+    return get_localhost_info('hostname', use_tcp=use_tcp)
 
 
 def get_machine_info():
@@ -697,7 +696,7 @@ def get_sonic_version_file():
 
 
 # Get hardware information
-def get_platform_info(config_db=None):
+def get_platform_info(config_db=None, use_tcp=True):
     """
     This function is used to get the HW info helper function
     """
@@ -722,7 +721,7 @@ def get_platform_info(config_db=None):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector(use_unix_socket_path=use_local_redis_socket('CONFIG_DB'))
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
@@ -735,7 +734,7 @@ def get_platform_info(config_db=None):
     return hw_info_dict
 
 
-def get_chassis_info():
+def get_chassis_info(use_tcp=True):
     """
     This function is used to get the Chassis serial / model / rev number
     """
@@ -744,7 +743,7 @@ def get_chassis_info():
 
     try:
         # Init statedb connection
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=not use_tcp)
         db.connect(db.STATE_DB)
         table = CHASSIS_INFO_TABLE.format(1)
 
@@ -1240,8 +1239,8 @@ def get_system_routing_stack():
 
 
 # Check if System warm reboot or Container warm restart is enabled.
-def is_warm_restart_enabled(container_name):
-    state_db = SonicV2Connector(use_unix_socket_path=use_local_redis_socket('STATE_DB'), host='127.0.0.1')
+def is_warm_restart_enabled(container_name, use_tcp=True):
+    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'
@@ -1351,8 +1350,8 @@ def get_bmc_build_config():
 
 
 # Check if System fast reboot is enabled.
-def is_fast_reboot_enabled():
-    state_db = SonicV2Connector(use_unix_socket_path=use_local_redis_socket('STATE_DB'), host='127.0.0.1')
+def is_fast_reboot_enabled(use_tcp=True):
+    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'

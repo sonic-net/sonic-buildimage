@@ -90,7 +90,7 @@ get_platform_info()
     # Get current HWSKU
     PRESENT_HWSKU=""
     if command -v sonic-cfggen &> /dev/null; then
-        PRESENT_HWSKU=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]' 2>/dev/null | tr -d '\r\n' | xargs)
+        PRESENT_HWSKU=$(sonic-cfggen -d --redis-unix-socket -v 'DEVICE_METADATA["localhost"]["hwsku"]' 2>/dev/null | tr -d '\r\n' | xargs)
     fi
     
     if [ -z "$PRESENT_HWSKU" ] && [ -f /etc/sonic/config_db.json ]; then

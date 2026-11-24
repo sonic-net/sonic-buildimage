@@ -3,7 +3,7 @@
 # platform_utils
 
 # Determine platform and is smartswitch
-PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM="$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.platform)"
 SMARTSWITCH=false
 PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
 

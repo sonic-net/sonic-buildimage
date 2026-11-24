@@ -61,7 +61,7 @@ json_args=$(jq -n \
     --arg syslog_counter "$syslog_counter" \
     '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
 
-sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
+sonic-cfggen -d --redis-unix-socket -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \
     > "$TMPFILE"
 

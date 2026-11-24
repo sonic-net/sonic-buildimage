@@ -25,8 +25,7 @@ def test_micas_scan_keeps_configured_endpoint_and_database(tmp_path, port, socke
     program = "make_endpoint() {\n" + setup + "printf '%s\\0' \"${native_cli[@]}\";\n}\nmake_endpoint"
     result = subprocess.run(['bash', '-c', program], capture_output=True, check=True)
     arguments = result.stdout.decode().split('\0')[:-1]
-    expected = ['redis-cli', '-n', '44']
-    expected += ['-s', socket_path] if port == 0 else ['-h', '127.0.0.2', '-p', '6380']
+    expected = ['redis-cli', '-s', socket_path, '-n', '44']
     assert arguments == expected
     assert 'sonic-db-cli -s --authenticate CONFIG_DB DEL $keys' in source
     assert 'sonic-db-cli -s --authenticate CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"' in source

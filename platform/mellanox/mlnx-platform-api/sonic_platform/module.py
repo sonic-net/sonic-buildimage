@@ -41,11 +41,12 @@ class Module(ModuleBase):
     STATE_DB = 6
     STATE_MODULAR_CHASSIS_SLOT_TABLE = 'MODULAR_CHASSIS_SLOT|{}'
     FIELD_SEQ_NO = 'seq_no'
-    redis_client = None
+    redis_clients = {}
 
-    def __init__(self, slot_id):
+    def __init__(self, slot_id, *, use_tcp=True):
         super(Module, self).__init__()
         self.slot_id = slot_id
+        self.use_tcp = use_tcp
         self.seq_no = 0
         self.current_state = Module.STATE_DEACTIVATED
         self.lock = threading.Lock()
@@ -125,23 +126,23 @@ class Module(ModuleBase):
         self.seq_no = seq_no
 
     @classmethod
-    def _get_redis_client(cls):
+    def _get_redis_client(cls, use_tcp):
         # Lazily create the STATE_DB client so that importing this module does not
         # pull in the redis package (saves ~20MB RSS in psud).
-        if cls.redis_client is None:
+        if use_tcp not in cls.redis_clients:
             import redis
             db_name = 'STATE_DB'
-            port = SonicDBConfig.getDbPort(db_name)
-            if port == 0:
-                endpoint = {'unix_socket_path': SonicDBConfig.getDbSock(db_name)}
+            if use_tcp:
+                endpoint = {'host': SonicDBConfig.getDbHostname(db_name),
+                            'port': SonicDBConfig.getDbPort(db_name)}
             else:
-                endpoint = {'host': SonicDBConfig.getDbHostname(db_name), 'port': port}
-            cls.redis_client = redis.Redis(db=SonicDBConfig.getDbId(db_name), **endpoint)
-        return cls.redis_client
+                endpoint = {'unix_socket_path': SonicDBConfig.getDbSock(db_name)}
+            cls.redis_clients[use_tcp] = redis.Redis(db=SonicDBConfig.getDbId(db_name), **endpoint)
+        return cls.redis_clients[use_tcp]
 
     def _get_seq_no(self):
         try:
-            seq_no = Module._get_redis_client().hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
+            seq_no = self._get_redis_client(self.use_tcp).hget(Module.STATE_MODULAR_CHASSIS_SLOT_TABLE.format(self.slot_id), Module.FIELD_SEQ_NO)
             seq_no = seq_no.decode().strip()
         except Exception as e:
             seq_no = 0

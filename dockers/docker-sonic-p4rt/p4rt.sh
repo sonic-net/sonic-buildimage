@@ -10,7 +10,7 @@ fi
 
 # Try to read p4rt and certs config from ConfigDB.
 # Use default value if no valid config exists
-P4RT_VARS=$(sonic-cfggen -d -t ${P4RT_VARS_FILE})
+P4RT_VARS=$(sonic-cfggen -d --redis-unix-socket -t ${P4RT_VARS_FILE})
 readonly P4RT_VARS=${P4RT_VARS//[\']/\"}
 readonly X509=$(echo ${P4RT_VARS} | jq -r '.x509')
 readonly P4RT=$(echo ${P4RT_VARS} | jq -r '.p4rt')

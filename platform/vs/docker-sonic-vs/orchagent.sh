@@ -25,7 +25,7 @@ fi
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
-SWSS_VARS=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
+SWSS_VARS=$(sonic-cfggen -d --redis-unix-socket -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
 
 MAC_ADDRESS=$(echo $SWSS_VARS | jq -r '.mac')
 if [ "$MAC_ADDRESS" == "None" ] || [ -z "$MAC_ADDRESS" ]; then

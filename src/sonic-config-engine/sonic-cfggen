@@ -43,7 +43,6 @@ from portconfig import get_port_config, get_breakout_mode, get_system_port_confi
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
-from sonic_py_common._redis_transport import use_local_redis_socket
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
 
@@ -517,6 +516,8 @@ def main():
     parser.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
     parser.add_argument("-H", "--platform-info", help="read platform and hardware info", action='store_true')
     parser.add_argument("-s", "--redis-unix-sock-file", help="unix sock file for redis connection")
+    parser.add_argument("--redis-unix-socket", action="store_true",
+                        help="use the configured Redis Unix socket for database reads")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--template", help="render the data with the template file", action="append", default=[],
                        type=lambda opt_value: tuple(opt_value.split(',')) if ',' in opt_value else (opt_value, sys.stdout))
@@ -609,7 +610,7 @@ def main():
     if args.from_db:
         if args.namespace is not None:
             load_namespace_config()
-        use_unix_sock = bool(args.redis_unix_sock_file) or use_local_redis_socket("CONFIG_DB", args.namespace)
+        use_unix_sock = args.redis_unix_socket or bool(args.redis_unix_sock_file)
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
         else:

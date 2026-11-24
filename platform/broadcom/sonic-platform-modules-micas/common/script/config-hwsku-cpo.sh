@@ -107,19 +107,13 @@ with open('/var/run/redis/sonic-db/database_config.json') as stream:
     config = json.load(stream)
 database = config['DATABASES']['CONFIG_DB']
 instance = config['INSTANCES'][database['instance']]
-for value in (database['id'], instance.get('hostname', 'localhost'),
-              instance.get('port', 6379), instance['unix_socket_path']):
-    print(value)
+print(database['id'])
+print(instance['unix_socket_path'])
 PY
     ) || return 1
     local -a redis_config native_cli
     mapfile -t redis_config <<< "$redis_settings"
-    native_cli=(redis-cli -n "${redis_config[0]}")
-    if [ "${redis_config[2]}" = "0" ]; then
-        native_cli+=(-s "${redis_config[3]}")
-    else
-        native_cli+=(-h "${redis_config[1]}" -p "${redis_config[2]}")
-    fi
+    native_cli=(redis-cli -s "${redis_config[1]}" -n "${redis_config[0]}")
     cursor=0
     Ethernet="*Ethernet*"
     echo "Loading the new configuration"

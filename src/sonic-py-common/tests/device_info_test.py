@@ -102,9 +102,11 @@ class TestDeviceInfo(object):
             result = device_info.get_platform()
             assert result == "x86_64-mlnx_msn2700-r0"
 
-    def test_get_chassis_info(self):
-        with mock.patch("sonic_py_common.device_info.SonicV2Connector", new=SonicV2Connector):
-            result = device_info.get_chassis_info()
+    @pytest.mark.parametrize("options,native_options", [({}, False), ({"use_tcp": False}, True)])
+    def test_get_chassis_info(self, options, native_options):
+        with mock.patch.object(device_info, "SonicV2Connector", return_value=SonicV2Connector()) as connector:
+            result = device_info.get_chassis_info(**options)
+            connector.assert_called_once_with(use_unix_socket_path=native_options)
             truth = {"serial": SonicV2Connector.TEST_SERIAL,
                      "model": SonicV2Connector.TEST_MODEL,
                      "revision": SonicV2Connector.TEST_REV,

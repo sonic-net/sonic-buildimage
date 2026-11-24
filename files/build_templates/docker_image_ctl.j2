@@ -690,7 +690,7 @@ start() {
         fi
     fi
     if [ ! -f /etc/sonic/peripheral_table.json ] && [ -f /usr/share/sonic/device/$PLATFORM/port_peripheral_config.j2 ]; then
-        sonic-cfggen -d -t /usr/share/sonic/device/$PLATFORM/port_peripheral_config.j2 > /etc/sonic/peripheral_table.json 2> errorlog.txt
+        sonic-cfggen -d --redis-unix-socket -t /usr/share/sonic/device/$PLATFORM/port_peripheral_config.j2 > /etc/sonic/peripheral_table.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render peripheral_table.json"
             echo "$(cat errorlog.txt)"
@@ -698,7 +698,7 @@ start() {
         fi
     fi
     if [ ! -f /etc/sonic/zero_profiles.json ] && [ -f /usr/share/sonic/templates/zero_profiles.j2 ]; then
-        sonic-cfggen -d -t /usr/share/sonic/device/$PLATFORM/zero_profiles.j2 > /etc/sonic/zero_profiles.json 2> errorlog.txt
+        sonic-cfggen -d --redis-unix-socket -t /usr/share/sonic/device/$PLATFORM/zero_profiles.j2 > /etc/sonic/zero_profiles.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render zero_profiles.json"
             echo "$(cat errorlog.txt)"
