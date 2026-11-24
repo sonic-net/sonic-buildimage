@@ -26,11 +26,15 @@ EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "event-down-ctr"
 
 def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
     try:
         DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
         DOCKER_CLIENT.images.get(image_name)
         return True
-    except (docker.errors.ImageNotFound, docker.errors.APIError):
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
         return False
 
 def get_expected_running_containers():
@@ -63,6 +67,7 @@ def get_expected_running_containers():
     # it will be removed from exception list.
     run_all_instance_list = ['database', 'bgp']
 
+    container_list = []
     for container_name in feature_table.keys():
         # skip frr_bmp since it's not container just bmp option used by bgpd
         if container_name == "frr_bmp":
@@ -70,6 +75,9 @@ def get_expected_running_containers():
         # A FEATURE|telemetry row can outlive the telemetry docker (old config_db, golden config)
         if container_name == "telemetry" and not check_docker_image("docker-sonic-telemetry"):
             continue
+        container_list.append(container_name)
+
+    for container_name in container_list:
         if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
             if multi_asic.is_multi_asic():
                 if feature_table[container_name].get("has_global_scope", "True") == "True":

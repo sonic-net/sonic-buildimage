@@ -15,7 +15,6 @@ import os
 import stat
 import subprocess
 import sys
-import docker
 import importlib.util
 import importlib.machinery
 import pytest
