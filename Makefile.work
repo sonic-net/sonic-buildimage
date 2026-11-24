@@ -63,9 +63,6 @@
 #  *             value to anything will enable it
 #  *             Default: unset
 #  *             Value: y
-#  * SONIC_PTF_ENV_PY_VER: Python version for PTF image
-#  *                       Default: mixed
-#  *                       Values: mixed,py3
 #  * ENABLE_MULTIDB: Enable multiple redis database instances.
 #  *                 Default: unset
 #  *                 Values: y
@@ -779,7 +776,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
-                           SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
 						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \

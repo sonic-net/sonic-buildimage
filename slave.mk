@@ -81,9 +81,6 @@ else
 ENABLE_PY2_MODULES = y
 endif
 
-# Python version for PTF image
-PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),py3)
-
 export BUILD_NUMBER
 export BUILD_TIMESTAMP
 export SONIC_IMAGE_VERSION
@@ -105,7 +102,6 @@ export BUILD_SNAPSHOT_URL
 export SONIC_OS_VERSION
 export FILES_PATH
 export PROJECT_ROOT
-export PTF_ENV_PY_VER
 
 ###############################################################################
 ## Utility rules
@@ -543,7 +539,6 @@ $(info "BUILD_MULTIASIC_KVM"             : "$(BUILD_MULTIASIC_KVM)")
 endif
 $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
-$(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
 $(info "ENABLE_SBOM"                     : "$(ENABLE_SBOM)")
 $(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
@@ -1787,7 +1782,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_COMMON_PY3)) \
-        $(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3)) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY2))) \
@@ -1888,7 +1882,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export config_engine_py2_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY2))"
 	export config_engine_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY3))"
 	export platform_common_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_COMMON_PY3))"
-	export redis_dump_load_py2_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY2))"
 	export redis_dump_load_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY3))"
 	export install_debug_image="$(INSTALL_DEBUG_TOOLS)"
 	export sonic_yang_models_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MODELS_PY3))"
