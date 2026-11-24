@@ -634,7 +634,7 @@ function check_add_hft_dependency()
 function check_ports_present()
 {
     # Only checks for PORT entries; does not parse or validate their configuration.
-    [[ -n "$($SONIC_DB_CLI CONFIG_DB KEYS 'PORT|*')" ]]
+    [[ -n "$($SONIC_DB_CLI -s CONFIG_DB KEYS 'PORT|*')" ]]
 }
 
 function check_service_enabled()

@@ -31,7 +31,7 @@ if [ -n "${IMAGE_VERSION}" ]; then
 fi
 
 SONIC_CFGGEN_ARGS=" \
-    -d \
+    -d --redis-unix-socket \
     -y /etc/sonic/sonic_version.yml \
     -t /usr/share/sonic/templates/sysDescription.j2,/etc/ssw/sysDescription \
     -t /usr/share/sonic/templates/snmpd.conf.j2,/etc/snmp/snmpd.conf \

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 CFGGEN_PARAMS=" \
-    -d \
+    -d --redis-unix-socket \
     -a "{\"namespace_id\":\"$NAMESPACE_ID\"}" \
     -t /usr/share/sonic/templates/lldpd.conf.j2 \
     -y /etc/sonic/sonic_version.yml \
