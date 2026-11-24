@@ -27,6 +27,7 @@ SUPPORTED_JOBS = CONTAINER_JOBS | {"package"}
 MIGRATED_JOBS = {
     "bazel-frr-python.yml": {"packages"},
     "bazel-frr.yml": {"native"},
+    "bazel-image-rules.yml": {"native-vs-installer"},
     "bazel-libteam.yml": {"native"},
     "bazel-sysmgr.yml": {"native"},
     "bazel-make-cache.yml": {"checks"},

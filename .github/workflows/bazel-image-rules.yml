@@ -3,6 +3,9 @@ name: Image assembly rule contracts
 on:
   pull_request:
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/migrated_job_cleanup_test.py
       - src/sonic-device-data/**
       - scripts/install_device_data.py
       - rules/sonic-device-data.mk
@@ -22,6 +25,9 @@ on:
   push:
     branches: [master]
     paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/migrated_job_cleanup_test.py
       - src/sonic-device-data/**
       - scripts/install_device_data.py
       - rules/sonic-device-data.mk
@@ -207,6 +213,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
       - name: Prepare the pinned image source submodules
         run: bash tools/bazel/ci/prepare_image_submodules.sh
       - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
@@ -221,8 +233,8 @@ jobs:
           python3 -B tools/bazel/ci/resources.py --configure
       - name: Preserve standard native repository and remote caches
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
-      - name: Restore default Bazel startup ownership
-        run: python3 tools/bazel/ci/repair_bazel_startup.py
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
       - name: Configure source download mirrors
         run: |
           mkdir -p artifacts/native-vs
@@ -246,6 +258,7 @@ jobs:
           bazel build --nobuild --config=syncd-dash \
             --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
       - name: Retain the acceptance results
+        id: runner_cleanup_upload_0
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -257,8 +270,10 @@ jobs:
             bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.log
           if-no-files-found: warn
           retention-days: 14
-      - name: Clean completed Bazel outputs
-        if: always()
-        run: |
-          bazel clean
-          bazel shutdown
+      - name: Authorize post-job cleanup
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

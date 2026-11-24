@@ -415,6 +415,15 @@ class MigratedCleanupTest(unittest.TestCase):
             self.steps = {"runner_cleanup_upload_0": {"outcome": "success"}}
             self.run_host_lifecycle()
 
+    def test_native_vs_publication_cleanup_preserves_shared_cache(self):
+        with mock.patch.dict(os.environ, {
+                "GITHUB_JOB": "native-vs-installer",
+                "GITHUB_WORKFLOW_REF":
+                    "securely1g/project/.github/workflows/bazel-image-rules.yml@refs/heads/test",
+                "BAZEL_CLEANUP_UPLOAD_STEPS": '["runner_cleanup_upload_0"]'}):
+            self.steps = {"runner_cleanup_upload_0": {"outcome": "success"}}
+            self.run_host_lifecycle()
+
 
 class MigratedWorkflowCleanupTest(unittest.TestCase):
     def test_every_bazel_job_container_verifies_private_startup_after_cache_setup(self):
@@ -441,6 +450,7 @@ class MigratedWorkflowCleanupTest(unittest.TestCase):
         self.assertEqual(covered, {
             ("bazel-eventd.yml", "native"), ("bazel-supervisor-rust.yml", "native"),
             ("bazel-frr.yml", "native"), ("bazel-frr-python.yml", "packages"),
+            ("bazel-image-rules.yml", "native-vs-installer"),
             ("bazel-libteam.yml", "native"), ("bazel-sysmgr.yml", "native"),
             ("bazel-oci.yml", "archive"), ("bazel-oci.yml", "package_amd64"),
             ("bazel-oci.yml", "checks"),
