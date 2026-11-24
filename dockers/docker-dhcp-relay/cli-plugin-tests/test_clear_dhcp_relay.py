@@ -563,14 +563,14 @@ def test_dhcpmon_clear_requests_authenticated_db(patch_import_module, version):
     requested = []
 
     class WriterDb:
-        def __init__(self, authenticate=False):
-            requested.append(authenticate)
+        def __init__(self, *, authenticate, use_tcp):
+            requested.append((authenticate, use_tcp))
 
     with patch.object(module, "Db", WriterDb), \
          patch.object(module, "clear_dhcpmon_counters") as clear:
         result = CliRunner().invoke(module.dhcp_relay.commands[version].commands["counters"])
     assert result.exit_code == 0
-    assert requested == [True]
+    assert requested == [(True, False)]
     assert isinstance(clear.call_args.args[0], WriterDb)
 
 
