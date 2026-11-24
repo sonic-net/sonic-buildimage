@@ -60,20 +60,33 @@ typedef struct wb_io_dev_s {
 
 static wb_io_dev_t* io_dev_arry[MAX_IO_DEV_NUM];
 
+static int io_dev_minor_to_dev(unsigned int minor, wb_io_dev_t **wb_io_dev)
+{
+    int i;
+
+    for (i = 0; i < MAX_IO_DEV_NUM; i++) {
+        if (io_dev_arry[i] == NULL) {
+            continue;
+        }
+        if (io_dev_arry[i]->misc.minor == (int)minor) {
+            *wb_io_dev = io_dev_arry[i];
+            return 0;
+        }
+    }
+
+    return -ENODEV;
+}
+
 static int io_dev_open(struct inode *inode, struct file *file)
 {
     unsigned int minor = iminor(inode);
     wb_io_dev_t *wb_io_dev;
+    int ret;
 
-    if (minor >= MAX_IO_DEV_NUM) {
-        IO_DEV_DEBUG_ERROR("minor out of range, minor = %d.\n", minor);
-        return -ENODEV;
-    }
-
-    wb_io_dev = io_dev_arry[minor];
-    if (wb_io_dev == NULL) {
+    ret = io_dev_minor_to_dev(minor, &wb_io_dev);
+    if (ret != 0) {
         IO_DEV_DEBUG_ERROR("wb_io_dev is NULL, open failed, minor = %d\n", minor);
-        return -ENODEV;
+        return ret;
     }
 
     file->private_data = wb_io_dev;
@@ -400,7 +413,7 @@ static wb_io_dev_t *dev_match(const char *path)
         wb_io_dev = io_dev_arry[i];
         snprintf(dev_name, MAX_NAME_SIZE,"/dev/%s", wb_io_dev->name);
         if (!strcmp(path, dev_name)) {
-            IO_DEV_DEBUG_VERBOSE("get dev_name = %s, minor = %d\n", dev_name, i);
+            IO_DEV_DEBUG_VERBOSE("get dev_name = %s, minor = %d\n", dev_name, wb_io_dev->misc.minor);
             return wb_io_dev;
         }
     }
@@ -468,7 +481,7 @@ EXPORT_SYMBOL(io_device_func_write);
 
 static int io_dev_probe(struct platform_device *pdev)
 {
-    int ret;
+    int ret, free_idx;
     wb_io_dev_t *wb_io_dev;
     struct miscdevice *misc;
     io_dev_device_t *io_dev_device;
@@ -549,13 +562,18 @@ static int io_dev_probe(struct platform_device *pdev)
         dev_err(&pdev->dev, "Failed to register %s device.\n", misc->name);
         return -ENXIO;
     }
-    if (misc->minor >= MAX_IO_DEV_NUM) {
-        dev_err(&pdev->dev, "Error: device minor[%d] more than max io device num[%d].\n",
-            misc->minor, MAX_IO_DEV_NUM);
-        misc_deregister(misc);
-        return -EINVAL;
+
+    for (free_idx = 0; free_idx < MAX_IO_DEV_NUM; free_idx++) {
+        if (io_dev_arry[free_idx] == NULL) {
+            break;
+        }
     }
-    io_dev_arry[misc->minor] = wb_io_dev;
+    if (free_idx >= MAX_IO_DEV_NUM) {
+        dev_err(&pdev->dev, "Error: io device num exceeds max io device num[%d].\n", MAX_IO_DEV_NUM);
+        misc_deregister(misc);
+        return -ENOSPC;
+    }
+    io_dev_arry[free_idx] = wb_io_dev;
     dev_info(&pdev->dev, "register %s device [0x%x][0x%x] with minor %d using %s addressing success.\n",
         misc->name, wb_io_dev->io_base, wb_io_dev->io_len, misc->minor,
         wb_io_dev->indirect_addr ? "indirect" : "direct");
