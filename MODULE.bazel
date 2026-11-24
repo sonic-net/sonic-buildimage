@@ -43,7 +43,7 @@ bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "redis-dump-load", version = "1.1.sonic.2", repo_name = "redis_dump_load")
-bazel_dep(name = "sonic-linux-kernel", version = "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b", repo_name = "sonic_linux_kernel")
+bazel_dep(name = "sonic-linux-kernel", version = "0.0.4-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b", repo_name = "sonic_linux_kernel")
 
 # PI, BMv2, P4C and DASH export their native Bazel outputs as installation TARs.
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.7", repo_name = "p4lang_pi")
@@ -81,7 +81,7 @@ register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
 # submodules selected by the rest of the Make image build.
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.44-35726399908a3beb947174e9359f902077928289",
+    version = "0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de",
     repo_name = "sonic_build_infra",
 )
 single_version_override(
@@ -364,7 +364,7 @@ pip.parse(
 use_repo(pip, "database_pip")
 
 bazel_dep(name = "socat", version = "1.8.0.2.sonic.7")
-bazel_dep(name = "iproute2", version = "6.15.0.sonic.7")
+bazel_dep(name = "iproute2", version = "6.15.0.sonic.9")
 bazel_dep(name = "libnl3", version = "3.7.0.sonic.8")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
 bazel_dep(name = "libyang", version = "3.12.2.sonic.8")
@@ -616,7 +616,7 @@ single_version_override(
 # Framework shares the root gNMI Go selection and public generator identities.
 # Its registration follows the standard non-root go.mod dependency mechanism;
 # the reviewed registry entry supplies that wiring.
-bazel_dep(name = "sonic-mgmt-framework", version = "1.0.0-d48ffb1ebae56f6525f24e14d39562a0ba825daa", repo_name = "sonic_mgmt_framework")
+bazel_dep(name = "sonic-mgmt-framework", version = "1.0.1-07de59606b0b37a105544284405e86e1a27051bf", repo_name = "sonic_mgmt_framework")
 
 # The old pre-flag.Parse glog diagnostic patch does not apply to glog1.2.4.
 # Preserve the shared root's current glog API and all other SONiC Go patches.
@@ -899,7 +899,7 @@ use_repo(pip, "vs_runtime_pip")
 # Make takes generate_cert.go from the selected SDK; Trixie now selects1.26.5.
 single_version_override(
     module_name = "sonic-mgmt-framework",
-    version = "1.0.0-d48ffb1ebae56f6525f24e14d39562a0ba825daa",
+    version = "1.0.1-07de59606b0b37a105544284405e86e1a27051bf",
     patches = ["//tools/bazel/image/vs/patches:framework-selected-go-sdk.patch"],
     patch_strip = 1,
 )
