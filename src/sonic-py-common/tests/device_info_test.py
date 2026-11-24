@@ -745,3 +745,19 @@ liquid_cooled=true
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
+
+
+def test_runtime_metadata_uses_supplied_hwsku(monkeypatch, tmp_path):
+    monkeypatch.setattr(device_info, "is_chassis", lambda: False)
+    monkeypatch.setattr(device_info, "is_multi_npu", lambda: False)
+    monkeypatch.setattr(device_info, "is_macsec_supported", lambda: 0)
+    monkeypatch.setattr(device_info, "get_platform", lambda: "test-platform")
+    monkeypatch.setattr(device_info, "get_path_to_platform_dir", lambda: str(tmp_path))
+    sku_path = tmp_path / "test-sku"
+    sku_path.mkdir()
+    (sku_path / "port_config.ini").touch()
+
+    with mock.patch.object(device_info, "get_hwsku", side_effect=AssertionError("Unexpected CONFIG_DB read")):
+        metadata = device_info.get_device_runtime_metadata(hwsku="test-sku")
+
+    assert metadata["DEVICE_RUNTIME_METADATA"]["ETHERNET_PORTS_PRESENT"] is True

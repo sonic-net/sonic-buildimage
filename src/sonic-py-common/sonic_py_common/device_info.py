@@ -1006,13 +1006,13 @@ def get_smartswitch_midplane_ip():
     return None
 
 
-def get_device_runtime_metadata():
+def get_device_runtime_metadata(hwsku=None):
     chassis_metadata = {}
     if is_chassis():
         chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
                                                 'chassis_type': 'voq' if is_voq_chassis() else 'packet'}}
 
-    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
+    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=hwsku, asic="0" if is_multi_npu() else None) else False}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)

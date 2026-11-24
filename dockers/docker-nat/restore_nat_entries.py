@@ -74,7 +74,7 @@ def main():
 
     # Use warmstart python binding to check warmstart information
     warmstart = swsscommon.WarmStart()
-    warmstart.initialize("natsyncd", "nat")
+    warmstart.initialize("natsyncd", "nat", 0, False, True)
     warmstart.checkWarmStart("natsyncd", "nat", False)
 
     # if swss or system warm reboot not enabled, don't run
