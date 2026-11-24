@@ -1,6 +1,7 @@
 """Shared mirror setup preserves source integrity and existing download policy."""
 
 import hashlib
+from http.client import IncompleteRead
 import io
 from pathlib import Path
 import re
@@ -9,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 import yaml
 
@@ -17,6 +19,66 @@ from tools.bazel.ci import source_mirrors
 
 
 class SourceMirrorsTest(unittest.TestCase):
+    def test_transient_http_errors_retry_then_verify_policy(self):
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        for status in (408, 429, 500, 502, 503, 504):
+            with self.subTest(status=status), \
+                    patch.object(source_mirrors, 'urlopen', side_effect=[
+                        HTTPError(source_mirrors.URL, status, 'temporary', None, None),
+                        io.BytesIO(shared),
+                    ]) as fetch, \
+                    patch.object(source_mirrors.time, 'sleep') as sleep, \
+                    patch.object(source_mirrors.random, 'uniform', return_value=0.5), \
+                    patch.object(sys, 'stderr', new_callable=io.StringIO) as diagnostics:
+                self.assertEqual(source_mirrors.download(), shared)
+                self.assertEqual(fetch.call_count, 2)
+                sleep.assert_called_once_with(1.5)
+                self.assertIn(f'HTTP {status}', diagnostics.getvalue())
+                self.assertIn('attempt 2/4', diagnostics.getvalue())
+
+    def test_transient_connection_and_response_read_errors_retry(self):
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        for error in (URLError('temporary DNS failure'), TimeoutError(),
+                      ConnectionResetError(), IncompleteRead(b'partial')):
+            with self.subTest(error=type(error).__name__), \
+                    patch.object(source_mirrors, 'urlopen') as fetch, \
+                    patch.object(source_mirrors.time, 'sleep') as sleep:
+                response = unittest.mock.MagicMock()
+                response.__enter__.return_value.read.side_effect = error
+                fetch.side_effect = [response, io.BytesIO(shared)]
+                self.assertEqual(source_mirrors.download(), shared)
+                self.assertEqual(fetch.call_count, 2)
+                sleep.assert_called_once()
+                response.__exit__.assert_called_once()
+
+    def test_exhausted_retries_preserve_existing_configuration(self):
+        error = HTTPError(source_mirrors.URL, 503, 'Backend.max_conn reached', None, None)
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(source_mirrors, 'urlopen', side_effect=error) as fetch, \
+                patch.object(source_mirrors.time, 'sleep') as sleep, \
+                patch.object(source_mirrors.random, 'uniform', return_value=0.5):
+            output = Path(temporary) / 'mirrors.cfg'
+            output.write_bytes(b'previous verified policy\n')
+            with self.assertRaises(HTTPError) as raised:
+                source_mirrors.prepare(output)
+            self.assertIs(raised.exception, error)
+            self.assertEqual(fetch.call_count, 4)
+            self.assertEqual(sleep.call_args_list,
+                             [unittest.mock.call(1.5), unittest.mock.call(2.5),
+                              unittest.mock.call(4.5)])
+            self.assertEqual(output.read_bytes(), b'previous verified policy\n')
+
+    def test_permanent_http_errors_are_not_retried(self):
+        for status in (400, 401, 403, 404):
+            error = HTTPError(source_mirrors.URL, status, 'permanent', None, None)
+            with self.subTest(status=status), \
+                    patch.object(source_mirrors, 'urlopen', side_effect=error) as fetch, \
+                    patch.object(source_mirrors.time, 'sleep') as sleep:
+                with self.assertRaises(HTTPError):
+                    source_mirrors.download()
+                fetch.assert_called_once()
+                sleep.assert_not_called()
+
     def test_dhcp_workflow_prefers_locked_snapshots_and_preserves_all_fallbacks(self):
         """Exercise the real workflow's CLI arguments through the shared helper."""
         root = Path(__file__).resolve().parents[3]
@@ -40,9 +102,12 @@ class SourceMirrorsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / 'mirrors.cfg'
             output.write_bytes(b'previous verified policy\n')
-            with patch.object(source_mirrors, 'urlopen', return_value=io.BytesIO(b'changed policy')), \
+            with patch.object(source_mirrors, 'urlopen', return_value=io.BytesIO(b'changed policy')) as fetch, \
+                    patch.object(source_mirrors.time, 'sleep') as sleep, \
                     self.assertRaisesRegex(ValueError, 'checksum mismatch'):
                 source_mirrors.prepare(output)
+            fetch.assert_called_once()
+            sleep.assert_not_called()
             self.assertEqual(output.read_bytes(), b'previous verified policy\n')
 
     def test_verified_shared_policy_keeps_local_debian_priority(self):

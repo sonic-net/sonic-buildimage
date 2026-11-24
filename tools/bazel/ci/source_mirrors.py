@@ -3,7 +3,12 @@
 
 import argparse
 import hashlib
+from http.client import IncompleteRead
 from pathlib import Path
+import random
+import sys
+import time
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -21,8 +26,27 @@ def verify(configuration):
 
 
 def download():
-    with urlopen(URL, timeout=60) as response:
-        return verify(response.read())
+    for attempt in range(4):
+        try:
+            with urlopen(URL, timeout=60) as response:
+                configuration = response.read()
+        except (URLError, TimeoutError, ConnectionError, IncompleteRead) as error:
+            if isinstance(error, HTTPError):
+                if error.code not in (408, 429, 500, 502, 503, 504):
+                    raise
+                reason = f"HTTP {error.code}"
+                error.close()
+            else:
+                reason = type(error).__name__
+            if attempt == 3:
+                raise
+            delay = 2 ** attempt + random.uniform(0, 1)
+            print(f"Source mirror configuration download failed ({reason}); "
+                  f"retrying in {delay:.1f}s (attempt {attempt + 2}/4)",
+                  file=sys.stderr)
+            time.sleep(delay)
+        else:
+            return verify(configuration)
 
 
 def prepare(output, local=ROOT / "tools/bazel/debian_mirrors.cfg", *, prefer_debian_snapshot=False):
