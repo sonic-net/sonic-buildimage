@@ -1,5 +1,7 @@
 import pytest
-import mock_tables # lgtm [py/unused-import]
+# Imported for side effects: installs fake Redis/SWSS connector patches
+# before pytest imports the CLI plugin modules.
+import mock_tables  # lgtm [py/unused-import]
 from unittest import mock
 
 @pytest.fixture()
