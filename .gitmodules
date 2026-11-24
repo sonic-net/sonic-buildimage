@@ -1,7 +1,7 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
 	url = https://github.com/ashutosh-agrawal/sonic-swss-common.git
-	branch = redis-vs-auth-integration-20261114
+	branch = redis-vs-auth-integration-20261124
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
