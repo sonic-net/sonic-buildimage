@@ -92,7 +92,7 @@ fi
 
 # Create /e/n/i file for existing and active interfaces, dhcp6 sytcl.conf and dhclient.conf
 CFGGEN_PARAMS=(
-    -d
+    -d --redis-unix-socket
     -j "${ZTP_INPUT}"
     -t /usr/share/sonic/templates/interfaces.j2,/etc/network/interfaces
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf

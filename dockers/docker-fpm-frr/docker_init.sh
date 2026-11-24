@@ -4,7 +4,7 @@ mkdir -p /etc/frr
 mkdir -p /etc/supervisor/conf.d
 
 CFGGEN_PARAMS=" \
-    -d \
+    -d --redis-unix-socket \
     -y /etc/sonic/constants.yml \
     -t /usr/share/sonic/templates/frr_vars.j2 \
     -t /usr/share/sonic/templates/supervisord/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
@@ -58,7 +58,7 @@ fi
 
 if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     CFGGEN_PARAMS=" \
-        -d \
+        -d --redis-unix-socket \
         -y /etc/sonic/constants.yml \
         -t /usr/share/sonic/templates/bgpd/gen_bgpd.conf.j2,/etc/frr/bgpd.conf \
         -t /usr/share/sonic/templates/zebra/zebra.conf.j2,/etc/frr/zebra.conf \
@@ -68,7 +68,7 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
         CFGGEN_PARAMS=" \
-            -d \
+            -d --redis-unix-socket \
             -y /etc/sonic/constants.yml \
             -T /usr/local/sonic/frrcfgd \
             -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
@@ -95,7 +95,7 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "unified" ]; then
     CFGGEN_PARAMS=" \
-        -d \
+        -d --redis-unix-socket \
         -y /etc/sonic/constants.yml \
         -T /usr/local/sonic/frrcfgd \
         -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \

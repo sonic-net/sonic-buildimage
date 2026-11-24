@@ -6,7 +6,7 @@ mkdir -p /etc/supervisor/conf.d/
 mkdir -p /dev/shm/supervisor/
 
 CFGGEN_PARAMS=" \
-    -d \
+    -d --redis-unix-socket \
 {% if ENABLE_ASAN == "y" %}
     -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\",\"ASIC_VENDOR\":\"${ASIC_VENDOR:-unknown}\"}" \
 {% else %}

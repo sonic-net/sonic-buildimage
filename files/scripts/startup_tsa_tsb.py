@@ -27,9 +27,9 @@ def get_tsb_timer_interval():
 
 def get_sonic_config(ns, config_name):
     if ns == "":
-        return subprocess.check_output(['sonic-cfggen', '-d', '-v', config_name.replace('"', "'"), ]).strip()
+        return subprocess.check_output(['sonic-cfggen', '-d', '--redis-unix-socket', '-v', config_name.replace('"', "'"), ]).strip()
     else:
-        return subprocess.check_output(['sonic-cfggen', '-d', '-v', config_name.replace('"', "'"), '-n', ns.replace('"', "'")]).strip()
+        return subprocess.check_output(['sonic-cfggen', '-d', '--redis-unix-socket', '-v', config_name.replace('"', "'"), '-n', ns.replace('"', "'")]).strip()
 
 def get_sub_role(asic_ns):
     sub_role_config = "DEVICE_METADATA['localhost']['sub_role']"
