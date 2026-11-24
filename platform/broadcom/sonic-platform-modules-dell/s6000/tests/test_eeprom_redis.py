@@ -12,8 +12,6 @@ import pytest
 @pytest.fixture
 def eeprom(monkeypatch):
     modules = {
-        'sonic_py_common._redis_transport': types.SimpleNamespace(
-            use_local_redis_socket=MagicMock(return_value=True)),
         'swsscommon.redis': types.SimpleNamespace(
             connection_pool=MagicMock(return_value={})),
         'sonic_platform_base.sonic_eeprom.eeprom_base': types.SimpleNamespace(
@@ -39,8 +37,7 @@ def eeprom(monkeypatch):
 
 @pytest.mark.parametrize('use_unix', [True, False])
 def test_reader_uses_configured_endpoint_without_native_pool(eeprom, use_unix):
-    eeprom.use_local_redis_socket.return_value = use_unix
-    assert eeprom._get_state_db_client() is eeprom.redis.Redis.return_value
+    assert eeprom._get_state_db_client(use_tcp=not use_unix) is eeprom.redis.Redis.return_value
     endpoint = ({'unix_socket_path': '/run/redis/custom-state.sock'} if use_unix
                 else {'host': '127.0.0.1', 'port': 6381})
     eeprom.redis.Redis.assert_called_once_with(db=16, **endpoint)
@@ -50,17 +47,16 @@ def test_reader_uses_configured_endpoint_without_native_pool(eeprom, use_unix):
 def test_writer_authenticates_on_configured_socket(eeprom):
     pool = MagicMock()
     eeprom.test_pool.return_value = pool
-    assert eeprom._get_state_db_client(authenticate=True) is eeprom.redis.Redis.return_value
+    assert eeprom._get_state_db_client(use_tcp=False, authenticate=True) is eeprom.redis.Redis.return_value
     eeprom.test_pool.assert_called_once_with(
         db=16, unix_socket_path='/run/redis/custom-state.sock', authenticate=True)
     eeprom.redis.Redis.assert_called_once_with(connection_pool=pool)
-    eeprom.use_local_redis_socket.assert_not_called()
 
 
 def test_writer_authentication_error_is_not_ignored(eeprom):
     eeprom.test_pool.side_effect = RuntimeError('missing selected credential')
     with pytest.raises(RuntimeError, match='missing selected credential'):
-        eeprom._get_state_db_client(authenticate=True)
+        eeprom._get_state_db_client(use_tcp=False, authenticate=True)
     eeprom.redis.Redis.assert_not_called()
 
 
@@ -68,6 +64,7 @@ def test_cache_reader_keeps_existing_byte_response_behavior(eeprom):
     client = eeprom.redis.Redis.return_value
     client.hget.return_value = b'1'
     decoder = eeprom.EepromS6000.__new__(eeprom.EepromS6000)
+    decoder._state_db_use_tcp = True
 
     # The existing decoder compares the byte reply with a string. This PR
     # preserves that behavior instead of also changing response decoding.
@@ -80,6 +77,7 @@ def test_cache_reader_keeps_existing_byte_response_behavior(eeprom):
 def test_cache_writer_uses_selected_client(eeprom, capsys):
     client = eeprom.redis.Redis.return_value
     decoder = eeprom.EepromS6000.__new__(eeprom.EepromS6000)
+    decoder._state_db_use_tcp = True
     # Exercise the existing invalid-block path without a hardware read.
     assert decoder.update_eeprom_db(bytes(128)) == 0
     assert 'Invalid Block starting at EEPROM offset 0' in capsys.readouterr().out

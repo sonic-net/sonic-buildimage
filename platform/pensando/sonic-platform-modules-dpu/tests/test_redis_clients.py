@@ -22,7 +22,7 @@ def load_definitions(path, names, namespace):
 
 @pytest.fixture
 def clients(monkeypatch):
-    sdk, pool, redis, select = (MagicMock() for _ in range(4))
+    sdk, pool, redis = (MagicMock() for _ in range(3))
     sdk.SonicDBConfig.getDbId.side_effect = {'CONFIG_DB': 4, 'STATE_DB': 6}.__getitem__
     sdk.SonicDBConfig.getDbSock.side_effect = lambda name: '/run/redis/' + name + '.sock'
     sdk.SonicDBConfig.getDbHostname.return_value = '127.0.0.1'
@@ -32,14 +32,12 @@ def clients(monkeypatch):
     parent.swsscommon = sdk
     monkeypatch.setitem(sys.modules, 'swsscommon', parent)
     monkeypatch.setitem(sys.modules, 'swsscommon.redis', types.SimpleNamespace(connection_pool=pool))
-    monkeypatch.setitem(sys.modules, 'sonic_py_common._redis_transport',
-                        types.SimpleNamespace(use_local_redis_socket=select))
     monkeypatch.setitem(sys.modules, 'redis', redis)
-    return sdk, pool, redis, select
+    return sdk, pool, redis
 
 
 def test_disable_containers_authenticates_config_writes(clients):
-    _, pool, redis, _ = clients
+    _, pool, redis = clients
     redis.StrictRedis.return_value.exists.side_effect = [True, False]
     module = load_definitions(ROOT / 'dpu/utils/dpu_pensando_util.py', ['disable_unused_containers'], {
         'DISABLE_CONTAINER_LIST': ['bgp', 'lldp'], 'log_err': MagicMock()})
@@ -52,7 +50,7 @@ def test_disable_containers_authenticates_config_writes(clients):
 
 @pytest.mark.parametrize('remote_available', [True, False])
 def test_health_writer_preserves_remote_and_authenticates_local_fallback(clients, remote_available):
-    _, pool, redis, _ = clients
+    _, pool, redis = clients
     remote, local = MagicMock(), MagicMock()
     if not remote_available:
         remote.ping.side_effect = ConnectionError('remote unavailable')
@@ -74,7 +72,7 @@ def test_health_writer_preserves_remote_and_authenticates_local_fallback(clients
 
 @pytest.fixture
 def eeprom(clients):
-    _, _, redis, _ = clients
+    _, _, redis = clients
     return load_definitions(ROOT / 'sonic_platform/fru_tlvinfo_decoder.py',
                             ['FruTlvInfoEncoder', 'EepromDefaultVisitor', 'EepromRedisVisitor'], {
         'redis': redis, 'eeprom_base': types.SimpleNamespace(EepromDecoder=object)})
@@ -82,10 +80,10 @@ def eeprom(clients):
 
 @pytest.mark.parametrize('use_socket', [False, True])
 def test_eeprom_reader_keeps_transport_and_cached_connection(clients, eeprom, use_socket):
-    _, pool, redis, select = clients
-    select.return_value = use_socket
+    _, pool, redis = clients
     encoder = eeprom.FruTlvInfoEncoder.__new__(eeprom.FruTlvInfoEncoder)
     encoder._redis_client = None
+    encoder._state_db_use_tcp = not use_socket
     assert encoder.redis_client is encoder.redis_client
     options = ({'unix_socket_path': '/run/redis/STATE_DB.sock'} if use_socket
                else {'host': '127.0.0.1', 'port': 6381})
@@ -94,7 +92,7 @@ def test_eeprom_reader_keeps_transport_and_cached_connection(clients, eeprom, us
 
 
 def test_eeprom_visitor_uses_a_separate_authenticated_writer(clients, eeprom):
-    _, pool, redis, _ = clients
+    _, pool, redis = clients
     encoder = eeprom.FruTlvInfoEncoder.__new__(eeprom.FruTlvInfoEncoder)
     encoder._redis_client = MagicMock(name='reader')
     visitor = eeprom.EepromRedisVisitor(encoder)

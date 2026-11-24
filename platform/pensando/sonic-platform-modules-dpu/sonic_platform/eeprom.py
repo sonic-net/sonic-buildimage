@@ -25,7 +25,7 @@ DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
 class Eeprom(FruTlvInfoEncoder):
     """Platform-specific EEPROM class"""
 
-    def __init__(self, is_psu=False, psu_index=0, is_fantray=False, fantray_index=0):
+    def __init__(self, is_psu=False, psu_index=0, is_fantray=False, fantray_index=0, *, use_tcp=True):
         self.start_offset = 0
         self._api_helper = APIHelper()
 
@@ -40,7 +40,7 @@ class Eeprom(FruTlvInfoEncoder):
             self._setup_files()
         # System EEPROM is in ONIE TlvInfo EEPROM format
         super(Eeprom, self).__init__(self.eeprom_path,
-                                    self.start_offset, '', True, self.fru_path)
+                                    self.start_offset, '', True, self.fru_path, use_tcp=use_tcp)
         self._load_system_eeprom()
 
     def _setup_files(self):

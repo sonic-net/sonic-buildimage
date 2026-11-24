@@ -12,8 +12,6 @@ import pytest
 
 @pytest.fixture
 def led(monkeypatch):
-    monkeypatch.setitem(sys.modules, 'sonic_py_common._redis_transport',
-                        types.SimpleNamespace(use_local_redis_socket=MagicMock(return_value=True)))
     config = MagicMock()
     monkeypatch.setitem(sys.modules, 'swsscommon.swsscommon',
                         types.SimpleNamespace(SonicDBConfig=config))
@@ -31,14 +29,10 @@ def led(monkeypatch):
 
 
 @pytest.mark.parametrize('db_name,db_id', [('CONFIG_DB', 14), ('STATE_DB', 16)])
-@pytest.mark.parametrize('use_unix', [True, False])
-def test_configured_endpoint_without_auth(led, db_name, db_id, use_unix):
-    led.use_local_redis_socket.return_value = use_unix
-    endpoint = ({'unix_socket_path': '/run/redis/' + db_name + '.sock'} if use_unix
-                else {'host': '127.0.0.1', 'port': 6381})
+def test_configured_socket_without_auth(led, db_name, db_id):
     assert led._get_db_client(db_name) is led.redis.Redis.return_value
-    led.use_local_redis_socket.assert_called_once_with(db_name)
-    led.redis.Redis.assert_called_once_with(db=db_id, decode_responses=True, **endpoint)
+    led.redis.Redis.assert_called_once_with(
+        db=db_id, decode_responses=True, unix_socket_path='/run/redis/' + db_name + '.sock')
 
 
 def test_both_databases_connect_and_ping(led):

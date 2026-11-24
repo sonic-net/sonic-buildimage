@@ -22,7 +22,6 @@ try:
     import redis
     import struct
     from collections import OrderedDict
-    from sonic_py_common._redis_transport import use_local_redis_socket
     from sonic_platform_base.sonic_eeprom.eeprom_base import EepromDecoder
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from swsscommon.swsscommon import SonicDBConfig
@@ -32,14 +31,14 @@ except ImportError as e:
 STATE_DB_NAME = 'STATE_DB'
 
 
-def _get_state_db_client(authenticate=False):
+def _get_state_db_client(*, use_tcp=True, authenticate=False):
     db = SonicDBConfig.getDbId(STATE_DB_NAME)
     if authenticate:
         from swsscommon.redis import connection_pool
         return redis.Redis(connection_pool=connection_pool(
             unix_socket_path=SonicDBConfig.getDbSock(STATE_DB_NAME), db=db,
             authenticate=True))
-    if use_local_redis_socket(STATE_DB_NAME):
+    if not use_tcp:
         return redis.Redis(db=db, unix_socket_path=SonicDBConfig.getDbSock(STATE_DB_NAME))
     return redis.Redis(db=db, host=SonicDBConfig.getDbHostname(STATE_DB_NAME),
                        port=SonicDBConfig.getDbPort(STATE_DB_NAME))
@@ -316,7 +315,8 @@ class EepromS6000(EepromDecoder):
                          "offset": 0x70, "format": _BLK_MAC_FORMAT})
     ])
 
-    def __init__(self, is_plugin=False):
+    def __init__(self, is_plugin=False, *, use_tcp=True):
+        self._state_db_use_tcp = use_tcp
         self.eeprom_path = "/sys/bus/i2c/devices/i2c-10/10-0053/eeprom"
         super(EepromS6000, self).__init__(self.eeprom_path, None, 0, '', True)
 
@@ -394,7 +394,7 @@ class EepromS6000(EepromDecoder):
         """
         Print out the contents of the EEPROM from database.
         """
-        client = _get_state_db_client()
+        client = _get_state_db_client(use_tcp=self._state_db_use_tcp)
         db_state = client.hget('EEPROM_INFO|State', 'Initialized')
         if db_state != '1':
             return -1
@@ -423,7 +423,7 @@ class EepromS6000(EepromDecoder):
         """
         Decode the contents of the EEPROM and update the contents to database
         """
-        client = _get_state_db_client(authenticate=True)
+        client = _get_state_db_client(use_tcp=False, authenticate=True)
         for blk_code in list(self._BLK_INFO.keys()):
             blk_name = self._BLK_INFO[blk_code]["name"]
             blk_start = self._BLK_INFO[blk_code]["offset"]
