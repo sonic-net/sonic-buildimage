@@ -1,0 +1,149 @@
+{
+  "_comment": [
+    "debconf answers of the Make build (DEBIAN_FRONTEND=noninteractive, no preseeding).",
+    "'default': the question was db_input'ed by the package config/postinst; the",
+    "noninteractive frontend stores the template Default. '@computed:<kind>' is filled",
+    "by the generator from image data. Literal values are what the config script",
+    "derives in the build chroot (documented per entry)."
+  ],
+  "questions": {
+    "apparmor/homedirs": {
+      "value": "default"
+    },
+    "ca-certificates/enable_crts": {
+      "value": "@computed:ca_enabled",
+      "variables": {
+        "enable_crts": "@computed:ca_enabled"
+      }
+    },
+    "ca-certificates/new_crts": {
+      "variables": {
+        "new_crts": ""
+      }
+    },
+    "ca-certificates/trust_new_crts": {
+      "value": "default"
+    },
+    "debconf/frontend": {
+      "value": "default"
+    },
+    "debconf/priority": {
+      "value": "default"
+    },
+    "fontconfig/enable_bitmaps": {
+      "value": "default"
+    },
+    "fontconfig/hinting_style": {
+      "value": "default"
+    },
+    "fontconfig/hinting_type": {
+      "value": "default"
+    },
+    "fontconfig/subpixel_rendering": {
+      "value": "default"
+    },
+    "iproute2/setcaps": {
+      "value": "default"
+    },
+    "iptables-persistent/autosave_v4": {
+      "value": "default"
+    },
+    "iptables-persistent/autosave_v6": {
+      "value": "default"
+    },
+    "kdump-tools/use_kdump": {
+      "value": "default"
+    },
+    "kexec-tools/load_kexec": {
+      "value": "default"
+    },
+    "kexec-tools/use_grub_config": {
+      "value": "default"
+    },
+    "libdebuginfod/usedebiandebuginfod": {
+      "value": "default"
+    },
+    "libnss-ldapd/nsswitch": {
+      "value": "",
+      "_why": "nslcd config: no nsswitch.conf services use ldap yet"
+    },
+    "libpam-runtime/override": {
+      "value": "default"
+    },
+    "libpam-runtime/profiles": {
+      "value": "@computed:pam_enabled",
+      "variables": {
+        "profile_names": "@computed:pam_names",
+        "profiles": "@computed:pam_descriptions"
+      },
+      "_why": "Current installed /usr/share/pam-configs defaults and pam-auth-update priority ordering after declared removals."
+    },
+    "locales/locales_to_be_generated": {
+      "value": "",
+      "variables": {
+        "locales": "@computed:locales_supported"
+      }
+    },
+    "nslcd/ldap-auth-type": {
+      "value": "none"
+    },
+    "nslcd/ldap-base": {
+      "value": "dc=,dc=",
+      "_why": "nslcd.config: base DN from the (empty) build-host domain"
+    },
+    "nslcd/ldap-bindpw": {
+      "value": "default"
+    },
+    "nslcd/ldap-starttls": {
+      "value": "false"
+    },
+    "nslcd/ldap-uris": {
+      "value": "ldap://127.0.0.1/",
+      "_why": "nslcd.config fallback when no LDAP server is discovered"
+    },
+    "openssh-server/password-authentication": {
+      "value": "default"
+    },
+    "openssh-server/permit-root-login": {
+      "value": "default"
+    },
+    "resolvconf/downup-interfaces": {
+      "value": "default"
+    },
+    "resolvconf/link-tail-to-original": {
+      "value": "default"
+    },
+    "resolvconf/linkify-resolvconf": {
+      "value": "default"
+    },
+    "sysstat/enable": {
+      "value": "default"
+    },
+    "sysstat/remove_files": {
+      "value": "default"
+    },
+    "tzdata/Areas": {
+      "value": "Etc",
+      "flags": [
+        "seen"
+      ],
+      "_why": "tzdata.config: no /etc/timezone -> Etc/UTC, marked seen"
+    },
+    "tzdata/Zones/Etc": {
+      "value": "UTC",
+      "flags": [
+        "seen"
+      ]
+    }
+  },
+  "_owners_comment": "Template owner (info file stem) -> owners recorded in config.dat. apt's dpkg-preconfigure registers Multi-Arch: same packages without the arch qualifier; the postinst then adds the qualified name.",
+  "owners": {
+    "libc6:@ARCH": [
+      "libc6",
+      "libc6:@ARCH"
+    ],
+    "libpam-modules:@ARCH": [
+      "libpam-modules"
+    ]
+  }
+}

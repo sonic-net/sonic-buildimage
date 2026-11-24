@@ -16,3 +16,5 @@ py_test(
     srcs = ["registry_lib_test.py"],
     deps = [":registry_lib"],
 )
+
+exports_files(["elf-runtime-cache-links.patch"])

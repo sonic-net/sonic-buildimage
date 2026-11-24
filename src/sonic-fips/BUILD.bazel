@@ -1,0 +1,44 @@
+"""Mainline FIPS source-package outputs consumed by the VS host image."""
+
+load("@sonic_build_infra//oci:source_controls.bzl", "source_package_controls")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["host-packages.json"])
+
+_NATIVE_PACKAGES = {
+    "openssl": "openssl",
+    "libssl3t64": "openssl",
+    "libssl-dev": "openssl",
+    "symcrypt-openssl": "symcrypt",
+    "ssh": "openssh",
+    "openssh-client": "openssh",
+    "openssh-server": "openssh",
+    "openssh-sftp-server": "openssh",
+    "libk5crypto3": "krb5",
+    "libkrb5support0": "krb5",
+    "libkrb5-3": "krb5",
+    "libgssapi-krb5-2": "krb5",
+    "python3.13": "python",
+    "python3.13-minimal": "python",
+    "libpython3.13": "python",
+    "libpython3.13-minimal": "python",
+    "libpython3.13-stdlib": "python",
+}
+
+[
+    alias(
+        name = package + ".runtime",
+        actual = "@sonic_fips//" + group + ":" + package + ".runtime",
+    )
+    for package, group in _NATIVE_PACKAGES.items()
+]
+
+[
+    source_package_controls(
+        name = package + ".control",
+        metadata = "@sonic_fips//" + group + ":" + package + ".runtime_metadata",
+        package = package,
+    )
+    for package, group in _NATIVE_PACKAGES.items()
+]

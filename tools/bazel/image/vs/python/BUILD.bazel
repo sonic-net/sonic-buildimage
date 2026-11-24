@@ -1,21 +1,144 @@
-"""Existing platform-common wheel metadata for the PMON Python closure."""
-
+load("@vs_runtime_pip//:requirements.bzl", "all_whl_requirements")
+load(":update.bzl", "runtime_lock_update")
+load("@sonic_build_infra//python:runtime_lock.bzl", "checked_python_runtime", "python_runtime_plan")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
-
+load("@sonic_build_infra//python:source_package.bzl", "python_runtime_packages")
+load(":apt_metadata.bzl", "apt_python_metadata")
 package(default_visibility = ["//visibility:public"])
-
 py_binary(
     name = "apt_metadata_tool",
     srcs = ["apt_metadata.py"],
     main = "apt_metadata.py",
-    python_version = "3.13",
     deps = ["@config_engine_pip//packaging"],
+    python_version = "3.13",
 )
 
 wheel_layer(
-    name = "platform_common_runtime",
-    headers = "/usr/local/include/python3.13",
+    name = "utilities_files",
+    wheels = ["@sonic_utilities//bazel/runtime:sonic_utilities_wheel"],
     site_packages = "/usr/local/lib/python3.13/dist-packages",
-    wheels = ["@sonic_platform_common//:sonic_platform_common_wheel"],
+    headers = "/usr/local/include/python3.13",
 )
+
+apt_python_metadata(
+    name = "utilities_runtime",
+    archive = ":utilities_files",
+    distribution = "sonic-utilities",
+)
+
+python_runtime_packages(
+    name = "utilities_packages",
+    deps = [":utilities_runtime"],
+)
+
+filegroup(
+    name = "utilities_runtime_metadata",
+    srcs = [":utilities_packages"],
+    output_group = "metadata",
+)
+
+exports_files(["requirements.in", "requirements_lock.txt", "runtime.inputs.json"])
+
+wheel_layer(
+    name = "platform_common_files",
+    wheels = ["@sonic_platform_common//:sonic_platform_common_wheel"],
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    headers = "/usr/local/include/python3.13",
+)
+apt_python_metadata(
+    name = "platform_common_runtime",
+    archive = ":platform_common_files",
+    distribution = "sonic-platform-common",
+)
+
+# The Make installer reuses these already-installed Debian distributions.
+# Versions and dependencies come from their installed Python metadata.
+_APT_DISTRIBUTIONS = {
+    "python3-m2crypto": "M2Crypto",
+    "python3-cryptography": "cryptography",
+    "python3-cffi": "cffi",
+    "python3-natsort": "natsort",
+    "python3-netifaces": "netifaces",
+    "python3-paramiko": "paramiko",
+    "python3-enlighten": "enlighten",
+    "python3-requests": "requests",
+    "python3-ijson": "ijson",
+    "python3-lxml": "lxml",
+    "python3-bcrypt": "bcrypt",
+    "python3-nacl": "PyNaCl",
+    "python3-pycparser": "pycparser",
+    "python3-blessed": "blessed",
+    "python3-prefixed": "prefixed",
+    "python3-wcwidth": "wcwidth",
+    "python3-certifi": "certifi",
+    "python3-idna": "idna",
+    "python3-charset-normalizer": "charset-normalizer",
+    "python3-chardet": "chardet",
+    "python3-dbus": "dbus-python",
+    "python3-gi": "PyGObject",
+    "python3-systemd": "systemd-python",
+    "python3-urllib3": "urllib3",
+    "python3-jinja2": "Jinja2",
+    "python3-markupsafe": "MarkupSafe",
+    "python3-packaging": "packaging",
+    "python3-yaml": "PyYAML",
+}
+[apt_python_metadata(name = package, archive = "@vs_host_debian//" + package + ":data", distribution = distribution) for package, distribution in _APT_DISTRIBUTIONS.items()]
+_APT_SOURCES = [":" + package for package in _APT_DISTRIBUTIONS]
+
+_SOURCES = [
+    "//src/sonic-py-common:sonic-py-common.runtime",
+    "//src/sonic-config-engine:sonic-config-engine.runtime",
+    "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+    "@sonic_yang_models//:sonic-yang-models.runtime",
+    ":platform_common_runtime",
+    ":utilities_runtime",
+    "//src/system-health:system_health.runtime",
+    "//src/sonic-ctrmgrd:ctrmgrd.runtime",
+    "@sonic_host_services//:sonic-host-services.runtime",
+    "@bitarray//:bitarray.runtime",
+    "@pycairo//:pycairo.runtime",
+    "@blkinfo//:blkinfo.runtime",
+    "@ipaddr//:ipaddr.runtime",
+    "@redis_dump_load//:install",
+    "@www_authenticate//:www-authenticate.runtime",
+]
+_SOURCE_NAMES = [
+    "sonic-py-common", "sonic-config-engine", "sonic-yang-mgmt", "sonic-yang-models",
+    "sonic-platform-common", "sonic-utilities", "system-health", "sonic-ctrmgrd", "sonic-host-services", "bitarray", "pycairo", "blkinfo", "ipaddr", "redis-dump-load", "www-authenticate",
+]
+python_runtime_plan(
+    name = "plan",
+    packages = _SOURCES + _APT_SOURCES,
+    roots = _SOURCE_NAMES + _APT_DISTRIBUTIONS.values() + ["redis==3.5.3", "psutil", "blkinfo", "ipaddr", "grpcio==1.71.0", "grpcio-tools==1.71.0", "smbus2", "telnetlib3", "pyangbind==0.8.7", "systemd-python", "azure-storage==0.36.0"],
+    source_distributions = _SOURCE_NAMES + _APT_DISTRIBUTIONS.values(),
+    site_packages = ["/usr/local/lib/python3.13/dist-packages", "/usr/lib/python3/dist-packages"],
+    python_version = "3.13",
+    python_platform = "x86_64-unknown-linux-gnu",
+    uv_version = "0.12.18",
+)
+
+wheel_layer(
+    name = "third_party",
+    wheels = all_whl_requirements,
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    interpreter = "/usr/bin/python3",
+)
+checked_python_runtime(
+    name = "runtime",
+    sources = _SOURCES,
+    inherited_sources = _APT_SOURCES,
+    third_party = [":third_party"],
+    plan = ":plan",
+    requirements = "requirements.in",
+    lock = "requirements_lock.txt",
+    inputs = "runtime.inputs.json",
+    update_command = 'bazel run //tools/bazel/image/vs/python:update -- --uv "/path/to/managed-uv-0.12.18"',
+)
+
+runtime_lock_update(name = "update", plan = ":plan")
+
+# Source installation trees are an optional source-only view, not a wheel installation view.
+filegroup(name = "source_trees", srcs = [":runtime_sources"], output_group = "installation_trees")
+filegroup(name = "apt_python_payloads", srcs = ["@vs_host_debian//python3:raw_packages"] + ["@vs_host_debian//" + package + ":raw_packages" for package in _APT_DISTRIBUTIONS])

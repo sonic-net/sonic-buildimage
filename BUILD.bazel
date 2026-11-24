@@ -36,3 +36,13 @@ exports_files([
     "platform/vs/docker-gbsyncd-vs.mk",
     "platform/template/docker-gbsyncd-trixie.mk",
 ])
+
+# Existing Make installer inputs consumed by the VS assembler.
+exports_files([
+    "onie-image.conf",
+    "installer/install.sh",
+    "installer/sharch_body.sh",
+    "installer/default_platform.conf",
+    "installer/efi_sbatlevel.py",
+    "platform/vs/dash-engine.service",
+])

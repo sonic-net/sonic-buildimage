@@ -183,3 +183,82 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 1
+
+  native-vs-installer:
+    name: Native Bazel VS installer (AMD64)
+    if: >-
+      (github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, linux, bazel-x64]
+    # The first native build took 79 minutes; allow time for checks and cleanup.
+    timeout-minutes: 120
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Use the existing native Sysmgr worker settings for nested Linux sandboxes.
+      options: --init --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl file git libtool patch pkg-config python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare the pinned image source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+      - name: Verify the native worker and configure standard CI inputs
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(bazel --version)" = 'bazel 8.5.1'
+          python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve standard native repository and remote caches
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
+      - name: Restore default Bazel startup ownership
+        run: python3 tools/bazel/ci/repair_bazel_startup.py
+      - name: Configure source download mirrors
+        run: |
+          mkdir -p artifacts/native-vs
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/native-vs-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/native-vs-mirrors.cfg" >> .bazelrc.user
+      - name: Build the complete VS AMD64 Trixie FIPS DASH runtime installer
+        run: |
+          bazel build --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic-vs.bin
+          sha256sum bazel-bin/tools/bazel/image/vs/sonic-vs.bin > artifacts/native-vs/sonic-vs.bin.sha256
+      - name: Verify the produced installer contents and installation layout
+        run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
+          bazel test --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic_vs_test
+      - name: Verify debug selection without producing a second installer
+        run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
+          bazel build --nobuild --config=syncd-dash \
+            --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
+      - name: Retain the acceptance results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-vs-installer-amd64
+          path: |
+            artifacts/native-vs/*.json
+            artifacts/native-vs/*.sha256
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.xml
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Clean completed Bazel outputs
+        if: always()
+        run: |
+          bazel clean
+          bazel shutdown

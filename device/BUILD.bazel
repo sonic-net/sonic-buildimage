@@ -18,3 +18,6 @@ filegroup(
 )
 
 exports_files(["BUILD.bazel"], visibility = ["//src/sonic-device-data:__pkg__"])
+
+# Platform markers also feed the VS installer platform archive.
+filegroup(name = "platform_asic_files", srcs = glob(["*/*/platform_asic"]), visibility = ["//visibility:public"])

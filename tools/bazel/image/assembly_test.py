@@ -242,6 +242,36 @@ class AssemblyTest(unittest.TestCase):
             onie.build(spec)
 
 
+    def test_raw_payloads_and_zstd_kernel_keep_installed_bytes(self):
+        # ONIE's ZIP reader consumes CRCs from local headers and extracts the
+        # original payload bytes. Already-compressed kernels need no Deflate.
+        spec, kernel = self.onie_spec()
+        config = Path(spec['boot_files']) / 'boot/config-test-release'
+        config.write_bytes(b'CONFIG_BLK_DEV_INITRD=y\nCONFIG_KERNEL_ZSTD=y\n')
+        metadata = json.loads(Path(spec['kernel_metadata']).read_text())
+        metadata['boot']['config']['sha256'] = hashlib.sha256(config.read_bytes()).hexdigest()
+        Path(spec['kernel_metadata']).write_text(json.dumps(metadata))
+        spec.update(
+            dockerfs=str(self.write('docker.raw.tar', b'docker payload' * 20000)),
+            dockerfs_compression='none',
+            platform_archive=str(self.write('platform.raw.tar', b'platform payload' * 10000)),
+            platform_compression='none',
+        )
+        onie.build(spec)
+        header, body = Path(spec['out']).read_bytes().split(b'exit_marker\n', 1)
+        self.assertEqual(re.search(rb'payload_sha1=([0-9a-f]+)', header)[1].decode(), hashlib.sha1(body).hexdigest())
+        self.assertEqual(int(re.search(rb'payload_image_size=(\d+)', header)[1]), len(body))
+        with tarfile.open(fileobj=io.BytesIO(body)) as archive:
+            with zipfile.ZipFile(io.BytesIO(archive.extractfile('installer/fs.zip').read())) as payload:
+                self.assertIsNone(payload.testzip())
+                self.assertEqual(payload.read('boot/vmlinuz-test-release'), kernel.read_bytes())
+                self.assertEqual(payload.getinfo('boot/vmlinuz-test-release').compress_type, zipfile.ZIP_STORED)
+                for name, field in [('dockerfs.tar.gz', 'dockerfs'), ('platform.tar.gz', 'platform_archive')]:
+                    self.assertEqual(gzip.decompress(payload.read(name)), Path(spec[field]).read_bytes())
+                    self.assertEqual(payload.getinfo(name).compress_type, zipfile.ZIP_STORED)
+                for info in payload.infolist():
+                    self.assertEqual(info.flag_bits & 0x0009, 0)
+
     def test_onie_rejects_unrendered_script_and_mislabeled_gzip(self):
         spec, _ = self.onie_spec()
         spec["installer_variables"] = {}

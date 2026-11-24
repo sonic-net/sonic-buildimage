@@ -1,0 +1,145 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load(":containers.bzl", "VS_DEBUG_IMAGES", "VS_IMAGES")
+load(":defs.bzl", "sonic_vs_image")
+load("//tools/bazel/image/vs/host:apt_profile.bzl", "APT_PACKAGES")
+load(":sources.bzl", "FIPS_HOST_CONTROLS", "FIPS_HOST_PAYLOADS", "HOST_DIRECT_CONTROLS", "HOST_PYTHON_RUNTIME", "HOST_SOURCE_METADATA", "HOST_SOURCE_PAYLOADS")
+load(":dpkg_state.bzl", "host_dpkg_unpacked")
+load(":platform_archive.bzl", "vs_platform_archive", "vs_platforms_asic")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+package(default_visibility = ["//visibility:public"])
+exports_files(["defs.bzl", "dpkg_state.bzl"])
+
+py_binary(name = "platform_archive_tool", srcs = ["platform_archive.py"], main = "platform_archive.py")
+vs_platform_archive(
+    name = "platform_archive",
+    lazy_platform = "x86_64-kvm_x86_64-r0",
+    packages = {"//platform/vs/sonic-platform-modules-vs:deb": "common"} | {"@image_tools//" + package + ":deb": "grub" for package in ["grub-common", "grub-pc-bin", "grub-efi-amd64-bin", "grub-efi-amd64-unsigned"]},
+)
+py_binary(name = "dpkg_state_tool", srcs = ["dpkg_state.py"], main = "dpkg_state.py", deps = ["//tools/bazel/image:assembly_lib"])
+py_test(
+    name = "dpkg_conffiles_test",
+    srcs = ["dpkg_conffiles_test.py", "dpkg_state.py"],
+    main = "dpkg_conffiles_test.py",
+    deps = ["//tools/bazel/image:assembly_lib"],
+    data = ["@sonic_build_infra//tools/build_tools:kernel_runtime"],
+    args = ["$(rootpath @sonic_build_infra//tools/build_tools:kernel_runtime)"],
+)
+
+host_dpkg_unpacked(
+    name = "dpkg_state_fixture",
+    testonly = True,
+    packages = {
+        "busybox": ["@initramfs_runtime//busybox:data", "@initramfs_runtime//busybox:control"],
+        "ifupdown2": ["@ifupdown2//:ifupdown2.runtime", "@ifupdown2//:ifupdown2.control"],
+    },
+)
+py_test(
+    name = "dpkg_state_test",
+    srcs = ["dpkg_state_test.py"],
+    main = "dpkg_state_test.py",
+    data = [":dpkg_state_fixture", "@sonic_build_infra//tools/build_tools:kernel_runtime", "@initramfs_runtime//busybox:control", "@ifupdown2//:ifupdown2.control"],
+    args = ["$(rootpath :dpkg_state_fixture)", "$(rootpath @sonic_build_infra//tools/build_tools:kernel_runtime)/bin/dpkg-query", "$(rootpath @initramfs_runtime//busybox:control)", "$(rootpath @ifupdown2//:ifupdown2.control)"],
+)
+py_binary(name = "kdump_tool", srcs = ["kdump.py"], main = "kdump.py", deps = ["//tools/bazel/image:assembly_lib"])
+
+py_binary(name = "platforms_tool", srcs = ["platforms.py"], main = "platforms.py")
+vs_platforms_asic(name = "platforms_asic", markers = ["//device:platform_asic_files"], generated = {"//src/sonic-device-data:vs_platform_asic": "x86_64-kvm_x86_64-r0"}, machine = "vs")
+
+string_flag(name = "variant", build_setting_default = "runtime", values = ["runtime", "debug"])
+config_setting(name = "debug", flag_values = {":variant": "debug"})
+_IMAGE_REFERENCE_ARGS = select({
+    ":debug": ["--image-reference=" + repository + "=" + label.rsplit(":", 1)[-1] for repository, label in VS_DEBUG_IMAGES.items()],
+    "//conditions:default": ["--image-reference=" + repository + "=" + repository for repository in VS_IMAGES],
+})
+write_file(name = "machine_conf", out = "machine.conf", content = ["machine=vs", "platform=x86_64-vs-r0"])
+
+# This declared JSON records this authorized local acceptance run. Supply an
+# updated explicit identity input for another build; it is not a release default.
+sonic_vs_image(
+    name = "sonic-vs.bin",
+    apt_packages = APT_PACKAGES,
+    source_payloads = HOST_SOURCE_PAYLOADS,
+    source_metadata = HOST_SOURCE_METADATA,
+    direct_controls = HOST_DIRECT_CONTROLS,
+    fips_payloads = FIPS_HOST_PAYLOADS,
+    fips_controls = FIPS_HOST_CONTROLS,
+    python_runtime = HOST_PYTHON_RUNTIME,
+    images = select({
+        ":debug": {label: label.rsplit(":", 1)[-1] + ":{version}," + label.rsplit(":", 1)[-1] + ":latest" for repository, label in VS_DEBUG_IMAGES.items()},
+        "//conditions:default": {label: repository + ":{version}," + repository + ":latest" for repository, label in VS_IMAGES.items()},
+    }),
+    local_images = select({
+        ":debug": {label: repository for repository, label in VS_DEBUG_IMAGES.items()},
+        "//conditions:default": {label: repository for repository, label in VS_IMAGES.items()},
+    }),
+    debug = select({":debug": True, "//conditions:default": False}),
+    image_version = "//tools/bazel/image/vs/metadata:image_version",
+    build_identity = ":local_build_identity.json",
+    build_values = {"username": "admin", "sonic_os_version": "13", "python_site_packages": "/usr/local/lib/python3.13/dist-packages", "CHANGE_DEFAULT_PASSWORD": "n", "lastchg_day": "20777"},
+    platform_archive = ":platform_archive",
+    platforms_asic = ":platforms_asic",
+)
+
+py_test(
+    name = "sonic_vs_test",
+    srcs = ["product_test.py"],
+    deps = ["@sonic_build_infra//apt:lib"],
+    main = "product_test.py",
+    size = "large",
+    timeout = "long",
+    data = [":sonic-vs.bin", ":squashfs", ":docker_store", "//tools/bazel/image/kernel:metadata", "//tools/bazel/image/vs/metadata:containers.json", ":local_build_identity.json", ":expected_host_packages.json", "//src/sonic-fips:host-packages.json", "//tools/bazel/image/vs/metadata:image_version", "@sonic_build_infra//tools/build_tools:unsquashfs", "//tools/bazel/image/vs/host:localedef"],
+    args = ["--image=$(rootpath :sonic-vs.bin)", "--squashfs=$(rootpath :squashfs)", "--docker=$(rootpath :docker_store)", "--kernel=$(rootpath //tools/bazel/image/kernel:metadata)", "--containers=$(rootpath //tools/bazel/image/vs/metadata:containers.json)", "--identity=$(rootpath :local_build_identity.json)", "--expected-host=$(rootpath :expected_host_packages.json)", "--fips=$(rootpath //src/sonic-fips:host-packages.json)", "--version=$(rootpath //tools/bazel/image/vs/metadata:image_version)", "--unsquashfs=$(rootpath @sonic_build_infra//tools/build_tools:unsquashfs)", "--localedef=$(rootpath //tools/bazel/image/vs/host:localedef)"] + select({":debug": ["--variant=debug"], "//conditions:default": ["--variant=runtime"]}) + _IMAGE_REFERENCE_ARGS,
+)
+
+py_test(
+    name = "raw_apt_test",
+    srcs = ["raw_apt_test.py"],
+    main = "raw_apt_test.py",
+    data = ["@initramfs_runtime//:packages", "@initramfs_runtime//:raw_packages"],
+    args = ["--old", "$(rootpaths @initramfs_runtime//:packages)", "--raw", "$(rootpaths @initramfs_runtime//:raw_packages)"],
+)
+
+py_test(
+    name = "real_initramfs_test",
+    srcs = ["initramfs_test.py"],
+    main = "initramfs_test.py",
+    size = "large",
+    timeout = "long",
+    data = [
+        ":initramfs",
+        ":kernel_links",
+        "//tools/bazel/image/kernel:metadata",
+        "@sonic_build_infra//tools/build_tools:zstd",
+    ],
+    args = [
+        "$(rootpath :initramfs)",
+        "$(rootpath //tools/bazel/image/kernel:metadata)",
+        "$(rootpath @sonic_build_infra//tools/build_tools:zstd)",
+        "$(rootpath :kernel_links)",
+    ],
+)
+
+py_test(
+    name = "kdump_test",
+    srcs = ["kdump_test.py"],
+    main = "kdump_test.py",
+    size = "large",
+    timeout = "long",
+    data = [
+        ":initramfs",
+        ":kdump_initramfs",
+        ":kdump_installed",
+        "//tools/bazel/image/kernel:metadata",
+        "@kdump_tools//:sysctl.conf",
+        "@sonic_build_infra//tools/build_tools:zstd",
+    ],
+    args = [
+        "$(rootpath :initramfs)",
+        "$(rootpath :kdump_initramfs)",
+        "$(rootpath :kdump_installed)",
+        "$(rootpath //tools/bazel/image/kernel:metadata)",
+        "$(rootpath @kdump_tools//:sysctl.conf)",
+        "$(rootpath @sonic_build_infra//tools/build_tools:zstd)",
+    ],
+)

@@ -22,6 +22,7 @@ JOBS = [("bazel-eventd.yml", "native"),
         ("bazel-oci.yml", "checks"), ("bazel-supervisor-rust.yml", "native"),
         ("bazel-yang-models.yml", "package")]
 PRIVATE_CACHE_JOBS = {
+    ("bazel-image-rules.yml", "native-vs-installer"),
     ("bazel-eventd.yml", "native"),
     ("bazel-libteam.yml", "native"),
     ("bazel-frr.yml", "native"), ("bazel-frr-python.yml", "packages"),
@@ -64,12 +65,18 @@ class SetupBazelCacheTest(unittest.TestCase):
                     continue
                 with self.subTest(workflow=path.name, job=name):
                     enabled.add((path.name, name))
-                    self.assertEqual(calls, ["python3 " + HELPER + " --private-remote-cache"])
+                    self.assertEqual(len(calls), 1)
+                    command = shlex.split(calls[0])
+                    self.assertEqual(command[:2], ["python3", HELPER])
+                    self.assertEqual(set(command[2:]) - {"--repository-only"},
+                                     {"--private-remote-cache"})
                     if path.name == "bazel-frr-python.yml":
                         self.assertEqual(job["runs-on"], ["self-hosted", "linux",
                                          "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"])
                         continue
-                    if path.name == "bazel-sysmgr.yml":
+                    if (path.name, name) in {
+                            ("bazel-sysmgr.yml", "native"),
+                            ("bazel-image-rules.yml", "native-vs-installer")}:
                         self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
                         continue
                     self.assertEqual(job["runs-on"], "${{ matrix.runner }}")

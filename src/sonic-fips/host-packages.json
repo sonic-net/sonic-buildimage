@@ -1,0 +1,87 @@
+[
+  {
+    "package": "openssl",
+    "version": "3.5.7-1~deb13u2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libssl3t64",
+    "version": "3.5.7-1~deb13u2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libssl-dev",
+    "version": "3.5.7-1~deb13u2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "symcrypt-openssl",
+    "version": "1.11.0",
+    "architecture": "all"
+  },
+  {
+    "package": "ssh",
+    "version": "1:10.0p1-7+fips",
+    "architecture": "all"
+  },
+  {
+    "package": "openssh-client",
+    "version": "1:10.0p1-7+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "openssh-server",
+    "version": "1:10.0p1-7+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "openssh-sftp-server",
+    "version": "1:10.0p1-7+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libk5crypto3",
+    "version": "1.21.3-5+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libkrb5support0",
+    "version": "1.21.3-5+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libkrb5-3",
+    "version": "1.21.3-5+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libgssapi-krb5-2",
+    "version": "1.21.3-5+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "python3.13",
+    "version": "3.13.5-2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "python3.13-minimal",
+    "version": "3.13.5-2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libpython3.13",
+    "version": "3.13.5-2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libpython3.13-minimal",
+    "version": "3.13.5-2+fips",
+    "architecture": "amd64"
+  },
+  {
+    "package": "libpython3.13-stdlib",
+    "version": "3.13.5-2+fips",
+    "architecture": "amd64"
+  }
+]

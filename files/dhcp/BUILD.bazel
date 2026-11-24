@@ -1,0 +1,15 @@
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "90-dhcp6-systcl.conf.j2",
+        "dhclient.conf.j2",
+        "graphserviceurl",
+        "ifupdown2_policy.json",
+        "rfc3442-classless-routes",
+        "sethostname",
+        "sethostname6",
+        "snmpcommunity",
+        "vrf"
+    ],
+)

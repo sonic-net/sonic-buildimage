@@ -1,3 +1,15 @@
 package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["apt.conf.d/*"]) + ["sources.list.j2"])
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "apt.conf.d/81norecommends",
+        "apt.conf.d/apt-clean",
+        "apt.conf.d/apt-gzip-indexes",
+        "apt.conf.d/apt-no-languages",
+        "apt.conf.d/apt-timeout-n-retries",
+        "apt.conf.d/no-check-valid-until"
+    ],
+)

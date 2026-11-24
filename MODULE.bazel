@@ -84,6 +84,11 @@ bazel_dep(
     version = "0.0.44-35726399908a3beb947174e9359f902077928289",
     repo_name = "sonic_build_infra",
 )
+single_version_override(
+    module_name = "sonic-build-infra",
+    patches = ["//tools/bazel/registry:elf-runtime-cache-links.patch"],
+    patch_strip = 1,
+)
 bazel_dep(name = "grub", version = "2.12.sonic.1")
 bazel_dep(
     name = "sonic-dash-api",
@@ -768,7 +773,7 @@ use_repo(pip, "dhcp_relay_pip")
 
 # Existing DHCP CLI tests use the published utilities wheel and Make-pinned
 # SDK from config_engine_pip; this hub supplies only additional test imports.
-bazel_dep(name = "sonic-utilities", version = "1.2.0-331e19551e1d345e86b59f73be573487893d5af1", repo_name = "sonic_utilities")
+bazel_dep(name = "sonic-utilities", version = "1.2.0-6f1a8a16a947817d76b55dead8cce68e5a4536e4", repo_name = "sonic_utilities")
 pip.parse(
     hub_name = "dhcp_relay_cli_test_pip",
     python_version = "3.13",
@@ -850,3 +855,54 @@ bazel_dep(
     version = "1.0.0-0e4c6a355c80396345a31232e30d20168060ae10",
     repo_name = "sonic_host_services",
 )
+
+# Native VS assembler inputs.
+use_repo(apt, "image_tools", "initramfs_runtime")
+bazel_dep(name = "bash", version = "5.2.37.sonic.1", repo_name = "sonic_bash")
+bazel_dep(name = "sedutil", version = "1.15.sonic.1", repo_name = "sedutil")
+bazel_dep(name = "libnss-tacplus", version = "1.0.4.sonic.1", repo_name = "libnss_tacplus")
+bazel_dep(name = "audisp-tacplus", version = "1.0.2.sonic.1", repo_name = "audisp_tacplus")
+bazel_dep(name = "ifupdown2", version = "3.0.0.sonic.1", repo_name = "ifupdown2")
+bazel_dep(name = "monit", version = "5.34.3.sonic.1", repo_name = "monit")
+bazel_dep(name = "makedumpfile", version = "1.7.7.sonic.1", repo_name = "makedumpfile")
+bazel_dep(name = "kdump-tools", version = "1.10.7.sonic.1", repo_name = "kdump_tools")
+bazel_dep(name = "pycairo", version = "1.26.1.sonic.1")
+bazel_dep(name = "blkinfo", version = "0.2.0.sonic.1", repo_name = "blkinfo")
+bazel_dep(name = "bitarray", version = "2.8.1.sonic.2", repo_name = "bitarray")
+bazel_dep(name = "rasdaemon", version = "0.6.8.sonic.1", repo_name = "rasdaemon")
+bazel_dep(name = "ipaddr", version = "2.2.0.sonic.1", repo_name = "ipaddr")
+bazel_dep(name = "www-authenticate", version = "0.9.2.sonic.1", repo_name = "www_authenticate")
+
+http_archive(
+    name = "initramfs_tools_src",
+    urls = ["https://salsa.debian.org/kernel-team/initramfs-tools/-/archive/v0.142/initramfs-tools-v0.142.tar.gz"],
+    sha256 = "27a78cc25acc3ca3d9c78deca165bf001b09b260ce25a3f3756e47a0e7bc0554",
+    strip_prefix = "initramfs-tools-v0.142",
+    build_file = "//src/initramfs-tools:source.BUILD.bazel",
+    patches = [
+        "//src/initramfs-tools:loopback-file-system-support.patch",
+        "//src/initramfs-tools:loopback-file-offset-support.patch",
+    ],
+    patch_args = ["-p1"],
+)
+
+pip.parse(
+    hub_name = "vs_runtime_pip",
+    python_version = "3.13",
+    requirements_lock = "//tools/bazel/image/vs/python:requirements_lock.txt",
+    download_only = True,
+    extra_pip_args = ["--only-binary=:all:"],
+)
+
+use_repo(pip, "vs_runtime_pip")
+
+# Make takes generate_cert.go from the selected SDK; Trixie now selects1.26.5.
+single_version_override(
+    module_name = "sonic-mgmt-framework",
+    version = "1.0.0-d48ffb1ebae56f6525f24e14d39562a0ba825daa",
+    patches = ["//tools/bazel/image/vs/patches:framework-selected-go-sdk.patch"],
+    patch_strip = 1,
+)
+
+# Utilities owns its data package; the image supplies the declared CLI environment.
+register_toolchains("//tools/bazel/image/vs/utilities_data:toolchain")

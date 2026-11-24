@@ -1,0 +1,224 @@
+{
+  "schema": 1,
+  "profile": "mainline VS/AMD64/Trixie/FIPS/DASH first acceptance",
+  "authority": "Manually reviewed original Make call sites; this file is intentionally independent of production sources.bzl",
+  "groups": [
+    {
+      "source": "files/build_templates/sonic_debian_extension.j2:123,161,173,220,272,275,303,327,348-369,376-410,590,617,1429",
+      "packages": [
+        "sedutil",
+        "sonic-nettools",
+        "ifupdown2",
+        "libyang3",
+        "python3-libyang",
+        "sonic-utilities-data",
+        "bash",
+        "sonic-host-services-data",
+        "sonic-device-data",
+        "libtac2",
+        "libpam-tacplus",
+        "libnss-tacplus",
+        "bash-tacplus",
+        "audisp-tacplus",
+        "libpam-radius-auth",
+        "libnss-radius",
+        "makedumpfile",
+        "kdump-tools",
+        "sonic-host-services-rs",
+        "sonic-db-cli",
+        "sonic-rsyslog-plugin",
+        "monit",
+        "rasdaemon",
+        "sonic-ctrmgrd-rs",
+        "syslog-counter"
+      ]
+    },
+    {
+      "source": "slave.mk:1842-1843; rules/swss-common.mk:13-14; rules/sonic-utilities.mk:15-18; extension:391-394",
+      "packages": [
+        "libswsscommon",
+        "python3-swsscommon",
+        "libnl-3-200",
+        "libnl-genl-3-200",
+        "libnl-route-3-200",
+        "libnl-nf-3-200",
+        "libnl-cli-3-200"
+      ]
+    },
+    {
+      "source": "platform/vs/one-image.mk:6; slave.mk:1811",
+      "packages": [
+        "systemd-sonic-generator",
+        "socat"
+      ]
+    },
+    {
+      "source": "rules/initramfs-tools.mk:3-13; build_debian.sh initramfs installation",
+      "packages": [
+        "initramfs-tools",
+        "initramfs-tools-core"
+      ]
+    },
+    {
+      "source": "build_debian.sh:46-47,261",
+      "kind": "pinned Docker APT runtime",
+      "packages": [
+        "docker-ce",
+        "docker-ce-cli",
+        "containerd.io"
+      ]
+    }
+  ],
+  "versions": {
+    "ifupdown2": "3.0.0-1",
+    "libyang3": "3.12.2-1",
+    "python3-libyang": "3.1.0-1",
+    "bash": "5.2.37-2",
+    "sedutil": "1.15-5ad84d8",
+    "sonic-nettools": "0.0.1-0",
+    "makedumpfile": "1:1.7.7-1",
+    "kdump-tools": "1:1.10.7",
+    "monit": "1:5.34.3-1",
+    "rasdaemon": "0.6.8-1",
+    "socat": "1.8.0.2-1",
+    "initramfs-tools": "0.142",
+    "initramfs-tools-core": "0.142",
+    "libtac2": "1.4.1-1",
+    "libpam-tacplus": "1.4.1-1",
+    "libnss-tacplus": "1.0.4-1",
+    "bash-tacplus": "1.0.0",
+    "audisp-tacplus": "1.0.2",
+    "libpam-radius-auth": "1.4.1-1",
+    "libnss-radius": "1.0.1-1",
+    "libnl-3-200": "3.7.0-0.2+b1sonic1",
+    "libnl-genl-3-200": "3.7.0-0.2+b1sonic1",
+    "libnl-route-3-200": "3.7.0-0.2+b1sonic1",
+    "libnl-nf-3-200": "3.7.0-0.2+b1sonic1",
+    "libnl-cli-3-200": "3.7.0-0.2+b1sonic1",
+    "docker-ce": "5:28.5.2-1~debian.13~trixie",
+    "docker-ce-cli": "5:28.5.2-1~debian.13~trixie",
+    "containerd.io": "1.7.28-2~debian.13~trixie"
+  },
+  "version_authority": [
+    "rules/{ifupdown2,libyang3,libyang3-py3,bash,sedutil,sonic-nettools,makedumpfile,monit,rasdaemon,socat,initramfs-tools,tacacs,radius,libnl3}.mk",
+    "makedumpfile DSC retains epoch omitted from the Make filename: https://snapshot.debian.org/archive/debian/20251005T203402Z/pool/main/m/makedumpfile/makedumpfile_1.7.7-1.dsc (SHA256 07b0299e656e8fdf5e91b14ff2c442a0a6cabe951264aaebc8de0ffe1c6f373e)",
+    "monit DSC retains epoch omitted from the Make filename: https://deb.debian.org/debian/pool/main/m/monit/monit_5.34.3-1.dsc (rules/monit.mk MONIT_DSC_SHA256 6339314234af0d8dffac62364c018dd547a4d21010e9ff76d761f15671138fe8); src/monit/Makefile also selects the debian/1% tag",
+    "kdump-tools upstream debian/changelog retains epoch 1:",
+    "build_debian.sh:46-47,261"
+  ],
+  "excluded_by_default": [
+    {
+      "package": "sonic-ztp",
+      "source": "extension:305; rules/config:89-90 ENABLE_ZTP unset"
+    },
+    {
+      "package": "flashrom",
+      "source": "extension:443 broadcom-only"
+    },
+    {
+      "package": "sonic-platform-vs",
+      "source": "platform/vs/one-image.mk:7; extension:914 lazy install then purge"
+    }
+  ],
+  "host_service_units": {
+    "authority": "src/sonic-host-services/data/debian/rules: override_dh_installsystemd thirteen named helpers and matching original service/timer resources; actual pinned Trixie Debhelper installs under usr/lib, UID/GID 0, mode 0644",
+    "files": {
+      "usr/lib/systemd/system/caclmgrd.service": {
+        "sha256": "13d90162b8df5b3cbf969ae10bb63a6596316c302dadb2c5d917de07dbac38af",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/hostcfgd.service": {
+        "sha256": "1ed304a754504f8c2774dd3b580b76807145a14a5cd6559804549e5b318dacdb",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/featured.service": {
+        "sha256": "6da287bab956a1d1435b07d7bb67d3cb7d7e58314e86c7471ca45ee9a7916203",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/aaastatsd.service": {
+        "sha256": "67bf0d2570818c47edb25c0724aa5509d61a3679df90ce860da32268bdb11ee7",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/procdockerstatsd.service": {
+        "sha256": "5ce69c32b1f7fc94c757420b0e498f65fe83bc6944945177ba992dd2116d5f6d",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/determine-reboot-cause.service": {
+        "sha256": "644778f6938b346a3493077a78d5fffe94ad7a33389d2bb4850864e2244a13b9",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/process-reboot-cause.service": {
+        "sha256": "95d7a6a466892331cd82308af8fc642cab30be1bf79db04dc2d669cdf6f09c03",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/gnoi-shutdown.service": {
+        "sha256": "78569cf35f56849a35f3df557cf56177fd261a637c4311d95254f68dcf9ef98c",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/console-monitor-dce.service": {
+        "sha256": "62353d811ca46dd57c919e4ebbd4d95804952e25c7f355589f30823efe7a529c",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/console-monitor-dte.service": {
+        "sha256": "ca9ffa66d78c7127e755f36a73e434ba726f30cb5b6cd280a471ce76e12ed6f5",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/console-monitor-proxy@.service": {
+        "sha256": "70193a7ef153a5389f3705fb7cf7deb676bc64fe5bfd87f8c92469fec32f528e",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/console-monitor-pty-bridge@.service": {
+        "sha256": "0951b57338e68ff34e642051a5e9921c28750bce28b90185e86193e36a23bb0f",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/sonic-hostservice.service": {
+        "sha256": "9684b989fcbeb1265c92e3cc5a59463cff71acd08571832218c364f465cac99d",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/hostcfgd.timer": {
+        "sha256": "c22bffd42b7915545caedca03f4079dc154a680445e8fa8811a95051802b6da3",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/featured.timer": {
+        "sha256": "4c3d9a2cfc8ca8bd918718f6493250f58b0067847d0286ef9ffd3ea35a337d8c",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      },
+      "usr/lib/systemd/system/aaastatsd.timer": {
+        "sha256": "98e0bb11f076081a478b7c1a7bd1f7e183a4a33d62334e81207b3770a8ce3db2",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      }
+    }
+  }
+}

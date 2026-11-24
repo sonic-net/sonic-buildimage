@@ -1,7 +1,8 @@
 """Write an ONIE self-extracting installer, streaming the nested payload ZIP.
 
 Only deflated boot members are temporarily compressed to determine their size.
-The large SquashFS and Docker members are streamed after a CRC-only read pass.
+New gzip members retain their CRC while pigz writes them; existing input members
+are streamed after a CRC-only read pass.
 ONIE BusyBox 1.25.1 rejects ZIP data descriptors, so CRCs must precede data.
 No fs.zip, installer staging tree or outer sharch.tar is materialized.
 """
@@ -10,7 +11,6 @@ import binascii
 import hashlib
 import json
 from contextlib import ExitStack
-from functools import partial
 import re
 import shutil
 import subprocess
@@ -22,15 +22,15 @@ import tempfile
 import zlib
 
 from kernel_inputs import boot_inputs, boot_mode
-from image_config import image_options, installer_config, boot_config, compressed_output
+from image_config import image_options, installer_config, boot_config
 
 
 class Member:
-    def __init__(self, name, path=None, mode=0o644, deflate=False, cleanup=None):
+    def __init__(self, name, path=None, mode=0o644, deflate=False, cleanup=None, crc=None):
         self.name, self.path, self.mode = name, Path(path) if path else None, mode
         self.method, self.temporary = (8 if deflate else 0), None
         self.size = self.original_size = self.path.stat().st_size if self.path else 0
-        self.crc = 0
+        self.crc = 0 if deflate or crc is None else crc
         if deflate:
             self.temporary = cleanup.enter_context(tempfile.TemporaryFile()) if cleanup else tempfile.TemporaryFile()
             compressor = zlib.compressobj(6, zlib.DEFLATED, -15)
@@ -41,7 +41,7 @@ class Member:
             self.temporary.write(compressor.flush())
             self.size = self.temporary.tell()
             self.temporary.seek(0)
-        elif self.path:
+        elif self.path and crc is None:
             with self.path.open("rb") as source:
                 for data in iter(lambda: source.read(1024 * 1024), b""):
                     self.crc = binascii.crc32(data, self.crc)
@@ -139,15 +139,35 @@ def add_resource(archive, destination, source, modes):
         raise ValueError("installer resource is not a regular file/directory: " + str(source))
 
 
-def _build(spec):
+def gzip_with_crc(source, destination, pigz):
+    """Record the ZIP CRC of compressed bytes during their only write pass."""
+    if not pigz:
+        raise ValueError('gzip output requires a declared pigz executable')
+    crc = 0
+    with source.open('rb') as inp, destination.open('wb') as out:
+        with subprocess.Popen([pigz, '-n', '-c'], stdin=inp, stdout=subprocess.PIPE) as process:
+            for data in iter(lambda: process.stdout.read(1024 * 1024), b''):
+                crc = binascii.crc32(data, crc)
+                out.write(data)
+        if process.returncode:
+            raise ValueError('gzip compression failed')
+    return crc
+
+
+def _build(spec, checksums=None):
     with ExitStack() as cleanup:
-        _write(spec, cleanup)
+        _write(spec, cleanup, checksums or {})
 
 
-def _write(spec, cleanup):
-    member = partial(Member, cleanup=cleanup)
+def _write(spec, cleanup, checksums):
+    def member(name, path=None, mode=0o644, deflate=False):
+        return Member(name, path, mode, deflate, cleanup, checksums.get(str(path)))
+
     metadata, boot_files = boot_inputs(spec["kernel_metadata"], spec["boot_files"])
     release = metadata["kernel_release"]
+    kernel_config = Path(spec["boot_files"]) / metadata["boot"]["config"]["path"]
+    zstd_kernel = b"CONFIG_KERNEL_ZSTD=y" in kernel_config.read_bytes().splitlines()
+    kernel_image = Path(spec["boot_files"]) / metadata["boot"]["vmlinuz"]["path"]
     names = image_options(spec)
     reserved = {"install.sh", "machine.conf", "default_platform.conf", "onie-image.conf", "platform.conf",
                 "onie-image-" + metadata["architecture"] + ".conf", "platforms_asic", "efi_sbatlevel.py"}
@@ -163,7 +183,8 @@ def _write(spec, cleanup):
         if path.is_dir():
             members.append(member(name + "/", mode=boot_mode(spec, relative, True)))
         else:
-            members.append(member(name, path, boot_mode(spec, relative), not path.name.endswith(".gz")))
+            deflate = not path.name.endswith(".gz") and not (zstd_kernel and path == kernel_image)
+            members.append(member(name, path, boot_mode(spec, relative), deflate))
     members += [member("boot/initrd.img-" + release, spec["initrd"]),
                 member("platform.tar.gz", spec["platform_archive"]),
                 member(names["squashfs_name"], spec["squashfs"])]
@@ -230,6 +251,7 @@ def build(spec):
     with tempfile.TemporaryDirectory(prefix="onie-prepare-") as temporary:
         work = Path(temporary)
         prepared = dict(spec)
+        checksums = {}
         names = image_options(spec)
         kernel, _ = boot_inputs(spec["kernel_metadata"], spec["boot_files"])
         for field in ("onie_image_conf", "arch_image_conf", "default_platform_conf"):
@@ -273,12 +295,11 @@ def build(spec):
                     raise ValueError("zstd dockerfs requires a zstd stream and docker_mode=ram")
             elif compression == "none":
                 compressed = work / name
-                with source.open("rb") as inp, compressed_output(compressed, "gzip", pigz=spec.get("pigz")) as out:
-                    shutil.copyfileobj(inp, out, 1024 * 1024)
+                checksums[str(compressed)] = gzip_with_crc(source, compressed, spec.get("pigz"))
                 prepared[field] = str(compressed)
             else:
                 raise ValueError("unsupported " + setting + " " + compression)
-        _build(prepared)
+        _build(prepared, checksums)
         if mode != "no_sign":
             signature = work / "signature.sig"
             if mode == "dev":
