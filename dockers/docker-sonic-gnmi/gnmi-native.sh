@@ -23,7 +23,7 @@ fi
 
 # Try to read telemetry and certs config from ConfigDB.
 # Use default value if no valid config exists
-TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
+TELEMETRY_VARS=$(sonic-cfggen -d --redis-unix-socket -t $TELEMETRY_VARS_FILE)
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
 X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
 GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")

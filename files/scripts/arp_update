@@ -92,7 +92,7 @@ replace_failed_neighbors() {
 
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
-  ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
+  ARP_UPDATE_VARS=$(sonic-cfggen -d --redis-unix-socket -t ${ARP_UPDATE_VARS_FILE})
   if [ $? -ne 0 ]; then
       logger -p error "arp_update_vars cannot be generated"
       sleep 300

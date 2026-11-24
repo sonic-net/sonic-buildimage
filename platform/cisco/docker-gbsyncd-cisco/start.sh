@@ -9,7 +9,7 @@ mkdir -p /etc/sai.d/
 
 # Create/Copy the pai.profile to /etc/sai.d/pai.profile
 if [ -f $HWSKU_DIR/pai.profile.j2 ]; then
-    sonic-cfggen -d -t $HWSKU_DIR/pai.profile.j2 > /etc/sai.d/pai.profile
+    sonic-cfggen -d --redis-unix-socket -t $HWSKU_DIR/pai.profile.j2 > /etc/sai.d/pai.profile
 else
     if [ -f $HWSKU_DIR/pai.profile ]; then
         cp $HWSKU_DIR/pai.profile /etc/sai.d/pai.profile

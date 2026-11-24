@@ -19,7 +19,7 @@ BASHRC = ROOT / 'files/image_config/bash/bash.bashrc'
 
 @pytest.mark.parametrize('port, socket', [(6379, None), (6400, None), (0, '/run/redis/redis.sock'),
                                         (0, "/run/redis/a b:'quoted'.sock")])
-def test_generator_uses_socket_only_when_tcp_disabled(monkeypatch, capsys, port, socket):
+def test_generator_reports_both_available_endpoints(monkeypatch, capsys, port, socket):
     config = types.SimpleNamespace(getDbId=lambda db: 4, getDbPort=lambda db: port,
                                    getDbSock=MagicMock(return_value=socket))
     module = types.ModuleType('swsscommon.swsscommon')
@@ -30,12 +30,12 @@ def test_generator_uses_socket_only_when_tcp_disabled(monkeypatch, capsys, port,
     monkeypatch.setitem(sys.modules, 'swsscommon.swsscommon', module)
     monkeypatch.setattr(sys, 'argv', [str(GENERATOR), 'CONFIG_DB'])
     runpy.run_path(str(GENERATOR), run_name='__main__')
-    expected = 'CONFIG_DB:4:' + str(port) + (':' + socket if port == 0 else '')
+    expected = f'CONFIG_DB:4:{port}:{socket or ""}'
     assert capsys.readouterr().out.strip() == expected
-    assert config.getDbSock.call_count == (1 if port == 0 else 0)
+    config.getDbSock.assert_called_once_with("CONFIG_DB")
 
 
-def test_missing_socket_reports_error_without_tcp_fallback(monkeypatch, capsys):
+def test_missing_socket_leaves_socket_field_empty(monkeypatch, capsys):
     config = types.SimpleNamespace(getDbId=lambda db: 4, getDbPort=lambda db: 0,
                                    getDbSock=lambda db: '')
     package = types.ModuleType('swsscommon')
@@ -47,8 +47,8 @@ def test_missing_socket_reports_error_without_tcp_fallback(monkeypatch, capsys):
     monkeypatch.setattr(sys, 'argv', [str(GENERATOR), 'CONFIG_DB'])
     runpy.run_path(str(GENERATOR), run_name='__main__')
     captured = capsys.readouterr()
-    assert captured.out == ''
-    assert 'Unix socket is not configured' in captured.err
+    assert captured.out.strip() == 'CONFIG_DB:4:0:'
+    assert captured.err == ''
 
 
 @pytest.mark.parametrize('interactive', [False, True])
@@ -67,7 +67,7 @@ def test_actual_bash_startup_preserves_native_arguments(tmp_path, interactive, e
     bashrc.write_text(BASHRC.read_text().replace('/usr/local/bin/sonic-db-aliases.py', shlex.quote(str(generator))))
     environment = dict(os.environ, PATH=str(tmp_path) + ':' + os.environ['PATH'], ALIAS_CAPTURE=str(capture))
     environment.pop('SSH_TARGET_CONSOLE_LINE', None)
-    query = "redis-configdb --scan --pattern 'x y*'"
+    query = "redis-configdb{} --scan --pattern 'x y*'".format('' if endpoint == '6379' else '-unix')
     if interactive:
         command = ['/bin/bash', '--noprofile', '--rcfile', str(bashrc), '-i', '-c', query]
     else:
