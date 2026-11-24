@@ -579,7 +579,7 @@ start() {
     MOUNTPATH=""
     {%- else %}
     # Obtain our HWSKU as we will mount directories with these names in each docker
-    HWSKU=${HWSKU:-`$SONIC_CFGGEN -d -v 'DEVICE_METADATA["localhost"]["hwsku"]'`}
+    HWSKU=${HWSKU:-`$SONIC_CFGGEN -d --redis-unix-socket -v 'DEVICE_METADATA["localhost"]["hwsku"]'`}
     MOUNTPATH="/usr/share/sonic/device/$PLATFORM/$HWSKU"
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
@@ -682,7 +682,7 @@ start() {
     {%- if docker_container_name == "swss" %}
     # Generate the asic_table.json and peripheral_table.json
     if [ ! -f /etc/sonic/asic_table.json ] && [ -f /usr/share/sonic/templates/asic_table.j2 ]; then
-        sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
+        sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d --redis-unix-socket -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render asic_table.json"
             echo "$(cat errorlog.txt)"
