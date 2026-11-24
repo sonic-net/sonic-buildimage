@@ -84,13 +84,43 @@ class RootPackagesTest(unittest.TestCase):
         self.index.parent.mkdir(parents=True)
         (self.workspace / remote_bundle.OUTPUT_INDEX).rename(self.index)
 
-    def build(self, upload=False):
+    def build(self, upload=False, *, platform=None):
         args = ['packages.py', 'build', '--workspace', str(self.workspace), '--debs-directory', str(self.directory),
                 '--architecture', self.architecture, '--remote-cache', 'grpc://fixture:9092']
+        if platform is not None:
+            args.extend(['--kernel-config', 'CONFIGURED_PLATFORM=' + platform])
         if upload:
             args.append('--upload-local-results')
         with patch.object(sys, 'argv', args):
             packages.main()
+
+    def test_kernel_timing_covers_restore_and_fallback(self):
+        start = '[ vs timing ] [ kernel-prep ] [ start ]'
+        end = '[ vs timing ] [ kernel-prep ] [ end ]'
+        log = io.StringIO()
+        with patch.dict(os.environ, {'SONIC_VS_IMAGE_TIMINGS': '1'}), contextlib.redirect_stderr(log):
+            self.build()
+            self.assertFalse(self.log.exists())
+            self.index.unlink()
+            self.build(platform='vs')
+            self.assertEqual(self.log.read_text().splitlines(), ['build', 'cquery'])
+            with patch.dict(os.environ, {'BAZEL': str(self.workspace / 'missing-bazel')}):
+                with self.assertRaises(FileNotFoundError):
+                    self.build(platform='vs')
+            self.assertEqual(log.getvalue().splitlines(), [start, end, start, end, start])
+
+    def test_kernel_timing_depends_only_on_the_timing_flag(self):
+        markers = ['[ vs timing ] [ kernel-prep ] [ start ]', '[ vs timing ] [ kernel-prep ] [ end ]']
+        for platform in (None, 'broadcom', 'vs'):
+            for timings in (None, '0', '1'):
+                with self.subTest(platform=platform, timings=timings), patch.dict(os.environ), \
+                        contextlib.redirect_stderr(io.StringIO()) as log, patch.object(packages, 'build_packages'):
+                    if timings is None:
+                        os.environ.pop('SONIC_VS_IMAGE_TIMINGS', None)
+                    else:
+                        os.environ['SONIC_VS_IMAGE_TIMINGS'] = timings
+                    self.build(platform=platform)
+                    self.assertEqual(log.getvalue().splitlines(), markers if timings == '1' else [])
 
     def test_registry_audit_standalone_and_make_share_the_same_configured_target(self):
         """Both native graphs must address the same five DEBs on the first Make call."""

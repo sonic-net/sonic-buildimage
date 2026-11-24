@@ -15,6 +15,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel import build_helpers
+from tools.bazel.ci import time_vs_image
 from tools.bazel.kernel import prepare, remote_bundle, root_request
 
 TARGET = '@sonic_linux_kernel//:kernel_packages'
@@ -286,8 +287,9 @@ def main():
             options += ['--remote_cache=' + args.remote_cache,
                         '--remote_upload_local_results=' + str(args.upload_local_results).lower()]
         bazel = os.environ.get('BAZEL', 'bazel')
-        build_packages(workspace, directory, args.architecture, config, bazel, options,
-                       args.remote_cache, args.upload_local_results)
+        with time_vs_image.log_make_phase('kernel-prep'):
+            build_packages(workspace, directory, args.architecture, config, bazel, options,
+                           args.remote_cache, args.upload_local_results)
 
 
 if __name__ == '__main__':

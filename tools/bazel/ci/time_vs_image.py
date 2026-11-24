@@ -60,9 +60,9 @@ def capture_bep(directory, phase, command, *, cwd):
 
 
 @contextmanager
-def log_make_phase(name, *, vs_make):
-    """Write a paired VS build-log marker only when the phase succeeds."""
-    enabled = vs_make and os.environ.get("SONIC_VS_IMAGE_TIMINGS") == "1"
+def log_make_phase(name):
+    """Mark the start and successful completion of a phase when timing is enabled."""
+    enabled = os.environ.get("SONIC_VS_IMAGE_TIMINGS") == "1"
     if enabled:
         print(f"[ vs timing ] [ {name} ] [ start ]", file=sys.stderr, flush=True)
     yield

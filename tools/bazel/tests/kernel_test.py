@@ -427,10 +427,10 @@ class KernelBundleTest(unittest.TestCase):
                 self.assertRaises(FileNotFoundError):
             kernel.main()
 
-    def test_vs_kernel_preparation_marks_the_successful_handoff_only(self):
+    def test_kernel_preparation_marks_the_successful_handoff_only(self):
         for platform, timings, fails, events in (
                 ("vs", "1", False, ["start", "end"]), ("vs", "1", True, ["start"]),
-                ("vs", "0", False, []), ("mellanox", "1", False, [])):
+                ("vs", "0", False, []), ("mellanox", "1", False, ["start", "end"])):
             command = ["prepare.py", "ensure", "--workspace", str(self.root),
                        "--kernel-config", "CONFIGURED_PLATFORM=" + platform]
             with self.subTest(platform=platform, timings=timings, fails=fails), \

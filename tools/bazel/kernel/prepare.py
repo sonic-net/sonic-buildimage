@@ -946,7 +946,7 @@ def main():
     workspace = args.workspace.resolve(strict=True)
     configuration = parse_kernel_config(args.kernel_config)
     if args.command == "ensure":
-        with time_vs_image.log_make_phase("kernel-prep", vs_make=configuration.get("CONFIGURED_PLATFORM") == "vs"):
+        with time_vs_image.log_make_phase("kernel-prep"):
             result = ensure(workspace, architecture=args.architecture, kernel_config=configuration, state=args.state_dir,
                             cache_directory=args.cache_directory, remote_cache=args.remote_cache,
                             upload=args.upload_local_results,
