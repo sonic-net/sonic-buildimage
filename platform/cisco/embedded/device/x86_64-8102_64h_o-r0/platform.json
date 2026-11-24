@@ -1,0 +1,811 @@
+{
+    "chassis": {
+        "name": "8102-64H-O",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "IOFPGA"
+            },
+            {
+                "name": "Aikido"
+            },
+            {
+                "name": "TAM"
+            },
+            {
+                "name": "SSD"
+            },
+            {
+                "name": "eCPLD"
+            }
+        ],
+        "fans": [
+            {
+                "name": "fantray0.fan0",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            },
+            {
+                "name": "fantray0.fan1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            },
+            {
+                "name": "fantray1.fan0",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            },
+            {
+                "name": "fantray1.fan1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            },
+            {
+                "name": "fantray2.fan0",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            },
+            {
+                "name": "fantray2.fan1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": true,
+                    "minimum": 30,
+                    "maximum": 30,
+                    "delay": 10
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "fantray0",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["flashing amber", "amber", "green"]
+                },
+                "num_fans": 2,
+                "fans": [
+                    {
+                        "name": "fantray0.fan0",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    },
+                    {
+                        "name": "fantray0.fan1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "fantray1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["flashing amber", "amber", "green"]
+                },
+                "num_fans": 2,
+                "fans": [
+                    {
+                        "name": "fantray1.fan0",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    },
+                    {
+                        "name": "fantray1.fan1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "fantray2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["flashing amber", "amber", "green"]
+                },
+                "num_fans": 2,
+                "fans": [
+                    {
+                        "name": "fantray2.fan0",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    },
+                    {
+                        "name": "fantray2.fan1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 30,
+                            "maximum": 30,
+                            "delay": 10
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU0",
+                "status_led": {
+                    "controllable": false
+                },
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "PSU0.fan0",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "thermals": [
+                
+                    {
+                        "name": "PSU0 Inlet_Temp"
+                    },
+                    {
+                        "name": "PSU0 HSNK_Temp"
+                    },
+                    {
+                        "name": "PSU0 Outlet_Temp"
+                    }
+                ]
+            },
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "num_fans": 1,
+                "fans": [
+                    {
+                        "name": "PSU1.fan0",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "thermals": [
+                
+                    {
+                        "name": "PSU1 Inlet_Temp"
+                    },
+                    {
+                        "name": "PSU1 HSNK_Temp"
+                    },
+                    {
+                        "name": "PSU1 Outlet_Temp"
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "X86_CORE_0_T"
+            },
+            {
+                "name": "CPU_U4_PVCCIN_TEMP"
+            },
+            {
+                "name": "CPU_U4_P1V05_TEMP"
+            },
+            {
+                "name": "CPU_U5_P1V2_TEMP"
+            },
+            {
+                "name": "CPU_U5_P1V05_TEMP"
+            },
+            {
+                "name": "ADT75_FANB_TEMP"
+            },
+            {
+                "name": "MB_U113_TMP421_LOCAL_TEMP"
+            },
+            {
+                "name": "MB_U113_TMP421_REMOTE_TEMP"
+            },
+            {
+                "name": "MB_U1_VDDS_VDDA_L1_TEMP"
+            },
+            {
+                "name": "MB_U1_VDDS_VDDA_L2_TEMP"
+            },
+            {
+                "name": "MB_U1_P3V3R_VDDCK_L1_TEMP"
+            },
+            {
+                "name": "MB_U1_P3V3R_VDDCK_L2_TEMP"
+            },
+            {
+                "name": "MB_U1_P3V3L_L1_TEMP"
+            },
+            {
+                "name": "MB_U1_P3V3L_L2_TEMP"
+            },
+            {
+                "name": "MB_U1_GB_CORE_L1_TEMP"
+            },
+            {
+                "name": "SSD_Temp"
+            },
+            {
+                "name": "DIMM_TEMP1"
+            },
+            {
+                "name": "NPU0_TEMP_0"
+            },
+            {
+                "name": "NPU0_TEMP_1"
+            },
+            {
+                "name": "NPU0_TEMP_2"
+            },
+            {
+                "name": "NPU0_TEMP_3"
+            },
+            {
+                "name": "NPU0_TEMP_4"
+            },
+            {
+                "name": "NPU0_TEMP_5"
+            },
+            {
+                "name": "NPU0_TEMP_6"
+            },
+            {
+                "name": "NPU0_TEMP_7"
+            },
+            {
+                "name": "NPU0_TEMP_8"
+            },
+            {
+                "name": "NPU0_TEMP_9"
+            }
+        ],
+        "voltage_sensors": [
+            {
+                "name": "CPU_U4_P1V05_VCCSUS_VOUT"
+            },
+            {
+                "name": "CPU_U4_P1V8_VCCIN_VOUT"
+            },
+            {
+                "name": "CPU_U4_P12V_VCCIN_VCCSUS_VIN"
+            },
+            {
+                "name": "CPU_U5_12V_DIMM_VCCIN_VIN"
+            },
+            {
+                "name": "CPU_U5_DIMM_P1V2_VOUT"
+            },
+            {
+                "name": "CPU_U5_P1V05_PCH_VOUT"
+            },
+            {
+                "name": "CPU_U46_5V_VOUT"
+            },
+            {
+                "name": "CPU_U46_12V_STBY_VIN"
+            },
+            {
+                "name": "CPU_U46_12V_VIN"
+            },
+            {
+                "name": "CPU_U46_P0V6_VTT_VOUT"
+            },
+            {
+                "name": "CPU_U46_P1V2A_VOUT"
+            },
+            {
+                "name": "CPU_U46_P1V3_PVCCKRHV_VOUT"
+            },
+            {
+                "name": "CPU_U46_P1V5_PCH_VOUT"
+            },
+            {
+                "name": "CPU_U46_P1V7_PVCCFUSESUS_VOUT"
+            },
+            {
+                "name": "CPU_U46_P2V5A_VOUT"
+            },
+            {
+                "name": "CPU_U46_P2V5_VPP_VOUT"
+            },
+            {
+                "name": "CPU_U46_P3V3A_VOUT"
+            },
+            {
+                "name": "CPU_U46_P3V3_PCH_VOUT"
+            },
+            {
+                "name": "CPU_U46_P3V3_SATA_VOUT"
+            },
+            {
+                "name": "CPU_U46_P3V3_VOUT"
+            },
+            {
+                "name": "MB_U1_GB_CORE_L1_VIN"
+            },
+            {
+                "name": "MB_U1_GB_CORE_L1_VOUT"
+            },
+            {
+                "name": "MB_U1_GB_VDDA_L2_VOUT"
+            },
+            {
+                "name": "MB_U1_GB_VDDCK_L2_VOUT"
+            },
+            {
+                "name": "MB_U1_GB_VDDS_L1_VOUT"
+            },
+            {
+                "name": "MB_U1_GB_VDDS_VDDA_VIN"
+            },
+            {
+                "name": "MB_U1_P3V3_L_L1_VIN"
+            },
+            {
+                "name": "MB_U1_P3V3_L_L1_VOUT"
+            },
+            {
+                "name": "MB_U1_P3V3_R_GB_VDDCK_VIN"
+            },
+            {
+                "name": "MB_U1_P3V3_R_L1_VOUT"
+            },
+            {
+                "name": "MB_U97_GB_P1V8_PLLVDD"
+            },
+            {
+                "name": "MB_U97_GB_P1V8_VDDIO"
+            },
+            {
+                "name": "MB_U97_GB_PCIE_VDDACK"
+            },
+            {
+                "name": "MB_U97_GB_PCIE_VDDH"
+            },
+            {
+                "name": "MB_U97_P1V2A_VOUT"
+            },
+            {
+                "name": "MB_U97_P1V8A_VOUT"
+            },
+            {
+                "name": "MB_U97_P1VA_VOUT"
+            },
+            {
+                "name": "MB_U97_P3V3A_VOUT"
+            },
+            {
+                "name": "MB_U97_P3V3_VOUT"
+            }
+        ],
+        "current_sensors": [
+            {
+                "name": "CPU_U4_PVCCIN_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "CPU_U4_PVCCIN_P1V05_IIN",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "FAN01_ISENSE",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "FAN23_ISENSE",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "FAN45_ISENSE",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "CPU_U5_P1V2_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "CPU_U5_P1V05_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_CORE_L1_IIN",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_CORE_L1_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_VDDA_L2_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_VDDCK_L2_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_VDDS_L1_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_GB_VDDS_VDDA_IIN",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_P3V3_L_L1_IIN",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_P3V3_L_L1_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_P3V3_R_GB_VDDCK_IIN",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U1_P3V3_R_L1_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U97_12V_GB_INA_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U97_12V_GEN_INA_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U97_12V_QSFP_L_INA_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            },
+            {
+                "name": "MB_U97_12V_QSFP_R_INA_IOUT",
+                "low-threshold": false,
+                "high-threshold": false,
+                "low-critical-threshold": false,
+                "high-critical-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "QSFP_0"
+            },
+            {
+                "name": "QSFP_1"
+            },
+            {
+                "name": "QSFP_2"
+            },
+            {
+                "name": "QSFP_3"
+            },
+            {
+                "name": "QSFP_4"
+            },
+            {
+                "name": "QSFP_5"
+            },
+            {
+                "name": "QSFP_6"
+            },
+            {
+                "name": "QSFP_7"
+            },
+            {
+                "name": "QSFP_8"
+            },
+            {
+                "name": "QSFP_9"
+            },
+            {
+                "name": "QSFP_10"
+            },
+            {
+                "name": "QSFP_11"
+            },
+            {
+                "name": "QSFP_12"
+            },
+            {
+                "name": "QSFP_13"
+            },
+            {
+                "name": "QSFP_14"
+            },
+            {
+                "name": "QSFP_15"
+            },
+            {
+                "name": "QSFP_16"
+            },
+            {
+                "name": "QSFP_17"
+            },
+            {
+                "name": "QSFP_18"
+            },
+            {
+                "name": "QSFP_19"
+            },
+            {
+                "name": "QSFP_20"
+            },
+            {
+                "name": "QSFP_21"
+            },
+            {
+                "name": "QSFP_22"
+            },
+            {
+                "name": "QSFP_23"
+            },
+            {
+                "name": "QSFP_24"
+            },
+            {
+                "name": "QSFP_25"
+            },
+            {
+                "name": "QSFP_26"
+            },
+            {
+                "name": "QSFP_27"
+            },
+            {
+                "name": "QSFP_28"
+            },
+            {
+                "name": "QSFP_29"
+            },
+            {
+                "name": "QSFP_30"
+            },
+            {
+                "name": "QSFP_31"
+            },
+            {
+                "name": "QSFP_32"
+            },
+            {
+                "name": "QSFP_33"
+            },
+            {
+                "name": "QSFP_34"
+            },
+            {
+                "name": "QSFP_35"
+            },
+            {
+                "name": "QSFP_36"
+            },
+            {
+                "name": "QSFP_37"
+            },
+            {
+                "name": "QSFP_38"
+            },
+            {
+                "name": "QSFP_39"
+            },
+            {
+                "name": "QSFP_40"
+            },
+            {
+                "name": "QSFP_41"
+            },
+            {
+                "name": "QSFP_42"
+            },
+            {
+                "name": "QSFP_43"
+            },
+            {
+                "name": "QSFP_44"
+            },
+            {
+                "name": "QSFP_45"
+            },
+            {
+                "name": "QSFP_46"
+            },
+            {
+                "name": "QSFP_47"
+            },
+            {
+                "name": "QSFP_48"
+            },
+            {
+                "name": "QSFP_49"
+            },
+            {
+                "name": "QSFP_50"
+            },
+            {
+                "name": "QSFP_51"
+            },
+            {
+                "name": "QSFP_52"
+            },
+            {
+                "name": "QSFP_53"
+            },
+            {
+                "name": "QSFP_54"
+            },
+            {
+                "name": "QSFP_55"
+            },
+            {
+                "name": "QSFP_56"
+            },
+            {
+                "name": "QSFP_57"
+            },
+            {
+                "name": "QSFP_58"
+            },
+            {
+                "name": "QSFP_59"
+            },
+            {
+                "name": "QSFP_60"
+            },
+            {
+                "name": "QSFP_61"
+            },
+            {
+                "name": "QSFP_62"
+            },
+            {
+                "name": "QSFP_63"
+            }
+        ]
+    },
+    "interfaces": {}
+}
