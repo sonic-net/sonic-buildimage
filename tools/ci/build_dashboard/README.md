@@ -69,7 +69,9 @@ build duration. For example, master commit `ede451eaef4d` appears at
 Date ranges and **Newest 10** use the commit date. A retry stays at the same
 horizontal position. A carried execution counts once. Measurements without a
 known commit time remain available in run history.
-Choose **Newest 60**, **Newest 120**, or **Show all** to see more. Hover or
+Choose **Newest 60**, **Newest 120**, or **Show all** to see more. The median,
+maximum, and minimum summarize the points currently shown. For an even number
+of points, the median is the average of the two middle durations. Hover or
 focus a point to see the measured commit's short SHA and the first line of
 its message. For example, the master point for `b65761475de4` shows
 “Skip duplicate checks and nondeterminism stripping in sonic-device-data (#274)”.

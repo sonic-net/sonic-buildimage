@@ -368,9 +368,9 @@ test("recognized future boundaries without a short label use a safe named fallba
   assert.deepEqual(points, before);
 });
 
-function datedPoint(run_id, started_at, name = "Build the VS installer (.bin)") {
-  const point = timingPoint(name);
-  const completed_at = started_at === null ? null : new Date(Date.parse(started_at) + 120000).toISOString();
+function datedPoint(run_id, started_at, name = "Build the VS installer (.bin)", seconds = 120) {
+  const point = timingPoint(name, {image_build_seconds: seconds});
+  const completed_at = started_at === null ? null : new Date(Date.parse(started_at) + seconds * 1000).toISOString();
   return {
     job: {...point.job, name: "Make VS image", job_id: run_id, status: "completed", started_at, completed_at,
       image_build_step_numbers: [1], url: `https://github.com/securely1g/sonic-buildimage/actions/runs/${run_id}/job/${run_id}`,
@@ -656,6 +656,7 @@ function descendants(node, predicate) {
 }
 function chartFixture(points, width = 1100) {
   const nodes = Object.fromEntries(["trend", "trend-note", "trend-preview", "history-legend",
+    "trend-stats", "trend-median", "trend-max", "trend-min",
     "series-filter", "path-filter", "arch-filter", "source-filter", "commit-filter", "pr-filter", "date-filter", "limit-filter"]
     .map(id => [id, new TestElement(id.endsWith("filter") ? "select" : "div")]));
   for (const node of Object.values(nodes)) node.value = "all";
@@ -672,6 +673,37 @@ function chartFixture(points, width = 1100) {
   render();
   return {nodes, render};
 }
+
+test("duration statistics summarize only the plotted image builds", () => {
+  const direct = "Build sonic-vs.bin directly with slave.mk";
+  const points = [3721, 6, 50, 0, 40, 9, 8, 15, 3, 12, 18].map((seconds, index) => {
+    const day = String(index + 1).padStart(2, "0");
+    return datedPoint(index + 1, `2026-11-${day}T00:00:00Z`, seconds === 0 ? direct : undefined, seconds);
+  });
+  const {nodes, render} = chartFixture(points);
+  function check(count, median, max, min) {
+    assert.equal(descendants(nodes.trend, node => node.attributes?.class === "chart-point").length, count);
+    assert.equal(nodes["trend-stats"].hidden, false);
+    assert.deepEqual(["trend-median", "trend-max", "trend-min"].map(id => nodes[id].textContent),
+      [median, max, min]);
+  }
+  check(10, "10.5s", "50s", "0s");
+  nodes["limit-filter"].value = "all";
+  render();
+  check(11, "12s", "1h 2m 1s", "0s");
+  nodes["date-filter"].value = "7";
+  render();
+  check(7, "12s", "40s", "3s");
+
+  // The only direct build ran on Nov 4, outside the date filter.
+  nodes["series-filter"].value = imageSeries(points[3].job).key;
+  render();
+  assert.equal(descendants(nodes.trend, node => node.attributes?.class === "chart-point").length, 0);
+  assert.equal(nodes["trend-stats"].hidden, true);
+  nodes["date-filter"].value = "all";
+  render();
+  check(1, "0s", "0s", "0s");
+});
 
 test("chart renders host-Make and unknown-boundary snapshots and filters their series", () => {
   const points = [datedPoint(1, "2026-11-10T00:00:00Z", "Build sonic-vs.bin through the host Make wrapper"),

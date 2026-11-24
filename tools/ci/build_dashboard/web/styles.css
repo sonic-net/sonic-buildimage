@@ -326,6 +326,26 @@ p {
   color: #142b40;
 }
 
+.trend-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  margin: 0;
+  padding: 0 25px 15px;
+}
+.trend-stats div {
+  display: grid;
+  gap: 3px;
+}
+.trend-stats dt {
+  color: var(--muted);
+  font-size: .8rem;
+}
+.trend-stats dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -1281,7 +1301,7 @@ footer a {
     grid-column: 1/-1;
     min-width: 0;
   }
-  .legend {
+  .legend, .trend-stats {
     padding-left: 17px;
     padding-right: 17px;
   }

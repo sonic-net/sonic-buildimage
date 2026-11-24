@@ -138,12 +138,13 @@ const BUILD_EVIDENCE = {
 const state = {data: null, selectedRun: null, selectedJob: null, loading: false};
 
 function seconds(value) { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null; }
-function duration(value, includeSeconds = false) {
+function duration(value, includeSeconds = false, fractionDigits = 0) {
   const number = seconds(value);
   if (number === null) return "—";
-  if (number < 60) return `${Math.round(number)}s`;
-  const rounded = Math.round(number);
-  return rounded >= 3600 ? `${Math.floor(rounded / 3600)}h ${Math.floor(rounded % 3600 / 60)}m${includeSeconds ? ` ${rounded % 60}s` : ""}` : `${Math.floor(rounded / 60)}m ${rounded % 60}s`;
+  const rounded = Number(number.toFixed(fractionDigits));
+  if (number < 60) return `${rounded}s`;
+  const secs = Number((rounded % 60).toFixed(fractionDigits));
+  return rounded >= 3600 ? `${Math.floor(rounded / 3600)}h ${Math.floor(rounded % 3600 / 60)}m${includeSeconds ? ` ${secs}s` : ""}` : `${Math.floor(rounded / 60)}m ${secs}s`;
 }
 function timestamp(value) { const parsed = Date.parse(value || ""); return Number.isFinite(parsed) ? parsed : null; }
 const pacificTime = {timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit", timeZoneName: "short"};
@@ -591,6 +592,16 @@ function pendingCommitImage() {
   const job = run?.jobs.find(item => images(item) && Object.hasOwn(PENDING_JOB_TEXT, result(item)));
   return job ? {run, job} : null;
 }
+function renderTrendStats(points) {
+  byId("trend-stats").hidden = !points.length;
+  if (!points.length) return;
+  const durations = points.map(({job}) => job.image_build_seconds).sort((a, b) => a - b);
+  const middle = Math.floor(durations.length / 2);
+  const median = durations.length % 2 ? durations[middle] : (durations[middle - 1] + durations[middle]) / 2;
+  byId("trend-median").textContent = duration(median, true, 3);
+  byId("trend-max").textContent = duration(durations.at(-1), true, 3);
+  byId("trend-min").textContent = duration(durations[0], true, 3);
+}
 function renderTrend() {
   const measurements = imageMeasurements(state.data);
   const all = measurements.records.filter(item => matchesRun(item.run) && matchesJob(item.job));
@@ -608,6 +619,7 @@ function renderTrend() {
     series: select.value, days: byId("date-filter").value, limit: byId("limit-filter").value,
     reference: timestamp(state.data.generated_at) ?? Date.now(),
   });
+  renderTrendStats(points);
   const container = byId("trend");
   container.replaceChildren();
   const legend = byId("history-legend"); legend.replaceChildren();
