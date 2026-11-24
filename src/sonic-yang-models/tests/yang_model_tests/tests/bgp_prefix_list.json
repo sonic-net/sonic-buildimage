@@ -5,6 +5,37 @@
     "BGP_PREFIX_LIST_WITH_VALID_IPV6_PREFIX": {
         "desc": "Load BGP prefix list table with a valid IPv6 prefix"
     },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV4_ENTRIES": {
+        "desc": "Load two named IPv4 entries with the same prefix and different sequence numbers"
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV6_ENTRY": {
+        "desc": "Load a named embedded-IPv4 IPv6 prefix with family and length bounds independent of the entry name"
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_MISSING_PREFIX": {
+        "desc": "Reject a named entry without the required prefix field",
+        "eStr": ["Named prefix-list entries require the prefix field"]
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_INVALID_PREFIX": {
+        "desc": "Reject an invalid prefix field in a named entry",
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    },
+    "BGP_PREFIX_LIST_WITH_CIDR_KEY_AND_PREFIX_FIELD": {
+        "desc": "Reject a CIDR key when the prefix field is also set",
+        "eStr": ["The prefix field requires an entry name without '/' in the key"]
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_INVALID_FAMILY": {
+        "desc": "Reject family mismatching the prefix field even if it matches the entry name",
+        "eStrKey": "Must"
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV4_INVALID_GE": {
+        "desc": "Reject ge=33 for a named IPv4 prefix",
+        "eStr": ["ge value must be <= 32 for IPv4 or <= 128 for IPv6"]
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV6_INVALID_LE": {
+        "desc": "Reject le below the prefix length for a named IPv6 prefix",
+        "eStr": ["le value must be >= prefix length"]
+    },
     "BGP_PREFIX_LIST_WITH_INVALID_PREFIX": {
         "desc": "Load BGP prefix list table with an invalid prefix",
         "eStrKey": "InvalidValue",
