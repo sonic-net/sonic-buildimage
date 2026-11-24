@@ -631,7 +631,7 @@ bool isInProcessDelivery() const;
 
 Behavior:
 
-- `enqueue()` takes the same `(op, data, values)` as `NotificationProducer::send()` and builds the same wire message, so the consumer's existing `pop()` / `pops()` parsing is unchanged. JSON is parsed on the main thread, not in the callback thread.
+- `enqueue()` takes the same `(op, data, values)` as `NotificationProducer::send()` and builds the same wire message, so the consumer's existing `pop()` / `pops()` parsing is unchanged. JSON is built on the callback thread and parsed on the main thread. The build and parse cost is tracked in [Section 5.3.14](#5314-follow-on-work) item 5.
 - Admission (op allowlist, then LruDedup or FIFO push) is the same code the Redis path uses, run under the consumer's queue mutex.
 - After releasing the mutex, `enqueue()` wakes the main loop with the consumer's `SelectableEvent` (eventfd), but only if the message was admitted. A message dropped by the op allowlist leaves the queue unchanged and does not wake the main loop. A dedup hit still counts as admitted.
 - `readData()` only drains the eventfd counter. Several `enqueue()` calls made before the main loop wakes collapse into one wake-up, and one `pops()` drains up to `DEFAULT_NC_POP_BATCH_SIZE` entries.
@@ -911,14 +911,14 @@ Unit tests cover both repositories.
 
 #### 5.3.12 Pros
 
-- Compared with Option 2, avoids the Redis re-post for migrated notifications and can reduce notification latency.
+- Compared with Option 2, avoids the Redis re-post for migrated notifications and can reduce notification latency. The JSON build and parse remain ([Section 5.3.14](#5314-follow-on-work) item 5).
 - Orch logic runs only on the `orchagent` main loop. The libsairedis callback thread only builds the message and enqueues it.
 - Reuses the existing `NotificationConsumer`, `Notifier`, `doTask(NotificationConsumer&)` handlers, and readiness gates. Each orch needs only a small change (consumer factory plus registration).
 - The same consumer class serves ZMQ and non-ZMQ mode, so topology (per-consumer queues), coalescing policy (LruDedup or FIFO), allowlist, statistics, and Select priority match Redis by construction.
 
 #### 5.3.13 Cons
 
-No drawbacks specific to Option 3 compared with the Redis path have been identified. Limitations shared with the Redis path, such as unbounded FIFO depth and a single Select priority for all notification consumers, are tracked in [Section 5.3.14](#5314-follow-on-work).
+No drawbacks specific to Option 3 compared with the Redis path have been identified. Limitations shared with the Redis path, such as unbounded FIFO depth, a single Select priority for all notification consumers, and the JSON wire message that is still built and parsed for in-process consumers, are tracked in [Section 5.3.14](#5314-follow-on-work).
 
 #### 5.3.14 Follow-on work
 
@@ -928,6 +928,7 @@ The following items are **out of scope** for this HLD. Each applies equally to t
 2. **FIFO queue depth and high-watermark in `COUNTERS_DB`.** FIFO consumers publish only `queue_policy=Fifo` and admission counters to `COUNTERS_DB:NOTIFICATION_CONSUMER_STATS`, while LruDedup consumers also publish depth and high-watermark. Publishing FIFO `current_depth` and `high_watermark` would be new telemetry.
 3. **Bounded FIFO depth.** A maximum FIFO depth, with an overflow policy, overflow counters, and rate-limited logging, would protect memory when a consumer stalls, for example an orch that stays not ready. FIFO queues are unbounded on both paths, because the Redis `NotificationConsumer` also drains its channel into an in-memory queue.
 4. **Operator alarms on queue depth and drops.** LruDedup consumers already log high-watermark through `LruDedupNotificationQueue`. Threshold alarms on queue depth and drops would be new.
+5. **JSON wire message for in-process consumers.** On the Redis path (Option 2), `NotificationProducer::send()` builds a JSON wire message on the callback thread and the consumer parses it on the main thread. Option 3 removes the Redis hop but keeps the same build and parse: `enqueue()` builds the JSON on the callback thread and `pop()` parses it on the main thread, and LruDedup keys on the wire string. Redis consumers need this format because it crosses a process boundary, but in-process consumers do not. Storing structured `(op, data, values)` entries and keying LruDedup on `op + data` would remove both passes for in-process consumers. This is a change to `NotificationConsumer` in sonic-swss-common, and it would need a measurement against the current cost.
 
 ### 5.4 Recommendation
 
