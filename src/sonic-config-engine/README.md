@@ -18,19 +18,15 @@ modes supply port attributes; `fec`, `autoneg`, and `role` may be overridden.
 Modes accept whitespace between option groups, such as `4x25G (4) [10G,1G]`.
 Invalid or unreadable selections fail rather than fall back.
 
-Generate ports directly or through a matching minigraph:
+Generate ports directly:
 
 ```shell
 sonic-cfggen -k Generic \
     -p /usr/share/sonic/platform/platform.json \
     -S /tmp/deployment-hwsku.json --var-json PORT
-
-sonic-cfggen -m /etc/sonic/minigraph.xml \
-    -p /usr/share/sonic/platform/platform.json \
-    -S /tmp/deployment-hwsku.json --print-data
 ```
 
-These commands print configuration without applying it. Direct port generation requires `-k`.
+This command prints configuration without applying it. Direct port generation requires `-k`.
 
 ### Selection and fallback
 
@@ -48,15 +44,5 @@ applies to other `get_port_config()` callers. Interfaces with overlapping lane
 assignments are not filtered.
 
 Only direct `-k` generation from HWSKU-specific `hwsku.json` emits `BREAKOUT_CFG`;
-other output does not support `config interface breakout`.
-
-### Minigraph
-
-Minimum and explicit JSON layouts preserve speeds, lanes, and supplied
-FEC/autonegotiation. On single-ASIC devices, missing channel/VLAN members,
-interface parents, route/FG-ECMP references, or unresolved dataplane ACL attachments
-cause errors, not topology repair. Legacy sources and multi-ASIC topology handling
-are unchanged.
-
-A missing HWSKU directory links to an existing base SKU directory (name without
-the final hyphen-separated suffix). Link failures warn and parsing continues.
+explicit selections, platform-root selections and minimum generation do not
+support `config interface breakout`.
