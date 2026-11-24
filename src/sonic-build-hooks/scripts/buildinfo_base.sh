@@ -319,6 +319,16 @@ run_logged()
     return $rc
 }
 
+# Drop the pin of package $2 from the constraint file $1, matching the name as pip
+# normalizes it.
+drop_pip_pin()
+{
+    local name=$(echo "$2" | tr '[:upper:]' '[:lower:]' | sed 's/[-_.]\+/-/g')
+    awk -F'==' -v name="$name" '{ n = tolower($1); gsub(/[-_.]+/, "-", n); if (n != name) print }' \
+        $1 > $1.new
+    mv -f $1.new $1
+}
+
 run_pip_command()
 {
     declare -a parameters=("--default-timeout" "$PIP_HTTP_TIMEOUT" "$@")
@@ -354,7 +364,17 @@ run_pip_command()
     local count=0
     local pip_version_file=$PIP_VERSION_FILE
     local tmp_version_file=$(mktemp)
+    # A pin an earlier install in this image build had to release stays released, so a
+    # later install does not bring it back. pre_run_buildinfo and post_run_cleanup remove
+    # the record, so it does not reach an image built FROM this one.
+    local released_file=$pip_version_file.released
+    local released newly_released=""
     [ -f "$pip_version_file" ] && cp -f $pip_version_file $tmp_version_file
+    if [ -f "$released_file" ]; then
+        for released in $(cat $released_file); do
+            drop_pip_pin $tmp_version_file $released
+        done
+    fi
     for para in "${parameters[@]}"
     do
         ([ "$para" == "-c" ] || [ "$para" == "--constraint" ]) && found=y
@@ -399,19 +419,27 @@ run_pip_command()
         [ "$result" == 0 ] || [ "$found" == "y" ] || [ "$install" != "y" ] && break
         # The resolver names each frozen pin that blocks it, such as a pin whose newer
         # dependents need a newer release, or one with no usable wheel on this architecture.
-        # Release only those, and try again.
-        pins=$(sed -n 's/.*The user requested (constraint) \([^ ]*==[^ ]*\).*/\1/p' $pip_log | sort -u)
+        # pip also names a package whose pin it cannot apply because the installed copy came
+        # from a Debian package it cannot uninstall. Release only those, for the rest of this
+        # build, and try again.
+        pins=$( (sed -n 's/.*The user requested (constraint) \([^ ]*\)==.*/\1/p' $pip_log
+                 sed -n "s/.*Cannot uninstall '\{0,1\}\([A-Za-z0-9][A-Za-z0-9._-]*\).*/\1/p" $pip_log) | sort -u)
         before=$(wc -l < $tmp_version_file)
-        for pin in $pins; do
-            echo "pip build hook: the frozen $pin blocks the install, releasing it" 1>&2
-            name=$(echo "${pin%%==*}" | tr '[:upper:]' '[:lower:]' | sed 's/[-_.]\+/-/g')
-            awk -F'==' -v name="$name" '{ n = tolower($1); gsub(/[-_.]+/, "-", n); if (n != name) print }' \
-                $tmp_version_file > $tmp_version_file.new
-            mv -f $tmp_version_file.new $tmp_version_file
+        for name in $pins; do
+            pin=$(awk -F'==' -v name="$(echo "$name" | tr '[:upper:]' '[:lower:]' | sed 's/[-_.]\+/-/g')" \
+                '{ n = tolower($1); gsub(/[-_.]+/, "-", n); if (n == name) print }' $tmp_version_file)
+            [ -z "$pin" ] && continue
+            echo "pip build hook: the frozen $pin blocks the install, releasing it for the rest of this build" 1>&2
+            drop_pip_pin $tmp_version_file $name
+            newly_released+=" $name"
         done
         # Stop when nothing was released; the same install would fail the same way.
         [ "$(wc -l < $tmp_version_file)" == "$before" ] && break
     done
+    # Keep a release only when the install it was made for succeeded.
+    if [ "$result" == 0 ] && [ -n "$newly_released" ] && [ -f "$pip_version_file" ]; then
+        printf '%s\n' $newly_released | $SUDO tee -a $released_file > /dev/null
+    fi
     if [ "$result" != 0 ] && [ "$install" == "y" ]; then
         echo "pip build hook: the install failed with the frozen versions in $pip_version_file as constraints" 1>&2
     fi

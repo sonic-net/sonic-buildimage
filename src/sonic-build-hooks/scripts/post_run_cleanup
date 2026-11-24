@@ -30,6 +30,7 @@ rm -rf /debs /python-wheels  ~/.cache
 find / | grep -E "__pycache__" | xargs rm -rf
 
 rm -rf $BUILD_VERSION_PATH/*
+rm -f $VERSION_PATH/*.released
 
 # Disable the build hooks
 symlink_build_hooks -d
