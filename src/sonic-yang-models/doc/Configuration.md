@@ -45,6 +45,7 @@
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
   * [GNMI](#gnmi)
+  * [GNMI_CLIENT](#gnmi_client)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -1688,6 +1689,22 @@ GNMI (gRPC Network Management Interface) related configuration is defined in the
     "GNMI_CLIENT_CERT": {
         "client.sonic.net": {
             "role": ["admin", "operator"]
+        }
+    }
+}
+```
+
+### GNMI_CLIENT
+
+The **GNMI_CLIENT** table holds the credentials this device presents when it acts as a gRPC client of another SONiC device's gNMI server (mTLS). On a BMC, the BMC daemon uses them for the gNOI System.Reboot handshake with the switch host; the files must be visible inside the BMC's PMON container, and an absent field falls back to the daemon's default path. File names follow the GNMI table's rules: certificates end in `.cer`, keys in `.key`. `ca_crt` is the CA certificate that the client uses to verify the server. When one CA issues the gNMI certificates, use the same CA file as `ca_crt` in the GNMI table. GNMI_CLIENT_CERT is the opposite direction: the clients this device's own gNMI server accepts.
+
+```
+{
+    "GNMI_CLIENT": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+            "client_key": "/etc/sonic/credentials/gnmi_client.key"
         }
     }
 }
