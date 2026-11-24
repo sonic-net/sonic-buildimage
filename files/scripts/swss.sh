@@ -425,6 +425,10 @@ start() {
 
     debug "Warm boot flag: ${SERVICE}$DEV ${WARM_BOOT}."
 
+    # pfcwd-hw-defaults acts on the PFC watchdog mode orchagent reports here. Drop the previous
+    # run's on every start, warm and fast included, so it only reads this run's.
+    $SONIC_DB_CLI STATE_DB DEL "PFC_WD_STATE_TABLE|PFC_WD" >/dev/null
+
     # Don't flush DB during warm boot
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial STATE databases ..."

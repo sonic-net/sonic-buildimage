@@ -1,0 +1,16 @@
+[Unit]
+Description=Bring the PFC watchdog config within the hardware range when the watchdog runs in hardware
+After=swss.service
+BindsTo=sonic.target
+After=sonic.target
+# installed by sonic-utilities
+ConditionPathExists=/usr/local/bin/pfcwd_hw_defaults
+
+[Service]
+# simple, not oneshot: the script waits for orchagent, and a oneshot still running would keep
+# systemd "starting", which makes 'config reload' refuse to run
+Type=simple
+ExecStart=/usr/local/bin/pfcwd_hw_defaults
+
+[Install]
+WantedBy=sonic.target
