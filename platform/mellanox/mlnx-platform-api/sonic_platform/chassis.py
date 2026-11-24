@@ -1524,8 +1524,9 @@ class Chassis(ChassisBase):
 
 
 class ModularChassis(Chassis):
-    def __init__(self):
+    def __init__(self, *, use_tcp=True):
         super(ModularChassis, self).__init__()
+        self._module_use_tcp = use_tcp
         self.module_initialized_count = 0
 
     def is_modular_chassis(self):
@@ -1550,7 +1551,7 @@ class ModularChassis(Chassis):
 
             if not self._module_list[index]:
                 from .module import Module
-                self._module_list[index] = Module(index + 1)
+                self._module_list[index] = Module(index + 1, use_tcp=self._module_use_tcp)
                 self.module_initialized_count += 1
 
     def initialize_modules(self):
@@ -1558,13 +1559,13 @@ class ModularChassis(Chassis):
             from .module import Module
             count = self.get_num_modules()
             for index in range(1, count + 1):
-                self._module_list.append(Module(index))
+                self._module_list.append(Module(index, use_tcp=self._module_use_tcp))
             self.module_initialized_count = count
         elif self.module_initialized_count != len(self._module_list):
             from .module import Module
             for index in range(len(self._module_list)):
                 if self._module_list[index] is None:
-                    self._module_list[index] = Module(index + 1)
+                    self._module_list[index] = Module(index + 1, use_tcp=self._module_use_tcp)
             self.module_initialized_count = len(self._module_list)
 
     def get_num_modules(self):
