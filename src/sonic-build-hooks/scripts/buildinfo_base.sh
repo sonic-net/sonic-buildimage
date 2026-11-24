@@ -305,6 +305,20 @@ release_pip_constraints()
         echo "pip build hook: could not read the install's requirements; every frozen version stays a constraint" 1>&2
 }
 
+# Run a command, copying its stdout and its stderr to the file $1, each still on its
+# own stream, and return the command's exit status. pip writes the explanation of a
+# resolution failure, which names the blocking pins, to stdout.
+run_logged()
+{
+    local log=$1 rc_file=$(mktemp) rc
+    shift
+    : > $log
+    { { "$@" 2>&1 1>&3; echo $? > $rc_file; } | tee -a $log 1>&2; } 3>&1 | tee -a $log
+    rc=$(cat $rc_file)
+    rm -f $rc_file
+    return $rc
+}
+
 run_pip_command()
 {
     declare -a parameters=("--default-timeout" "$PIP_HTTP_TIMEOUT" "$@")
@@ -373,14 +387,14 @@ run_pip_command()
     for attempt in 1 2 3 4 5; do
         if [ ! -z "$(get_version_cache_option)" ]; then
             FLOCK ${PIP_CACHE_PATH}
-            { $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}" 2>&1 1>&3 | tee $pip_log 1>&2; } 3>&1
-            result=${PIPESTATUS[0]}
+            run_logged $pip_log $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}"
+            result=$?
             chmod -f -R 777 ${PIP_CACHE_PATH}
             touch ${PIP_CACHE_PATH}
             FUNLOCK ${PIP_CACHE_PATH}
         else
-            { $REAL_COMMAND "${parameters[@]}" 2>&1 1>&3 | tee $pip_log 1>&2; } 3>&1
-            result=${PIPESTATUS[0]}
+            run_logged $pip_log $REAL_COMMAND "${parameters[@]}"
+            result=$?
         fi
         [ "$result" == 0 ] || [ "$found" == "y" ] || [ "$install" != "y" ] && break
         # The resolver names each frozen pin that blocks it, such as a pin whose newer
