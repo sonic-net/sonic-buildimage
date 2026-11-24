@@ -139,16 +139,16 @@
   "WATCHDOG": {
     "dev_info": {
       "device_type": "WATCHDOG",
-      "device_parent": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"MULTIFPGAPCIE0"{% else %}"MULTIFPGAPCIE1"{% endif %}
+      "device_parent": "MULTIFPGAPCIE0"
     },
     "dev_attr": {
-      "event_driven_power_cycle_control_reg_offset": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x1C"{% else %}"0x28"{% endif %},
-      "event_driven_power_cycle_control_bit": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}0{% else %}4{% endif %},
-      "watchdog_counter_reg_offset": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x2C"{% else %}"0x1E0"{% endif %},
+      "event_driven_power_cycle_control_reg_offset": "0x1C",
+      "event_driven_power_cycle_control_bit": 0,
+      "watchdog_counter_reg_offset": "0x2C",
       "use_watchdog_msi": {
         "msi_domain": 0,
-        "hw_irq": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}1{% else %}0{% endif %},
-        "watchdog_counter_msi_reg": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0x30"{% else %}"0x1D8"{% endif %}
+        "hw_irq": 1,
+        "watchdog_counter_msi_reg": "0x30"
       }
     }
   },
@@ -196,8 +196,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} 0x0 --bits=0:7",
       "reg_width": 32
     },
@@ -284,7 +282,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "bm-msi-0",
-          "irq_line_mask": {% if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}"0007ff02"{% else %}"0007ff00"{% endif %},
+          "irq_line_mask": "0007ff02",
           "interrupt_enable_reg": "20",
           "interrupt_status_reg": "24"
         }
@@ -384,8 +382,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_0_bdf}} 0x0 --bits=0:7",
       "reg_width": 32
     },
@@ -1064,8 +1060,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x0",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_1_bdf}} 0x0 --bits=0:7",
       "reg_width": 32
     },
@@ -29235,5 +29229,29 @@
       "chip_select": 0
     }
   },
-  "MGMT_LINK_CHECK": {}
+  "MGMT_LINK_CHECK": {},
+  "FPGA_REBOOT_CONF": {
+    "cpu_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0x8",
+      "enable_word": "0xdeadbeef"
+    },
+    "switch_host_pwrcyc": {% if (NH4210_SWITCH_HOST_POWER_CYCLE_SUPPORTED and CPU_CARD_FPGA_MEETS_MIN_VERSION_0x15) %}{
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0x68",
+      "enable_word": "0xbaddf00d",
+      "timeout_ms": 2000
+    }{% else %}{}{% endif %},
+    "bmc_is_platform_manager": {
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0xcc",
+      "mask": "0x40000000",
+      "compare_val": "0x40000000"
+    },
+    "switch_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{switchcard_fpga_0_bdf}}",
+      "reg_offset": "0x4",
+      "enable_word": "0xdeadbeef"
+    }
+  }
 }

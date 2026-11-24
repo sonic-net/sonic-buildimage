@@ -913,3 +913,39 @@ class TestAdm1266:
         ])
 
         assert [powerup.power_fault_cause.cause for powerup in powerups] == ["CPU_PWR_BAD", "MAIN_12V_LOSS"]
+
+    NO_POWERUP_EVENT_SPEC: ClassVar[dict] = {
+        "dpm": "DPM1",
+        "dpm_signal_to_fault_cause": [
+            {
+                "pdio_mask": "0x0003", "gpio_mask": "0x0000",
+                "pdio_value": "0x0001", "gpio_value": "0x0000",
+                "no_powerup_event": True,
+                "hw_cause": "HOST_RESET",
+                "hw_desc": "Switch Host reset",
+                "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER",
+            },
+            {
+                "pdio_mask": "0x0003", "gpio_mask": "0x0000",
+                "pdio_value": "0x0002", "gpio_value": "0x0000",
+                "hw_cause": "CHASSIS_CYCLE",
+                "hw_desc": "Chassis power cycle",
+                "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+            },
+        ],
+    }
+
+    def test_no_powerup_reboots_precede_the_cause_that_ended_the_powerup(self, adm1266_module):
+        powerups = self._powerups_with_fallback_spec(adm1266_module, [
+            create_raw_adm1266_blackbox_record(uid=301, powerup_counter=40, pdio_in=0x0002),
+            create_raw_adm1266_blackbox_record(uid=302, powerup_counter=40, pdio_in=0x0001),
+            create_raw_adm1266_blackbox_record(uid=303, powerup_counter=40, pdio_in=0x0001),
+            create_raw_adm1266_blackbox_record(uid=304, powerup_counter=40),
+            create_raw_adm1266_blackbox_record(uid=305, powerup_counter=41, pdio_in=0x0001),
+            create_raw_adm1266_blackbox_record(uid=306, powerup_counter=41, pdio_in=0x0002),
+        ], self.NO_POWERUP_EVENT_SPEC)
+
+        assert [c.cause for c in powerups[0].no_powerup_reboot_causes] == ["HOST_RESET", "HOST_RESET"]
+        assert powerups[0].power_fault_cause is None
+        assert [c.cause for c in powerups[1].no_powerup_reboot_causes] == ["HOST_RESET"]
+        assert powerups[1].power_fault_cause.cause == "CHASSIS_CYCLE"
