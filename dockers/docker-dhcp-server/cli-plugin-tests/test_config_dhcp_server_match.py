@@ -1246,6 +1246,27 @@ class TestConfigDHCPServerMatch:
         assert "Bindings fallback and maia-a have partially overlapping pools on Vlan100" in result.output
         assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", "range@") == "100.1.1.10"
 
+    @pytest.mark.parametrize("start,end,error", [
+        ("100.1.1.10", "100.1.1.20", "Bindings fallback and maia-a have partially overlapping pools on Vlan100"),
+        ("100.1.2.10", "100.1.2.10", "Range range3 is not in any subnet of vlan Vlan100"),
+        ("100.1.1.10", "100.1.1.10", None),
+    ])
+    def test_range_recreate_after_force_delete_is_validated(self, mock_db, start, end, error):
+        """fallback still references range3 after a forced delete, so re-adding it must pass binding validation."""
+        result = invoke(mock_db, RANGE_COMMAND.commands["del"], ["range3", "--force"])
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|fallback", "ranges@") == "range3"
+
+        result = invoke(mock_db, RANGE_COMMAND.commands["add"], ["range3", start, end])
+
+        if error:
+            assert result.exit_code == 2, result.output
+            assert error in result.output
+            assert not mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3")
+        else:
+            assert result.exit_code == 0, result.output
+            assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", "range@") == start + "," + end
+
     def test_enable_match_interface_with_partial_pool_overlap_rejected(self, mock_db):
         mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-b",
                       {"matches@": "port-etp2,vendor-b", "ips@": "100.1.1.20,100.1.1.21"})

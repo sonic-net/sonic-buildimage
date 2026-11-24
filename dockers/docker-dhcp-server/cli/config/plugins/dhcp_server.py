@@ -581,6 +581,8 @@ def dhcp_server_ipv4_range_add(db, range_name, ip_start, ip_end):
     if dbconn.exists("CONFIG_DB", key):
         ctx.fail("Range {} already exist".format(range_name))
     else:
+        # Bindings can still reference a force-deleted range, so recreating it is validated like an update.
+        validate_range_update(dbconn, range_name, ip_start + "," + ip_end)
         dbconn.hmset("CONFIG_DB", key, {"range@": ip_start + "," + ip_end})
 
 
