@@ -402,3 +402,77 @@ def test_named_entry_static_type(mocked_log_debug):
     del_handler_test(m, "SUPPRESS_PREFIX|sp1")
     mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix 10.0.0.0/24 removed from suppress_prefix configuration")
     assert "SUPPRESS_PREFIX|sp1" not in m.directory.get_slot("CONFIG_DB", "PREFIX_LIST")
+
+@pytest.mark.parametrize("prefix_type", ["SUPPRESS_PREFIX", "ANCHOR_PREFIX"])
+@pytest.mark.parametrize("new_prefix, ipv", [("10.1.0.0/24", "ip"), ("fc00::/64", "ipv6")])
+def test_static_named_entry_update_replaces_old_configuration(prefix_type, new_prefix, ipv):
+    m = constructor()
+    key = prefix_type + "|sp1"
+    set_handler_test(m, key, {"prefix": "10.0.0.0/24"})
+    m.cfg_mgr.push.reset_mock()
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost",
+                    {"bgp_asn": "65200", "type": "SpineRouter", "subtype": "UpstreamLC"})
+
+    set_handler_test(m, key, {"prefix": new_prefix})
+    cmds = get_pushed_cmds(m)
+    assert len(cmds) == 2
+    old_name = "SUPPRESS_IPV4_PREFIX" if prefix_type == "SUPPRESS_PREFIX" else "ANCHOR_CONTRIBUTING_ROUTES"
+    new_name = "SUPPRESS_IPV6_PREFIX" if prefix_type == "SUPPRESS_PREFIX" and ipv == "ipv6" else old_name
+    assert cmds[0].startswith("\nno ip prefix-list %s permit 10.0.0.0/24" % old_name)
+    assert cmds[1].startswith("\n%s prefix-list %s permit %s" % (ipv, new_name, new_prefix))
+    if prefix_type == "ANCHOR_PREFIX":
+        assert "no aggregate-address 10.0.0.0/24 route-map TAG_ANCHOR_COMMUNITY" in cmds[0]
+        assert "router bgp 65100" in cmds[0]
+        assert "router bgp 65200" in cmds[1]
+        assert "aggregate-address %s route-map TAG_ANCHOR_COMMUNITY" % new_prefix in cmds[1]
+    assert m.directory.get_slot("CONFIG_DB", "PREFIX_LIST")[key]["prefix"] == new_prefix
+
+    del_handler_test(m, key)
+    delete_cmd = get_pushed_cmds(m)[-1]
+    assert delete_cmd.startswith("\nno %s prefix-list %s permit %s" % (ipv, new_name, new_prefix))
+    if prefix_type == "ANCHOR_PREFIX":
+        assert "no aggregate-address %s route-map TAG_ANCHOR_COMMUNITY" % new_prefix in delete_cmd
+
+@pytest.mark.parametrize("prefix_type", ["SUPPRESS_PREFIX", "ANCHOR_PREFIX"])
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_static_named_entry_invalid_metadata_update_keeps_old_configuration(mocked_log_warn, prefix_type):
+    m = constructor()
+    key = prefix_type + "|sp1"
+    set_handler_test(m, key, {"prefix": "10.0.0.0/24"})
+    previous = dict(m.directory.get_slot("CONFIG_DB", "PREFIX_LIST")[key])
+    m.cfg_mgr.push.reset_mock()
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost",
+                    {"type": "SpineRouter", "subtype": "UpstreamLC"})
+
+    set_handler_test(m, key, {"prefix": "10.1.0.0/24"})
+    m.cfg_mgr.push.assert_not_called()
+    assert m.directory.get_slot("CONFIG_DB", "PREFIX_LIST")[key] == previous
+    mocked_log_warn.assert_called_with("PrefixListMgr:: Missing metadata key: 'bgp_asn'")
+
+@pytest.mark.parametrize("prefix_type", ["SUPPRESS_PREFIX", "ANCHOR_PREFIX"])
+def test_static_named_entry_unchanged_command_does_not_remove_configuration(prefix_type):
+    m = constructor()
+    key = prefix_type + "|sp1"
+    set_handler_test(m, key, {"prefix": "10.0.0.0/24"})
+    m.cfg_mgr.push.reset_mock()
+
+    set_handler_test(m, key, {"prefix": "10.0.0.0/24", "action": "permit", "seq": "20"})
+    cmds = get_pushed_cmds(m)
+    assert len(cmds) == 1
+    assert cmds[0].startswith("\nip prefix-list ")
+
+@pytest.mark.parametrize("prefix_type", ["SUPPRESS_PREFIX", "ANCHOR_PREFIX"])
+def test_static_named_entry_update_preserves_configuration_shared_by_other_entry(prefix_type):
+    m = constructor()
+    key = prefix_type + "|sp1"
+    other_key = prefix_type + "|sp2"
+    set_handler_test(m, key, {"prefix": "10.0.0.0/24"})
+    set_handler_test(m, other_key, {"prefix": "10.0.0.0/24"})
+    m.cfg_mgr.push.reset_mock()
+
+    set_handler_test(m, key, {"prefix": "10.1.0.0/24"})
+    cmds = get_pushed_cmds(m)
+    assert len(cmds) == 1
+    assert cmds[0].startswith("\nip prefix-list ")
+    assert "permit 10.1.0.0/24" in cmds[0]
+    assert m.directory.get_slot("CONFIG_DB", "PREFIX_LIST")[other_key]["prefix"] == "10.0.0.0/24"

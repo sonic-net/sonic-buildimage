@@ -75,7 +75,7 @@ class PrefixListMgr(Manager):
             cmd_parts.extend(["le", str(data["le"])])
         return "\n" + " ".join(cmd_parts)
 
-    def generate_prefix_list_config(self, prefix_type, data, add):
+    def generate_prefix_list_config(self, prefix_type, data, add, key=None):
         type_cfg = PREFIX_TYPE_CONFIG.get(prefix_type)
         if type_cfg is None:
             missing_action = "action" not in data or not data["action"]
@@ -130,6 +130,25 @@ class PrefixListMgr(Manager):
 
         template_key = type_cfg["add_template"] if add else type_cfg["del_template"]
         cmd = "\n" + self.templates[template_key].render(data=data)
+        if add and key is not None:
+            old_data = self._get_cached_entry(key)
+            if old_data is not None and old_data["prefix"] != data["prefix"]:
+                add_template = self.templates[type_cfg["add_template"]]
+                old_cmd = "\n" + add_template.render(data=old_data)
+                if old_cmd != cmd:
+                    old_config_in_use = any(
+                        other_key != key
+                        and other_key.split('|', 1)[0] == prefix_type
+                        and "\n" + add_template.render(data=other_data) == old_cmd
+                        for other_key, other_data in self.directory.get_slot(self.db_name, self.table_name).items()
+                    )
+                    if old_config_in_use:
+                        log_info("PrefixListMgr:: %s changed, previous configuration is still used by another entry" % key)
+                    else:
+                        # Cached fields retain the original ASN, address family and list name.
+                        old_delete_cmd = "\n" + self.templates[type_cfg["del_template"]].render(data=old_data)
+                        self.cfg_mgr.push(old_delete_cmd)
+                        log_info("PrefixListMgr:: %s changed, removed the previous entry" % key)
         self.cfg_mgr.push(cmd)
 
         action = "added to" if add else "removed from"
@@ -192,7 +211,7 @@ class PrefixListMgr(Manager):
                     self.cfg_mgr.push(self._build_dynamic_prefix_list_cmd(prefix_type, old_data, add=False))
                     log_info("PrefixListMgr:: %s changed, removed the previous entry" % key)
 
-        if self.generate_prefix_list_config(prefix_type, data, add=True):
+        if self.generate_prefix_list_config(prefix_type, data, add=True, key=key):
             log_info("PrefixListMgr:: %s %s configuration generated" % (prefix_type, data["prefix"]))
             self.directory.put(self.db_name, self.table_name, key, data)
             log_info("PrefixListMgr:: set %s" % key)
