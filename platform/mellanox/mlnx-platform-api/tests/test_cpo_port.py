@@ -418,6 +418,15 @@ class TestCdbLock:
 
 
 class TestFirmwareManagement:
+    def test_lpmode_configuration_is_rejected_under_firmware_control(self, cpo):
+        cpo.oe.get_api = mock.MagicMock()
+        with mock.patch.object(cpo.oe, '_is_sw_control', return_value=False):
+            with pytest.raises(
+                    OSError,
+                    match='lpmode configuration is not supported on firmware control'):
+                cpo.oe.set_lpmode(True)
+        cpo.oe.get_api.assert_not_called()
+
     @pytest.mark.parametrize('operation', [
         lambda oe: list(oe.download_firmware('/tmp/fw.bin')),
         lambda oe: list(oe.upgrade_firmware('/tmp/fw.bin')),

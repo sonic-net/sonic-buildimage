@@ -33,12 +33,9 @@ from . import utils
 from .device_data import DeviceDataManager
 from .module_sysfs import (
     POWER_MODE_LOW,
-    POWER_MODE_POLICY_HIGH,
-    POWER_MODE_POLICY_LOW,
     SFP_SYSFS_CONTROL,
     SFP_SYSFS_HWRESET,
     SFP_SYSFS_POWER_MODE,
-    SFP_SYSFS_POWER_MODE_POLICY,
     SFP_SYSFS_RESET,
 )
 from .nvidia_sysfs_eeprom import NvidiaSysfsEepromBanked
@@ -186,11 +183,7 @@ class NvidiaSysfsOe(OeBase, _NvidiaSysfsCpoDevice):
                 'Failed to set lpmode of OE {}: {}'.format(self.get_sdk_index(), exc))
             return False
 
-        path = self.module_attr_path(SFP_SYSFS_POWER_MODE_POLICY)
-        target = POWER_MODE_POLICY_LOW if lpmode else POWER_MODE_POLICY_HIGH
-        if utils.read_int_from_file(path) == target:
-            return True
-        return utils.write_file(path, str(target))
+        raise OSError('lpmode configuration is not supported on firmware control')
 
     def reset(self) -> bool:
         """Pulse the OE module reset. True if the sysfs write succeeded."""
