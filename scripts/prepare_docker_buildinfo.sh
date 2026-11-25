@@ -66,7 +66,11 @@ ENV ENABLE_SBOM=$ENABLE_SBOM
 RUN pre_run_buildinfo '${IMAGENAME}'
 '
 
+# ARG again: the post-run steps can land in a later stage than the
+# pre-script (a builder stage first), and a stage sees no ARG or ENV of
+# another. Where ENV ENABLE_SBOM is already set, it wins over the ARG.
 DOCKERFILE_POST_SCRIPT='
+ARG ENABLE_SBOM=n
 RUN post_run_buildinfo '${IMAGENAME}'
 RUN post_run_cleanup '${IMAGENAME}'
 '
@@ -86,6 +90,7 @@ if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCK
         awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
 
         # Append the docker build script at the end of the docker file
+        echo -e "\nARG ENABLE_SBOM=n" >> $TEMP_FILE
         echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
         echo -e "\nRUN post_run_cleanup ${IMAGENAME} " >> $TEMP_FILE
     fi

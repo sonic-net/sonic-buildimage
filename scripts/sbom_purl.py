@@ -110,6 +110,24 @@ def qualifiers_of(purl: str) -> dict:
     return out
 
 
+def with_namespace(purl: str, namespace: str) -> str:
+    """Return ``purl`` under ``namespace`` if it has none.
+
+    syft names a .deb file it finds `pkg:deb/<name>@...`, which no
+    scanner matches. Name and version are encoded, so a `/` in the
+    path can only separate a namespace.
+    """
+    if not purl or not namespace or not purl.startswith("pkg:"):
+        return purl
+    type_, slash, rest = purl[len("pkg:"):].partition("/")
+    if not slash:
+        return purl
+    path = rest.split("?", 1)[0].split("#", 1)[0].split("@", 1)[0]
+    if "/" in path:
+        return purl
+    return f"pkg:{type_}/{encode(namespace)}/{rest}"
+
+
 def with_qualifier(purl: str, key: str, value: str) -> str:
     """Return ``purl`` carrying ``key=value``, leaving an existing one alone.
 

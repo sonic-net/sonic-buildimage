@@ -25,8 +25,7 @@ Notes on accuracy:
     the dep graph under any feature combination), which is a superset of
     the crates actually compiled into the binary. SBOM/SCA convention is
     to treat Cargo.lock as the authoritative inventory; precise per-binary
-    coverage requires `cargo-auditable build`. See README.sbom.md "Known
-    limitations".
+    coverage requires `cargo-auditable build`.
   - go.sum is also a superset (it includes modules considered during
     resolution, including dropped versions). When syft can read a Go
     binary's embedded BuildInfo, that's more precise — but parsing go.sum
