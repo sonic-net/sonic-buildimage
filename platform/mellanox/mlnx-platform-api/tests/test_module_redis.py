@@ -38,17 +38,15 @@ def slot_module(monkeypatch):
     spec.loader.exec_module(module)
     module.SonicDBConfig.getDbId.return_value = 16
     module.SonicDBConfig.getDbHostname.return_value = '127.0.0.2'
-    module.SonicDBConfig.getDbSock.return_value = '/run/redis/custom state.sock'
     monkeypatch.setattr(redis, 'Redis', MagicMock())
     return module
 
 
-@pytest.mark.parametrize('use_tcp', [False, True])
-def test_slot_replacement_uses_configured_endpoint_and_cached_client(slot_module, use_tcp):
+def test_slot_replacement_uses_configured_tcp_endpoint_and_cached_client(slot_module):
     module = slot_module
     module.SonicDBConfig.getDbPort.return_value = 6387
     redis.Redis.return_value.hget.side_effect = [b'1', b'2']
-    slot = module.Module(1, use_tcp=use_tcp)
+    slot = module.Module(1)
     slot.current_state = module.Module.STATE_ACTIVATED
     module.utils.read_int_from_file.return_value = module.Module.STATE_ACTIVATED
     slot._re_init = MagicMock()
@@ -57,19 +55,7 @@ def test_slot_replacement_uses_configured_endpoint_and_cached_client(slot_module
     slot._re_init.reset_mock()
     slot._check_state()
 
-    endpoint = ({'unix_socket_path': '/run/redis/custom state.sock'} if not use_tcp
-                else {'host': '127.0.0.2', 'port': 6387})
-    redis.Redis.assert_called_once_with(db=16, **endpoint)
+    redis.Redis.assert_called_once_with(db=16, host='127.0.0.2', port=6387)
     assert slot.seq_no == '2'
     slot._re_init.assert_called_once_with()
     assert redis.Redis.return_value.hget.call_count == 2
-
-
-def test_unavailable_protected_socket_does_not_retry_tcp(slot_module):
-    module = slot_module
-    module.SonicDBConfig.getDbPort.return_value = 0
-    redis.Redis.return_value.hget.side_effect = redis.ConnectionError('socket unavailable')
-
-    assert module.Module(1, use_tcp=False)._get_seq_no() == 0
-    redis.Redis.assert_called_once_with(db=16, unix_socket_path='/run/redis/custom state.sock')
-    module.SonicDBConfig.getDbHostname.assert_not_called()
