@@ -152,6 +152,14 @@
                 "lag_type": "LACP"
             }
         },
+        "BRIDGE_PORT_PROTECTION": {
+            "PortChannel2": {
+                "protection_mode": "SOFTWARE",
+                "admin_mode": "AUTO",
+                "revertive": "true",
+                "wait_to_restore_time_ms": "5000"
+            }
+        },
         "PORTCHANNEL_INTERFACE": {
                 "PortChannel0003": {
                     "nat_zone": "1",
