@@ -11,8 +11,8 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  bgpd/bgp_debug.c               |   28 +-
  bgpd/bgp_debug.h               |    1 +
  bgpd/bgp_evpn.c                |   60 +-
- bgpd/bgp_evpn_mh.c             | 1744 +++++++++++++++++++++--
- bgpd/bgp_evpn_mh.h             |  130 +-
+ bgpd/bgp_evpn_mh.c             | 1754 ++++++++++++++++++++++--
+ bgpd/bgp_evpn_mh.h             |  131 +-
  bgpd/bgp_evpn_private.h        |   16 +
  bgpd/bgp_evpn_vty.c            |  206 +--
  bgpd/bgp_memory.c              |    4 +
@@ -60,7 +60,7 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  zebra/zebra_script.c           |    3 +
  zebra/zebra_vty.c              |  121 ++
  zebra/zebra_vxlan.c            |   11 +
- 52 files changed, 6286 insertions(+), 276 deletions(-)
+ 52 files changed, 6297 insertions(+), 276 deletions(-)
  create mode 100644 fpm/fpm_bpp.h
  create mode 100644 tests/lib/test_fpm_bpp.c
  create mode 100644 tests/lib/test_zapi_evpn_bpp.c
@@ -1155,7 +1155,7 @@ index b6208bb83a..f2025539f9 100644
  	*use_l3nhg = true;
  	if (CHECK_FLAG(es_vrf->flags, BGP_EVPNES_VRF_NHG_ACTIVE))
  		*is_l3nhg_active = true;
-@@ -3471,98 +3919,986 @@ bool bgp_evpn_path_es_use_nhg(struct bgp *bgp_vrf, struct bgp_path_info *pi,
+@@ -3471,98 +3919,996 @@ bool bgp_evpn_path_es_use_nhg(struct bgp *bgp_vrf, struct bgp_path_info *pi,
  	return true;
  }
  
@@ -1334,15 +1334,16 @@ index b6208bb83a..f2025539f9 100644
 +	return ready && eligible;
 +}
 +
-+static void bgp_evpn_es_l3_vtep_log_rmac_diff(struct bgp_evpn_es *es, const struct ipaddr *vtep_ip)
++static void bgp_evpn_es_l3_vtep_log_rmac_diff(struct bgp_evpn_es_l3_vtep *l3_vtep)
 +{
 +	struct listnode *node;
++	struct bgp_evpn_es *es = l3_vtep->es;
++	const struct ipaddr *vtep_ip = &l3_vtep->vtep_ip;
 +	struct bgp_evpn_es_vrf *es_vrf;
++	struct bgp_evpn_es_vrf *first_vrf = NULL;
 +	struct ethaddr first = {};
 +	bool have = false;
-+
-+	if (!BGP_DEBUG(evpn_mh, EVPN_MH_PROT))
-+		return;
++	bool mismatch = false;
 +
 +	for (ALL_LIST_ELEMENTS_RO(es->es_vrf_list, node, es_vrf)) {
 +		struct bgp_evpn_es_vrf_vtep *vtep;
@@ -1354,13 +1355,22 @@ index b6208bb83a..f2025539f9 100644
 +			continue;
 +		if (!have) {
 +			first = vtep->rmac;
++			first_vrf = es_vrf;
 +			have = true;
 +			continue;
 +		}
-+		if (memcmp(&first, &vtep->rmac, ETH_ALEN))
-+			zlog_debug("es %s vtep %pIA rmac differs vrf %s %pEA vs %pEA", es->esi_str,
-+				   vtep_ip, es_vrf->bgp_vrf->name_pretty, &vtep->rmac, &first);
++		if (memcmp(&first, &vtep->rmac, ETH_ALEN)) {
++			mismatch = true;
++			if (!l3_vtep->rmac_mismatch_logged)
++				zlog_warn("EVPN MH bridge-port protection: ESI %s peer VTEP %pIA has different RMACs across VRFs: %s %pEA and %s %pEA; using latest RMAC %pEA",
++					  es->esi_str, vtep_ip, first_vrf->bgp_vrf->name_pretty,
++					  &first, es_vrf->bgp_vrf->name_pretty, &vtep->rmac,
++					  &l3_vtep->rmac);
++			break;
++		}
 +	}
++
++	l3_vtep->rmac_mismatch_logged = mismatch;
 +}
 +
 +static void bgp_evpn_es_l3_vtep_warn(struct bgp_evpn_es_l3_vtep *l3_vtep, bool eligible, bool rt4)
@@ -1425,7 +1435,7 @@ index b6208bb83a..f2025539f9 100644
 +	sent = CHECK_FLAG(l3_vtep->flags, BGP_EVPN_ES_L3_VTEP_SENT);
 +	rmac_chg = eligible && sent && memcmp(&l3_vtep->sent_rmac, &l3_vtep->rmac, ETH_ALEN);
 +
-+	bgp_evpn_es_l3_vtep_log_rmac_diff(es, vtep_ip);
++	bgp_evpn_es_l3_vtep_log_rmac_diff(l3_vtep);
 +	bgp_evpn_es_l3_vtep_warn(l3_vtep, eligible, rt4);
 +
 +	if (eligible && (!sent || rmac_chg)) {
@@ -2527,7 +2537,7 @@ index 5268422535..84af744cca 100644
  
  	/* memory used for adding the es_vrf to
  	 * es_vrf->bgp_vrf->es_vrf_rb_tree
-@@ -202,6 +215,79 @@ struct bgp_evpn_es_vrf {
+@@ -202,6 +215,80 @@ struct bgp_evpn_es_vrf {
  
  	/* Number of ES-EVI entries associated with this ES-VRF */
  	uint32_t ref_cnt;
@@ -2585,6 +2595,7 @@ index 5268422535..84af744cca 100644
 +
 +	struct ethaddr rmac;
 +	struct ethaddr sent_rmac;
++	bool rmac_mismatch_logged;
 +	uint8_t warn_state;
 +#define BGP_EVPN_ES_L3_VTEP_WARN_NONE	      0
 +#define BGP_EVPN_ES_L3_VTEP_WARN_ELIGIBLE_NO_RT4 1

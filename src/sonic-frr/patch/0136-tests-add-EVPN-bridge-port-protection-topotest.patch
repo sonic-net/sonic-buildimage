@@ -11,7 +11,7 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md   |  381 +
  .../topotests/bgp_evpn_mh_bpp/spine1/frr.conf |   50 +
  .../topotests/bgp_evpn_mh_bpp/spine2/frr.conf |   50 +
- .../bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py   | 6508 +++++++++++++++++
+ .../bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py   | 6517 ++++++++++++++++++
  tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf |   76 +
  .../tor1/show_bpp_pending.json                |   40 +
  tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf |   76 +
@@ -21,7 +21,7 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  .../result-intf-eth0-wd-all-tag-default.json  |    4 +
  .../result-intf-eth0-wd-all-tag.json          |    4 +
  .../result-intf-eth0-wd-all.json              |    3 +-
- 13 files changed, 7453 insertions(+), 1 deletion(-)
+ 13 files changed, 7462 insertions(+), 1 deletion(-)
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf
@@ -537,7 +537,7 @@ new file mode 100644
 index 0000000000..a59ed3dcfa
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py
-@@ -0,0 +1,6508 @@
+@@ -0,0 +1,6517 @@
 +#!/usr/bin/env python
 +# SPDX-License-Identifier: ISC
 +
@@ -549,7 +549,7 @@ index 0000000000..a59ed3dcfa
 +# Patrice Brissette
 +#
 +
-+"""
++r"""
 +EVPN bridge-port protection (L3 multihoming).
 +
 +              +--------+         +--------+
@@ -3649,6 +3649,9 @@ index 0000000000..a59ed3dcfa
 +    _set_bpp(tor1, False)
 +    _del_vrf_c_vlan(tor1)
 +    _del_vrf_c_vlan(tor2)
++    _expect_ip_ead(
++        tor1, "new local VRF cleanup withdraws local IP A-D", evi_absent=True, es_absent=True
++    )
 +    _clear_ip_ead(tor2)
 +    _set_prot_debug(tor1, False)
 +
@@ -3729,13 +3732,19 @@ index 0000000000..a59ed3dcfa
 +    _set_bpp_if(tor2, ES_IF, True)
 +    _set_bpp(tor1, True)
 +    _expect_eligible(tor1, ES1_ID, (lo2,), "common rmac")
++    # The RMAC mismatch warning must be visible without protection debugging.
++    tor1.vtysh_cmd("configure terminal\nno debug bgp evpn mh protection")
 +    snap = _log_text(tgen, tor1, "zebra")
 +    bgpd_marker = _log_text(tgen, tor1, "bgpd")
 +    tor2.run("ip link set vlan4002 address %s" % mac_b)
 +    _expect_bpp_peer(
 +        tgen, tor1, ES1_ID, lo2, "add", "latest rmac", rmac=mac_b, after=snap
 +    )
-+    _expect_bgpd_log(tgen, tor1, "vtep %s rmac differs vrf" % lo2, bgpd_marker)
++    warning = "ESI %s peer VTEP %s has different RMACs across VRFs" % (ES1_ID, lo2)
++    _expect_bgpd_log(tgen, tor1, warning, bgpd_marker)
++    bgpd_output = _log_text(tgen, tor1, "bgpd")
++    bgpd_output = bgpd_output[len(bgpd_marker) :]
++    assert bgpd_output.count(warning) == 1, bgpd_output
 +    text = _log_text(tgen, tor1, "zebra")[len(snap) :]
 +    assert not _bpp_peer_lines(text, ES1_ID, "del"), text
 +    tor2.run("ip link set vlan4001 address %s" % old1)
