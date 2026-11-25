@@ -694,6 +694,7 @@ class TestChassis:
     def _make_sfp(self, sdk_index, asic_id='asic0'):
         sfp = MagicMock()
         sfp.sdk_index = sdk_index
+        sfp.index = sdk_index + 1
         sfp.asic_id = asic_id
         return sfp
 
@@ -793,12 +794,44 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        # keyed by 1-based physical port index
         assert changes == {'1': '0'}
         wait_ready_task.cancel_wait.assert_called_once_with(0)
         chassis._disable_polling_for_asic.assert_called_once_with('asic0')
         chassis._enable_polling_for_asic.assert_not_called()
         chassis.module_host_mgmt_initializer.set_asic_ready_value.assert_called_once_with(0, False)
+
+    @mock.patch('sonic_platform.chassis.os.path.exists', return_value=True)
+    @mock.patch('sonic_platform.chassis.utils.read_int_from_file')
+    @mock.patch('sonic_platform.chassis.InotifyEventHelper')
+    def test_get_asic_change_event_is_keyed_by_port_index_on_a_cpo_platform(
+            self, mock_inotify_cls, mock_read_int, _mock_exists):
+        """Two OEs of four banks each and the service port: SDK modules 0, 1
+        and 2, but front panel ports 1..8 and 9."""
+        chassis = Chassis()
+        ports = set()
+        for oe_id in range(2):
+            for bank_id in range(4):
+                port = self._make_sfp(oe_id, 'asic0')
+                port.index = oe_id * 4 + bank_id + 1
+                ports.add(port)
+        service = self._make_sfp(2, 'asic0')
+        service.index = 9
+        watcher, capture = self._setup_get_asic_change_event(
+            chassis, asic_count=1, ready_value=0, sfps_by_asic={'asic0': ports | {service}})
+        mock_inotify_cls.return_value = watcher
+        chassis.capture_current_asic_states = mock.MagicMock(return_value=capture)
+        mock_read_int.return_value = 0  # asic file content -> not ready
+
+        chassis._disable_polling_for_asic = mock.MagicMock()
+        wait_ready_task = mock.MagicMock()
+        with mock.patch.object(ModuleDetectionFlow, 'get_wait_ready_task', return_value=wait_ready_task), \
+             mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
+            changes = chassis.get_asic_change_event(timeout=1)
+
+        assert changes == {str(index): '0' for index in range(1, 10)}
+        # the reset waits are per sx_core module, so they stay on the SDK index
+        assert {call.args[0] for call in wait_ready_task.cancel_wait.call_args_list} == {0, 1, 2}
 
     @mock.patch('sonic_platform.chassis.os.path.exists', return_value=True)
     @mock.patch('sonic_platform.chassis.utils.read_int_from_file')
@@ -823,7 +856,7 @@ class TestChassis:
              mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True):
             changes = chassis.get_asic_change_event(timeout=1)
 
-        # keyed by 1-based physical port index, i.e. sdk_index + 1
+        # keyed by 1-based physical port index
         assert changes == {'1': '1'}
         chassis._enable_polling_for_asic.assert_called_once_with('asic0')
         chassis._disable_polling_for_asic.assert_not_called()
