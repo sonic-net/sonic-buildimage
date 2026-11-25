@@ -10,7 +10,8 @@ representing/retrieving/clearing records from a DPM device.
 import datetime
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Type, TypeVar
 
@@ -39,6 +40,23 @@ class RebootCause:
     description: str
     # Should match one of the ChassisBase.REBOOT_CAUSE_* constants (e.g., "REBOOT_CAUSE_POWER_LOSS").
     chassis_reboot_cause_category: str
+    # True for a symptom-level cause (e.g. a rail undervoltage) that any specific cause outranks.
+    is_fallback: bool = False
+    # True for a reboot that leaves the DPM powered up.
+    no_powerup_event: bool = False
+
+
+def pick_power_fault_cause(causes: Iterable[RebootCause | None]) -> RebootCause | None:
+    """Returns the first non-fallback cause, else the first fallback cause, else None."""
+    first_fallback = None
+    for cause in causes:
+        if cause is None:
+            continue
+        if not cause.is_fallback:
+            return cause
+        if first_fallback is None:
+            first_fallback = cause
+    return first_fallback
 
 
 UNKNOWN_TIMESTAMP = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
@@ -148,6 +166,8 @@ class DpmPowerUpEntry:
     power_fault_cause: RebootCause | None
     # List of raw records from the DPM that relate to this powerup.
     dpm_records: list[DpmRecord]
+    # Causes of the reboots in this powerup that left the DPM powered, oldest first.
+    no_powerup_reboot_causes: list[RebootCause] = field(default_factory=list)
 
 
 _RecordT = TypeVar("_RecordT", bound="DpmRecord")

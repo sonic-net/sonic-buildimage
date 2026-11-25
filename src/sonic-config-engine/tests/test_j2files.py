@@ -518,6 +518,85 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ports.json'), self.output_file))
 
+    def test_dhcpmon_upstream_address_families(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        interfaces = [
+            ("VLAN_INTERFACE", "Vlan1000", ("192.0.2.1/24", "2001:db8:1000::1/64")),
+            ("VLAN_INTERFACE", "Vlan2000", ("198.51.100.1/24", "2001:db8:2000::1/64")),
+            ("INTERFACE", "Ethernet0", ("203.0.113.1/24", "2001:db8:3::1/64")),
+            ("PORTCHANNEL_INTERFACE", "PortChannel01", ("10.0.0.1/31", "2001:db8:4::1/64")),
+        ]
+        for sonic_backend in (False, True):
+            for families in (("ipv4",), ("ipv6",), ("ipv4", "ipv6")):
+                case = "sonic_backend={}, families={}".format(sonic_backend, families)
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN": {},
+                    "VLAN_INTERFACE": {},
+                    "INTERFACE": {},
+                    "PORTCHANNEL_INTERFACE": {},
+                    "DHCPV4_RELAY": {},
+                    "DHCP_RELAY": {},
+                    "MGMT_INTERFACE": {"eth0|192.0.2.2/24": {}},
+                }
+                for table, name, prefixes in interfaces:
+                    data[table][name] = {}
+                    for prefix in prefixes:
+                        data[table]["{}|{}".format(name, prefix)] = {}
+                data["INTERFACE"]["Ethernet4|2001:db8:5::1/64"] = {}
+                data["INTERFACE"]["Ethernet8|198.51.100.2/24"] = {}
+                if "ipv4" in families:
+                    table, field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                        "VLAN", "dhcp_servers")
+                    data[table]["Vlan1000"] = {field: ["198.18.0.10"]}
+                if "ipv6" in families:
+                    data["DHCP_RELAY"]["Vlan1000"] = {"dhcpv6_servers": ["2001:db8:6::10"]}
+
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+
+                commands = [
+                    line.partition("=")[2].split()
+                    for line in rendered.splitlines() if line.startswith("command=")
+                ]
+                self.assertEqual(len(commands), 1, case)
+                command = commands[0]
+                self.assertEqual(command[:3], ["/usr/sbin/dhcpmon", "-id", "Vlan1000"], case)
+                upstreams = [
+                    command[index + 1] for index, arg in enumerate(command[:-1]) if arg == "-iu"
+                ]
+                expected_upstreams = ["Vlan2000", "Ethernet0", "PortChannel01"]
+                if "ipv4" in families:
+                    expected_upstreams.append("Ethernet8")
+                if "ipv6" in families:
+                    expected_upstreams.append("Ethernet4")
+                self.assertEqual(sorted(upstreams), sorted(expected_upstreams), case)
+                self.assertEqual(command[-2:], ["-im", "eth0"], case)
+
+    def test_dhcpmon_requires_matching_vlan_address(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        for sonic_backend in (False, True):
+            v4_table, v4_field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                "VLAN", "dhcp_servers")
+            for table, field, server, prefix in (
+                (v4_table, v4_field, "198.18.0.10", "2001:db8:1000::1/64"),
+                ("DHCP_RELAY", "dhcpv6_servers", "2001:db8:6::10", "192.0.2.1/24"),
+            ):
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN_INTERFACE": {"Vlan1000|{}".format(prefix): {}},
+                    table: {"Vlan1000": {field: [server]}},
+                }
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+                self.assertNotIn("dhcpmon-Vlan1000", rendered, repr(data))
+
     def test_dhcp_relay(self):
         # Test generation of wait_for_intf.sh
         dhc_sample_data = os.path.join(self.test_dir, "dhcp-relay-sample.json")
@@ -547,11 +626,47 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-secondary-subnets.supervisord.conf'), self.output_file))
 
-        # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is True and dhcp relay config is present
+        # Test generation when SONiC DHCPv4 is enabled and only DHCPv6 relay servers are configured.
         sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
                                      'docker-dhcp-relay.supervisord.conf.j2')
         argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        with open(self.output_file, 'r') as output:
+            rendered = output.read()
+        self.assertIn("programs=dhcprelayd,dhcp6relay,dhcp4relay", rendered)
+        self.assertIn("[program:dhcp6relay]", rendered)
+        self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
+        self.assertNotIn("[program:dhcpmon-Vlan2000]", rendered)
+
+        # Test generation when only SONiC DHCPv4 relay servers are configured.
+        sonic_dhcpv4_only_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]}
+            }
+        }
+        argument = ['-m', self.sonic_dhcp4relay_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(sonic_dhcpv4_only_data), '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        with open(self.output_file, 'r') as output:
+            rendered = output.read()
+        self.assertIn("programs=dhcprelayd,dhcp4relay", rendered)
+        self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
+        self.assertNotIn("[program:dhcp6relay]", rendered)
+        self.assertNotIn("[program:dhcpmon-Vlan2000]", rendered)
+
+        # Test generation when SONiC DHCPv4 and DHCPv6 relay servers are both configured.
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        sonic_dhcpv4_relay_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]},
+                "Vlan2000": {"dhcpv4_servers": ["192.0.0.3", "192.0.0.4"]}
+            }
+        }
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(sonic_dhcpv4_relay_data), '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
@@ -1977,6 +2092,24 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_dpu_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch_dpu.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_empty_src_intf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_empty_src_intf.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_with_mgmt_interface(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_with_mgmt_interface.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_with_mgmt_interface.conf")
 
         argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)

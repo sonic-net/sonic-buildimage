@@ -1472,6 +1472,13 @@
                 "bgp_rib_out_table": "false"
             }
         },
+        "GNMI_CLIENT": {
+            "certs": {
+                "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+                "client_key": "/etc/sonic/credentials/gnmi_client.key"
+            }
+        },
         "GNMI": {
             "certs": {
                 "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",

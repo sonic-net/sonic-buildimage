@@ -1,10 +1,8 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
 {% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
-{% elif PTF_ENV_PY_VER == "mixed" %}
-FROM {{ prefix}}debian:buster
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
 {% else %}
 FROM {{ prefix }}debian:trixie
 {% endif %}
@@ -49,9 +47,6 @@ RUN apt-get update          \
         cmake               \
         libqt5core5a        \
         libqt5network5      \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        libboost-atomic1.71.0 \
-{% else %}
         libboost-atomic1.83.0 \
         flex                  \
         bison                 \
@@ -60,20 +55,12 @@ RUN apt-get update          \
         libwrap0-dev          \
         libthrift-dev         \
         python3-thrift        \
-{% endif %}
         less                \
         git                 \
         iputils-ping        \
         hping3              \
         curl                \
         tmux                \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        python              \
-        python-dev          \
-        python-libpcap      \
-        python-scapy        \
-        python-six          \
-{% endif %}
         python3             \
         python3-venv        \
         python3-pip         \
@@ -82,9 +69,6 @@ RUN apt-get update          \
         python3-six         \
         python3-gi          \
         libpcap-dev         \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        tacacs+             \
-{% endif %}
         rsyslog             \
         ntpsec              \
         ntpstat             \
@@ -96,9 +80,7 @@ RUN apt-get update          \
         automake            \
         iproute2            \
         iptables            \
-{% if PTF_ENV_PY_VER != "mixed" %}
         wireshark-common    \
-{% endif %}
         freeradius          \
         quilt               \
     && rm -rf /var/lib/apt/lists/*
@@ -157,13 +139,11 @@ RUN set -eux \
         /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info \
     && rm -f /usr/local/lib/influxdb3-python/bin/pip*
 
-{% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 \
     && update-alternatives --install /usr/bin/pdb pdb /usr/bin/pdb3 1 \
     && update-alternatives --install /usr/bin/pydoc pydoc /usr/bin/pydoc3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
-{% endif %}
 
 COPY \
 {% for deb in docker_ptf_debs.split(' ') -%}
@@ -171,38 +151,18 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-{% if PTF_ENV_PY_VER == "mixed" %}
-RUN dpkg -i \
-{% for deb in docker_ptf_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor %}
-{% else %}
 RUN apt-get update
 # Install p4lang packages for DASH SAI support first and python-saithrift
 RUN apt install -y --reinstall ./debs/p4lang-pi_0.1.3-2_amd64.deb ./debs/p4lang-bmv2_1.15.0-9_amd64.deb ./debs/p4lang-p4c_1.2.4.2-3_amd64.deb ./debs/python-saithrift_0.9.4_amd64.deb
-{% endif %}
 
 
 COPY openbfdd-patches/ /root/openbfdd-patches/
-# Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
+# Install Python modules from PyPI after installing the Debian dependencies.
 # TODO: Clean up this step
 RUN rm -rf /debs \
     && apt-get -y autoclean \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
-{% if PTF_ENV_PY_VER == "mixed" %}
-    && wget --https-only https://bootstrap.pypa.io/pip/2.7/get-pip.py \
-    && python get-pip.py \
-    && rm -f get-pip.py \
-    && pip install setuptools \
-    && pip install supervisor \
-    && pip install ipython \
-    && git clone https://github.com/p4lang/scapy-vxlan.git \
-    && cd scapy-vxlan \
-    && python setup.py install \
-    && cd .. \
-    && rm -fr scapy-vxlan \
-{% endif %}
     && curl --fail --show-error --location -o /tmp/sflowtool-release.json "https://api.github.com/repos/sflow/sflowtool/releases/latest" \
     && SFLOWTOOL_VERSION=$(python3 -c 'import json; print(json.load(open("/tmp/sflowtool-release.json"))["tag_name"])') \
     && git clone --depth 1 --branch "${SFLOWTOOL_VERSION}" https://github.com/sflow/sflowtool \
@@ -236,34 +196,10 @@ RUN rm -rf /debs \
     && cd ../..            \
     && rm -fr nanomsg-src \
     && rm -f nanomsg.tar.gz /tmp/nanomsg-release.json \
-{% if PTF_ENV_PY_VER == "mixed" %}
-    && pip install cffi    \
-    && pip install nnpy    \
-    && pip install dpkt    \
-    && pip install ipaddress \
-    && pip install pysubnettree \
-    && pip install paramiko \
-    && pip install flask   \
-    && pip install exabgp==3.4.17\
-    && pip install pyaml   \
-    && pip install pybrctl pyro4 rpyc yabgp \
-    && pip install unittest-xml-reporting \
-    && pip install pyrasite \
-    && pip install retrying \
-{% endif %}
     && mkdir -p /opt       \
     && cd /opt             \
-{# ptf_nn_agent.py is pinned per Python env: the "mixed" image runs the agent
-   under Python 2 (nnpy), so it stays on the last nnpy-compatible upstream
-   commit; the py3 image ships pynng and tracks a p4lang/ptf main commit that
-   uses pynng (see #26912 / upstream p4lang/ptf#234). #}
-{% if PTF_ENV_PY_VER == "mixed" %}
-    && wget https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py
-{% else %}
     && wget https://raw.githubusercontent.com/p4lang/ptf/main/ptf_nn/ptf_nn_agent.py
-{% endif %}
 
-{% if PTF_ENV_PY_VER == "py3" %}
 RUN curl -L -o tacacs.tar.gz https://shrubbery.net/pub/tac_plus/tacacs-F4.0.4.32.tar.gz\
     && mkdir -p tac_plus\
     && tar -xvzf tacacs.tar.gz -C tac_plus\
@@ -277,16 +213,13 @@ RUN curl -L -o tacacs.tar.gz https://shrubbery.net/pub/tac_plus/tacacs-F4.0.4.32
     && chmod 0755 /etc/tacacs+
 COPY ["tacacs_plus", "/etc/init.d"]
 COPY ["tacacs+", "/etc/default"]
-{% endif %}
 
 # Workaround: Tornado installed outside of the
 # virtualenv as the call to the process API
 # Ansible -> Supervisor -> ExaBGP -> Process API
 # causes the process API to have a restricted
 # environment without access to the virtualenv.
-{% if PTF_ENV_PY_VER == "py3" %}
-    RUN pip3 install --break-system-packages "tornado>=6.5.5"
-{% endif %}
+RUN pip3 install --break-system-packages "tornado>=6.5.5"
 
 
 RUN python3 -m venv env-python3
@@ -304,27 +237,11 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
 # Upgrade pip to address CVE vulnerabilities in older pip versions
 RUN pip3 install --upgrade pip
 
-{% if PTF_ENV_PY_VER == "mixed" %}
-RUN pip3 install --upgrade --ignore-installed pip
-{% endif %}
-
 # For py3 image the following offending packages below do not use the updated
 # setuptools on Python 3.9. The packages downgrade setuptools
 # to 40.x causing further installations to fail
-{% if PTF_ENV_PY_VER == "py3" %}
 {% set offending_packages = ["supervisor", "ipython", "exabgp==4.2.25", "grpcio-tools==1.82.0", "pybrctl", "pyrasite", "scapy", "thrift"] %}
 {{ install_offending_packages(offending_packages) }}
-{% else %}
-RUN pip3 install setuptools \
-        && pip3 install supervisor \
-        && pip3 install ipython \
-        && pip3 install exabgp==4.2.25 \
-        && pip3 install grpcio-tools==1.82.0 \
-        && pip3 install pybrctl \
-        && pip3 install pyrasite \
-        && pip3 install scapy \
-        && pip3 install thrift
-{% endif %}
 
 # ExaBGP's process-API reader can silently drop the tail of a large command
 # batch, leaving a route announcement or withdrawal only partially applied
@@ -348,15 +265,11 @@ RUN EXABGP_PKG="$(python3 -c 'import importlib.util; print(importlib.util.find_s
 # Install all python modules from pypi. python3-scapy is exception,
 # ptf debian package requires python3-scapy
 RUN pip3 install Flask   \
-{% if PTF_ENV_PY_VER == "py3" %}
     && pip3 install Werkzeug \
-{% endif %}
     && pip3 install Cython \
     && pip3 install cffi    \
     && pip3 install nnpy    \
-{% if PTF_ENV_PY_VER == "py3" %}
     && pip3 install pynng   \
-{% endif %}
     && pip3 install dpkt    \
     && pip3 install ipaddress \
     && pip3 install pysubnettree \
@@ -406,12 +319,6 @@ COPY supervisord.conf /etc/supervisor/
 COPY conf.d/ /etc/supervisor/conf.d/
 COPY ptf_tgen.sh /ptf_tgen/
 
-{% if PTF_ENV_PY_VER == "mixed" %}
-# Move tcpdump into /usr/bin Otherwise it's impossible to run tcpdump due to a docker bug
-RUN mv /usr/sbin/tcpdump /usr/bin/tcpdump
-RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
-{% endif %}
-
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
@@ -422,14 +329,6 @@ RUN git clone https://github.com/google/gnxi.git \
 COPY gnxi-patches/ gnxi/patches/
 
 
-{% if PTF_ENV_PY_VER == "mixed" %}
-RUN cd gnxi \
-    && quilt push -a \
-    && cd gnmi_cli_py \
-    && pip install -r requirements.txt \
-    && pip3 install protobuf==6.33.5 --no-binary=protobuf
-{% else %}
-
 # Since gnxi were generated with proto 3.x we need to regenerate _pb2 with the new proto version
 RUN cd gnxi \
     && quilt push -a \
@@ -439,7 +338,6 @@ RUN cd gnxi \
     && sed -i 's|github.com/openconfig/gnmi/proto/gnmi_ext/gnmi_ext.proto|gnmi_ext.proto|' gnmi.proto \
     && python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. gnmi_ext.proto gnmi.proto \
     && rm -f gnmi.proto gnmi_ext.proto
-{% endif %}
 
 # Deactivating a virtualenv.
 # ENV PATH="$BACKUP_OF_PATH"
@@ -471,33 +369,29 @@ RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
 # findings; minimal version selection preserves them across a version bump.
 # The Python gRPC stubs are generated from the same checkout into
 # /usr/local/lib/gobgp-api, so the binaries and the stubs always describe the
-# same gobgp version. They are skipped on the mixed-python image, whose
-# protobuf runtime predates the gencode grpcio-tools emits.
+# same gobgp version.
 RUN curl --fail --show-error --location -o /tmp/gobgp-release.json "https://api.github.com/repos/osrg/gobgp/releases/latest" \
     && GOBGP_VERSION=$(python3 -c 'import json; print(json.load(open("/tmp/gobgp-release.json"))["tag_name"])') \
     && git clone --branch "${GOBGP_VERSION}" https://github.com/osrg/gobgp.git /tmp/gobgp \
     && cd /tmp/gobgp \
     && echo "gobgp $(git describe --tags --always) $(git rev-parse HEAD)" \
-    && go get google.golang.org/grpc@v1.83.2 golang.org/x/net@v0.58.0 golang.org/x/text@v0.41.0 \
+    && go get google.golang.org/grpc@v1.83.2 golang.org/x/net@v0.60.0 golang.org/x/text@v0.42.0 \
     && go mod tidy \
     && go build -o /usr/local/bin/gobgpd ./cmd/gobgpd \
     && go build -o /usr/local/bin/gobgp ./cmd/gobgp \
     && chmod +x /usr/local/bin/gobgpd /usr/local/bin/gobgp \
-{%- if PTF_ENV_PY_VER != "mixed" %}
     && mkdir -p /usr/local/lib/gobgp-api \
     && python3 -m grpc_tools.protoc -Iproto \
         --python_out=/usr/local/lib/gobgp-api --grpc_python_out=/usr/local/lib/gobgp-api \
         api/gobgp.proto api/attribute.proto api/capability.proto \
         api/common.proto api/extcom.proto api/nlri.proto \
     && PYTHONPATH=/usr/local/lib/gobgp-api python3 -c "from api import gobgp_pb2_grpc" \
-{%- endif %}
     && rm -rf /tmp/gobgp /tmp/gobgp-release.json /root/go/pkg/mod /root/.cache/go-build
 
 # Remove Go toolchain to reduce image size
 RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-{% if PTF_ENV_PY_VER == "py3" %}
 # New setuptools installs flat SAI clients instead of eggs. Link only those
 # clients and their metadata into the isolated venv, keeping version collection
 # intact without exposing all system Python packages.
@@ -515,7 +409,6 @@ RUN SITE_DIR=$(/root/env-python3/bin/python -c 'import sysconfig; print(sysconfi
 
 # Fail the build if saithrift is not importable the way the QoS saitests use it.
 RUN /root/env-python3/bin/python -c "import switch_sai_thrift.switch_sai_rpc"
-{% endif %}
 
 # Native MACsec codec: importable as `ptf_macsec` from ptf.dataplane
 # (auto-installed at DataPlane construction). See ptf-py3.patch/0008.
@@ -545,18 +438,6 @@ RUN ARCH=$(dpkg --print-architecture) \
     && rm -rf /root/env-python3/lib/python*/site-packages/pip \
         /root/env-python3/lib/python*/site-packages/pip-*.dist-info \
     && rm -f /root/env-python3/bin/pip*
-
-# {% if PTF_ENV_PY_VER == "py3" %}
-# # Create symlink so that test scripts and ptf_runner invocation path
-# # is same across python 2 and python 3 envs. Note that for virtual-env
-# # ptf is under /root/env-python3/bin.
-# # TODO - cleanup when the supported PTF image is py3only across all branches
-# RUN mkdir -p /root/env-python3/bin \
-#     && ln -s /usr/local/bin/ptf /usr/bin/ptf \
-#     && ln -s /usr/bin/python /root/env-python3/bin/python3 \
-#     && ln -s /usr/bin/python /root/env-python3/bin/python \
-#     && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
-# {% endif %}
 
 # There are some scripts like supervisorctl and others invoked from
 # custom Ansible modules which use exec_command to run these. Since

@@ -4,7 +4,74 @@
             "type": "adm1266",
             "dpm": "DPM1",
             "dpm_signal_to_fault_cause": [
-{%- if CPUCARD_FPGA_WATCHDOG_SUPPORTED %}
+{%- if CPU_CARD_FPGA_MEETS_MIN_VERSION_0x15 %}
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "THERMTRIP_L",
+                    "hw_desc": "CPU exceeded Tdie temperature threshold",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0100",
+                    "pdio_value": "0x8000",
+                    "gpio_value": "0x0100",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "CPU FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG",
+                    "no_powerup_event": true
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0100",
+                    "pdio_value": "0x8000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "CPU FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_PWR_CYC_REQ",
+                    "hw_desc": "BMC requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "FPGA_PWR_CYC_REQ",
+                    "hw_desc": "FPGA requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0100",
+                    "pdio_value": "0x4002",
+                    "gpio_value": "0x0100",
+                    "hw_cause": "BMC_CMD_X86_SWT_PWR_OFF",
+                    "hw_desc": "x86 and switch card FPGA/ASIC powered off",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_DOWN_REQUEST_FROM_BMC",
+                    "no_powerup_event": true
+                },
+                {
+                    "pdio_mask": "0xC002",
+                    "gpio_mask": "0x0100",
+                    "pdio_value": "0x8002",
+                    "gpio_value": "0x0100",
+                    "hw_cause": "FPGA_CMD_X86_SWT_PWR_CYCLE",
+                    "hw_desc": "CPU FPGA power cycled the x86 and switch card FPGA/ASIC",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER",
+                    "no_powerup_event": true
+                }
+{%- else %}
                 {
                     "pdio_mask": "0xC002",
                     "gpio_mask": "0x0000",
@@ -14,7 +81,6 @@
                     "hw_desc": "CPU FPGA watchdog expired",
                     "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
                 },
-{%- endif %}
                 {
                     "pdio_mask": "0xC002",
                     "gpio_mask": "0x0000",
@@ -41,16 +107,8 @@
                     "hw_cause": "FPGA_PWR_CYC_REQ",
                     "hw_desc": "FPGA requested power cycle",
                     "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
-                },
-                {
-                    "pdio_mask": "0x0001",
-                    "gpio_mask": "0x0000",
-                    "pdio_value": "0x0000",
-                    "gpio_value": "0x0000",
-                    "hw_cause": "THERMTRIP_L",
-                    "hw_desc": "CPU exceeded Tdie temperature threshold",
-                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
                 }
+{%- endif %}
             ],
             "pin_to_name": {
                 "VH1": "POS12V",
@@ -81,7 +139,8 @@
                 "PDI7": "POS1V1_S0",
                 "PDO7": "POS1V1_S0",
                 "PDI8": "POS1V8_S0+POS3V3_S0",
-                "PDO8": "POS1V8_S0+POS3V3_S0"
+                "PDO8": "POS1V8_S0+POS3V3_S0",
+                "GPI4": "MODE_LATCH_BUF"
             }
         },
         "switch_card_1": {
@@ -172,6 +231,7 @@
                     "hw_desc": "CPU card power bad",
                     "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
                 },
+{%- if not SWITCH_CARD_FPGA_0_MEETS_MIN_VERSION_0x8E %}
                 {
                     "pdio_mask": "0x0008",
                     "gpio_mask": "0x0000",
@@ -181,6 +241,7 @@
                     "hw_desc": "FPGA watchdog expired",
                     "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
                 },
+{%- endif %}
                 {
                     "pdio_mask": "0x0010",
                     "gpio_mask": "0x0000",
@@ -207,6 +268,17 @@
                     "hw_cause": "CMD_PWR_CYC",
                     "hw_desc": "Software commanded power cycle",
                     "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0000",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0000",
+                    "gpio_value": "0x0000",
+                    "vh_uv_mask": "0x1",
+                    "vh_uv_value": "0x1",
+                    "hw_cause": "MAIN_12V_LOSS",
+                    "hw_desc": "Loss of 12V power from PSU",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
                 }
             ],
             "pin_to_name": {
@@ -228,7 +300,7 @@
                 "PDI1": "FPGA_DPM_LOG_0",
                 "PDI2": "FPGA_DPM_LOG_1",
                 "PDI3": "FPGA_DPM_LOG_2",
-                "PDI4": "FPGA_DPM_LOG_3",
+                "PDI4": {% if SWITCH_CARD_FPGA_0_MEETS_MIN_VERSION_0x8E %}"FPGA_CMD_SC_PWR_CYC"{% else %}"FPGA_DPM_LOG_3"{% endif %},
                 "PDI5": "FPGA_DPM_LOG_4",
                 "PDI6": "FPGA_DPM_LOG_5",
                 "PDI7": "FPGA_DPM_LOG_6",
