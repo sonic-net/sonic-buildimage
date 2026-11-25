@@ -2396,6 +2396,33 @@ def keep_installed(obs: list, shipped: Optional[set], scope: str) -> list:
             if not c["purl"].startswith("pkg:deb/") or c["name"] in shipped]
 
 
+def warn_unlisted(obs: list, recipes: list, scope: str) -> None:
+    """Warn about installed debs named ``sonic`` only because apt lists none.
+
+    `deb_origin` treats a package no apt list names as SONiC's. That is
+    right for a local .deb, but a Debian package whose installed version
+    has dropped out of the lists (a stale base layer) lands there too,
+    and grype then matches none of its distro CVEs. Name every such
+    package that no recipe built. ``built`` cannot be the test: it
+    already counts every unlisted package as local.
+    """
+    from_recipe = {
+        (c.get("name"), _strip_epoch(c.get("version", "")))
+        for c in recipes
+        if (c.get("purl") or "").startswith("pkg:deb/sonic/")
+    }
+    names = sorted({
+        c["name"] for c in obs
+        if c["purl"].startswith("pkg:deb/sonic/")
+        and (c["name"], _strip_epoch(c.get("version", ""))) not in from_recipe
+    })
+    if names:
+        warn(f"{scope}: {len(names)} installed deb(s) are in no apt list and "
+             f"were built by no recipe, so they are named pkg:deb/sonic and "
+             f"scanners will not match their distro CVEs (stale apt lists?): "
+             f"{', '.join(names)}")
+
+
 def operating_system_component(distro_id: str, version_id: str) -> dict:
     """Build a CycloneDX ``operating-system`` component carrying the
     distro. grype keys OS-package (deb/rpm/apk) matching off the
@@ -2502,6 +2529,7 @@ def _container_main(container_filename: str) -> int:
         target_path, scope, arch, "Debian", distro=distro,
         built=local_debs(target_path, arch, fragments.all),
     ), shipped_from_list(target_path, scope), scope)
+    warn_unlisted(obs, fragments.all, scope)
     info(f"Container observation: {len(obs)} components")
 
     # Lockfile-derived: only this container's scope.
@@ -2755,6 +2783,7 @@ def main() -> int:
         target_path, "host-image", arch, "Debian", distro=host_distro,
         built=built_debs,
     ), shipped_from_dpkg_status(host_status), "host-image")
+    warn_unlisted(obs_host, recipe_components, "host-image")
     info(f"Host rootfs observation: {len(obs_host)} components")
 
     # ---- Per-container observation + container identity ----
@@ -2792,12 +2821,14 @@ def main() -> int:
 
         # In-container observation set.
         scope = f"dockers/{cname}"
-        obs_containers.extend(keep_installed(observation_components_for_scope(
+        scope_obs = keep_installed(observation_components_for_scope(
             target_path, scope, arch, "Debian",
             distro=sbom_os_release.read(os.path.join(
                 target_path, "versions", scope, "os-release")),
             built=built_debs,
-        ), shipped_from_list(target_path, scope), scope))
+        ), shipped_from_list(target_path, scope), scope)
+        warn_unlisted(scope_obs, recipe_components, scope)
+        obs_containers.extend(scope_obs)
 
     info(f"Container observation: {len(obs_containers)} components "
          f"across {len(installer_dockers)} containers")

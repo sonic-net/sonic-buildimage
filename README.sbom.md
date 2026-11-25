@@ -61,10 +61,12 @@ All five appear in the `Build Configuration` dump at the start of a build.
 
 - **In the `.bin` SBOM:** the host root filesystem, kernel and modules,
   bootloader, and every container the `.bin` installs. Optional
-  containers appear when their `INCLUDE_*` flag ships them. Only
-  packages still installed in the finished image are listed.
-- **Never in any SBOM:** `sonic-slave-*` build images,
-  `docker-sonic-sdk-buildenv`, and build-only debs and wheels.
+  containers appear when their `INCLUDE_*` flag ships them. An apt or
+  pip package is listed only if it is still installed in the finished
+  image; a `.deb` or wheel a recipe built is listed whether or not it
+  ships (see [Known limitations](#known-limitations)).
+- **Never in any SBOM:** `sonic-slave-*` build images and
+  `docker-sonic-sdk-buildenv`.
 - **Build toolchain:** in `formulation[]`, not `components[]`: it
   built the image but is not in it, and grype does not scan it.
 - **Test-container SBOMs** have no scanner pass unless
@@ -230,6 +232,13 @@ jq '.components[] | select((.licenses // []) == []) | .name' $SBOM
 - Vendor EULA licenses are recorded by name, not as SPDX.
 - Language dependencies are read only from SONiC-built `.deb`s; for
   Debian's, the scanner covers them.
+- Every recipe-built `.deb` and wheel is listed, shipped or not:
+  golang, `-dev` and `-dbgsym` packages included.
+- A package no apt list names is taken as SONiC's
+  (`pkg:deb/sonic/...`). A Debian package whose installed version has
+  left the apt lists (a stale base layer) lands there too, and scanners
+  miss its CVEs; the build warns with the names of any such package no
+  recipe built.
 
 ## File map
 
