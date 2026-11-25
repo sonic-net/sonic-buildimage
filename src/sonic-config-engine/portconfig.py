@@ -286,9 +286,16 @@ def parse_port_config_file(port_config_file):
 SYSTEM_PORT_CONFIG_COLUMNS = ['name', 'speed', 'index', 'core_id',
                               'core_port_id', 'num_voq']
 
+# Optional file next to port_config.ini, same columns: internal ASIC ports
+# (e.g. the DNX Eventor) that need a SYSTEM_PORT row but are not PORTs.
+EXTRA_SYSTEM_PORTS_FILE = "extra_system_ports.ini"
+
 def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id):
     ports = {}
     files = [port_config_file]
+    extra_system_ports_file = os.path.join(os.path.dirname(port_config_file), EXTRA_SYSTEM_PORTS_FILE)
+    if os.path.isfile(extra_system_ports_file):
+        files.append(extra_system_ports_file)
     for file in files:
         with open(file) as data:
             titles = list(SYSTEM_PORT_CONFIG_COLUMNS)

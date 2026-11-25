@@ -41,7 +41,7 @@
     {% else %}
         {%- set system_port_name = system_port  %}
     {% endif %}
-    {%- if 'cpu' not  in system_port_name.lower() and 'IB' not in system_port_name and 'Rec' not in system_port_name %}
+    {%- if 'cpu' not  in system_port_name.lower() and 'IB' not in system_port_name and 'Rec' not in system_port_name and 'Eventor' not in system_port_name %}
         {%- if SYSTEM_PORT_ALL.append(system_port_name) %}{%- endif %}
     {%- endif %}
 {#- find all system_port_name has hostname|asicname. If it is true, get the portname and check if the port name is present in the deviceNeighbor -#}
