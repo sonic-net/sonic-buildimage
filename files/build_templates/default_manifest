@@ -42,6 +42,7 @@
         "privileged": false,
         "entrypoint": "",
         "volumes": [],
+        "capabilities": [],
         "mounts": [],
         "environment": {},
         "tmpfs": []

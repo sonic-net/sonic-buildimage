@@ -229,6 +229,7 @@ define generate_manifest
     $(eval export fast_shutdown_before=$($*.gz_FAST_SHUTDOWN_BEFORE))
     $(eval export privileged=$($(1).gz_CONTAINER_PRIVILEGED))
     $(eval export volumes=$($(1).gz_CONTAINER_VOLUMES))
+    $(eval export capabilities=$($(1).gz_CONTAINER_CAPABILITIES))
     $(eval export tmpfs=$($(1).gz_CONTAINER_TMPFS))
     $(eval export config_cli_plugin=$($(1).gz_CLI_CONFIG_PLUGIN))
     $(eval export show_cli_plugin=$($(1).gz_CLI_SHOW_PLUGIN))
