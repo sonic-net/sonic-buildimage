@@ -19,6 +19,11 @@
 # The run refuses to start if an injection is already present (use --force),
 # and always withdraws every injection it made unless --keep is given.
 #
+# On the platform marker directory, which thermalctld watches, nothing is
+# injected unless thermalctld is confirmed to publish injected leaks as test
+# leaks (sonic-platform-daemons#943); an older thermalctld/bmcctld would act on
+# them. Use --leak-test-dir for a private directory that no daemon watches.
+#
 # On a live system thermalctld logs the injected leak like a real one, and a
 # CRITICAL injection is written to /host/bmc/event.log.
 #
@@ -210,24 +215,47 @@ def check_cli(report, poller, leak_test_dir, names):
     report.check("CLI clear observed by poller", poller.get_leak_sensor_status() == [])
 
 
-def check_state_db(report, leak_test, names, timeout):
+def connect_compatible_consumer(names):
+    """Return (db, None) if the running thermalctld marks injected leaks as test
+    leaks, else (None, reason).
+
+    Compatibility is read from the fields a sonic-platform-daemons#943
+    thermalctld publishes on every refresh: test_leak and leak_source on each
+    sensor's LIQUID_COOLING_INFO row, and test_leak on SYSTEM_LEAK_STATUS, which
+    is what bmcctld reads before taking a mitigation action.
+    """
+    try:
+        from swsscommon.swsscommon import SonicV2Connector
+    except ImportError:
+        return None, "swsscommon is not importable"
+    try:
+        db = SonicV2Connector(use_unix_socket_path=True)
+        db.connect(db.STATE_DB)
+    except Exception as ex:  # noqa: BLE001
+        return None, "cannot connect to STATE_DB: {}".format(ex)
+
+    for name in names:
+        key = "LIQUID_COOLING_INFO|{}".format(name)
+        row = db.get_all(db.STATE_DB, key) or {}
+        if not row:
+            return None, ("{} is absent; is thermalctld running with liquid "
+                          "cooling enabled?".format(key))
+        if "test_leak" not in row or "leak_source" not in row:
+            return None, ("thermalctld does not publish test_leak on {}; it would "
+                          "act on an injected leak".format(key))
+    system = db.get_all(db.STATE_DB, "SYSTEM_LEAK_STATUS|system") or {}
+    if "test_leak" not in system:
+        return None, ("SYSTEM_LEAK_STATUS|system has no test_leak; bmcctld would "
+                      "act on an injected leak")
+    return db, None
+
+
+def check_state_db(report, db, leak_test, names, timeout):
     """Verify the running thermalctld publishes the injection to STATE_DB as a
     test leak: flagged per sensor (test_leak=Enabled, leak_source=test) and, in
     SYSTEM_LEAK_STATUS, with test_leak=Enabled next to device_leak_status.
     bmcctld takes no mitigation action while test_leak is Enabled.
     """
-    try:
-        from swsscommon.swsscommon import SonicV2Connector
-    except ImportError:
-        report.record(SKIP, "STATE_DB verification", "swsscommon not importable here")
-        return
-    try:
-        db = SonicV2Connector(use_unix_socket_path=True)
-        db.connect(db.STATE_DB)
-    except Exception as ex:  # noqa: BLE001
-        report.record(SKIP, "STATE_DB verification", "cannot connect: {}".format(ex))
-        return
-
     name = names[0]
 
     def wait_for(predicate):
@@ -240,21 +268,6 @@ def check_state_db(report, leak_test, names, timeout):
             if time.monotonic() >= deadline:
                 return False, entry, system
             time.sleep(1)
-
-    if not db.exists(db.STATE_DB, "LIQUID_COOLING_INFO|{}".format(name)):
-        report.record(SKIP, "STATE_DB verification",
-                      "LIQUID_COOLING_INFO|{} absent; is thermalctld running with "
-                      "liquid cooling enabled?".format(name))
-        return
-
-    # A thermalctld that does not publish test_leak does not mark an injected
-    # leak as a test leak, and bmcctld powers the switch off on a CRITICAL
-    # device_leak_status that is not marked. Never inject into such a consumer.
-    if "test_leak" not in (db.get_all(db.STATE_DB, "LIQUID_COOLING_INFO|{}".format(name)) or {}):
-        report.record(SKIP, "STATE_DB verification",
-                      "thermalctld does not publish test_leak; it would act on an "
-                      "injected CRITICAL leak, so none is injected")
-        return
 
     leak_test.set_test_leak(name, True, severity=sim.severity_from_name("CRITICAL"))
     ok, entry, system = wait_for(
@@ -307,6 +320,15 @@ def main(argv=None):
         print(report.summary())
         return 2
 
+    db = None
+    if os.path.realpath(leak_test_dir) == os.path.realpath(module.LEAK_TEST_DIR):
+        db, reason = connect_compatible_consumer(names)
+        if db is None:
+            print("refusing to inject into {}, which thermalctld watches: {}. "
+                  "Use --leak-test-dir DIR for a private directory.".format(
+                      leak_test_dir, reason))
+            return 2
+
     if any(leak_test.is_test_leak_enabled(n) for n in names):
         if not args.force:
             print("an injection is already present; clear it or pass --force")
@@ -320,10 +342,13 @@ def main(argv=None):
             check_sensor_cycle(report, module, leak_test, poller, leak_test_dir, name)
         check_clear_all(report, leak_test, poller, names)
         check_cli(report, poller, leak_test_dir, names)
-        if args.verify_db:
-            check_state_db(report, leak_test, names, args.db_timeout)
-        else:
+        if not args.verify_db:
             report.record(SKIP, "STATE_DB verification", "pass --verify-db to enable")
+        elif db is None:
+            report.record(SKIP, "STATE_DB verification",
+                          "thermalctld does not watch {}".format(leak_test_dir))
+        else:
+            check_state_db(report, db, leak_test, names, args.db_timeout)
     finally:
         if not args.keep:
             leak_test.clear_test_leaks()

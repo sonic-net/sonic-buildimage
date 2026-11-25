@@ -108,21 +108,29 @@ test_leak_injection_sim.py               # API + CLI checks, prints PASS/FAIL pe
 test_leak_injection_sim.py --verify-db   # also wait for thermalctld to publish to STATE_DB
 ```
 
-With `--verify-db` it waits (default 60 s, `--db-timeout`) for
+On the platform marker directory, which thermalctld watches, the script
+injects nothing until it has confirmed that thermalctld marks injected leaks
+as test leaks: every `LIQUID_COOLING_INFO|<sensor>` row must carry `test_leak`
+and `leak_source`, and `SYSTEM_LEAK_STATUS|system` must carry `test_leak`.
+That check runs before the first injection of the run. If `swsscommon` is not
+importable, STATE_DB is unreachable, thermalctld is not publishing liquid
+cooling, or it predates sonic-platform-daemons#943, the script exits 2
+without writing a marker. An older thermalctld reports an injected CRITICAL
+leak in `device_leak_status` without marking it as a test leak, and bmcctld's
+default policy powers the switch off on that.
+
+With `--verify-db` it also waits (default 60 s, `--db-timeout`) for
 `LIQUID_COOLING_INFO|<sensor>` to show `leaking=Yes`, `test_leak=Enabled`,
 `leak_source=test` and the injected `test_leak_severity`, and
 `SYSTEM_LEAK_STATUS|system` to show `device_leak_status=CRITICAL` with
-`test_leak=Enabled`, then for both to clear after withdrawal. This needs
-`swsscommon` importable and thermalctld running with liquid cooling enabled;
-otherwise that check is skipped, not failed. It is also skipped, and nothing is injected, if
-thermalctld does not publish `test_leak`: such a thermalctld reports an
-injected CRITICAL leak in `device_leak_status` without marking it as a test
-leak, and bmcctld's default policy powers the switch off on that.
+`test_leak=Enabled`, then for both to clear after withdrawal.
 
 Both scripts accept `--leak-test-dir DIR` to operate on another marker
-directory. That bypasses `Chassis()` and, on a development host without the
-platform package installed, loads the module from the source tree the way the
-unit tests do:
+directory. No daemon watches it, so the verifier skips the consumer check and
+the STATE_DB verification there. The sensors still read their GPIO lines, so
+this is not a hardware-free mode on the BMC. It bypasses `Chassis()` and, on a
+development host without the platform package installed, loads the module
+from the source tree the way the unit tests do:
 
 ```
 cd platform/aspeed/sonic-platform-modules-nexthop/common
