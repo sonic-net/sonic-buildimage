@@ -1,5 +1,6 @@
 import json
 import pytest
+from pathlib import Path
 from common_utils import MockConfigDb, dhcprelayd_refresh_dhcrelay_test, dhcprelayd_proceed_with_check_res_test
 from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler
 from dhcp_utilities.dhcprelayd.dhcprelayd import DHCP_SERVER_CHECKER, MID_PLANE_CHECKER
@@ -174,10 +175,12 @@ def mock_get_config_db_table(table_name):
     return mock_config_db.get_config_db_table(table_name)
 
 
-def test_read_kea_lease(mock_swsscommon_dbconnector_init):
+def test_read_kea_lease(mock_swsscommon_dbconnector_init, tmp_path):
+    lease_file = tmp_path / "kea-lease_smart_switch.csv"
+    lease_file.write_bytes(Path("tests/test_data/kea-lease_smart_switch.csv").read_bytes() + b"\n")
     with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         db_connector = DhcpDbConnector()
-        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease_smart_switch.csv")
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file=lease_file)
         # Verify whether lease information read is as expected
         lease = kea_lease_handler._read()
         assert lease == expected_lease
