@@ -1,0 +1,22 @@
+#!/bin/sh
+# Create /host/machine.conf before systemd starts, so systemd-sonic-generator
+# sees the platform on the first boot after the eMMC is imaged.
+
+PREREQ=""
+
+prereqs() { echo "$PREREQ"; }
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+[ -d "${rootmnt}/host" ] || exit 0
+[ -x /sbin/sonic-machine-conf-init.sh ] || exit 0
+
+MACHINE_CONF="${rootmnt}/host/machine.conf" LOG_FILE=/dev/null \
+    /bin/sh /sbin/sonic-machine-conf-init.sh || \
+    echo "sonic-machine-conf: failed; sonic-machine-conf-init.service will retry"
+exit 0

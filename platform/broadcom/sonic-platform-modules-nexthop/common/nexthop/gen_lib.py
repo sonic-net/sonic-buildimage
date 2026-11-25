@@ -7,12 +7,15 @@
 
 import os
 import tempfile
+from typing import Any
 
 import jinja2
 
 
-def render(template_filepath: str, variables: dict[str, str]) -> str:
-    """Return the template at `template_filepath` filled in with `variables`."""
+def render(template_filepath: str, variables: dict[str, Any]) -> str:
+    """The template filled in with `variables`. The template decides the output
+    format.
+    """
     loader = jinja2.FileSystemLoader(os.path.dirname(template_filepath))
     # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     j2_env = jinja2.Environment(loader=loader, keep_trailing_newline=True)

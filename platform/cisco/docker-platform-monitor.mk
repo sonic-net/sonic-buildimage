@@ -5,7 +5,13 @@
 # DOCKER_PLATFORM_MONITOR comes from rules/docker-platform-monitor.mk which is
 # included before the platform rules.mk
 #
+# Keep only the sonic_platform Python package in pmon. The platform module
+# Debian package also carries host services, configuration, and kernel files.
+ifeq ($(CISCO_PLATFORM_SOURCE_MODE),source)
 $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(CISCO_PACIFIC_WHEEL)
+else
+$(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(CISCO_EMBEDDED_PLATFORM_WHEEL)
+endif
 
 # Additional platform specific libraries.
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += \
