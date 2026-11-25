@@ -14,6 +14,7 @@ import signal
 import sys
 import logging
 import os
+from swsscommon.swsscommon import SonicDBConfig
 from typing import Dict, List, Tuple, Optional
 
 # Configure logging
@@ -42,6 +43,13 @@ LED_OFF           = 0x7
 
 # Special port that needs individual handling
 SPECIAL_PORT = "Ethernet1024"
+
+
+def _get_db_client(db_name):
+    return redis.Redis(db=SonicDBConfig.getDbId(db_name),
+                       unix_socket_path=SonicDBConfig.getDbSock(db_name),
+                       decode_responses=True)
+
 
 PORT_TO_REG = {
     0: "0x90",    8: "0x91",   16: "0x92",   24: "0x93",   32: "0x94",   40: "0x95",   48: "0x96",   56: "0x97",
@@ -74,8 +82,8 @@ class LedSwitchMonitor:
     def connect_redis(self):
         """Connect to Redis databases"""
         try:
-            self.redis_db4 = redis.Redis(host='127.0.0.1', port=6379, db=4, decode_responses=True)
-            self.redis_db6 = redis.Redis(host='127.0.0.1', port=6379, db=6, decode_responses=True)
+            self.redis_db4 = _get_db_client('CONFIG_DB')
+            self.redis_db6 = _get_db_client('STATE_DB')
             # Test connection
             self.redis_db4.ping()
             self.redis_db6.ping()
