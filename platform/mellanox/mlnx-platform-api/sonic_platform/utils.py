@@ -250,25 +250,33 @@ def load_json_file(filename, log_func=logger.log_error):
         return None
 
 
-def _extract_ports_index_by_type(port_type, num_of_asics=1):
+def get_port_name_to_index_map():
+    """Compose an interface name to front panel port index mapping from 'platform.json'
+
+    Returns:
+        dict[str, int]: interface name -> port index (1-based) as the platform
+        declares it, or None if there is no platform.json or it declares none.
+    """
     platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
     if not os.path.exists(platform_file):
         return None
 
     platform_dict = load_json_file(platform_file)['interfaces']
     port_name_to_index_map_dict = {}
-    port_index_list = []
-
-    # Compose a interface name to index mapping from 'platform.json'
-    for i, (key, value) in enumerate(platform_dict.items()):
+    for key, value in platform_dict.items():
         if PORT_INDEX_KEY in value:
-            index_raw = value[PORT_INDEX_KEY]
             # The index could be "1" or "1, 1, 1, 1"
-            index = index_raw.split(',')[0]
-            port_name_to_index_map_dict[key] = index
+            port_name_to_index_map_dict[key] = int(value[PORT_INDEX_KEY].split(',')[0])
 
-    if not bool(port_name_to_index_map_dict):
+    return port_name_to_index_map_dict if port_name_to_index_map_dict else None
+
+
+def _extract_ports_index_by_type(port_type, num_of_asics=1):
+    port_name_to_index_map_dict = get_port_name_to_index_map()
+    if not port_name_to_index_map_dict:
         return None
+
+    port_index_list = []
 
     hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
     hwsku_dict = {}
@@ -284,7 +292,7 @@ def _extract_ports_index_by_type(port_type, num_of_asics=1):
     # Check if "port_type" matches, if yes, add the port index to the list.
     for i, (key, value) in enumerate(hwsku_dict.items()):
         if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == port_type:
-            port_index_list.append(int(port_name_to_index_map_dict[key]) - 1)
+            port_index_list.append(port_name_to_index_map_dict[key] - 1)
 
     # Remove duplicates
     port_index_list = list(dict.fromkeys(port_index_list))
@@ -308,10 +316,11 @@ def extract_RJ45_ports_index(num_of_asics=1):
 def build_cpo_port_map(cpo_data=None):
     """Build the CPO port map used by chassis as cpo_port_map.
 
-    Reads the interfaces section of cpo.json. Each interface may list OE/ELS
-    devices; the first time a (oe_id, els_id, bank_id) triple appears in file order,
-    it is assigned the next chassis index 0, 1, 2, ... Duplicate triples on later
-    interfaces (e.g. multiple Ethernet names for the same bank) are skipped.
+    Reads the interfaces section of cpo.json. Each interface lists the OE/ELS
+    devices behind it, and its chassis index is the front panel port index that
+    platform.json declares for that interface. The order of the interfaces in
+    cpo.json therefore does not matter: an interface keeps its devices however
+    the file is regenerated or sorted.
 
     Args:
         cpo_data: already parsed cpo.json, as handed to construct_cpo_devices.
@@ -330,20 +339,21 @@ def build_cpo_port_map(cpo_data=None):
     if not isinstance(interfaces, dict):
         return None
 
-    seen = set()
+    port_name_to_index_map = get_port_name_to_index_map() if interfaces else None
     cpo_port_map = {}
-    index = 0
     for interface_name, interface_data in interfaces.items():
         interface_associated_devices = interface_data.get('associated_devices') or []
         oe_id, els_id, bank_id = _parse_oe_els_bank_for_interface(interface_associated_devices, interface_name)
         if oe_id is None:
             continue
-        oe_els_bank = (oe_id, els_id, bank_id)
-        if oe_els_bank in seen:
+        if not port_name_to_index_map or interface_name not in port_name_to_index_map:
+            logger.log_error("Interface {} of cpo.json has no port index in platform.json".format(interface_name))
             continue
-        seen.add(oe_els_bank)
-        cpo_port_map[index] = oe_els_bank
-        index += 1
+        index = port_name_to_index_map[interface_name] - 1
+        oe_els_bank = (oe_id, els_id, bank_id)
+        if cpo_port_map.setdefault(index, oe_els_bank) != oe_els_bank:
+            logger.log_error("Interface {} maps port {} to {}, but it is already mapped to {}".format(
+                interface_name, index + 1, oe_els_bank, cpo_port_map[index]))
 
     return cpo_port_map if cpo_port_map else None
 

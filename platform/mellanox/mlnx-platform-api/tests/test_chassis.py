@@ -322,7 +322,8 @@ class TestChassis:
         from sonic_platform.utils import build_cpo_port_map
 
         chassis = Chassis()
-        with mock.patch('sonic_platform.chassis.build_cpo_port_map', build_cpo_port_map):
+        with mock.patch('sonic_platform.chassis.build_cpo_port_map', build_cpo_port_map), \
+                mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value={"Ethernet0": 1}):
             chassis.construct_cpo_devices(cpo_data)
 
         assert chassis.cpo_port_map == {0: (0, 0, 0)}

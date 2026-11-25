@@ -234,8 +234,46 @@ class TestUtils:
             ),
         ],
     )
+    @mock.patch('sonic_platform.utils.get_port_name_to_index_map',
+                mock.MagicMock(return_value={"Ethernet0": 1, "Ethernet4": 1, "Ethernet8": 2, "Ethernet32": 2}))
     def test_build_cpo_port_map(self, cpo_data, expected_result):
         assert utils.build_cpo_port_map(cpo_data) == expected_result
+
+    @staticmethod
+    def _cpo_interface(oe_id, bank):
+        return {"associated_devices": [{"device_id": "OE%d" % oe_id, "bank": bank},
+                                       {"device_id": "ELS%d" % oe_id, "bank": 0}]}
+
+    def test_build_cpo_port_map_does_not_depend_on_the_order_of_cpo_json(self):
+        """A port is the one platform.json says it is, however cpo.json is
+        sorted. Counting the entries instead would put another OE behind the
+        same port index after a regeneration, without any error."""
+        names = ["Ethernet%d" % (8 * i) for i in range(8)]
+        port_indexes = {name: i + 1 for i, name in enumerate(names)}
+        interfaces = {name: self._cpo_interface(i // 4, i % 4) for i, name in enumerate(names)}
+        expected = {i: (i // 4, i // 4, i % 4) for i in range(8)}
+
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value=port_indexes):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == expected
+            # sorted by name: Ethernet0, Ethernet16, Ethernet24, ..., Ethernet8
+            by_name = {name: interfaces[name] for name in sorted(names)}
+            assert list(by_name) != names
+            assert utils.build_cpo_port_map({"interfaces": by_name}) == expected
+            reversed_order = {name: interfaces[name] for name in reversed(names)}
+            assert utils.build_cpo_port_map({"interfaces": reversed_order}) == expected
+
+    def test_build_cpo_port_map_skips_what_platform_json_does_not_declare(self):
+        interfaces = {"Ethernet0": self._cpo_interface(0, 0), "Ethernet8": self._cpo_interface(0, 1)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value={"Ethernet0": 1}):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == {0: (0, 0, 0)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value=None):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) is None
+
+    def test_build_cpo_port_map_keeps_the_first_of_two_devices_on_one_port(self):
+        interfaces = {"Ethernet0": self._cpo_interface(0, 0), "Ethernet4": self._cpo_interface(1, 0)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map',
+                        return_value={"Ethernet0": 1, "Ethernet4": 1}):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == {0: (0, 0, 0)}
 
     @pytest.mark.parametrize(
         "cpo_data, expected_result",
@@ -263,6 +301,7 @@ class TestUtils:
     def test_build_cpo_service_port_map(self, cpo_data, expected_result):
         assert utils.build_cpo_service_port_map(cpo_data) == expected_result
 
+    @mock.patch('sonic_platform.utils.get_port_name_to_index_map', mock.MagicMock(return_value={"Ethernet0": 1}))
     @mock.patch('sonic_py_common.device_info.get_cpo_data')
     def test_the_port_maps_read_cpo_json_when_not_handed_the_data(self, mock_get_cpo_data):
         """Both builders fall back to the one community reader of cpo.json."""
