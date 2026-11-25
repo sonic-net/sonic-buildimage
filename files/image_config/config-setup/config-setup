@@ -165,6 +165,28 @@ reload_configdb()
     config reload ${CONFIG_FILE} -y -n
 }
 
+# Reload the config db files migrated from the previous image
+# Usage: reload_migrated_configdb
+reload_migrated_configdb()
+{
+    if reload_configdb; then
+        return 0
+    fi
+
+    # config reload loads nothing when a config db file fails YANG validation
+    # against the models of this image. The migrated files were written by the
+    # previous image, and db_migrator.py only runs after they are loaded, so
+    # one value that the models of this image no longer accept would leave the
+    # switch with an empty CONFIG_DB and no management IP. Load them without
+    # the validation, which -f skips when no file name is given, and leave the
+    # errors in the log.
+    echo "Reloading existing config db without YANG validation..."
+    config reload -y -n -f || return 1
+    logger -t config-setup -p user.warning \
+        "Loaded the config db migrated from the previous image without YANG validation," \
+        "because 'config reload' failed on it. Fix the errors logged before this message."
+}
+
 # Restore SONiC configuration from a backup copy
 copy_config_files_and_directories()
 {
@@ -630,7 +652,7 @@ do_config_migration()
         exit 0
     elif check_all_config_db_present; then
         echo "Use config_db.json from old system..."
-        reload_configdb
+        reload_migrated_configdb
         do_db_migration
     elif [ -r ${MINGRAPH_FILE} ]; then
         echo "Use minigraph.xml from old system..."

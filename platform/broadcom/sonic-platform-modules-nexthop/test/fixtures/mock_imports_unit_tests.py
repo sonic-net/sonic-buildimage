@@ -49,6 +49,8 @@ MOCK_MODULES = [
     # EEPROM
     "sonic_eeprom",
     "sonic_eeprom.eeprom_tlvinfo",
+    "sonic_platform_base.sonic_eeprom",
+    "sonic_platform_base.sonic_eeprom.eeprom_tlvinfo",
 
     # Other
     "portconfig",
