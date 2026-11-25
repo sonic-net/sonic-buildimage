@@ -700,16 +700,17 @@ def get_platform_info(config_db=None, use_tcp=True):
     """
     This function is used to get the HW info helper function
     """
-    global hw_info_dict, hwsku_info
+    global hw_info_dict
 
-    if hw_info_dict:
+    use_host_cache = config_db is None
+    if use_host_cache and hw_info_dict:
         return hw_info_dict
 
     from .multi_asic import get_asic_presence_list
 
     version_info = get_sonic_version_info()
 
-    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info}
+    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info if use_host_cache else None}
     if version_info:
         hw_info['asic_type'] = version_info.get('asic_type')
     try:
@@ -719,20 +720,18 @@ def get_platform_info(config_db=None, use_tcp=True):
 
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
-        if not config_db:
+        if config_db is None:
             config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
         if not hw_info['platform']:
             hw_info['platform'] = metadata.get('platform')
-        if not hwsku_info:
-            hwsku_info = metadata.get('hwsku')
-        hw_info['hwsku'] = hwsku_info
+        hw_info['hwsku'] = metadata.get('hwsku')
         switch_type = metadata.get('switch_type')
         if switch_type:
             hw_info['switch_type'] = switch_type
-        if hw_info['platform'] and hw_info['hwsku']:
+        if use_host_cache and hw_info['platform'] and hw_info['hwsku']:
             hw_info_dict = hw_info
     except Exception:
         pass
@@ -797,15 +796,21 @@ def is_chassis_config_absent():
     return False
 
 
-def is_voq_chassis():
-    switch_type = get_localhost_info('switch_type')
+def _get_chassis_metadata_field(field, localhost_metadata):
+    if localhost_metadata is None:
+        return get_localhost_info(field)
+    return localhost_metadata.get(field)
+
+
+def is_voq_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
-def is_packet_chassis():
-    switch_type = get_localhost_info('switch_type')
+def is_packet_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -825,9 +830,9 @@ def is_disaggregated_chassis():
         return False
 
 
-def is_virtual_chassis():
-    switch_type = get_localhost_info('switch_type')
-    asic_type = get_platform_info().get('asic_type')
+def is_virtual_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
+    asic_type = (get_sonic_version_info() or {}).get('asic_type')
     # A single-asic "pizza box" VOQ vlab has switch_type=voq but no chassis_db
     # config (chassisdb.conf absent), so it is not a virtual chassis.
     single_asic = is_chassis_config_absent()
@@ -837,10 +842,11 @@ def is_virtual_chassis():
         return False
 
 
-def is_chassis():
-    if get_localhost_info('type') == 'SpineRouter':
+def is_chassis(localhost_metadata=None):
+    if _get_chassis_metadata_field('type', localhost_metadata) == 'SpineRouter':
         return True
-    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
+    return ((is_voq_chassis(localhost_metadata) and not is_disaggregated_chassis())
+            or is_packet_chassis(localhost_metadata) or is_virtual_chassis(localhost_metadata))
 
 
 def is_smartswitch():
@@ -1012,13 +1018,21 @@ def get_smartswitch_midplane_ip():
     return None
 
 
-def get_device_runtime_metadata(hwsku=None):
-    chassis_metadata = {}
-    if is_chassis():
-        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
-                                                'chassis_type': 'voq' if is_voq_chassis() else 'packet'}}
+def get_device_runtime_metadata(hwsku=None, localhost_metadata=None):
+    chassis_options = {}
+    if localhost_metadata is not None:
+        chassis_options['localhost_metadata'] = localhost_metadata
+        hwsku = hwsku or localhost_metadata.get('hwsku')
 
-    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=hwsku, asic="0" if is_multi_npu() else None) else False}
+    chassis_metadata = {}
+    if is_chassis(**chassis_options):
+        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
+                                                'chassis_type': 'voq' if is_voq_chassis(**chassis_options) else 'packet'}}
+
+    has_ports = False
+    if hwsku or localhost_metadata is None:
+        has_ports = bool(get_path_to_port_config_file(hwsku=hwsku, asic="0" if is_multi_npu() else None))
+    port_metadata = {'ETHERNET_PORTS_PRESENT': has_ports}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)

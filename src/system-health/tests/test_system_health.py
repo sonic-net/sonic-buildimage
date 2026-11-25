@@ -1839,6 +1839,39 @@ def test_get_service_from_feature_table():
     assert 'swss.service' not in dir_list
 
 
+def test_feature_rendering_on_supervisor_with_tcp_disabled(tmp_path, monkeypatch):
+    platform = tmp_path / 'test-platform'
+    hwsku = platform / 'test-sku'
+    hwsku.mkdir(parents=True)
+    (platform / 'platform_env.conf').write_text('supervisor=1\n')
+    (platform / 'chassisdb.conf').touch()
+    (hwsku / 'port_config.ini').touch()
+    monkeypatch.setattr(device_info, 'get_platform', lambda **kwargs: platform.name)
+    monkeypatch.setattr(device_info, 'HOST_DEVICE_PATH', str(tmp_path))
+    monkeypatch.setattr(device_info, 'CONTAINER_PLATFORM_PATH', str(tmp_path / 'unused'))
+    connector = MagicMock(side_effect=ConnectionError('TCP disabled'))
+    monkeypatch.setattr(device_info, 'ConfigDBConnector', connector)
+
+    monitor = Sysmonitor()
+    monitor.config_db = MagicMock()
+    feature_state = (
+        "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or "
+        "DEVICE_RUNTIME_METADATA.get('CHASSIS_METADATA', {}).get('module_type') == 'supervisor' %}"
+        "disabled{% else %}enabled{% endif %}"
+    )
+    monitor.config_db.get_table.side_effect = [
+        {'bgp': {'state': feature_state}, 'database': {'state': 'always_enabled'}},
+        {'localhost': {'type': 'LeafRouter', 'switch_type': 'voq', 'hwsku': hwsku.name}},
+    ]
+
+    services = []
+    monitor.get_service_from_feature_table(services)
+
+    assert services == ['database.service']
+    assert monitor.config_db.get_table.call_args_list == [call('FEATURE'), call('DEVICE_METADATA')]
+    connector.assert_not_called()
+
+
 @patch('healthd.time.time')
 @patch('healthd.HealthDaemon.log_notice', side_effect=lambda *args, **kwargs: None)
 @patch('healthd.HealthDaemon.log_warning', side_effect=lambda *args, **kwargs: None)

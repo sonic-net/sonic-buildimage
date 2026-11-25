@@ -124,12 +124,12 @@ class TestDeviceInfo(object):
             open_mocked.assert_called_once_with(device_info.SONIC_VERSION_YAML_PATH)
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
-    @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
     @mock.patch("sonic_py_common.device_info.get_localhost_info")
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
-    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_version_info, mock_is_chassis_config_absent):
         mock_localhost_info.return_value = "npu"
-        mock_platform_info.return_value = {"switch_type": "npu"}
+        mock_version_info.return_value = {"asic_type": "mellanox"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_chassis() == False
@@ -137,7 +137,6 @@ class TestDeviceInfo(object):
         assert device_info.is_packet_chassis() == False
 
         mock_localhost_info.return_value = "voq"
-        mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
@@ -145,7 +144,6 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "voq"
-        mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = True
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
@@ -153,7 +151,6 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "voq"
-        mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = True
         assert device_info.is_voq_chassis() == False
@@ -161,7 +158,6 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "chassis-packet"
-        mock_platform_info.return_value = {"switch_type": "chassis-packet"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -169,13 +165,12 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "SpineRouter"
-        mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "dummy-sup"
-        mock_platform_info.return_value = {"switch_type": "dummy-sup", "asic_type": "vs"}
+        mock_version_info.return_value = {"asic_type": "vs"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -184,7 +179,7 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = None
-        mock_platform_info.return_value = {}
+        mock_version_info.return_value = None
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
@@ -192,12 +187,12 @@ class TestDeviceInfo(object):
         assert device_info.is_chassis() == False
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
-    @mock.patch("sonic_py_common.device_info.get_platform_info")
+    @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
     @mock.patch("sonic_py_common.device_info.get_localhost_info")
-    def test_is_virtual_chassis_single_node(self, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+    def test_is_virtual_chassis_single_node(self, mock_localhost_info, mock_version_info, mock_is_chassis_config_absent):
         # A single-node vlab has no chassisdb.conf, so it is not a virtual
         # chassis regardless of its switch_type
-        mock_platform_info.return_value = {"asic_type": "vs"}
+        mock_version_info.return_value = {"asic_type": "vs"}
         mock_is_chassis_config_absent.return_value = True
         for switch_type in ["dummy-sup", "voq", "chassis-packet"]:
             mock_localhost_info.return_value = switch_type
@@ -285,6 +280,34 @@ class TestDeviceInfo(object):
         assert info["hwsku"] == "test-sku"
         assert info["switch_type"] == "dpu"
         unix_db.get_table.assert_called_once_with("DEVICE_METADATA")
+
+    @pytest.mark.parametrize("read_host_first", [False, True])
+    def test_platform_info_keeps_supplied_connector_out_of_host_caches(self, monkeypatch, read_host_first):
+        monkeypatch.delenv("PLATFORM", raising=False)
+        monkeypatch.setattr(device_info, "get_machine_info", lambda: {})
+        monkeypatch.setattr(device_info, "hw_info_dict", {})
+        monkeypatch.setattr(device_info, "hwsku_info", None)
+        host_db = mock.Mock()
+        host_db.get_table.return_value = {
+            "localhost": {"platform": "host-platform", "hwsku": "host-sku", "switch_type": "npu"}
+        }
+        asic_db = mock.Mock()
+        asic_db.get_table.return_value = {
+            "localhost": {"platform": "asic-platform", "hwsku": "asic-sku", "switch_type": "voq"}
+        }
+        monkeypatch.setattr(device_info, "ConfigDBConnector", mock.Mock(return_value=host_db))
+
+        if read_host_first:
+            assert device_info.get_platform_info()["hwsku"] == "host-sku"
+            assert device_info.get_hwsku() == "host-sku"
+        info = device_info.get_platform_info(config_db=asic_db)
+        assert info["platform"] == "asic-platform"
+        assert info["hwsku"] == "asic-sku"
+        assert info["switch_type"] == "voq"
+        asic_db.connect.assert_not_called()
+        assert device_info.hwsku_info == ("host-sku" if read_host_first else None)
+        assert device_info.get_platform_info()["hwsku"] == "host-sku"
+        assert device_info.get_hwsku() == "host-sku"
 
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
