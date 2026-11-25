@@ -188,3 +188,14 @@ def test_library_round_trip_preserves_persistent_keys(legacy_redis, pretty):
     redisdl.loads(output.getvalue(), unix_socket_path=path)
     assert client.get('persistent') == b'value'
     assert client.ttl('persistent') == -1
+
+
+@pytest.mark.parametrize('streaming', [False, True])
+@pytest.mark.parametrize('use_expireat', [False, True])
+def test_library_restores_legacy_persistent_keys(legacy_redis, monkeypatch, streaming, use_expireat):
+    path, client = legacy_redis
+    saved = {'persistent': {'type': 'string', 'value': 'value', 'ttl': -0.001, 'expireat': 1}}
+    monkeypatch.setattr(redisdl, 'have_streaming_load', streaming)
+    redisdl.load(io.StringIO(json.dumps(saved)), unix_socket_path=path, use_expireat=use_expireat)
+    assert client.get('persistent') == b'value'
+    assert client.ttl('persistent') == -1

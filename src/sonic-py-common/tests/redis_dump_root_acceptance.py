@@ -25,14 +25,14 @@ def require_real_root():
 
 
 def test_real_ordinary_dump_and_load_denial(protected_redis):
-    root, socket, writer = protected_redis
+    _, socket, writer = protected_redis
     writer.set('ordinary-readable', 'value')
     code = '''
 import io, json, sys
 from unittest.mock import patch
 import redis
 from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
-socket = sys.argv[2]
+socket = sys.argv[1]
 with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=0), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbId', return_value=0), \\
@@ -50,7 +50,7 @@ with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=socket)
         else:
             raise AssertionError('ordinary load wrote to Redis')
 '''
-    completed = subprocess.run([sys.executable, '-c', code, str(root), socket],
+    completed = subprocess.run([sys.executable, '-c', code, socket],
                                user=65534, group=65534, extra_groups=[], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr
     assert writer.get('ordinary-readable') == b'value'
@@ -101,7 +101,7 @@ def test_real_legacy_transport_permissions(uid, transport, metadata_port, socket
 import io, json, sys
 from unittest.mock import patch
 from sonic_py_common.sonic_db_dump_load import sonic_db_dump_load
-argv = ['sonic-db-dump', '-n', 'APPL_DB'] + (['-t', sys.argv[4]] if sys.argv[4] else [])
+argv = ['sonic-db-dump', '-n', 'APPL_DB'] + (['-t', sys.argv[3]] if sys.argv[3] else [])
 with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=sys.argv[1] + '/redis.sock'), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbPort', return_value=int(sys.argv[2])), \\
      patch('swsscommon.swsscommon.SonicDBConfig.getDbId', return_value=0), \\
@@ -115,7 +115,7 @@ with patch('swsscommon.swsscommon.SonicDBConfig.getDbSock', return_value=sys.arg
             configured_port = port if metadata_port == 'tcp' else 0
             completed = subprocess.run([
                 sys.executable, '-c', code, str(root), str(configured_port),
-                socket_mode, transport or '',
+                transport or '',
             ], user=uid, group=uid, extra_groups=[], capture_output=True, text=True, timeout=15)
             assert (completed.returncode == 0) == works, completed.stderr
         finally:

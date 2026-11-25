@@ -151,9 +151,22 @@ def test_missing_unix_socket_fails_before_connection(endpoint):
 
 
 @pytest.mark.parametrize('command', ['dump', 'load'])
-def test_default_database_and_empty_namespace_are_explicit(endpoint, command):
-    config, _ = endpoint
+def test_bare_tcp_uses_redis_client_defaults(endpoint, command):
+    config, pool = endpoint
     with patch.object(sys, 'argv', ['sonic-db-' + command]), \
+            patch('redisdl.' + command) as operation:
+        sonic_db_dump_load()
+    assert operation.call_args.kwargs == {'encoding': 'utf-8'}
+    config.getDbId.assert_not_called()
+    config.getDbHostname.assert_not_called()
+    config.getDbPort.assert_not_called()
+    pool.assert_not_called()
+
+
+@pytest.mark.parametrize('command', ['dump', 'load'])
+def test_unix_defaults_to_appl_db_in_empty_namespace(endpoint, command):
+    config, _ = endpoint
+    with patch.object(sys, 'argv', ['sonic-db-' + command, '-t', 'unix_socket']), \
             patch('sonic_py_common.multi_asic.is_multi_asic', return_value=True), \
             patch('sonic_py_common.multi_asic.get_current_namespace') as current, \
             patch('redisdl.' + command):

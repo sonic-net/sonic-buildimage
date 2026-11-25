@@ -24,15 +24,13 @@ def sonic_db_dump_load():
             args['host'] = SonicDBConfig.getDbHostname(dbname, key)
             args['port'] = SonicDBConfig.getDbPort(dbname, key)
             args['unix_socket_path'] = None
-        elif conntype == 'unix_socket':
+        else:
             socket_path = SonicDBConfig.getDbSock(dbname, key)
             if not socket_path:
                 raise ValueError('No Unix socket is configured for database {}'.format(dbname))
             args['host'] = None
             args['port'] = None
             args['unix_socket_path'] = socket_path
-        else:
-            raise TypeError('redis connection type is tcp or unix_socket')
 
         return args
 
@@ -54,9 +52,12 @@ def sonic_db_dump_load():
             args['empty'] = True
         if hasattr(options, 'backend') and options.backend:
             args['streaming_backend'] = options.backend
-        if hasattr(options, 'dbname'):
+        dbname = options.dbname
+        if options.conntype == 'unix_socket':
+            dbname = dbname or DEFAULT_DB
+        if dbname:
             key = SonicDBKey(options.netns)
-            args.update(database_connection_kwargs(options.dbname, key, options.conntype))
+            args.update(database_connection_kwargs(dbname, key, options.conntype))
             if action == LOAD and args['unix_socket_path'] is not None:
                 from swsscommon.redis import connection_pool
                 args['connection_pool'] = connection_pool(
@@ -121,30 +122,22 @@ def sonic_db_dump_load():
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('-w', '--password', help='connect with PASSWORD')
     parser.add_option('--netns', help='Namespace string to use asic0/asic1.../asicn', default='')
+    parser.add_option('-n', '--dbname', help='use DATABASE (APPL_DB by default with unix_socket)')
+    parser.add_option(
+        '-t', '--conntype', type='choice', choices=['tcp', 'unix_socket'], default='tcp',
+        help='redis connection type (tcp or unix_socket, default: tcp)')
     if help == DUMP:
-        parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
-        parser.add_option(
-            '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-k', '--keys', help='dump only keys matching specified glob-style pattern')
         parser.add_option('-o', '--output', help='write to OUTPUT instead of stdout')
         parser.add_option('-y', '--pretty', help='split output on multiple lines and indent it', action='store_true')
         parser.add_option('-E', '--encoding', help='set encoding to use while decoding data from redis', default='utf-8')
     elif help == LOAD:
-        parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
-        parser.add_option(
-            '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-e', '--empty', help='delete all keys in destination db prior to loading', action='store_true')
         parser.add_option('-E', '--encoding', help='set encoding to use while encoding data to redis', default='utf-8')
         parser.add_option('-B', '--backend', help='use specified streaming backend')
         parser.add_option('-A', '--use-expireat', help='use EXPIREAT rather than TTL/EXPIRE', action='store_true')
     else:
         parser.add_option('-l', '--load', help='load data into redis (default is to dump data from redis)', action='store_true')
-        parser.add_option('-n', '--dbname', help='use DATABASE (default: APPL_DB)', default=DEFAULT_DB)
-        parser.add_option(
-            '-t', '--conntype',
-            help='redis connection type (tcp or unix_socket); default: tcp', default='tcp')
         parser.add_option('-k', '--keys', help='dump only keys matching specified glob-style pattern')
         parser.add_option('-o', '--output', help='write to OUTPUT instead of stdout (dump mode only)')
         parser.add_option('-y', '--pretty', help='split output on multiple lines and indent it (dump mode only)', action='store_true')

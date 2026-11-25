@@ -36,7 +36,7 @@ Subject: [PATCH] Handle current Redis client arguments and TTL results
      return r
  
  def dumps(host='localhost', port=6379, password=None, db=0, pretty=False,
-@@ -523,7 +523,7 @@
+@@ -523,12 +523,16 @@
              p.sadd(key, element)
      elif type == 'zset':
          for element, score in value:
@@ -45,3 +45,12 @@ Subject: [PATCH] Handle current Redis client arguments and TTL results
      elif type == 'hash':
          p.hmset(key, value)
      else:
+         raise UnknownTypeError("Unknown key type: %s" % type)
+
++    # Older dumps recorded a negative TTL and an expiry for persistent keys.
++    if ttl is not None and ttl < 0:
++        return
++
+     if use_expireat:
+         if expireat is not None:
+             r.pexpireat_or_expireat_pipeline(p, key, expireat)
