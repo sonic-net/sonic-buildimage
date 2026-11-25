@@ -77,7 +77,7 @@ def tag_feature(feature=None, image_name=None, image_tag=None):
             if id and (owner == "kube") and image_name:
                 ret = _tag_container_image(k, id, image_name, image_tag)
             else:
-                syslog.syslog(syslog.LOG_ERR,
+                syslog.syslog(syslog.LOG_INFO,
                         "Skip to tag feature={} image={} tag={}".format(
                             k, str(image_name), str(image_tag)))
                 ret = -1
