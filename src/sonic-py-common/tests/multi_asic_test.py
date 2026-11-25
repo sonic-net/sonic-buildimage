@@ -27,23 +27,14 @@ def test_namespace_connections_use_the_requested_transport(connect, constructor,
         result.connect.assert_called_once_with('CONFIG_DB')
 
 
-@pytest.mark.parametrize('use_tcp,authenticate', [(True, False), (False, True)])
-@pytest.mark.parametrize('entry_exists', [False, True])
-def test_mod_entry_uses_selected_transport_for_existence_check_and_write(use_tcp, authenticate, entry_exists):
+def test_get_port_table_forwards_transport():
     with mock.patch.object(multi_asic, 'get_namespace_list', return_value=['asic0']), \
             mock.patch.object(multi_asic, 'connect_config_db_for_ns') as connect:
-        db = connect.return_value
-        db.get_entry.return_value = {'admin_status': 'down'} if entry_exists else {}
-        multi_asic.mod_entry('PORT', 'Ethernet0', {'admin_status': 'up'}, modIfExists=True,
-                             use_tcp=use_tcp, authenticate=authenticate)
-    db.get_entry.assert_called_once_with('PORT', 'Ethernet0')
-    calls = [mock.call('asic0', use_tcp=use_tcp)]
-    if entry_exists:
-        calls.append(mock.call('asic0', use_tcp=use_tcp, authenticate=authenticate))
-        db.mod_entry.assert_called_once_with('PORT', 'Ethernet0', {'admin_status': 'up'})
-    else:
-        db.mod_entry.assert_not_called()
-    assert connect.call_args_list == calls
+        ports = {'Ethernet0': {'admin_status': 'down'}}
+        connect.return_value.get_table.return_value = ports
+        assert multi_asic.get_port_table(use_tcp=False) == ports
+    connect.assert_called_once_with('asic0', use_tcp=False)
+    connect.return_value.get_table.assert_called_once_with('PORT')
 
 
 class TestMultiAsic:

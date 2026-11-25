@@ -329,9 +329,9 @@ def get_port_entry_for_asic(port, namespace):
     return get_table_entry_for_asic(PORT_CFG_DB_TABLE, port, namespace)
 
 
-def get_table_entry_for_asic(table, entry, namespace, use_tcp=True):
+def get_table_entry_for_asic(table, entry, namespace):
 
-    config_db = connect_config_db_for_ns(namespace, use_tcp=use_tcp)
+    config_db = connect_config_db_for_ns(namespace)
     return config_db.get_entry(table, entry)
 
 def get_port_table_for_asic(namespace):
@@ -345,19 +345,18 @@ def get_table_for_asic(table, namespace, use_tcp=True):
     return config_db.get_table(table)
 
 
-def mod_entry(table, key, value, namespace=None, modIfExists=False, use_tcp=True, authenticate=False):
+def mod_entry(table, key, value, namespace=None, modIfExists=False):
     """
     Modifies an entry in a table with a value in a specified namespace.
     If no namespace is specified all namespaces are modified.
     If modIfExists is true, the entry will be modified only if the key
     already exists in the table.
-    Writer authentication requires use_tcp=False.
     """
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        if not modIfExists or get_table_entry_for_asic(table, key, ns, use_tcp=use_tcp):
-            config_db = connect_config_db_for_ns(ns, use_tcp=use_tcp, authenticate=authenticate)
+        if not modIfExists or get_table_entry_for_asic(table, key, ns):
+            config_db = connect_config_db_for_ns(ns)
             config_db.mod_entry(table, key, value)
 
 

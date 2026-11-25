@@ -700,7 +700,7 @@ def get_platform_info(config_db=None, use_tcp=True):
     """
     This function is used to get the HW info helper function
     """
-    global hw_info_dict
+    global hw_info_dict, hwsku_info
 
     if hw_info_dict:
         return hw_info_dict
@@ -709,14 +709,13 @@ def get_platform_info(config_db=None, use_tcp=True):
 
     version_info = get_sonic_version_info()
 
-    hw_info_dict['platform'] = get_platform()
-    hw_info_dict['hwsku'] = get_hwsku()
+    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info}
     if version_info:
-        hw_info_dict['asic_type'] = version_info.get('asic_type')
+        hw_info['asic_type'] = version_info.get('asic_type')
     try:
-        hw_info_dict['asic_count'] = len(get_asic_presence_list())
+        hw_info['asic_count'] = len(get_asic_presence_list())
     except:
-        hw_info_dict['asic_count'] = 'N/A'
+        hw_info['asic_count'] = 'N/A'
 
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
@@ -725,13 +724,20 @@ def get_platform_info(config_db=None, use_tcp=True):
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
+        if not hw_info['platform']:
+            hw_info['platform'] = metadata.get('platform')
+        if not hwsku_info:
+            hwsku_info = metadata.get('hwsku')
+        hw_info['hwsku'] = hwsku_info
         switch_type = metadata.get('switch_type')
         if switch_type:
-            hw_info_dict['switch_type'] = switch_type
+            hw_info['switch_type'] = switch_type
+        if hw_info['platform'] and hw_info['hwsku']:
+            hw_info_dict = hw_info
     except Exception:
         pass
 
-    return hw_info_dict
+    return hw_info
 
 
 def get_chassis_info(use_tcp=True):
@@ -1350,8 +1356,8 @@ def get_bmc_build_config():
 
 
 # Check if System fast reboot is enabled.
-def is_fast_reboot_enabled(use_tcp=True):
-    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
+def is_fast_reboot_enabled():
+    state_db = SonicV2Connector(host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'

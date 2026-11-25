@@ -243,13 +243,13 @@ class TestDeviceInfo(object):
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
     @mock.patch("sonic_py_common.device_info.get_machine_info")
-    @mock.patch("sonic_py_common.device_info.get_hwsku")
-    def test_get_platform_info(self, mock_hwsku, mock_machine_info, mock_sonic_ver, mock_cfg_db):
+    def test_get_platform_info(self, mock_machine_info, mock_sonic_ver, mock_cfg_db, monkeypatch):
+        monkeypatch.setattr(device_info, "hw_info_dict", {})
+        monkeypatch.setattr(device_info, "hwsku_info", None)
         mock_cfg_inst = mock_cfg_db.return_value
-        mock_cfg_inst.get_table.return_value = {"localhost": {"switch_type": "npu"}}
+        mock_cfg_inst.get_table.return_value = {"localhost": {"switch_type": "npu", "hwsku": "Mellanox-SN2700"}}
         mock_sonic_ver.return_value = SONIC_VERISON_YML_RESULT
         mock_machine_info.return_value = {"onie_platform" : "x86_64-mlnx_msn2700-r0"}
-        mock_hwsku.return_value = "Mellanox-SN2700"
         for _ in range(0,5):
             hw_info_dict = device_info.get_platform_info()
             assert hw_info_dict["asic_type"] == "mellanox"
@@ -257,10 +257,34 @@ class TestDeviceInfo(object):
             assert hw_info_dict["hwsku"] == "Mellanox-SN2700"
             assert hw_info_dict["switch_type"] == "npu"
         mock_sonic_ver.assert_called_once()
-        # TODO(trixie): Figure out why this is failing
-        # mock_machine_info.assert_called_once()
-        mock_hwsku.assert_called_once()
         mock_cfg_inst.get_table.assert_called_once_with("DEVICE_METADATA")
+
+    @pytest.mark.parametrize("try_tcp_first", [False, True])
+    def test_get_platform_info_uses_unix_for_all_metadata(self, monkeypatch, try_tcp_first):
+        monkeypatch.delenv("PLATFORM", raising=False)
+        monkeypatch.setattr(device_info, "get_machine_info", lambda: {})
+        monkeypatch.setattr(device_info, "hw_info_dict", {})
+        monkeypatch.setattr(device_info, "hwsku_info", None)
+        unix_db = mock.Mock()
+        unix_db.get_table.return_value = {
+            "localhost": {"platform": "test-platform", "hwsku": "test-sku", "switch_type": "dpu"}
+        }
+
+        def connect(use_unix_socket_path=False):
+            if not use_unix_socket_path:
+                raise ConnectionError("TCP disabled")
+            return unix_db
+
+        with mock.patch.object(device_info, "ConfigDBConnector", side_effect=connect) as connector:
+            if try_tcp_first:
+                assert device_info.get_platform_info()["hwsku"] is None
+            info = device_info.get_platform_info(use_tcp=False)
+            expected_calls = [mock.call(use_unix_socket_path=False)] if try_tcp_first else []
+            assert connector.call_args_list == expected_calls + [mock.call(use_unix_socket_path=True)]
+        assert info["platform"] == "test-platform"
+        assert info["hwsku"] == "test-sku"
+        assert info["switch_type"] == "dpu"
+        unix_db.get_table.assert_called_once_with("DEVICE_METADATA")
 
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
