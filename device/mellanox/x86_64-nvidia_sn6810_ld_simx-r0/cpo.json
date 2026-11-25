@@ -360,31 +360,7 @@
                 }
             ]
         },
-        "Ethernet4": {
-            "associated_devices": [
-                {
-                    "device_id": "OE0",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS0",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet8": {
-            "associated_devices": [
-                {
-                    "device_id": "OE0",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS0",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet12": {
             "associated_devices": [
                 {
                     "device_id": "OE0",
@@ -408,31 +384,7 @@
                 }
             ]
         },
-        "Ethernet20": {
-            "associated_devices": [
-                {
-                    "device_id": "OE0",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS0",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet24": {
-            "associated_devices": [
-                {
-                    "device_id": "OE0",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS0",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet28": {
             "associated_devices": [
                 {
                     "device_id": "OE0",
@@ -456,31 +408,7 @@
                 }
             ]
         },
-        "Ethernet36": {
-            "associated_devices": [
-                {
-                    "device_id": "OE1",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS1",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet40": {
-            "associated_devices": [
-                {
-                    "device_id": "OE1",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS1",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet44": {
             "associated_devices": [
                 {
                     "device_id": "OE1",
@@ -504,31 +432,7 @@
                 }
             ]
         },
-        "Ethernet52": {
-            "associated_devices": [
-                {
-                    "device_id": "OE1",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS1",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet56": {
-            "associated_devices": [
-                {
-                    "device_id": "OE1",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS1",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet60": {
             "associated_devices": [
                 {
                     "device_id": "OE1",
@@ -552,31 +456,7 @@
                 }
             ]
         },
-        "Ethernet68": {
-            "associated_devices": [
-                {
-                    "device_id": "OE2",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS2",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet72": {
-            "associated_devices": [
-                {
-                    "device_id": "OE2",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS2",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet76": {
             "associated_devices": [
                 {
                     "device_id": "OE2",
@@ -600,31 +480,7 @@
                 }
             ]
         },
-        "Ethernet84": {
-            "associated_devices": [
-                {
-                    "device_id": "OE2",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS2",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet88": {
-            "associated_devices": [
-                {
-                    "device_id": "OE2",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS2",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet92": {
             "associated_devices": [
                 {
                     "device_id": "OE2",
@@ -648,31 +504,7 @@
                 }
             ]
         },
-        "Ethernet100": {
-            "associated_devices": [
-                {
-                    "device_id": "OE3",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS3",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet104": {
-            "associated_devices": [
-                {
-                    "device_id": "OE3",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS3",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet108": {
             "associated_devices": [
                 {
                     "device_id": "OE3",
@@ -696,31 +528,7 @@
                 }
             ]
         },
-        "Ethernet116": {
-            "associated_devices": [
-                {
-                    "device_id": "OE3",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS3",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet120": {
-            "associated_devices": [
-                {
-                    "device_id": "OE3",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS3",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet124": {
             "associated_devices": [
                 {
                     "device_id": "OE3",
@@ -744,31 +552,7 @@
                 }
             ]
         },
-        "Ethernet132": {
-            "associated_devices": [
-                {
-                    "device_id": "OE4",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS4",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet136": {
-            "associated_devices": [
-                {
-                    "device_id": "OE4",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS4",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet140": {
             "associated_devices": [
                 {
                     "device_id": "OE4",
@@ -792,31 +576,7 @@
                 }
             ]
         },
-        "Ethernet148": {
-            "associated_devices": [
-                {
-                    "device_id": "OE4",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS4",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet152": {
-            "associated_devices": [
-                {
-                    "device_id": "OE4",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS4",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet156": {
             "associated_devices": [
                 {
                     "device_id": "OE4",
@@ -840,31 +600,7 @@
                 }
             ]
         },
-        "Ethernet164": {
-            "associated_devices": [
-                {
-                    "device_id": "OE5",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS5",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet168": {
-            "associated_devices": [
-                {
-                    "device_id": "OE5",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS5",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet172": {
             "associated_devices": [
                 {
                     "device_id": "OE5",
@@ -888,31 +624,7 @@
                 }
             ]
         },
-        "Ethernet180": {
-            "associated_devices": [
-                {
-                    "device_id": "OE5",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS5",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet184": {
-            "associated_devices": [
-                {
-                    "device_id": "OE5",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS5",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet188": {
             "associated_devices": [
                 {
                     "device_id": "OE5",
@@ -936,31 +648,7 @@
                 }
             ]
         },
-        "Ethernet196": {
-            "associated_devices": [
-                {
-                    "device_id": "OE6",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS6",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet200": {
-            "associated_devices": [
-                {
-                    "device_id": "OE6",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS6",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet204": {
             "associated_devices": [
                 {
                     "device_id": "OE6",
@@ -984,31 +672,7 @@
                 }
             ]
         },
-        "Ethernet212": {
-            "associated_devices": [
-                {
-                    "device_id": "OE6",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS6",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet216": {
-            "associated_devices": [
-                {
-                    "device_id": "OE6",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS6",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet220": {
             "associated_devices": [
                 {
                     "device_id": "OE6",
@@ -1032,31 +696,7 @@
                 }
             ]
         },
-        "Ethernet228": {
-            "associated_devices": [
-                {
-                    "device_id": "OE7",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS7",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet232": {
-            "associated_devices": [
-                {
-                    "device_id": "OE7",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS7",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet236": {
             "associated_devices": [
                 {
                     "device_id": "OE7",
@@ -1080,31 +720,7 @@
                 }
             ]
         },
-        "Ethernet244": {
-            "associated_devices": [
-                {
-                    "device_id": "OE7",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS7",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet248": {
-            "associated_devices": [
-                {
-                    "device_id": "OE7",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS7",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet252": {
             "associated_devices": [
                 {
                     "device_id": "OE7",
@@ -1128,31 +744,7 @@
                 }
             ]
         },
-        "Ethernet260": {
-            "associated_devices": [
-                {
-                    "device_id": "OE8",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS8",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet264": {
-            "associated_devices": [
-                {
-                    "device_id": "OE8",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS8",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet268": {
             "associated_devices": [
                 {
                     "device_id": "OE8",
@@ -1176,31 +768,7 @@
                 }
             ]
         },
-        "Ethernet276": {
-            "associated_devices": [
-                {
-                    "device_id": "OE8",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS8",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet280": {
-            "associated_devices": [
-                {
-                    "device_id": "OE8",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS8",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet284": {
             "associated_devices": [
                 {
                     "device_id": "OE8",
@@ -1224,31 +792,7 @@
                 }
             ]
         },
-        "Ethernet292": {
-            "associated_devices": [
-                {
-                    "device_id": "OE9",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS9",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet296": {
-            "associated_devices": [
-                {
-                    "device_id": "OE9",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS9",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet300": {
             "associated_devices": [
                 {
                     "device_id": "OE9",
@@ -1272,31 +816,7 @@
                 }
             ]
         },
-        "Ethernet308": {
-            "associated_devices": [
-                {
-                    "device_id": "OE9",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS9",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet312": {
-            "associated_devices": [
-                {
-                    "device_id": "OE9",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS9",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet316": {
             "associated_devices": [
                 {
                     "device_id": "OE9",
@@ -1320,31 +840,7 @@
                 }
             ]
         },
-        "Ethernet324": {
-            "associated_devices": [
-                {
-                    "device_id": "OE10",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS10",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet328": {
-            "associated_devices": [
-                {
-                    "device_id": "OE10",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS10",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet332": {
             "associated_devices": [
                 {
                     "device_id": "OE10",
@@ -1368,31 +864,7 @@
                 }
             ]
         },
-        "Ethernet340": {
-            "associated_devices": [
-                {
-                    "device_id": "OE10",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS10",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet344": {
-            "associated_devices": [
-                {
-                    "device_id": "OE10",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS10",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet348": {
             "associated_devices": [
                 {
                     "device_id": "OE10",
@@ -1416,31 +888,7 @@
                 }
             ]
         },
-        "Ethernet356": {
-            "associated_devices": [
-                {
-                    "device_id": "OE11",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS11",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet360": {
-            "associated_devices": [
-                {
-                    "device_id": "OE11",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS11",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet364": {
             "associated_devices": [
                 {
                     "device_id": "OE11",
@@ -1464,31 +912,7 @@
                 }
             ]
         },
-        "Ethernet372": {
-            "associated_devices": [
-                {
-                    "device_id": "OE11",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS11",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet376": {
-            "associated_devices": [
-                {
-                    "device_id": "OE11",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS11",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet380": {
             "associated_devices": [
                 {
                     "device_id": "OE11",
@@ -1512,31 +936,7 @@
                 }
             ]
         },
-        "Ethernet388": {
-            "associated_devices": [
-                {
-                    "device_id": "OE12",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS12",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet392": {
-            "associated_devices": [
-                {
-                    "device_id": "OE12",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS12",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet396": {
             "associated_devices": [
                 {
                     "device_id": "OE12",
@@ -1560,31 +960,7 @@
                 }
             ]
         },
-        "Ethernet404": {
-            "associated_devices": [
-                {
-                    "device_id": "OE12",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS12",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet408": {
-            "associated_devices": [
-                {
-                    "device_id": "OE12",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS12",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet412": {
             "associated_devices": [
                 {
                     "device_id": "OE12",
@@ -1608,31 +984,7 @@
                 }
             ]
         },
-        "Ethernet420": {
-            "associated_devices": [
-                {
-                    "device_id": "OE13",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS13",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet424": {
-            "associated_devices": [
-                {
-                    "device_id": "OE13",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS13",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet428": {
             "associated_devices": [
                 {
                     "device_id": "OE13",
@@ -1656,31 +1008,7 @@
                 }
             ]
         },
-        "Ethernet436": {
-            "associated_devices": [
-                {
-                    "device_id": "OE13",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS13",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet440": {
-            "associated_devices": [
-                {
-                    "device_id": "OE13",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS13",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet444": {
             "associated_devices": [
                 {
                     "device_id": "OE13",
@@ -1704,31 +1032,7 @@
                 }
             ]
         },
-        "Ethernet452": {
-            "associated_devices": [
-                {
-                    "device_id": "OE14",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS14",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet456": {
-            "associated_devices": [
-                {
-                    "device_id": "OE14",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS14",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet460": {
             "associated_devices": [
                 {
                     "device_id": "OE14",
@@ -1752,31 +1056,7 @@
                 }
             ]
         },
-        "Ethernet468": {
-            "associated_devices": [
-                {
-                    "device_id": "OE14",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS14",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet472": {
-            "associated_devices": [
-                {
-                    "device_id": "OE14",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS14",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet476": {
             "associated_devices": [
                 {
                     "device_id": "OE14",
@@ -1800,31 +1080,7 @@
                 }
             ]
         },
-        "Ethernet484": {
-            "associated_devices": [
-                {
-                    "device_id": "OE15",
-                    "bank": 0
-                },
-                {
-                    "device_id": "ELS15",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet488": {
-            "associated_devices": [
-                {
-                    "device_id": "OE15",
-                    "bank": 1
-                },
-                {
-                    "device_id": "ELS15",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet492": {
             "associated_devices": [
                 {
                     "device_id": "OE15",
@@ -1848,31 +1104,7 @@
                 }
             ]
         },
-        "Ethernet500": {
-            "associated_devices": [
-                {
-                    "device_id": "OE15",
-                    "bank": 2
-                },
-                {
-                    "device_id": "ELS15",
-                    "bank": 0
-                }
-            ]
-        },
         "Ethernet504": {
-            "associated_devices": [
-                {
-                    "device_id": "OE15",
-                    "bank": 3
-                },
-                {
-                    "device_id": "ELS15",
-                    "bank": 0
-                }
-            ]
-        },
-        "Ethernet508": {
             "associated_devices": [
                 {
                     "device_id": "OE15",
