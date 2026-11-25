@@ -7,7 +7,7 @@ if [ "$EUID" -ne 0 ] ; then
 fi
 
 # Command is only supported on spine routers
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* ]] ; then
+if [[ "$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* ]] ; then
     echo "Operation is not supported on this platform"
     exit 1
 fi
@@ -56,9 +56,9 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
 
     while [ $asic -lt $NUM_ASIC ]
     do        
-        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
+        sub_role=`sonic-cfggen -d --redis-unix-socket -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
         if [ $sub_role == 'FrontEnd' ] ; then
-            cur_idf_isolation_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state -n $NAMESPACE_PREFIX$asic)"
+            cur_idf_isolation_state="$(sonic-cfggen -d --redis-unix-socket -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state -n $NAMESPACE_PREFIX$asic)"
             if [ $1 == 'status' ] ; then
                 echo "BGP$asic: IDF isolation state: $cur_idf_isolation_state"
             else
@@ -74,7 +74,7 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
         asic=$[$asic+1]
     done
 else
-    cur_idf_isolation_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state)"
+    cur_idf_isolation_state="$(sonic-cfggen -d --redis-unix-socket -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state)"
     if [ $1 == 'status' ] ; then
         echo "IDF isolation state: $cur_idf_isolation_state"
     else

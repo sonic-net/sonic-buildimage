@@ -5,7 +5,7 @@ PLATFORM_ENV_CONF=/usr/share/sonic/platform/platform_env.conf
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
-SWSS_VARS=$(sonic-cfggen -d -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
+SWSS_VARS=$(sonic-cfggen -d --redis-unix-socket -y /etc/sonic/sonic_version.yml -t $SWSS_VARS_FILE) || exit 1
 export platform=$(echo $SWSS_VARS | jq -r '.asic_type')
 export sub_platform=$(echo $SWSS_VARS | jq -r '.asic_subtype')
 

@@ -4,7 +4,7 @@
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
-subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+subtype=`sonic-db-cli -s CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
 TSA_CHASSIS_STATE=false
 
 if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]]; then
@@ -43,12 +43,12 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
     while [ $asic -lt $NUM_ASIC ]
     do
         # Run TSA/TSB/TSC scripts in BGP instance for frontend ASICs.
-        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
+        sub_role=`sonic-cfggen -d --redis-unix-socket -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
         if [ $sub_role == 'FrontEnd' ]
         then
             echo -e "BGP"$asic" : \c"
             if [[ -n "$TSA_STATE_UPDATE" ]]; then
-                current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled -n $NAMESPACE_PREFIX$asic)"
+                current_tsa_state="$(sonic-cfggen -d --redis-unix-socket -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled -n $NAMESPACE_PREFIX$asic)"
                 if [[ $current_tsa_state  == $desired_tsa_state ]]; then
                     echo "$err_msg"
                     logger -t $1 -p user.info "$err_msg"
@@ -66,7 +66,7 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
     done
 else
         if [[ -n "$TSA_STATE_UPDATE" ]]; then
-            current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
+            current_tsa_state="$(sonic-cfggen -d --redis-unix-socket -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
             if [[ $current_tsa_state  == $desired_tsa_state ]]; then
                 echo "$err_msg"
                 logger -t $1 -p user.info "$err_msg"

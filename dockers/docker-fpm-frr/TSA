@@ -31,7 +31,7 @@ then
         continue
       ;;
     esac
-    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"ip_version\": \"$ip_version\", \"ip_protocol\": \"$ip_protocol\", \"internal_route_map\": \"$internal_route_map\"}" -y /etc/sonic/constants.yml -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.isolate.conf.j2 > "$TSA_FILE"
+    sonic-cfggen -d --redis-unix-socket -a "{\"route_map_name\":\"$route_map_name\", \"ip_version\": \"$ip_version\", \"ip_protocol\": \"$ip_protocol\", \"internal_route_map\": \"$internal_route_map\"}" -y /etc/sonic/constants.yml -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.isolate.conf.j2 > "$TSA_FILE"
     vtysh -f "$TSA_FILE"
     rm -f "$TSA_FILE"
   done

@@ -33,7 +33,7 @@ start()
         # Backup dynamic configuration to restore it when the static configuration is removed
         mv ${DYNAMIC_CONFIG_FILE_TEMPLATE} ${WD} 2>/dev/null || true
 
-        sonic-cfggen -d -t /usr/share/sonic/templates/resolv.conf.j2,${STATIC_CONFIG_FILE}
+        sonic-cfggen -d --redis-unix-socket -t /usr/share/sonic/templates/resolv.conf.j2,${STATIC_CONFIG_FILE}
 
         /sbin/resolvconf --enable-updates
         /sbin/resolvconf -u

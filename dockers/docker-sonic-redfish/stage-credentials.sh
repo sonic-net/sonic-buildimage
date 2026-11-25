@@ -55,7 +55,7 @@ STATUS_KEY="REDFISH_CERT_STATUS|global"
 db_cmd() {
     local db="$1"
     shift
-    sonic-db-cli "${db}" "$@" 2>/dev/null
+    sonic-db-cli -s "${db}" "$@" 2>/dev/null
 }
 
 log() { logger -t stage-credentials "$*"; echo "stage-credentials: $*"; }

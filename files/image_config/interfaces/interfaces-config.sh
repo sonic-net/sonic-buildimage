@@ -92,7 +92,7 @@ fi
 
 # Create /e/n/i file for existing and active interfaces, dhcp6 sytcl.conf and dhclient.conf
 CFGGEN_PARAMS=(
-    -d
+    -d --redis-unix-socket
     -j "${ZTP_INPUT}"
     -t /usr/share/sonic/templates/interfaces.j2,/etc/network/interfaces
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf
@@ -103,7 +103,7 @@ CFGGEN_PARAMS=(
 # so interfaces.j2 can render the BMC interface stanza with the correct IP.
 #   switch_bmc=1  -> use bmc_addr  (BMC's own IP on the link)
 #   switch_host=1 -> use bmc_if_addr (Switch-Host's IP on the BMC link)
-PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+PLATFORM=$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.platform 2>/dev/null)
 PLATFORM_ENV_CONF="/usr/share/sonic/device/$PLATFORM/platform_env.conf"
 IS_SWITCH_BMC=0
 IS_SWITCH_HOST=0

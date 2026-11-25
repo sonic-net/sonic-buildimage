@@ -9,7 +9,7 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM="$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.platform)"
 PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
 if [ -f $PLATFORM_ENV_CONF_FILE ]; then
   source $PLATFORM_ENV_CONF_FILE
@@ -27,7 +27,7 @@ fi
 /usr/bin/TS TSC
 [[ $1 != "no-stats" ]] && portstat -p 5
 
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]]
+if [[ "$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]]
 then
   echo
   show mux status

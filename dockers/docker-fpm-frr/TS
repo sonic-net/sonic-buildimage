@@ -1,6 +1,6 @@
 #!/bin/bash
 
-switch_type=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['switch_type']"`
+switch_type=`sonic-cfggen -d --redis-unix-socket -v "DEVICE_METADATA['localhost']['switch_type']"`
 # Check whether the routemap is for internal BGP sessions.
 function is_internal_route_map()
 {

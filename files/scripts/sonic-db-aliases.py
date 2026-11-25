@@ -33,8 +33,8 @@ try:
         try:
             db_id = SonicDBConfig.getDbId(db)
             db_port = SonicDBConfig.getDbPort(db)
-            # Output format: DB_NAME:DB_ID:DB_PORT
-            print(f'{db}:{db_id}:{db_port}')
+            db_socket = SonicDBConfig.getDbSock(db)
+            print(f'{db}:{db_id}:{db_port}:{db_socket or ""}')
         except Exception as e:
             # Print error to stderr (will be captured by bash)
             print(f'ERROR:Failed to get config for {db}: {e}', file=sys.stderr)

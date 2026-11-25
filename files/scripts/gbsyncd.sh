@@ -65,11 +65,11 @@ PEER="swss"
 DEBUGLOG="/tmp/swss-$SERVICE-debug$DEV.log"
 LOCKFILE="/tmp/swss-$SERVICE-lock$DEV"
 NAMESPACE_PREFIX="asic"
-SONIC_GLOBAL_DB_CLI="sonic-db-cli"
-SONIC_DB_CLI="sonic-db-cli"
+SONIC_GLOBAL_DB_CLI="sonic-db-cli -s"
+SONIC_DB_CLI="sonic-db-cli -s"
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
-    SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
+    SONIC_DB_CLI="sonic-db-cli -s -n $NET_NS"
 fi
 
 case "$1" in

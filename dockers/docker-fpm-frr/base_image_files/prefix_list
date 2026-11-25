@@ -38,8 +38,8 @@ DEVICE_SUBTYPE=""
 
 read_device_metadata() {
     if [[ -z "$DEVICE_TYPE" ]]; then
-        DEVICE_TYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
-        DEVICE_SUBTYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
+        DEVICE_TYPE=$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.type)
+        DEVICE_SUBTYPE=$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.subtype)
     fi
 }
 
@@ -69,7 +69,7 @@ validate_device_for_type() {
 # Function to skip operation on chassis supervisor
 skip_chassis_supervisor() {
     local PLATFORM supervisor
-    PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+    PLATFORM="$(sonic-cfggen -d --redis-unix-socket -v DEVICE_METADATA.localhost.platform)"
     [ -f "/usr/share/sonic/device/$PLATFORM/platform_env.conf" ] && \
         . "/usr/share/sonic/device/$PLATFORM/platform_env.conf"
 
@@ -133,7 +133,7 @@ handle_prefix_list_asic() {
 
     if [ $operation == 'status' ] ; then
         echo "BGP$asic: Current prefix lists:"
-        sonic-cfggen -d -v PREFIX_LIST -n $namespace_prefix$asic
+        sonic-cfggen -d --redis-unix-socket -v PREFIX_LIST -n $namespace_prefix$asic
     else
         if [ $operation == 'add' ]; then
             local prefix_list_entry="{\"PREFIX_LIST\":{\"$PREFIX_TYPE|$network\":{}}}"
@@ -141,7 +141,7 @@ handle_prefix_list_asic() {
             logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
             echo "BGP$asic: Added prefix list: $PREFIX_TYPE with network: $network"
         elif [ $operation == 'remove' ]; then
-            sonic-db-cli -n $namespace_prefix$asic CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            sonic-db-cli -s --authenticate -n $namespace_prefix$asic CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
             logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
             echo "BGP$asic: Removed prefix list: $PREFIX_TYPE with network: $network"
         fi
@@ -156,7 +156,7 @@ handle_prefix_list_single() {
 
     if [ $operation == 'status' ] ; then
         echo "Current prefix lists:"
-        sonic-cfggen -d -v PREFIX_LIST
+        sonic-cfggen -d --redis-unix-socket -v PREFIX_LIST
     else
         if [ $operation == 'add' ]; then
             local prefix_list_entry="{\"PREFIX_LIST\":{\"$PREFIX_TYPE|$network\":{}}}"
@@ -164,7 +164,7 @@ handle_prefix_list_single() {
             logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
             echo "Added prefix list: $PREFIX_TYPE with network: $network"
         elif [ $operation == 'remove' ]; then
-            sonic-db-cli CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            sonic-db-cli -s --authenticate CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
             logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
             echo "Removed prefix list: $PREFIX_TYPE with network: $network"
         fi
@@ -201,7 +201,7 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
     asic=0
     while [ $asic -lt $NUM_ASIC ]
     do
-        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n asic$asic`
+        sub_role=`sonic-cfggen -d --redis-unix-socket -v "DEVICE_METADATA['localhost']['sub_role']" -n asic$asic`
         if [ $sub_role == 'FrontEnd' ]; then
             handle_prefix_list_asic $asic $1 $2 $3
         fi

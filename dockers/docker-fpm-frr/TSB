@@ -27,7 +27,7 @@ then
         continue
       ;;
     esac
-    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"internal_route_map\": \"$internal_route_map\"}" -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.unisolate.conf.j2 > "$TSB_FILE"
+    sonic-cfggen -d --redis-unix-socket -a "{\"route_map_name\":\"$route_map_name\", \"internal_route_map\": \"$internal_route_map\"}" -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.unisolate.conf.j2 > "$TSB_FILE"
     vtysh -f "$TSB_FILE"
     rm -f "$TSB_FILE"
   done
