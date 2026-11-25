@@ -92,8 +92,9 @@ MUX_COMMANDS = [
     ["muxcable", "hwmode", "muxdirection", "--json", "--", "Ethernet0"],
     ["muxcable", "hwmode", "switchmode"],
     ["muxcable", "hwmode", "switchmode", "--", "Ethernet0"],
-    ["muxcable", "firmware", "version", "--", "Ethernet0"],
-    ["muxcable", "firmware", "version", "--active", "--", "Ethernet0"],
+    ["muxcable", "firmware", "version", "--preserve-download-state", "--", "Ethernet0"],
+    ["muxcable", "firmware", "version", "--preserve-download-state", "--active", "--", "Ethernet0"],
+    ["muxcable", "firmware", "version", "--preserve-download-state", "--", "all"],
 ]
 for operation in ["berinfo", "eyeinfo", "fecstatistics", "pcsstatistics"]:
     for target in ["NIC", "TORA", "TORB", "LOCAL"]:
@@ -128,7 +129,9 @@ def test_console_and_mux_queries_preserve_arguments(executable, arguments):
     ("show", ["muxcable", "berinfo", "--", "Ethernet0", "INVALID"]),
     ("show", ["muxcable", "berinfo", "--", "Ethernet0"]),
     ("show", ["muxcable", "hwmode", "switchmode", "--json"]),
-    ("show", ["muxcable", "firmware", "version", "--json", "--", "Ethernet0"]),
+    ("show", ["muxcable", "firmware", "version", "--", "Ethernet0"]),
+    ("show", ["muxcable", "firmware", "version", "--active", "--", "Ethernet0"]),
+    ("show", ["muxcable", "firmware", "version", "--preserve-download-state", "--json", "--", "Ethernet0"]),
     ("show", ["muxcable", "firmware", "activate", "--", "Ethernet0"]),
     ("show", ["muxcable", "debugdumpregisters", "Ethernet0", "all"]),
     ("show", ["muxcable", "config", "Ethernet0"]),
@@ -142,9 +145,12 @@ def test_other_console_and_mux_operations_are_denied(executable, arguments):
 @pytest.mark.parametrize("arguments", [
     ["show", "table"],
     ["show", "table", "--", "DATAACL"],
+    ["show", "table", "--", "EDGE ACL"],
     ["show", "rule"],
     ["show", "rule", "--", "DATAACL"],
     ["show", "rule", "--", "DATAACL", "RULE_1"],
+    ["show", "rule", "--", "EDGE ACL"],
+    ["show", "rule", "--", "EDGE ACL", "ALLOW SSH"],
 ])
 def test_acl_display_runs_as_root(arguments):
     result = ordinary_sudo(arguments, "acl-loader")
@@ -156,11 +162,11 @@ def test_acl_display_runs_as_root(arguments):
     ["update", "full", "/tmp/acl.json"],
     ["update", "incremental", "/tmp/acl.json"],
     ["delete", "DATAACL"],
-    ["show", "table", "--", "DATAACL", "extra"],
-    ["show", "rule", "--", "DATAACL", "RULE_1", "extra"],
+    ["show", "table", "DATAACL"],
+    ["show", "rule", "--unexpected", "--", "DATAACL"],
     ["show", "table", "--", "DATAACL\nupdate full /tmp/acl.json"],
 ])
-def test_acl_mutations_and_extra_arguments_are_denied(arguments):
+def test_acl_mutations_and_unlisted_command_forms_are_denied(arguments):
     result = ordinary_sudo(arguments, "acl-loader")
     assert result.returncode != 0
     assert not result.stdout
