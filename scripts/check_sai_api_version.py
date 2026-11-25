@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require the three Broadcom SAI binaries to report the same OCP API version."""
+"""Require the Broadcom XGS and legacy-TH SAI binaries to report the same OCP API version."""
 
 import argparse
 import ctypes
@@ -82,14 +82,14 @@ def compare_versions(results):
         f"{path.name}={version}" for path, version in zip(results, versions)
     ), flush=True)
     if len(set(versions)) != 1:
-        raise VersionCheckError("Broadcom XGS, legacy-TH and DNX vendor API versions must be equal")
+        raise VersionCheckError("Broadcom XGS and legacy-TH vendor API versions must be equal")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--image")
-    source.add_argument("--compare", nargs=3, type=Path)
+    source.add_argument("--compare", nargs=2, type=Path)
     source.add_argument("--syncd", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()

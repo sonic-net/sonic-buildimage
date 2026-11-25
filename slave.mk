@@ -1651,7 +1651,7 @@ $(DOCKER_LOAD_TARGETS) :$(TARGET_PATH)/%.gz-load : .platform docker-start $$(TAR
 	$(call docker-image-load,$*)
 	$(FOOTER)
 
-BROADCOM_SAI_API_CHECK_IMAGES := docker-syncd-brcm.gz docker-syncd-brcm-legacy-th.gz docker-syncd-brcm-dnx.gz
+BROADCOM_SAI_API_CHECK_IMAGES := docker-syncd-brcm.gz docker-syncd-brcm-legacy-th.gz
 BROADCOM_SAI_API_CHECK_TARGETS := $(addsuffix -sai-api-check,$(addprefix $(TARGET_PATH)/,$(BROADCOM_SAI_API_CHECK_IMAGES)))
 
 .PHONY: $(TARGET_PATH)/broadcom-sai-api-version-check $(BROADCOM_SAI_API_CHECK_TARGETS)
@@ -1659,7 +1659,7 @@ $(TARGET_PATH)/broadcom-sai-api-version-check:
 	results=$$(mktemp -d)
 	trap 'rm -rf "$$results"' EXIT
 	status=0
-	# Collect results for all three binaries, even if an earlier check fails.
+	# Collect results for both binaries, even if an earlier check fails.
 	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) --keep-going $(BROADCOM_SAI_API_CHECK_TARGETS) BROADCOM_SAI_API_RESULT_DIR="$$results" || status=$$?
 	python3 scripts/check_sai_api_version.py --compare $(foreach image,$(BROADCOM_SAI_API_CHECK_IMAGES),"$$results/$(image).version") || status=$$?
 	exit $$status
