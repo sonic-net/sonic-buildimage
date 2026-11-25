@@ -698,6 +698,19 @@ class TestChassis:
         sfp.asic_id = asic_id
         return sfp
 
+    def _make_cpo_bank_ports(self, oe_id, first_index, asic_id='asic0'):
+        """The four ports of one OE, one per bank."""
+        from sonic_platform.cpo import CpoPort
+        ports = []
+        for bank_id in range(4):
+            port = MagicMock(spec=CpoPort)
+            port.index = first_index + bank_id
+            port.sdk_index = oe_id
+            port.bank_id = bank_id
+            port.asic_id = asic_id
+            ports.append(port)
+        return ports
+
     def test_disable_polling_for_asic_removes_only_target_fds(self):
         chassis = Chassis()
         sfp_a0 = self._make_sfp(0, 'asic0')
@@ -741,6 +754,34 @@ class TestChassis:
             chassis._enable_polling_for_asic('asic0')
 
         refresh.assert_called_once_with(sfp, chassis.poll_obj, chassis.registered_fds)
+
+    def test_enable_polling_for_asic_registers_one_port_per_oe(self):
+        """The banks of an OE share one sx_core module, so its nodes are
+        registered on the bank 0 port only - when the ASIC comes back just like
+        on the first registration. Registering all four would poll each node
+        four times and report every event four times."""
+        chassis = Chassis()
+        banks = self._make_cpo_bank_ports(oe_id=0, first_index=1)
+        service = self._make_sfp(16, 'asic0')
+        chassis._asic_modules_dict = {'asic0': set(banks) | {service}}
+        chassis.poll_obj = mock.MagicMock()
+        chassis.registered_fds = {}
+
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=True), \
+             mock.patch.object(ModuleDetectionFlow, 'refresh_poll_obj') as refresh:
+            chassis._enable_polling_for_asic('asic0')
+
+        assert refresh.call_count == 2
+        assert {call.args[0] for call in refresh.call_args_list} == {banks[0], service}
+
+    def test_get_sfp_list_for_polling_keeps_bank_0_of_each_oe(self):
+        chassis = Chassis()
+        banks = self._make_cpo_bank_ports(oe_id=0, first_index=1)
+        service = self._make_sfp(16, 'asic0')
+        chassis._cpo_list = banks + [None]
+        chassis._sfp_list = [None] * 4 + [service]
+
+        assert chassis.get_sfp_list_for_polling() == [banks[0], service]
 
     def test_enable_polling_for_asic_swallows_refresh_errors(self):
         chassis = Chassis()

@@ -769,6 +769,8 @@ class Chassis(ChassisBase):
             return
         host_mgmt = DeviceDataManager.is_module_host_management_mode()
         for s in self._asic_modules_dict.get(asic_id, ()):
+            if not self._is_port_poll_owner(s):
+                continue
             try:
                 if host_mgmt:
                     ModuleDetectionFlow.refresh_poll_obj(s, self.poll_obj, self.registered_fds)
@@ -840,14 +842,13 @@ class Chassis(ChassisBase):
         to one port per virtual module (oe_id, els_id) by keeping only bank 0,
         since all banks of an OE share a single sx_core module.
         """
-        from . import cpo
+        return [port for port in self._all_ports() if self._is_port_poll_owner(port)]
 
-        out = []
-        for sfp_object in self._all_ports():
-            if isinstance(sfp_object, cpo.CpoPort) and sfp_object.bank_id != 0:
-                continue
-            out.append(sfp_object)
-        return out
+    @staticmethod
+    def _is_port_poll_owner(port):
+        """Whether the port owns the poll fds of its sx_core module."""
+        from . import cpo
+        return not (isinstance(port, cpo.CpoPort) and port.bank_id != 0)
 
     def get_change_event_for_module_host_management_mode(self, timeout):
         """Get SFP change event when module host management mode is enabled.
