@@ -3,9 +3,17 @@ set -eu
 
 # Reserve the service identity before installing packages that allocate users.
 fail() { echo "Redis service identity: $*" >&2; exit 1; }
+
+normalize_id() {
+    case "$1" in
+        ''|*[!0-9]*) fail "$2 must be a decimal integer" ;;
+    esac
+    printf '%s\n' "$1" | sed 's/^0*//; s/^$/0/'
+}
+
 [ "$#" -eq 2 ] || fail 'requires the configured UID and GID'
-redis_uid=$1
-redis_gid=$2
+redis_uid=$(normalize_id "$1" UID)
+redis_gid=$(normalize_id "$2" GID)
 [ "$(id -u)" = 0 ] || fail 'requires root'
 
 if getent passwd | awk -F: -v uid="$redis_uid" '$3 == uid && $1 != "redis" { found=1 } END { exit !found }'; then

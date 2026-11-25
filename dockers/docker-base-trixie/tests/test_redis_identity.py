@@ -46,6 +46,22 @@ def test_configured_uid_and_gid_are_used():
     assert grp.getgrnam('redis').gr_gid == 402
 
 
+def test_zero_padded_ids_are_idempotent():
+    assert reserve('0401', '0402').returncode == 0
+    assert reserve('0401', '0402').returncode == 0
+    identity = pwd.getpwnam('redis')
+    assert (identity.pw_uid, identity.pw_gid) == (401, 402)
+    assert grp.getgrnam('redis').gr_gid == 402
+
+
+@pytest.mark.parametrize('uid,gid,field', [('', 402, 'UID'), (401, '4x2', 'GID')])
+def test_invalid_ids_are_rejected_before_creating_accounts(uid, gid, field):
+    result = reserve(uid, gid)
+    assert result.returncode != 0 and f'{field} must be a decimal integer' in result.stderr
+    assert command('getent', 'passwd', 'redis').returncode != 0
+    assert command('getent', 'group', 'redis').returncode != 0
+
+
 def test_missing_build_arguments_are_rejected():
     result = command('sh', str(SCRIPT))
     assert result.returncode != 0 and 'configured UID and GID' in result.stderr
