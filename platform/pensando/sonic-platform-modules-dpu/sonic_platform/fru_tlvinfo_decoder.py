@@ -72,7 +72,7 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
     _TLV_DISPLAY_VENDOR_EXT     = True
 
 
-    def __init__(self, path, start, status, ro, fru_path, max_len=_TLV_INFO_MAX_LEN, *, use_tcp=True):
+    def __init__(self, path, start, status, ro, fru_path, max_len=_TLV_INFO_MAX_LEN):
         self._api_helper = APIHelper()
         # overwrite initial eeprom file
         if os.path.exists(path):
@@ -84,7 +84,6 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
         self.fru_path = fru_path
         self.fru_data = self._load_fru_data()
         self._redis_client = None
-        self._state_db_use_tcp = use_tcp
         eeprom = self._convert_fru_to_tlvInfoHeader()
         self.write_eeprom(eeprom)
 
@@ -729,7 +728,7 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
     def checksum_type(self):
         return 'crc32'
 
-    def _connect_redis(self, *, use_tcp, authenticate=False):
+    def _connect_redis(self, *, authenticate=False):
         from swsscommon import swsscommon
         db = swsscommon.SonicDBConfig.getDbId("STATE_DB")
         if authenticate:
@@ -737,8 +736,6 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
             return redis.Redis(connection_pool=connection_pool(
                 unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"),
                 db=db, authenticate=True))
-        if not use_tcp:
-            return redis.Redis(db=db, unix_socket_path=swsscommon.SonicDBConfig.getDbSock("STATE_DB"))
         return redis.Redis(db=db, host=swsscommon.SonicDBConfig.getDbHostname("STATE_DB"),
                            port=swsscommon.SonicDBConfig.getDbPort("STATE_DB"))
 
@@ -746,7 +743,7 @@ class FruTlvInfoEncoder(eeprom_base.EepromDecoder):
     def redis_client(self):
         """Return the cached EEPROM reader connection."""
         if not self._redis_client:
-            self._redis_client = self._connect_redis(use_tcp=self._state_db_use_tcp)
+            self._redis_client = self._connect_redis()
         return self._redis_client
 
     def _redis_hget(self, key, field):
@@ -851,7 +848,7 @@ class EepromDecodeVisitor(EepromDefaultVisitor):
 class EepromRedisVisitor(EepromDefaultVisitor):
     def __init__(self, eeprom_object):
         self.eeprom_object = eeprom_object
-        self.redis_client = eeprom_object._connect_redis(use_tcp=False, authenticate=True)
+        self.redis_client = eeprom_object._connect_redis(authenticate=True)
         self.vendor_ext_tlv_num = 0
         self.fvs = {}
         self.error = None

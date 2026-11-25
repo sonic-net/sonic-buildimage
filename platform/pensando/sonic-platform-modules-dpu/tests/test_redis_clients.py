@@ -78,16 +78,12 @@ def eeprom(clients):
         'redis': redis, 'eeprom_base': types.SimpleNamespace(EepromDecoder=object)})
 
 
-@pytest.mark.parametrize('use_socket', [False, True])
-def test_eeprom_reader_keeps_transport_and_cached_connection(clients, eeprom, use_socket):
+def test_eeprom_reader_keeps_configured_tcp_connection_cached(clients, eeprom):
     _, pool, redis = clients
     encoder = eeprom.FruTlvInfoEncoder.__new__(eeprom.FruTlvInfoEncoder)
     encoder._redis_client = None
-    encoder._state_db_use_tcp = not use_socket
     assert encoder.redis_client is encoder.redis_client
-    options = ({'unix_socket_path': '/run/redis/STATE_DB.sock'} if use_socket
-               else {'host': '127.0.0.1', 'port': 6381})
-    redis.Redis.assert_called_once_with(db=6, **options)
+    redis.Redis.assert_called_once_with(db=6, host='127.0.0.1', port=6381)
     pool.assert_not_called()
 
 

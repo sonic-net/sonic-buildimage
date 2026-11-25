@@ -31,15 +31,13 @@ except ImportError as e:
 STATE_DB_NAME = 'STATE_DB'
 
 
-def _get_state_db_client(*, use_tcp=True, authenticate=False):
+def _get_state_db_client(*, authenticate=False):
     db = SonicDBConfig.getDbId(STATE_DB_NAME)
     if authenticate:
         from swsscommon.redis import connection_pool
         return redis.Redis(connection_pool=connection_pool(
             unix_socket_path=SonicDBConfig.getDbSock(STATE_DB_NAME), db=db,
             authenticate=True))
-    if not use_tcp:
-        return redis.Redis(db=db, unix_socket_path=SonicDBConfig.getDbSock(STATE_DB_NAME))
     return redis.Redis(db=db, host=SonicDBConfig.getDbHostname(STATE_DB_NAME),
                        port=SonicDBConfig.getDbPort(STATE_DB_NAME))
 
@@ -315,8 +313,7 @@ class EepromS6000(EepromDecoder):
                          "offset": 0x70, "format": _BLK_MAC_FORMAT})
     ])
 
-    def __init__(self, is_plugin=False, *, use_tcp=True):
-        self._state_db_use_tcp = use_tcp
+    def __init__(self, is_plugin=False):
         self.eeprom_path = "/sys/bus/i2c/devices/i2c-10/10-0053/eeprom"
         super(EepromS6000, self).__init__(self.eeprom_path, None, 0, '', True)
 
@@ -394,7 +391,7 @@ class EepromS6000(EepromDecoder):
         """
         Print out the contents of the EEPROM from database.
         """
-        client = _get_state_db_client(use_tcp=self._state_db_use_tcp)
+        client = _get_state_db_client()
         db_state = client.hget('EEPROM_INFO|State', 'Initialized')
         if db_state != '1':
             return -1
@@ -423,7 +420,7 @@ class EepromS6000(EepromDecoder):
         """
         Decode the contents of the EEPROM and update the contents to database
         """
-        client = _get_state_db_client(use_tcp=False, authenticate=True)
+        client = _get_state_db_client(authenticate=True)
         for blk_code in list(self._BLK_INFO.keys()):
             blk_name = self._BLK_INFO[blk_code]["name"]
             blk_start = self._BLK_INFO[blk_code]["offset"]
