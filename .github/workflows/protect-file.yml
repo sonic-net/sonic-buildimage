@@ -15,21 +15,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Fetch base branch
-        run: |
-          git fetch origin ${GITHUB_BASE_REF}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2
 
       - name: Check protected files
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           echo "Starting file check step"
           protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
-          base_branch=$(git rev-parse origin/${GITHUB_BASE_REF})
-          
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            # Use the base of this run's merge commit, even when rerunning old jobs.
+            base_commit=$(git rev-parse HEAD^1)
+          elif [[ "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            base_commit=$(git hash-object -t tree /dev/null)
+          else
+            base_commit="$BEFORE_SHA"
+            git fetch --no-tags --depth=1 origin "$base_commit"
+          fi
+          changed_files=$(git diff --name-only "$base_commit" HEAD)
+
           for protected_file in "${protected_files[@]}"; do
             echo "Checking ${protected_file}"
-            if git diff --name-only $base_branch | grep -q "^${protected_file}\$"; then
+            if grep -Fxq "$protected_file" <<< "$changed_files"; then
               echo "Error: You are trying to modify ${protected_file}, which is protected."
               exit 1
             fi

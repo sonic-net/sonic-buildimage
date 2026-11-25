@@ -80,13 +80,12 @@
 /platform/mellanox/                               @sonic-net/sonic-mellanox-maintainer
 /device/nvidia-bluefield/                         @sonic-net/sonic-mellanox-maintainer
 /platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
-/platform/nephos/                                 @sonic-net/sonic-nephos-maintainer
 /device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
 /platform/aspeed/sonic-platform-modules-nexthop/  @sonic-net/sonic-nexthop-maintainer
-/platform/broadcom/sonic-platform-modules/nexthop/ @sonic-net/sonic-nexthop-maintainer
+/platform/broadcom/sonic-platform-modules-nexthop/ @sonic-net/sonic-nexthop-maintainer
 /device/nokia/                                    @sonic-net/sonic-nokia-maintainer
 /platform/aspeed/sonic-platform-modules-nokia/    @sonic-net/sonic-nokia-maintainer
-/platform/broadcom/sonic-platform-modules/nokia/  @sonic-net/sonic-nokia-maintainer
+/platform/broadcom/sonic-platform-modules-nokia/  @sonic-net/sonic-nokia-maintainer
 
 # common library
 /src/initramfs-tools/                   @qiluo-msft
@@ -101,7 +100,6 @@
 /src/socat/                             @sonic-net/sonic-management
 
 # redis
-/src/redis/                             @sonic-net/sonic-management
 /src/hiredis/                           @sonic-net/sonic-management
 
 # yang

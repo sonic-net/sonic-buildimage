@@ -6,14 +6,17 @@ import syslog
 import time
 from typing import NoReturn
 
-from nexthop.pddf_config_parser import (
-    extract_fpga_attrs,
-    FpgaDeviceName,
-)
-from nexthop.fpga_lib import write_32
-from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf, get_switchcard_fpga_0_bdf
+from sonic_py_common import device_info
 
-REBOOT_DELAY_MS = 1000
+from nexthop.fpga_lib import (
+    DEFAULT_POWER_CYCLE_TIMEOUT_MS,
+    PowerCycleRegister,
+    write_32,
+)
+from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf, get_switchcard_fpga_0_bdf
+from nexthop.pddf_config_parser import SWITCH_HOST_KEY, FpgaDeviceName, reboot_conf
+
+CHASSIS_POWER_CYCLE_ORDER = ("cpu_card_fpga_0_chassis_pwrcyc", "switch_card_fpga_0_chassis_pwrcyc")
 
 # Countdown written to the watchdog powercycle counter to trigger it.
 WATCHDOG_TRIGGER_MS = 100
@@ -72,65 +75,31 @@ def watchdog_powercycle(config) -> NoReturn:
 
     # Wait for the countdown plus the usual reboot delay before concluding
     # the watchdog did not cut power.
-    time.sleep(REBOOT_DELAY_MS / 1000)
+    time.sleep(DEFAULT_POWER_CYCLE_TIMEOUT_MS / 1000)
 
     # If we reach here, the watchdog did not cut power.
     raise Exception("Watchdog powercycle did not trigger")
 
 
+def should_power_cycle_switch_host(conf: dict) -> bool:
+    return bool(conf.get(SWITCH_HOST_KEY)) and device_info.is_switch_host()
+
+
 def powercycle(config) -> NoReturn:
-    fpga_types = (
-        FpgaDeviceName.CPU_CARD.value,
-        FpgaDeviceName.SWITCHCARD.value,
-        FpgaDeviceName.SWITCHCARD_0.value,
-    )
-    try:
-        fpga_attrs = extract_fpga_attrs(config, fpga_types)
-    except Exception as e:
-        raise Exception("Failed to extract FPGA attributes from PDDF configuration") from e
+    conf = reboot_conf(config)
 
-    if not fpga_attrs:
-        raise Exception("No FPGA attributes found in PDDF configuration")
+    names = CHASSIS_POWER_CYCLE_ORDER
+    if should_power_cycle_switch_host(conf):
+        names = (SWITCH_HOST_KEY,)
 
-    log_to_kernel("Writing to CPU card FPGA power cycle control register to initiate reboot")
-    bdf = None
-    try:
-        attrs = fpga_attrs[FpgaDeviceName.CPU_CARD.value]
-        bdf = get_cpu_card_fpga_bdf()
-        write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
-    except Exception as e:
-        log_to_kernel(
-            "Error attempting power cycle via control register on CPU FPGA"
-            f" {bdf if bdf else ''}: {e}, trying switchcard FPGA"
-        )
-    time.sleep(REBOOT_DELAY_MS / 1000)
-
-    sc_fpga_name = None
-    sc_bdf = None
-    if FpgaDeviceName.SWITCHCARD.value in fpga_attrs:
-        sc_fpga_name = FpgaDeviceName.SWITCHCARD.value
-        sc_bdf = get_switchcard_fpga_bdf()
-    elif FpgaDeviceName.SWITCHCARD_0.value in fpga_attrs:
-        sc_fpga_name = FpgaDeviceName.SWITCHCARD_0.value
-        sc_bdf = get_switchcard_fpga_0_bdf()
-    else:
-        raise Exception(
-            "Error attempting power cycle via control register on switchcard FPGA"
-            ": Switchcard FPGA bdf not found."
-        )
-
-    if sc_fpga_name is not None:
+    for name in names:
+        if name not in conf:
+            continue
+        log_to_kernel(f"Writing the {name} register to initiate reboot")
         try:
-            log_to_kernel(f"Writing to '{sc_fpga_name}' power cycle control register to initiate reboot")
-            attrs = fpga_attrs[sc_fpga_name]
-            write_32(sc_bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
+            PowerCycleRegister.from_pddf(conf[name]).trigger()
         except Exception as e:
-            raise Exception(
-                "Error attempting power cycle via control register on switchcard FPGA"
-                f" {sc_bdf if sc_bdf else ''}: {e}"
-            ) from e
-
-    time.sleep(REBOOT_DELAY_MS / 1000)
+            log_to_kernel(f"{name} failed: {e}")
 
     # If we reach here, we silently failed to reboot the dataplane!
     raise Exception("Failed to initiate reboot")

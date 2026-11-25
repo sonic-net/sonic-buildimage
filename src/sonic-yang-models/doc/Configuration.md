@@ -44,6 +44,7 @@
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
   * [GNMI](#gnmi)
+  * [GNMI_CLIENT](#gnmi_client)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -1653,6 +1654,22 @@ GNMI (gRPC Network Management Interface) related configuration is defined in the
 }
 ```
 
+### GNMI_CLIENT
+
+The **GNMI_CLIENT** table holds the credentials this device presents when it acts as a gRPC client of another SONiC device's gNMI server (mTLS). On a BMC, the BMC daemon uses them for the gNOI System.Reboot handshake with the switch host; the files must be visible inside the BMC's PMON container, and an absent field falls back to the daemon's default path. File names follow the GNMI table's rules: certificates end in `.cer`, keys in `.key`. `ca_crt` is the CA certificate that the client uses to verify the server. When one CA issues the gNMI certificates, use the same CA file as `ca_crt` in the GNMI table. GNMI_CLIENT_CERT is the opposite direction: the clients this device's own gNMI server accepts.
+
+```
+{
+    "GNMI_CLIENT": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+            "client_key": "/etc/sonic/credentials/gnmi_client.key"
+        }
+    }
+}
+```
+
 ### Hash
 
 Generic hash allows user to configure various aspects of hashing algorithm.
@@ -3112,6 +3129,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
+- INSTALL_ON_KERNEL: Flag to also program the route into the kernel routing table (optional). It should be a boolean value, e.g. "true".
 
 ```
 {
@@ -3120,7 +3138,8 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
-        "consistent_hashing_buckets": "10"
+        "consistent_hashing_buckets": "10",
+        "install_on_kernel": "true"
     },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",

@@ -1458,6 +1458,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "11-11": {
@@ -2334,6 +2406,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xfffffff0",
+                    "lane1": "0xfffffff0",
+                    "lane2": "0xfffffff0",
+                    "lane3": "0xfffffff0",
+                    "lane4": "0xfffffff0",
+                    "lane5": "0xfffffff0",
+                    "lane6": "0xfffffff0",
+                    "lane7": "0xfffffff0"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "17-17": {
@@ -2459,6 +2603,78 @@
                     "lane5": "0xfffffff0",
                     "lane6": "0xfffffff0",
                     "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
                 },
                 "post2": {
                     "lane0": "0x0",
@@ -2626,6 +2842,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "19-19": {
@@ -2751,6 +3039,78 @@
                     "lane5": "0xfffffff4",
                     "lane6": "0xfffffff4",
                     "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x80",
+                    "lane1": "0x80",
+                    "lane2": "0x80",
+                    "lane3": "0x80",
+                    "lane4": "0x80",
+                    "lane5": "0x80",
+                    "lane6": "0x80",
+                    "lane7": "0x80"
+                },
+                "post1": {
+                    "lane0": "0xfffffff0",
+                    "lane1": "0xfffffff0",
+                    "lane2": "0xfffffff0",
+                    "lane3": "0xfffffff0",
+                    "lane4": "0xfffffff0",
+                    "lane5": "0xfffffff0",
+                    "lane6": "0xfffffff0",
+                    "lane7": "0xfffffff0"
                 },
                 "post2": {
                     "lane0": "0x0",
@@ -3064,6 +3424,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe6",
+                    "lane1": "0xffffffe6",
+                    "lane2": "0xffffffe6",
+                    "lane3": "0xffffffe6",
+                    "lane4": "0xffffffe6",
+                    "lane5": "0xffffffe6",
+                    "lane6": "0xffffffe6",
+                    "lane7": "0xffffffe6"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffee",
+                    "lane1": "0xffffffee",
+                    "lane2": "0xffffffee",
+                    "lane3": "0xffffffee",
+                    "lane4": "0xffffffee",
+                    "lane5": "0xffffffee",
+                    "lane6": "0xffffffee",
+                    "lane7": "0xffffffee"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "22-22": {
@@ -3189,6 +3621,78 @@
                     "lane5": "0xfffffff4",
                     "lane6": "0xfffffff4",
                     "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
                 },
                 "post2": {
                     "lane0": "0x0",
@@ -3481,6 +3985,78 @@
                     "lane5": "0xfffffff0",
                     "lane6": "0xfffffff0",
                     "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
                 },
                 "post2": {
                     "lane0": "0x0",
@@ -3919,6 +4495,78 @@
                     "lane5": "0xfffffff0",
                     "lane6": "0xfffffff0",
                     "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x76",
+                    "lane1": "0x76",
+                    "lane2": "0x76",
+                    "lane3": "0x76",
+                    "lane4": "0x76",
+                    "lane5": "0x76",
+                    "lane6": "0x76",
+                    "lane7": "0x76"
+                },
+                "post1": {
+                    "lane0": "0xffffffee",
+                    "lane1": "0xffffffee",
+                    "lane2": "0xffffffee",
+                    "lane3": "0xffffffee",
+                    "lane4": "0xffffffee",
+                    "lane5": "0xffffffee",
+                    "lane6": "0xffffffee",
+                    "lane7": "0xffffffee"
                 },
                 "post2": {
                     "lane0": "0x0",
@@ -15182,6 +15830,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "105-105": {
@@ -17226,6 +17946,78 @@
                     "lane6": "0x0",
                     "lane7": "0x0"
                 }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe0",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
             }
         },
         "119-119": {
@@ -17633,6 +18425,78 @@
                     "lane5": "0x5c",
                     "lane6": "0x5c",
                     "lane7": "0x5c"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
                 },
                 "post1": {
                     "lane0": "0xffffffec",
@@ -18665,6 +19529,1042 @@
                     "lane5": "0xffffffe4",
                     "lane6": "0xffffffe4",
                     "lane7": "0xffffffe4"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "1,9,28-29,37,42,56-58,62,69,74,88-90,94,98": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x6c",
+                    "lane1": "0x6c",
+                    "lane2": "0x6c",
+                    "lane3": "0x6c",
+                    "lane4": "0x6c",
+                    "lane5": "0x6c",
+                    "lane6": "0x6c",
+                    "lane7": "0x6c"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "2,12-13,25,31-34,38,40,50,52-53,59-60,65-66,70,72,82,84-85,91-92,120": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x70",
+                    "lane1": "0x70",
+                    "lane2": "0x70",
+                    "lane3": "0x70",
+                    "lane4": "0x70",
+                    "lane5": "0x70",
+                    "lane6": "0x70",
+                    "lane7": "0x70"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "3-4,30,36,68": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x76",
+                    "lane1": "0x76",
+                    "lane2": "0x76",
+                    "lane3": "0x76",
+                    "lane4": "0x76",
+                    "lane5": "0x76",
+                    "lane6": "0x76",
+                    "lane7": "0x76"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "5,7-8,20,43-44,46-47,49,54,61,64,75-76,78-79,81,86,93,96,111": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x74",
+                    "lane1": "0x74",
+                    "lane2": "0x74",
+                    "lane3": "0x74",
+                    "lane4": "0x74",
+                    "lane5": "0x74",
+                    "lane6": "0x74",
+                    "lane7": "0x74"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "6,11,26,39,48,51,71,80,83": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "14,99,102,109": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x6c",
+                    "lane1": "0x6c",
+                    "lane2": "0x6c",
+                    "lane3": "0x6c",
+                    "lane4": "0x6c",
+                    "lane5": "0x6c",
+                    "lane6": "0x6c",
+                    "lane7": "0x6c"
+                },
+                "post1": {
+                    "lane0": "0xfffffff0",
+                    "lane1": "0xfffffff0",
+                    "lane2": "0xfffffff0",
+                    "lane3": "0xfffffff0",
+                    "lane4": "0xfffffff0",
+                    "lane5": "0xfffffff0",
+                    "lane6": "0xfffffff0",
+                    "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "15,55,63,87,95": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe2",
+                    "lane1": "0xffffffe2",
+                    "lane2": "0xffffffe2",
+                    "lane3": "0xffffffe2",
+                    "lane4": "0xffffffe2",
+                    "lane5": "0xffffffe2",
+                    "lane6": "0xffffffe2",
+                    "lane7": "0xffffffe2"
+                },
+                "main": {
+                    "lane0": "0x76",
+                    "lane1": "0x76",
+                    "lane2": "0x76",
+                    "lane3": "0x76",
+                    "lane4": "0x76",
+                    "lane5": "0x76",
+                    "lane6": "0x76",
+                    "lane7": "0x76"
+                },
+                "post1": {
+                    "lane0": "0xffffffee",
+                    "lane1": "0xffffffee",
+                    "lane2": "0xffffffee",
+                    "lane3": "0xffffffee",
+                    "lane4": "0xffffffee",
+                    "lane5": "0xffffffee",
+                    "lane6": "0xffffffee",
+                    "lane7": "0xffffffee"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "23,35,45,67,77": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe2",
+                    "lane1": "0xffffffe2",
+                    "lane2": "0xffffffe2",
+                    "lane3": "0xffffffe2",
+                    "lane4": "0xffffffe2",
+                    "lane5": "0xffffffe2",
+                    "lane6": "0xffffffe2",
+                    "lane7": "0xffffffe2"
+                },
+                "main": {
+                    "lane0": "0x76",
+                    "lane1": "0x76",
+                    "lane2": "0x76",
+                    "lane3": "0x76",
+                    "lane4": "0x76",
+                    "lane5": "0x76",
+                    "lane6": "0x76",
+                    "lane7": "0x76"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "41,73": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe2",
+                    "lane1": "0xffffffe2",
+                    "lane2": "0xffffffe2",
+                    "lane3": "0xffffffe2",
+                    "lane4": "0xffffffe2",
+                    "lane5": "0xffffffe2",
+                    "lane6": "0xffffffe2",
+                    "lane7": "0xffffffe2"
+                },
+                "main": {
+                    "lane0": "0x78",
+                    "lane1": "0x78",
+                    "lane2": "0x78",
+                    "lane3": "0x78",
+                    "lane4": "0x78",
+                    "lane5": "0x78",
+                    "lane6": "0x78",
+                    "lane7": "0x78"
+                },
+                "post1": {
+                    "lane0": "0xffffffee",
+                    "lane1": "0xffffffee",
+                    "lane2": "0xffffffee",
+                    "lane3": "0xffffffee",
+                    "lane4": "0xffffffee",
+                    "lane5": "0xffffffee",
+                    "lane6": "0xffffffee",
+                    "lane7": "0xffffffee"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "97,100,124": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe0",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xfffffff0",
+                    "lane1": "0xfffffff0",
+                    "lane2": "0xfffffff0",
+                    "lane3": "0xfffffff0",
+                    "lane4": "0xfffffff0",
+                    "lane5": "0xfffffff0",
+                    "lane6": "0xfffffff0",
+                    "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "101,103,106-107,113-114,116-117,119,122,125-126": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xfffffff0",
+                    "lane1": "0xfffffff0",
+                    "lane2": "0xfffffff0",
+                    "lane3": "0xfffffff0",
+                    "lane4": "0xfffffff0",
+                    "lane5": "0xfffffff0",
+                    "lane6": "0xfffffff0",
+                    "lane7": "0xfffffff0"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "105,115,123": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe0",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "108,110": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe0",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xffffffec",
+                    "lane1": "0xffffffec",
+                    "lane2": "0xffffffec",
+                    "lane3": "0xffffffec",
+                    "lane4": "0xffffffec",
+                    "lane5": "0xffffffec",
+                    "lane6": "0xffffffec",
+                    "lane7": "0xffffffec"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "post3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            }
+        },
+        "112,127-128": {
+            "OPTICAL100": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe4",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe4",
+                    "lane3": "0xffffffe4",
+                    "lane4": "0xffffffe4",
+                    "lane5": "0xffffffe4",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x68",
+                    "lane1": "0x68",
+                    "lane2": "0x68",
+                    "lane3": "0x68",
+                    "lane4": "0x68",
+                    "lane5": "0x68",
+                    "lane6": "0x68",
+                    "lane7": "0x68"
+                },
+                "post1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
                 },
                 "post2": {
                     "lane0": "0x0",
