@@ -38,11 +38,11 @@ pycparser==3.12
 pygments==2.21.0
 pynacl==1.6.2
 pynng==0.9.0
-pyrasite==2.0
+pyrasite==2.3.0
 pyro4==4.82
 pysubnettree==0.38.1
 python-libpcap==0.5.4
-pyyaml==6.0.3
+pyyaml==6.0.4
 retrying==1.4.2
 rpyc==6.0.2
 saithrift==0.9
@@ -58,5 +58,5 @@ tornado==6.6.1
 traitlets==5.16.1
 typing_extensions==4.16.0
 unittest-xml-reporting==4.0.0
-wcwidth==0.9.4
+wcwidth==0.9.5
 werkzeug==3.1.9

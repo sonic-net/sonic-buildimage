@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import click
+import json
 import textwrap
 import tempfile
 import os
@@ -148,6 +149,7 @@ def test_generate_pddf_device_json_resolves_feature_flag(gen_cli_module, monkeyp
         [
           {
             "name": "fan_duty_packed_in_one_word",
+            "source": "fpga_version",
             "bdf_var": "switchcard_fpga_1_bdf",
             "reg_offset": "0x0",
             "mask": "0xfff",
@@ -208,6 +210,74 @@ def test_generate_pddf_device_json_resolves_feature_flag(gen_cli_module, monkeyp
         assert '"attr_offset": "0x250"' in render()
 
 
+def test_generate_pddf_device_json_resolves_device_version_flag(gen_cli_module, monkeypatch):
+    """A `{% if flag %}` gated on the Device Version reads the same value the
+    template sees as `device_version`."""
+    from nexthop import nexthop_device_info
+
+    INPUT_PDDF_DEVICE_TEMPLATE = textwrap.dedent(
+        """
+        {
+          "FPGA": {
+            "pwr_cycle_reg_offset": "{% if SWITCH_HOST_REBOOT %}0x60{% else %}0x8{% endif %}",
+            "device_version": {{ device_version }}
+          }
+        }
+        """
+    )
+    INPUT_PCIE_VARIABLES = textwrap.dedent(
+        """
+        - name: "cpu_card_fpga_bdf"
+          lookup_command: "echo 03 | xargs printf '0000:%s:00.0'"
+        """
+    )
+    INPUT_FEATURE_FLAGS = textwrap.dedent(
+        """
+        [
+          {
+            "name": "SWITCH_HOST_REBOOT",
+            "source": "onie_device_version",
+            "comparison": "GREATER_THAN_OR_EQUAL",
+            "version": "0x3"
+          }
+        ]
+        """
+    )
+    INPUT_PLATFORM_JSON = '{"chassis": {"name": "NH-4210-F"}}'
+
+    monkeypatch.setattr(nexthop_device_info, "get_device_version", lambda: 3)
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
+        template_path = os.path.join(temp_dir, "pddf-device.json.j2")
+        platform_json_path = os.path.join(temp_dir, "platform.json")
+        feature_flags_path = os.path.join(temp_dir, "feature-flags.json")
+        output_path = os.path.join(temp_dir, "pddf-device.json")
+        for path, text in [
+            (vars_path, INPUT_PCIE_VARIABLES),
+            (template_path, INPUT_PDDF_DEVICE_TEMPLATE),
+            (platform_json_path, INPUT_PLATFORM_JSON),
+            (feature_flags_path, INPUT_FEATURE_FLAGS),
+        ]:
+            with open(path, "w") as f:
+                f.write(text)
+
+        result = runner.invoke(
+            gen_cli_module.pddf_device_json_base,
+            [
+                f"--template_filepath={template_path}",
+                f"--vars_filepath={vars_path}",
+                f"--platform_json_filepath={platform_json_path}",
+                f"--feature_flags_filepath={feature_flags_path}",
+                f"--output_filepath={output_path}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        with open(output_path) as f:
+            output = json.load(f)
+    assert output == {"FPGA": {"pwr_cycle_reg_offset": "0x60", "device_version": 3}}
+
+
 def test_generate_pd_plugin_json_resolves_feature_flag(gen_cli_module, monkeypatch):
     """End-to-end through the command: a `{% if flag %}` in pd-plugin.json.j2 is
     resolved from feature-flags.json by reading the FPGA revision register. The
@@ -242,6 +312,7 @@ def test_generate_pd_plugin_json_resolves_feature_flag(gen_cli_module, monkeypat
         [
           {
             "name": "CPUCARD_FPGA_WATCHDOG_SUPPORTED",
+            "source": "fpga_version",
             "bdf_var": "cpu_card_fpga_bdf",
             "reg_offset": "0x0",
             "mask": "0xff",

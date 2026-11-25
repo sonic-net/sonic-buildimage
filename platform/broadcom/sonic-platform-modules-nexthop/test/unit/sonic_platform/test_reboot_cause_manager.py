@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import dataclasses
 import datetime
 import pytest
 import sys
@@ -922,7 +923,7 @@ class TestRebootCauseManager:
                 ),
             ]
 
-    def _hw_cause(self, reboot_cause_manager_module, source, cause, is_fallback=False):
+    def _hw_cause(self, reboot_cause_manager_module, source, cause, is_fallback=False, no_powerup_event=False):
         return reboot_cause_manager_module.RebootCause(
             type=reboot_cause_manager_module.RebootCause.Type.HARDWARE,
             source=source,
@@ -931,6 +932,7 @@ class TestRebootCauseManager:
             description=f"{cause}_DESC",
             chassis_reboot_cause_category="REBOOT_CAUSE_HARDWARE_OTHER",
             is_fallback=is_fallback,
+            no_powerup_event=no_powerup_event,
         )
 
     def test_pick_power_fault_cause(self, reboot_cause_manager_module):
@@ -968,6 +970,93 @@ class TestRebootCauseManager:
         causes = reboot_cause_manager_module.squash_dpms_powerups_to_cause_per_reboot(dpm_to_powerups)
 
         assert causes == [specific, fallback]
+
+    def test_squash_places_no_powerup_reboots_between_power_cycles(self, reboot_cause_manager_module):
+        dpm_1 = create_autospec(reboot_cause_manager_module.DpmBase)
+        dpm_2 = create_autospec(reboot_cause_manager_module.DpmBase)
+        for dpm, current in ((dpm_1, 12), (dpm_2, 7)):
+            dpm.max_powerup_counter.return_value = 65535
+            dpm.get_powerup_counter.return_value = current
+        reset_a, reset_b, reset_c = (
+            self._hw_cause(reboot_cause_manager_module, "dpm-1", name, no_powerup_event=True)
+            for name in ("RESET_A", "RESET_B", "RESET_C")
+        )
+        chassis = self._hw_cause(reboot_cause_manager_module, "dpm-2", "CHASSIS")
+        Entry = reboot_cause_manager_module.DpmPowerUpEntry
+        dpm_to_powerups = {
+            dpm_1: [Entry(11, None, [], [reset_a]), Entry(12, None, [], [reset_b, reset_c])],
+            dpm_2: [Entry(6, chassis, []), Entry(7, None, [])],
+        }
+
+        causes = reboot_cause_manager_module.squash_dpms_powerups_to_cause_per_reboot(dpm_to_powerups)
+
+        assert causes == [reset_a, chassis, reset_b, reset_c]
+
+    def test_squash_reports_no_powerup_reboots_without_any_power_cycle(self, reboot_cause_manager_module):
+        dpm_1 = create_autospec(reboot_cause_manager_module.DpmBase)
+        dpm_2 = create_autospec(reboot_cause_manager_module.DpmBase)
+        for dpm in (dpm_1, dpm_2):
+            dpm.max_powerup_counter.return_value = 65535
+            dpm.get_powerup_counter.return_value = 20
+        reset = self._hw_cause(reboot_cause_manager_module, "dpm-1", "RESET", no_powerup_event=True)
+        echo = self._hw_cause(reboot_cause_manager_module, "dpm-2", "RESET_ECHO", no_powerup_event=True)
+        Entry = reboot_cause_manager_module.DpmPowerUpEntry
+        dpm_to_powerups = {
+            dpm_1: [Entry(20, None, [], [reset])],
+            dpm_2: [Entry(20, None, [], [echo])],
+        }
+
+        causes = reboot_cause_manager_module.squash_dpms_powerups_to_cause_per_reboot(dpm_to_powerups)
+
+        assert causes == [reset]
+
+    def _sw_cause(self, reboot_cause_manager_module, timestamp, cause="reboot"):
+        return reboot_cause_manager_module.RebootCause(
+            type=reboot_cause_manager_module.RebootCause.Type.SOFTWARE,
+            source="SW",
+            timestamp=timestamp,
+            cause=cause,
+            description=cause,
+            chassis_reboot_cause_category="REBOOT_CAUSE_NON_HARDWARE",
+        )
+
+    def test_sw_reboot_absorbs_its_switch_host_reset_logged_before_the_dpm_clock_was_set(
+        self, reboot_cause_manager_module
+    ):
+        rcm = reboot_cause_manager_module
+        untimed_reset = self._hw_cause(rcm, "dpm", "RESET", no_powerup_event=True)
+        sw = self._sw_cause(rcm, datetime.datetime(2025, 3, 4, tzinfo=datetime.timezone.utc))
+
+        assert rcm.squash_sw_and_hw_causes([sw, untimed_reset]) == [sw]
+
+    @pytest.mark.parametrize("reset_after_sw_s", [-2, 0, 3])
+    def test_sw_reboot_absorbs_its_switch_host_reset_despite_clock_skew(
+        self, reboot_cause_manager_module, reset_after_sw_s
+    ):
+        rcm = reboot_cause_manager_module
+        at = datetime.datetime(2025, 3, 4, 5, 6, 7, tzinfo=datetime.timezone.utc)
+        earlier = dataclasses.replace(
+            self._hw_cause(rcm, "dpm", "EARLIER"), timestamp=at - datetime.timedelta(minutes=20)
+        )
+        reset = dataclasses.replace(
+            self._hw_cause(rcm, "dpm", "RESET", no_powerup_event=True),
+            timestamp=at + datetime.timedelta(seconds=reset_after_sw_s),
+        )
+        sw = self._sw_cause(rcm, at)
+
+        causes = rcm.squash_sw_and_hw_causes(rcm.merge_sw_and_hw_causes(sw, [earlier, reset]))
+
+        assert causes == [earlier, sw]
+
+    def test_sw_reboot_without_a_time_goes_before_a_switch_host_reset(self, reboot_cause_manager_module):
+        rcm = reboot_cause_manager_module
+        reset = dataclasses.replace(
+            self._hw_cause(rcm, "dpm", "RESET", no_powerup_event=True),
+            timestamp=datetime.datetime(2025, 3, 4, tzinfo=datetime.timezone.utc),
+        )
+        sw = self._sw_cause(rcm, rcm.UNKNOWN_TIMESTAMP, cause="Watchdog")
+
+        assert rcm.merge_sw_and_hw_causes(sw, [reset]) == [sw, reset]
 
     def test_squash_sw_and_hw_causes(self, reboot_cause_manager_module):
         # Given
