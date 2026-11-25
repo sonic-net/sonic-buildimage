@@ -1657,7 +1657,7 @@ BROADCOM_SAI_API_CHECK_TARGETS := $(addsuffix -sai-api-check,$(addprefix $(TARGE
 .PHONY: $(TARGET_PATH)/broadcom-sai-api-version-check $(BROADCOM_SAI_API_CHECK_TARGETS)
 $(TARGET_PATH)/broadcom-sai-api-version-check:
 	results=$$(mktemp -d)
-	trap 'rm -f $(foreach image,$(BROADCOM_SAI_API_CHECK_IMAGES),"$$results/$(image).version"); rmdir "$$results"' EXIT
+	trap 'rm -rf "$$results"' EXIT
 	status=0
 	# Collect results for all three binaries, even if an earlier check fails.
 	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) --keep-going $(BROADCOM_SAI_API_CHECK_TARGETS) BROADCOM_SAI_API_RESULT_DIR="$$results" || status=$$?
@@ -1672,7 +1672,9 @@ $(BROADCOM_SAI_API_CHECK_TARGETS): $(TARGET_PATH)/%.gz-sai-api-check: docker-sta
 	$(call docker-image-load,$*,$(BROADCOM_SAI_API_RESULT_DIR)/$*.gz.version)
 	$(FOOTER)
 
+ifeq ($(CONFIGURED_PLATFORM),broadcom)
 SONIC_TARGET_LIST += $(TARGET_PATH)/broadcom-sai-api-version-check
+endif
 
 ###############################################################################
 ## Installers
