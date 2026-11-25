@@ -930,3 +930,209 @@ class TestChassis:
 
         mock_ensure.assert_called_once()
         assert len(chassis._fan_drawer_list) == 1
+
+
+class TestElsfpChangeEvent:
+    """The laser source event source exists to be scoped: its own poll object
+    over its own fds. These cover the ways that scoping can be lost, and how it
+    reads the detection nodes it shares with the module detection flow.
+    """
+
+    @staticmethod
+    def _make_cpo_port(index, oe_id, asic_id='asic0'):
+        port = mock.MagicMock()
+        port.index = index
+        port.oe_id = oe_id
+        port.els_id = oe_id
+        port.bank_id = (index - 1) % 4
+        port.NUMBER_OF_BANKS = 4
+        port.get_asic_id.return_value = asic_id
+        return port
+
+    def _make_oe_ports(self, oe_count):
+        return [self._make_cpo_port(i + 1, oe_id=i // 4) for i in range(oe_count * 4)]
+
+    @staticmethod
+    def _make_fd(value):
+        fd = mock.MagicMock()
+        fd.read.return_value = value
+        return fd
+
+    def _make_chassis(self, ports):
+        chassis = Chassis()
+        chassis._cpo_list = ports
+        chassis.sfp_wait_ready_and_initialize = mock.MagicMock()
+        return chassis
+
+    @staticmethod
+    def _sw_control_fds(hw_present='1', power_good='1'):
+        """What the detection flow polls under software control, fresh per call."""
+        return lambda port: {
+            'hw_present': TestElsfpChangeEvent._make_fd(hw_present),
+            'power_good': TestElsfpChangeEvent._make_fd(power_good),
+        }
+
+    def _poll_once(self, chassis, fds_for_poling, fire, after_registration=None):
+        """Register, then fire the nodes fire() picks once and go quiet."""
+        with mock.patch('sonic_platform.chassis.select.poll') as mock_poll, \
+                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling', side_effect=fds_for_poling):
+            poll_obj = mock_poll.return_value
+            assert chassis._register_els_fds() is True
+            fired = fire(chassis.els_registered_fds)
+            if after_registration:
+                after_registration(chassis.els_registered_fds)
+            pending = [[(fileno, 0) for fileno in fired]]
+            poll_obj.poll.side_effect = lambda *_: pending.pop(0) if pending else []
+            return chassis.get_elsfp_change_event(timeout=1)[1]
+
+    @staticmethod
+    def _nodes(registered, fd_type):
+        return [fileno for fileno, entry in registered.items() if entry[2] == fd_type]
+
+    def test_the_detection_nodes_are_registered_on_bank_0_of_each_vmodule_only(self):
+        """Four ports share an OE and therefore its nodes. Registering per port
+        would poll each node four times and quadruple every event, and bank 0 is
+        the port whose state picks the nodes."""
+        ports = self._make_oe_ports(2)
+        chassis = self._make_chassis([None] + ports)
+
+        with mock.patch('sonic_platform.chassis.select.poll') as mock_poll, \
+                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling',
+                                  side_effect=self._sw_control_fds()) as get_fds:
+            assert chassis._register_els_fds() is True
+
+        # 8 ports over 2 OEs -> 2 vModules x (hw_present, power_good)
+        assert [call.args[0] for call in get_fds.call_args_list] == [ports[0], ports[4]]
+        assert mock_poll.return_value.register.call_count == 4
+        assert sorted((entry[0].index, entry[2]) for entry in chassis.els_registered_fds.values()) == \
+            [(1, 'hw_present'), (1, 'power_good'), (5, 'hw_present'), (5, 'power_good')]
+
+    def test_it_does_not_touch_the_shared_poll_object(self):
+        """Sharing get_change_event's poll object is what made two state tasks
+        collide inside poll(), so this must leave it alone."""
+        chassis = self._make_chassis(self._make_oe_ports(1))
+        chassis.poll_obj = None
+        chassis.registered_fds = None
+
+        with mock.patch('sonic_platform.chassis.select.poll'), \
+                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling',
+                                  side_effect=self._sw_control_fds()):
+            chassis._register_els_fds()
+
+        assert chassis.poll_obj is None
+        assert chassis.registered_fds is None
+        assert chassis.els_poll_obj is not None
+
+    def test_too_early_reports_nothing_rather_than_half_registering(self):
+        """A port whose sysfs is not up yet answers None, and a partly built
+        poll object would go on being used as if it were complete."""
+        ports = self._make_oe_ports(2)
+        chassis = self._make_chassis(ports)
+        opened = []
+
+        def fds_for_poling(port):
+            fds = {'hw_present': self._make_fd('1'),
+                   'power_good': None if port is ports[4] else self._make_fd('1')}
+            opened.extend(fd for fd in fds.values() if fd is not None)
+            return fds
+
+        with mock.patch('sonic_platform.chassis.select.poll'), \
+                mock.patch.object(ModuleDetectionFlow, 'get_fds_for_poling', side_effect=fds_for_poling):
+            assert chassis._register_els_fds() is False
+
+        assert chassis.els_poll_obj is None
+        assert chassis.els_registered_fds is None
+        # nothing opened on the way is left behind
+        assert all(fd.close.called for fd in opened)
+
+    def test_the_first_poll_dummy_event_is_ignored(self):
+        """The SDK fires every node once on first poll. Reporting that as a real
+        change would make every consumer re-read all its static pages at start."""
+        chassis = self._make_chassis(self._make_oe_ports(1))
+
+        events = self._poll_once(chassis, self._sw_control_fds(), fire=lambda registered: list(registered))
+
+        assert events == {'elsfp': {}}
+
+    def test_hw_present_dropping_is_reported_as_removed_for_every_bank_of_the_oe(self):
+        """All four banks sit behind the node that changed, so all four need to
+        hear about it."""
+        chassis = self._make_chassis(self._make_oe_ports(1))
+
+        def drop_hw_present(registered):
+            for fileno in self._nodes(registered, 'hw_present'):
+                registered[fileno][1].read.return_value = '0'
+
+        events = self._poll_once(chassis, self._sw_control_fds(),
+                                 fire=lambda registered: self._nodes(registered, 'hw_present'),
+                                 after_registration=drop_hw_present)
+
+        assert events == {'elsfp': {1: '0', 2: '0', 3: '0', 4: '0'}}
+
+    def test_power_good_dropping_is_reported_as_a_power_error(self):
+        """Power bad is what CpoPort.fill_change_event reports as the power
+        budget error, so this stream must say the same."""
+        chassis = self._make_chassis(self._make_oe_ports(1))
+
+        def drop_power_good(registered):
+            for fileno in self._nodes(registered, 'power_good'):
+                registered[fileno][1].read.return_value = '0'
+
+        events = self._poll_once(chassis, self._sw_control_fds(),
+                                 fire=lambda registered: self._nodes(registered, 'power_good'),
+                                 after_registration=drop_power_good)
+
+        power_error = str(SfpBase.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SfpBase.SFP_STATUS_BIT_INSERTED)
+        assert events == {'elsfp': {index: power_error for index in (1, 2, 3, 4)}}
+
+    def test_power_good_recovering_is_reported_as_inserted(self):
+        chassis = self._make_chassis(self._make_oe_ports(1))
+
+        def raise_power_good(registered):
+            for fileno in self._nodes(registered, 'power_good'):
+                registered[fileno][1].read.return_value = '1'
+
+        events = self._poll_once(chassis, self._sw_control_fds(power_good='0'),
+                                 fire=lambda registered: self._nodes(registered, 'power_good'),
+                                 after_registration=raise_power_good)
+
+        assert events == {'elsfp': {1: '1', 2: '1', 3: '1', 4: '1'}}
+
+    def test_a_firmware_control_error_carries_its_description(self):
+        """Under firmware control only present is polled, and its error value
+        is decoded the same way the detection flow decodes it."""
+        ports = self._make_oe_ports(1)
+        ports[0].get_error_info_from_sdk_error_type.return_value = ('6', 'Power budget exceeded')
+        chassis = self._make_chassis(ports)
+
+        def present_error(registered):
+            for fileno in self._nodes(registered, 'present'):
+                registered[fileno][1].read.return_value = '2'
+
+        events = self._poll_once(chassis, lambda port: {'present': self._make_fd('1')},
+                                 fire=lambda registered: self._nodes(registered, 'present'),
+                                 after_registration=present_error)
+
+        assert events == {
+            'elsfp': {1: '6', 2: '6', 3: '6', 4: '6'},
+            'elsfp_error': {1: 'Power budget exceeded', 2: 'Power budget exceeded',
+                            3: 'Power budget exceeded', 4: 'Power budget exceeded'},
+        }
+
+    def test_a_node_that_cannot_be_read_is_skipped(self):
+        """A read error on one node must not take the other nodes down with it."""
+        chassis = self._make_chassis(self._make_oe_ports(2))
+
+        def break_oe0_and_drop_oe1(registered):
+            for fileno in self._nodes(registered, 'hw_present'):
+                port, fd, _ = registered[fileno]
+                if port.oe_id == 0:
+                    fd.read.side_effect = OSError(22, 'Invalid argument')
+                else:
+                    fd.read.return_value = '0'
+
+        events = self._poll_once(chassis, self._sw_control_fds(),
+                                 fire=lambda registered: self._nodes(registered, 'hw_present'),
+                                 after_registration=break_oe0_and_drop_oe1)
+
+        assert events == {'elsfp': {5: '0', 6: '0', 7: '0', 8: '0'}}

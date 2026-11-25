@@ -159,6 +159,11 @@ class Chassis(ChassisBase):
         utils.watch_shutdown_signals()
         self.poll_obj = None
         self.registered_fds = None
+        # The laser sources are polled through a poll object of their own. See
+        # get_elsfp_change_event for why it cannot share the one above.
+        self.els_poll_obj = None
+        self.els_registered_fds = None
+        self.els_states_before_first_poll = None
 
         self._bmc = None
         self._bmc_data = None
@@ -1130,6 +1135,162 @@ class Chassis(ChassisBase):
                     elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return {'sfp': {}}
+
+    def _register_els_fds(self):
+        """Register the detection nodes of every vModule, or report that it is too early.
+
+        The laser source has no change node of its own that is readable in both
+        control modes, so this polls the ones the module detection flow does:
+        hw_present and power_good under software control, present under
+        firmware control. They are module attributes, so every bank of an OE
+        reads the same ones. They are therefore registered once per vModule, on
+        its bank 0 port, and their events reported for all of its banks;
+        registering per port would put each node in the poll object four times
+        and hand back four copies of every event.
+        """
+        self.els_poll_obj = select.poll()
+        self.els_registered_fds = {}
+        # The SDK sends one event per node the first time it is polled. Holding
+        # the value from before that poll is what tells it apart from a real one.
+        self.els_states_before_first_poll = {}
+
+        for port in self._cpo_vmodule_ports():
+            fds = ModuleDetectionFlow.get_fds_for_poling(port)
+            if any(fd is None for fd in fds.values()):
+                for fd in fds.values():
+                    if fd is not None:
+                        fd.close()
+                self._reset_els_poll()
+                logger.log_warning('CPO ports are not initialized, too early to get ELS change event')
+                return False
+
+            for fd_type, fd in fds.items():
+                self.els_poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                self.els_registered_fds[fd.fileno()] = (port, fd, fd_type)
+                try:
+                    self.els_states_before_first_poll[fd.fileno()] = self._read_poll_fd(fd)
+                except (OSError, IOError, ValueError):
+                    pass
+
+        logger.log_debug(f'Registered ELS file descriptors for polling: {self.els_registered_fds}')
+        return True
+
+    def _reset_els_poll(self):
+        for _, fd, _ in (self.els_registered_fds or {}).values():
+            fd.close()
+        self.els_poll_obj = None
+        self.els_registered_fds = None
+        self.els_states_before_first_poll = None
+
+    def _cpo_vmodule_ports(self):
+        """One CPO port per vModule: bank 0, the port the detection flow drives."""
+        return [port for port in self._cpo_list if port is not None and port.bank_id == 0]
+
+    @staticmethod
+    def _read_poll_fd(fd):
+        fd.seek(0)
+        return int(fd.read().strip())
+
+    @staticmethod
+    def _els_status_from_event(port, fd_type, fd_value):
+        """The port status a detection node value stands for.
+
+        These are the values CpoPort.fill_change_event reports for the states
+        the same value leads the detection flow to.
+
+        Returns:
+            (str, str): the status, and an error description or None
+        """
+        from sonic_platform_base.sfp_base import SfpBase
+        from .module_sysfs import SFP_SYSFS_POWER_GOOD, SFP_STATUS_ERROR, SFP_STATUS_INSERTED, SFP_STATUS_REMOVED
+
+        if fd_type == SFP_SYSFS_POWER_GOOD:
+            if fd_value == 0:
+                return str(SfpBase.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SfpBase.SFP_STATUS_BIT_INSERTED), None
+            return SFP_STATUS_INSERTED, None
+        if str(fd_value) == SFP_STATUS_ERROR:
+            return port.get_error_info_from_sdk_error_type()
+        if str(fd_value) == SFP_STATUS_REMOVED:
+            return SFP_STATUS_REMOVED, None
+        return SFP_STATUS_INSERTED, None
+
+    def get_elsfp_change_event(self, timeout=0):
+        """Change events for the laser sources of the CPO ports.
+
+        Deliberately scoped rather than folded into get_change_event: it keeps
+        its own poll object over its own fds. Sharing get_change_event's would
+        break twice over. CPython refuses to enter poll() on one object from two
+        threads at once - RuntimeError('concurrent poll() invocation') - and
+        callers here wait with an effectively infinite timeout, so they are
+        inside poll() almost all the time and would collide at once. And that
+        object holds every front panel fd, so each caller would also be handed
+        the other's events despite the two owning disjoint port sets.
+
+        Args:
+            timeout: Timeout in milliseconds. 0 blocks until a change is detected.
+
+        Returns:
+            (bool, dict): always True, and {'elsfp': {port_index: status}} naming
+                the ports whose vModule changed state, plus
+                {'elsfp_error': {port_index: description}} for the ones that
+                report an error. The keys are the laser source's own rather than
+                'sfp', so that a consumer watching both event sources can tell
+                which of them it is being told about.
+        """
+        self.sfp_wait_ready_and_initialize()
+
+        if not self.els_poll_obj and not self._register_els_fds():
+            return True, {'elsfp': {}}
+
+        wait_forever = (timeout == 0)
+        # Cap the wait so a shutdown is not held up for the full timeout.
+        timeout = 1000.0 if timeout >= 1000 else float(timeout)
+        begin = time.monotonic()
+
+        while True:
+            port_dict = {}
+            error_dict = {}
+            for fileno, _ in self.els_poll_obj.poll(timeout):
+                if fileno not in self.els_registered_fds:
+                    logger.log_error(f'Unknown file no {fileno} from ELS poll event, '
+                                     f'registered files are {self.els_registered_fds}')
+                    continue
+
+                port, fd, fd_type = self.els_registered_fds[fileno]
+                try:
+                    fd_value = self._read_poll_fd(fd)
+                except (OSError, IOError, ValueError) as e:
+                    logger.log_warning(f'Failed to read {fd_type} for OE '
+                                       f'{port.oe_id} ELS {port.els_id}: {e}')
+                    continue
+
+                if fileno in self.els_states_before_first_poll:
+                    if self.els_states_before_first_poll.pop(fileno) == fd_value:
+                        logger.log_debug(f'Ignore dummy ELS event {fd_type}:{fd_value} for OE '
+                                         f'{port.oe_id} ELS {port.els_id}')
+                        continue
+
+                # The banks of an OE are the NUMBER_OF_BANKS ports that follow
+                # its bank 0, as in CpoPort.fill_change_event.
+                bank_indices = [port.index + i for i in range(port.NUMBER_OF_BANKS)]
+                logger.log_notice(f'Got ELS event: OE={port.oe_id}, '
+                                  f'ELS={port.els_id}, type={fd_type}, value={fd_value}, '
+                                  f'ports={bank_indices}')
+                status, error_desc = self._els_status_from_event(port, fd_type, fd_value)
+                for index in bank_indices:
+                    port_dict[index] = status
+                    if error_desc:
+                        error_dict[index] = error_desc
+
+            if port_dict:
+                logger.log_notice(f'Sending ELS change event: {port_dict}')
+                events = {'elsfp': port_dict}
+                if error_dict:
+                    events['elsfp_error'] = error_dict
+                return True, events
+
+            if not wait_forever and (time.monotonic() - begin) * 1000 >= timeout:
+                return True, {'elsfp': {}}
 
     def reinit_sfps(self, port_dict):
         """
