@@ -24,7 +24,6 @@ $(eval $(call add_derived_package,$(BMCWEB),$(BMCWEB_DBG)))
 SONIC_DBUS_BRIDGE = sonic-dbus-bridge_$(SONIC_REDFISH_VERSION)_$(CONFIGURED_ARCH).deb
 $(SONIC_DBUS_BRIDGE)_SRC_PATH = $(SRC_PATH)/sonic-redfish/sonic-dbus-bridge
 $(SONIC_DBUS_BRIDGE)_DEPENDS += $(LIBSWSSCOMMON_DEV)
-$(SONIC_DBUS_BRIDGE)_RDEPENDS += $(LIBSWSSCOMMON)
 SONIC_DPKG_DEBS += $(SONIC_DBUS_BRIDGE)
 
 # sonic-dbus-bridge debug symbols package
