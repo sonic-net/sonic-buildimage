@@ -1452,7 +1452,7 @@ UPGRADE_SUMMARY = {
                 "name":"IOB_FPGA",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1460,7 +1460,7 @@ UPGRADE_SUMMARY = {
                 "name":"DOM_FPGA",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1468,7 +1468,7 @@ UPGRADE_SUMMARY = {
                 "name":"SCM_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1476,7 +1476,7 @@ UPGRADE_SUMMARY = {
                 "name":"MCB_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1484,7 +1484,7 @@ UPGRADE_SUMMARY = {
                 "name":"SMB_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1492,7 +1492,7 @@ UPGRADE_SUMMARY = {
                 "name":"FCB_B_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1500,7 +1500,7 @@ UPGRADE_SUMMARY = {
                 "name":"FCB_T_CPLD",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1508,7 +1508,7 @@ UPGRADE_SUMMARY = {
                 "name":"MAC_PCIe",
                 "is_support_warm_upg":0,
                 "init_cmd": [
-                    # firmware upgrade set sysled blue/amber alternate flashing
+                    # firmware upgrade set sysled blue/amber or green/amber alternate flashing
                     {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
                 ]
             },
@@ -1533,7 +1533,7 @@ UPGRADE_SUMMARY = {
     "BMC": {
         "name": "BMC",
         "init_cmd": [
-            # firmware upgrade set sysled blue/amber alternate flashing
+            # firmware upgrade set sysled blue/amber or green/amber alternate flashing
             {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x50, "value": [0x01]}
         ],
         "finish_cmd": [],
@@ -2799,6 +2799,14 @@ REBOOT_CAUSE_PARA = {
             "finish_operation": [
                 {"gettype": "cmd", "cmd": "rm -rf /etc/.otp_other_reboot_flag"},
             ]
+        },
+        {
+            "name": "wdt_reboot",
+            "monitor_point": {"gettype":"cmd", "cmd":"busybox devmem 0xfe00192c", "mask": 0x40, "okval":0x40},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
+            ],
         },
     ],
     "other_reboot_cause_record": [

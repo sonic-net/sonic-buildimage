@@ -418,6 +418,7 @@ class Adm1266BlackBoxRecord(DpmRecord):
             description=entry["hw_desc"],
             chassis_reboot_cause_category=entry["reboot_cause"],
             is_fallback=vh_uv_mask is not None,
+            no_powerup_event=entry.get("no_powerup_event", False),
         )
 
     def set_metadata_and_process_power_fault_cause(self, platform_spec: dict[str, Any]):
@@ -634,18 +635,30 @@ class Adm1266(DpmBase, type=DpmType.ADM1266, max_powerup_counter=65535):
         powerups = []
         for _, group in grouped_by_powerup:
             group_list = list(group)
-            last_record = group_list[-1]  # highest UID determines the cause, unless only a fallback
-            power_fault_cause = last_record.get_power_fault_cause()
-            if power_fault_cause and power_fault_cause.is_fallback:
-                power_fault_cause = pick_power_fault_cause(
-                    record.get_power_fault_cause() for record in reversed(group_list)
-                )
+            no_powerup_reboot_indices = [
+                i
+                for i, record in enumerate(group_list)
+                if (cause := record.get_power_fault_cause()) and cause.no_powerup_event
+            ]
+            after_last_no_powerup_reboot = (
+                group_list[no_powerup_reboot_indices[-1] + 1 :] if no_powerup_reboot_indices else group_list
+            )
+            causes = [record.get_power_fault_cause() for record in after_last_no_powerup_reboot]
+            power_fault_cause = None
+            if causes:
+                # highest UID determines the cause, unless only a fallback
+                power_fault_cause = causes[-1]
+                if power_fault_cause and power_fault_cause.is_fallback:
+                    power_fault_cause = pick_power_fault_cause(reversed(causes))
 
             powerups.append(
                 DpmPowerUpEntry(
-                    powerup_counter=last_record.powerup_counter,
+                    powerup_counter=group_list[-1].powerup_counter,
                     power_fault_cause=power_fault_cause,
                     dpm_records=cast(list[DpmRecord], group_list),
+                    no_powerup_reboot_causes=[
+                        cast(RebootCause, group_list[i].get_power_fault_cause()) for i in no_powerup_reboot_indices
+                    ],
                 )
             )
         return powerups
