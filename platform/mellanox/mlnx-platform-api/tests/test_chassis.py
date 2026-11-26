@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import itertools
 import os
 import random
 import sys
@@ -773,6 +774,30 @@ class TestChassis:
 
         assert refresh.call_count == 2
         assert {call.args[0] for call in refresh.call_args_list} == {banks[0], service}
+
+    def test_enable_polling_for_asic_legacy_filters_the_first_poll_event(self):
+        """The legacy poll loop looks up the state stored before the first poll
+        by port object, so the dummy event SDK sends on the re-registered fd
+        must be dropped instead of being reported to xcvrd."""
+        chassis = Chassis()
+        sfp = self._make_sfp(0, 'asic0')
+        sfp.get_module_status.return_value = '1'
+        fd = MagicMock()
+        fd.fileno.return_value = 10
+        sfp.get_fd_for_polling_legacy.return_value = fd
+        chassis._asic_modules_dict = {'asic0': {sfp}}
+        chassis.poll_obj = MagicMock()
+        chassis.poll_obj.poll.return_value = [(10, 0)]
+        chassis.registered_fds = {}
+        chassis.sfp_states_before_first_poll = {}
+
+        with mock.patch.object(DeviceDataManager, 'is_module_host_management_mode', return_value=False):
+            chassis._enable_polling_for_asic('asic0')
+        assert chassis.sfp_states_before_first_poll == {sfp: '1'}
+
+        with mock.patch('sonic_platform.chassis.time.monotonic', side_effect=itertools.count()):
+            assert chassis.get_change_event_legacy(timeout=1) == {'sfp': {}}
+        assert chassis.sfp_states_before_first_poll == {}
 
     def test_get_sfp_list_for_polling_keeps_bank_0_of_each_oe(self):
         chassis = Chassis()

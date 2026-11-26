@@ -780,7 +780,7 @@ class Chassis(ChassisBase):
                         continue
                     self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
                     self.registered_fds[fd.fileno()] = (s, fd)
-                    self.sfp_states_before_first_poll[s.sdk_index] = s.get_module_status()
+                    self.sfp_states_before_first_poll[s] = s.get_module_status()
             except Exception as e:
                 logger.log_warning(f'Failed to enable polling for SFP {s.sdk_index}: {e}')
 
