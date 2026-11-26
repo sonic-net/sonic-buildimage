@@ -149,6 +149,21 @@ class Chassis(ChassisBase):
                 pass
         return "N/A"
 
+    def get_system_eeprom_info(self):
+        """
+        Retrieves the full content of system EEPROM information for the chassis
+
+        Returns:
+            A dictionary where keys are the type code defined in the OCP ONIE
+            TlvInfo EEPROM format and values are their corresponding values.
+        """
+        if self._eeprom:
+            try:
+                return self._eeprom.system_eeprom_info()
+            except Exception:
+                pass
+        return {}
+
     def get_module_index(self, module_name):
         """
         Retrieves module index from the module name
