@@ -28,6 +28,16 @@ devices = {
             "airflow": "intake"
         },
     ],
+    "psus": [
+        {
+            "name": "PSU1",
+            "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
+        },
+        {
+            "name": "PSU2",
+            "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
+        },
+    ],
     "temps": [
         {
             "name": "CPU_TEMP",
