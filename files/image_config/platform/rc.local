@@ -199,6 +199,32 @@ program_console_speed()
     # sed corrupted the unit. Fixed rate, not a --keep-baud ring.
     unit=/lib/systemd/system/serial-getty@.service
     dropin_dir=/etc/systemd/system/serial-getty@.service.d
+    # Only this SONiC-owned instance override is removed when a platform opts out.
+    rm -f /etc/systemd/system/serial-getty@*.service.d/20-sonic-console-flow-control.conf
+    if ! flow_control_tty=$(
+        console_hardware_flow_control=
+        platform_env_conf="/usr/share/sonic/device/$platform/platform_env.conf"
+        if [ -f "$platform_env_conf" ]; then
+            . "$platform_env_conf" || exit 1
+        fi
+        printf '%s' "$console_hardware_flow_control"
+    ); then
+        echo "program_console_speed: could not read platform environment for '$platform'; hardware flow control disabled"
+        flow_control_tty=
+    fi
+    case "$flow_control_tty" in
+        ttyS*) flow_control_index=${flow_control_tty#ttyS} ;;
+        ttyAMA*) flow_control_index=${flow_control_tty#ttyAMA} ;;
+        "") flow_control_index=0 ;;
+        *) flow_control_index=invalid ;;
+    esac
+    case "$flow_control_index" in
+        ""|*[!0-9]*)
+            echo "program_console_speed: invalid console_hardware_flow_control '$flow_control_tty'; hardware flow control disabled"
+            flow_control_tty=
+            ;;
+    esac
+
     execstart=$(grep -m1 '^ExecStart=-' "$unit" | \
         sed -e "s|--keep-baud [0-9][0-9,]*|$CONSOLE_SPEED|" \
             -e "s|u' [0-9][0-9,]* |u' $CONSOLE_SPEED |")
@@ -208,6 +234,25 @@ program_console_speed()
             *" $CONSOLE_SPEED "*)
                 mkdir -p "$dropin_dir"
                 printf '[Service]\nExecStart=\n%s\n' "$execstart" > "$dropin_dir/10-sonic-console-baud.conf"
+                if [ -n "$flow_control_tty" ]; then
+                    case " $execstart " in
+                        *" --flow-control "*) flow_execstart=$execstart ;;
+                        *)
+                            flow_execstart=$(printf '%s\n' "$execstart" | \
+                                sed 's|^\(ExecStart=-[^ ]*/agetty\) |\1 --flow-control |')
+                            ;;
+                    esac
+                    case " $flow_execstart " in
+                        *" --flow-control "*)
+                            flow_dropin_dir="/etc/systemd/system/serial-getty@$flow_control_tty.service.d"
+                            mkdir -p "$flow_dropin_dir"
+                            printf '[Service]\nExecStart=\n%s\n' "$flow_execstart" > "$flow_dropin_dir/20-sonic-console-flow-control.conf"
+                            ;;
+                        *)
+                            echo "program_console_speed: could not enable hardware flow control in '$execstart'; keeping the baud-only override"
+                            ;;
+                    esac
+                fi
                 ;;
             *)
                 echo "program_console_speed: could not place $CONSOLE_SPEED into '$execstart'; keeping the packaged unit"
@@ -292,8 +337,6 @@ fi
 
 . /host/machine.conf
 
-program_console_speed
-
 platform=""
 if [ -n "$aboot_platform" ]; then
     platform=$aboot_platform
@@ -302,6 +345,8 @@ elif [ -n "$onie_platform" ]; then
 else
     echo "Unknown SONiC platform"
 fi
+
+program_console_speed
 
 # W/A for https://github.com/sonic-net/sonic-buildimage/issues/24086
 if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2>/dev/null; then
