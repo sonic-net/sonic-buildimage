@@ -58,6 +58,9 @@ def parse_fw_version_dpu(output: str) -> list[str]:
 
 
 def get_oe_fw_version(_output: str) -> list[str]:
+    # SimX has no OE to answer the flint --vmod query.
+    if get_device_data_manager().is_simx_platform():
+        return ["N/A"]
     return get_vmod().get_running_versions() or ["N/A"]
 
 
