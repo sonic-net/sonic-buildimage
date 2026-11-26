@@ -1,0 +1,8 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+device_property :
+     mac_port_bad_link_check_iterations :  0
+     enable_mac_port_bad_link_check : false
+     enable_health_category_asic_hw : false

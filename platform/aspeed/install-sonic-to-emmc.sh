@@ -202,8 +202,8 @@ fw_setenv linuxargs "$LINUXARGS" || { log_error "Failed to set linuxargs"; exit 
 # the device forces a full re-init and re-tune. DISK_INTERFACE is mmc here by definition.
 fw_setenv sonic_boot_load "mmc dev 0; ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name}" || { log_error "Failed to set sonic_boot_load"; exit 1; }
 fw_setenv sonic_boot_load_old "mmc dev 0; ext4load ${DISK_INTERFACE} 0:${DEMO_PART} \${loadaddr} \${fit_name_old}" || { log_error "Failed to set sonic_boot_load_old"; exit 1; }
-fw_setenv sonic_bootargs "setenv bootargs root=UUID=${UUID} rw rootwait panic=1 \${linuxargs}" || { log_error "Failed to set sonic_bootargs"; exit 1; }
-fw_setenv sonic_bootargs_old "setenv bootargs root=UUID=${UUID} rw rootwait panic=1 \${linuxargs_old}" || { log_error "Failed to set sonic_bootargs_old"; exit 1; }
+fw_setenv sonic_bootargs "setenv bootargs root=UUID=${UUID} rw rootwait panic=10 \${linuxargs}" || { log_error "Failed to set sonic_bootargs"; exit 1; }
+fw_setenv sonic_bootargs_old "setenv bootargs root=UUID=${UUID} rw rootwait panic=10 \${linuxargs_old}" || { log_error "Failed to set sonic_bootargs_old"; exit 1; }
 fw_setenv sonic_image_1 "run sonic_bootargs; run sonic_boot_load; bootm \${loadaddr}#conf-\${bootconf}" || { log_error "Failed to set sonic_image_1"; exit 1; }
 fw_setenv sonic_image_2 "run sonic_bootargs_old; run sonic_boot_load_old; bootm \${loadaddr}#conf-\${bootconf}" || { log_error "Failed to set sonic_image_2"; exit 1; }
 

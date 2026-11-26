@@ -21,6 +21,7 @@ try:
     import os
     import logging
     import math
+    import fcntl, time
     from logging.handlers import RotatingFileHandler
     from platform_intf import *
     from sonic_platform_base.sonic_xcvr.bailly_optoe_base import CpoOptoeBase, get_cpo_json_data
@@ -40,6 +41,12 @@ LOG_TRACE_LEVEL = 0
 LOG_DEBUG_LEVEL = 1
 LOG_WARNING_LEVEL = 2
 LOG_ERROR_LEVEL = 3
+
+
+
+EEPROM_LOCK_TIMEOUT = 2.0   # s; If it cannot be obtained, release it to prevent the lock holder from getting stuck abnormally and dragging down the entire link.
+EEPROM_LOCK_RETRY   = 0.001 # s
+
 
 class CPO(CpoOptoeBase):
     def __init__(self, index, oe_id, oe_bank_id,  els_id, els_bank_id):
@@ -275,3 +282,74 @@ class CPO(CpoOptoeBase):
 
     def get_reset_status(self):
         return False
+
+    def acquire_lock(self, fd, timeout=EEPROM_LOCK_TIMEOUT):
+        if timeout is None:
+            fcntl.flock(fd, fcntl.LOCK_EX)  
+            return True
+
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return True
+            except OSError as e:
+                if time.monotonic() >= deadline:
+                    return False
+                time.sleep(EEPROM_LOCK_RETRY)
+
+    def release_lock(self, fd):
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+    def read_eeprom(self, offset, num_bytes):
+        sys_path = self.get_eeprom_path()
+        if not sys_path:
+            return None
+        try:
+            with open(sys_path, mode='rb', buffering=0) as f:
+                if not self.acquire_lock(f.fileno()):
+                    self._cpolog(LOG_ERROR_LEVEL,
+                        "read_eeprom lock timeout {}, offset: {}".format(self._port_id, offset))
+                    return None
+                try:
+                    f.seek(offset)
+                    ret = f.read(num_bytes)
+                    time.sleep(0.01)
+                finally:
+                    self.release_lock(f.fileno())
+
+            if ret is None or len(ret) != num_bytes:
+                self._cpolog(LOG_ERROR_LEVEL,
+                    "read_eeprom short read {}, offset: {}, expect: {}, got: {}".format(
+                        self._port_id, offset, num_bytes, 0 if ret is None else len(ret)))
+                return None
+            return bytearray(ret)
+        except (OSError, IOError) as e:
+            self._cpolog(LOG_ERROR_LEVEL,
+                "read_eeprom error {}, offset: {}, {}".format(self._port_id, offset, e))
+            return None
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        sys_path = self.get_eeprom_path()
+        if not sys_path:
+            return False
+        if len(write_buffer) < num_bytes:
+            return False
+        written = 0
+        try:
+            with open(sys_path, mode='r+b', buffering=0) as f:
+                if not self.acquire_lock(f.fileno()):
+                    self._cpolog(LOG_ERROR_LEVEL,
+                        "write_eeprom lock timeout {}, offset: {}".format(self._port_id, offset))
+                    return False
+                try:
+                    f.seek(offset)
+                    written = f.write(write_buffer[0:num_bytes])
+                    time.sleep(0.01)
+                finally:
+                    self.release_lock(f.fileno())
+            return written == num_bytes
+        except (OSError, IOError) as e:
+            self._cpolog(LOG_ERROR_LEVEL,
+                "write_eeprom error {}, offset: {}, {}".format(self._port_id, offset, e))
+            return False

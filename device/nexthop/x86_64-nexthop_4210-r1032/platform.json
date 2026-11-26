@@ -1,9 +1,17 @@
 {
+    "asic_sensors": {
+        "poll_interval": "5",
+        "poll_admin_status": "enable"
+    },
     "interfaces": {
         "Ethernet0": {
             "breakout_modes": {
                 "1x800G": [
                     "etp1"
+                ],
+                "2x100G": [
+                    "etp1a",
+                    "etp1b"
                 ],
                 "2x400G": [
                     "etp1a",
@@ -34,6 +42,10 @@
                 "1x800G": [
                     "etp2"
                 ],
+                "2x100G": [
+                    "etp2a",
+                    "etp2b"
+                ],
                 "2x400G": [
                     "etp2a",
                     "etp2b"
@@ -62,6 +74,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp3"
+                ],
+                "2x100G": [
+                    "etp3a",
+                    "etp3b"
                 ],
                 "2x400G": [
                     "etp3a",
@@ -92,6 +108,10 @@
                 "1x800G": [
                     "etp4"
                 ],
+                "2x100G": [
+                    "etp4a",
+                    "etp4b"
+                ],
                 "2x400G": [
                     "etp4a",
                     "etp4b"
@@ -120,6 +140,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp5"
+                ],
+                "2x100G": [
+                    "etp5a",
+                    "etp5b"
                 ],
                 "2x400G": [
                     "etp5a",
@@ -150,6 +174,10 @@
                 "1x800G": [
                     "etp6"
                 ],
+                "2x100G": [
+                    "etp6a",
+                    "etp6b"
+                ],
                 "2x400G": [
                     "etp6a",
                     "etp6b"
@@ -178,6 +206,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp7"
+                ],
+                "2x100G": [
+                    "etp7a",
+                    "etp7b"
                 ],
                 "2x400G": [
                     "etp7a",
@@ -208,6 +240,10 @@
                 "1x800G": [
                     "etp8"
                 ],
+                "2x100G": [
+                    "etp8a",
+                    "etp8b"
+                ],
                 "2x400G": [
                     "etp8a",
                     "etp8b"
@@ -236,6 +272,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp9"
+                ],
+                "2x100G": [
+                    "etp9a",
+                    "etp9b"
                 ],
                 "2x400G": [
                     "etp9a",
@@ -266,6 +306,10 @@
                 "1x800G": [
                     "etp10"
                 ],
+                "2x100G": [
+                    "etp10a",
+                    "etp10b"
+                ],
                 "2x400G": [
                     "etp10a",
                     "etp10b"
@@ -294,6 +338,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp11"
+                ],
+                "2x100G": [
+                    "etp11a",
+                    "etp11b"
                 ],
                 "2x400G": [
                     "etp11a",
@@ -324,6 +372,10 @@
                 "1x800G": [
                     "etp12"
                 ],
+                "2x100G": [
+                    "etp12a",
+                    "etp12b"
+                ],
                 "2x400G": [
                     "etp12a",
                     "etp12b"
@@ -352,6 +404,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp13"
+                ],
+                "2x100G": [
+                    "etp13a",
+                    "etp13b"
                 ],
                 "2x400G": [
                     "etp13a",
@@ -382,6 +438,10 @@
                 "1x800G": [
                     "etp14"
                 ],
+                "2x100G": [
+                    "etp14a",
+                    "etp14b"
+                ],
                 "2x400G": [
                     "etp14a",
                     "etp14b"
@@ -410,6 +470,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp15"
+                ],
+                "2x100G": [
+                    "etp15a",
+                    "etp15b"
                 ],
                 "2x400G": [
                     "etp15a",
@@ -440,6 +504,10 @@
                 "1x800G": [
                     "etp16"
                 ],
+                "2x100G": [
+                    "etp16a",
+                    "etp16b"
+                ],
                 "2x400G": [
                     "etp16a",
                     "etp16b"
@@ -468,6 +536,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp17"
+                ],
+                "2x100G": [
+                    "etp17a",
+                    "etp17b"
                 ],
                 "2x400G": [
                     "etp17a",
@@ -498,6 +570,10 @@
                 "1x800G": [
                     "etp18"
                 ],
+                "2x100G": [
+                    "etp18a",
+                    "etp18b"
+                ],
                 "2x400G": [
                     "etp18a",
                     "etp18b"
@@ -526,6 +602,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp19"
+                ],
+                "2x100G": [
+                    "etp19a",
+                    "etp19b"
                 ],
                 "2x400G": [
                     "etp19a",
@@ -556,6 +636,10 @@
                 "1x800G": [
                     "etp20"
                 ],
+                "2x100G": [
+                    "etp20a",
+                    "etp20b"
+                ],
                 "2x400G": [
                     "etp20a",
                     "etp20b"
@@ -584,6 +668,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp21"
+                ],
+                "2x100G": [
+                    "etp21a",
+                    "etp21b"
                 ],
                 "2x400G": [
                     "etp21a",
@@ -614,6 +702,10 @@
                 "1x800G": [
                     "etp22"
                 ],
+                "2x100G": [
+                    "etp22a",
+                    "etp22b"
+                ],
                 "2x400G": [
                     "etp22a",
                     "etp22b"
@@ -642,6 +734,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp23"
+                ],
+                "2x100G": [
+                    "etp23a",
+                    "etp23b"
                 ],
                 "2x400G": [
                     "etp23a",
@@ -672,6 +768,10 @@
                 "1x800G": [
                     "etp24"
                 ],
+                "2x100G": [
+                    "etp24a",
+                    "etp24b"
+                ],
                 "2x400G": [
                     "etp24a",
                     "etp24b"
@@ -700,6 +800,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp25"
+                ],
+                "2x100G": [
+                    "etp25a",
+                    "etp25b"
                 ],
                 "2x400G": [
                     "etp25a",
@@ -730,6 +834,10 @@
                 "1x800G": [
                     "etp26"
                 ],
+                "2x100G": [
+                    "etp26a",
+                    "etp26b"
+                ],
                 "2x400G": [
                     "etp26a",
                     "etp26b"
@@ -758,6 +866,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp27"
+                ],
+                "2x100G": [
+                    "etp27a",
+                    "etp27b"
                 ],
                 "2x400G": [
                     "etp27a",
@@ -788,6 +900,10 @@
                 "1x800G": [
                     "etp28"
                 ],
+                "2x100G": [
+                    "etp28a",
+                    "etp28b"
+                ],
                 "2x400G": [
                     "etp28a",
                     "etp28b"
@@ -816,6 +932,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp29"
+                ],
+                "2x100G": [
+                    "etp29a",
+                    "etp29b"
                 ],
                 "2x400G": [
                     "etp29a",
@@ -846,6 +966,10 @@
                 "1x800G": [
                     "etp30"
                 ],
+                "2x100G": [
+                    "etp30a",
+                    "etp30b"
+                ],
                 "2x400G": [
                     "etp30a",
                     "etp30b"
@@ -874,6 +998,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp31"
+                ],
+                "2x100G": [
+                    "etp31a",
+                    "etp31b"
                 ],
                 "2x400G": [
                     "etp31a",
@@ -904,6 +1032,10 @@
                 "1x800G": [
                     "etp32"
                 ],
+                "2x100G": [
+                    "etp32a",
+                    "etp32b"
+                ],
                 "2x400G": [
                     "etp32a",
                     "etp32b"
@@ -932,6 +1064,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp33"
+                ],
+                "2x100G": [
+                    "etp33a",
+                    "etp33b"
                 ],
                 "2x400G": [
                     "etp33a",
@@ -962,6 +1098,10 @@
                 "1x800G": [
                     "etp34"
                 ],
+                "2x100G": [
+                    "etp34a",
+                    "etp34b"
+                ],
                 "2x400G": [
                     "etp34a",
                     "etp34b"
@@ -990,6 +1130,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp35"
+                ],
+                "2x100G": [
+                    "etp35a",
+                    "etp35b"
                 ],
                 "2x400G": [
                     "etp35a",
@@ -1020,6 +1164,10 @@
                 "1x800G": [
                     "etp36"
                 ],
+                "2x100G": [
+                    "etp36a",
+                    "etp36b"
+                ],
                 "2x400G": [
                     "etp36a",
                     "etp36b"
@@ -1048,6 +1196,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp37"
+                ],
+                "2x100G": [
+                    "etp37a",
+                    "etp37b"
                 ],
                 "2x400G": [
                     "etp37a",
@@ -1078,6 +1230,10 @@
                 "1x800G": [
                     "etp38"
                 ],
+                "2x100G": [
+                    "etp38a",
+                    "etp38b"
+                ],
                 "2x400G": [
                     "etp38a",
                     "etp38b"
@@ -1106,6 +1262,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp39"
+                ],
+                "2x100G": [
+                    "etp39a",
+                    "etp39b"
                 ],
                 "2x400G": [
                     "etp39a",
@@ -1136,6 +1296,10 @@
                 "1x800G": [
                     "etp40"
                 ],
+                "2x100G": [
+                    "etp40a",
+                    "etp40b"
+                ],
                 "2x400G": [
                     "etp40a",
                     "etp40b"
@@ -1164,6 +1328,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp41"
+                ],
+                "2x100G": [
+                    "etp41a",
+                    "etp41b"
                 ],
                 "2x400G": [
                     "etp41a",
@@ -1194,6 +1362,10 @@
                 "1x800G": [
                     "etp42"
                 ],
+                "2x100G": [
+                    "etp42a",
+                    "etp42b"
+                ],
                 "2x400G": [
                     "etp42a",
                     "etp42b"
@@ -1222,6 +1394,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp43"
+                ],
+                "2x100G": [
+                    "etp43a",
+                    "etp43b"
                 ],
                 "2x400G": [
                     "etp43a",
@@ -1252,6 +1428,10 @@
                 "1x800G": [
                     "etp44"
                 ],
+                "2x100G": [
+                    "etp44a",
+                    "etp44b"
+                ],
                 "2x400G": [
                     "etp44a",
                     "etp44b"
@@ -1280,6 +1460,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp45"
+                ],
+                "2x100G": [
+                    "etp45a",
+                    "etp45b"
                 ],
                 "2x400G": [
                     "etp45a",
@@ -1310,6 +1494,10 @@
                 "1x800G": [
                     "etp46"
                 ],
+                "2x100G": [
+                    "etp46a",
+                    "etp46b"
+                ],
                 "2x400G": [
                     "etp46a",
                     "etp46b"
@@ -1338,6 +1526,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp47"
+                ],
+                "2x100G": [
+                    "etp47a",
+                    "etp47b"
                 ],
                 "2x400G": [
                     "etp47a",
@@ -1368,6 +1560,10 @@
                 "1x800G": [
                     "etp48"
                 ],
+                "2x100G": [
+                    "etp48a",
+                    "etp48b"
+                ],
                 "2x400G": [
                     "etp48a",
                     "etp48b"
@@ -1396,6 +1592,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp49"
+                ],
+                "2x100G": [
+                    "etp49a",
+                    "etp49b"
                 ],
                 "2x400G": [
                     "etp49a",
@@ -1426,6 +1626,10 @@
                 "1x800G": [
                     "etp50"
                 ],
+                "2x100G": [
+                    "etp50a",
+                    "etp50b"
+                ],
                 "2x400G": [
                     "etp50a",
                     "etp50b"
@@ -1454,6 +1658,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp51"
+                ],
+                "2x100G": [
+                    "etp51a",
+                    "etp51b"
                 ],
                 "2x400G": [
                     "etp51a",
@@ -1484,6 +1692,10 @@
                 "1x800G": [
                     "etp52"
                 ],
+                "2x100G": [
+                    "etp52a",
+                    "etp52b"
+                ],
                 "2x400G": [
                     "etp52a",
                     "etp52b"
@@ -1512,6 +1724,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp53"
+                ],
+                "2x100G": [
+                    "etp53a",
+                    "etp53b"
                 ],
                 "2x400G": [
                     "etp53a",
@@ -1542,6 +1758,10 @@
                 "1x800G": [
                     "etp54"
                 ],
+                "2x100G": [
+                    "etp54a",
+                    "etp54b"
+                ],
                 "2x400G": [
                     "etp54a",
                     "etp54b"
@@ -1570,6 +1790,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp55"
+                ],
+                "2x100G": [
+                    "etp55a",
+                    "etp55b"
                 ],
                 "2x400G": [
                     "etp55a",
@@ -1600,6 +1824,10 @@
                 "1x800G": [
                     "etp56"
                 ],
+                "2x100G": [
+                    "etp56a",
+                    "etp56b"
+                ],
                 "2x400G": [
                     "etp56a",
                     "etp56b"
@@ -1628,6 +1856,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp57"
+                ],
+                "2x100G": [
+                    "etp57a",
+                    "etp57b"
                 ],
                 "2x400G": [
                     "etp57a",
@@ -1658,6 +1890,10 @@
                 "1x800G": [
                     "etp58"
                 ],
+                "2x100G": [
+                    "etp58a",
+                    "etp58b"
+                ],
                 "2x400G": [
                     "etp58a",
                     "etp58b"
@@ -1686,6 +1922,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp59"
+                ],
+                "2x100G": [
+                    "etp59a",
+                    "etp59b"
                 ],
                 "2x400G": [
                     "etp59a",
@@ -1716,6 +1956,10 @@
                 "1x800G": [
                     "etp60"
                 ],
+                "2x100G": [
+                    "etp60a",
+                    "etp60b"
+                ],
                 "2x400G": [
                     "etp60a",
                     "etp60b"
@@ -1744,6 +1988,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp61"
+                ],
+                "2x100G": [
+                    "etp61a",
+                    "etp61b"
                 ],
                 "2x400G": [
                     "etp61a",
@@ -1774,6 +2022,10 @@
                 "1x800G": [
                     "etp62"
                 ],
+                "2x100G": [
+                    "etp62a",
+                    "etp62b"
+                ],
                 "2x400G": [
                     "etp62a",
                     "etp62b"
@@ -1802,6 +2054,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp63"
+                ],
+                "2x100G": [
+                    "etp63a",
+                    "etp63b"
                 ],
                 "2x400G": [
                     "etp63a",
@@ -1832,6 +2088,10 @@
                 "1x800G": [
                     "etp64"
                 ],
+                "2x100G": [
+                    "etp64a",
+                    "etp64b"
+                ],
                 "2x400G": [
                     "etp64a",
                     "etp64b"
@@ -1860,6 +2120,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp65"
+                ],
+                "2x100G": [
+                    "etp65a",
+                    "etp65b"
                 ],
                 "2x400G": [
                     "etp65a",
@@ -1890,6 +2154,10 @@
                 "1x800G": [
                     "etp66"
                 ],
+                "2x100G": [
+                    "etp66a",
+                    "etp66b"
+                ],
                 "2x400G": [
                     "etp66a",
                     "etp66b"
@@ -1918,6 +2186,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp67"
+                ],
+                "2x100G": [
+                    "etp67a",
+                    "etp67b"
                 ],
                 "2x400G": [
                     "etp67a",
@@ -1948,6 +2220,10 @@
                 "1x800G": [
                     "etp68"
                 ],
+                "2x100G": [
+                    "etp68a",
+                    "etp68b"
+                ],
                 "2x400G": [
                     "etp68a",
                     "etp68b"
@@ -1976,6 +2252,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp69"
+                ],
+                "2x100G": [
+                    "etp69a",
+                    "etp69b"
                 ],
                 "2x400G": [
                     "etp69a",
@@ -2006,6 +2286,10 @@
                 "1x800G": [
                     "etp70"
                 ],
+                "2x100G": [
+                    "etp70a",
+                    "etp70b"
+                ],
                 "2x400G": [
                     "etp70a",
                     "etp70b"
@@ -2034,6 +2318,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp71"
+                ],
+                "2x100G": [
+                    "etp71a",
+                    "etp71b"
                 ],
                 "2x400G": [
                     "etp71a",
@@ -2064,6 +2352,10 @@
                 "1x800G": [
                     "etp72"
                 ],
+                "2x100G": [
+                    "etp72a",
+                    "etp72b"
+                ],
                 "2x400G": [
                     "etp72a",
                     "etp72b"
@@ -2092,6 +2384,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp73"
+                ],
+                "2x100G": [
+                    "etp73a",
+                    "etp73b"
                 ],
                 "2x400G": [
                     "etp73a",
@@ -2122,6 +2418,10 @@
                 "1x800G": [
                     "etp74"
                 ],
+                "2x100G": [
+                    "etp74a",
+                    "etp74b"
+                ],
                 "2x400G": [
                     "etp74a",
                     "etp74b"
@@ -2150,6 +2450,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp75"
+                ],
+                "2x100G": [
+                    "etp75a",
+                    "etp75b"
                 ],
                 "2x400G": [
                     "etp75a",
@@ -2180,6 +2484,10 @@
                 "1x800G": [
                     "etp76"
                 ],
+                "2x100G": [
+                    "etp76a",
+                    "etp76b"
+                ],
                 "2x400G": [
                     "etp76a",
                     "etp76b"
@@ -2208,6 +2516,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp77"
+                ],
+                "2x100G": [
+                    "etp77a",
+                    "etp77b"
                 ],
                 "2x400G": [
                     "etp77a",
@@ -2238,6 +2550,10 @@
                 "1x800G": [
                     "etp78"
                 ],
+                "2x100G": [
+                    "etp78a",
+                    "etp78b"
+                ],
                 "2x400G": [
                     "etp78a",
                     "etp78b"
@@ -2266,6 +2582,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp79"
+                ],
+                "2x100G": [
+                    "etp79a",
+                    "etp79b"
                 ],
                 "2x400G": [
                     "etp79a",
@@ -2296,6 +2616,10 @@
                 "1x800G": [
                     "etp80"
                 ],
+                "2x100G": [
+                    "etp80a",
+                    "etp80b"
+                ],
                 "2x400G": [
                     "etp80a",
                     "etp80b"
@@ -2324,6 +2648,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp81"
+                ],
+                "2x100G": [
+                    "etp81a",
+                    "etp81b"
                 ],
                 "2x400G": [
                     "etp81a",
@@ -2354,6 +2682,10 @@
                 "1x800G": [
                     "etp82"
                 ],
+                "2x100G": [
+                    "etp82a",
+                    "etp82b"
+                ],
                 "2x400G": [
                     "etp82a",
                     "etp82b"
@@ -2382,6 +2714,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp83"
+                ],
+                "2x100G": [
+                    "etp83a",
+                    "etp83b"
                 ],
                 "2x400G": [
                     "etp83a",
@@ -2412,6 +2748,10 @@
                 "1x800G": [
                     "etp84"
                 ],
+                "2x100G": [
+                    "etp84a",
+                    "etp84b"
+                ],
                 "2x400G": [
                     "etp84a",
                     "etp84b"
@@ -2440,6 +2780,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp85"
+                ],
+                "2x100G": [
+                    "etp85a",
+                    "etp85b"
                 ],
                 "2x400G": [
                     "etp85a",
@@ -2470,6 +2814,10 @@
                 "1x800G": [
                     "etp86"
                 ],
+                "2x100G": [
+                    "etp86a",
+                    "etp86b"
+                ],
                 "2x400G": [
                     "etp86a",
                     "etp86b"
@@ -2498,6 +2846,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp87"
+                ],
+                "2x100G": [
+                    "etp87a",
+                    "etp87b"
                 ],
                 "2x400G": [
                     "etp87a",
@@ -2528,6 +2880,10 @@
                 "1x800G": [
                     "etp88"
                 ],
+                "2x100G": [
+                    "etp88a",
+                    "etp88b"
+                ],
                 "2x400G": [
                     "etp88a",
                     "etp88b"
@@ -2556,6 +2912,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp89"
+                ],
+                "2x100G": [
+                    "etp89a",
+                    "etp89b"
                 ],
                 "2x400G": [
                     "etp89a",
@@ -2586,6 +2946,10 @@
                 "1x800G": [
                     "etp90"
                 ],
+                "2x100G": [
+                    "etp90a",
+                    "etp90b"
+                ],
                 "2x400G": [
                     "etp90a",
                     "etp90b"
@@ -2614,6 +2978,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp91"
+                ],
+                "2x100G": [
+                    "etp91a",
+                    "etp91b"
                 ],
                 "2x400G": [
                     "etp91a",
@@ -2644,6 +3012,10 @@
                 "1x800G": [
                     "etp92"
                 ],
+                "2x100G": [
+                    "etp92a",
+                    "etp92b"
+                ],
                 "2x400G": [
                     "etp92a",
                     "etp92b"
@@ -2672,6 +3044,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp93"
+                ],
+                "2x100G": [
+                    "etp93a",
+                    "etp93b"
                 ],
                 "2x400G": [
                     "etp93a",
@@ -2702,6 +3078,10 @@
                 "1x800G": [
                     "etp94"
                 ],
+                "2x100G": [
+                    "etp94a",
+                    "etp94b"
+                ],
                 "2x400G": [
                     "etp94a",
                     "etp94b"
@@ -2730,6 +3110,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp95"
+                ],
+                "2x100G": [
+                    "etp95a",
+                    "etp95b"
                 ],
                 "2x400G": [
                     "etp95a",
@@ -2760,6 +3144,10 @@
                 "1x800G": [
                     "etp96"
                 ],
+                "2x100G": [
+                    "etp96a",
+                    "etp96b"
+                ],
                 "2x400G": [
                     "etp96a",
                     "etp96b"
@@ -2788,6 +3176,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp97"
+                ],
+                "2x100G": [
+                    "etp97a",
+                    "etp97b"
                 ],
                 "2x400G": [
                     "etp97a",
@@ -2818,6 +3210,10 @@
                 "1x800G": [
                     "etp98"
                 ],
+                "2x100G": [
+                    "etp98a",
+                    "etp98b"
+                ],
                 "2x400G": [
                     "etp98a",
                     "etp98b"
@@ -2846,6 +3242,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp99"
+                ],
+                "2x100G": [
+                    "etp99a",
+                    "etp99b"
                 ],
                 "2x400G": [
                     "etp99a",
@@ -2876,6 +3276,10 @@
                 "1x800G": [
                     "etp100"
                 ],
+                "2x100G": [
+                    "etp100a",
+                    "etp100b"
+                ],
                 "2x400G": [
                     "etp100a",
                     "etp100b"
@@ -2904,6 +3308,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp101"
+                ],
+                "2x100G": [
+                    "etp101a",
+                    "etp101b"
                 ],
                 "2x400G": [
                     "etp101a",
@@ -2934,6 +3342,10 @@
                 "1x800G": [
                     "etp102"
                 ],
+                "2x100G": [
+                    "etp102a",
+                    "etp102b"
+                ],
                 "2x400G": [
                     "etp102a",
                     "etp102b"
@@ -2962,6 +3374,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp103"
+                ],
+                "2x100G": [
+                    "etp103a",
+                    "etp103b"
                 ],
                 "2x400G": [
                     "etp103a",
@@ -2992,6 +3408,10 @@
                 "1x800G": [
                     "etp104"
                 ],
+                "2x100G": [
+                    "etp104a",
+                    "etp104b"
+                ],
                 "2x400G": [
                     "etp104a",
                     "etp104b"
@@ -3020,6 +3440,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp105"
+                ],
+                "2x100G": [
+                    "etp105a",
+                    "etp105b"
                 ],
                 "2x400G": [
                     "etp105a",
@@ -3050,6 +3474,10 @@
                 "1x800G": [
                     "etp106"
                 ],
+                "2x100G": [
+                    "etp106a",
+                    "etp106b"
+                ],
                 "2x400G": [
                     "etp106a",
                     "etp106b"
@@ -3078,6 +3506,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp107"
+                ],
+                "2x100G": [
+                    "etp107a",
+                    "etp107b"
                 ],
                 "2x400G": [
                     "etp107a",
@@ -3108,6 +3540,10 @@
                 "1x800G": [
                     "etp108"
                 ],
+                "2x100G": [
+                    "etp108a",
+                    "etp108b"
+                ],
                 "2x400G": [
                     "etp108a",
                     "etp108b"
@@ -3136,6 +3572,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp109"
+                ],
+                "2x100G": [
+                    "etp109a",
+                    "etp109b"
                 ],
                 "2x400G": [
                     "etp109a",
@@ -3166,6 +3606,10 @@
                 "1x800G": [
                     "etp110"
                 ],
+                "2x100G": [
+                    "etp110a",
+                    "etp110b"
+                ],
                 "2x400G": [
                     "etp110a",
                     "etp110b"
@@ -3194,6 +3638,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp111"
+                ],
+                "2x100G": [
+                    "etp111a",
+                    "etp111b"
                 ],
                 "2x400G": [
                     "etp111a",
@@ -3224,6 +3672,10 @@
                 "1x800G": [
                     "etp112"
                 ],
+                "2x100G": [
+                    "etp112a",
+                    "etp112b"
+                ],
                 "2x400G": [
                     "etp112a",
                     "etp112b"
@@ -3252,6 +3704,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp113"
+                ],
+                "2x100G": [
+                    "etp113a",
+                    "etp113b"
                 ],
                 "2x400G": [
                     "etp113a",
@@ -3282,6 +3738,10 @@
                 "1x800G": [
                     "etp114"
                 ],
+                "2x100G": [
+                    "etp114a",
+                    "etp114b"
+                ],
                 "2x400G": [
                     "etp114a",
                     "etp114b"
@@ -3310,6 +3770,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp115"
+                ],
+                "2x100G": [
+                    "etp115a",
+                    "etp115b"
                 ],
                 "2x400G": [
                     "etp115a",
@@ -3340,6 +3804,10 @@
                 "1x800G": [
                     "etp116"
                 ],
+                "2x100G": [
+                    "etp116a",
+                    "etp116b"
+                ],
                 "2x400G": [
                     "etp116a",
                     "etp116b"
@@ -3368,6 +3836,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp117"
+                ],
+                "2x100G": [
+                    "etp117a",
+                    "etp117b"
                 ],
                 "2x400G": [
                     "etp117a",
@@ -3398,6 +3870,10 @@
                 "1x800G": [
                     "etp118"
                 ],
+                "2x100G": [
+                    "etp118a",
+                    "etp118b"
+                ],
                 "2x400G": [
                     "etp118a",
                     "etp118b"
@@ -3426,6 +3902,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp119"
+                ],
+                "2x100G": [
+                    "etp119a",
+                    "etp119b"
                 ],
                 "2x400G": [
                     "etp119a",
@@ -3456,6 +3936,10 @@
                 "1x800G": [
                     "etp120"
                 ],
+                "2x100G": [
+                    "etp120a",
+                    "etp120b"
+                ],
                 "2x400G": [
                     "etp120a",
                     "etp120b"
@@ -3484,6 +3968,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp121"
+                ],
+                "2x100G": [
+                    "etp121a",
+                    "etp121b"
                 ],
                 "2x400G": [
                     "etp121a",
@@ -3514,6 +4002,10 @@
                 "1x800G": [
                     "etp122"
                 ],
+                "2x100G": [
+                    "etp122a",
+                    "etp122b"
+                ],
                 "2x400G": [
                     "etp122a",
                     "etp122b"
@@ -3542,6 +4034,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp123"
+                ],
+                "2x100G": [
+                    "etp123a",
+                    "etp123b"
                 ],
                 "2x400G": [
                     "etp123a",
@@ -3572,6 +4068,10 @@
                 "1x800G": [
                     "etp124"
                 ],
+                "2x100G": [
+                    "etp124a",
+                    "etp124b"
+                ],
                 "2x400G": [
                     "etp124a",
                     "etp124b"
@@ -3600,6 +4100,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp125"
+                ],
+                "2x100G": [
+                    "etp125a",
+                    "etp125b"
                 ],
                 "2x400G": [
                     "etp125a",
@@ -3630,6 +4134,10 @@
                 "1x800G": [
                     "etp126"
                 ],
+                "2x100G": [
+                    "etp126a",
+                    "etp126b"
+                ],
                 "2x400G": [
                     "etp126a",
                     "etp126b"
@@ -3659,6 +4167,10 @@
                 "1x800G": [
                     "etp127"
                 ],
+                "2x100G": [
+                    "etp127a",
+                    "etp127b"
+                ],
                 "2x400G": [
                     "etp127a",
                     "etp127b"
@@ -3687,6 +4199,10 @@
             "breakout_modes": {
                 "1x800G": [
                     "etp128"
+                ],
+                "2x100G": [
+                    "etp128a",
+                    "etp128b"
                 ],
                 "2x400G": [
                     "etp128a",
@@ -3767,11 +4283,6 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "DCDC0",
-                "low-threshold": false,
-                "low-crit-threshold": false
-            },
-            {
                 "name": "DCDC1",
                 "low-threshold": false,
                 "low-crit-threshold": false
@@ -3830,6 +4341,774 @@
                 "name": "DCDC0_MEZZ1",
                 "low-threshold": false,
                 "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC core.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon4",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon5",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon6",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon7",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC core.pvtmon8",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt6.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt7.pvtmon3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt0.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt1.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt2.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt3.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon1.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon2.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt4.pvtmon3.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon0.remote3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC pt5.pvtmon1.remote2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC Min",

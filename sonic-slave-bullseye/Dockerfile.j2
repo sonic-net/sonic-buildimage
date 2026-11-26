@@ -187,7 +187,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-all-dev \
 #{%- endif %}
         python3-twisted \
-        phpunit \
         libbit-vector-perl \
         openjdk-11-jdk \
         javahelper \
@@ -196,7 +195,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libhttpclient-java \
         libslf4j-java \
         libservlet3.1-java \
-        pkg-php-tools \
 # For mellanox sdk build
         libpcre3 \
         libpcre3-dev \
@@ -214,7 +212,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For mellanox sai build
         libtool-bin \
         libxml2-dev \
-# For BFN sdk build
+# For SDK builds
         libusb-1.0-0-dev \
         libcurl4-openssl-dev \
         libunwind8-dev \

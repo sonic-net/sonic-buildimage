@@ -38,7 +38,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
-LINUX_KERNEL_VERSION=6.12.41+deb13
+LINUX_KERNEL_VERSION=6.12.94+deb13
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -157,8 +157,11 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install busybox linux-base
 echo '[INFO] Install SONiC linux kernel image'
 ## Note: duplicate apt-get command to ensure every line return zero
-sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
-basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
+## The linux-image-<kver>-* glob also matches the kernel debug package (linux-image-<kver>-dbg);
+## install only the kernel image itself.
+kernel_debs=$(ls $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | grep -v -- '-dbg_')
+sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $kernel_debs $FILESYSTEM_ROOT
+basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $kernel_debs | sed 's,^,./,')
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y install $basename_deb_packages
 ( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install acl
@@ -557,9 +560,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # docker Python API package is needed by Ansible docker module as well as some SONiC applications
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docker==7.1.0'
 
-# Install scapy
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
-
 ## Note: keep pip installed for maintenance purpose
 
 # Install GCC, needed for building/installing some Python packages
@@ -676,6 +676,14 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
 fi
 
+# Install after restoring the rootfs, including for no-Docker installers.
+if [ -n "${scapy_wheel:-}" ]; then
+    sudo cp "$scapy_wheel" "$FILESYSTEM_ROOT/"
+    scapy_wheel_basename=$(basename "$scapy_wheel")
+    sudo https_proxy=$https_proxy LANG=C chroot "$FILESYSTEM_ROOT" pip3 install "$scapy_wheel_basename"
+    sudo rm -f "$FILESYSTEM_ROOT/$scapy_wheel_basename"
+fi
+
 ## Version file part 2
 export build_version="${SONIC_IMAGE_VERSION}"
 export debian_version="$(cat $FILESYSTEM_ROOT/etc/debian_version)"
@@ -781,6 +789,18 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         # verifying vmlinuz file.
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT
+    fi
+
+    # Embed the UEFI Secure Boot db certificate (DB.auth) into the image so the installer can
+    # enroll it into the DUT firmware. The file is placed under /boot so it ships at
+    # image-<version>/boot/ alongside the signed shim/grub.
+    if [ -n "$SECURE_BOOT_DB_CERT" ]; then
+        echo "Secure Boot support build stage: embedding Secure Boot db certificate from $SECURE_BOOT_DB_CERT"
+        if [ ! -f "$SECURE_BOOT_DB_CERT" ]; then
+            echo "Error: SECURE_BOOT_DB_CERT=$SECURE_BOOT_DB_CERT is set but the file is missing"
+            exit 1
+        fi
+        sudo cp "$SECURE_BOOT_DB_CERT" "$FILESYSTEM_ROOT/boot/DB.auth"
     fi
     echo "Secure Boot support build stage: END."
 fi
