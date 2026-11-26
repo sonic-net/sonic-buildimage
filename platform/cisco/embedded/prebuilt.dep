@@ -1,0 +1,11 @@
+# Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+# Shared metadata for the versioned Cisco release assets registered by the macro.
+CISCO_PREBUILT_DEP_FILES := $(SONIC_COMMON_FILES_LIST)
+CISCO_PREBUILT_DEP_FILES += $(PLATFORM_SRC_PATH)/prebuilt.dep
+CISCO_PREBUILT_DEP_FILES += $(wildcard $(PLATFORM_SRC_PATH)/*.mk)
+$(foreach deb,$(CISCO_EMBEDDED_PREBUILT_DEBS), \
+    $(eval $(deb)_CACHE_MODE := GIT_CONTENT_SHA) \
+    $(eval $(deb)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $($(deb)_URL)) \
+    $(eval $(deb)_DEP_FILES := $(CISCO_PREBUILT_DEP_FILES)))

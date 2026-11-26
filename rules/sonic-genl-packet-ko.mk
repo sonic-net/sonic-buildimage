@@ -1,4 +1,4 @@
-# BFN Platform modules
+# genl-packet kernel module
 
 GENL_PACKET_VERSION = 1.0-1
 GENL_PACKET_KO_NAME = genl-packet-module

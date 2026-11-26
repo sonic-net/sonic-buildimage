@@ -65,9 +65,36 @@ sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \
     > "$TMPFILE"
 
+# Keep the docker0 inputs in /run, empty at boot, so the rsyslogd started
+# before docker0 exists does not try to bind them; the restart below loads them.
+DOCKER0_INPUTS_DIR=/run/sonic-rsyslog
+DOCKER0_INPUTS="$DOCKER0_INPUTS_DIR/docker0-inputs.conf"
+docker0_inputs_failed=false
+if [ -n "$docker0_ip" ] && [ "$docker0_ip" != "$udp_server_ip" ]; then
+    docker0_inputs=$(printf 'input(type="imudp" address="%s" port="514")\ninput(type="imrelp" address="%s" port="2514")' \
+        "$docker0_ip" "$docker0_ip")
+    if [ "$(cat "$DOCKER0_INPUTS" 2>/dev/null)" != "$docker0_inputs" ]; then
+        if ! { mkdir -p "$DOCKER0_INPUTS_DIR" && \
+               printf '%s\n' "$docker0_inputs" > "$DOCKER0_INPUTS"; }; then
+            rm -f "$DOCKER0_INPUTS"
+            echo "Failed to update $DOCKER0_INPUTS; docker0 inputs not configured" >&2
+            docker0_inputs_failed=true
+        fi
+    fi
+else
+    rm -f "$DOCKER0_INPUTS"
+fi
+
 if ! cp "$TMPFILE" /etc/rsyslog.conf; then
     echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
     exit 1
 fi
 
 systemctl restart rsyslog
+rsyslog_status=$?
+
+# Fail the unit only after the restart above, so loopback logging keeps working.
+if $docker0_inputs_failed; then
+    exit 1
+fi
+exit $rsyslog_status
