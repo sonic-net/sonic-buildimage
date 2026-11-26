@@ -148,7 +148,7 @@ class DockerBuildinfoTest(unittest.TestCase):
                 self.assert_hooks(image, initialized={0}, final_stage=0)
 
     def test_single_stage_image_retains_its_hooks(self):
-        self.assert_hooks("docker-config-engine-stretch", initialized={0}, final_stage=0)
+        self.assert_hooks("docker-sonic-redfish", initialized={0}, final_stage=0)
 
     def test_copy_only_runtime_stage_initializes_before_finalizing(self):
         for flatten in (False, True):
@@ -230,7 +230,7 @@ class DockerBuildinfoTest(unittest.TestCase):
             "docker-gnmi-watchdog": {0, 1},
             "docker-base-trixie": {0},
             "docker-config-engine-trixie": {0},
-            "docker-config-engine-stretch": {0},
+            "docker-sonic-redfish": {0},
         }
         for image, independent in images.items():
             with self.subTest(image=image):

@@ -102,7 +102,7 @@ class KernelSbomTest(unittest.TestCase):
         self.assertEqual(props["sonic:installed_vmlinuz_sha256"],
                          hashlib.sha256(b"kernel fixture").hexdigest())
         ancestor = component["pedigree"]["ancestors"][0]
-        self.assertEqual(ancestor["purl"], "pkg:deb/debian/linux@6.12.41-1?arch=source")
+        self.assertEqual(ancestor["purl"], f"pkg:deb/debian/linux@{self.fixture.config['package_version']}?arch=source")
         self.assertEqual(len(ancestor["externalReferences"]), 3)
         self.assertEqual(component["externalReferences"][1]["hashes"][0]["content"],
                          kernel.sha256(self.rootfs / self.copyright))

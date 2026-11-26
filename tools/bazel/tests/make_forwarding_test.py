@@ -49,7 +49,7 @@ class MakeForwardingTest(unittest.TestCase):
         (self.directory / "tools/bazel/direct_image_goals.mk").symlink_to(
             ROOT / "tools/bazel/direct_image_goals.mk")
         self.log = self.directory / "forwarded.log"
-        targets = " ".join((*ARTIFACTS, "jessie", "bookworm", "docker-cleanup"))
+        targets = " ".join((*ARTIFACTS, "bullseye", "bookworm", "docker-cleanup"))
         # This controlled inner Make records dispatch only. Its phony targets
         # ensure it never masks a successful handoff from the real outer file.
         (self.directory / "Makefile.work").write_text(f""".PHONY: {targets}
@@ -123,12 +123,12 @@ class MakeForwardingTest(unittest.TestCase):
                 self.assertEqual(calls, [])
                 self.assertEqual(self.state(target), before)
 
-    def test_default_goal_remains_jessie(self):
+    def test_default_goal_remains_bullseye(self):
         """Keep bare Make on its original default goal instead of selecting the force helper.
         """
-        result, calls = self.make(NOJESSIE="0")
+        result, calls = self.make(NOBULLSEYE="0")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(calls, [["jessie", "y", "", ""]])
+        self.assertEqual(calls, [["bullseye", "y", "", ""]])
 
     def test_distribution_phases_and_requested_target_are_preserved(self):
         """Preserve the Bookworm prerequisite phase and forward the full artifact name to
