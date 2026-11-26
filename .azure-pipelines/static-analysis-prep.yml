@@ -1,0 +1,60 @@
+# Static Analysis Preparation Pipeline
+#
+# Prepares a clean sonic-buildimage workspace with all submodules and
+# externally-fetched source trees fully initialized, ready for static
+# code analysis tools (bandit, semgrep, pylint, etc.).
+# No build is performed.
+#
+# All source acquisition logic lives in:
+#   .azure-pipelines/scripts/prepare_source.py
+
+trigger:
+  branches:
+    include:
+      - master
+      - 202*
+
+pr:
+  branches:
+    include:
+      - master
+      - 202*
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+steps:
+  - checkout: self
+    clean: true
+    submodules: recursive
+    fetchDepth: 1
+
+  - script: sudo apt-get install -y -q devscripts
+    displayName: 'Install dependencies'
+
+  - script: |
+      python3 .azure-pipelines/scripts/prepare_source.py \
+        --repo-root . \
+        --summary
+    displayName: 'Prepare source tree'
+
+  - script: |
+      set -e
+      DEST=$(Agent.TempDirectory)/sonic-buildimage-source
+      mkdir -p "$DEST"
+      rsync -a --delete \
+        --exclude='.git' \
+        --exclude='target/' \
+        --exclude='fsroot*' \
+        --exclude='dpkg/' \
+        --exclude='src/p4lang/' \
+        --exclude='src/sonic-linux-kernel/' \
+        --exclude='src/grub2/' \
+        --exclude='src/sonic-device-data/' \
+        ./ "$DEST"/
+      echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+    displayName: 'Stage source tree for publish'
+
+  - publish: $(Agent.TempDirectory)/sonic-buildimage-source
+    artifact: sonic-buildimage-source
+    displayName: 'Publish source tree for analysis jobs'
