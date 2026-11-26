@@ -72,6 +72,22 @@
 #include "lib/vrf.h"
 #include <nexthopgroup/c-api/nexthopgroup_capi.h>
 
+/*
+ * SONiC-private top-level RTA carrying BGP PIC backup nexthops on the FPM
+ * wire. Numbered well above the kernel's RTA_MAX so it can't collide with
+ * future kernel additions. The decoder side (fpmsyncd) must use the same
+ * value; changes here MUST be reflected there.
+ *
+ * Each backup is a struct rtnexthop with the regular IP fields (gateway,
+ * ifindex, weight, onlink). An SRv6 backup also carries a nested
+ * RTA_ENCAP_TYPE=FPM_ROUTE_ENCAP_SRV6 block with its encap source and SID,
+ * the same attributes an SRv6 steer route uses.
+ */
+#define FPM_RTA_BACKUP_NH 200
+
+_Static_assert(FPM_RTA_BACKUP_NH > RTA_MAX,
+	       "FPM_RTA_BACKUP_NH collides with the kernel RTA space; move it higher");
+
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620
 #define SEG6_SEGMENT_NAME_LEN 64
@@ -3384,6 +3400,247 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+/*
+ * Return why a backup nexthop cannot be carried in FPM_RTA_BACKUP_NH, or NULL
+ * when it can. The attribute carries plain IP nexthops and SRv6 nexthops with
+ * a single SID, the one SID an SRv6 steer route carries. A nexthop that
+ * resolved with another encapsulation - a label stack that is pushed on the
+ * wire, an SRv6 SID list of more than one SID, a VXLAN/EVPN encap - or that
+ * is an SRv6 local SID or a blackhole cannot be expressed. Sending it as a
+ * bare gateway would strip its encapsulation and forward engaged backup
+ * traffic unencapsulated, so the caller drops it instead.
+ *
+ * Implicit-null labels are not pushed (see build_label_stack()), so a label
+ * stack made only of implicit-null forwards as plain IP and is expressible.
+ * EVPN nexthops are detected with NEXTHOP_FLAG_EVPN: nh_encap_type is only
+ * set on the primary nexthops, while the flag is kept on backup nexthops.
+ */
+static const char *fpm_backup_nh_inexpressible(const struct nexthop *nexthop)
+{
+	int i;
+
+	/* SRv6 first: an SRv6 VPN nexthop also carries the service label
+	 * BGP received with the SID, which is not pushed on the wire; the
+	 * SRv6 encoders send the SID alone.
+	 */
+	if (nexthop->nh_srv6 && nexthop->nh_srv6->seg6_segs &&
+	    !sid_zero(nexthop->nh_srv6->seg6_segs))
+		return nexthop->nh_srv6->seg6_segs->num_segs > 1
+			       ? "SRv6 SID list of more than one SID"
+			       : NULL;
+	if (nexthop->nh_label) {
+		for (i = 0; i < nexthop->nh_label->num_labels; i++)
+			if (nexthop->nh_label->label[i] != MPLS_LABEL_IMPLICIT_NULL)
+				return "MPLS label stack";
+	}
+	if (nexthop->nh_srv6 &&
+	    nexthop->nh_srv6->seg6local_action != ZEBRA_SEG6_LOCAL_ACTION_UNSPEC)
+		return "SRv6 local SID";
+	if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN) ||
+	    nexthop->nh_encap_type == NET_VXLAN)
+		return "VXLAN encap";
+	if (nexthop->type == NEXTHOP_TYPE_BLACKHOLE)
+		return "blackhole";
+	return NULL;
+}
+
+/*
+ * Pick the SRv6 encap source address: the first global IPv6 address found
+ * by the same walk the SRv6 route encoders use, or :: when there is none.
+ */
+static void fpm_srv6_encap_src(struct in6_addr *encap_src_addr)
+{
+	struct connected *connected;
+	struct interface *ifp;
+	struct vrf *vrf;
+	struct prefix *cp;
+
+	memset(encap_src_addr, 0, sizeof(*encap_src_addr));
+
+	ifp = if_lookup_by_name("lo", VRF_DEFAULT);
+	vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
+	if (!ifp || !vrf)
+		return;
+
+	FOR_ALL_INTERFACES (vrf, ifp) {
+		frr_each (if_connected, ifp->connected, connected) {
+			cp = connected->address;
+			if (cp->family == AF_INET6 &&
+			    !IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
+			    !IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
+				*encap_src_addr = cp->u.prefix6;
+				break;
+			}
+		}
+	}
+}
+
+/*
+ * Emit one nexthop as a struct rtnexthop entry inside an already-open RTA
+ * nest. Used to populate the FPM_RTA_BACKUP_NH attribute with backup
+ * nexthops.
+ *
+ * Scope: regular IP nexthops (gateway + ifindex + weight + onlink), plus,
+ * for an SRv6 nexthop, a nested RTA_ENCAP_TYPE=FPM_ROUTE_ENCAP_SRV6 block
+ * with the encap source and the SID, as an SRv6 steer route carries them.
+ * The caller drops nexthops that need more (fpm_backup_nh_inexpressible()).
+ *
+ * route_family is the address family of the route prefix. An IPv6 nexthop
+ * on an IPv4 route (RFC 5549) cannot be expressed as an IPv4 RTA_GATEWAY,
+ * so it is encoded as a cross-family RTA_VIA {AF_INET6, <v6 addr>},
+ * mirroring how zebra encodes the primary nexthops of such routes.
+ */
+static bool fpm_route_build_rtnh(struct nlmsghdr *nlmsg, size_t buflen,
+				 int route_family,
+				 const struct nexthop *nexthop)
+{
+	struct rtnexthop *rtnh;
+
+	rtnh = nl_attr_rtnh(nlmsg, buflen);
+	if (rtnh == NULL)
+		return false;
+
+	if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_ONLINK))
+		rtnh->rtnh_flags |= RTNH_F_ONLINK;
+
+	switch (nexthop->type) {
+	case NEXTHOP_TYPE_IPV4:
+	case NEXTHOP_TYPE_IPV4_IFINDEX:
+		if (!nl_attr_put(nlmsg, buflen, RTA_GATEWAY,
+				 &nexthop->gate.ipv4, IPV4_MAX_BYTELEN))
+			return false;
+		break;
+	case NEXTHOP_TYPE_IPV6:
+	case NEXTHOP_TYPE_IPV6_IFINDEX:
+		if (route_family == AF_INET) {
+			struct {
+				uint16_t family;
+				uint8_t addr[IPV6_MAX_BYTELEN];
+			} __attribute__((packed)) via = {
+				.family = AF_INET6,
+			};
+
+			memcpy(via.addr, &nexthop->gate.ipv6,
+			       IPV6_MAX_BYTELEN);
+			if (!nl_attr_put(nlmsg, buflen, RTA_VIA, &via,
+					 sizeof(via)))
+				return false;
+		} else if (!nl_attr_put(nlmsg, buflen, RTA_GATEWAY,
+					&nexthop->gate.ipv6,
+					IPV6_MAX_BYTELEN)) {
+			return false;
+		}
+		break;
+	case NEXTHOP_TYPE_IFINDEX:
+	case NEXTHOP_TYPE_BLACKHOLE:
+		break;
+	}
+
+	if (nexthop->nh_srv6 && nexthop->nh_srv6->seg6_segs &&
+	    !sid_zero(nexthop->nh_srv6->seg6_segs)) {
+		struct in6_addr encap_src_addr;
+		struct rtattr *nest;
+
+		if (!nl_attr_put16(nlmsg, buflen, RTA_ENCAP_TYPE,
+				   FPM_ROUTE_ENCAP_SRV6))
+			return false;
+		nest = nl_attr_nest(nlmsg, buflen, RTA_ENCAP);
+		if (!nest)
+			return false;
+		fpm_srv6_encap_src(&encap_src_addr);
+		if (!nl_attr_put(nlmsg, buflen,
+				 FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR,
+				 &encap_src_addr, IPV6_MAX_BYTELEN))
+			return false;
+		if (!nl_attr_put(nlmsg, buflen, FPM_ROUTE_ENCAP_SRV6_VPN_SID,
+				 &nexthop->nh_srv6->seg6_segs->seg[0],
+				 IPV6_MAX_BYTELEN))
+			return false;
+		nl_attr_nest_end(nlmsg, nest);
+	}
+
+	if (nexthop->type != NEXTHOP_TYPE_BLACKHOLE)
+		rtnh->rtnh_ifindex = nexthop->ifindex;
+	if (nexthop->weight)
+		rtnh->rtnh_hops = nexthop->weight - 1;
+
+	nl_attr_rtnh_end(nlmsg, rtnh);
+	return true;
+}
+
+/*
+ * Append a top-level FPM_RTA_BACKUP_NH attribute carrying the route's
+ * backup nexthops to a netlink message that has already been populated by
+ * zebra's standard route encoder. Primary nexthops continue to be carried
+ * in RTA_MULTIPATH (or single-path attrs) by zebra; only the backup set
+ * lives in this SONiC-only attribute.
+ *
+ * No-ops when backup_ng is NULL or empty, and when every nexthop in
+ * backup_ng is recursive, inactive or carries an encapsulation the attribute
+ * cannot express: the attribute is then absent rather than present-and-empty.
+ *
+ * A mixed backup set is sent with only its expressible nexthops, so
+ * {plain, labeled} shrinks to the plain nexthop rather than losing the whole
+ * backup. Dropped nexthops are logged under "debug zebra fpm".
+ *
+ * Returns the new total message length on success, 0 on buffer overflow.
+ *
+ * On error mid-loop or empty result, restores nlmsg_len to its pre-nest
+ * value so the caller's buffer doesn't carry a half-written or empty
+ * attribute.
+ */
+static ssize_t fpm_append_backup_nexthops(struct nlmsghdr *nlmsg, size_t buflen,
+					  int route_family,
+					  const struct nexthop_group *backup_ng)
+{
+	const struct nexthop *nexthop;
+	const char *inexpressible;
+	struct rtattr *nest;
+	uint32_t pre_nest_len;
+	unsigned int backup_count = 0;
+
+	if (backup_ng == NULL || backup_ng->nexthop == NULL)
+		return NLMSG_ALIGN(nlmsg->nlmsg_len);
+
+	pre_nest_len = nlmsg->nlmsg_len;
+	nest = nl_attr_nest(nlmsg, buflen, FPM_RTA_BACKUP_NH);
+	if (nest == NULL)
+		return 0;
+
+	for (ALL_NEXTHOPS_PTR(backup_ng, nexthop)) {
+		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+			continue;
+		if (!NEXTHOP_IS_ACTIVE(nexthop->flags))
+			continue;
+		inexpressible = fpm_backup_nh_inexpressible(nexthop);
+		if (inexpressible) {
+			if (IS_ZEBRA_DEBUG_FPM)
+				zlog_debug("%s: dropping backup nexthop %pNHv: %s cannot be sent in FPM_RTA_BACKUP_NH",
+					   __func__, nexthop, inexpressible);
+			continue;
+		}
+		if (!fpm_route_build_rtnh(nlmsg, buflen, route_family,
+					  nexthop)) {
+			nlmsg->nlmsg_len = pre_nest_len;
+			return 0;
+		}
+		backup_count++;
+	}
+
+	if (backup_count == 0) {
+		nlmsg->nlmsg_len = pre_nest_len;
+		return NLMSG_ALIGN(nlmsg->nlmsg_len);
+	}
+
+	nl_attr_nest_end(nlmsg, nest);
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: appended FPM_RTA_BACKUP_NH with %u nexthop(s)",
+			   __func__, backup_count);
+
+	return NLMSG_ALIGN(nlmsg->nlmsg_len);
+}
+
 static ssize_t
 dplane_fpm_nl_send_br_port_shl_entries(const struct zebra_dplane_ctx *ctx,
 				       uint8_t *nl_buf, size_t nl_buf_len)
@@ -3688,6 +3945,35 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 					EC_ZEBRA_FPM_ENCODE_FAIL,
 					"%s: netlink_route_multipath_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
+				return 0;
+			}
+
+			/*
+			 * BGP PIC backup nexthops ride along as a SONiC-only
+			 * top-level attribute (FPM_RTA_BACKUP_NH) appended to
+			 * the standard route message. Only route-level
+			 * "all-primaries-down" backup pools are emitted; per-NH
+			 * protection groups (backup_idx[] association, e.g.
+			 * TI-LFA) are skipped so they cannot be misprogrammed
+			 * as a route-level pool. No backups is a no-op.
+			 */
+			const struct nexthop_group *backup_ng = NULL;
+
+			if (dplane_ctx_get_backup_all_primaries_down(ctx))
+				backup_ng = dplane_ctx_get_backup_ng(ctx);
+			else if (dplane_ctx_get_backup_ng(ctx)->nexthop &&
+				 IS_ZEBRA_DEBUG_FPM)
+				zlog_debug("%s: skipping per-NH backup group (not encodable over FPM)",
+					   __func__);
+
+			rv = fpm_append_backup_nexthops(
+				(struct nlmsghdr *)&nl_buf[nl_buf_len],
+				sizeof(nl_buf) - nl_buf_len,
+				dplane_ctx_get_dest(ctx)->family, backup_ng);
+			if (rv <= 0) {
+				flog_err(EC_ZEBRA_FPM_ENCODE_FAIL,
+					 "%s: fpm_append_backup_nexthops failed", __func__);
 				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
