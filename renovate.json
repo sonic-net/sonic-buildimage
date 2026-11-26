@@ -29,12 +29,20 @@
       "extractVersionTemplate": "^(?<version>.+)~trixie$"
     },
     {
-      "description": "Rust toolchain in the trixie build container",
+      "description": "Rust toolchain in the trixie build container, and in the watchdog containers' builder stage, which install their own. Both move in one pull request",
       "customType": "regex",
-      "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/"],
+      "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/", "/^dockers/docker-[a-z]+-watchdog/Dockerfile\\.j2$/"],
       "matchStrings": ["--default-toolchain (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "rust-lang/rust",
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "OpenTelemetry Collector (contrib) in docker-sonic-otel, one dependency per architecture. Renovate takes the new release's sha256 for each package and updates OTEL_SHA256 with OTEL_TAG, so the new hash is reviewed in the PR",
+      "customType": "regex",
+      "managerFilePatterns": ["/^dockers/docker-sonic-otel/Dockerfile\\.j2$/"],
+      "matchStrings": ["ARG OTEL_TAG=(?<currentValue>v\\d+\\.\\d+\\.\\d+)\\nARG OTEL_SHA256=(?<currentDigest>[0-9a-f]{64})"],
+      "depNameTemplate": "open-telemetry/opentelemetry-collector-releases",
+      "datasourceTemplate": "github-release-attachments"
     },
     {
       "description": "FIPS Go for trixie. SONiC builds and publishes the package, so the preset lists it on the Dependency Dashboard only",

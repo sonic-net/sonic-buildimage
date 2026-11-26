@@ -22,7 +22,7 @@ tracing-log = "0.2"
 syslog-tracing = "0.3"
 nix = { version = "0.27", features = ["signal", "process"] }
 thiserror = "1.0"
-mio = { version = "0.8", features = ["os-poll", "os-ext"] }
+mio = { version = "1.0", features = ["os-poll", "os-ext"] }
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }
 
 [dev-dependencies]
