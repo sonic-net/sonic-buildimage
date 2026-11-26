@@ -12,7 +12,7 @@ except ImportError as e:
 def subprocess_os_cmd(cmd):
     if len(cmd) <= 0:
         return -1
-    p = subprocess.Popen(cmd,shell=True)
+    p = subprocess.Popen(cmd, shell=False)
     p.wait()
     returncode = p.returncode
     if returncode !=0:
