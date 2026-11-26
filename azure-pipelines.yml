@@ -28,9 +28,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    # Temporary companion source for IS-IS PR #28789. Return to master after
-    # sonic-mgmt #28767 is merged, before merging this temporary CI wiring.
-    ref: refs/pull/28767/head
+    ref: master
     endpoint: sonic-net
   - repository: buildimage
     type: github
@@ -105,10 +103,6 @@ stages:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      # Build the installed CLI through the native submodule override; keep
-      # the tracked utilities gitlink unchanged until its companion is merged.
-      SUBMODULE: sonic-utilities
-      COMMIT_ID: 47ad0714cca3810a9487c47c9d9afb8fc8bc8907
       jobGroups:
       - name: vs
         variables:
@@ -270,7 +264,6 @@ stages:
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      MGMT_COMMIT_HASH: dd9e1a3c8c5079a4ae4ce12b64767aca06008578
       PTF_MODIFIED: $(PTF_MODIFIED)
       PTF_IMAGE_TAG: $(PTF_IMAGE_TAG)
 
