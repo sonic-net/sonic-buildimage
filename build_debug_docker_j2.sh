@@ -1,6 +1,7 @@
 #! /bin/bash
 
 echo "
+{% from \"dockers/dockerfile-macros.j2\" import rsync_from_builder_stage %}
 ARG BASE=$1
 FROM \$BASE AS base
 
@@ -46,6 +47,6 @@ RUN rm -rf /debs
 
 FROM \$BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+{{ rsync_from_builder_stage() }}
 
 "
