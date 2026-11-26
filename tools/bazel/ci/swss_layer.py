@@ -68,7 +68,7 @@ def verify_libteam_metadata(metadata, native):
     checks.require(metadata.get("schema") == 1 and metadata.get("architecture") == "amd64",
                    "libteam package metadata schema or architecture differs")
     owner = metadata.get("source_modules", {}).get("libteam", {})
-    checks.require(owner.get("version") == "1.31.0.sonic.1" and
+    checks.require(isinstance(owner.get("version"), str) and owner["version"] and
                    re.fullmatch(r"[0-9a-f]{64}", owner.get("module_sha256", "")),
                    "libteam package metadata lacks the selected owner identity")
     records = metadata.get("source_packages", [])

@@ -79,6 +79,12 @@ class LibteamMetadataTest(unittest.TestCase):
                 "source_revision": "1.31.0.sonic.1", "payload_sha256": "c" * 64,
                 "native_files": [{"path": path, **item}]})
 
+    def test_both_library_records_follow_the_version_in_the_image_manifest(self):
+        self.metadata["source_modules"]["libteam"]["version"] = "1.31.0.sonic.2"
+        for record in self.metadata["source_packages"]:
+            record["source_revision"] = "1.31.0.sonic.2"
+        verify_libteam_metadata(self.metadata, self.native)
+
     def test_two_library_records_match_selected_owner_and_installed_native_bytes(self):
         report = verify_libteam_metadata(self.metadata, self.native)
         self.assertEqual(report["owner"], self.metadata["source_modules"]["libteam"])
