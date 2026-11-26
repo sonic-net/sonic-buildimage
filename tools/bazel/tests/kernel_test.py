@@ -762,7 +762,7 @@ class KernelBundleTest(unittest.TestCase):
     def test_make_native_mode_keeps_legacy_deb_contract(self):
         makefile = self.make_fixture()
         with makefile.open("a") as stream:
-            stream.write("native:\n\t@test -n '$(SONIC_MAKE_DEBS)'\n\t@test '$(words $(SONIC_DERIVED_DEBS))' = 3\n"
+            stream.write("native:\n\t@test -n '$(SONIC_MAKE_DEBS)'\n\t@test '$(sort $(SONIC_DERIVED_DEBS))' = '$(sort $(LINUX_KBUILD) $(LINUX_KERNEL) $(LINUX_KERNEL_DBG) $(LINUX_HEADERS))'\n"
                          "\t@test -z '$(SONIC_COPY_DEBS)'\n"
                          "\t@test '$($(LINUX_HEADERS_COMMON)_CACHE_MODE)' = GIT_CONTENT_SHA\n"
                          "\t@test -z '$($(LINUX_HEADERS_COMMON)_CACHE_FORCE_RESTORE)'\n")
@@ -1167,7 +1167,7 @@ class KernelBundleTest(unittest.TestCase):
         start = script.index("kernel_image_debs=()")
         selection = script[start:script.index("sudo cp", start)]
         selected = subprocess.check_output(["bash", "-c", selection + '\nprintf "%s\\n" "${kernel_image_debs[@]}"'],
-            env={"debs_path": str(output), "LINUX_KERNEL_VERSION": "6.12.41+deb13", "CONFIGURED_ARCH": self.architecture}, text=True).splitlines()
+            env={"debs_path": str(output), "LINUX_KERNEL_VERSION": self.config["kernel_version"] + self.config["kernel_config"]["KERNEL_ABISUFFIX"], "CONFIGURED_ARCH": self.architecture}, text=True).splitlines()
         runtime = next(name for name, item in self.packages.items() if item["kind"] == "runtime")
         self.assertEqual(selected, [str(output / runtime)])
 
@@ -1256,7 +1256,8 @@ class KernelConfigurationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             (workspace / "rules").mkdir()
-            contents = (ROOT / "rules/linux-kernel.mk").read_text().replace("KERNEL_VERSION = 6.12.41", "KERNEL_VERSION = 6.12.42")
+            contents = re.sub(r"^KERNEL_VERSION = .*?$", "KERNEL_VERSION = 6.12.42",
+                              (ROOT / "rules/linux-kernel.mk").read_text(), count=1, flags=re.MULTILINE)
             (workspace / "rules/linux-kernel.mk").write_text(contents)
             expected, packages = kernel.contract(workspace, "amd64")
             self.assertEqual(expected["kernel_version"], "6.12.42")

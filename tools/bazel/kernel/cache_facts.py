@@ -9,7 +9,7 @@ PYTHON_EXTENSION = "@@aspect_rules_py+//py/unstable:extension.bzl%python_interpr
 GO_EXTENSION = "@@rules_go+//go:extensions.bzl%go_sdk"
 GO_RELEASES = "https://go.dev/dl/?mode=json&include=all"
 GO_VERSION = "1.26.7"
-ROOT_GO_VERSIONS = {"1.23.0", "1.24.0", "1.24.6", "1.25.6", "1.25.9", GO_VERSION}
+ROOT_GO_VERSIONS = {"1.23.0", "1.24.0", "1.24.6", "1.25.6", "1.25.9", "1.26.0", GO_VERSION}
 PYTHON_RELEASES = "https://github.com/astral-sh/python-build-standalone/releases/download"
 
 # The pinned extension selected 372 filename/checksum pairs from these three

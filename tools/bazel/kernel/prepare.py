@@ -118,10 +118,12 @@ def consumer_modules(workspace, source, kernel_gitlink):
     require(root == {"name": "sonic-kernel-cache-consumer"}, "unexpected kernel consumer module")
     require(set(modules) == {"sonic-linux-kernel", "sonic-build-infra"},
             "kernel consumer must declare only the kernel and shared tools modules")
+    # Registry revisions can add packaging patches to the same upstream module.
+    # source.json is checked against the gitlink and resolution lock before use.
+    kernel = modules["sonic-linux-kernel"]
     require(source_root.get("name") == "sonic-linux-kernel"
-            and modules["sonic-linux-kernel"] == {
-                "name": "sonic-linux-kernel", "version": source_root.get("version") + "-" + kernel_gitlink,
-                "repo_name": "sonic_linux_kernel"},
+            and kernel.get("repo_name") == "sonic_linux_kernel"
+            and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-" + re.escape(kernel_gitlink), kernel.get("version", "")),
             "registered kernel version differs from the checked-out gitlink")
     infra = modules["sonic-build-infra"]
     require(infra == source_modules.get("sonic-build-infra")

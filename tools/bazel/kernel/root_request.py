@@ -14,10 +14,16 @@ import subprocess
 from tools.bazel.kernel.cache_identity import require
 
 
+# This registered toolchain supplies sonic-utilities data generation. Kernel
+# targets do not select its toolchain type, but Bazel loads its declaration.
+UTILITIES_TOOLCHAIN = "//tools/bazel/image/vs/utilities_data:toolchain"
+UTILITIES_TOOLCHAIN_BUILD = "tools/bazel/image/vs/utilities_data/BUILD.bazel"
+
 # These module declarations contain comprehensions and repo rules as well as
 # literal file labels. A new declaration can introduce another external input.
 # Re-audit its file reads before enabling reuse for a different graph.
 MODULE_FILES = {
+    UTILITIES_TOOLCHAIN_BUILD: "c565d060ef41510587cace2256fff1845b98210ed3571c2fc4c2fe653331380d",
     "MODULE.bazel": "69ebf4321d6cd15ee991f770d7db7f1529dea9bd1c5db5308a2db0e0bbde72f0",
     # The device-data repo rule reads host data only when that repository is used.
     # Its implementation was audited against the kernel target dependency graph.
@@ -39,7 +45,12 @@ CONSUMER_HELPERS = {
     "tools/bazel/ci/kernel_artifacts.py", "tools/bazel/ci/public_artifacts.py", "tools/bazel/ci/resolution.py",
     "tools/bazel/ci/resources.py", "tools/bazel/ci/time_vs_image.py",
 }
-LOCAL_MODULES = {"sonic-sysmgr", "sonic-yang-models", "sonic-yang-mgmt"}
+LOCAL_MODULES = {
+    "bash-tacplus": "src/tacacs/bash_tacplus",
+    "sonic-sysmgr": "src/sonic-sysmgr",
+    "sonic-yang-mgmt": "src/sonic-yang-mgmt",
+    "sonic-yang-models": "src/sonic-yang-models",
+}
 KERNEL = "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
 INFRA = "0.0.42-da5f4c8d370f501572f435ade330ec209c9c0203"
 BAZEL_SHA256 = "61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e"
@@ -85,10 +96,10 @@ def local_modules(workspace):
     paths = {}
     for entry in _calls(workspace, "local_path_override"):
         name = entry["module_name"]
-        require(name in LOCAL_MODULES and name not in paths and entry["path"] == "src/" + name,
+        require(name in LOCAL_MODULES and name not in paths and entry["path"] == LOCAL_MODULES[name],
                 "unexpected root kernel local module override")
         paths[name] = workspace / entry["path"]
-    require(paths.keys() == LOCAL_MODULES, "root kernel local module inventory changed")
+    require(paths.keys() == LOCAL_MODULES.keys(), "root kernel local module inventory changed")
     return paths
 
 
@@ -98,7 +109,7 @@ def declared_kernel_modules(workspace):
     versions = {item["name"]: item["version"] for item in _calls(workspace, "bazel_dep")
                 if item["name"] in expected}
     for override in _calls(workspace, "single_version_override"):
-        if override["module_name"] in expected:
+        if override["module_name"] in expected and override.get("version"):
             versions[override["module_name"]] = override["version"]
     require(versions == expected, "root kernel producer release has not been audited")
     return versions
@@ -115,10 +126,15 @@ def _tracked_inputs(workspace):
         paths.update((parent / "__init__.py").as_posix() for parent in Path(helper).parents
                      if parent != Path("."))
     for module in MODULE_FILES:
-        for node in ast.walk(_module(workspace, module)):
+        declaration = _module(workspace, module)
+        if module == UTILITIES_TOOLCHAIN_BUILD:
+            continue
+        for node in ast.walk(declaration):
             if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.startswith("//"):
                 package, filename = node.value[2:].split(":", 1)
                 label = Path(package) / filename
+                if node.value == UTILITIES_TOOLCHAIN:
+                    label = Path(UTILITIES_TOOLCHAIN_BUILD)
                 require(".." not in label.parts and not label.is_absolute(), "non-workspace root module input")
                 paths.add(label.as_posix())
                 required.add(label.as_posix())

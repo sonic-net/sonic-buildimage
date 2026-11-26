@@ -13,6 +13,8 @@ on:
 jobs:
   check-file:
     if: ${{ github.event.deleted != true }}
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,10 +47,35 @@ jobs:
           fi
 
           protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
-          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- "${protected_files[@]}")
-          if [[ -n "$changed_files" ]]; then
-            echo "Error: You are trying to modify protected files:"
-            printf '%s\n' "$changed_files"
+          changed_files=()
+          for file in "${protected_files[@]}"; do
+            before=$(git ls-tree "$BASE_SHA" -- "$file")
+            after=$(git ls-tree "$HEAD_SHA" -- "$file")
+            if [[ "$before" != "$after" ]]; then
+              changed_files+=("$file")
+            fi
+          done
+          if (( ${#changed_files[@]} == 0 )); then
+            echo "No changes detected in protected files"
+            exit 0
+          fi
+
+          # The fork syncs master from sonic-net. Keep the original prohibition
+          # in sonic-net itself and on release branches. The canonical URL and
+          # ref below are independent of PR inputs and checked-out files.
+          if [[ "$GITHUB_REPOSITORY" != securely1g/sonic-buildimage || "${GITHUB_BASE_REF:-$GITHUB_REF_NAME}" != master ]]; then
+            printf 'Protected file changed: %s\n' "${changed_files[@]}"
             exit 1
           fi
-          echo "No changes detected in protected files"
+          git fetch --no-tags --depth=1 --filter=blob:none \
+            https://github.com/sonic-net/sonic-buildimage.git refs/heads/master
+          upstream_sha=$(git rev-parse --verify 'FETCH_HEAD^{commit}')
+          for file in "${changed_files[@]}"; do
+            canonical=$(git ls-tree "$upstream_sha" -- "$file")
+            proposed=$(git ls-tree "$HEAD_SHA" -- "$file")
+            if [[ "$canonical" != '100644 blob '* || "$proposed" != "$canonical" ]]; then
+              echo "Protected file $file must match the regular file in sonic-net master at $upstream_sha"
+              exit 1
+            fi
+            echo "Verified $file against sonic-net master at $upstream_sha"
+          done

@@ -41,11 +41,15 @@ def _installed_hash(root, archive, member):
     return expected
 
 
-# Both registry releases overlay the same two packaging patches on the gitlink.
+# Each listed release overlays the same two packaging patches on its gitlink.
 # Keep their immutable publication URLs available when the SBOM runs offline.
 REGISTRY_OVERLAY_COMMITS = {
-    "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": "066e962d36592590d2f6634202b5176922aad07c",
-    "0.0.4-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": "bfde140643a14e408e5bd9aa3c4610870685ae04",
+    "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": (
+        "securely1g", "066e962d36592590d2f6634202b5176922aad07c"),
+    "0.0.4-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": (
+        "securely1g", "bfde140643a14e408e5bd9aa3c4610870685ae04"),
+    "0.0.5-dea1b2300ab2ec706810817d97ff3761379eb3f0": (
+        "sonic-net", "872ed827b70638f667f5ef6e0bab64c4f3e177b4"),
 }
 REGISTRY_PATCH_HASHES = {
     "patches-debian/bazel-install-outputs.patch": "ce84bcecd9c98abcdd5c4d7e65e4cc57c66f97fb8f654c78604ab066201a4611",
@@ -63,8 +67,8 @@ def _patches(workspace, manifest, commit, module_version=None):
                    if record["name"] in {"disable-secureboot-config-checks.patch", "bazel-debug-sources.patch",
                                          "bazel-relocatable-tools.patch", "bazel-install-outputs.patch"})
     inventory = {item["name"]: item["sha256"] for item in manifest["source_files"]}
-    registry_commit = REGISTRY_OVERLAY_COMMITS.get(module_version)
-    overlays = REGISTRY_PATCH_HASHES if registry_commit else {}
+    publication = REGISTRY_OVERLAY_COMMITS.get(module_version)
+    overlays = REGISTRY_PATCH_HASHES if publication else {}
     patch_sources = []
     for record in records:
         path = Path(record["path"]).resolve().relative_to(source).as_posix()
@@ -73,7 +77,8 @@ def _patches(workspace, manifest, commit, module_version=None):
     for path, digest in overlays.items():
         # These exact packaging patches carry no CVE claims. The replaced
         # gitlink file may have different content or may be absent altogether.
-        url = (f"https://github.com/securely1g/sonic-bazel-registry/blob/{registry_commit}/"
+        owner, revision = publication
+        url = (f"https://github.com/{owner}/sonic-bazel-registry/blob/{revision}/"
                f"modules/sonic-linux-kernel/{module_version}/overlay/{path}")
         patch_sources.append((path, {"path": path, "sha256": digest}, url))
 

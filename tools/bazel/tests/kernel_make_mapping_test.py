@@ -37,6 +37,7 @@ class KernelMakeMappingTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="kernel-make-mapping-")
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        self.version = kernel.effective_config(ROOT, "amd64")["KERNEL_VERSION"]
         self.workspace = self.root / "workspace"
         self.workspace.mkdir()
         git(self.workspace, "init", "-q")
@@ -301,9 +302,9 @@ class KernelMakeMappingTest(unittest.TestCase):
         self.assertEqual(options, {"--debs-directory": "target/debs/trixie", "--cache-directory": "/bazel_cache"})
         self.assertEqual(config, {
             "CONFIGURED_ARCH": "amd64", "CONFIGURED_PLATFORM": "vs", "BLDENV": "trixie",
-            "CROSS_BUILD_ENVIRON": "", "MULTIARCH_QEMU_ENVIRON": "", "KERNEL_VERSION": "6.12.41",
+            "CROSS_BUILD_ENVIRON": "", "MULTIARCH_QEMU_ENVIRON": "", "KERNEL_VERSION": self.version,
             "KERNEL_ABISUFFIX": "+deb13", "KERNEL_SUBVERSION": "1", "KERNEL_FEATURESET": "sonic",
-            "KVERSION": "6.12.41+deb13-sonic-amd64", "ADDITIONAL_BUILD_PROFILES": "",
+            "KVERSION": self.version + "+deb13-sonic-amd64", "ADDITIONAL_BUILD_PROFILES": "",
             "SECURE_UPGRADE_MODE": "no_sign", "SECURE_UPGRADE_KERNEL_CAFILE": "",
             "INCLUDE_EXTERNAL_PATCHES": "n", "EXTERNAL_KERNEL_PATCH_URL": "", "EXTERNAL_KERNEL_PATCH_LOC": "",
         })
@@ -351,14 +352,14 @@ class KernelMakeMappingTest(unittest.TestCase):
                 result = self.run_make(makefile, "selection", BUILD_WITH_BAZEL_WHEN_AVAILABLE=disabled)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual((self.workspace / "native-debs.txt").read_text().strip(),
-                    "linux-headers-6.12.41+deb13-common-sonic_6.12.41-1_all.deb")
+                    f"linux-headers-{self.version}+deb13-common-sonic_{self.version}-1_all.deb")
                 self.assertEqual((self.workspace / "native-cache.txt").read_text().strip(), "GIT_CONTENT_SHA")
                 self.assertFalse((self.workspace / "order.txt").exists())
 
     def test_bazel_preparation_failure_does_not_use_native_producer(self):
         makefile = self.lazy_make_fixture()
         (self.workspace / "fail-prepare").touch()
-        target = "target/debs/trixie/linux-image-6.12.41+deb13-sonic-amd64-unsigned_6.12.41-1_amd64.deb"
+        target = f"target/debs/trixie/linux-image-{self.version}+deb13-sonic-amd64-unsigned_{self.version}-1_amd64.deb"
         result = self.run_make(makefile, target)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Error 29", result.stderr)

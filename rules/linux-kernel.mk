@@ -74,8 +74,6 @@ $(LINUX_HEADERS)_RDEPENDS += $(LINUX_KBUILD) $(LINUX_KERNEL)
 $(eval $(call add_derived_package,$(LINUX_HEADERS_COMMON),$(LINUX_HEADERS)))
 
 ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
-LINUX_KERNEL_DBG = linux-image-$(KVERSION)-dbg_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_$(CONFIGURED_ARCH).deb
-$(eval $(call add_derived_package,$(LINUX_HEADERS_COMMON),$(LINUX_KERNEL_DBG)))
 SONIC_BAZEL_KERNEL_DEBS := $(LINUX_HEADERS_COMMON) $(LINUX_KBUILD) $(LINUX_KERNEL) $(LINUX_HEADERS) $(LINUX_KERNEL_DBG)
 # These outputs are produced together by ensure; the generic derived-DEB rule
 # must not touch their timestamps after a cache hit or unchanged rebuild.

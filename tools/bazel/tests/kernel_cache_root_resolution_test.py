@@ -20,7 +20,7 @@ from tools.bazel.tests.kernel_cache_identity_test import release_fixture, resolu
 def resolution_fixture(workspace):
     """Return a miniature full lock and HTTPS URL->bytes/None fixture.
 
-    A new workspace receives the actual producer versions and three maintained
+    A new workspace receives the actual producer versions and the maintained
     local overrides. Existing integration workspaces keep their declarations.
     The BCR patchelf source is a real transitive dependency, not a direct pin.
     """
@@ -32,10 +32,10 @@ def resolution_fixture(workspace):
             'module(name="root_kernel_fixture")\n'
             f'bazel_dep(name="sonic-linux-kernel", version="{root_request.KERNEL}")\n'
             f'bazel_dep(name="sonic-build-infra", version="{root_request.INFRA}")\n' +
-            ''.join(f'local_path_override(module_name="{name}", path="src/{name}")\n'
-                    for name in sorted(root_request.LOCAL_MODULES)))
-    for name in root_request.LOCAL_MODULES:
-        (workspace / "src" / name).mkdir(parents=True, exist_ok=True)
+            ''.join(f'local_path_override(module_name="{name}", path="{path}")\n'
+                    for name, path in sorted(root_request.LOCAL_MODULES.items())))
+    for path in root_request.LOCAL_MODULES.values():
+        (workspace / path).mkdir(parents=True, exist_ok=True)
     return isolated_fixture(root_resolution.REGISTRY, {
         "kernel_gitlink": root_request.KERNEL.rsplit("-", 1)[1],
         "modules": {"sonic-linux-kernel": root_request.KERNEL, "sonic-build-infra": root_request.INFRA}})

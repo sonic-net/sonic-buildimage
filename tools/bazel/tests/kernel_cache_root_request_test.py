@@ -48,13 +48,16 @@ class RootKernelRequestTest(unittest.TestCase):
             "tools/bazel/kernel/packages.py": "# fixture\n", "tools/bazel/kernel/root_resolution_registry.json": "{}",
             "tools/bazel/kernel/cache_wire.proto": "// fixture\n", "src/other/lock.txt": "abc\n",
             "src/other/deps.MODULE.bazel": 'register_toolchains("@infra//:cc")\n',
-            "MODULE.bazel": f'bazel_dep(name="sonic-linux-kernel",version="{version}")\n'
+            request.UTILITIES_TOOLCHAIN_BUILD: 'toolchain(name="toolchain", toolchain=":environment")\n',
+            "MODULE.bazel": f'register_toolchains("{request.UTILITIES_TOOLCHAIN}")\n'
+                            f'bazel_dep(name="sonic-linux-kernel",version="{version}")\n'
                             f'bazel_dep(name="sonic-build-infra",version="{request.INFRA}")\n'
+                            'single_version_override(module_name="sonic-build-infra",patches=["//src/other:lock.txt"])\n'
                             'lock_file="//src/other:lock.txt"\ninclude("//src/other:deps.MODULE.bazel")\n',
         }
-        for name in sorted(request.LOCAL_MODULES):
-            self.files["MODULE.bazel"] += f'local_path_override(module_name="{name}",path="src/{name}")\n'
-            self.files[f"src/{name}/MODULE.bazel"] = f'module(name="{name}")\n'
+        for name, path in sorted(request.LOCAL_MODULES.items()):
+            self.files["MODULE.bazel"] += f'local_path_override(module_name="{name}",path="{path}")\n'
+            self.files[f"{path}/MODULE.bazel"] = f'module(name="{name}")\n'
         for name, data in self.files.items():
             destination = self.repo / name
             destination.parent.mkdir(exist_ok=True, parents=True)
@@ -85,7 +88,7 @@ class RootKernelRequestTest(unittest.TestCase):
                         "--disk_cache=/bazel_cache/kernel-linux-sandbox/disk_cache",
                         "--remote_cache=grpc://172.16.0.4:9092", "--remote_upload_local_results=false"]
         digests = {k: hashlib.sha256(v.encode()).hexdigest() for k, v in self.files.items()}
-        for name, value in {"KERNEL": version, "MODULE_FILES": {k: digests[k] for k in ("MODULE.bazel", "src/other/deps.MODULE.bazel")},
+        for name, value in {"KERNEL": version, "MODULE_FILES": {k: digests[k] for k in ("MODULE.bazel", "src/other/deps.MODULE.bazel", request.UTILITIES_TOOLCHAIN_BUILD)},
                             "RC_FILES": {k: digests[k] for k in request.RC_FILES}, "SLAVE_RC": rc,
                             "BAZELISK_HOME": cache, "BAZELISK": bazel, "WORKER_PATHS": {str(bazel.parent)}}.items():
             self.enterContext(patch.object(request, name, value))
@@ -126,6 +129,13 @@ class RootKernelRequestTest(unittest.TestCase):
         self.assertNotEqual(original, self.key())
         (nested / "extraneous").touch()
         with self.assertRaises(ValueError):
+            self.key()
+
+    def test_registered_toolchain_declaration_is_audited(self):
+        path = self.repo / request.UTILITIES_TOOLCHAIN_BUILD
+        path.write_text(path.read_text() + 'toolchain(name="new", toolchain=":changed")\n')
+        git(self.repo, "commit", "-qam", "change registered toolchain")
+        with self.assertRaisesRegex(ValueError, "declaration needs input review"):
             self.key()
 
     def test_cache_fallback_settings_keep_the_same_root_request(self):
