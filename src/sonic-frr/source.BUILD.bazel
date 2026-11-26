@@ -32,7 +32,7 @@ _DEBIAN_CFLAGS = select({
 })
 _CFLAGS = [
     "-fms-extensions", "-fno-omit-frame-pointer", "-funwind-tables",
-    "-Wall", "-Wextra", "-Wformat-nonliteral", "-Wformat-security",
+    "-Wall", "-Wextra", "-Wformat-extra-args", "-Waddress-of-packed-member", "-Wformat-nonliteral", "-Wformat-security",
     "-Wswitch-enum", "-Wstrict-prototypes", "-Wmissing-prototypes",
     "-Wmissing-declarations", "-Wpointer-arith", "-Wbad-function-cast",
     "-Wwrite-strings", "-Wundef", "-Wimplicit-fallthrough", "-Wshadow",
@@ -330,6 +330,7 @@ exec "$$clippy" "$$script" -o "$$output" "$$source"
         "zebra/zebra_vty.c",
         "zebra/zebra_srv6_vty.c",
         "zebra/zebra_vrf.c",
+        "zebra/zserv.c",
         "zebra/dpdk/zebra_dplane_dpdk_vty.c",
         "zebra/label_manager.c",
         "zebra/zebra_cli.c",
@@ -421,6 +422,7 @@ filegroup(
         ":clippy_zebra_zebra_vty_c",
         ":clippy_zebra_zebra_srv6_vty_c",
         ":clippy_zebra_zebra_vrf_c",
+        ":clippy_zebra_zserv_c",
         ":clippy_zebra_dpdk_zebra_dplane_dpdk_vty_c",
         ":clippy_zebra_label_manager_c",
         ":clippy_zebra_zebra_cli_c",
@@ -790,6 +792,7 @@ cc_library(
         ":clippy_zebra_zebra_srv6_vty_c",
         ":clippy_zebra_zebra_routemap_c",
         ":clippy_zebra_zebra_vrf_c",
+        ":clippy_zebra_zserv_c",
         ":clippy_zebra_zebra_vty_c",
     ],
     deps = [
@@ -1848,8 +1851,6 @@ cc_library(
         "lib/id_alloc.c",
         "lib/if.c",
         "lib/if_rmap.c",
-        "lib/imsg-buffer.c",
-        "lib/imsg.c",
         "lib/iso.c",
         "lib/jhash.c",
         "lib/json.c",
@@ -1881,8 +1882,8 @@ cc_library(
         "lib/srv6.c",
         "lib/network.c",
         "lib/nexthop.c",
-        "lib/netns_linux.c",
-        "lib/netns_other.c",
+        "lib/netlink_parser.c",
+        "lib/netns.c",
         "lib/nexthop_group.c",
         "lib/northbound.c",
         "lib/northbound_cli.c",
@@ -2347,7 +2348,7 @@ cc_library(
 
 cc_library(
     name = "zebra_dplane_fpm_sonic_la_objects",
-    srcs = ["zebra/dplane_fpm_sonic.c"],
+    srcs = ["zebra/dplane_fpm_sonic.c", "zebra/fpm_mac.c", "zebra/fpm_mac.h"],
     textual_hdrs = [],
     deps = [
         ":generated_headers",
@@ -2703,6 +2704,8 @@ cc_library(
         "mgmtd/mgmt_history.c",
         "mgmtd/mgmt_memory.c",
         "mgmtd/mgmt_txn.c",
+        "mgmtd/mgmt_txn_cfg.c",
+        "mgmtd/mgmt_vty_frontend.c",
         "mgmtd/mgmt_vty.c",
     ],
     textual_hdrs = [":clippy_mgmtd_mgmt_vty_c"],
@@ -2732,6 +2735,10 @@ cc_library(
         "bgpd/bgp_advertise.c",
         "bgpd/bgp_aspath.c",
         "bgpd/bgp_attr.c",
+        "bgpd/bgp_ls.c",
+        "bgpd/bgp_ls_nlri.c",
+        "bgpd/bgp_ls_ted.c",
+        "bgpd/bgp_srv6.c",
         "bgpd/bgp_attr_evpn.c",
         "bgpd/bgp_bfd.c",
         "bgpd/bgp_clist.c",
@@ -2878,6 +2885,7 @@ cc_library(
         "ospfd/ospf_neighbor.c",
         "ospfd/ospf_network.c",
         "ospfd/ospf_nsm.c",
+        "ospfd/ospf_quicknbr.c",
         "ospfd/ospf_opaque.c",
         "ospfd/ospf_packet.c",
         "ospfd/ospf_ri.c",
@@ -3127,6 +3135,8 @@ cc_library(
         "ldpd/adjacency.c",
         "ldpd/control.c",
         "ldpd/hello.c",
+        "ldpd/imsg-buffer.c",
+        "ldpd/imsg.c",
         "ldpd/init.c",
         "ldpd/interface.c",
         "ldpd/keepalive.c",
@@ -3229,6 +3239,7 @@ cc_library(
         "staticd/static_bfd.c",
         "staticd/static_debug.c",
         "staticd/static_nht.c",
+        "staticd/static_trace.c",
         "staticd/static_routes.c",
         "staticd/static_zebra.c",
         "staticd/static_vrf.c",
@@ -3261,6 +3272,7 @@ cc_library(
     name = "bfdd_libbfd_a_objects",
     srcs = [
         "bfdd/bfd.c",
+        "bfdd/bfd_trace.c",
         "bfdd/bfdd_nb.c",
         "bfdd/bfdd_nb_config.c",
         "bfdd/bfdd_nb_state.c",
@@ -3775,6 +3787,40 @@ native_runtime_binary(
 )
 
 cc_library(
+    name = "tests_bgpd_test_community_objects",
+    srcs = ["tests/bgpd/test_community.c"],
+    textual_hdrs = [],
+    deps = [
+        ":generated_headers",
+        ":bgpd_libbgp_a",
+        ":bgpd_rfp_example_librfp_librfp_a",
+        ":lib_libfrr_la",
+        "@sonic-buildimage//src/sonic-frr:cap",
+        "@libyang//:libyang",
+        "@sonic-buildimage//src/sonic-frr:json_c",
+        "@sonic-buildimage//src/sonic-frr:pcre2",
+    ] + _TCMALLOC_DEPS,
+    copts = _DEBIAN_CFLAGS + _CFLAGS,
+    local_defines = ["HAVE_CONFIG_H"],
+    includes = ["tests/bgpd", "tests/helpers/c"],
+    alwayslink = True,
+    linkstatic = True,
+)
+
+cc_binary(
+    name = "tests/bgpd/test_community_binary",
+    deps = [":tests_bgpd_test_community_objects"],
+    linkopts = _INSTALL_RPATH + ["-lm"] + ["-latomic", "-lrt", "-Wl,--export-dynamic", "-Wl,-z,relro,-z,now"],
+    linkstatic = False,
+)
+
+native_runtime_binary(
+    name = "tests/bgpd/test_community",
+    binary = ":tests/bgpd/test_community_binary",
+    runtime_payloads = ["@sonic-buildimage//src/sonic-frr:target_runtime"],
+)
+
+cc_library(
     name = "tests_bgpd_test_ecommunity_objects",
     srcs = ["tests/bgpd/test_ecommunity.c"],
     textual_hdrs = [],
@@ -4143,6 +4189,20 @@ cc_binary(
 native_runtime_binary(
     name = "tests/ospf6d/test_lsdb",
     binary = ":tests/ospf6d/test_lsdb_binary",
+    runtime_payloads = ["@sonic-buildimage//src/sonic-frr:target_runtime"],
+)
+
+cc_binary(
+    name = "tests/zebra/fpm_mac_test_binary",
+    srcs = ["tests/zebra/fpm_mac_test.c", "zebra/fpm_mac.c", "zebra/fpm_mac.h"],
+    copts = _COMMON,
+    includes = ["zebra"],
+    deps = ["@sonic-buildimage//src/sonic-frr:cunit"],
+)
+
+native_runtime_binary(
+    name = "tests/zebra/fpm_mac_test",
+    binary = ":tests/zebra/fpm_mac_test_binary",
     runtime_payloads = ["@sonic-buildimage//src/sonic-frr:target_runtime"],
 )
 
@@ -5909,6 +5969,7 @@ filegroup(
         ":tests/bgpd/test_aspath",
         ":tests/bgpd/test_bgp_table",
         ":tests/bgpd/test_capability",
+        ":tests/bgpd/test_community",
         ":tests/bgpd/test_ecommunity",
         ":tests/bgpd/test_mp_attr",
         ":tests/bgpd/test_packet",
@@ -5920,6 +5981,7 @@ filegroup(
         ":tests/isisd/test_isis_vertex_queue",
         ":tests/ospfd/test_ospf_spf",
         ":tests/ospf6d/test_lsdb",
+        ":tests/zebra/fpm_mac_test",
         ":tests/zebra/test_lm_plugin",
         ":tests/lib/test_resolver",
         ":tests/lib/cxxcompat",
@@ -6100,6 +6162,7 @@ _UPSTREAM_CHECK_BINARIES = [
     (":tests/bgpd/test_aspath", "tests/bgpd/test_aspath"),
     (":tests/bgpd/test_bgp_table", "tests/bgpd/test_bgp_table"),
     (":tests/bgpd/test_capability", "tests/bgpd/test_capability"),
+    (":tests/bgpd/test_community", "tests/bgpd/test_community"),
     (":tests/bgpd/test_ecommunity", "tests/bgpd/test_ecommunity"),
     (":tests/bgpd/test_mp_attr", "tests/bgpd/test_mp_attr"),
     (":tests/bgpd/test_packet", "tests/bgpd/test_packet"),
@@ -6111,6 +6174,7 @@ _UPSTREAM_CHECK_BINARIES = [
     (":tests/isisd/test_isis_vertex_queue", "tests/isisd/test_isis_vertex_queue"),
     (":tests/ospfd/test_ospf_spf", "tests/ospfd/test_ospf_spf"),
     (":tests/ospf6d/test_lsdb", "tests/ospf6d/test_lsdb"),
+    (":tests/zebra/fpm_mac_test", "tests/zebra/fpm_mac_test"),
     (":tests/zebra/test_lm_plugin", "tests/zebra/test_lm_plugin"),
     (":tests/lib/test_resolver", "tests/lib/test_resolver"),
     (":tests/lib/cxxcompat", "tests/lib/cxxcompat"),
@@ -6347,6 +6411,7 @@ filegroup(
         "yang/frr-module-translator.yang",
         "yang/frr-nexthop.yang",
         "yang/frr-test-module.yang",
+        "yang/frr-test-config.yang",
         "yang/frr-if-rmap.yang",
         "yang/frr-interface.yang",
         "yang/frr-route-map.yang",

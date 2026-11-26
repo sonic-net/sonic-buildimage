@@ -2,17 +2,29 @@
 @DEFINES@
 #ifndef HAVE_EXPLICIT_BZERO
 #include <stddef.h>
+#ifndef __cplusplus
 void explicit_bzero(void *buf, size_t len);
+#else
+extern "C" void explicit_bzero(void *buf, size_t len);
+#endif
 #endif
 #ifndef HAVE_STRLCAT
 #include <stddef.h>
+#ifndef __cplusplus
 size_t strlcat(char *__restrict dest,
 	       const char *__restrict src, size_t destsize);
+#else
+extern "C" size_t strlcat(char *dest, const char *src, size_t destsize);
+#endif
 #endif
 #ifndef HAVE_STRLCPY
 #include <stddef.h>
+#ifndef __cplusplus
 size_t strlcpy(char *__restrict dest,
 	       const char *__restrict src, size_t destsize);
+#else
+extern "C" size_t strlcpy(char *dest, const char *src, size_t destsize);
+#endif
 #endif
 #ifdef __OpenBSD__
 #define __wchar_t __wchar_t_ignore

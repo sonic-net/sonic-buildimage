@@ -72,7 +72,7 @@ production startup script's default authentication. Its deprecated `-ui
 /rest_ui` argument is preserved; the current server uses its default installed
 UI directory `/etc/rest_server/ui`.
 
-The shared Go graph uses one root gNMI work file, Go 1.25.9, modern glog 1.2.4,
+The shared Go graph uses one root gNMI work file, Go 1.26.7, modern glog 1.2.4,
 and the existing SONiC-patched public goyang and ygot modules. Framework joins
 through its go.mod requirements. The root explicitly preserves x/text 0.39.0
 from the original owners while combining their compatible net/crypto/sys

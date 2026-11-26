@@ -13,7 +13,9 @@ def command(*args):
     return subprocess.check_output([bazel, *args], cwd=root, env=env, text=True).strip()
 mapping = json.loads(command('mod', 'dump_repo_mapping', ''))
 repo = mapping['sonic_build_infra']
-command('fetch', '--repo=@@' + repo)
+# Materialize the selected SDK before the plan records its absolute path.
+# A reused output base can otherwise retain the preceding SDK after a pin update.
+command('fetch', '--repo=@@' + repo, '--repo=@@' + mapping['buildimage_go_sdk'])
 base = Path(command('info', 'output_base'))
 os.execve(sys.executable, [sys.executable, str(base / 'external' / repo / 'go/lock.py'),
                           '--workspace', str(root), '--bazel', bazel,

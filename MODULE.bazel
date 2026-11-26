@@ -31,7 +31,7 @@ include("//src/sonic-frr:deps.MODULE.bazel")
 
 # Cache Go module ZIPs by reviewed archive digests.
 bazel_dep(name = "gazelle", version = "0.54.0.sonic.2", repo_name = "bazel_gazelle")
-bazel_dep(name = "rules_go", version = "0.65.0.sonic.2", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_go", version = "0.65.0.sonic.3", repo_name = "io_bazel_rules_go")
 go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
 go_deps.zip_lock(file = "//tools/bazel/go:go.zip.sums.json")
 use_repo(go_deps, go_zip_lock_plan = "bazel_gazelle_go_repository_config")
@@ -140,7 +140,7 @@ local_path_override(
 # repair selected when another module requests the unpatched stable release.
 single_version_override(
     module_name = "rules_go",
-    version = "0.65.0.sonic.2",
+    version = "0.65.0.sonic.3",
 )
 
 single_version_override(
@@ -367,14 +367,7 @@ bazel_dep(name = "socat", version = "1.8.0.2.sonic.8")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.9")
 bazel_dep(name = "libnl3", version = "3.7.0.sonic.10")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.2")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.9")
-
-# Apply the parser fix used by the native Debian package to all image consumers.
-single_version_override(
-    module_name = "libyang",
-    patches = ["//src/libyang3:patch/0002-parsers-forget-a-freed-keyless-list-from-the-unres-sets.patch"],
-    patch_strip = 1,
-)
+bazel_dep(name = "libyang", version = "3.12.2.sonic.10")
 
 # Keep the image's LACP port-removal fix on top of the published libteam source.
 single_version_override(
@@ -538,7 +531,8 @@ bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.2-20200309174518-a0
 bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.2", repo_name = "com_github_openconfig_ygot")
 
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.25.9")
+go_sdk.download(name = "buildimage_go_sdk", version = "1.26.7")
+use_repo(go_sdk, "buildimage_go_sdk")
 
 use_repo(apt, "gnmi_debian", "gnmi_debug_debian", "gnmi_test_debian")
 
@@ -723,6 +717,23 @@ http_archive(
 bazel_dep(name = "otelcol-contrib", version = "0.165.0.sonic.1", repo_name = "otelcol_contrib")
 
 otel_runtime_deps = use_extension("@otelcol_contrib//bazel:collector_deps.bzl", "go_deps")
+# Apply the release's Avro replacement from its locked Go module. OBI uses
+# upstream's generated BPF objects, which the ordinary Go module ZIP omits.
+otel_runtime_deps.from_file(go_mod = "@otelcol_contrib//distributions/otelcol-contrib:go.mod")
+otel_runtime_deps.archive_override(
+    path = "go.opentelemetry.io/obi",
+    patches = ["@otelcol_contrib//bazel:0003-obi-replacement-metadata.patch"],
+    patch_strip = 1,
+    sha256 = "d3cbec602e3ab7b357d2f4a57b29e502365f9098808418e8b4d96dec8fa9281f",
+    strip_prefix = "obi-v0.15.2-source-generated",
+    urls = ["https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation/releases/download/v0.15.2/obi-v0.15.2-source-generated.tar.gz"],
+)
+
+otel_runtime_deps.module_override(
+    path = "github.com/hamba/avro/v2",
+    patches = ["@otelcol_contrib//bazel:0004-avro-replacement-metadata.patch"],
+    patch_strip = 1,
+)
 otel_runtime_deps.gazelle_default_attributes(
     build_file_generation = "clean",
     directives = ["gazelle:proto disable_global"],
@@ -847,7 +858,25 @@ radius_patch_tools_repository(name="radius_source_patch_tools",lock="@sonic_buil
 
 radius_prepared_source(name="freeradius_pam_src",gnu_tools="@radius_source_patch_tools//:ROOT",build_file="//src/radius/pam:freeradius.BUILD.bazel",inputs={'freeradius_configure.patch': '//src/radius/pam:freeradius/patches/freeradius_configure.patch', 'freeradius_2007-04-06.patch': '//src/radius/pam:freeradius/patches/freeradius_2007-04-06.patch', 'freeradius_libeap_deprecated_openssl_1_0.patch': '//src/radius/pam:freeradius/patches/freeradius_libeap_deprecated_openssl_1_0.patch', 'libltdl_config_sub.patch': '//src/radius/pam:freeradius/patches/libltdl_config_sub.patch', 'config.sub': '//src/radius/pam:freeradius/patches/config.sub', 'config.guess': '//src/radius/pam:freeradius/patches/config.guess'},steps=['{"op": "archive", "urls": ["https://github.com/FreeRADIUS/freeradius-server/archive/5f715dba4d2dbdb268bf60fcc656352274930941.tar.gz"], "sha256": "8f95c10749877ff00e03a58aad4662063e30de57f8eb45cc9094d2f2028b82b9", "strip_prefix": "freeradius-server-5f715dba4d2dbdb268bf60fcc656352274930941"}', '{"op": "patch", "input": "freeradius_configure.patch"}', '{"op": "patch", "input": "freeradius_2007-04-06.patch", "format": "gnu", "fuzz": 2}', '{"op": "patch", "input": "freeradius_libeap_deprecated_openssl_1_0.patch"}', '{"op": "patch", "input": "libltdl_config_sub.patch"}', '{"op": "file", "input": "config.sub", "path": "config.sub"}', '{"op": "file", "input": "config.guess", "path": "config.guess"}'])
 
-radius_prepared_source(name="pam_radius_src",build_file="//src/radius/pam:pam_radius.BUILD.bazel",inputs={'0001-chap-support.patch': '//src/radius/pam:debian/patches/0001-chap-support.patch', '0002-peap-mschapv2-support.patch': '//src/radius/pam:debian/patches/0002-peap-mschapv2-support.patch', '0003-nas-ip-address-config.patch': '//src/radius/pam:debian/patches/0003-nas-ip-address-config.patch', '0004-fix-blastradius.patch': '//src/radius/pam:debian/patches/0004-fix-blastradius.patch'},steps=['{"op": "archive", "urls": ["https://github.com/FreeRADIUS/pam_radius/archive/149c25df84cf5cd0e9addd9346699a9ca8fdddd2.tar.gz"], "sha256": "3b45c13f4fa009a68b391338484050b91f9f37363ddb88c4cba59b137e932b3a", "strip_prefix": "pam_radius-149c25df84cf5cd0e9addd9346699a9ca8fdddd2"}', '{"op": "patch", "input": "0001-chap-support.patch"}', '{"op": "patch", "input": "0002-peap-mschapv2-support.patch"}', '{"op": "patch", "input": "0003-nas-ip-address-config.patch"}', '{"op": "patch", "input": "0004-fix-blastradius.patch"}'])
+pam_radius_patches = [
+    "0001-chap-support.patch",
+    "0002-peap-mschapv2-support.patch",
+    "0003-nas-ip-address-config.patch",
+    "0004-fix-blastradius.patch",
+    "0005-peap-validation-and-bounds.patch",
+    "0006-bound-peap-response-wait.patch",
+]
+
+radius_prepared_source(
+    name = "pam_radius_src",
+    build_file = "//src/radius/pam:pam_radius.BUILD.bazel",
+    gnu_tools = "@radius_source_patch_tools//:ROOT",
+    inputs = {patch: "//src/radius/pam:debian/patches/" + patch for patch in ["series"] + pam_radius_patches},
+    steps = [
+        '{"op":"archive","urls":["https://github.com/FreeRADIUS/pam_radius/archive/149c25df84cf5cd0e9addd9346699a9ca8fdddd2.tar.gz"],"sha256":"3b45c13f4fa009a68b391338484050b91f9f37363ddb88c4cba59b137e932b3a","strip_prefix":"pam_radius-149c25df84cf5cd0e9addd9346699a9ca8fdddd2"}',
+        '{"op":"patch_series","format":"gnu","series_input":"series","patch_inputs":["' + '","'.join(pam_radius_patches) + '"]}',
+    ],
+)
 
 use_repo(apt, "radius_pam_build_debian")
 

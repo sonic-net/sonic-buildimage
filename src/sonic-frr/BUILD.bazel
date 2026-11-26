@@ -14,6 +14,10 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["patch/*.patch"]) + [
     "dplane_fpm_sonic/dplane_fpm_sonic.c",
+    "dplane_fpm_sonic/fpm_mac.c",
+    "dplane_fpm_sonic/fpm_mac.h",
+    "dplane_fpm_sonic/tests/fpm_mac_test.c",
+    "dplane_fpm_sonic/tests/fpm_mac_test.py",
     "patch/series",
     "test_generation.py",
     "upstream_tests.py",
@@ -70,13 +74,13 @@ filegroup(
 
 
 py_binary(name = "test_generation", srcs = ["test_generation.py"])
-# Release metadata is bound to the fixed 10.5.4 source's first Debian stanza.
+# Release metadata is bound to the fixed 10.7.1 source's first Debian stanza.
 expand_template(
     name = "package_changelog",
     template = "@frr_source//:debian/changelog",
     out = "metadata/changelog.Debian",
     substitutions = {
-        "frr (10.5.4-0) unstable; urgency=medium": "frr (10.5.4-sonic-0) UNRELEASED; urgency=medium\n\n  * Build the SONiC-patched FRRouting sources.\n\n -- SONiC <sonicproject@googlegroups.com>  Mon, 20 Apr 2026 02:00:00 -0600\n\nfrr (10.5.4-0) unstable; urgency=medium",
+        "frr (10.7.1-0) unstable; urgency=medium": "frr (10.7.1-sonic-0) UNRELEASED; urgency=medium\n\n  * Build the SONiC-patched FRRouting sources.\n\n -- SONiC <sonicproject@googlegroups.com>  Tue, 25 Aug 2026 02:00:00 -0600\n\nfrr (10.7.1-0) unstable; urgency=medium",
     },
 )
 
@@ -93,10 +97,10 @@ _SUBSTITUTIONS = {
     "GRPC_TRUE": "#",
     "PACKAGE_BUGREPORT": "https://github.com/frrouting/frr/issues",
     "PACKAGE_NAME": "frr",
-    "PACKAGE_STRING": "frr 10.5.4",
+    "PACKAGE_STRING": "frr 10.7.1",
     "PACKAGE_TARNAME": "frr",
     "PACKAGE_URL": "https://frrouting.org/",
-    "PACKAGE_VERSION": "10.5.4",
+    "PACKAGE_VERSION": "10.7.1",
     "SCRIPTING_TRUE": "#",
     "TIMEOUT_MIN": "2",
     "ZEROMQ_TRUE": "#",
@@ -210,7 +214,7 @@ pkg_files(
 )
 
 # The epoch is the date of the fixed source's first debian/changelog stanza.
-_DOCUMENTATION_EPOCH = "1776672000"
+_DOCUMENTATION_EPOCH = "1787644800"
 # FRR's upstream conf.py accepts the declared version; all docs stay in place.
 [
     run_binary(
@@ -601,6 +605,7 @@ _COMMON_HEADER_DEFINES = [
     "#define HAVE_ISISD 1",
     "#define HAVE_LCAPS 1",
     "#define HAVE_LDPD 1",
+    "#define HAVE_EPOLL_PWAIT 1",
     "#define HAVE_LIBUNWIND 1",
     "#define HAVE_MALLINFO 1",
     "#define HAVE_MALLINFO2 1",
@@ -650,13 +655,13 @@ _COMMON_HEADER_DEFINES = [
     "#define PACKAGE \"frr\"",
     "#define PACKAGE_BUGREPORT \"https://github.com/frrouting/frr/issues\"",
     "#define PACKAGE_NAME \"frr\"",
-    "#define PACKAGE_STRING \"frr 10.5.4\"",
+    "#define PACKAGE_STRING \"frr 10.7.1\"",
     "#define PACKAGE_TARNAME \"frr\"",
     "#define PACKAGE_URL \"\"",
-    "#define PACKAGE_VERSION \"10.5.4\"",
+    "#define PACKAGE_VERSION \"10.7.1\"",
     "#define STDC_HEADERS 1",
     "#define SUPPORT_OSPF_API 1",
-    "#define VERSION \"10.5.4\"",
+    "#define VERSION \"10.7.1\"",
     "#define VICI_SOCKET \"/var/run/charon.vici\"",
     "#define YYTEXT_POINTER 1"
 ]
@@ -699,6 +704,7 @@ _TARGET_HEADER_DEFINES = [
     "#define MULTIPATH_NUM 514",
     "#define PAM_CONV_FUNC misc_conv",
     "#define SNMP_AGENTX 1",
+    "#define USE_EPOLL 1",
     "#define USE_PAM 1",
     "#define VTYSH 1",
     "#define VTYSH_PAGER \"/usr/bin/pager\"",

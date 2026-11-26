@@ -53,13 +53,12 @@ header but makes no libFIB API call, so the linker drops its unused shared
 library. The existing Make build and runtime metadata declarations are retained;
 a recipe dependency alone is not proof of an ELF loader dependency.
 
-Native builds use the maintained registry `main`, including Net-SNMP
-`5.9.3.sonic.1`, libyang `3.12.2.sonic.8` and libnl3 `3.7.0.sonic.8`.
-The root selects published build infrastructure
-`0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe` for the libFIB collections.
-The source and ordered
-SONiC patches remain unchanged. Installation targets retain
-`preserve_install_rpath = True` for FRR's private shared libraries.
+FRR 10.7.1 uses the same release commit and ordered patch series as the
+Make build. The SONiC FPM module includes the MAC decoder, and the upstream
+check suite exercises its CUnit test and the BGP community test. Build
+dependencies come from the registry versions selected by the root
+`MODULE.bazel`. Installation targets preserve the runtime search path for
+FRR's private shared libraries.
 
 For local validation, use the commands and explicit platform flags in
 `.github/workflows/bazel-frr.yml`. The CI entry point
