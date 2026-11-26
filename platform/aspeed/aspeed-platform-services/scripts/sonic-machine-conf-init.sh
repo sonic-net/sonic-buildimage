@@ -58,6 +58,10 @@ elif echo "$MODEL" | grep -q "Nokia-BMC-H6-128"; then
     PLATFORM="arm64-nokia_bmc_h6_128-r0"
     MACHINE="aspeed_ast2700"
     log "Detected Nokia H6-128 BMC platform"
+elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
+    PLATFORM="arm64-aspeed_ast2700_evb-r0"
+    MACHINE="aspeed_ast2700"
+    log "Detected Aspeed AST2700 EVB platform"
 elif echo "$COMPATIBLE" | grep -q "micas,m2-w6950-128oc"; then
     PLATFORM="arm64-micas_m2-w6950-128oc-r0"
     MACHINE="aspeed_ast2700"
