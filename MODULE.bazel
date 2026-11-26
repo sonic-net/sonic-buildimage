@@ -717,6 +717,9 @@ http_archive(
 bazel_dep(name = "otelcol-contrib", version = "0.165.0.sonic.1", repo_name = "otelcol_contrib")
 
 otel_runtime_deps = use_extension("@otelcol_contrib//bazel:collector_deps.bzl", "go_deps")
+# Gazelle reads ZIP locks from the root module. Use the producer's hashes so
+# fetching modules with newer Go requirements does not invoke the image SDK.
+otel_runtime_deps.zip_lock(file = "@otelcol_contrib//bazel:collector-go-zip-lock.json")
 # Apply the release's Avro replacement from its locked Go module. OBI uses
 # upstream's generated BPF objects, which the ordinary Go module ZIP omits.
 otel_runtime_deps.from_file(go_mod = "@otelcol_contrib//distributions/otelcol-contrib:go.mod")
@@ -745,10 +748,14 @@ otel_runtime_deps.module_override(
 )
 
 otel_golden_deps = use_extension("@otelcol_contrib//bazel:golden_deps.bzl", "go_deps")
+otel_golden_deps.zip_lock(file = "@otelcol_contrib//bazel:golden-go-zip-lock.json")
 otel_golden_deps.gazelle_default_attributes(
     build_file_generation = "clean",
     directives = ["gazelle:proto disable_global"],
 )
+
+otel_ocb_deps = use_extension("@otelcol_contrib//bazel:ocb_deps.bzl", "go_deps")
+otel_ocb_deps.zip_lock(file = "@otelcol_contrib//bazel:ocb-go-zip-lock.json")
 
 use_repo(apt, "otel_debian")
 
