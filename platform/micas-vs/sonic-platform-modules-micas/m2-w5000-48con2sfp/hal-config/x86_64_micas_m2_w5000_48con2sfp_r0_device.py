@@ -13,7 +13,6 @@ class threshold:
     FAN_SPEED_MAX = 20000
     FAN_SPEED_MIN = 2000
 
-
 class Description:
     CPLD = "Used for managing IO modules, SFP+ modules and system LEDs"
     BIOS = "Performs initialization of hardware components during booting"
