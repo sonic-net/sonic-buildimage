@@ -1957,6 +1957,15 @@ class ModularChassis(Chassis):
         """
         return reduce(lambda x, y: x + y, (x.get_all_sfps() for x in self.get_all_modules()))
 
+    def get_all_ports(self):
+        """
+        Retrieves all front panel ports of this chassis
+
+        Returns:
+            A list of the line card SFP objects. A modular chassis has no CPO ports.
+        """
+        return self.get_all_sfps()
+
     def get_sfp(self, index):
         """
         Retrieves sfp represented by (1-based) index <index>

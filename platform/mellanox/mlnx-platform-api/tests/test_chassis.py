@@ -534,6 +534,16 @@ class TestChassis:
         with mock.patch("builtins.open", mock.mock_open(read_data="SONIC_BOOT_TYPE=None")):
             assert chassis._parse_warmfast_reboot_from_proc_cmdline() == None
 
+    def test_modular_chassis_get_all_ports_returns_the_line_card_sfps(self):
+        from sonic_platform.chassis import ModularChassis
+        chassis = ModularChassis()
+        line_cards = [MagicMock(), MagicMock()]
+        line_cards[0].get_all_sfps.return_value = ['lc1_sfp1', 'lc1_sfp2']
+        line_cards[1].get_all_sfps.return_value = ['lc2_sfp1', 'lc2_sfp2']
+        chassis.get_all_modules = MagicMock(return_value=line_cards)
+
+        assert chassis.get_all_ports() == ['lc1_sfp1', 'lc1_sfp2', 'lc2_sfp1', 'lc2_sfp2']
+
     def test_module(self):
         from sonic_platform.chassis import ModularChassis
         # Test get_num_modules, it should not create any SFP objects
