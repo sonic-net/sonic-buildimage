@@ -784,16 +784,20 @@ def is_chassis_config_absent():
     return False
 
 
-def is_voq_chassis():
-    switch_type = get_localhost_info('switch_type')
-    single_voq = is_chassis_config_absent()
+def _is_voq_switch_type(switch_type):
+    return switch_type in ('voq', 'fabric') and not is_chassis_config_absent()
 
-    return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
+
+def is_voq_chassis():
+    return _is_voq_switch_type(get_localhost_info('switch_type'))
+
+
+def _is_packet_switch_type(switch_type):
+    return switch_type == 'chassis-packet'
 
 
 def is_packet_chassis():
-    switch_type = get_localhost_info('switch_type')
-    return True if switch_type and switch_type == 'chassis-packet' else False
+    return _is_packet_switch_type(get_localhost_info('switch_type'))
 
 
 def is_disaggregated_chassis():
@@ -812,28 +816,40 @@ def is_disaggregated_chassis():
         return False
 
 
+def _is_virtual_switch_type(switch_type):
+    return (get_platform_info().get('asic_type') == "vs"
+            and switch_type in ["dummy-sup", "voq", "chassis-packet"]
+            # A single-asic "pizza box" VOQ vlab has switch_type=voq but no chassis_db
+            # config (chassisdb.conf absent), so it is not a virtual chassis.
+            and not is_chassis_config_absent())
+
+
 def is_virtual_chassis():
-    switch_type = get_localhost_info('switch_type')
-    asic_type = get_platform_info().get('asic_type')
-    # A single-asic "pizza box" VOQ vlab has switch_type=voq but no chassis_db
-    # config (chassisdb.conf absent), so it is not a virtual chassis.
-    single_asic = is_chassis_config_absent()
-    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]  and not single_asic:
-        return True
-    else:
-        return False
+    return _is_virtual_switch_type(get_localhost_info('switch_type'))
+
+
+def _get_localhost_metadata():
+    """Return the DEVICE_METADATA|localhost entry from one CONFIG_DB read, or None if the
+    read failed or the entry is missing."""
+    try:
+        config_db = ConfigDBConnector()
+        config_db.connect()
+        return config_db.get_table('DEVICE_METADATA').get('localhost')
+    except Exception:
+        return None
 
 
 def is_chassis():
     global is_chassis_info
 
-    # Some CLI commands call this once per port, and each call reads DEVICE_METADATA three
-    # times through get_localhost_info(), opening a CONFIG_DB connection every time. Cache the
-    # answer, including a negative one, which is the normal case on a non-chassis device.
+    # Some CLI commands call this once per port. Reading DEVICE_METADATA separately for the
+    # device type and for each switch_type check opens several CONFIG_DB connections per call,
+    # so read it once and derive the answer from that single snapshot. Cache the answer,
+    # including a negative one, which is the normal case on a non-chassis device.
     #
-    # A failed lookup makes get_localhost_info() return None, which looks the same as an unset
-    # switch_type. The device type is always set in a loaded config, so only cache once it was
-    # read; otherwise the next call retries.
+    # A failed read cannot be told apart from an unset switch_type, so a read that failed is
+    # never cached. The device type is always set in a loaded config; a snapshot without it is
+    # treated as incomplete and the next call retries.
     #
     # Whether a device is a chassis does not change while a process runs. A long-running
     # process keeps the value it read first until it restarts.
@@ -843,11 +859,16 @@ def is_chassis():
     if is_chassis_info is not None:
         return is_chassis_info
 
-    device_type = get_localhost_info('type')
+    metadata = _get_localhost_metadata() or {}
+    device_type = metadata.get('type')
+    switch_type = metadata.get('switch_type')
+
     if device_type == 'SpineRouter':
         result = True
     else:
-        result = bool((is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis())
+        result = bool((_is_voq_switch_type(switch_type) and not is_disaggregated_chassis())
+                      or _is_packet_switch_type(switch_type)
+                      or _is_virtual_switch_type(switch_type))
 
     if device_type:
         is_chassis_info = result
