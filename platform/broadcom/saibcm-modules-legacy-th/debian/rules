@@ -209,6 +209,7 @@ binary-arch: build install
 	dh_installdeb -s
 #	dh_perl -s
 	dh_shlibdeps -s
+	dh_kerneldeps -s
 	dh_gencontrol -s -- -n"$(PKG_NAME)"
 	dh_md5sums -s
 	dh_builddeb -s --filename $(PKG_NAME)

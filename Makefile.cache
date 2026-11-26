@@ -150,7 +150,8 @@ endif
 endif
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
                             debian/compat debian/install debian/copyright
-SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-bullseye/Dockerfile.j2 \
+SONIC_COMMON_BASE_FILES_LIST  := $(shell git ls-files src/sonic-build-hooks/debhelper) \
+                                 sonic-slave-bullseye/Dockerfile.j2 \
                                  sonic-slave-bookworm/Dockerfile.j2 \
 								 sonic-slave-trixie/Dockerfile.j2
 

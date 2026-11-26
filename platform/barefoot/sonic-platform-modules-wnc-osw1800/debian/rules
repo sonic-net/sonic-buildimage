@@ -10,7 +10,7 @@ SCRIPT_SRC := $(shell pwd)/scripts
 SERVICE_SRC := $(shell pwd)/service
 
 %:
-	dh $@ --with python3
+	dh $@ --with kernel_modules --with python3
 
 override_dh_auto_build:
 	make -C $(KERNEL_SRC)/build M=$(MODULE_SRC)

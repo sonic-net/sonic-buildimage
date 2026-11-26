@@ -1,9 +1,7 @@
 # linux kernel package
 
-KERNEL_VERSION = 6.12.94
-KERNEL_ABISUFFIX = +deb13
-KERNEL_SUBVERSION = 1
-KERNEL_FEATURESET = sonic
+# Set KERNEL_* here first to override the version from sonic-linux-kernel.
+include $(SRC_PATH)/sonic-linux-kernel/kernel-version.mk
 # Note: KVERSION_SHORT is used by Arista
 KVERSION_SHORT := $(KERNEL_VERSION)$(KERNEL_ABISUFFIX)-$(KERNEL_FEATURESET)
 ifeq ($(CONFIGURED_ARCH), armhf)

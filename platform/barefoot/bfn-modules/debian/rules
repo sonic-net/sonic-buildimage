@@ -8,7 +8,7 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MODULE_SRC := $(shell pwd)/modules
 
 %:
-	dh $@ --with python3
+	dh $@ --with kernel_modules --with python3
 
 override_dh_auto_build:
 	make -C $(KERNEL_SRC)/build M=$(MODULE_SRC)

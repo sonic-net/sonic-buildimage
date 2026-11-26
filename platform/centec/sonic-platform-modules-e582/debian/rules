@@ -10,7 +10,7 @@ KDAL_DIR := centec-dal/
 PCA954X_DIR := pca954x/
 
 %:
-	dh $@
+	dh $@ --with kernel_modules
 
 override_dh_auto_build:
 	cp ../../centec/centec-dal/ $(MOD_SRC_DIR)/$(KDAL_DIR) -rf

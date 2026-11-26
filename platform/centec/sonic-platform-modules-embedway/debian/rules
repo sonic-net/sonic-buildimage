@@ -7,7 +7,7 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 
 %:
-	dh $@
+	dh $@ --with kernel_modules
 
 override_dh_auto_build:
 	rm $(MOD_SRC_DIR)/centec-dal -rf

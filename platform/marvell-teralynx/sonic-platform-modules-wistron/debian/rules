@@ -24,7 +24,7 @@ SERVICE_DIR := service
 CONF_DIR := conf
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild --pybuild-system=setuptools
+	dh $@ --with kernel_modules --with python3 --buildsystem=pybuild --pybuild-system=setuptools
 
 override_dh_auto_clean:
 	(set -e; for mod in $(MODULE_DIRS); do \

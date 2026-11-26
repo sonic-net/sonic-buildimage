@@ -26,7 +26,7 @@ MOD_SRC_DIR:= $(shell pwd)
 UTILS_DIR := utils
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild
+	dh $@ --with kernel_modules --with python3 --buildsystem=pybuild
 
 override_dh_auto_clean:
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) clean
