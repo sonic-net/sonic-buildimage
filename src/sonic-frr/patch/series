@@ -52,3 +52,7 @@
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
 0130-lib-fix-use-after-free-in-agentx_events_update.patch
 0131-SONiC-ONLY-zebra-Copy-the-VxLAN-encap-data-to-a-nexthop-resolved-through-EVPN.patch
+# Requires the EVPN L3MH and bridge-port protection patches (sonic-buildimage PRs #30220 and #30585)
+# EVPN L3MH port-down handoff and recovery, FRR PR #24584
+0139-bgpd-zebra-EVPN-L3MH-port-handoff.patch
+0140-tests-cover-EVPN-L3MH-port-handoff.patch
