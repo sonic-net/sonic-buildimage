@@ -79,24 +79,32 @@ class psu(devicebase):
         self.psu_display_name_conifg = conf.get("psu_display_name", None)
         self.psu_not_present_pwm = conf.get("psu_not_present_pwm", 100)
         self.Temperature_config = conf.get("Temperature", None)
-        self.Temperature = sensor(self.Temperature_config, self.get_psu_model)
+        if self.Temperature_config:
+            self.Temperature = sensor(self.Temperature_config, self.get_psu_model)
 
         self.FanSpeedTolerance = conf.get('psu_fan_tolerance', 30)
         self.FanSpeed_config = conf.get("FanSpeed", None)
-        self.FanSpeed = sensor(self.FanSpeed_config, self.get_psu_model)
+        if self.FanSpeed_config:
+            self.FanSpeed = sensor(self.FanSpeed_config, self.get_psu_model)
 
         self.__InputsVoltage_config = conf.get("InputsVoltage", None)
-        self.generate_psu_input_vol(self.__InputsVoltage_config)
+        if self.__InputsVoltage_config:
+            self.generate_psu_input_vol(self.__InputsVoltage_config)
         self.__InputsCurrent_config = conf.get("InputsCurrent", None)
-        self.InputsCurrent = sensor(self.__InputsCurrent_config, self.get_psu_model)
+        if self.__InputsCurrent_config:
+            self.InputsCurrent = sensor(self.__InputsCurrent_config, self.get_psu_model)
         self.__InputsPower_config = conf.get("InputsPower", None)
-        self.InputsPower = sensor(self.__InputsPower_config, self.get_psu_model)
+        if self.__InputsPower_config:
+            self.InputsPower = sensor(self.__InputsPower_config, self.get_psu_model)
         self.__OutputsVoltage_config = conf.get("OutputsVoltage", None)
-        self.OutputsVoltage = sensor(self.__OutputsVoltage_config, self.get_psu_model)
+        if self.__OutputsVoltage_config:
+            self.OutputsVoltage = sensor(self.__OutputsVoltage_config, self.get_psu_model)
         self.__OutputsCurrent_config = conf.get("OutputsCurrent", None)
-        self.OutputsCurrent = sensor(self.__OutputsCurrent_config, self.get_psu_model)
+        if self.__OutputsCurrent_config:
+            self.OutputsCurrent = sensor(self.__OutputsCurrent_config, self.get_psu_model)
         self.__OutputsPower_config = conf.get("OutputsPower", None)
-        self.OutputsPower = sensor(self.__OutputsPower_config, self.get_psu_model)
+        if self.__OutputsPower_config:
+            self.OutputsPower = sensor(self.__OutputsPower_config, self.get_psu_model)
 
         self.__InputStatus_config = conf.get("InputsStatus", None)
         self.__OutputStatus_config = conf.get("OutputsStatus", None)

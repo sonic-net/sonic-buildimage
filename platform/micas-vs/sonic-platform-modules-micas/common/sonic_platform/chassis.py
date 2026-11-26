@@ -24,7 +24,7 @@ try:
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
     from sonic_platform.thermal import Thermal
-    # from sonic_platform.watchdog import Watchdog
+    from sonic_platform.watchdog import Watchdog
     from sonic_platform.component import Component
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.dcdc import Dcdc, VoltageSensor, CurrentSensor
@@ -87,7 +87,7 @@ class Chassis(ChassisBase):
             print("EEPROM INIT ERROR %s" % str(err))
 
         # Initialize watchdog
-        # self._watchdog = Watchdog()
+        self._watchdog = None
         fantray_num = self.int_case.get_fan_total_number()
         for index in range(fantray_num):
             fandrawer = FanDrawer(self.int_case, index + 1)
@@ -127,6 +127,34 @@ class Chassis(ChassisBase):
                 currobj = CurrentSensor(self.int_case, index + 1, curr_index)
                 self._current_sensor_list.append(currobj)
                 curr_index += 1
+
+    def get_num_sfps(self):
+        """
+        Retrieves the number of sfps available on this chassis
+
+        Returns:
+            An integer, the number of sfps available on this chassis
+        """
+        return self.port_num
+    
+    def get_sfp(self, index):
+        """
+        Retrieves sfp represented by (1-based) index <index>
+        Args:
+            index: An integer, the index (1-based) of the sfp to retrieve.
+            The index should be the sequence of a physical port in a chassis,
+            starting from 1.
+            For example, 1 for Ethernet0, 2 for Ethernet4 and so on.
+        Returns:
+            An object dervied from SfpBase representing the specified sfp
+        """
+        try:
+            # The index will start from 1
+            sfp = self._sfp_list[index-1]
+        except IndexError:
+            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
+                             index, len(self._sfp_list)))
+        return sfp
 
     def get_name(self):
         """
@@ -573,3 +601,10 @@ class Chassis(ChassisBase):
                 ret_dict[name] = status
         self.voltage_status_dict = current_voltage_status_dict
         return ret_dict
+    
+    def get_watchdog(self):
+        if self._watchdog is None:
+            from sonic_platform.watchdog import Watchdog
+            self._watchdog = Watchdog()
+
+        return self._watchdog

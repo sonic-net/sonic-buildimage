@@ -2345,7 +2345,7 @@ static void xgbe_phy_x_mode(struct xgbe_prv_data *pdata)
 
 	/* 1G/X */
 	xgbe_phy_perform_ratechange(pdata, XGBE_MB_CMD_SET_1G, XGBE_MB_SUBCMD_1G_KX);
-
+	pdata->en_rx_adap = 0;
 	phy_data->cur_mode = XGBE_MODE_X;
 
 	netif_dbg(pdata, link, pdata->netdev, "1GbE X mode set\n");
@@ -2359,7 +2359,7 @@ static void xgbe_phy_sgmii_1000_mode(struct xgbe_prv_data *pdata)
 
 	/* 1G/SGMII */
 	xgbe_phy_perform_ratechange(pdata, XGBE_MB_CMD_SET_1G, XGBE_MB_SUBCMD_1G_SGMII);
-
+	pdata->en_rx_adap = 0;
 	phy_data->cur_mode = XGBE_MODE_SGMII_1000;
 
 	netif_dbg(pdata, link, pdata->netdev, "1GbE SGMII mode set\n");
