@@ -1,9 +1,13 @@
-From 371b6e8e7820c93d99b295d7550c9e921b2984d8 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Patrice Brissette <pbrisset@cisco.com>
 Date: Fri, 6 Nov 2026 19:56:42 -0500
 Subject: [PATCH 124/125] bgpd,zebra,lib,fpm: EVPN bridge-port protection
 
-Squashed backport of the current FRRouting/frr PR #24071 implementation to the SONiC FRR 10.7.1 patch stack. Include the shared FPM BPP codec and focused ZAPI/FPM unit tests. The bgp_evpn_mh_bpp topotest is carried in the following patch.
+Squashed backport of the current FRRouting/frr PR #24071 implementation to the SONiC FRR 10.7.1 patch stack. Include Zebra's protection replay API and focused ZAPI unit tests. The SONiC FPM sender and connect hook are provided by sonic-buildimage#30439. The bgp_evpn_mh_bpp topotest is carried in the following patch.
+
+Correlate port-wide bridge-port completions by request sequence. Keep a
+failed unbind pending until it succeeds or a newer binding succeeds.
+Return an empty JSON object for an unknown ESI.
 
 Co-authored-by: Cursor <cursoragent@cursor.com>
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
@@ -11,10 +15,10 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  bgpd/bgp_debug.c               |   28 +-
  bgpd/bgp_debug.h               |    1 +
  bgpd/bgp_evpn.c                |   60 +-
- bgpd/bgp_evpn_mh.c             | 1754 ++++++++++++++++++++++--
- bgpd/bgp_evpn_mh.h             |  131 +-
+ bgpd/bgp_evpn_mh.c             | 1754 +++++++++++++++++++++++++++--
+ bgpd/bgp_evpn_mh.h             |  131 ++-
  bgpd/bgp_evpn_private.h        |   16 +
- bgpd/bgp_evpn_vty.c            |  206 +--
+ bgpd/bgp_evpn_vty.c            |  206 ++--
  bgpd/bgp_memory.c              |    4 +
  bgpd/bgp_memory.h              |    4 +
  bgpd/bgp_route.c               |   12 +-
@@ -25,13 +29,10 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  bgpd/bgpd.h                    |    5 +
  doc/user/bgp.rst               |   60 +
  doc/user/zebra.rst             |    3 +-
- fpm/fpm_bpp.h                  |  176 +++
- fpm/subdir.am                  |    1 +
  lib/log.c                      |    4 +-
  lib/zclient.c                  |  116 ++
  lib/zclient.h                  |   25 +
- tests/lib/subdir.am            |   16 +
- tests/lib/test_fpm_bpp.c       |  424 ++++++
+ tests/lib/subdir.am            |    7 +
  tests/lib/test_zapi_evpn_bpp.c |  230 ++++
  yang/frr-zebra.yang            |    7 +
  zebra/debug.c                  |   22 +-
@@ -45,11 +46,11 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  zebra/subdir.am                |    2 +
  zebra/zapi_msg.c               |    2 +
  zebra/zebra_cli.c              |   33 +
- zebra/zebra_dplane.c           |  215 ++-
- zebra/zebra_dplane.h           |   38 +
- zebra/zebra_evpn_bpp.c         | 2362 ++++++++++++++++++++++++++++++++
- zebra/zebra_evpn_bpp.h         |   94 ++
- zebra/zebra_evpn_mh.c          |  160 ++-
+ zebra/zebra_dplane.c           |  221 +++-
+ zebra/zebra_dplane.h           |   42 +-
+ zebra/zebra_evpn_bpp.c         | 2369 ++++++++++++++++++++++++++++++++++++++++
+ zebra/zebra_evpn_bpp.h         |   98 ++
+ zebra/zebra_evpn_mh.c          |  170 ++-
  zebra/zebra_evpn_mh.h          |   54 +-
  zebra/zebra_l2.c               |    7 +
  zebra/zebra_nb.c               |    6 +
@@ -60,15 +61,13 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
  zebra/zebra_script.c           |    3 +
  zebra/zebra_vty.c              |  121 ++
  zebra/zebra_vxlan.c            |   11 +
- 52 files changed, 6297 insertions(+), 276 deletions(-)
- create mode 100644 fpm/fpm_bpp.h
- create mode 100644 tests/lib/test_fpm_bpp.c
+ 49 files changed, 5710 insertions(+), 284 deletions(-)
  create mode 100644 tests/lib/test_zapi_evpn_bpp.c
  create mode 100644 zebra/zebra_evpn_bpp.c
  create mode 100644 zebra/zebra_evpn_bpp.h
 
 diff --git a/bgpd/bgp_debug.c b/bgpd/bgp_debug.c
-index e104bd6765..6aff0a1077 100644
+index e104bd676584bd20a4608acf1bc698f621872680..6aff0a10777305c2ee4c22bdd3385b39d3d7864a 100644
 --- a/bgpd/bgp_debug.c
 +++ b/bgpd/bgp_debug.c
 @@ -2129,7 +2129,7 @@ DEFUN (no_debug_bgp_pbr,
@@ -142,7 +141,7 @@ index e104bd6765..6aff0a1077 100644
  	if (CONF_BGP_DEBUG(bfd, BFD_LIB)) {
  		vty_out(vty, "debug bgp bfd\n");
 diff --git a/bgpd/bgp_debug.h b/bgpd/bgp_debug.h
-index ae3540e9ea..68ea5c0596 100644
+index ae3540e9ea47aac752a55b4cde6a0b229a749e01..68ea5c05966afc3db7438d2153302e4ce622b505 100644
 --- a/bgpd/bgp_debug.h
 +++ b/bgpd/bgp_debug.h
 @@ -138,6 +138,7 @@ struct bgp_debug_filter {
@@ -154,7 +153,7 @@ index ae3540e9ea..68ea5c0596 100644
  #define BGP_DEBUG_GRACEFUL_RESTART     0x01
  
 diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
-index 80d9a7f0ba..8b5ce407dc 100644
+index 80d9a7f0ba200c7fe97b6490cffc810e900e7446..8b5ce407dc0454e54e986979e5bfd29491f1a7ad 100644
 --- a/bgpd/bgp_evpn.c
 +++ b/bgpd/bgp_evpn.c
 @@ -4254,17 +4254,28 @@ static int install_uninstall_routes_for_vrf(struct bgp *bgp_vrf, bool install)
@@ -297,7 +296,7 @@ index 80d9a7f0ba..8b5ce407dc 100644
  	bgp_evpn_nh_finish(bgp_vrf);
  }
 diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
-index b6208bb83a..f2025539f9 100644
+index b6208bb83abe67fbf026164b9836536355d0ea2b..d04a1454ecc41e72a3ff1c65ee1890020e00b877 100644
 --- a/bgpd/bgp_evpn_mh.c
 +++ b/bgpd/bgp_evpn_mh.c
 @@ -10,6 +10,7 @@
@@ -1328,7 +1327,7 @@ index b6208bb83a..f2025539f9 100644
 +			continue;
 +		eligible = false;
 +		if (missing)
-+			json_array_string_add(missing, es_vrf->bgp_vrf->name);
++			json_array_string_add(missing, es_vrf->bgp_vrf->name_pretty);
 +	}
 +
 +	return ready && eligible;
@@ -1893,7 +1892,7 @@ index b6208bb83a..f2025539f9 100644
 +static void bgp_evpn_es_vrf_json_identity(json_object *json, const struct bgp_evpn_es_vrf *es_vrf)
 +{
 +	json_object_string_add(json, "esi", es_vrf->es->esi_str);
-+	json_object_string_add(json, "vrf", es_vrf->bgp_vrf->name);
++	json_object_string_add(json, "vrf", es_vrf->bgp_vrf->name_pretty);
 +}
 +
 +static void bgp_evpn_es_vrf_show_summary(struct vty *vty, struct bgp_evpn_es_vrf *es_vrf,
@@ -1935,7 +1934,7 @@ index b6208bb83a..f2025539f9 100644
 +		strlcpy(ipv6_nhg, "-", sizeof(ipv6_nhg));
 +
 +	vty_out(vty, "%-30s %-15s %-10s %-5s %-10s %-10s %-11u %u\n", es_vrf->es->esi_str,
-+		es_vrf->bgp_vrf->name, nhg_active ? "yes" : "no", l3mh ? "yes" : "no", ipv4_nhg,
++		es_vrf->bgp_vrf->name_pretty, nhg_active ? "yes" : "no", l3mh ? "yes" : "no", ipv4_nhg,
 +		ipv6_nhg, es_vrf->ref_cnt, es_vrf->l3_ref_cnt);
 +}
 +
@@ -1950,7 +1949,7 @@ index b6208bb83a..f2025539f9 100644
 +		return;
 +	}
 +
-+	vty_out(vty, "%-30s %-15s %-14u %-12u %u\n", es_vrf->es->esi_str, es_vrf->bgp_vrf->name,
++	vty_out(vty, "%-30s %-15s %-14u %-12u %u\n", es_vrf->es->esi_str, es_vrf->bgp_vrf->name_pretty,
 +		es_vrf->ip_ead_drop_label, es_vrf->ip_ead_drop_rmac, es_vrf->ip_ead_drop_non_aa);
 +}
 +
@@ -1964,7 +1963,7 @@ index b6208bb83a..f2025539f9 100644
 +		bgp_evpn_es_vrf_json_identity(json, es_vrf);
 +		json_vteps = json_object_new_array();
 +	} else {
-+		vty_out(vty, "%-30s %s\n", es_vrf->es->esi_str, es_vrf->bgp_vrf->name);
++		vty_out(vty, "%-30s %s\n", es_vrf->es->esi_str, es_vrf->bgp_vrf->name_pretty);
 +		vty_out(vty, "  %-39s %-9s %-8s %-6s %s\n", "Remote-VTEP", "IP-AD-EVI", "IP-AD-ES",
 +			"Active", "RMAC");
 +	}
@@ -2106,7 +2105,7 @@ index b6208bb83a..f2025539f9 100644
 +	if (es)
 +		bgp_evpn_es_vrf_show(vty, uj, es, type);
 +	else if (uj)
-+		vty_json(vty, json_object_new_array());
++		vty_json_empty(vty, NULL);
 +	else
 +		vty_out(vty, "ESI not found\n");
 +}
@@ -2210,7 +2209,7 @@ index b6208bb83a..f2025539f9 100644
  }
  
  /*****************************************************************************/
-@@ -3947,13 +5283,208 @@ bgp_evpn_local_es_evi_do_del(struct bgp_evpn_es_evi *es_evi)
+@@ -3947,13 +5293,208 @@ bgp_evpn_local_es_evi_do_del(struct bgp_evpn_es_evi *es_evi)
  	return bgp_evpn_es_evi_local_info_clear(es_evi);
  }
  
@@ -2419,7 +2418,7 @@ index b6208bb83a..f2025539f9 100644
  	es = bgp_evpn_es_find(esi);
  	if (!es) {
  		flog_err(
-@@ -3995,6 +5526,13 @@ int bgp_evpn_local_es_evi_add(struct bgp *bgp, esi_t *esi, vni_t vni)
+@@ -3995,6 +5536,13 @@ int bgp_evpn_local_es_evi_add(struct bgp *bgp, esi_t *esi, vni_t vni)
  	struct bgp_evpn_es_evi *es_evi;
  	char buf[ESI_STR_LEN];
  
@@ -2433,7 +2432,7 @@ index b6208bb83a..f2025539f9 100644
  	es = bgp_evpn_es_find(esi);
  	if (!es) {
  		flog_err(
-@@ -4005,7 +5543,6 @@ int bgp_evpn_local_es_evi_add(struct bgp *bgp, esi_t *esi, vni_t vni)
+@@ -4005,7 +5553,6 @@ int bgp_evpn_local_es_evi_add(struct bgp *bgp, esi_t *esi, vni_t vni)
  		return -1;
  	}
  
@@ -2441,7 +2440,7 @@ index b6208bb83a..f2025539f9 100644
  	if (!vpn) {
  		flog_err(
  				EC_BGP_ES_CREATE,
-@@ -5221,6 +6758,8 @@ void bgp_evpn_mh_init(void)
+@@ -5221,6 +6768,8 @@ void bgp_evpn_mh_init(void)
  	/* list of ESs with pending processing */
  	bgp_mh_info->pend_es_list = list_new();
  	listset_app_node_mem(bgp_mh_info->pend_es_list);
@@ -2450,7 +2449,7 @@ index b6208bb83a..f2025539f9 100644
  
  	bgp_mh_info->enable_ead_evi_rx = BGP_EVPN_MH_EAD_EVI_RX_DEF;
  	bgp_mh_info->enable_ead_evi_tx = BGP_EVPN_MH_EAD_EVI_TX_DEF;
-@@ -5255,10 +6794,15 @@ void bgp_evpn_mh_finish(void)
+@@ -5255,10 +6804,15 @@ void bgp_evpn_mh_finish(void)
  {
  	struct bgp_evpn_es *es;
  	struct bgp_evpn_es *es_next;
@@ -2466,7 +2465,7 @@ index b6208bb83a..f2025539f9 100644
  	/* Force cleanup of all ES structures including ES-EVI and ES-VRF.
  	 * During shutdown, normal cleanup may fail due to guard conditions
  	 * that prevent freeing structures with REMOTE flags set. We force
-@@ -5288,8 +6832,24 @@ void bgp_evpn_mh_finish(void)
+@@ -5288,8 +6842,24 @@ void bgp_evpn_mh_finish(void)
  			}
  		}
  
@@ -2493,7 +2492,7 @@ index b6208bb83a..f2025539f9 100644
  	event_cancel(&bgp_mh_info->t_cons_check);
  	list_delete(&bgp_mh_info->local_es_list);
 diff --git a/bgpd/bgp_evpn_mh.h b/bgpd/bgp_evpn_mh.h
-index 5268422535..84af744cca 100644
+index 526842253526cc85d8f38171b7e247e7f3790e1f..aaeb4041e2ee0790f69247fba57d1f9521fb2c38 100644
 --- a/bgpd/bgp_evpn_mh.h
 +++ b/bgpd/bgp_evpn_mh.h
 @@ -13,6 +13,12 @@
@@ -2618,7 +2617,7 @@ index 5268422535..84af744cca 100644
  };
  
  /* ES per-EVI info
-@@ -300,6 +386,8 @@ struct bgp_evpn_mh_info {
+@@ -300,6 +387,8 @@ struct bgp_evpn_mh_info {
  	struct list *local_es_list;
  	/* List of ESs with pending/periodic processing */
  	struct list *pend_es_list;
@@ -2627,7 +2626,7 @@ index 5268422535..84af744cca 100644
  	/* periodic timer for running background consistency checks */
  	struct event *t_cons_check;
  
-@@ -404,10 +492,19 @@ extern int bgp_evpn_es_route_install_uninstall(struct bgp *bgp,
+@@ -404,10 +493,19 @@ extern int bgp_evpn_es_route_install_uninstall(struct bgp *bgp,
  extern void update_type1_routes_for_evi(struct bgp *bgp, struct bgpevpn *vpn);
  extern int delete_global_ead_evi_routes(struct bgp *bgp, struct bgpevpn *vpn);
  extern int bgp_evpn_mh_route_update(struct bgp *bgp, struct bgp_evpn_es *es,
@@ -2648,7 +2647,7 @@ index 5268422535..84af744cca 100644
  int bgp_evpn_type1_route_process(struct peer *peer, afi_t afi, safi_t safi,
  		struct attr *attr, uint8_t *pfx, int psize,
  		uint32_t addpath_id);
-@@ -429,6 +526,7 @@ bgp_evpn_remote_es_evi_del(struct bgp *bgp, struct bgpevpn *vpn,
+@@ -429,6 +527,7 @@ bgp_evpn_remote_es_evi_del(struct bgp *bgp, struct bgpevpn *vpn,
  			   struct bgp_path_info *pi);
  extern void bgp_evpn_mh_init(void);
  extern void bgp_evpn_mh_finish(void);
@@ -2656,7 +2655,7 @@ index 5268422535..84af744cca 100644
  extern void bgp_evpn_es_cleanup_routes(struct bgp *bgp);
  void bgp_evpn_vni_es_init(struct bgpevpn *vpn);
  void bgp_evpn_vni_es_cleanup(struct bgpevpn *vpn);
-@@ -439,23 +537,29 @@ void bgp_evpn_es_evi_show_vni(struct vty *vty, vni_t vni,
+@@ -439,23 +538,29 @@ void bgp_evpn_es_evi_show_vni(struct vty *vty, vni_t vni,
  void bgp_evpn_es_evi_show(struct vty *vty, bool uj, bool detail);
  struct bgp_evpn_es *bgp_evpn_es_find(const esi_t *esi);
  extern void bgp_evpn_vrf_es_init(struct bgp *bgp_vrf);
@@ -2699,7 +2698,7 @@ index 5268422535..84af744cca 100644
  extern void bgp_evpn_nh_finish(struct bgp *bgp_vrf);
  extern void bgp_evpn_nh_show(struct vty *vty, bool uj);
 diff --git a/bgpd/bgp_evpn_private.h b/bgpd/bgp_evpn_private.h
-index e9832493f5..fd90ccd1eb 100644
+index e9832493f570058ea60d4c09c151eb7c315d8cf8..fd90ccd1eb3089ec207319d2edd6bc7361cfe530 100644
 --- a/bgpd/bgp_evpn_private.h
 +++ b/bgpd/bgp_evpn_private.h
 @@ -385,6 +385,21 @@ static inline void encode_rmac_extcomm(struct ecommunity_val *eval,
@@ -2733,7 +2732,7 @@ index e9832493f5..fd90ccd1eb 100644
  extern struct bgp_path_info *delete_evpn_route_entry(struct bgp *bgp, afi_t afi, safi_t safi,
  						     struct bgp_dest *dest,
 diff --git a/bgpd/bgp_evpn_vty.c b/bgpd/bgp_evpn_vty.c
-index ddb7066b4e..ad842a4c59 100644
+index ddb7066b4e842e0612ed54b8d4cf3556581a7d43..c2bd50e52fe6bfde04fd00fbf65e17c6e6162ab3 100644
 --- a/bgpd/bgp_evpn_vty.c
 +++ b/bgpd/bgp_evpn_vty.c
 @@ -717,15 +717,21 @@ static void show_esi_routes(struct bgp *bgp,
@@ -2905,7 +2904,7 @@ index ddb7066b4e..ad842a4c59 100644
 +		es = bgp_evpn_es_find(&esi);
 +		if (!es) {
 +			if (uj)
-+				vty_json(vty, json_object_new_array());
++				vty_json_empty(vty, NULL);
 +			else
 +				vty_out(vty, "ESI not found\n");
 +			return CMD_SUCCESS;
@@ -3049,7 +3048,7 @@ index ddb7066b4e..ad842a4c59 100644
  	install_element(VIEW_NODE, &show_bgp_l2vpn_evpn_vrf_import_rt_cmd);
  
 diff --git a/bgpd/bgp_memory.c b/bgpd/bgp_memory.c
-index ff9ed92b5c..d97f162440 100644
+index ff9ed92b5c0311ca4c1a07730a861db093dd3f9b..d97f162440cd1b1bf17790c142eafd9e399c2df4 100644
 --- a/bgpd/bgp_memory.c
 +++ b/bgpd/bgp_memory.c
 @@ -126,6 +126,10 @@ DEFINE_MTYPE(BGPD, BGP_EVPN_ES_EVI, "BGP EVPN ES-per-EVI Information");
@@ -3064,7 +3063,7 @@ index ff9ed92b5c..d97f162440 100644
  DEFINE_MTYPE(BGPD, BGP_SRV6_L3SERVICE, "BGP prefix-sid SRV6 L3 Service");
  DEFINE_MTYPE(BGPD, BGP_SRV6_VPN, "BGP prefix-sid srv6 vpn service");
 diff --git a/bgpd/bgp_memory.h b/bgpd/bgp_memory.h
-index 3cc2e19450..b63bd0169d 100644
+index 3cc2e19450535f511b968abe7a71a3ed7038c7c5..b63bd0169d8ff12e36f7c0f4e0739fe3d10d2d1b 100644
 --- a/bgpd/bgp_memory.h
 +++ b/bgpd/bgp_memory.h
 @@ -113,6 +113,10 @@ DECLARE_MTYPE(BGP_EVPN_ES);
@@ -3079,7 +3078,7 @@ index 3cc2e19450..b63bd0169d 100644
  DECLARE_MTYPE(BGP_EVPN_PATH_ES_INFO);
  DECLARE_MTYPE(BGP_EVPN_PATH_MH_INFO);
 diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
-index 32220e10ec..e07f037897 100644
+index 32220e10eca90ed16f893afcc8cc631d0104a6d9..e07f037897a2e923c5a1da53b86e7c3ba10978a8 100644
 --- a/bgpd/bgp_route.c
 +++ b/bgpd/bgp_route.c
 @@ -366,6 +366,8 @@ void bgp_path_info_extra_free(struct bgp_path_info_extra **extra)
@@ -3117,7 +3116,7 @@ index 32220e10ec..e07f037897 100644
  		    !bgp_path_info_labels_same(pi, &bgp_labels.label[0], bgp_labels.num_labels)) {
  			if (!evpn_unimported)
 diff --git a/bgpd/bgp_route.h b/bgpd/bgp_route.h
-index 50f63b54ff..3b6fc2890c 100644
+index 50f63b54ff735506c00f89f13e1788b31fa2ed79..3b6fc2890c7a1000c4f8e8a62f40702893316fbf 100644
 --- a/bgpd/bgp_route.h
 +++ b/bgpd/bgp_route.h
 @@ -142,6 +142,8 @@ struct bgp_path_mh_info {
@@ -3139,7 +3138,7 @@ index 50f63b54ff..3b6fc2890c 100644
  	struct bgp_path_info *type5_originator;
  };
 diff --git a/bgpd/bgp_updgrp_packet.c b/bgpd/bgp_updgrp_packet.c
-index bb3055a3a1..b3e71e429a 100644
+index bb3055a3a1c4175055f724748635508a112bfb1c..b3e71e429abfa3179cb346754cddd982d11fa5c1 100644
 --- a/bgpd/bgp_updgrp_packet.c
 +++ b/bgpd/bgp_updgrp_packet.c
 @@ -534,7 +534,8 @@ struct stream *bpacket_reformat_for_peer(struct bpacket *pkt,
@@ -3153,7 +3152,7 @@ index bb3055a3a1..b3e71e429a 100644
  			gnh_modified = 1;
  		}
 diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
-index 0bcee8cefe..360853ceb7 100644
+index 0bcee8cefe5a95c7248c59755cb4f772216aeca9..360853ceb7bc92dcc170adc3acd82ae13032a54b 100644
 --- a/bgpd/bgp_zebra.c
 +++ b/bgpd/bgp_zebra.c
 @@ -2787,6 +2787,43 @@ int bgp_zebra_advertise_all_vni(struct bgp *bgp, int advertise)
@@ -3257,7 +3256,7 @@ index 0bcee8cefe..360853ceb7 100644
  
  	return 0;
 diff --git a/bgpd/bgp_zebra.h b/bgpd/bgp_zebra.h
-index 84982a97ee..15ca497d61 100644
+index 84982a97ee05dbe680fc608cb11aa709775a697b..15ca497d61245a59167b64ee82f0c2559d695a14 100644
 --- a/bgpd/bgp_zebra.h
 +++ b/bgpd/bgp_zebra.h
 @@ -100,6 +100,9 @@ extern int bgp_zebra_advertise_gw_macip(struct bgp *bgp, int advertise,
@@ -3271,10 +3270,10 @@ index 84982a97ee..15ca497d61 100644
  extern int bgp_zebra_vxlan_flood_control(struct bgp *bgp, struct bgpevpn *evpn);
  
 diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
-index b041d06b53..42f6579a55 100644
+index 5f1906f44f702daa89e4cefdf8d2cdbb652a1a3a..68096874ce5bfadcc2f47683ed3bf9044f1feca8 100644
 --- a/bgpd/bgpd.h
 +++ b/bgpd/bgpd.h
-@@ -966,6 +966,11 @@ struct bgp {
+@@ -965,6 +965,11 @@ struct bgp {
  	 */
  	uint32_t l3vni_neigh_sync_walk;
  
@@ -3287,7 +3286,7 @@ index b041d06b53..42f6579a55 100644
  	 * Reject aspaths with AS_SET and/or AS_CONFED_SET.
  	 */
 diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
-index 90234cc321..4e582cdc19 100644
+index 90234cc321e31e493a9f1907e588dec7c078f1ff..4e582cdc19ab966d82b67d1565b518bdb9281055 100644
 --- a/doc/user/bgp.rst
 +++ b/doc/user/bgp.rst
 @@ -4355,6 +4355,34 @@ following zebra configuration -
@@ -3365,7 +3364,7 @@ index 90234cc321..4e582cdc19 100644
  
     Display per-VNI EVPN routing table in bgp. Filter route-type, vtep, or VNI.
 diff --git a/doc/user/zebra.rst b/doc/user/zebra.rst
-index a1d917602f..2f9541be46 100644
+index a1d917602fa668e42acb781b00178fb3aac4c68b..2f9541be469e544df4346392a7a3e4f17f7af19a 100644
 --- a/doc/user/zebra.rst
 +++ b/doc/user/zebra.rst
 @@ -2067,10 +2067,11 @@ Debugging
@@ -3381,202 +3380,8 @@ index a1d917602f..2f9541be46 100644
  
  .. clicmd:: debug zebra nexthop [detail]
  
-diff --git a/fpm/fpm_bpp.h b/fpm/fpm_bpp.h
-new file mode 100644
-index 0000000000..2d180fea59
---- /dev/null
-+++ b/fpm/fpm_bpp.h
-@@ -0,0 +1,176 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * EVPN bridge-port protection FPM wire codec.
-+ *
-+ * Copyright (C) 2026 Cisco Systems, Inc.
-+ */
-+
-+#ifndef _FRR_FPM_BPP_H
-+#define _FRR_FPM_BPP_H
-+
-+#include <stdbool.h>
-+#include <stddef.h>
-+#include <stdint.h>
-+#include <string.h>
-+#include <sys/types.h>
-+
-+#include <linux/netlink.h>
-+#include <netinet/in.h>
-+
-+#define FPM_BPP_ESI_LEN		10U
-+#define FPM_BPP_MAX_MEMBERS	510U
-+#define FPM_BPP_MEMBER_TYPE_L3	1U
-+#define FPM_BPP_NH_TYPE		4U
-+#define FPM_BPP_NHG_TYPE	8U
-+#define FPM_BPP_ID_TYPE(id)	(((uint32_t)(id) >> 28) & 0xfU)
-+#define FPM_BPP_MSG_BINDING_ADD 147U
-+#define FPM_BPP_MSG_BINDING_DEL 148U
-+#define FPM_BPP_MSG_MEMBER_ADD	149U
-+#define FPM_BPP_MSG_MEMBER_DEL	150U
-+#define FPM_BPP_MSG_GROUP_ADD	151U
-+#define FPM_BPP_MSG_GROUP_DEL	152U
-+#define FPM_BPP_MSG_REPLAY_DONE 153U
-+
-+struct fpm_bpp_member {
-+	uint32_t nh_id;
-+	uint8_t type;
-+	uint8_t family;
-+	union {
-+		struct in_addr ip4;
-+		struct in6_addr ip6;
-+	} vtep;
-+	uint8_t rmac[6];
-+};
-+
-+struct fpm_bpp_group {
-+	uint32_t nhg_id;
-+	uint32_t count;
-+	uint8_t esi[FPM_BPP_ESI_LEN];
-+	struct fpm_bpp_member members[];
-+};
-+
-+struct fpm_bpp_binding {
-+	int ifindex;
-+	uint32_t backup_nhg_id;
-+};
-+
-+#ifdef __cplusplus
-+#define FPM_BPP_STATIC_ASSERT static_assert
-+#else
-+#define FPM_BPP_STATIC_ASSERT _Static_assert
-+#endif
-+
-+FPM_BPP_STATIC_ASSERT(sizeof(struct fpm_bpp_member) == 32, "FPM BPP Member ABI size");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_member, type) == 4, "FPM BPP Member type offset");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_member, family) == 5, "FPM BPP Member family offset");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_member, vtep) == 8, "FPM BPP Member VTEP offset");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_member, rmac) == 24, "FPM BPP Member RMAC offset");
-+FPM_BPP_STATIC_ASSERT(sizeof(struct fpm_bpp_group) == 20, "FPM BPP Group ABI size");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_group, count) == 4, "FPM BPP Group count offset");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_group, esi) == 8, "FPM BPP Group ESI offset");
-+FPM_BPP_STATIC_ASSERT(offsetof(struct fpm_bpp_group, members) == 20, "FPM BPP Group Member offset");
-+FPM_BPP_STATIC_ASSERT(sizeof(int) == 4 && sizeof(struct fpm_bpp_binding) == 8,
-+		      "FPM BPP Binding ABI size");
-+
-+static inline size_t fpm_bpp_group_length(uint32_t count)
-+{
-+	return sizeof(struct fpm_bpp_group) + (size_t)count * sizeof(struct fpm_bpp_member);
-+}
-+
-+static inline ssize_t fpm_bpp_encode(uint16_t message_type, const void *payload,
-+				     size_t payload_length, void *buffer, size_t buffer_length)
-+{
-+	struct nlmsghdr *header = buffer;
-+	size_t message_length = NLMSG_SPACE(payload_length);
-+
-+	if (message_length > buffer_length)
-+		return 0;
-+
-+	memset(buffer, 0, message_length);
-+	header->nlmsg_len = NLMSG_LENGTH(payload_length);
-+	header->nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
-+	header->nlmsg_type = message_type;
-+	if (payload_length)
-+		memcpy(NLMSG_DATA(header), payload, payload_length);
-+
-+	return message_length;
-+}
-+
-+static inline ssize_t fpm_bpp_encode_member(uint16_t message_type, bool is_delete,
-+					    const struct fpm_bpp_member *member, void *buffer,
-+					    size_t buffer_length)
-+{
-+	struct fpm_bpp_member payload = {};
-+
-+	if (!member || FPM_BPP_ID_TYPE(member->nh_id) != FPM_BPP_NH_TYPE)
-+		return -1;
-+
-+	payload.nh_id = member->nh_id;
-+	if (!is_delete)
-+		payload = *member;
-+
-+	return fpm_bpp_encode(message_type, &payload, sizeof(payload), buffer, buffer_length);
-+}
-+
-+static inline ssize_t fpm_bpp_encode_group(uint16_t message_type, bool is_delete, uint32_t nhg_id,
-+					   const uint8_t esi[FPM_BPP_ESI_LEN],
-+					   const struct fpm_bpp_member *members, uint32_t count,
-+					   void *buffer, size_t buffer_length)
-+{
-+	struct fpm_bpp_group *payload;
-+	uint8_t payload_buffer[sizeof(struct fpm_bpp_group) +
-+			       FPM_BPP_MAX_MEMBERS * sizeof(struct fpm_bpp_member)] = {};
-+	size_t payload_length;
-+	uint32_t i;
-+
-+	if (FPM_BPP_ID_TYPE(nhg_id) != FPM_BPP_NHG_TYPE)
-+		return -1;
-+	if (!is_delete && (!esi || !members || !count))
-+		return -1;
-+	if (count > FPM_BPP_MAX_MEMBERS)
-+		return -1;
-+
-+	if (is_delete)
-+		count = 0;
-+	payload_length = fpm_bpp_group_length(count);
-+	payload = (struct fpm_bpp_group *)payload_buffer;
-+	payload->nhg_id = nhg_id;
-+	payload->count = count;
-+	if (!is_delete) {
-+		memcpy(payload->esi, esi, FPM_BPP_ESI_LEN);
-+		for (i = 0; i < count; i++) {
-+			if (FPM_BPP_ID_TYPE(members[i].nh_id) != FPM_BPP_NH_TYPE)
-+				return -1;
-+			if (i && members[i - 1].nh_id >= members[i].nh_id)
-+				return -1;
-+		}
-+		memcpy(payload->members, members, (size_t)count * sizeof(*members));
-+	}
-+
-+	return fpm_bpp_encode(message_type, payload, payload_length, buffer, buffer_length);
-+}
-+
-+static inline ssize_t fpm_bpp_encode_binding(uint16_t message_type, int ifindex,
-+					     uint32_t backup_nhg_id, void *buffer,
-+					     size_t buffer_length)
-+{
-+	struct fpm_bpp_binding payload = {
-+		.ifindex = ifindex,
-+		.backup_nhg_id = backup_nhg_id,
-+	};
-+
-+	if (backup_nhg_id && FPM_BPP_ID_TYPE(backup_nhg_id) != FPM_BPP_NHG_TYPE)
-+		return -1;
-+
-+	return fpm_bpp_encode(message_type, &payload, sizeof(payload), buffer, buffer_length);
-+}
-+
-+static inline ssize_t fpm_bpp_encode_replay_done(uint16_t message_type, void *buffer,
-+						 size_t buffer_length)
-+{
-+	return fpm_bpp_encode(message_type, NULL, 0, buffer, buffer_length);
-+}
-+
-+#undef FPM_BPP_STATIC_ASSERT
-+
-+#endif /* _FRR_FPM_BPP_H */
-diff --git a/fpm/subdir.am b/fpm/subdir.am
-index b5988137e0..6446db618c 100644
---- a/fpm/subdir.am
-+++ b/fpm/subdir.am
-@@ -8,6 +8,7 @@ fpm_libfrrfpm_pb_la_LDFLAGS = $(LIB_LDFLAGS) -version-info 0:0:0
- fpm_libfrrfpm_pb_la_CPPFLAGS = $(AM_CPPFLAGS) $(PROTOBUF_C_CFLAGS)
- fpm_libfrrfpm_pb_la_SOURCES = \
- 	fpm/fpm.h \
-+	fpm/fpm_bpp.h \
- 	fpm/fpm_pb.h \
- 	fpm/fpm_pb.c \
- 	# end
 diff --git a/lib/log.c b/lib/log.c
-index 6c35387e9c..a46b2c9b24 100644
+index 6c35387e9caa8e8aeb40683cddbe5e626b363664..a46b2c9b2450869050b23272d60c34f1eed4f77b 100644
 --- a/lib/log.c
 +++ b/lib/log.c
 @@ -464,7 +464,9 @@ static const struct zebra_desc_table command_types[] = {
@@ -3591,7 +3396,7 @@ index 6c35387e9c..a46b2c9b24 100644
  #undef DESC_ENTRY
  
 diff --git a/lib/zclient.c b/lib/zclient.c
-index 221b3f7a9d..8e86de4c93 100644
+index 221b3f7a9d0a2723b9cbd1e51574d9074d0fd64a..8e86de4c93016bea1d91e9250ef0033e2241268f 100644
 --- a/lib/zclient.c
 +++ b/lib/zclient.c
 @@ -28,6 +28,7 @@
@@ -3722,7 +3527,7 @@ index 221b3f7a9d..8e86de4c93 100644
 +	return -1;
 +}
 diff --git a/lib/zclient.h b/lib/zclient.h
-index 7b89bf3d99..3362d96723 100644
+index 7b89bf3d99bfc838dbaa299b408922ba9fcb6f16..3362d967237664a5989e5f7e91fa9008046ea555 100644
 --- a/lib/zclient.h
 +++ b/lib/zclient.h
 @@ -238,6 +238,8 @@ typedef enum {
@@ -3765,10 +3570,10 @@ index 7b89bf3d99..3362d96723 100644
  
  struct zclient_options {
 diff --git a/tests/lib/subdir.am b/tests/lib/subdir.am
-index aab5d6ae91..51c274a0f7 100644
+index aab5d6ae915fe426bdf3570af3af2d657655f6e1..eec196cba14032e710e46e9bc951da9d3a8f0671 100644
 --- a/tests/lib/subdir.am
 +++ b/tests/lib/subdir.am
-@@ -401,3 +401,19 @@ tests_lib_test_zlog_CPPFLAGS = $(TESTS_CPPFLAGS)
+@@ -401,3 +401,10 @@ tests_lib_test_zlog_CPPFLAGS = $(TESTS_CPPFLAGS)
  tests_lib_test_zlog_LDADD = $(ALL_TESTS_LDADD)
  tests_lib_test_zlog_SOURCES = tests/lib/test_zlog.c
  EXTRA_DIST += tests/lib/test_zlog.py
@@ -3779,448 +3584,9 @@ index aab5d6ae91..51c274a0f7 100644
 +tests_lib_test_zapi_evpn_bpp_CPPFLAGS = $(TESTS_CPPFLAGS)
 +tests_lib_test_zapi_evpn_bpp_LDADD = $(ALL_TESTS_LDADD)
 +tests_lib_test_zapi_evpn_bpp_SOURCES = tests/lib/test_zapi_evpn_bpp.c
-+
-+
-+if LINUX
-+check_PROGRAMS += tests/lib/test_fpm_bpp
-+tests_lib_test_fpm_bpp_CFLAGS = $(TESTS_CFLAGS)
-+tests_lib_test_fpm_bpp_CPPFLAGS = $(TESTS_CPPFLAGS)
-+tests_lib_test_fpm_bpp_LDADD = $(ALL_TESTS_LDADD)
-+tests_lib_test_fpm_bpp_SOURCES = tests/lib/test_fpm_bpp.c
-+endif
-diff --git a/tests/lib/test_fpm_bpp.c b/tests/lib/test_fpm_bpp.c
-new file mode 100644
-index 0000000000..4583fa06a0
---- /dev/null
-+++ b/tests/lib/test_fpm_bpp.c
-@@ -0,0 +1,424 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * EVPN bridge-port protection FPM wire codec tests.
-+ *
-+ * Copyright (C) 2026 Cisco Systems, Inc.
-+ */
-+
-+#include <zebra.h>
-+
-+#include "fpm/fpm.h"
-+#include "fpm/fpm_bpp.h"
-+
-+enum {
-+	FPM_BPP_BINDING_ADD = 147,
-+	FPM_BPP_BINDING_DEL = 148,
-+	FPM_BPP_MEMBER_ADD = 149,
-+	FPM_BPP_MEMBER_DEL = 150,
-+	FPM_BPP_GROUP_ADD = 151,
-+	FPM_BPP_GROUP_DEL = 152,
-+	FPM_BPP_REPLAY_DONE = 153,
-+};
-+
-+struct sonic_bpp_standin {
-+	struct fpm_bpp_member members[4];
-+	size_t member_count;
-+	uint32_t group_id;
-+	uint32_t group_members[4];
-+	size_t group_member_count;
-+	uint32_t pending_group_id;
-+	uint32_t pending_group_members[4];
-+	size_t pending_group_member_count;
-+	int ifindex;
-+	uint32_t binding_group_id;
-+	int pending_ifindex;
-+	uint32_t pending_binding_group_id;
-+	uint32_t replay_done_count;
-+};
-+
-+static size_t fpm_frame(const void *netlink, size_t netlink_length, uint8_t *frame,
-+			size_t frame_length)
-+{
-+	fpm_msg_hdr_t *header = (fpm_msg_hdr_t *)frame;
-+	size_t length = FPM_MSG_HDR_LEN + netlink_length;
-+
-+	assert(length <= frame_length);
-+	header->version = FPM_PROTO_VERSION;
-+	header->msg_type = FPM_MSG_TYPE_NETLINK;
-+	header->msg_len = htons(length);
-+	memcpy(fpm_msg_data(header), netlink, netlink_length);
-+	return length;
-+}
-+
-+static struct fpm_bpp_member *standin_member(struct sonic_bpp_standin *state, uint32_t id)
-+{
-+	size_t i;
-+
-+	for (i = 0; i < state->member_count; i++)
-+		if (state->members[i].nh_id == id)
-+			return &state->members[i];
-+	return NULL;
-+}
-+
-+static void standin_reconcile(struct sonic_bpp_standin *state)
-+{
-+	size_t i;
-+
-+	if (state->pending_group_id) {
-+		for (i = 0; i < state->pending_group_member_count; i++)
-+			if (!standin_member(state, state->pending_group_members[i]))
-+				break;
-+		if (i == state->pending_group_member_count) {
-+			state->group_id = state->pending_group_id;
-+			state->group_member_count = state->pending_group_member_count;
-+			memcpy(state->group_members, state->pending_group_members,
-+			       i * sizeof(state->group_members[0]));
-+			state->pending_group_id = 0;
-+			state->pending_group_member_count = 0;
-+		}
-+	}
-+
-+	if (state->pending_binding_group_id == state->group_id) {
-+		state->ifindex = state->pending_ifindex;
-+		state->binding_group_id = state->pending_binding_group_id;
-+		state->pending_ifindex = 0;
-+		state->pending_binding_group_id = 0;
-+	}
-+}
-+
-+static int standin_apply(struct sonic_bpp_standin *state, const uint8_t *frame, size_t frame_length)
-+{
-+	const fpm_msg_hdr_t *fpm = (const fpm_msg_hdr_t *)frame;
-+	const struct nlmsghdr *netlink;
-+	const void *payload;
-+	size_t payload_length;
-+	const struct fpm_bpp_member *member;
-+	const struct fpm_bpp_group *group;
-+	const struct fpm_bpp_binding *binding;
-+	struct fpm_bpp_member *current;
-+	size_t i;
-+
-+	if (!fpm_msg_ok(fpm, frame_length) || fpm->version != FPM_PROTO_VERSION ||
-+	    fpm->msg_type != FPM_MSG_TYPE_NETLINK)
-+		return -1;
-+	netlink = fpm_msg_data((fpm_msg_hdr_t *)fpm);
-+	if (fpm_msg_data_len(fpm) < sizeof(*netlink) ||
-+	    netlink->nlmsg_len > fpm_msg_data_len(fpm) || netlink->nlmsg_len < NLMSG_HDRLEN)
-+		return -1;
-+	payload = NLMSG_DATA(netlink);
-+	payload_length = NLMSG_PAYLOAD(netlink, 0);
-+
-+	switch (netlink->nlmsg_type) {
-+	case FPM_BPP_MEMBER_ADD:
-+		if (payload_length != sizeof(*member))
-+			return -1;
-+		member = payload;
-+		if (FPM_BPP_ID_TYPE(member->nh_id) != FPM_BPP_NH_TYPE ||
-+		    member->type != FPM_BPP_MEMBER_TYPE_L3 ||
-+		    (member->family != AF_INET && member->family != AF_INET6))
-+			return -1;
-+		current = standin_member(state, member->nh_id);
-+		if (!current) {
-+			if (state->member_count == array_size(state->members))
-+				return -1;
-+			current = &state->members[state->member_count++];
-+		}
-+		*current = *member;
-+		standin_reconcile(state);
-+		return 0;
-+	case FPM_BPP_MEMBER_DEL:
-+		if (payload_length != sizeof(*member))
-+			return -1;
-+		member = payload;
-+		for (i = 0; i < state->group_member_count; i++)
-+			if (state->group_members[i] == member->nh_id)
-+				return -1;
-+		current = standin_member(state, member->nh_id);
-+		if (!current)
-+			return -1;
-+		i = current - state->members;
-+		state->members[i] = state->members[--state->member_count];
-+		return 0;
-+	case FPM_BPP_GROUP_ADD:
-+		if (payload_length < sizeof(*group))
-+			return -1;
-+		group = payload;
-+		if (!group->count || group->count > array_size(state->group_members) ||
-+		    payload_length != fpm_bpp_group_length(group->count) ||
-+		    FPM_BPP_ID_TYPE(group->nhg_id) != FPM_BPP_NHG_TYPE)
-+			return -1;
-+		for (i = 0; i < group->count; i++) {
-+			if (i && group->members[i - 1].nh_id >= group->members[i].nh_id)
-+				return -1;
-+			state->pending_group_members[i] = group->members[i].nh_id;
-+		}
-+		state->pending_group_id = group->nhg_id;
-+		state->pending_group_member_count = group->count;
-+		standin_reconcile(state);
-+		return 0;
-+	case FPM_BPP_GROUP_DEL:
-+		if (payload_length != sizeof(*group))
-+			return -1;
-+		group = payload;
-+		if (group->nhg_id != state->group_id || group->count ||
-+		    state->binding_group_id == group->nhg_id)
-+			return -1;
-+		state->group_id = 0;
-+		state->group_member_count = 0;
-+		return 0;
-+	case FPM_BPP_BINDING_ADD:
-+		if (payload_length != sizeof(*binding))
-+			return -1;
-+		binding = payload;
-+		if (FPM_BPP_ID_TYPE(binding->backup_nhg_id) != FPM_BPP_NHG_TYPE)
-+			return -1;
-+		state->pending_ifindex = binding->ifindex;
-+		state->pending_binding_group_id = binding->backup_nhg_id;
-+		standin_reconcile(state);
-+		return 0;
-+	case FPM_BPP_BINDING_DEL:
-+		if (payload_length != sizeof(*binding))
-+			return -1;
-+		binding = payload;
-+		if (binding->ifindex != state->ifindex || binding->backup_nhg_id)
-+			return -1;
-+		state->ifindex = 0;
-+		state->binding_group_id = 0;
-+		if (binding->ifindex == state->pending_ifindex) {
-+			state->pending_ifindex = 0;
-+			state->pending_binding_group_id = 0;
-+		}
-+		return 0;
-+	case FPM_BPP_REPLAY_DONE:
-+		if (payload_length || state->pending_group_id || state->pending_binding_group_id)
-+			return -1;
-+		state->replay_done_count++;
-+		return 0;
-+	default:
-+		return -1;
-+	}
-+}
-+
-+static size_t encode_frame(ssize_t encoded, const uint8_t *netlink, uint8_t *frame)
-+{
-+	assert(encoded > 0);
-+	return fpm_frame(netlink, encoded, frame, FPM_MAX_MSG_LEN);
-+}
-+
-+static void init_member(struct fpm_bpp_member *member, uint32_t id, const char *vtep,
-+			const uint8_t rmac[6])
-+{
-+	memset(member, 0, sizeof(*member));
-+	member->nh_id = id;
-+	member->type = FPM_BPP_MEMBER_TYPE_L3;
-+	member->family = strchr(vtep, ':') ? AF_INET6 : AF_INET;
-+	assert(inet_pton(member->family, vtep, &member->vtep) == 1);
-+	memcpy(member->rmac, rmac, sizeof(member->rmac));
-+}
-+
-+static void test_codec_and_standin(void)
-+{
-+	const uint8_t rmac1[6] = { 0x02, 0, 0, 0, 0, 1 };
-+	const uint8_t rmac2[6] = { 0x02, 0, 0, 0, 0, 2 };
-+	const uint8_t rmac3[6] = { 0x02, 0, 0, 0, 0, 3 };
-+	const uint8_t esi[FPM_BPP_ESI_LEN] = { 3, 0x44, 0x38, 0x39, 0xff, 0xff, 1, 0, 0, 1 };
-+	struct fpm_bpp_member members[2];
-+	struct sonic_bpp_standin state = {};
-+	struct nlmsghdr *header;
-+	struct fpm_bpp_member *wire_member;
-+	uint8_t netlink[FPM_MAX_MSG_LEN] = {};
-+	uint8_t frame[FPM_MAX_MSG_LEN] = {};
-+	const uint32_t member1_id = 0x40000011;
-+	const uint32_t member2_id = 0x40000022;
-+	const uint32_t group_id = 0x80000033;
-+	ssize_t encoded;
-+	size_t framed;
-+
-+	init_member(&members[0], member1_id, "192.0.2.1", rmac1);
-+	init_member(&members[1], member2_id, "2001:db8::2", rmac2);
-+
-+	encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[0], netlink,
-+					sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	header = (struct nlmsghdr *)fpm_msg_data((fpm_msg_hdr_t *)frame);
-+	assert(header->nlmsg_type == FPM_BPP_MEMBER_ADD);
-+	assert(header->nlmsg_len == NLMSG_LENGTH(sizeof(struct fpm_bpp_member)));
-+	wire_member = NLMSG_DATA(header);
-+	assert(!memcmp(wire_member, &members[0], sizeof(*wire_member)));
-+	assert(standin_apply(&state, frame, framed) == 0);
-+
-+	encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[1], netlink,
-+					sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+
-+	encoded = fpm_bpp_encode_group(FPM_BPP_GROUP_ADD, false, group_id, esi, members,
-+				       array_size(members), netlink, sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	assert(state.group_id == group_id);
-+	assert(state.group_member_count == 2);
-+	assert(state.group_members[0] == member1_id);
-+	assert(state.group_members[1] == member2_id);
-+
-+	encoded = fpm_bpp_encode_binding(FPM_BPP_BINDING_ADD, 42, group_id, netlink,
-+					 sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	assert(state.ifindex == 42);
-+	assert(state.binding_group_id == group_id);
-+
-+	encoded = fpm_bpp_encode_replay_done(FPM_BPP_REPLAY_DONE, netlink, sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	assert(state.replay_done_count == 1);
-+
-+	memcpy(members[0].rmac, rmac3, sizeof(members[0].rmac));
-+	encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[0], netlink,
-+					sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	assert(!memcmp(standin_member(&state, member1_id)->rmac, rmac3, sizeof(rmac3)));
-+
-+	encoded = fpm_bpp_encode_binding(FPM_BPP_BINDING_DEL, 42, 0, netlink, sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+
-+	encoded = fpm_bpp_encode_group(FPM_BPP_GROUP_DEL, true, group_id, NULL, NULL, 0, netlink,
-+				       sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+
-+	encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_DEL, true, &members[0], netlink,
-+					sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_DEL, true, &members[1], netlink,
-+					sizeof(netlink));
-+	framed = encode_frame(encoded, netlink, frame);
-+	assert(standin_apply(&state, frame, framed) == 0);
-+	assert(state.member_count == 0);
-+}
-+
-+enum delivery_step {
-+	DELIVER_BINDING,
-+	DELIVER_GROUP,
-+	DELIVER_MEMBERS,
-+};
-+
-+struct encoded_frame {
-+	uint8_t data[FPM_MAX_MSG_LEN];
-+	size_t length;
-+};
-+
-+static void test_out_of_order_delivery(void)
-+{
-+	static const enum delivery_step orders[][3] = {
-+		{ DELIVER_BINDING, DELIVER_GROUP, DELIVER_MEMBERS },
-+		{ DELIVER_BINDING, DELIVER_MEMBERS, DELIVER_GROUP },
-+		{ DELIVER_GROUP, DELIVER_BINDING, DELIVER_MEMBERS },
-+		{ DELIVER_GROUP, DELIVER_MEMBERS, DELIVER_BINDING },
-+		{ DELIVER_MEMBERS, DELIVER_BINDING, DELIVER_GROUP },
-+		{ DELIVER_MEMBERS, DELIVER_GROUP, DELIVER_BINDING },
-+	};
-+	const uint8_t rmac[6] = { 0x02, 0, 0, 0, 0, 1 };
-+	const uint8_t esi[FPM_BPP_ESI_LEN] = { 3, 0x44, 0x38, 0x39, 0xff, 0xff, 1, 0, 0, 1 };
-+	const uint32_t group_id = 0x80000033;
-+	struct encoded_frame member_frames[2] = {};
-+	struct encoded_frame group_frame = {};
-+	struct encoded_frame binding_frame = {};
-+	struct encoded_frame replay_frame = {};
-+	struct fpm_bpp_member members[2];
-+	uint8_t netlink[FPM_MAX_MSG_LEN] = {};
-+	struct sonic_bpp_standin state;
-+	ssize_t encoded;
-+	size_t order;
-+	size_t step;
-+	size_t i;
-+
-+	init_member(&members[0], 0x40000011, "192.0.2.1", rmac);
-+	init_member(&members[1], 0x40000022, "2001:db8::2", rmac);
-+	for (i = 0; i < array_size(members); i++) {
-+		encoded = fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[i], netlink,
-+						sizeof(netlink));
-+		member_frames[i].length = encode_frame(encoded, netlink, member_frames[i].data);
-+	}
-+	encoded = fpm_bpp_encode_group(FPM_BPP_GROUP_ADD, false, group_id, esi, members,
-+				       array_size(members), netlink, sizeof(netlink));
-+	group_frame.length = encode_frame(encoded, netlink, group_frame.data);
-+	encoded = fpm_bpp_encode_binding(FPM_BPP_BINDING_ADD, 42, group_id, netlink,
-+					 sizeof(netlink));
-+	binding_frame.length = encode_frame(encoded, netlink, binding_frame.data);
-+	encoded = fpm_bpp_encode_replay_done(FPM_BPP_REPLAY_DONE, netlink, sizeof(netlink));
-+	replay_frame.length = encode_frame(encoded, netlink, replay_frame.data);
-+
-+	for (order = 0; order < array_size(orders); order++) {
-+		memset(&state, 0, sizeof(state));
-+		for (step = 0; step < array_size(orders[order]); step++) {
-+			switch (orders[order][step]) {
-+			case DELIVER_BINDING:
-+				assert(standin_apply(&state, binding_frame.data,
-+						     binding_frame.length) == 0);
-+				break;
-+			case DELIVER_GROUP:
-+				assert(standin_apply(&state, group_frame.data,
-+						     group_frame.length) == 0);
-+				break;
-+			case DELIVER_MEMBERS:
-+				for (i = 0; i < array_size(member_frames); i++) {
-+					size_t index = order % 2 ? i : 1 - i;
-+
-+					assert(standin_apply(&state, member_frames[index].data,
-+							     member_frames[index].length) == 0);
-+				}
-+				break;
-+			}
-+			if (step + 1 < array_size(orders[order]))
-+				assert(state.binding_group_id == 0);
-+		}
-+		assert(state.member_count == 2);
-+		assert(state.group_id == group_id);
-+		assert(state.group_member_count == 2);
-+		assert(state.ifindex == 42);
-+		assert(state.binding_group_id == group_id);
-+		assert(state.pending_group_id == 0);
-+		assert(state.pending_binding_group_id == 0);
-+		assert(standin_apply(&state, replay_frame.data, replay_frame.length) == 0);
-+		assert(state.replay_done_count == 1);
-+	}
-+}
-+
-+static void test_rejections(void)
-+{
-+	const uint8_t rmac[6] = { 0x02, 0, 0, 0, 0, 1 };
-+	const uint8_t esi[FPM_BPP_ESI_LEN] = { 1 };
-+	struct fpm_bpp_member members[2];
-+	uint8_t netlink[FPM_MAX_MSG_LEN] = {};
-+
-+	init_member(&members[0], 0x40000022, "192.0.2.1", rmac);
-+	init_member(&members[1], 0x40000011, "192.0.2.2", rmac);
-+
-+	assert(fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[0], netlink,
-+				     sizeof(struct nlmsghdr)) == 0);
-+	members[0].nh_id = 0x10000022;
-+	assert(fpm_bpp_encode_member(FPM_BPP_MEMBER_ADD, false, &members[0], netlink,
-+				     sizeof(netlink)) < 0);
-+	members[0].nh_id = 0x40000022;
-+
-+	assert(fpm_bpp_encode_group(FPM_BPP_GROUP_ADD, false, 0x80000001, esi, members,
-+				    array_size(members), netlink, sizeof(netlink)) < 0);
-+	assert(fpm_bpp_encode_group(FPM_BPP_GROUP_ADD, false, 0x80000001, esi, members, 0, netlink,
-+				    sizeof(netlink)) < 0);
-+	assert(fpm_bpp_encode_group(FPM_BPP_GROUP_ADD, false, 0x20000001, esi, members, 1, netlink,
-+				    sizeof(netlink)) < 0);
-+	assert(fpm_bpp_encode_binding(FPM_BPP_BINDING_ADD, 42, 0x20000001, netlink,
-+				      sizeof(netlink)) < 0);
-+}
-+
-+int main(void)
-+{
-+	test_codec_and_standin();
-+	test_out_of_order_delivery();
-+	test_rejections();
-+	return 0;
-+}
 diff --git a/tests/lib/test_zapi_evpn_bpp.c b/tests/lib/test_zapi_evpn_bpp.c
 new file mode 100644
-index 0000000000..bc32fddfd7
+index 0000000000000000000000000000000000000000..bc32fddfd7c26f7251411604e08c5a595162e447
 --- /dev/null
 +++ b/tests/lib/test_zapi_evpn_bpp.c
 @@ -0,0 +1,230 @@
@@ -4455,7 +3821,7 @@ index 0000000000..bc32fddfd7
 +	return 0;
 +}
 diff --git a/yang/frr-zebra.yang b/yang/frr-zebra.yang
-index 328e5b8ade..b5e0761778 100644
+index 328e5b8ade1c9ff9ed5ea265f93463080e10a050..b5e0761778f13fdc12f14057f1c1d2aeaeff1576 100644
 --- a/yang/frr-zebra.yang
 +++ b/yang/frr-zebra.yang
 @@ -2459,6 +2459,13 @@ module frr-zebra {
@@ -4473,7 +3839,7 @@ index 328e5b8ade..b5e0761778 100644
        container ipv6-router-advertisements {
          if-feature "ipv6-router-advertisements";
 diff --git a/zebra/debug.c b/zebra/debug.c
-index 28c087b533..a23c5aa702 100644
+index 28c087b533a7d60b396038e59c2ba568f91a60d8..a23c5aa702b209df241971f328ee65c80041ccab 100644
 --- a/zebra/debug.c
 +++ b/zebra/debug.c
 @@ -122,6 +122,9 @@ DEFUN_NOSH (show_debugging_zebra,
@@ -4534,7 +3900,7 @@ index 28c087b533..a23c5aa702 100644
  		vty_out(vty, "debug zebra pseudowires\n");
  		write++;
 diff --git a/zebra/debug.h b/zebra/debug.h
-index d50ee14d84..5b00805411 100644
+index d50ee14d8407aaab4827b16b9cf9a5d418f59055..5b008054115bbdf186928a5ad6003ee520815779 100644
 --- a/zebra/debug.h
 +++ b/zebra/debug.h
 @@ -56,6 +56,7 @@ extern "C" {
@@ -4554,7 +3920,7 @@ index d50ee14d84..5b00805411 100644
  #define IS_ZEBRA_DEBUG_PBR (zebra_debug_pbr & ZEBRA_DEBUG_PBR)
  
 diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
-index 8e12083709..cabaf7059c 100644
+index 8e120837097f64cbdff7b4c8ed41c83f658af17e..cabaf7059ce2a0781282d9e80518dee35ee306a0 100644
 --- a/zebra/dplane_fpm_nl.c
 +++ b/zebra/dplane_fpm_nl.c
 @@ -1068,6 +1068,9 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
@@ -4568,7 +3934,7 @@ index 8e12083709..cabaf7059c 100644
  	case DPLANE_OP_PW_UNINSTALL:
  	case DPLANE_OP_ADDR_INSTALL:
 diff --git a/zebra/if_netlink.c b/zebra/if_netlink.c
-index 2e169905bd..86a62bc143 100644
+index 2e169905bdb6050713b1e58f2e760a7428d230ff..86a62bc143e25d98bee6209d45ce353ac08c328f 100644
 --- a/zebra/if_netlink.c
 +++ b/zebra/if_netlink.c
 @@ -719,21 +719,18 @@ static void netlink_bridge_vlan_update(struct zebra_dplane_ctx *ctx,
@@ -4617,7 +3983,7 @@ index 2e169905bd..86a62bc143 100644
  
  static int netlink_bridge_interface(struct zebra_dplane_ctx *ctx,
 diff --git a/zebra/interface.c b/zebra/interface.c
-index 90f2e4afda..3a57f3dd45 100644
+index 91523aeed338044a17d778ea59b313f72685889e..cf524387a17a430dfed1e41e39fe9db6956a4403 100644
 --- a/zebra/interface.c
 +++ b/zebra/interface.c
 @@ -36,6 +36,7 @@
@@ -4628,7 +3994,7 @@ index 90f2e4afda..3a57f3dd45 100644
  #include "zebra/zebra_trace.h"
  #include "zebra/zebra_l2.h"
  #include "zebra/zebra_neigh.h"
-@@ -862,6 +863,10 @@ void if_handle_vrf_change(struct interface *ifp, vrf_id_t vrf_id)
+@@ -863,6 +864,10 @@ void if_handle_vrf_change(struct interface *ifp, vrf_id_t vrf_id)
  
  	if (ifp->info && IS_ZEBRA_IF_VLAN(ifp))
  		zebra_evpn_l3vni_svi_vrf_change(ifp, old_vrf_id);
@@ -4640,7 +4006,7 @@ index 90f2e4afda..3a57f3dd45 100644
  
  static void ipv6_ll_address_to_mac(struct in6_addr *address, uint8_t *mac)
 diff --git a/zebra/interface.h b/zebra/interface.h
-index e3e08e9e65..4652653407 100644
+index e3e08e9e6575d403d3a7e0a024141408bd8c682e..4652653407c54007d29c52af552835d0e7190831 100644
 --- a/zebra/interface.h
 +++ b/zebra/interface.h
 @@ -54,6 +54,7 @@ struct zebra_es_if_info {
@@ -4652,10 +4018,10 @@ index e3e08e9e65..4652653407 100644
  	struct zebra_evpn_es *es; /* local ES */
  };
 diff --git a/zebra/kernel_netlink.c b/zebra/kernel_netlink.c
-index 55b0312f64..f2896e5bbd 100644
+index 894f0c3219fdca0f6a2c30895c2797adc7ac3e01..d985ed02bf0a7d68e1385056010b7ae1d954a327 100644
 --- a/zebra/kernel_netlink.c
 +++ b/zebra/kernel_netlink.c
-@@ -1476,6 +1476,9 @@ static enum netlink_msg_status nl_put_msg(struct nl_batch *bth,
+@@ -1488,6 +1488,9 @@ static enum netlink_msg_status nl_put_msg(struct nl_batch *bth,
  	case DPLANE_OP_LSP_NOTIFY:
  	case DPLANE_OP_BR_PORT_UPDATE:
  	case DPLANE_OP_BR_PORT_DELETE:
@@ -4666,7 +4032,7 @@ index 55b0312f64..f2896e5bbd 100644
  
  	case DPLANE_OP_INTF_SPEED_GET:
 diff --git a/zebra/kernel_socket.c b/zebra/kernel_socket.c
-index 5d508ce50f..957d829ac9 100644
+index 5d508ce50f53be3947e0b78ffedb2953abb932fc..957d829ac9a5bacad15d56a80ddc28eeb392998e 100644
 --- a/zebra/kernel_socket.c
 +++ b/zebra/kernel_socket.c
 @@ -1674,6 +1674,12 @@ void kernel_update_multi(struct dplane_ctx_list_head *ctx_list)
@@ -4683,7 +4049,7 @@ index 5d508ce50f..957d829ac9 100644
  			res = kernel_intf_netconf_update(ctx);
  			break;
 diff --git a/zebra/subdir.am b/zebra/subdir.am
-index 25c06572d4..cdad1c2480 100644
+index 7c0045c5d3188041616f293ffcde7b4822532142..01d7c7dcce03f65ca9cc59e755ba21ef0a9217b5 100644
 --- a/zebra/subdir.am
 +++ b/zebra/subdir.am
 @@ -113,6 +113,7 @@ zebra_zebra_SOURCES = \
@@ -4703,7 +4069,7 @@ index 25c06572d4..cdad1c2480 100644
  	zebra/zebra_l2_bridge_if.h \
  	zebra/zebra_vxlan_if.h \
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
-index dd61d46935..07c022fb3f 100644
+index dd61d46935cfc4a366b477a1ec2776c53f949e06..07c022fb3f74fa9859155b6493d7b3043b84d3cb 100644
 --- a/zebra/zapi_msg.c
 +++ b/zebra/zapi_msg.c
 @@ -4232,6 +4232,8 @@ void (*const zserv_handlers[])(ZAPI_HANDLER_ARGS) = {
@@ -4716,7 +4082,7 @@ index dd61d46935..07c022fb3f 100644
  
  /*
 diff --git a/zebra/zebra_cli.c b/zebra/zebra_cli.c
-index e5a14089e7..a96419aa72 100644
+index e5a14089e7f47e5a16ec9957dadf8700b0a80456..a96419aa721de2c383b84a5901e711e494aa43ef 100644
 --- a/zebra/zebra_cli.c
 +++ b/zebra/zebra_cli.c
 @@ -1421,6 +1421,34 @@ static void lib_interface_zebra_evpn_mh_uplink_cli_write(
@@ -4774,7 +4140,7 @@ index e5a14089e7..a96419aa72 100644
  	install_element(INTERFACE_NODE, &ipv6_nd_ra_fast_retrans_cmd);
  	install_element(INTERFACE_NODE, &ipv6_nd_ra_retrans_interval_cmd);
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index 191e66eda9..9546c2eff3 100644
+index 191e66eda97d9763f123ad909c0428137379b6b4..bec1483d74b12082c12dd39813ac30468586f7d0 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
 @@ -20,6 +20,8 @@
@@ -5025,7 +4391,41 @@ index 191e66eda9..9546c2eff3 100644
  /*
   * Enqueue LSP add for the dataplane.
   */
-@@ -7365,6 +7555,21 @@ static void kernel_dplane_log_detail(struct zebra_dplane_ctx *ctx)
+@@ -5466,7 +5656,7 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ 					       uint32_t sph_filter_cnt,
+ 					       const struct ipaddr *sph_filters,
+ 					       uint32_t backup_nhg_id,
+-					       uint16_t vid)
++					       uint16_t vid, uint32_t seq)
+ {
+ 	enum zebra_dplane_result result = ZEBRA_DPLANE_REQUEST_FAILURE;
+ 	uint32_t flags = 0;
+@@ -5503,6 +5693,7 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ 	dplane_ctx_ns_init(ctx, zns, false);
+ 
+ 	ctx->zd_ifindex = ifp->ifindex;
++	ctx->zd_seq = seq;
+ 	strlcpy(ctx->zd_ifname, ifp->name, sizeof(ctx->zd_ifname));
+ 
+ 	/* Init the br-port-specific data area */
+@@ -5535,7 +5726,7 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ }
+ 
+ enum zebra_dplane_result
+-dplane_br_port_delete(const struct interface *ifp, uint16_t vid)
++dplane_br_port_delete(const struct interface *ifp, uint16_t vid, uint32_t seq)
+ {
+ 	enum zebra_dplane_result result = ZEBRA_DPLANE_REQUEST_FAILURE;
+ 	int ret;
+@@ -5559,6 +5750,7 @@ dplane_br_port_delete(const struct interface *ifp, uint16_t vid)
+ 	dplane_ctx_ns_init(ctx, zns, false);
+ 
+ 	ctx->zd_ifindex = ifp->ifindex;
++	ctx->zd_seq = seq;
+ 	strlcpy(ctx->zd_ifname, ifp->name, sizeof(ctx->zd_ifname));
+ 
+ 	/* Init the br-port-specific data area */
+@@ -7365,6 +7557,21 @@ static void kernel_dplane_log_detail(struct zebra_dplane_ctx *ctx)
  			   dplane_op2str(dplane_ctx_get_op(ctx)));
  		break;
  
@@ -5047,7 +4447,7 @@ index 191e66eda9..9546c2eff3 100644
  	case DPLANE_OP_LSP_INSTALL:
  	case DPLANE_OP_LSP_UPDATE:
  	case DPLANE_OP_LSP_DELETE:
-@@ -7599,6 +7804,14 @@ static void kernel_dplane_handle_result(struct zebra_dplane_ctx *ctx)
+@@ -7599,6 +7806,14 @@ static void kernel_dplane_handle_result(struct zebra_dplane_ctx *ctx)
  				memory_order_relaxed);
  		break;
  
@@ -5063,7 +4463,7 @@ index 191e66eda9..9546c2eff3 100644
  	case DPLANE_OP_LSP_UPDATE:
  	case DPLANE_OP_LSP_DELETE:
 diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
-index 787d4c5670..554e3f4bb2 100644
+index 787d4c567077e93ee877ddfb9e39f1222a377033..b07acb9eb5cd79e285c770f5ba076e2087f6a141 100644
 --- a/zebra/zebra_dplane.h
 +++ b/zebra/zebra_dplane.h
 @@ -237,6 +237,11 @@ enum dplane_op_e {
@@ -5106,6 +4506,19 @@ index 787d4c5670..554e3f4bb2 100644
  /* Accessors for LSP information */
  
  /* Init the internal LSP data struct - necessary before adding to it.
+@@ -994,10 +1020,10 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ 					       uint32_t sph_filter_cnt,
+ 					       const struct ipaddr *sph_filters,
+ 					       uint32_t backup_nhg_id,
+-					       uint16_t vid);
++					       uint16_t vid, uint32_t seq);
+ 
+ enum zebra_dplane_result dplane_br_port_delete(const struct interface *ifp,
+-					       uint16_t vid);
++					       uint16_t vid, uint32_t seq);
+ 
+ /* Forward ref of nhg_hash_entry */
+ struct nhg_hash_entry;
 @@ -1116,6 +1142,18 @@ void dplane_mac_init(struct zebra_dplane_ctx *ctx, const struct interface *ifp,
  		     vni_t vni, struct ipaddr *vtep_ip, bool sticky, uint32_t nhg_id,
  		     uint32_t update_flags);
@@ -5127,10 +4540,10 @@ index 787d4c5670..554e3f4bb2 100644
   */
 diff --git a/zebra/zebra_evpn_bpp.c b/zebra/zebra_evpn_bpp.c
 new file mode 100644
-index 0000000000..491f547998
+index 0000000000000000000000000000000000000000..336cc4086325a5537eb6b8d5ec276fbe54f1a77c
 --- /dev/null
 +++ b/zebra/zebra_evpn_bpp.c
-@@ -0,0 +1,2362 @@
+@@ -0,0 +1,2369 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Zebra EVPN-MH bridge-port protection
@@ -5416,6 +4829,7 @@ index 0000000000..491f547998
 +	ifindex_t ifindex;
 +	char ifname[IFNAMSIZ];
 +	uint32_t backup_nhg_id;
++	uint32_t seq;
 +	esi_t esi;
 +	char esi_str[ESI_STR_LEN];
 +	struct zebra_evpn_bpp_xtab_bind_hash_item item;
@@ -5943,7 +5357,9 @@ index 0000000000..491f547998
 +	}
 +	ent = &bpp_export_log[bpp_export_log_head];
 +	memset(ent, 0, sizeof(*ent));
-+	ent->seq = ++bpp_export_log_seq;
++	if (++bpp_export_log_seq == 0)
++		bpp_export_log_seq++;
++	ent->seq = bpp_export_log_seq;
 +	ent->op = op;
 +	ent->is_del = is_del;
 +	ent->id = id;
@@ -5954,8 +5370,8 @@ index 0000000000..491f547998
 +	return ent;
 +}
 +
-+static struct zebra_evpn_bpp_export_log *
-+zebra_evpn_bpp_export_log_find(enum dplane_op_e op, uint32_t id, const char *ifname)
++static struct zebra_evpn_bpp_export_log *zebra_evpn_bpp_export_log_find(enum dplane_op_e op,
++									uint32_t id, uint32_t seq)
 +{
 +	uint32_t i, idx, n;
 +
@@ -5969,7 +5385,7 @@ index 0000000000..491f547998
 +
 +		if (!ent->completed && ent->op == op) {
 +			if (op == DPLANE_OP_BR_PORT_UPDATE) {
-+				if (ifname && !strcmp(ent->ifname, ifname))
++				if (ent->seq == seq)
 +					return ent;
 +			} else if (ent->id == id) {
 +				return ent;
@@ -6971,7 +6387,7 @@ index 0000000000..491f547998
 +	return zebra_evpn_bpp_if_bound(zebra_evpn_bpp_if_find(es->zif));
 +}
 +
-+void zebra_evpn_bpp_export_br_port(struct zebra_evpn_es *es, bool is_del)
++uint32_t zebra_evpn_bpp_export_br_port(struct zebra_evpn_es *es, bool is_del)
 +{
 +	struct zebra_evpn_bpp_export_log *ent;
 +	struct zebra_evpn_bpp_xtab_bind key, *e;
@@ -6979,7 +6395,7 @@ index 0000000000..491f547998
 +	uint32_t backup;
 +
 +	if (!es || !es->zif || !es->zif->ifp)
-+		return;
++		return 0;
 +
 +	backup = is_del ? 0 : es->l3_nhg_id;
 +	ent = zebra_evpn_bpp_export_log_push(DPLANE_OP_BR_PORT_UPDATE, is_del, backup);
@@ -6999,9 +6415,10 @@ index 0000000000..491f547998
 +				zebra_evpn_bpp_xtab_bind_hash_del(&bpp_bind_retire, pending);
 +				XFREE(MTYPE_ZEVPN_BPP_EXPORT, pending);
 +			}
++			e->seq = ent->seq;
 +			zebra_evpn_bpp_xtab_bind_hash_add(&bpp_bind_retire, e);
 +		}
-+		return;
++		return ent->seq;
 +	}
 +
 +	bpp_xcnt_bind_add++;
@@ -7012,12 +6429,14 @@ index 0000000000..491f547998
 +	}
 +	strlcpy(e->ifname, es->zif->ifp->name, sizeof(e->ifname));
 +	e->backup_nhg_id = es->l3_nhg_id;
++	e->seq = ent->seq;
 +	memcpy(&e->esi, &es->esi, sizeof(esi_t));
 +	esi_to_str(&es->esi, e->esi_str, sizeof(e->esi_str));
 +
 +	bif = zebra_evpn_bpp_if_find(es->zif);
 +	if (bif && bif->export_status == ZEBRA_EVPN_BPP_X_NONE)
 +		bif->export_status = ZEBRA_EVPN_BPP_X_SENT;
++	return ent->seq;
 +}
 +
 +static void zebra_evpn_bpp_fpm_status_set(struct zebra_evpn_bpp_if *bif, enum dplane_op_e op,
@@ -7041,18 +6460,7 @@ index 0000000000..491f547998
 +	struct zebra_evpn_bpp_peer *peer;
 +	struct zebra_evpn_es *es;
 +	enum dplane_op_e op = dplane_ctx_get_op(ctx);
-+	const char *ifname;
 +	uint32_t id;
-+
-+	if (op == DPLANE_OP_BR_PORT_UPDATE) {
-+		ifname = dplane_ctx_get_ifname(ctx);
-+		frr_each (zebra_evpn_bpp_if_hash, &bpp_if_hash, bif) {
-+			if (ifname && strcmp(bif->zif->ifp->name, ifname))
-+				continue;
-+			zebra_evpn_bpp_fpm_status_set(bif, op, status);
-+		}
-+		return;
-+	}
 +
 +	if (op == DPLANE_OP_EVPN_MH_NHG_UPDATE) {
 +		es = zebra_evpn_es_find(dplane_ctx_get_evpn_mh_esi(ctx));
@@ -7094,9 +6502,9 @@ index 0000000000..491f547998
 +	} else if (op == DPLANE_OP_EVPN_MH_NHG_UPDATE) {
 +		object = ZEBRA_EVPN_BPP_TEST_GROUP;
 +		is_del = dplane_ctx_get_evpn_mh_is_del(ctx);
-+	} else if (op == DPLANE_OP_BR_PORT_UPDATE) {
++	} else if (op == DPLANE_OP_BR_PORT_UPDATE || op == DPLANE_OP_BR_PORT_DELETE) {
 +		object = ZEBRA_EVPN_BPP_TEST_BINDING;
-+		is_del = dplane_ctx_get_br_port_backup_nhg_id(ctx) == 0;
++		is_del = !zebra_evpn_mh_id_is_l3_bpp(dplane_ctx_get_br_port_backup_nhg_id(ctx));
 +	} else {
 +		return false;
 +	}
@@ -7114,21 +6522,26 @@ index 0000000000..491f547998
 +	enum zebra_dplane_result status;
 +	struct zebra_evpn_bpp_export_log *ent;
 +	struct zebra_evpn_bpp_nh key, *nh;
-+	const char *ifname;
 +	uint32_t id = 0;
++	uint32_t seq;
 +
 +	if (!ctx || !bpp_inited)
 +		return;
 +
 +	op = dplane_ctx_get_op(ctx);
-+	ifname = dplane_ctx_get_ifname(ctx);
++	/* Both port-wide unbind operations complete the same BPP export. */
++	if (op == DPLANE_OP_BR_PORT_DELETE)
++		op = DPLANE_OP_BR_PORT_UPDATE;
++	seq = dplane_ctx_get_seq(ctx);
 +	if (op == DPLANE_OP_EVPN_MH_NH_UPDATE)
 +		id = dplane_ctx_get_evpn_mh_nh_id(ctx);
 +	else if (op == DPLANE_OP_EVPN_MH_NHG_UPDATE)
 +		id = dplane_ctx_get_evpn_mh_nhg_id(ctx);
-+	else if (op == DPLANE_OP_BR_PORT_UPDATE)
++	else if (op == DPLANE_OP_BR_PORT_UPDATE) {
++		if (!seq)
++			return;
 +		id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
-+	else if (op != DPLANE_OP_EVPN_MH_REPLAY_DONE)
++	} else if (op != DPLANE_OP_EVPN_MH_REPLAY_DONE)
 +		return;
 +
 +#ifdef DEV_BUILD
@@ -7138,25 +6551,13 @@ index 0000000000..491f547998
 +	status = dplane_ctx_get_status(ctx);
 +	zebra_evpn_bpp_fpm_status_update(ctx, status);
 +
-+	ent = zebra_evpn_bpp_export_log_find(op, id, ifname);
++	ent = zebra_evpn_bpp_export_log_find(op, id, seq);
 +	if (ent) {
 +		ent->completed = true;
 +		ent->result = status;
 +		if (op == DPLANE_OP_BR_PORT_UPDATE) {
 +			ent->br_port_flags = dplane_ctx_get_br_port_flags(ctx);
 +			ent->sph_filter_count = dplane_ctx_get_br_port_sph_filter_cnt(ctx);
-+		}
-+	}
-+
-+	if (op == DPLANE_OP_BR_PORT_UPDATE && status == ZEBRA_DPLANE_REQUEST_SUCCESS && id &&
-+	    zebra_evpn_mh_id_is_l3_bpp(id)) {
-+		struct zebra_evpn_bpp_if *bif;
-+
-+		frr_each (zebra_evpn_bpp_if_hash, &bpp_if_hash, bif) {
-+			if (!ifname || strcmp(bif->zif->ifp->name, ifname))
-+				continue;
-+			if (bif->export_status == ZEBRA_EVPN_BPP_X_SENT)
-+				bif->export_status = ZEBRA_EVPN_BPP_X_ACKED;
 +		}
 +	}
 +
@@ -7170,33 +6571,51 @@ index 0000000000..491f547998
 +			XFREE(MTYPE_ZEVPN_BPP_NH, nh);
 +		}
 +	}
-+	if (status == ZEBRA_DPLANE_REQUEST_SUCCESS && op == DPLANE_OP_BR_PORT_UPDATE && ent &&
-+	    ent->is_del) {
-+		struct zebra_evpn_bpp_xtab_bind *bind;
++	if (op == DPLANE_OP_BR_PORT_UPDATE) {
++		ifindex_t ifindex = dplane_ctx_get_ifindex(ctx);
++		struct zebra_evpn_bpp_xtab_bind bind_key = { .ifindex = ifindex };
++		struct zebra_evpn_bpp_xtab_bind *retire, *live;
++		bool is_bpp = zebra_evpn_mh_id_is_l3_bpp(id);
 +
-+		frr_each_safe (zebra_evpn_bpp_xtab_bind_hash, &bpp_bind_retire, bind) {
-+			if (!ifname || strcmp(bind->ifname, ifname))
-+				continue;
-+			zebra_evpn_bpp_xtab_bind_hash_del(&bpp_bind_retire, bind);
-+			XFREE(MTYPE_ZEVPN_BPP_EXPORT, bind);
-+			break;
++		retire = zebra_evpn_bpp_xtab_bind_hash_find(&bpp_bind_retire, &bind_key);
++		live = zebra_evpn_bpp_xtab_bind_hash_find(&bpp_xtab_bind, &bind_key);
++
++		if (live ? live->seq == seq : retire && retire->seq == seq) {
++			struct interface *ifp = if_lookup_by_index(ifindex, VRF_DEFAULT);
++			struct zebra_evpn_bpp_if *bif = ifp && ifp->info
++								? zebra_evpn_bpp_if_find(ifp->info)
++								: NULL;
++
++			if (bif) {
++				zebra_evpn_bpp_fpm_status_set(bif, op, status);
++				if (is_bpp && status == ZEBRA_DPLANE_REQUEST_SUCCESS &&
++				    bif->export_status == ZEBRA_EVPN_BPP_X_SENT)
++					bif->export_status = ZEBRA_EVPN_BPP_X_ACKED;
++			}
++		}
++
++		/* A successful newer BPP binding also replaces the retired one. */
++		if (status == ZEBRA_DPLANE_REQUEST_SUCCESS && retire &&
++		    (seq == retire->seq || (is_bpp && (int32_t)(seq - retire->seq) > 0))) {
++			zebra_evpn_bpp_xtab_bind_hash_del(&bpp_bind_retire, retire);
++			XFREE(MTYPE_ZEVPN_BPP_EXPORT, retire);
 +		}
 +	}
 +}
 +
 +static void zebra_evpn_bpp_replay_binding(struct interface *ifp,
-+					  uint32_t backup_nhg_id)
++					  uint32_t backup_nhg_id, uint32_t seq)
 +{
 +	struct zebra_if *zif = ifp->info;
 +	struct ipaddr sph_filters[ES_VTEP_MAX_CNT] = {};
 +	uint16_t vid;
 +
-+	dplane_br_port_update(ifp, false, 0, sph_filters, backup_nhg_id, 0);
++	dplane_br_port_update(ifp, false, 0, sph_filters, backup_nhg_id, 0, seq);
 +	if (zif && bf_is_inited(zif->vlan_bitmap)) {
 +		bf_for_each_set_bit(zif->vlan_bitmap, vid,
 +				    IF_VLAN_BITMAP_MAX) {
 +			dplane_br_port_update(ifp, false, 0, sph_filters,
-+					      backup_nhg_id, vid);
++					      backup_nhg_id, vid, 0);
 +		}
 +	}
 +}
@@ -7219,11 +6638,12 @@ index 0000000000..491f547998
 +		ifp = if_lookup_by_index(bind->ifindex, VRF_DEFAULT);
 +		if (!ifp)
 +			continue;
-+		zebra_evpn_bpp_replay_binding(ifp, 0);
 +		ent = zebra_evpn_bpp_export_log_push(DPLANE_OP_BR_PORT_UPDATE, true, 0);
 +		ent->replay = true;
 +		strlcpy(ent->ifname, bind->ifname, sizeof(ent->ifname));
 +		memcpy(&ent->esi, &bind->esi, sizeof(esi_t));
++		bind->seq = ent->seq;
++		zebra_evpn_bpp_replay_binding(ifp, 0, bind->seq);
 +	}
 +	frr_each (zebra_evpn_bpp_nh_id_hash, &bpp_nh_retire, retire) {
 +		if (NHG_ID_TYPE(retire->nh_id) != NHG_TYPE_L3_BPP)
@@ -7269,13 +6689,13 @@ index 0000000000..491f547998
 +		es = zebra_evpn_es_find(&bind->esi);
 +		if (!es || !es->zif || !es->zif->ifp)
 +			continue;
-+		zebra_evpn_bpp_replay_binding(es->zif->ifp,
-+					      bind->backup_nhg_id);
 +		ent = zebra_evpn_bpp_export_log_push(DPLANE_OP_BR_PORT_UPDATE, false,
 +						     bind->backup_nhg_id);
 +		ent->replay = true;
 +		strlcpy(ent->ifname, bind->ifname, sizeof(ent->ifname));
 +		memcpy(&ent->esi, &bind->esi, sizeof(esi_t));
++		bind->seq = ent->seq;
++		zebra_evpn_bpp_replay_binding(es->zif->ifp, bind->backup_nhg_id, bind->seq);
 +	}
 +	dplane_evpn_mh_replay_done();
 +	ent = zebra_evpn_bpp_export_log_push(DPLANE_OP_EVPN_MH_REPLAY_DONE, false, 0);
@@ -7495,10 +6915,10 @@ index 0000000000..491f547998
 +}
 diff --git a/zebra/zebra_evpn_bpp.h b/zebra/zebra_evpn_bpp.h
 new file mode 100644
-index 0000000000..fb12a5f3d1
+index 0000000000000000000000000000000000000000..e0d5cfb62b38920a7ed1de20c23741838ec57e33
 --- /dev/null
 +++ b/zebra/zebra_evpn_bpp.h
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,98 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Zebra EVPN-MH bridge-port protection
@@ -7566,7 +6986,7 @@ index 0000000000..fb12a5f3d1
 +extern bool zebra_evpn_bpp_es_bound(const struct zebra_evpn_es *es);
 +
 +/* Record a protection Binding enqueue; is_del clears the export table. */
-+extern void zebra_evpn_bpp_export_br_port(struct zebra_evpn_es *es, bool is_del);
++extern uint32_t zebra_evpn_bpp_export_br_port(struct zebra_evpn_es *es, bool is_del);
 +
 +/* Complete an export-log entry when the dplane result arrives. */
 +extern void zebra_evpn_bpp_dplane_result(struct zebra_dplane_ctx *ctx);
@@ -7574,7 +6994,11 @@ index 0000000000..fb12a5f3d1
 +/* Last state sent and the enqueue ring. */
 +extern void zebra_evpn_bpp_show_export(struct vty *vty, bool uj);
 +
-+/* Retry pending deletes, then replay Members, Groups, Bindings and REPLAY_DONE. */
++/*
++ * The dataplane provider calls this on Zebra's main thread when its FPM
++ * session connects. Queue pending deletes, then Members, Groups, Bindings
++ * and REPLAY_DONE.
++ */
 +extern void zebra_evpn_bpp_replay(void);
 +
 +#ifdef DEV_BUILD
@@ -7594,7 +7018,7 @@ index 0000000000..fb12a5f3d1
 +
 +#endif /* _ZEBRA_EVPN_BPP_H */
 diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
-index 661b2bf2f0..6e81ed6853 100644
+index 599fd51f6603831930021b081b2f40cf1b59e997..5115cc022e4b1d29b8633e9d7f1e7327e7fa2439 100644
 --- a/zebra/zebra_evpn_mh.c
 +++ b/zebra/zebra_evpn_mh.c
 @@ -28,6 +28,7 @@
@@ -7613,7 +7037,7 @@ index 661b2bf2f0..6e81ed6853 100644
  #include "zebra/zebra_nhg.h"
  
  DEFINE_MTYPE_STATIC(ZEBRA, ZACC_BD, "Access Broadcast Domain");
-@@ -709,6 +711,8 @@ void zebra_evpn_acc_bd_svi_set(struct zebra_if *vlan_zif,
+@@ -717,6 +719,8 @@ void zebra_evpn_acc_bd_svi_set(struct zebra_if *vlan_zif,
  			zebra_evpn_mac_svi_del(vlan_zif->ifp, acc_bd->zevpn);
  		zebra_evpn_acc_bd_free_on_deref(acc_bd);
  	}
@@ -7622,7 +7046,7 @@ index 661b2bf2f0..6e81ed6853 100644
  }
  
  /* On some events macs are force-flushed. This api can be used to reinstate
-@@ -750,6 +754,8 @@ static void zebra_evpn_acc_bd_evpn_set(struct zebra_evpn_access_bd *acc_bd,
+@@ -759,6 +763,8 @@ static void zebra_evpn_acc_bd_evpn_set(struct zebra_evpn_access_bd *acc_bd,
  			zebra_evpn_mac_svi_del(acc_bd->vlan_zif->ifp,
  					       old_zevpn);
  	}
@@ -7631,7 +7055,16 @@ index 661b2bf2f0..6e81ed6853 100644
  }
  
  /* Lookup API for  VxLAN_IF's Bridge, VLAN in EVPN cache */
-@@ -1346,6 +1352,8 @@ void zebra_evpn_if_cleanup(struct zebra_if *zif)
+@@ -1106,7 +1112,7 @@ void zebra_evpn_vl_mbr_deref(uint16_t vid, struct zebra_if *zif)
+ 	list_delete_node(acc_bd->mbr_zifs, node);
+ 
+ 	if (acc_bd->zevpn && zif->es_info.es) {
+-		dplane_br_port_delete(zif->ifp, vid);
++		dplane_br_port_delete(zif->ifp, vid, 0);
+ 		zebra_evpn_local_es_evi_del(zif->es_info.es, acc_bd->zevpn);
+ 	}
+ 
+@@ -1355,6 +1361,8 @@ void zebra_evpn_if_cleanup(struct zebra_if *zif)
  	if (es)
  		zebra_evpn_local_es_del(&es);
  
@@ -7640,7 +7073,7 @@ index 661b2bf2f0..6e81ed6853 100644
  	if (zmh_info && zmh_info->evpn_vlan_table)
  		hash_iterate(zmh_info->evpn_vlan_table, zebra_evpn_acc_vl_ref_cleanup_cb, zif);
  }
-@@ -1355,23 +1363,52 @@ void zebra_evpn_if_cleanup(struct zebra_if *zif)
+@@ -1364,23 +1372,52 @@ void zebra_evpn_if_cleanup(struct zebra_if *zif)
   *   A L2 NH entry is programmed in the kernel for every ES-VTEP entry. This
   * NH is then added to the L2-ECMP-NHG associated with the ES.
   */
@@ -7700,7 +7133,7 @@ index 661b2bf2f0..6e81ed6853 100644
  	}
  
  	return nh_id;
-@@ -1379,9 +1416,7 @@ static uint32_t zebra_evpn_nhid_alloc(struct zebra_evpn_es *es)
+@@ -1388,9 +1425,7 @@ static uint32_t zebra_evpn_nhid_alloc(struct zebra_evpn_es *es)
  
  static void zebra_evpn_nhid_free(uint32_t nh_id, struct zebra_evpn_es *es)
  {
@@ -7711,7 +7144,7 @@ index 661b2bf2f0..6e81ed6853 100644
  		return;
  
  	if (es) {
-@@ -1389,7 +1424,7 @@ static void zebra_evpn_nhid_free(uint32_t nh_id, struct zebra_evpn_es *es)
+@@ -1398,7 +1433,7 @@ static void zebra_evpn_nhid_free(uint32_t nh_id, struct zebra_evpn_es *es)
  		es->nhg_id = 0;
  	}
  
@@ -7720,25 +7153,51 @@ index 661b2bf2f0..6e81ed6853 100644
  }
  
  /* Reserve bitmap index for a stale FDB NH/NHG read from kernel at startup,
-@@ -1914,6 +1949,11 @@ static bool zebra_evpn_es_br_port_dplane_clear(struct zebra_evpn_es *es)
+@@ -1915,6 +1950,7 @@ static void zebra_evpn_es_vtep_local_clear(struct zebra_evpn_es_vtep *es_vtep)
+ static bool zebra_evpn_es_br_port_dplane_clear(struct zebra_evpn_es *es)
+ {
+ 	struct zebra_if *zif = es->zif;
++	uint32_t seq = 0;
+ 	uint16_t vid;
+ 
+ 	if (!(es->flags & ZEBRA_EVPNES_BR_PORT))
+@@ -1923,14 +1959,19 @@ static bool zebra_evpn_es_br_port_dplane_clear(struct zebra_evpn_es *es)
  	if (IS_ZEBRA_DEBUG_EVPN_MH_ES)
  		zlog_debug("es %s br-port dplane clear", es->esi_str);
  
 +	if (es->bpp_backup_nhg_id) {
 +		es->bpp_backup_nhg_id = 0;
-+		zebra_evpn_bpp_export_br_port(es, true);
++		seq = zebra_evpn_bpp_export_br_port(es, true);
 +	}
 +
  	if (bf_is_inited(zif->vlan_bitmap)) {
  		bf_for_each_set_bit(zif->vlan_bitmap, vid,
  				    IF_VLAN_BITMAP_MAX) {
-@@ -1954,6 +1994,33 @@ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
+-			dplane_br_port_delete(es->zif->ifp, vid);
++			dplane_br_port_delete(es->zif->ifp, vid, 0);
+ 		}
+ 	}
+ 
+-	dplane_br_port_delete(es->zif->ifp, 0);
++	dplane_br_port_delete(es->zif->ifp, 0, seq);
+ 
+ 	return true;
+ }
+@@ -1953,6 +1994,7 @@ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
+ 	struct listnode *node = NULL;
+ 	struct zebra_evpn_es_vtep *es_vtep;
+ 	uint32_t sph_filter_cnt = 0;
++	uint32_t seq = 0;
+ 
+ 	if (!(es->flags & ZEBRA_EVPNES_LOCAL))
+ 		return zebra_evpn_es_br_port_dplane_clear(es);
+@@ -1963,6 +2005,33 @@ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
  	if (!(es->flags & ZEBRA_EVPNES_BR_PORT))
  		return false;
  
 +	if (zebra_evpn_bpp_es_bound(es) && es->l3_nhg_id) {
-+		bool binding_changed =
-+			es->bpp_backup_nhg_id != es->l3_nhg_id;
++		/* The backup group belongs to the port-wide request. */
++		bool binding_changed = !vid && es->bpp_backup_nhg_id != es->l3_nhg_id;
 +
 +		if (binding_changed &&
 +		    (IS_ZEBRA_DEBUG_EVPN_MH_ES ||
@@ -7746,27 +7205,36 @@ index 661b2bf2f0..6e81ed6853 100644
 +			zlog_debug("es %s br-port protection Binding by %s nhg 0x%x", es->esi_str,
 +				   caller, es->l3_nhg_id);
 +		memset(&sph_filters, 0, sizeof(sph_filters));
-+		dplane_br_port_update(es->zif->ifp, false /* non_df */, 0, sph_filters,
-+				      es->l3_nhg_id, vid);
 +		if (binding_changed) {
-+			zebra_evpn_bpp_export_br_port(es, false);
++			seq = zebra_evpn_bpp_export_br_port(es, false);
 +			es->bpp_backup_nhg_id = es->l3_nhg_id;
 +		}
++		dplane_br_port_update(es->zif->ifp, false /* non_df */, 0, sph_filters,
++				      es->l3_nhg_id, vid, seq);
 +		return true;
 +	}
 +
-+	if (es->bpp_backup_nhg_id) {
++	if (!vid && es->bpp_backup_nhg_id) {
 +		if (IS_ZEBRA_DEBUG_EVPN_MH_ES || IS_ZEBRA_DEBUG_EVPN_MH_PROT)
 +			zlog_debug("es %s br-port protection Binding clear by %s", es->esi_str,
 +				   caller);
 +		es->bpp_backup_nhg_id = 0;
-+		zebra_evpn_bpp_export_br_port(es, true);
++		seq = zebra_evpn_bpp_export_br_port(es, true);
 +	}
 +
  	if (IS_ZEBRA_DEBUG_EVPN_MH_ES)
  		zlog_debug("es %s br-port dplane update by %s", es->esi_str,
  			   caller);
-@@ -2013,6 +2080,12 @@ static bool zebra_evpn_es_br_port_dplane_update_all_vids(
+@@ -1992,7 +2061,7 @@ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
+ 	}
+ 
+ 	dplane_br_port_update(es->zif->ifp, !!(es->flags & ZEBRA_EVPNES_NON_DF),
+-			      sph_filter_cnt, sph_filters, backup_nhg_id, vid);
++			      sph_filter_cnt, sph_filters, backup_nhg_id, vid, seq);
+ 
+ 	return true;
+ }
+@@ -2022,6 +2091,12 @@ static bool zebra_evpn_es_br_port_dplane_update_all_vids(
  	return dplane_updated;
  }
  
@@ -7779,7 +7247,7 @@ index 661b2bf2f0..6e81ed6853 100644
  /* returns TRUE if dplane entry was updated */
  static bool zebra_evpn_es_df_change(struct zebra_evpn_es *es, bool new_non_df,
  				    const char *caller, const char *reason)
-@@ -2249,6 +2322,10 @@ static void zebra_evpn_es_free(struct zebra_evpn_es **esp)
+@@ -2258,6 +2333,10 @@ static void zebra_evpn_es_free(struct zebra_evpn_es **esp)
  		kernel_del_mac_nhg(es->nhg_id);
  	}
  	zebra_evpn_nhid_free(es->nhg_id, es);
@@ -7790,7 +7258,7 @@ index 661b2bf2f0..6e81ed6853 100644
  
  	/* cleanup resources maintained against the ES */
  	list_delete(&es->es_evi_list);
-@@ -2348,10 +2425,14 @@ static void zebra_evpn_es_re_eval_send_to_client(struct zebra_evpn_es *es,
+@@ -2357,10 +2436,14 @@ static void zebra_evpn_es_re_eval_send_to_client(struct zebra_evpn_es *es,
  	if (old_ready == new_ready)
  		return;
  
@@ -7807,7 +7275,7 @@ index 661b2bf2f0..6e81ed6853 100644
  
  	/* re-eval associated EVIs */
  	if (es_evi_re_reval) {
-@@ -2392,6 +2473,7 @@ void zebra_evpn_es_send_all_to_client(bool add)
+@@ -2401,6 +2484,7 @@ void zebra_evpn_es_send_all_to_client(bool add)
  						es, es_evi->zevpn,
  						false /* add */);
  			}
@@ -7815,7 +7283,7 @@ index 661b2bf2f0..6e81ed6853 100644
  			if (!add)
  				zebra_evpn_es_send_del_to_client(es);
  		}
-@@ -2674,6 +2756,8 @@ static void zebra_evpn_es_local_info_set(struct zebra_evpn_es *es,
+@@ -2683,6 +2767,8 @@ static void zebra_evpn_es_local_info_set(struct zebra_evpn_es *es,
  	 * a local ES to stamp as their ESI.
  	 */
  	zebra_evpn_l3vni_readvertise_acc_port(zif->ifp);
@@ -7824,7 +7292,7 @@ index 661b2bf2f0..6e81ed6853 100644
  }
  
  static void zebra_evpn_es_local_info_clear(struct zebra_evpn_es **esp)
-@@ -2723,8 +2807,10 @@ static void zebra_evpn_es_local_info_clear(struct zebra_evpn_es **esp)
+@@ -2732,8 +2818,10 @@ static void zebra_evpn_es_local_info_clear(struct zebra_evpn_es **esp)
  	/* Refresh any pure-L3 RT-2s for hosts behind this port; with the local
  	 * ES gone they must be withdrawn.
  	 */
@@ -7836,7 +7304,7 @@ index 661b2bf2f0..6e81ed6853 100644
  
  	/* remove from the ES list */
  	list_delete_node(zmh_info->local_es_list, &es->local_es_listnode);
-@@ -2756,9 +2842,12 @@ static void zebra_evpn_local_es_del(struct zebra_evpn_es **esp)
+@@ -2765,9 +2853,12 @@ static void zebra_evpn_local_es_del(struct zebra_evpn_es **esp)
  		zebra_evpn_local_es_evi_do_del(es_evi);
  
  	/* send a del if the ES had been sent to BGP earlier */
@@ -7850,7 +7318,7 @@ index 661b2bf2f0..6e81ed6853 100644
  	zebra_evpn_es_local_info_clear(esp);
  }
  
-@@ -2953,6 +3042,33 @@ stream_failure:
+@@ -2962,6 +3053,33 @@ stream_failure:
  	return;
  }
  
@@ -7884,7 +7352,7 @@ index 661b2bf2f0..6e81ed6853 100644
  void zebra_evpn_es_mac_deref_entry(struct zebra_mac *mac)
  {
  	struct zebra_evpn_es *es = mac->es;
-@@ -3210,6 +3326,16 @@ void zebra_evpn_es_bypass_cfg_update(struct zebra_if *zif, bool bypass)
+@@ -3219,6 +3337,16 @@ void zebra_evpn_es_bypass_cfg_update(struct zebra_if *zif, bool bypass)
  		zebra_evpn_es_bypass_update(zif->es_info.es, zif->ifp, bypass);
  }
  
@@ -7901,7 +7369,7 @@ index 661b2bf2f0..6e81ed6853 100644
  
  /* Only certain types of access ports can be setup as an Ethernet Segment */
  bool zebra_evpn_is_if_es_capable(struct zebra_if *zif)
-@@ -4972,12 +5098,16 @@ void zebra_evpn_mh_init(void)
+@@ -4981,12 +5109,16 @@ void zebra_evpn_mh_init(void)
  
  	zmh_info->startup_delay_time = ZEBRA_EVPN_MH_STARTUP_DELAY_DEF;
  	zebra_evpn_mh_startup_delay_timer_start("init");
@@ -7919,7 +7387,7 @@ index 661b2bf2f0..6e81ed6853 100644
  
  	frr_each_safe (mh_vtep_list, &zmh_info->mh_vtep_list, mh_vtep)
 diff --git a/zebra/zebra_evpn_mh.h b/zebra/zebra_evpn_mh.h
-index 7172fae8f3..58b498036e 100644
+index 7172fae8f3a880ea664287ec422b6aca0ec00e4a..58b498036edf3106f4a0188fe6926ece94169828 100644
 --- a/zebra/zebra_evpn_mh.h
 +++ b/zebra/zebra_evpn_mh.h
 @@ -74,9 +74,15 @@ struct zebra_evpn_es {
@@ -8028,7 +7496,7 @@ index 7172fae8f3..58b498036e 100644
  void zebra_evpn_flush_local_mac(struct zebra_mac *mac, struct interface *ifp);
  
 diff --git a/zebra/zebra_l2.c b/zebra/zebra_l2.c
-index 0fa7353336..88275a8a09 100644
+index 97b285587b6663490d31615d45eebc26508c4114..75761906df60f8d3b862bb7c17110c84d596973e 100644
 --- a/zebra/zebra_l2.c
 +++ b/zebra/zebra_l2.c
 @@ -30,6 +30,7 @@
@@ -8039,7 +7507,7 @@ index 0fa7353336..88275a8a09 100644
  #include "zebra/zebra_neigh.h"
  
  /* definitions */
-@@ -255,6 +256,7 @@ void zebra_l2_bridge_add_update(struct interface *ifp,
+@@ -256,6 +257,7 @@ void zebra_l2_bridge_add_update(struct interface *ifp,
  
  	/* Link all slaves to this bridge */
  	map_slaves_to_bridge(ifp, 1, false, ZEBRA_BRIDGE_NO_ACTION);
@@ -8047,7 +7515,7 @@ index 0fa7353336..88275a8a09 100644
  }
  
  /*
-@@ -266,6 +268,7 @@ void zebra_l2_bridge_del(struct interface *ifp)
+@@ -267,6 +269,7 @@ void zebra_l2_bridge_del(struct interface *ifp)
  
  	/* Unlink all slaves to this bridge */
  	map_slaves_to_bridge(ifp, 0, false, ZEBRA_BRIDGE_NO_ACTION);
@@ -8055,7 +7523,7 @@ index 0fa7353336..88275a8a09 100644
  }
  
  void zebra_l2if_update_bridge(struct interface *ifp, uint8_t chgflags)
-@@ -509,6 +512,8 @@ void zebra_l2if_update_bridge_slave(struct interface *ifp,
+@@ -513,6 +516,8 @@ void zebra_l2if_update_bridge_slave(struct interface *ifp,
  
  		zebra_l2_unmap_slave_from_bridge(&zif->brslave_info);
  	}
@@ -8064,7 +7532,7 @@ index 0fa7353336..88275a8a09 100644
  }
  
  void zebra_l2if_update_bond_slave(struct interface *ifp, ifindex_t bond_ifindex,
-@@ -592,4 +597,6 @@ void zebra_vlan_mbr_re_eval(struct interface *ifp, bitfield_t old_vlan_bitmap)
+@@ -596,4 +601,6 @@ void zebra_vlan_mbr_re_eval(struct interface *ifp, bitfield_t old_vlan_bitmap)
  	bf_for_each_set_bit(old_vlan_bitmap, vid, IF_VLAN_BITMAP_MAX) {
  		zebra_evpn_vl_mbr_deref(vid, zif);
  	}
@@ -8072,7 +7540,7 @@ index 0fa7353336..88275a8a09 100644
 +	zebra_evpn_bpp_if_update(zif);
  }
 diff --git a/zebra/zebra_nb.c b/zebra/zebra_nb.c
-index 0f840a84c5..22292df6a1 100644
+index 0f840a84c56365f4d4d39c85386e54e5d33bd15d..22292df6a12d6bc4c28a2fec3c93aee53d5eda01 100644
 --- a/zebra/zebra_nb.c
 +++ b/zebra/zebra_nb.c
 @@ -608,6 +608,12 @@ const struct frr_yang_module_info frr_zebra_info = {
@@ -8089,7 +7557,7 @@ index 0f840a84c5..22292df6a1 100644
  			.xpath = "/frr-interface:lib/interface/frr-zebra:zebra/ipv6-router-advertisements/send-advertisements",
  			.cbs = {
 diff --git a/zebra/zebra_nb.h b/zebra/zebra_nb.h
-index f3153464f2..3315a8335d 100644
+index f3153464f27cd808cdaf9830327e064d6c37493a..3315a8335d3a8119d561374e67878a8828040946 100644
 --- a/zebra/zebra_nb.h
 +++ b/zebra/zebra_nb.h
 @@ -202,6 +202,7 @@ int lib_interface_zebra_evpn_mh_df_preference_modify(
@@ -8101,7 +7569,7 @@ index f3153464f2..3315a8335d 100644
  	struct nb_cb_modify_args *args);
  int lib_interface_zebra_ipv6_router_advertisements_max_rtr_adv_interval_modify(
 diff --git a/zebra/zebra_nb_config.c b/zebra/zebra_nb_config.c
-index b23ba586b4..e43a973da1 100644
+index b23ba586b4b689e39f865f03e48812b633e79b5b..e43a973da1a30b18eb582aa038e094bd010adf81 100644
 --- a/zebra/zebra_nb_config.c
 +++ b/zebra/zebra_nb_config.c
 @@ -2564,6 +2564,24 @@ int lib_interface_zebra_evpn_mh_uplink_modify(struct nb_cb_modify_args *args)
@@ -8130,7 +7598,7 @@ index b23ba586b4..e43a973da1 100644
   * XPath: /frr-interface:lib/interface/frr-zebra:zebra/ipv6-router-advertisements/send-advertisements
   */
 diff --git a/zebra/zebra_nhg.h b/zebra/zebra_nhg.h
-index 152bdef2b1..ea92fd6c89 100644
+index 152bdef2b1dab88ff11910f425cafe7122d61dc5..ea92fd6c8925e014feb900cca64bb6dae4993c75 100644
 --- a/zebra/zebra_nhg.h
 +++ b/zebra/zebra_nhg.h
 @@ -180,12 +180,19 @@ struct nhg_hash_entry {
@@ -8157,7 +7625,7 @@ index 152bdef2b1..ea92fd6c89 100644
  
  /* Was this one we created, either this session or previously? */
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index fc15424fd1..51a2922df7 100644
+index fc15424fd1f9e38cf36f70465f3fcc4b90044caf..b62b45669bd181a7c316a494cf55fc9716404ec5 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
 @@ -50,6 +50,7 @@
@@ -8181,17 +7649,17 @@ index fc15424fd1..51a2922df7 100644
  			case DPLANE_OP_RULE_ADD:
  			case DPLANE_OP_RULE_DELETE:
  			case DPLANE_OP_RULE_UPDATE:
-@@ -5316,6 +5323,8 @@ static void rib_process_dplane_results(struct event *event)
- 			case DPLANE_OP_VTEP_ADD:
+@@ -5317,6 +5324,8 @@ static void rib_process_dplane_results(struct event *event)
  			case DPLANE_OP_VTEP_DELETE:
  			case DPLANE_OP_BR_PORT_UPDATE:
+ 			case DPLANE_OP_BR_PORT_DELETE:
 +				zebra_evpn_bpp_dplane_result(ctx);
 +				break;
- 			case DPLANE_OP_BR_PORT_DELETE:
  			case DPLANE_OP_NEIGH_TABLE_UPDATE:
  			case DPLANE_OP_GRE_SET:
+ 			case DPLANE_OP_SRV6_ENCAP_SRCADDR_SET:
 diff --git a/zebra/zebra_script.c b/zebra/zebra_script.c
-index 08fa3c7f92..bc21b623b2 100644
+index 08fa3c7f925d74ad42713a3dad4bbfe19c6e8334..bc21b623b230aad5d6444d3cf309270cc7a6d250 100644
 --- a/zebra/zebra_script.c
 +++ b/zebra/zebra_script.c
 @@ -422,6 +422,9 @@ void lua_pushzebra_dplane_ctx(lua_State *L, const struct zebra_dplane_ctx *ctx)
@@ -8205,7 +7673,7 @@ index 08fa3c7f92..bc21b623b2 100644
  	case DPLANE_OP_INTF_NETCONFIG: /*NYI*/
  	case DPLANE_OP_INTF_SPEED_GET:
 diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
-index e5df141176..67b91a1af1 100644
+index e5df141176d4895e34f03780c3c5c8f6f680ecdb..67b91a1af1e30e2620e4642d56e7956f09c6e8aa 100644
 --- a/zebra/zebra_vty.c
 +++ b/zebra/zebra_vty.c
 @@ -44,6 +44,7 @@
@@ -8358,7 +7826,7 @@ index e5df141176..67b91a1af1 100644
  	install_element(VIEW_NODE, &show_evpn_access_vlan_cmd);
  	install_element(VIEW_NODE, &show_evpn_rmac_vni_mac_cmd);
 diff --git a/zebra/zebra_vxlan.c b/zebra/zebra_vxlan.c
-index 21fec14952..43bb07560c 100644
+index 81aa3de57568f47eebb8919762dac2e1f5eba0ab..0e7d1836c9edfd0cd44df5b7391ff4c00933f48f 100644
 --- a/zebra/zebra_vxlan.c
 +++ b/zebra/zebra_vxlan.c
 @@ -40,6 +40,7 @@
@@ -8369,7 +7837,7 @@ index 21fec14952..43bb07560c 100644
  #include "zebra/zebra_evpn_vxlan.h"
  #include "zebra/zebra_dplane.h"
  #include "zebra/zebra_router.h"
-@@ -2123,6 +2124,8 @@ static struct zebra_l3vni *zl3vni_add(vni_t vni, vrf_id_t vrf_id)
+@@ -2124,6 +2125,8 @@ static struct zebra_l3vni *zl3vni_add(vni_t vni, vrf_id_t vrf_id)
  	/* Create hash table for neighbors */
  	zebra_neigh_db_init(zl3vni->nh_table);
  
@@ -8378,7 +7846,7 @@ index 21fec14952..43bb07560c 100644
  	return zl3vni;
  }
  
-@@ -2133,6 +2136,8 @@ static int zl3vni_del(struct zebra_l3vni *zl3vni)
+@@ -2134,6 +2137,8 @@ static int zl3vni_del(struct zebra_l3vni *zl3vni)
  {
  	struct zebra_l3vni *tmp_zl3vni;
  
@@ -8387,7 +7855,7 @@ index 21fec14952..43bb07560c 100644
  	/* free the list of l2vnis */
  	list_delete(&zl3vni->l2vnis);
  	zl3vni->l2vnis = NULL;
-@@ -2494,6 +2499,8 @@ void zebra_vxlan_process_l3vni_oper_up(struct zebra_l3vni *zl3vni)
+@@ -2495,6 +2500,8 @@ void zebra_vxlan_process_l3vni_oper_up(struct zebra_l3vni *zl3vni)
  	evpn_zvrf = zebra_vrf_get_evpn();
  	if (evpn_zvrf && evpn_zvrf->advertise_l3vni_neigh)
  		zebra_vxlan_l3vni_neigh_replay();
@@ -8396,7 +7864,7 @@ index 21fec14952..43bb07560c 100644
  }
  
  void zebra_vxlan_process_l3vni_oper_down(struct zebra_l3vni *zl3vni)
-@@ -2517,6 +2524,8 @@ void zebra_vxlan_process_l3vni_oper_down(struct zebra_l3vni *zl3vni)
+@@ -2518,6 +2525,8 @@ void zebra_vxlan_process_l3vni_oper_down(struct zebra_l3vni *zl3vni)
  	zevpn = zebra_evpn_l3_neigh_sync_lookup(zl3vni->vni);
  	if (zevpn)
  		zebra_evpn_l3vni_neigh_flush(zevpn);
@@ -8405,7 +7873,7 @@ index 21fec14952..43bb07560c 100644
  }
  
  static void zevpn_add_to_l3vni_list(struct hash_bucket *bucket, void *ctxt)
-@@ -6214,6 +6223,8 @@ void zebra_vxlan_advertise_all_vni(ZAPI_HANDLER_ARGS)
+@@ -6243,6 +6252,8 @@ void zebra_vxlan_advertise_all_vni(ZAPI_HANDLER_ARGS)
  	}
  
  l3vni_neigh_sync:
@@ -8414,6 +7882,3 @@ index 21fec14952..43bb07560c 100644
  	/* Idempotent while enabled, so a bgpd (GR) reconnect that re-sends the
  	 * message also restores the L3VNI ES base EVPN and replays the
  	 * pure-L3 RT-2s for hosts learned before the token turned on.
--- 
-2.54.0
-

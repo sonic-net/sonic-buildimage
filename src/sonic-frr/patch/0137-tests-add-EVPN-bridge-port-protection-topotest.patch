@@ -1,27 +1,29 @@
-From 30075d77e1509a79d4db8f33c8a1e068d7cf171e Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Patrice Brissette <pbrisset@cisco.com>
 Date: Fri, 6 Nov 2026 19:56:43 -0500
 Subject: [PATCH 125/125] tests: add EVPN bridge-port protection topotest
 
 Backport the current bgp_evpn_mh_bpp coverage from FRRouting/frr PR #24071.
 
+Cover overlapping binding delete and add replay and missing-ESI JSON.
+
 Co-authored-by: Cursor <cursoragent@cursor.com>
 Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 ---
- tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md   |  381 +
- .../topotests/bgp_evpn_mh_bpp/spine1/frr.conf |   50 +
- .../topotests/bgp_evpn_mh_bpp/spine2/frr.conf |   50 +
- .../bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py   | 6517 ++++++++++++++++++
- tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf |   76 +
- .../tor1/show_bpp_pending.json                |   40 +
- tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf |   76 +
- tests/topotests/bgp_evpn_mh_bpp/tor3/frr.conf |   73 +
- tests/topotests/bgp_evpn_mh_bpp/tor4/frr.conf |   76 +
- tests/topotests/lib/bpp_export_check.py       |  113 +
- .../result-intf-eth0-wd-all-tag-default.json  |    4 +
- .../result-intf-eth0-wd-all-tag.json          |    4 +
- .../result-intf-eth0-wd-all.json              |    3 +-
- 13 files changed, 7462 insertions(+), 1 deletion(-)
+ tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md        |  382 ++
+ tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf    |   50 +
+ tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf    |   50 +
+ .../bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py        | 6593 ++++++++++++++++++++
+ tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf      |   76 +
+ .../bgp_evpn_mh_bpp/tor1/show_bpp_pending.json     |   40 +
+ tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf      |   76 +
+ tests/topotests/bgp_evpn_mh_bpp/tor3/frr.conf      |   73 +
+ tests/topotests/bgp_evpn_mh_bpp/tor4/frr.conf      |   76 +
+ tests/topotests/lib/bpp_export_check.py            |  113 +
+ .../result-intf-eth0-wd-all-tag-default.json       |    4 +
+ .../result-intf-eth0-wd-all-tag.json               |    4 +
+ .../simple-results/result-intf-eth0-wd-all.json    |    3 +-
+ 13 files changed, 7539 insertions(+), 1 deletion(-)
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf
  create mode 100644 tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf
@@ -35,10 +37,10 @@ Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
 
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md b/tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md
 new file mode 100644
-index 0000000000..8ec7fe3646
+index 0000000000000000000000000000000000000000..a16c597ed715ae14f3ca549f4baf2490b7ad5707
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/COVERAGE.md
-@@ -0,0 +1,381 @@
+@@ -0,0 +1,382 @@
 +# EVPN Bridge-Port Protection Test Traceability
 +
 +## Purpose
@@ -148,7 +150,7 @@ index 0000000000..8ec7fe3646
 +| EAD-03 | An unknown VNI is rejected when `l3vni-neigh` is off; with L3MH enabled, an early ES-EVI remains pending until its L3VNI appears. | `test_bpp_es_evi_unknown_vni_rejected`, `test_bpp_es_evi_l3vni_order` | **Covered** | Allocator/resource exhaustion is not injected. |
 +| EAD-04 | IP A-D per-EVI is originated per protected IP-VRF with its L3VNI label and Router's MAC EC. | `test_bpp_ip_ead_tx`, `test_bpp_ip_ead_tx_rmac_change` validate source and receiving-leaf BGP routes and exact Router's MAC ECs; receiver classification and `test_bpp_ip_ead_rx_label_mismatch` validate the labels without inferring them from route targets | **Covered** | The type-1 JSON output does not expose the label, and exact on-wire BGP packet bytes are not decoded. |
 +| EAD-05 | IP A-D per-ES follows ES state, uses the configured route targets, and supports fragmentation. | `test_bpp_ip_ead_tx`, `test_bpp_ip_ead_tx_per_es_frag`, `test_bpp_ip_ead_tx_rt_change` (exact add/replace/delete RT sets in the receiving BGP RIB), `test_bpp_ip_ead_tx_local_es_down` | **Covered** | Maximum fragmentation scale is not tested. |
-+| EAD-06 | IP A-D next hops use the configured VXLAN endpoint, including IPv6, rather than another global address. | `test_bpp_ip_ead_tx_ipv6` with a competing management IPv6 address; `tests/lib/test_fpm_bpp` checks IPv4 and IPv6 Member wire encoding | **Covered** | None identified in FRR. |
++| EAD-06 | IP A-D next hops use the configured VXLAN endpoint, including IPv6, rather than another global address. | `test_bpp_ip_ead_tx_ipv6` with a competing management IPv6 address | **Covered** | None identified in FRR. |
 +| EAD-07 | Per-EVI origination follows ready VLAN/IP-VRF configuration while per-ES origination follows ES operational state. | `test_bpp_ip_ead_tx_withdraw` | **Covered** | None identified in FRR. |
 +| EAD-08 | Received per-EVI and per-ES routes are classified and scoped to the correct ESI and IP-VRF. | `test_bpp_ip_ead_rx_classify`, `test_bpp_ip_ead_rx_mac_scope_only`, `test_bpp_ip_ead_rx_dual_scope`, `test_bpp_other_esi` | **Covered** | Dual MAC-VRF/IP-VRF import add, remove, restore, and independent withdrawal are directly asserted; RX assertions reject extra stale VTEPs. |
 +| EAD-09 | A per-EVI label/L3VNI mismatch is ignored. | `test_bpp_ip_ead_rx_label_mismatch` | **Covered** | None identified in FRR. |
@@ -171,7 +173,7 @@ index 0000000000..8ec7fe3646
 +| ELIG-07 | Removing `l3vni-neigh`, protection, required remote per-EVI coverage, or peer reachability sends a DEL; restoration sends ADD. Removing a local VRF from the required set can make a peer eligible. | `test_bpp_knob_off_del`, `test_bpp_protection_off_del`, `test_bpp_per_evi_one_vrf`, `test_bpp_peer_vtep_unreachable`, `test_bpp_vrf_leaves_ready_set` | **Covered** | None identified in FRR. |
 +| RMAC-01 | Member RMAC comes from the per-EVI Router's MAC EC and is common to the peer VTEP. | `test_bpp_rmac_common_multi_vrf`, `test_bpp_member_rmac` | **Covered** | RT-2/RT-5 independence is inferred through route filtering/activity, not packet-level timing injection. |
 +| RMAC-02 | If VRFs advertise different RMACs for one VTEP, the latest received RMAC wins. | `test_bpp_rmac_latest` | **Covered** | Per-VRF RMAC identities are deliberately unsupported. |
-+| RMAC-03 | RMAC change sends ADD with the new RMAC and no DEL; the Member and Group IDs stay stable. | `test_bpp_rmac_change`, `test_bpp_ids_stable`, `test_bpp_rmac_change_export`; `tests/lib/test_fpm_bpp` applies the replacement Member bytes in a stateful consumer | **Covered** | Actual SONiC DB/ASIC replacement is external. |
++| RMAC-03 | RMAC change sends ADD with the new RMAC and no DEL; the Member and Group IDs stay stable. | `test_bpp_rmac_change`, `test_bpp_ids_stable`, `test_bpp_rmac_change_export` | **Covered** | Actual SONiC DB/ASIC replacement is external. |
 +| ZAPI-01 | L3VNI ES-EVI and BPP peer messages carry the required ESI, type, VTEP family/address, and RMAC semantics. | `tests/lib/test_zapi_evpn_bpp` checks exact IPv4/IPv6 ADD/DEL layouts and lengths, round trips, DEL key-only form, every truncation, trailing data, invalid family/type, zero VTEP/RMAC, and invalid ES-EVI ESI/VNI rejection; `test_bpp_zapi` verifies successful daemon integration. | **Covered** | None identified in FRR. |
 +| ZAPI-02 | Existing L2 remote-ES processing and kernel L2 nexthops are unchanged. | `test_bpp_l2_untouched`; `test_bpp_l2_br_port_unchanged` removes and restores an unprotected local L2 ES before and during L3 BPP, compares the exact resulting bridge-port dataplane contexts, and verifies stable L2 ES and converged kernel nexthop state. | **Covered** | None identified in FRR. |
 +
@@ -181,10 +183,10 @@ index 0000000000..8ec7fe3646
 +|---|---|---|---|---|
 +| OBJ-01 | One Group exists per protected ESI, even when two ESes have the same peer set. | `test_bpp_group_per_es_same_peers`, `test_bpp_scale` | **Covered** | None identified in FRR. |
 +| OBJ-02 | One Member identity exists per `(type, family, VTEP)` and is shared across Groups. | `test_bpp_member_shared`, `test_bpp_dual_family_same_peer` | **Covered** | SONiC identity mapping is external. |
-+| OBJ-03 | A Group carries its ESI and complete Member records sorted by `nh_id`. | `test_bpp_dplane_emit` compares the exact ordered Group payload, including every Member ID, type, family, VTEP, and RMAC, against the Member table. `test_bpp_show_member` and `test_bpp_replay` exercise the same state through show and replay paths. `tests/lib/test_fpm_bpp` checks the variable-length wire payload and consumer decoding. | **Covered** | Actual SONiC DB/ASIC programming is external. |
++| OBJ-03 | A Group carries its ESI and complete Member records sorted by `nh_id`. | `test_bpp_dplane_emit` compares the exact ordered Group payload, including every Member ID, type, family, VTEP, and RMAC, against the Member table. `test_bpp_show_member` and `test_bpp_replay` exercise the same state through show and replay paths. | **Covered** | FPM encoding and SONiC DB/ASIC programming are external. |
 +| OBJ-04 | One Binding associates the ES bond with its Group and covers all protected VLANs. | `test_bpp_dplane_emit`, `test_bpp_fanout`, `test_bpp_l2vni_on_bd_binding`, `test_bpp_scale` | **Covered** | The all-VLAN scope is inferred from the single bond Binding because the Binding has no VLAN list. ASIC bridge-port programming is external. |
-+| OBJ-05 | IPv4 and IPv6 Members are distinct and include family, VTEP, type, and RMAC. | `test_bpp_ipv6_vtep`, `test_bpp_dual_family_same_peer`, `test_bpp_member_rmac`, `test_bpp_show_member`; `tests/lib/test_fpm_bpp` checks both native wire representations | **Covered** | Actual SONiC DB/ASIC programming is external. |
-+| OBJ-06 | A protection Binding carries the bond ifindex, type-8 backup Group, `non_df=false`, and an empty split-horizon list. | `test_bpp_dplane_emit` verifies the bond ifindex, ESI, type-8 Group reference, and the completed dplane context's zero flags and zero split-horizon-filter count. `tests/lib/test_fpm_bpp` checks the 8-byte Binding ABI and ADD/DEL decoding. | **Covered** | ASIC programming remains external. |
++| OBJ-05 | IPv4 and IPv6 Members are distinct and include family, VTEP, type, and RMAC. | `test_bpp_ipv6_vtep`, `test_bpp_dual_family_same_peer`, `test_bpp_member_rmac`, `test_bpp_show_member` | **Covered** | FPM encoding and SONiC DB/ASIC programming are external. |
++| OBJ-06 | A protection Binding carries the bond ifindex, type-8 backup Group, `non_df=false`, and an empty split-horizon list. | `test_bpp_dplane_emit` verifies the bond ifindex, ESI, type-8 Group reference, and the completed dplane context's zero flags and zero split-horizon-filter count. | **Covered** | FPM Binding encoding and ASIC programming are external. |
 +| ID-01 | Member IDs have type 4, Group IDs have type 8, and both use the FPM channel only. | `test_bpp_id_disjoint`, `test_bpp_fpm_kernel_disjoint` | **Covered** | The external FPM consumer must use the same tags. |
 +| ID-02 | L3 protection IDs cannot alias L2 NH/NHG IDs or kernel nexthop IDs, including for the same VTEP and after churn. | `test_bpp_id_disjoint`, `test_bpp_id_disjoint_same_vtep`, `test_bpp_id_disjoint_churn`, `test_bpp_group_separate_from_l2_nhg`, `test_bpp_fpm_kernel_disjoint` | **Covered** | Mixed-version SONiC is outside FRR. |
 +| ID-03 | IDs remain stable for unchanged objects, Group updates, and RMAC updates while zebra is alive. | `test_bpp_ids_stable`, `test_bpp_peer_join_leave`, `test_bpp_rmac_change_export`, `test_bpp_replay` | **Covered** | IDs intentionally change after zebra restart. |
@@ -195,7 +197,7 @@ index 0000000000..8ec7fe3646
 +
 +| ID | Requirement or functionality | Automated evidence | Status | Residual risk |
 +|---|---|---|---|---|
-+| LIFE-01 | Initial state exports Members, a Group, and one Binding; no protection ID is sent to kernel. Member-before-Group-before-Binding create order is best-effort, not a correctness requirement. | `test_bpp_dplane_emit` validates the exact complete Group Member records and Binding context; `test_bpp_fpm_kernel_disjoint` and retained-log consistency checks verify channel separation and lifecycle; `tests/lib/test_fpm_bpp` checks FPM framing and stateful create/delete application. | **Covered** | Actual SONiC DB/ASIC programming is external. |
++| LIFE-01 | Initial state exports Members, a Group, and one Binding; no protection ID is sent to kernel. Member-before-Group-before-Binding create order is best-effort, not a correctness requirement. | `test_bpp_dplane_emit` validates the exact complete Group Member records and Binding context; `test_bpp_fpm_kernel_disjoint` and retained-log consistency checks verify channel separation and lifecycle. | **Covered** | FPM delivery and SONiC DB/ASIC programming are external. |
 +| LIFE-02 | Peer join adds the Member before replacing the existing Group; no Binding resend occurs. | `test_bpp_peer_join_leave`, `test_bpp_scale`; `bpp_export_check()` | **Covered** | Out-of-order consumer parking is external. |
 +| LIFE-03 | Peer leave replaces the Group before deleting an unreferenced Member; the Binding remains while the Group is non-empty. | `test_bpp_peer_join_leave`, `test_bpp_per_evi_one_vrf`, `test_bpp_per_es_mass_withdraw` | **Covered** | SONiC application is external. |
 +| LIFE-04 | Last peer, feature disable, or ES deletion deletes Binding, Group, then unreferenced Members. | `test_bpp_last_peer`, `test_bpp_disable`, `test_bpp_es_delete`, `test_bpp_per_es_mass_withdraw` | **Covered** | SONiC application is external. |
@@ -234,7 +236,7 @@ index 0000000000..8ec7fe3646
 +| 16 | Local link down changes nothing | `test_bpp_local_link_down` | **Covered** |
 +| 17 | Replay keeps IDs, ends in marker, and preserves primary path | Replay tests | **Covered** for Tier 1; actual FPM reconnect is **External** |
 +| 18 | Zebra restart rebuilds clean state | `test_bpp_config_reload` | **Covered** in FRR; SONiC reconciliation is **External** |
-+| 19 | Binding-first delivery converges | `tests/lib/test_fpm_bpp` parks unresolved Bindings and Groups and verifies convergence for all six Member/Group/Binding delivery orders, including reversed Member order | **Covered** in the stateful stand-in; fpmsyncd integration remains external |
++| 19 | Binding-first delivery converges | SONiC consumer reconciliation for out-of-order Members, Groups, and Bindings | **External** |
 +| 20 | IDs are kernel-disjoint and not reused before delete completion or later in the zebra lifetime | ID and FPM/kernel disjoint tests; checker | **Covered** |
 +| 21 | Scale minimum and churn without Binding resend | `test_bpp_scale` | **Covered** |
 +
@@ -297,7 +299,6 @@ index 0000000000..8ec7fe3646
 +### ZAPI, eligibility, and RMAC resolution
 +
 +- `tests/lib/test_zapi_evpn_bpp` (C unit test)
-+- `tests/lib/test_fpm_bpp` (FPM wire codec and stateful SONiC stand-in C unit test)
 +- `test_bpp_zapi`
 +- `test_bpp_l2_untouched`
 +- `test_bpp_eligibility`
@@ -378,6 +379,8 @@ index 0000000000..8ec7fe3646
 +The audit does **not** support a claim of complete end-to-end coverage yet.
 +The following items remain. FRR-local gaps can be closed in this repository;
 +consumer and hardware gaps require SONiC/FPM integration.
++The SONiC FPM provider and its wire encoder tests are tracked in
++[sonic-buildimage#30439](https://github.com/sonic-net/sonic-buildimage/pull/30439).
 +
 +| Priority | Gap | Why it matters | Required closure |
 +|---|---|---|---|
@@ -422,7 +425,7 @@ index 0000000000..8ec7fe3646
 +and P1 SONiC/FPM gaps above are closed.
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf
 new file mode 100644
-index 0000000000..e94d5ee78d
+index 0000000000000000000000000000000000000000..e94d5ee78d83b9976d907c71b1c0f09e5532e926
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/spine1/frr.conf
 @@ -0,0 +1,50 @@
@@ -478,7 +481,7 @@ index 0000000000..e94d5ee78d
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf
 new file mode 100644
-index 0000000000..54beefcabc
+index 0000000000000000000000000000000000000000..54beefcabc7bb7cbcffa4fcdfdb2a87e48a7af18
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/spine2/frr.conf
 @@ -0,0 +1,50 @@
@@ -534,10 +537,10 @@ index 0000000000..54beefcabc
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py b/tests/topotests/bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py
 new file mode 100644
-index 0000000000..a59ed3dcfa
+index 0000000000000000000000000000000000000000..b3072b8739ea77dabd1bc19e155915e935c1389e
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/test_bgp_evpn_mh_bpp.py
-@@ -0,0 +1,6517 @@
+@@ -0,0 +1,6593 @@
 +#!/usr/bin/env python
 +# SPDX-License-Identifier: ISC
 +
@@ -1354,6 +1357,28 @@ index 0000000000..a59ed3dcfa
 +
 +
 +ES1_L3MH_VRFS = {"vrf-a": _l3mh_es_vrf(), "vrf-b": _l3mh_es_vrf()}
++
++
++
++def test_bpp_missing_esi_json():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    tor1 = tgen.gears["tor1"]
++    missing_esi = "00:00:00:00:00:00:00:00:00:fe"
++    views = (
++        "es l3-eligibility",
++        "es-vrf summary",
++        "es-vrf drop-counters",
++        "es-vrf ip-ad-vteps",
++    )
++    command = "show bgp l2vpn evpn"
++    results = {
++        view: tor1.vtysh_cmd(f"{command} {view} {missing_esi} json", isjson=True)
++        for view in views
++    }
++    assert results == {view: {} for view in views}
 +
 +
 +def test_bpp_es_vrf_assoc():
@@ -7052,12 +7077,66 @@ index 0000000000..a59ed3dcfa
 +        )
 +
 +
++def test_bpp_replay_binding_delete_and_add_completions():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    tor1, tor2 = (tgen.gears[name] for name in ("tor1", "tor2"))
++    op = "BR_PORT_UPDATE"
++    fail = "test zebra evpn mh bridge-port-protection fail-next binding"
++    try:
++        _set_bpp_if(tor2, ES_IF, True)
++        _set_bpp(tor1, True)
++        _expect_export_clean(
++            tor1, "initial binding", members=1, vteps=(tor_lo("tor2"),), allow_failed=True
++        )
++
++        marker = _export_marker(tor1)
++        tor1.vtysh_cmd(f"{fail} delete")
++        _set_bpp(tor1, False)
++        _expect_failed_completion(tor1, marker, op, "del", "failed final delete")
++        _expect_pending_deletes(tor1, 0, 1, "failed final delete remains pending")
++
++        marker = _export_marker(tor1)
++        tor1.vtysh_cmd(f"{fail} add")
++        _set_bpp(tor1, True)
++        _expect_failed_completion(tor1, marker, op, "add", "failed replacement add")
++        _expect_pending_deletes(tor1, 0, 1, "failed add did not supersede delete")
++
++        marker = _export_marker(tor1)
++        tor1.vtysh_cmd(f"{fail} delete")
++        tor1.vtysh_cmd("clear evpn mh bridge-port-protection replay")
++
++        def replay_results():
++            events = _replay_events(tor1, marker)
++            if not events or not events[-1].get("completed"):
++                return None
++            if events[-1].get("op") != "EVPN_MH_REPLAY_DONE":
++                return None
++            return [
++                (event["action"], event.get("result"))
++                for event in events
++                if event["op"] == op and event["interface"] == ES_IF and event.get("replay")
++            ]
++
++        _, results = topotest.run_and_expect(
++            lambda: replay_results() is not None, True, count=WAIT_COUNT, wait=WAIT_STEP
++        )
++        assert results
++        assert replay_results() == [("del", "FAILURE"), ("add", "SUCCESS")]
++        _expect_pending_deletes(tor1, 0, 0, "successful add superseded the delete")
++    finally:
++        _set_bpp(tor1, False)
++        _clear_ip_ead(tor2)
++
++
 +if __name__ == "__main__":
 +    args = ["-s"] + sys.argv[1:]
 +    sys.exit(pytest.main(args))
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf
 new file mode 100644
-index 0000000000..c6dc8a157d
+index 0000000000000000000000000000000000000000..c6dc8a157da7890d358fbab8d7e4c048f4fec429
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/tor1/frr.conf
 @@ -0,0 +1,76 @@
@@ -7139,7 +7218,7 @@ index 0000000000..c6dc8a157d
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/tor1/show_bpp_pending.json b/tests/topotests/bgp_evpn_mh_bpp/tor1/show_bpp_pending.json
 new file mode 100644
-index 0000000000..84e638a4cf
+index 0000000000000000000000000000000000000000..84e638a4cf1c6dee2d2ee3245ad313e79c0d84e1
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/tor1/show_bpp_pending.json
 @@ -0,0 +1,40 @@
@@ -7185,7 +7264,7 @@ index 0000000000..84e638a4cf
 +}
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf
 new file mode 100644
-index 0000000000..e5501ea53d
+index 0000000000000000000000000000000000000000..e5501ea53d3b76cdd8e4059e2370aad19a7e1c73
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/tor2/frr.conf
 @@ -0,0 +1,76 @@
@@ -7267,7 +7346,7 @@ index 0000000000..e5501ea53d
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/tor3/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/tor3/frr.conf
 new file mode 100644
-index 0000000000..f4ebbc158f
+index 0000000000000000000000000000000000000000..f4ebbc158f2f8fdd12e8148b99e735ac1716a136
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/tor3/frr.conf
 @@ -0,0 +1,73 @@
@@ -7346,7 +7425,7 @@ index 0000000000..f4ebbc158f
 +!
 diff --git a/tests/topotests/bgp_evpn_mh_bpp/tor4/frr.conf b/tests/topotests/bgp_evpn_mh_bpp/tor4/frr.conf
 new file mode 100644
-index 0000000000..432a2ba680
+index 0000000000000000000000000000000000000000..432a2ba680174a623aac7b813b81fb682004e04a
 --- /dev/null
 +++ b/tests/topotests/bgp_evpn_mh_bpp/tor4/frr.conf
 @@ -0,0 +1,76 @@
@@ -7428,7 +7507,7 @@ index 0000000000..432a2ba680
 +!
 diff --git a/tests/topotests/lib/bpp_export_check.py b/tests/topotests/lib/bpp_export_check.py
 new file mode 100644
-index 0000000000..7f41b51921
+index 0000000000000000000000000000000000000000..7f41b51921ccf4ebf294180dac00e3a5a9d366a2
 --- /dev/null
 +++ b/tests/topotests/lib/bpp_export_check.py
 @@ -0,0 +1,113 @@
@@ -7546,7 +7625,7 @@ index 0000000000..7f41b51921
 +
 +    return errors
 diff --git a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag-default.json b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag-default.json
-index d2138d3d32..737a2a2e05 100644
+index d2138d3d32949c2f31e74276a812ed41cc0dd7fd..737a2a2e0582fa4e11d03051fa2d44bbdb7b63a9 100644
 --- a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag-default.json
 +++ b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag-default.json
 @@ -8,6 +8,10 @@
@@ -7561,7 +7640,7 @@ index d2138d3d32..737a2a2e05 100644
    }
  }
 diff --git a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag.json b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag.json
-index 54e9fe309c..afa52ed1b4 100644
+index 54e9fe309c7db197d303ebeee98e0cad97a32ee6..afa52ed1b40cb7c0f15b6568075c91486277df95 100644
 --- a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag.json
 +++ b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all-tag.json
 @@ -8,6 +8,10 @@
@@ -7576,7 +7655,7 @@ index 54e9fe309c..afa52ed1b4 100644
    }
  }
 diff --git a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all.json b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all.json
-index 07ba53b8bc..4ce3d057a8 100644
+index 07ba53b8bcc4136189aaf6f450137c7b1a0477c7..4ce3d057a86f0e07ddd5857576f74fd50c3a2fff 100644
 --- a/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all.json
 +++ b/tests/topotests/mgmt_oper/simple-results/result-intf-eth0-wd-all.json
 @@ -2,6 +2,7 @@
@@ -7588,6 +7667,3 @@ index 07ba53b8bc..4ce3d057a8 100644
 +    "bridge-port-protection": false
    }
  }
--- 
-2.54.0
-
