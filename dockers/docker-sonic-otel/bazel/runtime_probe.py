@@ -205,7 +205,7 @@ def main():
                 "loaded source ELF changed: " + name)
     policy = {"architecture": "amd64", "elfs": [item for item in report["elfs"] if item["path"] in expected],
         "debug_pairs": [], "policy": {"commands": [
-            {"argv": ["/usr/local/bin/otelcol-contrib", "--version"], "output_pattern": "0.144.0"},
+            {"argv": ["/usr/local/bin/otelcol-contrib", "--version"], "output_pattern": r"\b0\.165\.0\b"},
             {"argv": ["curl", "--version"]}, {"argv": ["wget", "--version"]}],
         "python_imports": ["yaml", "supervisor", "supervisord_dependent_startup", "swsscommon.swsscommon"],
         "supervisor_config": "etc/supervisor/conf.d/supervisord.conf"}}

@@ -11,8 +11,8 @@ not introduce DEB generation.
 | Common library, DB CLI and Python bindings | `@sonic_swss_common//dist:libswsscommon_pkg`, `:sonic-db-cli_pkg`, `@sonic_swss_common//pyext:swsscommon_pkg` |
 | libyang and its Python/CFFI binding | `@libyang//:libyang_pkg`, `@libyang_python//:libyang_pkg` |
 | libnl runtime family | Existing `@libnl3` runtime-file targets listed in `BUILD.bazel` |
-| Event services and Rust supervisor utility | `//src/sonic-eventd:eventd_runtime`, `//src/sonic-supervisord-utilities-rs:runtime` |
-| Config-engine, py-common, YANG management, containercfgd and Python supervisor utility | Five owner wheel targets listed in `:python_runtime` |
+| Rust container configuration daemon, event services and Rust supervisor utility | `//src/sonic-containercfgd-rs:runtime`, `//src/sonic-eventd:eventd_runtime`, `//src/sonic-supervisord-utilities-rs:runtime` |
+| Config-engine, py-common, YANG management and Python supervisor utility | Four owner wheel targets listed in `:python_runtime` |
 | YANG models and package metadata | `@sonic_yang_models//:yang_models_pkg` |
 | Redis dump/load | `@redis_dump_load//:wheel` |
 | Runtime Python dependencies | `@config_engine_pip`, using the committed source lock |

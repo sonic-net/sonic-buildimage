@@ -2,9 +2,8 @@
 
 The opt-in AMD64/Trixie VS path assembles `docker-sonic-otel.gz` and
 `docker-sonic-otel-dbg.gz` directly from source-owned runtime and debug TARs.
-The collector is `otelcol-contrib@0.144.0.sonic.1`; its registration is
-[registry PR #196](https://github.com/securely1g/sonic-bazel-registry/pull/196).
-The source owner retains the original 0.144.0 component manifest, Go module
+The collector is `otelcol-contrib@0.165.0.sonic.1` from the sonic-net Bazel registry.
+The source owner retains the original 0.165.0 component manifest, Go module
 versions, installed configuration and unit, and matching detached symbols.
 This image defines no Debian package producer.
 

@@ -369,6 +369,13 @@ bazel_dep(name = "libnl3", version = "3.7.0.sonic.10")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.2")
 bazel_dep(name = "libyang", version = "3.12.2.sonic.9")
 
+# Apply the parser fix used by the native Debian package to all image consumers.
+single_version_override(
+    module_name = "libyang",
+    patches = ["//src/libyang3:patch/0002-parsers-forget-a-freed-keyless-list-from-the-unres-sets.patch"],
+    patch_strip = 1,
+)
+
 # Keep the image's LACP port-removal fix on top of the published libteam source.
 single_version_override(
     module_name = "libteam",
@@ -378,6 +385,8 @@ single_version_override(
 
 single_version_override(
     module_name = "sonic-rust-deps",
+    patches = ["//src/sonic-containercfgd-rs:bazel/shared-crate-dependencies.patch"],
+    patch_strip = 1,
     version = "0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e",
 )
 
@@ -711,7 +720,7 @@ http_archive(
     build_file = "//tools/bazel/image/tar_split_json:upstream.BUILD.bazel",
 )
 
-bazel_dep(name = "otelcol-contrib", version = "0.144.0.sonic.2", repo_name = "otelcol_contrib")
+bazel_dep(name = "otelcol-contrib", version = "0.165.0.sonic.1", repo_name = "otelcol_contrib")
 
 otel_runtime_deps = use_extension("@otelcol_contrib//bazel:collector_deps.bzl", "go_deps")
 otel_runtime_deps.gazelle_default_attributes(
@@ -794,7 +803,7 @@ http_file(
 
 bazel_dep(
     name = "sonic-pins",
-    version = "0.0.1-42726b44e5f7b1ffeeedc5283aab7ea83a4d224e",
+    version = "0.0.2-8b93535e1229290a4efd859d8934bf9014715133",
     repo_name = "sonic_pins",
 )
 

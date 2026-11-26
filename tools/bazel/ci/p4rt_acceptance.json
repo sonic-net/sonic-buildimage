@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "owner": "42726b44e5f7b1ffeeedc5283aab7ea83a4d224e",
+  "owner": "8b93535e1229290a4efd859d8934bf9014715133",
   "outputs": {
     "base.packages.json": "//dockers/docker-base-trixie:runtime_package_metadata",
     "base.source.tar": "//dockers/docker-base-trixie:source_runtime",

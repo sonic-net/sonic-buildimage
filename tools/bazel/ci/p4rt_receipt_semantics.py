@@ -27,7 +27,7 @@ def verify(read, *, source, owner, outputs, test_targets):
         assert record['bytes'] > 0
 
     runtime_meta = read('p4rt-runtime.packages.json')
-    assert runtime_meta['source_modules']['sonic-pins']['version'] == '0.0.1-' + owner
+    assert runtime_meta['source_modules']['sonic-pins']['version'] == '0.0.2-' + owner
     digest(runtime_meta['source_contract_sha256'])
     p4rt_pkg = next(pkg for pkg in runtime_meta['source_packages'] if pkg['package'] == 'sonic-p4rt')
     assert p4rt_pkg['target'] == '@@sonic-pins+//p4rt_app:p4rt_runtime'

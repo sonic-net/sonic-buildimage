@@ -28,6 +28,7 @@ _SOURCE_TARS = {
     "libnl-genl-3-200": "@libnl3//:libnl-genl-3-runtime_files",
     "libnl-nf-3-200": "@libnl3//:libnl-nf-3-runtime_files",
     "libnl-route-3-200": "@libnl3//:libnl-route-3-runtime_files",
+    "sonic-containercfgd-rs": "//src/sonic-containercfgd-rs:runtime",
     "sonic-eventd": "//src/sonic-eventd:eventd_runtime",
     "sonic-supervisord-utilities-rs": "//src/sonic-supervisord-utilities-rs:runtime",
 }
@@ -75,7 +76,6 @@ wheel_layer(
         "//src/sonic-config-engine:sonic_config_engine_wheel",
         "//src/sonic-py-common:sonic_py_common_wheel",
         "@sonic_yang_mgmt//:sonic_yang_mgmt_wheel",
-        "//src/sonic-containercfgd:sonic_containercfgd_wheel",
         "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
         "@redis_dump_load//:wheel",
     ] + [whl_requirement(name) for name in [
@@ -172,6 +172,7 @@ installed_packages(
         "@libyang//:runtime_packages.json",
         "@libyang_python//:runtime_packages.json",
         "@libnl3//:runtime_packages.json",
+        "//src/sonic-containercfgd-rs:bazel/runtime_packages.json",
         "//src/sonic-eventd:bazel/runtime_packages.json",
         "//src/sonic-supervisord-utilities-rs:bazel/runtime_packages.json",
     ],

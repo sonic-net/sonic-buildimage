@@ -15,7 +15,7 @@ _COMPATIBLE = [
 
 expand_template(
     name = "tagged_rsyslog",
-    template = "//files/image_config:rsyslog/rsyslog-container-gnmi.conf",
+    template = "//files/image_config:rsyslog/rsyslog-container-relp-udp.conf",
     out = "tagged-rsyslog.conf",
     substitutions = {"%syslogtag%": "gnmi_watchdog#%syslogtag%"},
 )

@@ -66,11 +66,9 @@ def main():
                  "sonic_yang_cfg_generator", "supervisor", "supervisord_dependent_startup"):
         module = importlib.import_module(name)
         assert str(Path(module.__file__).resolve()).startswith(("/usr/lib/", "/usr/local/lib/")), name
-    # Importing the daemon starts its boot wait against SONiC's external Redis.
-    # A standalone base image has no Redis service; verify the installed entry
-    # point here and leave that connection to the complete service-image check.
-    daemon = importlib.util.find_spec("containercfgd.containercfgd")
-    assert daemon and str(Path(daemon.origin).resolve()).startswith("/usr/local/lib/")
+    # Clap handles version and help before the daemon connects to CONFIG_DB.
+    assert command("/usr/bin/sonic-containercfgd-rs", "--version").strip() == "sonic-containercfgd-rs 1.0.0"
+    assert "--service-name" in command("/usr/bin/sonic-containercfgd-rs", "--help")
     assert importlib.metadata.version("sonic-yang-mgmt") == "1.0"
     # Make-built child containers resolve the config-engine wheel's dependency
     # on this distribution. Model files alone do not satisfy pip's resolver.
