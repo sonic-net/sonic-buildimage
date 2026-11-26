@@ -123,6 +123,19 @@ assert_eq "non-DualToR IPv4 link-local mismatch is logged" \
     "-p warning MAC mismatch for 169.254.1.1 on Vlan1000 - kernel: 02:00:00:00:00:01, APPL_DB: 02:00:00:00:00:02" \
     "$(<"$LOGGER_LOG")"
 
+ip() {
+    printf '%s\n' \
+        "192.0.2.10 dev Vlan1000 lladdr 02:00:00:00:00:10 REACHABLE" \
+        "192.0.2.11 dev Vlan1000 lladdr 02:00:00:00:00:11 STALE" \
+        "192.0.2.12 dev Vlan1000 lladdr 02:00:00:00:00:12 extern_learn NOARP" \
+        "192.0.2.13 dev Vlan2000 lladdr 02:00:00:00:00:13 REACHABLE" \
+        "fe80::1 dev Vlan1000 lladdr 02:00:00:00:00:14 router REACHABLE"
+}
+
+assert_eq "VLAN neighbors to refresh leave out NOARP entries" \
+    $'192.0.2.10 Vlan1000\n192.0.2.11 Vlan1000' \
+    "$(vlan_neighbors_to_refresh -4 Vlan1000)"
+
 [[ ! -e "$MARKER_FILE" ]]
 
 echo "arp_update helper tests passed"
