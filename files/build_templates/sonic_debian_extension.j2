@@ -145,6 +145,8 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bmc_fw_update.py
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/logout_message $FILESYSTEM_ROOT/etc/
+# Create a default copy of motd for factory reset
+sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/motd_factory_default
 
 # Create all needed directories
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/
@@ -153,9 +155,6 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/cache/sonic/
 sudo install -d -m 0700 -o root -g root $FILESYSTEM_ROOT/var/cache/sonic/system-health/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_FIRMWARE/
-# This is needed for Stretch and might not be needed for Buster where Linux create this directory by default.
-# Keeping it generic. It should not harm anyways.
-sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 
 # Install sonic-nettools
 install_deb_package $debs_path/sonic-nettools_*.deb
@@ -253,11 +252,6 @@ install_pip_package {{platform_common_py3_wheel_path}}
 install_pip_package {{pddf_platform_api_base_py3_wheel_path}}
 {% endif %}
 
-{# Barefoot platform vendors' sonic_platform packages import the Python 'thrift' library #}
-{% if sonic_asic_platform == "barefoot" %}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift==0.13.0
-{% endif %}
-
 # Install system-health Python 3 package
 install_pip_package {{system_health_py3_wheel_path}}
 
@@ -308,6 +302,23 @@ install_deb_package $debs_path/sonic-host-services-data_*.deb
 {% if enable_ztp == "y" %}
 # Install ZTP (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-ztp_*.deb
+{% if sonic_asic_platform == "aspeed" %}
+# Default ZTP configuration for BMC (aspeed) images. config-setup seeds
+# /host/ztp/ztp_cfg.json from this template on first boot, before the ZTP
+# engine can create it with built-in defaults (admin-mode true, feat-inband
+# true).
+#  - admin-mode follows the ENABLE_BMC_ZTP build flag. With the default (n)
+#    ZTP is administratively disabled: first boot loads the factory default
+#    configuration and ztp.service exits. Admins opt in with 'ztp enable'
+#    followed by 'ztp run -y'.
+#  - feat-inband is false: a BMC is provisioned over eth0 only.
+sudo tee $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/ztp_cfg.json > /dev/null <<EOF
+{
+    "admin-mode": {{ "true" if enable_bmc_ztp == "y" else "false" }},
+    "feat-inband": false
+}
+EOF
+{% endif %}
 {% endif %}
 
 {% for machine_debs in lazy_build_installer_debs.strip().split() -%}
@@ -682,7 +693,7 @@ sudo cp $BUILD_TEMPLATES/buffers_config.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMP
 sudo cp $BUILD_TEMPLATES/qos_config.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
 # Copy the templates for dynamically buffer calculation
-{% if sonic_asic_platform == "mellanox" or sonic_asic_platform == "vs" or sonic_asic_platform == "barefoot" %}
+{% if sonic_asic_platform == "mellanox" or sonic_asic_platform == "vs" %}
 if [ -f platform/{{ sonic_asic_platform }}/asic_table.j2 ]
 then
     sudo cp platform/{{ sonic_asic_platform }}/asic_table.j2 $FILESYSTEM_ROOT/usr/share/sonic/templates/asic_table.j2

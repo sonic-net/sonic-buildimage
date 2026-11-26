@@ -34,12 +34,6 @@ PHONY_PATH = $(TARGET_PATH)/phony/$(BLDENV)
 PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/$(BLDENV)
 PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/$(BLDENV)
 PROJECT_ROOT := $(shell pwd)
-JESSIE_DEBS_PATH = $(TARGET_PATH)/debs/jessie
-JESSIE_FILES_PATH = $(TARGET_PATH)/files/jessie
-STRETCH_DEBS_PATH = $(TARGET_PATH)/debs/stretch
-STRETCH_FILES_PATH = $(TARGET_PATH)/files/stretch
-BUSTER_DEBS_PATH = $(TARGET_PATH)/debs/buster
-BUSTER_FILES_PATH = $(TARGET_PATH)/files/buster
 BULLSEYE_DEBS_PATH = $(TARGET_PATH)/debs/bullseye
 BULLSEYE_FILES_PATH = $(TARGET_PATH)/files/bullseye
 BOOKWORM_DEBS_PATH = $(TARGET_PATH)/debs/bookworm
@@ -87,9 +81,6 @@ else
 ENABLE_PY2_MODULES = y
 endif
 
-# Python version for PTF image
-PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),py3)
-
 export BUILD_NUMBER
 export BUILD_TIMESTAMP
 export SONIC_IMAGE_VERSION
@@ -111,7 +102,6 @@ export BUILD_SNAPSHOT_URL
 export SONIC_OS_VERSION
 export FILES_PATH
 export PROJECT_ROOT
-export PTF_ENV_PY_VER
 
 ###############################################################################
 ## Utility rules
@@ -129,16 +119,10 @@ ifneq ($(CONFIGURED_PLATFORM),generic)
 endif
 
 configure :
-	$(Q)mkdir -p $(JESSIE_DEBS_PATH)
-	$(Q)mkdir -p $(STRETCH_DEBS_PATH)
-	$(Q)mkdir -p $(BUSTER_DEBS_PATH)
 	$(Q)mkdir -p $(BULLSEYE_DEBS_PATH)
 	$(Q)mkdir -p $(BOOKWORM_DEBS_PATH)
 	$(Q)mkdir -p $(TRIXIE_DEBS_PATH)
 	$(Q)mkdir -p $(FILES_PATH)
-	$(Q)mkdir -p $(JESSIE_FILES_PATH)
-	$(Q)mkdir -p $(STRETCH_FILES_PATH)
-	$(Q)mkdir -p $(BUSTER_FILES_PATH)
 	$(Q)mkdir -p $(BULLSEYE_FILES_PATH)
 	$(Q)mkdir -p $(BOOKWORM_FILES_PATH)
 	$(Q)mkdir -p $(BOOKWORM_PHONY_PATH)
@@ -502,6 +486,7 @@ $(info "HTTP_PROXY"                      : "$(HTTP_PROXY)")
 $(info "HTTPS_PROXY"                     : "$(HTTPS_PROXY)")
 $(info "NO_PROXY"                        : "$(NO_PROXY)")
 $(info "ENABLE_ZTP"                      : "$(ENABLE_ZTP)")
+$(info "ENABLE_BMC_ZTP"                  : "$(ENABLE_BMC_ZTP)")
 $(info "INCLUDE_PDE"                     : "$(INCLUDE_PDE)")
 $(info "SONIC_DEBUGGING_ON"              : "$(SONIC_DEBUGGING_ON)")
 $(info "SONIC_PROFILING_ON"              : "$(SONIC_PROFILING_ON)")
@@ -554,7 +539,6 @@ $(info "BUILD_MULTIASIC_KVM"             : "$(BUILD_MULTIASIC_KVM)")
 endif
 $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
-$(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
 $(info "ENABLE_SBOM"                     : "$(ENABLE_SBOM)")
 $(info "SBOM_FORMAT"                     : "$(SBOM_FORMAT)")
@@ -1337,18 +1321,6 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES))
 
 DOCKER_IMAGES_FOR_INSTALLERS := $(sort $(foreach installer,$(SONIC_INSTALLERS),$($(installer)_DOCKERS)))
 
-$(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(JESSIE_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(JESSIE_FILES_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(JESSIE_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_JESSIE_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(JESSIE_FILES_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_STRETCH_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(STRETCH_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_STRETCH_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(STRETCH_FILES_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_STRETCH_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(STRETCH_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_STRETCH_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(STRETCH_FILES_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_BUSTER_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(BUSTER_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_BUSTER_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(BUSTER_FILES_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_BUSTER_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(BUSTER_DEBS_PATH)))
-$(foreach DOCKER_IMAGE,$(SONIC_BUSTER_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(BUSTER_FILES_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_BULLSEYE_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(BULLSEYE_DEBS_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_BULLSEYE_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(BULLSEYE_FILES_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_BULLSEYE_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(BULLSEYE_DEBS_PATH)))
@@ -1358,24 +1330,6 @@ $(foreach DOCKER_IMAGE,$(SONIC_BOOKWORM_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_P
 $(foreach DOCKER_IMAGE,$(SONIC_BOOKWORM_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_DEBS_PATH := $(BOOKWORM_DEBS_PATH)))
 $(foreach DOCKER_IMAGE,$(SONIC_BOOKWORM_DBG_DOCKERS), $(eval $(DOCKER_IMAGE)_FILES_PATH := $(BOOKWORM_FILES_PATH)))
 
-ifeq ($(BLDENV),jessie)
-	DOCKER_IMAGES := $(SONIC_JESSIE_DOCKERS)
-	DOCKER_DBG_IMAGES := $(SONIC_JESSIE_DBG_DOCKERS)
-	JESSIE_DOCKER_IMAGES = $(filter $(SONIC_JESSIE_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS))
-	JESSIE_DBG_DOCKER_IMAGES = $(filter $(SONIC_JESSIE_DBG_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS))
-else
-ifeq ($(BLDENV),stretch)
-	DOCKER_IMAGES := $(SONIC_STRETCH_DOCKERS)
-	DOCKER_DBG_IMAGES := $(SONIC_STRETCH_DBG_DOCKERS)
-	STRETCH_DOCKER_IMAGES = $(filter $(SONIC_STRETCH_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS))
-	STRETCH_DBG_DOCKER_IMAGES = $(filter $(SONIC_STRETCH_DBG_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS))
-else
-ifeq ($(BLDENV),buster)
-	DOCKER_IMAGES := $(SONIC_BUSTER_DOCKERS)
-	DOCKER_DBG_IMAGES := $(SONIC_BUSTER_DBG_DOCKERS)
-	BUSTER_DOCKER_IMAGES = $(filter $(SONIC_BUSTER_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS) $(SONIC_PACKAGES_LOCAL))
-	BUSTER_DBG_DOCKER_IMAGES = $(filter $(SONIC_BUSTER_DBG_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS) $(SONIC_PACKAGES_LOCAL))
-else
 ifeq ($(BLDENV),bullseye)
 	DOCKER_IMAGES := $(SONIC_BULLSEYE_DOCKERS)
 	DOCKER_DBG_IMAGES := $(SONIC_BULLSEYE_DBG_DOCKERS)
@@ -1388,11 +1342,8 @@ ifeq ($(BLDENV),bookworm)
 	BOOKWORM_DOCKER_IMAGES = $(filter $(SONIC_BOOKWORM_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS) $(SONIC_PACKAGES_LOCAL))
 	BOOKWORM_DBG_DOCKER_IMAGES = $(filter $(SONIC_BOOKWORM_DBG_DOCKERS),$(DOCKER_IMAGES_FOR_INSTALLERS) $(EXTRA_DOCKER_TARGETS) $(SONIC_PACKAGES_LOCAL))
 else
-	DOCKER_IMAGES = $(filter-out $(SONIC_JESSIE_DOCKERS) $(SONIC_STRETCH_DOCKERS) $(SONIC_BUSTER_DOCKERS) $(SONIC_BULLSEYE_DOCKERS) $(SONIC_BOOKWORM_DOCKERS),$(SONIC_DOCKER_IMAGES))
-	DOCKER_DBG_IMAGES = $(filter-out $(SONIC_JESSIE_DBG_DOCKERS) $(SONIC_STRETCH_DBG_DOCKERS) $(SONIC_BUSTER_DBG_DOCKERS) $(SONIC_BULLSEYE_DBG_DOCKERS) $(SONIC_BOOKWORM_DBG_DOCKERS), $(SONIC_DOCKER_DBG_IMAGES))
-endif
-endif
-endif
+	DOCKER_IMAGES = $(filter-out $(SONIC_BULLSEYE_DOCKERS) $(SONIC_BOOKWORM_DOCKERS),$(SONIC_DOCKER_IMAGES))
+	DOCKER_DBG_IMAGES = $(filter-out $(SONIC_BULLSEYE_DBG_DOCKERS) $(SONIC_BOOKWORM_DBG_DOCKERS), $(SONIC_DOCKER_DBG_IMAGES))
 endif
 endif
 
@@ -1678,9 +1629,6 @@ DOCKER_LOAD_TARGETS = $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 
 ifeq ($(BLDENV),trixie)
 DOCKER_LOAD_TARGETS += $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
-		      $(SONIC_JESSIE_DOCKERS) \
-		      $(SONIC_STRETCH_DOCKERS) \
-		      $(SONIC_BUSTER_DOCKERS) \
 		      $(SONIC_BULLSEYE_DOCKERS) \
 		      $(SONIC_BOOKWORM_DOCKERS)))
 
@@ -1756,6 +1704,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
+		SECURE_BOOT_DB_CERT='$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' \
 			./build_debian.sh $(LOG)
 
 		$(call SAVE_CACHE,$*,$@)
@@ -1834,7 +1783,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_COMMON_PY3)) \
-        $(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3)) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY2))) \
@@ -1864,6 +1812,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 	export enable_organization_extensions="$(ENABLE_ORGANIZATION_EXTENSIONS)"
 	export enable_ztp="$(ENABLE_ZTP)"
+	export enable_bmc_ztp="$(ENABLE_BMC_ZTP)"
 	export include_teamd="$(INCLUDE_TEAMD)"
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
@@ -1926,7 +1875,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export config_engine_py2_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY2))"
 	export config_engine_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CONFIG_ENGINE_PY3))"
 	export platform_common_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_COMMON_PY3))"
-	export redis_dump_load_py2_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY2))"
 	export redis_dump_load_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(REDIS_DUMP_LOAD_PY3))"
 	export install_debug_image="$(INSTALL_DEBUG_TOOLS)"
 	export sonic_yang_models_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MODELS_PY3))"
@@ -2060,6 +2008,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_UI_DASH_VERSION=$(MASTER_UI_DASH_VERSION) \
 		ENABLE_SBOM="$(ENABLE_SBOM)" \
 		TARGET_PATH="$(TARGET_PATH)" \
+		SECURE_BOOT_DB_CERT='$(subst ','"'"',$(SECURE_BOOT_DB_CERT))' \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
@@ -2243,15 +2192,6 @@ bookworm : $$(addprefix $(TARGET_PATH)/,$$(BOOKWORM_DOCKER_IMAGES)) \
 
 bullseye : $$(addprefix $(TARGET_PATH)/,$$(BULLSEYE_DOCKER_IMAGES)) \
           $$(addprefix $(TARGET_PATH)/,$$(BULLSEYE_DBG_DOCKER_IMAGES))
-
-buster : $$(addprefix $(TARGET_PATH)/,$$(BUSTER_DOCKER_IMAGES)) \
-          $$(addprefix $(TARGET_PATH)/,$$(BUSTER_DBG_DOCKER_IMAGES))
-
-stretch : $$(addprefix $(TARGET_PATH)/,$$(STRETCH_DOCKER_IMAGES)) \
-          $$(addprefix $(TARGET_PATH)/,$$(STRETCH_DBG_DOCKER_IMAGES))
-
-jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
-         $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DBG_DOCKER_IMAGES))
 
 ###############################################################################
 ## Standard targets

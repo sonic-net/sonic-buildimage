@@ -9,6 +9,7 @@ These tests run in isolation from the SONiC environment using pytest:
 python -m pytest test/unit/sonic_platform/test_thermal.py -v
 """
 
+import time
 import types
 from unittest.mock import Mock, call, patch
 from fixtures.test_helpers_common import mock_data_in_swsscommon
@@ -1137,3 +1138,28 @@ class TestSfpThermal:
             # Values should remain cached (unchanged)
             assert sfp_th.get_high_threshold() == 75.0
             assert sfp_th.get_low_threshold() == 10.5
+
+    @pytest.mark.parametrize("tz", ["UTC", "Asia/Shanghai", "America/Los_Angeles"])
+    def test_temperature_stale_check_uses_utc(self, thermal_module, pddf_platform, monkeypatch, tz):
+        """xcvrd writes last_update_time in UTC, so the stale check must not depend on the local timezone."""
+        monkeypatch.setenv("TZ", tz)
+        time.tzset()
+        try:
+            now = time.time()
+            mock_data_in_swsscommon("STATE_DB", "TRANSCEIVER_DOM_TEMPERATURE", {
+                "Ethernet56": {"temperature": "39.0",
+                               "last_update_time": time.strftime("%a %b %d %H:%M:%S %Y", time.gmtime(now - 5))},
+                "Ethernet64": {"temperature": "39.0",
+                               "last_update_time": time.strftime("%a %b %d %H:%M:%S %Y", time.gmtime(now - 120))},
+            })
+            for index, intf_name, expected in ((15, "Ethernet56", 39.0), (17, "Ethernet64", None)):
+                sfp = Mock()
+                sfp.get_name.return_value = f'sfp{index}'
+                sfp.get_presence.return_value = True
+                sfp.get_position_in_parent.return_value = index
+                with patch.object(thermal_module.PortIndexMapper, 'get_interface_name', return_value=intf_name):
+                    assert thermal_module.SfpThermal(sfp, pddf_platform).get_temperature() == expected
+        finally:
+            monkeypatch.delenv("TZ")
+            time.tzset()
+

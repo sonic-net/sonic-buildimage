@@ -8,6 +8,16 @@
 [![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=master&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=master)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
 
+*202611 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202611&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202611)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202611&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202611)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=202611&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=2432&branchName=202611)
+[![Marvell-Prestera(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-armhf?branchName=202611&label=Marvell-Prestera-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202611)
+[![Marvell-Prestera(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-arm64?branchName=202611&label=Marvell-Prestera-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202611)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202611&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202611)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202611&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202611)
+
 *202605 builds*:
 
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202605&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202605)
@@ -214,7 +224,6 @@ DEFAULT_BUILD_LOG_TIMESTAMP = simple
 
 The supported ASIC vendors are:
 
-* PLATFORM=barefoot
 * PLATFORM=broadcom
 * PLATFORM=marvell-prestera
 * PLATFORM=marvell-teralynx
@@ -245,18 +254,18 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 make target/sonic-marvell-prestera-armhf.bin
 ```
 
-To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian buster
+To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian bookworm
 using cross-compilation, run the following commands:
 
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 \
+CROSS_BLDENV=1 \
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
+CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
@@ -305,8 +314,6 @@ ONIE image is used for all other Broadcom ASIC based devices.
 
 ```shell
 make configure PLATFORM=broadcom
-# build debian stretch required targets
-BLDENV=stretch make stretch
 # build ONIE image
 make target/sonic-broadcom.bin
 # build EOS image

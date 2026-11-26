@@ -62,8 +62,6 @@
 /device/arista/                                   @sonic-net/sonic-arista-maintainer
 /platform/broadcom/sonic-platform-modules-arista/ @sonic-net/sonic-arista-maintainer
 /files/Aboot/                                     @sonic-net/sonic-arista-maintainer
-/device/barefoot/                                 @sonic-net/sonic-barefoot-maintainer
-/platform/barefoot/                               @sonic-net/sonic-barefoot-maintainer
 /device/broadcom/                                 @sonic-net/sonic-broadcom-maintainer
 /platform/broadcom/                               @sonic-net/sonic-broadcom-maintainer
 /device/cisco/                                    @sonic-net/sonic-cisco-maintainer
@@ -82,10 +80,10 @@
 /platform/nvidia-bluefield/                       @sonic-net/sonic-mellanox-maintainer
 /device/nexthop/                                  @sonic-net/sonic-nexthop-maintainer
 /platform/aspeed/sonic-platform-modules-nexthop/  @sonic-net/sonic-nexthop-maintainer
-/platform/broadcom/sonic-platform-modules/nexthop/ @sonic-net/sonic-nexthop-maintainer
+/platform/broadcom/sonic-platform-modules-nexthop/ @sonic-net/sonic-nexthop-maintainer
 /device/nokia/                                    @sonic-net/sonic-nokia-maintainer
 /platform/aspeed/sonic-platform-modules-nokia/    @sonic-net/sonic-nokia-maintainer
-/platform/broadcom/sonic-platform-modules/nokia/  @sonic-net/sonic-nokia-maintainer
+/platform/broadcom/sonic-platform-modules-nokia/  @sonic-net/sonic-nokia-maintainer
 
 # common library
 /src/initramfs-tools/                   @qiluo-msft
@@ -100,7 +98,6 @@
 /src/socat/                             @sonic-net/sonic-management
 
 # redis
-/src/redis/                             @sonic-net/sonic-management
 /src/hiredis/                           @sonic-net/sonic-management
 
 # yang
