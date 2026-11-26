@@ -581,7 +581,10 @@ fn parse_gnmi_port(value: Option<&str>) -> u16 {
 // Fail-open: a missing or unreadable FEATURE|gnmi.state counts as enabled.
 fn feature_enabled(state: Option<&str>) -> bool {
     match state {
-        Some(s) => !s.trim().eq_ignore_ascii_case("disabled"),
+        Some(s) => {
+            let s = s.trim();
+            !s.eq_ignore_ascii_case("disabled") && !s.eq_ignore_ascii_case("always_disabled")
+        }
         None => true,
     }
 }
@@ -611,12 +614,11 @@ fn read_tcp_tables() -> Result<String, String> {
     Err(last_err)
 }
 
-// In uds-only mode (GNMI_LISTENER_MODE=uds-only) gnmi has no TCP listener; with no port
-// configured, a live unix socket counts as the listener being up.
+// gnmi creates its unix socket only in uds-only mode (GNMI_LISTENER_MODE=uds-only), where it
+// opens no TCP listener whatever GNMI|gnmi.port says; a live socket counts as the listener.
 fn listener_status(
     tables: Result<String, String>,
     port: u16,
-    port_configured: bool,
     socket_live: impl FnOnce() -> bool,
 ) -> String {
     let tables = match tables {
@@ -625,11 +627,22 @@ fn listener_status(
     };
     if tcp_listening(&tables, port) {
         "OK".to_string()
-    } else if !port_configured && socket_live() {
+    } else if socket_live() {
         "OK (unix socket)".to_string()
     } else {
         format!("ERROR: no TCP listener on port {port}")
     }
+}
+
+// The BAD-cert probe passes when the server rejects the request and fails when it is accepted.
+fn expect_rejected(mut res: CommandResult) -> CommandResult {
+    if res.success {
+        res.success = false;
+        res.error = Some("Expected FAILURE with BAD cert but command SUCCEEDED".to_string());
+    } else {
+        res.success = true;
+    }
+    res
 }
 
 fn show_probe_error(results: &[CommandResult]) -> Option<String> {
@@ -666,7 +679,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
     let gnmi = redis_hgetall("GNMI|gnmi");
     let port = parse_gnmi_port(field(&gnmi, "port"));
     let socket = usable_socket(&env_or_default(UNIX_SOCKET_ENV_VAR, DEFAULT_UNIX_SOCKET));
-    let gnmi_status = listener_status(read_tcp_tables(), port, field(&gnmi, "port").is_some(), || {
+    let gnmi_status = listener_status(read_tcp_tables(), port, || {
         socket.as_deref().map(|s| UnixStream::connect(s).is_ok()).unwrap_or(false)
     });
     // Only run xpath probes if the listener is up
@@ -707,15 +720,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
             server_key: env_or_default(BAD_KEY_ENV_VAR, DEFAULT_BAD_KEY),
         };
         let bad_cname = env_or_default(BAD_CNAME_ENV_VAR, DEFAULT_BAD_CNAME);
-        let mut res_bad = run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &bad_sec, &bad_cname, timeout, "SHOW", false);
-        if res_bad.success {
-            res_bad.success = false;
-            let msg = "Expected FAILURE with BAD cert but command SUCCEEDED".to_string();
-            res_bad.error = Some(match res_bad.error.take() {
-                Some(existing) => format!("{existing}; {msg}"),
-                None => msg,
-            });
-        }
+        let res_bad = expect_rejected(run_gnmi_for_xpath(CERT_PROBE_XPATH, port, &bad_sec, &bad_cname, timeout, "SHOW", false));
         ok &= res_bad.success;
         cmd_results.push(res_bad);
 
@@ -990,6 +995,7 @@ mod tests {
         assert!(feature_enabled(None));
         assert!(!feature_enabled(Some("disabled")));
         assert!(!feature_enabled(Some("Disabled")));
+        assert!(!feature_enabled(Some("always_disabled")));
     }
 
     #[test]
@@ -1181,14 +1187,15 @@ mod tests {
     #[test]
     fn listener_status_rules() {
         let never = || -> bool { panic!("socket consulted") };
-        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 8080, true, never), "OK");
-        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, true, || true),
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 8080, never), "OK");
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, || false),
                    "ERROR: no TCP listener on port 50052");
-        // uds-only: no port configured, no TCP listener, live socket.
-        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || true), "OK (unix socket)");
-        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || false),
+        // uds-only: no TCP listener (even with GNMI|gnmi.port set), live socket.
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, || true), "OK (unix socket)");
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, || true), "OK (unix socket)");
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, || false),
                    "ERROR: no TCP listener on port 8080");
-        assert_eq!(listener_status(Err("cannot read".into()), 8080, false, || true), "ERROR: cannot read");
+        assert_eq!(listener_status(Err("cannot read".into()), 8080, || true), "ERROR: cannot read");
     }
 
     #[test]
@@ -1209,6 +1216,18 @@ mod tests {
             duration_ms: 0,
             unauthenticated: false,
         }
+    }
+
+    #[test]
+    fn bad_cert_probe_passes_only_when_rejected() {
+        let mut rejected = result(false, false);
+        rejected.error = Some("exit code: 1".into());
+        let res = expect_rejected(rejected);
+        assert!(res.success);
+        assert_eq!(res.error.as_deref(), Some("exit code: 1"));
+        let res = expect_rejected(result(true, false));
+        assert!(!res.success);
+        assert!(res.error.unwrap().contains("Expected FAILURE"));
     }
 
     #[test]
