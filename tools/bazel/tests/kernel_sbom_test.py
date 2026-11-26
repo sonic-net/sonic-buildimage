@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from tools.bazel.tests import kernel_test
+from tools.bazel.kernel import packages
 from tools.bazel.kernel import prepare as kernel
 import build_sbom
 import sbom_kernel_deb
@@ -29,6 +31,39 @@ def chdir(path):
         yield
     finally:
         os.chdir(previous)
+
+
+class RegistryPatchPedigreeTest(unittest.TestCase):
+    def test_selected_kernel_and_previous_release_use_their_published_overlays(self):
+        # These two releases published the same patch bytes. Exercise the version
+        # selected by buildimage even when CI has no checkout or kernel packages.
+        version = packages.module_version(ROOT)
+        source_commit = "96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
+        hashes = {
+            "patches-debian/bazel-install-outputs.patch": "ce84bcecd9c98abcdd5c4d7e65e4cc57c66f97fb8f654c78604ab066201a4611",
+            "patches-debian/bazel-relocatable-tools.patch": "d4f28a1e44b37532e1fa4476525d0ff575bc4e74f03a36e72133fe6ddd728414",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            source = workspace / kernel.KERNEL_PATH
+            (source / "patches-debian").mkdir(parents=True)
+            (source / "patches-sonic").mkdir()
+            (source / "patches-debian/bazel-relocatable-tools.patch").write_text("Original gitlink patch\n")
+            for release, revision in (
+                (version, "bfde140643a14e408e5bd9aa3c4610870685ae04"),
+                ("0.0.3-" + source_commit, "066e962d36592590d2f6634202b5176922aad07c"),
+            ):
+                with self.subTest(release=release):
+                    manifest = {"source_files": [{"name": p, "sha256": h} for p, h in hashes.items()]}
+                    args = (workspace, manifest, source_commit, release)
+                    patches, properties = sbom_kernel_deb._patches(*args)
+                    prefix = (f"https://github.com/securely1g/sonic-bazel-registry/blob/{revision}/"
+                              f"modules/sonic-linux-kernel/{release}/overlay/")
+                    self.assertEqual({p["diff"]["url"] for p in patches}, {prefix + p for p in hashes})
+                    self.assertEqual({p["value"] for p in properties}, {h + "  " + p for p, h in hashes.items()})
+                    manifest["source_files"][0]["sha256"] = "0" * 64
+                    with self.assertRaisesRegex(ValueError, "compiled source inventory"):
+                        sbom_kernel_deb._patches(*args)
 
 
 class KernelSbomTest(unittest.TestCase):
@@ -142,19 +177,6 @@ class KernelSbomTest(unittest.TestCase):
         applied.write_text("changed\n")
         with self.assertRaisesRegex(ValueError, "compiled source inventory"):
             sbom_kernel_deb._patches(self.fixture.root, manifest, self.fixture.gitlink)
-
-    def test_root_registry_pedigree_binds_replaced_and_added_patches(self):
-        hashes = sbom_kernel_deb.REGISTRY_PATCH_HASHES
-        original = self.fixture.source / "patches-debian/bazel-relocatable-tools.patch"
-        original.write_text("Different patch in the kernel source checkout\n")
-        manifest = {"source_files": [{"name": path, "sha256": digest} for path, digest in hashes.items()]}
-        args = (self.fixture.root, manifest, self.fixture.gitlink, sbom_kernel_deb.REGISTRY_VERSION)
-        patches, properties = sbom_kernel_deb._patches(*args)
-        self.assertEqual({p["diff"]["url"] for p in patches}, {sbom_kernel_deb.REGISTRY_OVERLAY + p for p in hashes})
-        self.assertEqual({prop["value"] for prop in properties}, {digest + "  " + path for path, digest in hashes.items()})
-        manifest["source_files"][0]["sha256"] = "0" * 64
-        with self.assertRaisesRegex(ValueError, "compiled source inventory"):
-            sbom_kernel_deb._patches(*args)
 
     def test_final_aggregator_replaces_stale_deb_and_rejects_missing_bundle(self):
         target = self.fixture.root / "target"

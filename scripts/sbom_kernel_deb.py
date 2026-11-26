@@ -41,13 +41,12 @@ def _installed_hash(root, archive, member):
     return expected
 
 
-# Registry #446 supplies two packaging patches on top of the kernel gitlink.
-# The installed-image SBOM also runs offline, including after a direct DEB
-# restore. Bind their published overlay URLs to the exact compiled bytes.
-REGISTRY_VERSION = "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
-REGISTRY_OVERLAY = ("https://github.com/securely1g/sonic-bazel-registry/blob/"
-                    "066e962d36592590d2f6634202b5176922aad07c/modules/sonic-linux-kernel/"
-                    + REGISTRY_VERSION + "/overlay/")
+# Both registry releases overlay the same two packaging patches on the gitlink.
+# Keep their immutable publication URLs available when the SBOM runs offline.
+REGISTRY_OVERLAY_COMMITS = {
+    "0.0.3-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": "066e962d36592590d2f6634202b5176922aad07c",
+    "0.0.4-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b": "bfde140643a14e408e5bd9aa3c4610870685ae04",
+}
 REGISTRY_PATCH_HASHES = {
     "patches-debian/bazel-install-outputs.patch": "ce84bcecd9c98abcdd5c4d7e65e4cc57c66f97fb8f654c78604ab066201a4611",
     "patches-debian/bazel-relocatable-tools.patch": "d4f28a1e44b37532e1fa4476525d0ff575bc4e74f03a36e72133fe6ddd728414",
@@ -64,7 +63,8 @@ def _patches(workspace, manifest, commit, module_version=None):
                    if record["name"] in {"disable-secureboot-config-checks.patch", "bazel-debug-sources.patch",
                                          "bazel-relocatable-tools.patch", "bazel-install-outputs.patch"})
     inventory = {item["name"]: item["sha256"] for item in manifest["source_files"]}
-    overlays = REGISTRY_PATCH_HASHES if module_version == REGISTRY_VERSION else {}
+    registry_commit = REGISTRY_OVERLAY_COMMITS.get(module_version)
+    overlays = REGISTRY_PATCH_HASHES if registry_commit else {}
     patch_sources = []
     for record in records:
         path = Path(record["path"]).resolve().relative_to(source).as_posix()
@@ -73,7 +73,9 @@ def _patches(workspace, manifest, commit, module_version=None):
     for path, digest in overlays.items():
         # These exact packaging patches carry no CVE claims. The replaced
         # gitlink file may have different content or may be absent altogether.
-        patch_sources.append((path, {"path": path, "sha256": digest}, REGISTRY_OVERLAY + path))
+        url = (f"https://github.com/securely1g/sonic-bazel-registry/blob/{registry_commit}/"
+               f"modules/sonic-linux-kernel/{module_version}/overlay/{path}")
+        patch_sources.append((path, {"path": path, "sha256": digest}, url))
 
     patches, properties = [], []
     for path, record, url in patch_sources:
