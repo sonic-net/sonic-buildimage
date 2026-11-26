@@ -32,7 +32,7 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "serde"] }
 syslog-tracing = "0.3"
-thiserror = "1"
+thiserror = "2"
 anyhow = "1"
 human-panic = "2"
 better-panic = "0.3"

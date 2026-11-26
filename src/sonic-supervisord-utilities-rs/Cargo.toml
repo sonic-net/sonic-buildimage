@@ -21,7 +21,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 tracing-log = "0.2"
 syslog-tracing = "0.3"
 nix = { version = "0.27", features = ["signal", "process"] }
-thiserror = "1.0"
+thiserror = "2.0"
 mio = { version = "1.0", features = ["os-poll", "os-ext"] }
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }
 
