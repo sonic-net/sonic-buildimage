@@ -106,7 +106,7 @@ class DebianPoolTest(unittest.TestCase):
                     f"https://deb.debian.org/{archive}/pool/{path}", original])
 
     def test_ci_keeps_maintained_mirror_priority_and_pool_fallback(self):
-        source = (ROOT / "tools/bazel/tests/fixtures/source-mirrors-9697f3db.cfg").read_bytes()
+        source = (ROOT / "tools/bazel/tests/fixtures/source-mirrors-f9a9baae.cfg").read_bytes()
         with tempfile.TemporaryDirectory() as temporary, patch.object(source_mirrors, "download", return_value=source):
             output = Path(temporary) / "downloader.cfg"
             source_mirrors.prepare(output)

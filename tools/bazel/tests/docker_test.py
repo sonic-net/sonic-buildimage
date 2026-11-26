@@ -14,6 +14,49 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 
+class ReadinessSelectionTest(unittest.TestCase):
+    def test_profile_and_readiness_select_one_builder_per_archive(self):
+        slave = (ROOT / "slave.mk").read_text()
+        selection = slave[slave.index("# A docker opts into the Bazel build"):
+                          slave.index("$(foreach IMAGE,$(DOCKER_IMAGES), $(eval $(IMAGE)_DEBS_PATH")]
+        # Include the real upstream exporter and a marker for the profile exporter.
+        exporters = slave[slave.index("include tools/bazel/docker.mk"):
+                          slave.index("# Targets for building docker debug images")]
+        exporters = exporters.replace("include tools/bazel/docker.mk",
+                                      'profile_archives := $(SONIC_BAZEL_DOCKER_IMAGES)')
+        makefile = """
+BLDENV := trixie
+TARGET_PATH := target
+DBG_IMAGE_MARK := dbg
+SONIC_BAZEL_DOCKER_IMAGES := profile.gz community.gz
+SONIC_BAZEL_DBG_DOCKER_IMAGES := profile-dbg.gz
+SONIC_DOCKER_IMAGES := profile.gz community.gz make.gz
+SONIC_DOCKER_DBG_IMAGES := profile-dbg.gz community-dbg.gz
+DOCKER_IMAGES := $(SONIC_DOCKER_IMAGES)
+DOCKER_DBG_IMAGES := $(SONIC_DOCKER_DBG_IMAGES)
+profile.gz_BAZEL_TARGET = //dockers/custom:profile.gz
+community.gz_BAZEL_READINESS = experimental
+""" + selection + exporters + """
+check:
+	@echo "runtime=$(strip $(SONIC_BAZEL_DOCKER_IMAGES))"
+	@echo "debug=$(strip $(SONIC_BAZEL_DBG_DOCKER_IMAGES))"
+	@echo "profile=$(strip $(profile_archives))"
+	@echo "make=$(strip $(DOCKER_IMAGES))"
+"""
+        for readiness in ("bazel_disabled", "stable", "experimental"):
+            with self.subTest(readiness=readiness):
+                selected = readiness == "experimental"
+                run = subprocess.run(["make", "--no-print-directory", "-f", "-", "check",
+                                      "BAZEL_MIN_READINESS=" + readiness], input=makefile,
+                                     text=True, capture_output=True, check=True)
+                rows = dict(line.split("=", 1) for line in run.stdout.splitlines())
+                self.assertEqual(rows["profile"], "profile.gz")
+                self.assertEqual(rows["runtime"], "profile.gz community.gz" if selected else "profile.gz")
+                self.assertEqual(rows["debug"], "profile-dbg.gz community-dbg.gz" if selected else "profile-dbg.gz")
+                self.assertEqual(rows["make"], "make.gz" if selected else "community.gz make.gz")
+                self.assertNotIn("overriding recipe", run.stderr)
+
+
 class ArchiveRecipeFixture:
     """Use production logging/publication; replace only the Bazel executable."""
 

@@ -16,7 +16,7 @@ def make_series():
     return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
 
 
-# Exact recipe from securely1g/sonic-bazel-registry#236 (libteam 1.31.0.sonic.1).
+# Published recipe from sonic-net/sonic-bazel-registry at f398c8abd2ed.
 # Update only together with the declared owner version and parity review.
 RECIPE = ROOT / "tools/bazel/tests/fixtures/libteam-owner-source.json"
 
@@ -27,7 +27,26 @@ def bazel_patches():
 
 class LibteamPatchSeriesTest(unittest.TestCase):
     def test_bazel_applies_make_series_in_order(self):
-        self.assertEqual(bazel_patches(), make_series())
+        published = bazel_patches()
+        series = make_series()
+        self.assertEqual(published, series[:len(published)])
+        tree = ast.parse((ROOT / "MODULE.bazel").read_text())
+        selected = []
+        overrides = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            keywords = {item.arg: item.value for item in node.keywords}
+            name = getattr(node.func, "id", "")
+            if name == "bazel_dep" and ast.literal_eval(keywords["name"]) == "libteam":
+                selected.append(ast.literal_eval(keywords["version"]))
+            if name.endswith("_override") and ast.literal_eval(keywords["module_name"]) == "libteam":
+                overrides.append((name, {key: ast.literal_eval(value) for key, value in keywords.items()}))
+        self.assertEqual(selected, [json.loads(RECIPE.read_text())["version"]])
+        image_patches = ["//src/libteam:patch/" + patch for patch in series[len(published):]]
+        self.assertEqual(overrides, [("single_version_override", {
+            "module_name": "libteam", "patches": image_patches, "patch_strip": 1,
+        })] if image_patches else [])
 
     def test_every_series_patch_exists(self):
         expected = json.loads(RECIPE.with_name("libteam-owner-patch-bodies.json").read_text())
@@ -39,21 +58,6 @@ class LibteamPatchSeriesTest(unittest.TestCase):
             # patch body must remain exactly Make's existing patch bytes.
             body = data[data.index(b"diff --git "):]
             self.assertEqual(expected[name], hashlib.sha256(body).hexdigest(), name)
-
-    def test_root_selects_the_shared_owner_without_local_override(self):
-        tree = ast.parse((ROOT / "MODULE.bazel").read_text())
-        selected = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            keywords = {item.arg: item.value for item in node.keywords}
-            name = getattr(node.func, "id", "")
-            if name == "bazel_dep" and ast.literal_eval(keywords["name"]) == "libteam":
-                selected.append(ast.literal_eval(keywords["version"]))
-            if name.endswith("_override") and "module_name" in keywords:
-                self.assertNotEqual(ast.literal_eval(keywords["module_name"]), "libteam")
-        expected_version = json.loads(RECIPE.read_text())["version"]
-        self.assertEqual(selected, [expected_version])
 
 
 if __name__ == "__main__":

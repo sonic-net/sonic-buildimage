@@ -40,7 +40,7 @@ RESOLUTION_RECORDS = {
 }
 KERNEL_PATH = Path("src/sonic-linux-kernel")
 DOWNLOADER_CONFIG = Path("tools/bazel/debian_mirrors.cfg")
-REGISTRY_PREFIX = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"
+REGISTRY_PREFIX = "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/"
 DEFAULT_REGISTRY = REGISTRY_PREFIX + "main"
 WATCHED = [
     ".gitmodules", "Makefile", "Makefile.work", "rules/linux-kernel.mk", "rules/linux-kernel.dep",

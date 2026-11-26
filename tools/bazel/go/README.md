@@ -2,7 +2,7 @@
 
 `MODULE.bazel` selects the published Gazelle ZIP-cache extension and declares
 this root's ZIP lock. The root and CI use the canonical maintained registry
-from `securely1g/sonic-bazel-registry/main`.
+from `sonic-net/sonic-bazel-registry/main`.
 
 Update dependencies in their owning Go modules, then run from buildimage:
 

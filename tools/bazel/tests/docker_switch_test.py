@@ -170,6 +170,7 @@ class DockerSwitchCacheTest(ArchiveRecipeFixture, unittest.TestCase):
         self.makefile += """
 RULES_PATH = rules
 SONIC_DPKG_CACHE_METHOD = rwcache
+SLAVE_BASE_TAG = fixture-trixie
 SONIC_DOCKER_IMAGES = telemetry.gz routing.gz
 SONIC_DOCKER_DBG_IMAGES = telemetry-dbg.gz routing-dbg.gz
 SONIC_BAZEL_SWITCHABLE_IMAGES = $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES)

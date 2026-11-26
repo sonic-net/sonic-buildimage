@@ -22,7 +22,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	patch -p0 < ../patch/enable_readline.patch
 	# Share the source fix already used by the registered Bazel producer.
 	# Keep the patch in its source owner and verify the immutable download.
-	wget -O procan-namespace-nul.patch "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/9195a792858dc052d88428dbc35e5ba52687b93c/modules/socat/1.8.0.2.sonic.7/overlay/bazel/0003-procan-namespace-nul.patch"
+	wget -O procan-namespace-nul.patch "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/f9a9baaeabad4a77c3ad5939fe257434e635e0dc/modules/socat/1.8.0.2.sonic.8/overlay/bazel/0003-procan-namespace-nul.patch"
 	echo "3772cdaa0a90488d3eca0a51d07a8ddc4e7d0dc202159b602c787555b7fb4dc8  procan-namespace-nul.patch" | sha256sum -c -
 	patch -p1 < procan-namespace-nul.patch
 	rm procan-namespace-nul.patch

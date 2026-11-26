@@ -700,7 +700,7 @@ private remote cache/downloader. The mirror may redirect HTTPS requests to
 HTTP, so HTTPS source URLs alone do not guarantee end-to-end TLS.
 
 The source-base, OCI archive, and full VS jobs also use the registry's shared
-[`ci/source_mirrors.cfg`](https://github.com/securely1g/sonic-bazel-registry/blob/main/ci/source_mirrors.cfg).
+[`ci/source_mirrors.cfg`](https://github.com/sonic-net/sonic-bazel-registry/blob/main/ci/source_mirrors.cfg).
 [`source_mirrors.py`](source_mirrors.py) downloads one commit-pinned copy and
 verifies its SHA256 before adding it after the local Debian rules. CI selects
 the combined file with Bazel's `--downloader_config`, preserving the local

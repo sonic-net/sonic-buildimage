@@ -129,7 +129,7 @@ print(json.dumps({'output': str(args.output)}))
             ("BUILD_WITH_BAZEL_WHEN_AVAILABLE ?=", "SONIC_BAZEL_CACHE_SOURCE ?=",
              "SONIC_DPKG_CACHE_SOURCE ?=", "sonic_bazel_dev_repo_contents =",
              "SONIC_BAZEL_REPO_CONTENTS_SOURCE ?=")))
-        environment = dict(os.environ)
+        environment = dict(os.environ, USER="test-builder")
         for name in ("BUILD_WITH_BAZEL_WHEN_AVAILABLE", "SONIC_BAZEL_CACHE_SOURCE",
                      "SONIC_DPKG_CACHE_SOURCE", "SONIC_BAZEL_REPO_CONTENTS_SOURCE", "MAKEFLAGS", "MFLAGS"):
             environment.pop(name, None)
@@ -187,10 +187,10 @@ check:
         # Only expand the default: never create or alter the user's real cache.
         makefile = ".PHONY: check\ncheck:\n\t@printf '%s\\n' '$(SONIC_BAZEL_CACHE_SOURCE)'\n"
         for mode, source, package_cache, expected in (
-            ("n", None, None, "/var/cache/sonic/artifacts/bazel"),
-            ("y", None, None, "/var/cache/sonic/artifacts/bazel"),
-            ("n", None, "/example/packages", "/example/packages/bazel"),
-            ("y", None, "/example/packages", "/example/packages/bazel"),
+            ("n", None, None, "/var/cache/sonic/artifacts/bazel/test-builder"),
+            ("y", None, None, "/var/cache/sonic/artifacts/bazel/test-builder"),
+            ("n", None, "/example/packages", "/example/packages/bazel/test-builder"),
+            ("y", None, "/example/packages", "/example/packages/bazel/test-builder"),
             ("y", "", "/example/packages", ""),
             ("n", "/example/cache", "/example/packages", "/example/cache"),
         ):
@@ -235,7 +235,7 @@ check:
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 directory = Path(temporary)
                 package_cache = directory / "packages"
-                source = package_cache / "bazel"
+                source = package_cache / "bazel" / "test-builder"
                 result = self.cache_mount(directory, mode, package_cache=package_cache)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 record = json.loads(result.stdout)
@@ -251,7 +251,18 @@ check:
                 self.assertEqual(record["mounts"]["/bazel_cache"], [str(source), "rw"])
                 self.assertEqual(record["source_owner"], os.getuid())
                 self.assertTrue((source / "container-cache-write").is_file())
+                self.assertEqual(source.stat().st_mode & 0o777, 0o700)
                 self.assert_system_cache_settings(record)
+
+    def test_unavailable_default_uses_container_local_cache(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            blocked = directory / "packages"
+            blocked.touch()
+            result = self.cache_mount(directory, package_cache=blocked, repo_contents="")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("container-local caches", result.stderr)
+            self.assertEqual(json.loads(result.stdout)["args"], ["builder-image"])
 
     def test_prepared_repository_mount_is_separate_from_action_and_download_caches(self):
         with tempfile.TemporaryDirectory() as temporary:

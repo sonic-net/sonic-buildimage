@@ -20,7 +20,7 @@ from tools.bazel.ci import source_mirrors
 
 class SourceMirrorsTest(unittest.TestCase):
     def test_transient_http_errors_retry_then_verify_policy(self):
-        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-f9a9baae.cfg').read_bytes()
         for status in (408, 429, 500, 502, 503, 504):
             with self.subTest(status=status), \
                     patch.object(source_mirrors, 'urlopen', side_effect=[
@@ -37,7 +37,7 @@ class SourceMirrorsTest(unittest.TestCase):
                 self.assertIn('attempt 2/4', diagnostics.getvalue())
 
     def test_transient_connection_and_response_read_errors_retry(self):
-        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-f9a9baae.cfg').read_bytes()
         for error in (URLError('temporary DNS failure'), TimeoutError(),
                       ConnectionResetError(), IncompleteRead(b'partial')):
             with self.subTest(error=type(error).__name__), \
@@ -86,7 +86,7 @@ class SourceMirrorsTest(unittest.TestCase):
         job = workflow['jobs']['dhcp_relay_source_image']
         step = next(step for step in job['steps']
                     if step.get('name') == 'Configure verified source download mirrors')
-        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-f9a9baae.cfg').read_bytes()
         with tempfile.TemporaryDirectory() as temporary:
             command = shlex.split(step['run'].splitlines()[0].replace('$RUNNER_TEMP', temporary))
             self.assertEqual(command[:3], ['python3', '-B', 'tools/bazel/ci/source_mirrors.py'])
@@ -126,7 +126,7 @@ class SourceMirrorsTest(unittest.TestCase):
             self.assertEqual(output.read_bytes(), local.read_bytes() + b'\n' + shared)
 
     def test_native_policy_adds_only_the_original_timestamped_snapshot_first(self):
-        shared = (Path(__file__).parent / 'fixtures/source-mirrors-9697f3db.cfg').read_bytes()
+        shared = (Path(__file__).parent / 'fixtures/source-mirrors-f9a9baae.cfg').read_bytes()
         with tempfile.TemporaryDirectory() as temporary, \
                 patch.object(source_mirrors, 'urlopen', side_effect=lambda *_a, **_k: io.BytesIO(shared)):
             output = Path(temporary) / 'mirrors.cfg'

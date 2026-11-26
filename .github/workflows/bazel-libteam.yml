@@ -98,7 +98,7 @@ jobs:
           CI_CPU: ${{ matrix.cpu }}
           CI_DISTRIBUTION: ${{ matrix.distribution }}
           # Use the canonical maintained registry.
-          SONIC_BAZEL_REGISTRY: https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+          SONIC_BAZEL_REGISTRY: https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -194,6 +194,9 @@ jobs:
             *) owner_probe="$execution_root/$probe_file" ;;
           esac
           test -f "$owner_probe"
+          # Check the published source tree after Bazel applies the image-owned patch.
+          owner_root="$(dirname "$(dirname "$owner_probe")")"
+          (cd "$owner_root" && patch --force --fuzz=0 --dry-run --reverse -p1 < "$GITHUB_WORKSPACE/src/libteam/patch/0021-teamd-lacp-guard-missing-port-on-removal.patch")
           python3 -B "$owner_probe" \
             --bazel "$probe_bazel" \
             --bazel-arg="--host_platform=@sonic_build_infra//platforms:${CI_CPU}_trixie" \

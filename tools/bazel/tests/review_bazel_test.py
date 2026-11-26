@@ -69,7 +69,7 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
                     self.assertEqual(command_args.pop(), '--remote_upload_local_results=false')
                 self.assertEqual(command_args[-len(arguments):], arguments)
                 self.assertEqual([x for x in actual if x.startswith('--registry=')], [
-                    '--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/' + REVISION,
+                    '--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/' + REVISION,
                     '--registry=https://bcr.bazel.build'])
                 self.assertEqual(actual[actual.index(command)-1], '--bazelrc=' + record['rc_path'])
                 self.assertIn('--nohome_rc', actual)
@@ -92,7 +92,7 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
                 arguments = json.loads(self.record.read_text())['arguments']
                 self.assertIn(EXPORT_POLICY, arguments[:arguments.index('build')])
                 self.assertEqual([arg for arg in arguments if arg.startswith('--registry=')], [
-                    '--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/' +
+                    '--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/' +
                     (base_revision or 'main'), '--registry=https://bcr.bazel.build'])
 
     def test_read_only_flag_precedes_end_of_options(self):

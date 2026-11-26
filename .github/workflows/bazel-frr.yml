@@ -90,7 +90,7 @@ jobs:
           CI_CPU: ${{ matrix.cpu }}
           CI_DISTRIBUTION: ${{ matrix.distribution }}
           # Use the published dependencies from the maintained registry.
-          SONIC_BAZEL_REGISTRY: https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+          SONIC_BAZEL_REGISTRY: https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
         run: |
           set -euo pipefail
           mkdir -p artifacts

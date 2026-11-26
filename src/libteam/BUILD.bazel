@@ -2,6 +2,8 @@
 # The shared libteam module owns compilation, TARs, metadata and native tests.
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["patch/0021-teamd-lacp-guard-missing-port-on-removal.patch"])
+
 [
     alias(name = name, actual = "@libteam//:" + name)
     for name in [

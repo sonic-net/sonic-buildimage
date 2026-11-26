@@ -91,29 +91,29 @@ class LibteamMetadataTest(unittest.TestCase):
         self.assertEqual(len(report["packages"]), 2)
 
     def test_captured_canonical_library_records_match_selected_owner(self):
-        # PR195 job127364237079 packages.json (SHA256 c0c2043e104b471c0df1bf3f427f8221de04b801cafffea6ed8b9bed6147071c).
+        # Build 45598261334, swss-source artifact 15023362342, packages.json (SHA256 afb321ab37286a76cd58fb9c2fd272372199e37e16c605d7ecef991da6e8f338).
         # These are metadata fields only; this pure test does not read an ELF.
         metadata = {
             "schema": 1, "architecture": "amd64",
             "source_modules": {"libteam": {
-                "version": "1.31.0.sonic.1",
-                "module_sha256": "33b616806dea29faf2b69a338e4df53cd96ac0f0ced328c8de4b95e6a2c016e3",
+                "version": "1.31.0.sonic.2",
+                "module_sha256": "0074efa0cd5c9ecd608617a46e5e366ac37d0ec11308b500bcb35ba823eddf2d",
             }},
             "source_packages": [],
         }
         native = {}
         for package, target, filename, payload_sha, native_sha in (
                 ("libteam5", "libteam_runtime", "libteam.so.5.6.1",
-                 "029d4fa4cacc7fdddc36c73fec089f06f6155238bdcc484feea16ab8ae8e7884",
-                 "df6213bccca57b4c9ec45acbab2e6c7a648f29e84bf7d8cc1ff5675c99f3e237"),
+                 "7f13dde242b2f1bfb1b2c1c6dce43c4498f52fc4080dccb0415f86910668f4fc",
+                 "32c080ae586ad12fdc38191e3c8abfdb650fe729263322e099eee2ec2d152ceb"),
                 ("libteamdctl0", "libteamdctl_runtime", "libteamdctl.so.0.1.5",
-                 "1fcc1b0d885522897443e4d9f1b101640e34348d8367c98e7963cecfff9aa152",
-                 "e2cc923fc6b03c35af3ab328dd602ea11fda65a46b43fcc04347aea8a5abce31")):
+                 "4f8805a9f1e59e1cf1173ea0d3f0a2a437eac5d7b0258a943e8a2007ee354a4c",
+                 "b63f468a536775865e72ed3b48ba8d50e0dd22bfac2461f058ede771cac9ac3e")):
             path = "usr/lib/x86_64-linux-gnu/" + filename
             native[path] = {"sha256": native_sha, "mode": 0o644, "uid": 0, "gid": 0}
             metadata["source_packages"].append({
                 "package": package, "version": "1.31-1", "replaced_version": None,
-                "target": "@@libteam+//:" + target, "source_revision": "1.31.0.sonic.1",
+                "target": "@@libteam+//:" + target, "source_revision": "1.31.0.sonic.2",
                 "payload_sha256": payload_sha, "native_files": [{"path": path, **native[path]}],
             })
         self.assertEqual(verify_libteam_metadata(metadata, native)["packages"],

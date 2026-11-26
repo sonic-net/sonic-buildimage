@@ -18,7 +18,7 @@ Local and CI builds resolve modules from registry `main`. The hosted workflows u
 the same checksum-verified [source mirror policy](../../tools/bazel/ci/source_mirrors.py)
 as the installer, with the repository's Debian mirrors first.
 
-Socat uses [`1.8.0.2.sonic.7`](https://github.com/securely1g/sonic-bazel-registry/tree/main/modules/socat/1.8.0.2.sonic.7),
+Socat uses [`1.8.0.2.sonic.8`](https://github.com/sonic-net/sonic-bazel-registry/tree/main/modules/socat/1.8.0.2.sonic.8),
 with the same upstream 1.8.0.2 and Debian
 1.8.0.2-1 archive hashes. Its explicit `tar.xz` archive type supports the
 verified content URL, whose path has no archive extension. This upgrade

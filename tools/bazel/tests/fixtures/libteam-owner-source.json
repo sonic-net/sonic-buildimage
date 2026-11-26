@@ -1,5 +1,5 @@
 {
-  "version": "1.31.0.sonic.1",
+  "version": "1.31.0.sonic.2",
   "patches": [
     "0001-libteam-Temporarily-remove-redundant-debug-messages.patch",
     "0002-teamd-lacp-runner-will-send-lacp-update-right-after-.patch",

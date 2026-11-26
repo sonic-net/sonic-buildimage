@@ -37,7 +37,7 @@ def main():
     validate_pair(source, registry, os.environ["SELECTED_ARCHITECTURE"])
     repository = os.environ["GITHUB_REPOSITORY"]
     source_url = f"https://github.com/{repository}.git"
-    catalog_url = "https://github.com/securely1g/sonic-bazel-registry.git"
+    catalog_url = "https://github.com/sonic-net/sonic-bazel-registry.git"
 
     with tempfile.TemporaryDirectory(dir=os.environ["RUNNER_TEMP"]) as temporary:
         verify_branch_commit(source_url, source, Path(temporary) / "source")

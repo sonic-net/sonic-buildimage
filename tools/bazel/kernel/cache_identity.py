@@ -26,7 +26,7 @@ import urllib.request
 from tools.bazel.kernel import cache_facts
 
 
-SONIC_REGISTRY = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"
+SONIC_REGISTRY = "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/"
 BCR = "https://bcr.bazel.build"
 MAX_LOCK_BYTES = 128 * 1024 * 1024
 MAX_REGISTRY_FILE_BYTES = 4 * 1024 * 1024

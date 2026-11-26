@@ -4,11 +4,11 @@ module(
 )
 
 # Keep the transitive APT link and archive rules aligned with the image.
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.22", repo_name = None)
-bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.26", repo_name = None)
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.2")
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe",
+    version = "0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de",
     repo_name = "sonic_build_infra",
 )
 
@@ -27,5 +27,5 @@ use_repo(pip, "sonic_yang_models_pip")
 # Keep the published source-install API selected for standalone consumers.
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.38-0baa4acc9eac9ccc793b81104b1580d530271cbe",
+    version = "0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de",
 )

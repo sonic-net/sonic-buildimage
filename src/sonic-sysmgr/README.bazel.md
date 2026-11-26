@@ -21,7 +21,7 @@ immutable review registry followed by Bazel Central Registry:
 
 ```sh
 bazel --nosystem_rc --noworkspace_rc build \
-  --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
+  --registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main \
   --registry=https://bcr.bazel.build/ \
   --platforms=@sonic_build_infra//platforms:x86_64_trixie \
   --compilation_mode=opt \
@@ -62,7 +62,7 @@ From that environment, run the same driver from the repository root:
 
 ```sh
 python3 -B src/sonic-sysmgr/bazel/ci.py \
-  --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
+  --registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main \
   --artifacts artifacts/sysmgr
 ```
 

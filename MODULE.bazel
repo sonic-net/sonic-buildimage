@@ -30,8 +30,8 @@ use_repo(watchdog_crates, "bmp_watchdog_crates", "gnmi_watchdog_crates")
 include("//src/sonic-frr:deps.MODULE.bazel")
 
 # Cache Go module ZIPs by reviewed archive digests.
-bazel_dep(name = "gazelle", version = "0.54.0.sonic.1", repo_name = "bazel_gazelle")
-bazel_dep(name = "rules_go", version = "0.65.0.sonic.1", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "gazelle", version = "0.54.0.sonic.2", repo_name = "bazel_gazelle")
+bazel_dep(name = "rules_go", version = "0.65.0.sonic.2", repo_name = "io_bazel_rules_go")
 go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
 go_deps.zip_lock(file = "//tools/bazel/go:go.zip.sums.json")
 use_repo(go_deps, go_zip_lock_plan = "bazel_gazelle_go_repository_config")
@@ -43,7 +43,7 @@ bazel_dep(name = "googletest", version = "1.16.0")
 bazel_dep(name = "patchelf", version = "0.18.0.bcr.1")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "redis-dump-load", version = "1.1.sonic.2", repo_name = "redis_dump_load")
-bazel_dep(name = "sonic-linux-kernel", version = "0.0.4-96c621843a2bc9dbbe17eb890c8c6e1cea5e834b", repo_name = "sonic_linux_kernel")
+bazel_dep(name = "sonic-linux-kernel", version = "0.0.5-dea1b2300ab2ec706810817d97ff3761379eb3f0", repo_name = "sonic_linux_kernel")
 
 # PI, BMv2, P4C and DASH export their native Bazel outputs as installation TARs.
 bazel_dep(name = "p4lang-pi", version = "0.1.3.sonic.7", repo_name = "p4lang_pi")
@@ -57,18 +57,18 @@ single_version_override(
 bazel_dep(name = "sonic-dash", version = "0.0.1-d5c003dd7774c2b43f275c0233acc73a0ea28d2f", repo_name = "sonic_dash")
 
 # Use the source-owned Python binding metadata required by sonic-yang-mgmt.
-bazel_dep(name = "libyang-python", version = "3.1.0.sonic.6", repo_name = "libyang_python")
+bazel_dep(name = "libyang-python", version = "3.1.0.sonic.7", repo_name = "libyang_python")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
-bazel_dep(name = "net-snmp", version = "5.9.3.sonic.1", repo_name = "net_snmp")
+bazel_dep(name = "net-snmp", version = "5.9.3.sonic.2", repo_name = "net_snmp")
 
 # Share APT lock metadata across dependency sets.
 bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.26")
 # Preserve system and quote headers in the P4/DASH Make builds.
-bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.1")
+bazel_dep(name = "rules_foreign_cc", version = "0.16.0.sonic.2")
 bazel_dep(name = "rules_gzip", version = "1.0.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
-bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.2")
 bazel_dep(name = "rules_rs", version = "0.1.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "tar.bzl", version = "0.10.5.sonic.2")
@@ -89,15 +89,15 @@ single_version_override(
     patches = ["//tools/bazel/registry:elf-runtime-cache-links.patch"],
     patch_strip = 1,
 )
-bazel_dep(name = "grub", version = "2.12.sonic.1")
+bazel_dep(name = "grub", version = "2.12.sonic.2")
 bazel_dep(
     name = "sonic-dash-api",
-    version = "0.0.5-9b2893e890734a2db0c53a5e5c64b031ec0dcfbd",
+    version = "0.0.6-55310bf7437d67411418c974587adcdc1b194d6b",
     repo_name = "sonic_dash_api",
 )
 bazel_dep(
     name = "sonic-sairedis",
-    version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
+    version = "0.0.5-6b9b254c0d083f3c75e20c61e88e083a7acf0a67",
     repo_name = "sonic_sairedis",
 )
 bazel_dep(
@@ -107,13 +107,13 @@ bazel_dep(
 )
 
 bazel_dep(name = "sonic-swss", version = "0.0.3-9c3797990d4b5a79100a40fe7689927c18212361", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-platform-common", version = "1.0.0", repo_name = "sonic_platform_common")
+bazel_dep(name = "sonic-platform-common", version = "1.0.1-74d0685cf303b1a08099b378d2428f4a8e6d85e0", repo_name = "sonic_platform_common")
 bazel_dep(name = "sonic-snmpagent", version = "2.1.0-a27e093fac394f7871ec1b19bb12ca6739c29fa9", repo_name = "sonic_snmpagent")
-bazel_dep(name = "sonic-swss-common", version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61", repo_name = "sonic_swss_common")
-bazel_dep(name = "hsflowd", version = "2.1.26.sonic.1")
-bazel_dep(name = "sflowtool", version = "6.11.0.sonic.3")
-bazel_dep(name = "libpsample", version = "1.1.0.sonic.2")
-bazel_dep(name = "scapy", version = "2.6.1.sonic.2")
+bazel_dep(name = "sonic-swss-common", version = "0.0.8-2a4ddd070edb719f2e969a880a5cfff711e64e72", repo_name = "sonic_swss_common")
+bazel_dep(name = "hsflowd", version = "2.1.26.sonic.2")
+bazel_dep(name = "sflowtool", version = "6.11.0.sonic.4")
+bazel_dep(name = "libpsample", version = "1.1.0.sonic.3")
+bazel_dep(name = "scapy", version = "2.6.1.sonic.3")
 bazel_dep(
     name = "sonic-yang-mgmt",
     version = "1.0.0-9ab452d22773c41783092ae3bd6c206d6c257c8d",
@@ -121,7 +121,7 @@ bazel_dep(
 )
 bazel_dep(
     name = "sonic-yang-models",
-    version = "1.0.1-b0a9362a7a1b4b5e1b7188c019d256f7c8aaff9f",
+    version = "1.0.1-dd732f9512a84966487951250adae8e3e5c9943e",
     repo_name = "sonic_yang_models",
 )
 
@@ -140,7 +140,7 @@ local_path_override(
 # repair selected when another module requests the unpatched stable release.
 single_version_override(
     module_name = "rules_go",
-    version = "0.65.0.sonic.1",
+    version = "0.65.0.sonic.2",
 )
 
 single_version_override(
@@ -155,7 +155,7 @@ single_version_override(
 
 single_version_override(
     module_name = "libnl3",
-    version = "3.7.0.sonic.8",
+    version = "3.7.0.sonic.10",
 )
 
 single_version_override(
@@ -363,26 +363,26 @@ pip.parse(
 )
 use_repo(pip, "database_pip")
 
-bazel_dep(name = "socat", version = "1.8.0.2.sonic.7")
+bazel_dep(name = "socat", version = "1.8.0.2.sonic.8")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.9")
-bazel_dep(name = "libnl3", version = "3.7.0.sonic.8")
-bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.8")
+bazel_dep(name = "libnl3", version = "3.7.0.sonic.10")
+bazel_dep(name = "libteam", version = "1.31.0.sonic.2")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.9")
 
+# Keep the image's LACP port-removal fix on top of the published libteam source.
 single_version_override(
-    module_name = "sonic-rust-deps",
-    version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
-)
-
-bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")
-bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", repo_name = "sonic_wpa_supplicant")
-single_version_override(
-    module_name = "sonic-wpa-supplicant",
-    version = "2.9.0.sonic.1",
-    patches = ["//tools/bazel/registry:wpa-supplicant-fips-openssl.patch"],
+    module_name = "libteam",
+    patches = ["//src/libteam:patch/0021-teamd-lacp-guard-missing-port-on-removal.patch"],
     patch_strip = 1,
 )
 
+single_version_override(
+    module_name = "sonic-rust-deps",
+    version = "0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e",
+)
+
+bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")
+bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.3", repo_name = "sonic_wpa_supplicant")
 
 # MACsec runtime/debug and private Redis checks share the production APT lock.
 use_repo(apt, "macsec_debian")
@@ -449,12 +449,12 @@ source_modules(
 
 single_version_override(
     module_name = "sonic-swss-common",
-    version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61",
+    version = "0.0.8-2a4ddd070edb719f2e969a880a5cfff711e64e72",
 )
 
 single_version_override(
     module_name = "sonic-sairedis",
-    version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
+    version = "0.0.5-6b9b254c0d083f3c75e20c61e88e083a7acf0a67",
 )
 
 # Preserve Syncd's Vim debug roots independently of the shared Vim-nox set.
@@ -501,7 +501,7 @@ local_path_override(
     path = "src/sonic-sysmgr",
 )
 
-bazel_dep(name = "protobuf-legacy", version = "3.21.12.sonic.2", repo_name = "sonic_protobuf")
+bazel_dep(name = "protobuf-legacy", version = "3.21.12.sonic.4", repo_name = "sonic_protobuf")
 
 use_repo(apt, "sysmgr_debian", "sysmgr_debug_debian", "sysmgr_test_debian")
 
@@ -523,10 +523,10 @@ apt_inputs(
 
 # The gNMI and schema owners supply direct runtime TARs; the image adds only
 # its original startup/configuration files and pinned external dependencies.
-bazel_dep(name = "sonic-gnmi", version = "0.1.0-3cc2cba22ba980128518aafe4ddae14aeebebb08", repo_name = "sonic_gnmi")
-bazel_dep(name = "sonic-mgmt-common", version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b", repo_name = "sonic_mgmt_common")
-bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.1-20200309174518-a00bece872fc", repo_name = "com_github_openconfig_goyang")
-bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.1", repo_name = "com_github_openconfig_ygot")
+bazel_dep(name = "sonic-gnmi", version = "0.1.0-dce084b51edb123d10cc6a74ea1bb719f5bb85c3", repo_name = "sonic_gnmi")
+bazel_dep(name = "sonic-mgmt-common", version = "1.0.2-68bfd75e9034ac0981c0f431b54cf8a9a868a2ca", repo_name = "sonic_mgmt_common")
+bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.2-20200309174518-a00bece872fc", repo_name = "com_github_openconfig_goyang")
+bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.2", repo_name = "com_github_openconfig_ygot")
 
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.25.9")
@@ -610,7 +610,7 @@ go_patches.module_override(
 
 single_version_override(
     module_name = "sonic-mgmt-common",
-    version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b",
+    version = "1.0.2-68bfd75e9034ac0981c0f431b54cf8a9a868a2ca",
 )
 
 # Framework shares the root gNMI Go selection and public generator identities.
@@ -666,7 +666,7 @@ apt_inputs(
 # LLDP runtime comes from lldpd and DBSyncd. Select its six external runtime
 # library roots from the reviewed native build dependencies.
 bazel_dep(name = "lldpd", version = "1.0.16.sonic.3")
-bazel_dep(name = "sonic-dbsyncd", version = "2.0.0-8a3830704d3f6067823f7c10b3b31913965add81", repo_name = "sonic_dbsyncd")
+bazel_dep(name = "sonic-dbsyncd", version = "2.0.1-273c3e8bda3e11f9dc49cb6fede53e1e12daa313", repo_name = "sonic_dbsyncd")
 use_repo(apt, "lldpd_deps")
 
 apt_inputs(
@@ -679,7 +679,7 @@ apt_inputs(
 
 
 # MUX consumes the Linkmgrd runtime and debug TARs.
-bazel_dep(name = "sonic-linkmgrd", version = "1.0.0-92c78b468b678e3c2ed2877d2cb0a52306f2297f", repo_name = "sonic_linkmgrd")
+bazel_dep(name = "sonic-linkmgrd", version = "1.0.1-4942334e9878b473099d7e07fc82bff9fc8c54f2", repo_name = "sonic_linkmgrd")
 
 apt_inputs(
     name = "mux_runtime_apt_inputs",
@@ -711,7 +711,7 @@ http_archive(
     build_file = "//tools/bazel/image/tar_split_json:upstream.BUILD.bazel",
 )
 
-bazel_dep(name = "otelcol-contrib", version = "0.144.0.sonic.1", repo_name = "otelcol_contrib")
+bazel_dep(name = "otelcol-contrib", version = "0.144.0.sonic.2", repo_name = "otelcol_contrib")
 
 otel_runtime_deps = use_extension("@otelcol_contrib//bazel:collector_deps.bzl", "go_deps")
 otel_runtime_deps.gazelle_default_attributes(
@@ -733,7 +733,7 @@ otel_golden_deps.gazelle_default_attributes(
 use_repo(apt, "otel_debian")
 
 # Native nnpy is source-built for the BMv2 clients installed by its owner.
-bazel_dep(name = "nnpy", version = "1.4.2.sonic.1")
+bazel_dep(name = "nnpy", version = "1.4.2.sonic.2")
 
 use_repo(apt, "dash_engine_debian", "dash_engine_debug_debian", "nnpy_deps")
 use_repo(pip, "nnpy_tools")
@@ -754,7 +754,7 @@ source_modules(
 )
 
 # DHCP relay consumes native owner TARs and the shared locked runtime inputs.
-bazel_dep(name = "isc-dhcp", version = "4.4.3.sonic.1", repo_name = "isc_dhcp")
+bazel_dep(name = "isc-dhcp", version = "4.4.3.sonic.2", repo_name = "isc_dhcp")
 bazel_dep(name = "sonic-dhcpmon", version = "0.1.0-b824589b2ba49a8ba59142289bfb04bb3ca68875", repo_name = "sonic_dhcpmon")
 bazel_dep(name = "sonic-dhcp-relay", version = "0.1.0-1bbc612265bfc8e7582cb699dc44326f62595739", repo_name = "sonic_dhcp_relay")
 use_repo(apt, "dhcp_relay_runtime_debian", "dhcp_relay_test_debian")
@@ -807,7 +807,7 @@ apt_inputs(
 
 # Platform Daemons supplies the PMON service wheels. lm-sensors supplies the
 # native payloads and package metadata used by the installer and debug image.
-bazel_dep(name = "lm-sensors", version = "3.6.0.sonic.3", repo_name = "lm_sensors")
+bazel_dep(name = "lm-sensors", version = "3.6.0.sonic.4", repo_name = "lm_sensors")
 bazel_dep(
     name = "sonic-platform-daemons",
     version = "1.0.0-2f8dea4661691ce7e6bfa3322576c8ab5591730f",
@@ -843,7 +843,7 @@ radius_prepared_source(name="pam_radius_src",build_file="//src/radius/pam:pam_ra
 use_repo(apt, "radius_pam_build_debian")
 
 # Buildimage owns the Bash TACACS plugin sources.
-bazel_dep(name = "pam-tacplus", version = "1.4.1.sonic.1")
+bazel_dep(name = "pam-tacplus", version = "1.4.1.sonic.2")
 bazel_dep(name = "bash-tacplus", version = "1.0.0.sonic.1", repo_name = "bash_tacplus")
 local_path_override(module_name = "bash-tacplus", path = "src/tacacs/bash_tacplus")
 
@@ -858,20 +858,20 @@ bazel_dep(
 
 # Native VS assembler inputs.
 use_repo(apt, "image_tools", "initramfs_runtime")
-bazel_dep(name = "bash", version = "5.2.37.sonic.1", repo_name = "sonic_bash")
-bazel_dep(name = "sedutil", version = "1.15.sonic.1", repo_name = "sedutil")
-bazel_dep(name = "libnss-tacplus", version = "1.0.4.sonic.1", repo_name = "libnss_tacplus")
-bazel_dep(name = "audisp-tacplus", version = "1.0.2.sonic.1", repo_name = "audisp_tacplus")
-bazel_dep(name = "ifupdown2", version = "3.0.0.sonic.1", repo_name = "ifupdown2")
-bazel_dep(name = "monit", version = "5.34.3.sonic.1", repo_name = "monit")
-bazel_dep(name = "makedumpfile", version = "1.7.7.sonic.1", repo_name = "makedumpfile")
-bazel_dep(name = "kdump-tools", version = "1.10.7.sonic.1", repo_name = "kdump_tools")
-bazel_dep(name = "pycairo", version = "1.26.1.sonic.1")
-bazel_dep(name = "blkinfo", version = "0.2.0.sonic.1", repo_name = "blkinfo")
-bazel_dep(name = "bitarray", version = "2.8.1.sonic.2", repo_name = "bitarray")
+bazel_dep(name = "bash", version = "5.2.37.sonic.3", repo_name = "sonic_bash")
+bazel_dep(name = "sedutil", version = "1.15.sonic.2", repo_name = "sedutil")
+bazel_dep(name = "libnss-tacplus", version = "1.0.4.sonic.2", repo_name = "libnss_tacplus")
+bazel_dep(name = "audisp-tacplus", version = "1.0.2.sonic.2", repo_name = "audisp_tacplus")
+bazel_dep(name = "ifupdown2", version = "3.0.0.sonic.2", repo_name = "ifupdown2")
+bazel_dep(name = "monit", version = "5.34.3.sonic.2", repo_name = "monit")
+bazel_dep(name = "makedumpfile", version = "1.7.7.sonic.2", repo_name = "makedumpfile")
+bazel_dep(name = "kdump-tools", version = "1.10.7.sonic.2", repo_name = "kdump_tools")
+bazel_dep(name = "pycairo", version = "1.26.1.sonic.2")
+bazel_dep(name = "blkinfo", version = "0.2.0.sonic.2", repo_name = "blkinfo")
+bazel_dep(name = "bitarray", version = "2.8.1.sonic.3", repo_name = "bitarray")
 bazel_dep(name = "rasdaemon", version = "0.6.8.sonic.1", repo_name = "rasdaemon")
-bazel_dep(name = "ipaddr", version = "2.2.0.sonic.1", repo_name = "ipaddr")
-bazel_dep(name = "www-authenticate", version = "0.9.2.sonic.1", repo_name = "www_authenticate")
+bazel_dep(name = "ipaddr", version = "2.2.0.sonic.2", repo_name = "ipaddr")
+bazel_dep(name = "www-authenticate", version = "0.9.2.sonic.2", repo_name = "www_authenticate")
 
 http_archive(
     name = "initramfs_tools_src",

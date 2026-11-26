@@ -559,7 +559,7 @@ image archive target at the current published registry revision:
 
 ```sh
 export SONIC_BAZEL_REGISTRY_REVISION=$(git ls-remote --exit-code \
-  https://github.com/securely1g/sonic-bazel-registry.git refs/heads/main | cut -f1)
+  https://github.com/sonic-net/sonic-bazel-registry.git refs/heads/main | cut -f1)
 tools/bazel/ci/review_bazel.sh query //dockers/docker-database:docker-database.gz
 ```
 

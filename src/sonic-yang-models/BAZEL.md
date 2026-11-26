@@ -13,7 +13,7 @@ retains setup.py's model completeness checks and both Python and CVL variants.
   and checks that Python discovers the installed distribution and version.
 
 ```sh
-registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
 bazel test --registry="$registry" --registry=https://bcr.bazel.build \
   --lockfile_mode=update //:yang_models_package_test
 bazel build --registry="$registry" --registry=https://bcr.bazel.build \

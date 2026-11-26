@@ -54,7 +54,7 @@ def vs_test_inputs(directory, debug):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bazel', default='bazel')
-    parser.add_argument('--registry', default='https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main')
+    parser.add_argument('--registry', default='https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main')
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--jobs', type=int)
     parser.add_argument('--startup-arg', action='append', default=[])

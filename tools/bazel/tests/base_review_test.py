@@ -64,7 +64,7 @@ class BaseReviewTest(unittest.TestCase):
             result = subprocess.check_output([WRAPPER, "build", "//..."], env=env, text=True)
             registries = [arg for arg in result.splitlines() if arg.startswith("--registry=")]
             self.assertEqual(registries, [
-                "--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/" + "a" * 40,
+                "--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/" + "a" * 40,
                 "--registry=https://bcr.bazel.build",
             ])
             self.assertIn("--remote_upload_local_results=false", result.splitlines())
@@ -77,4 +77,4 @@ class BaseReviewTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
             env.pop("SONIC_BASE_REVIEW_REGISTRY")
             ordinary = subprocess.check_output([WRAPPER, "info", "release"], env=env, text=True)
-            self.assertIn("--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main", ordinary.splitlines())
+            self.assertIn("--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main", ordinary.splitlines())

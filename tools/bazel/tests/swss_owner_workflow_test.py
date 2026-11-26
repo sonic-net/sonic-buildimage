@@ -57,7 +57,7 @@ class SwssOwnerWorkflowTest(unittest.TestCase):
     def test_bootstrap_verifies_config_before_appending_to_existing_caches(self):
         from tools.bazel.ci import source_mirrors
 
-        fixture = ROOT / "tools/bazel/tests/fixtures/source-mirrors-9697f3db.cfg"
+        fixture = ROOT / "tools/bazel/tests/fixtures/source-mirrors-f9a9baae.cfg"
         self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(), source_mirrors.SHA256)
         for filename, job in JOBS:
             steps = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"][job]["steps"]
@@ -106,7 +106,7 @@ class SwssOwnerWorkflowTest(unittest.TestCase):
                                     env=dict(os.environ, PATH=str(root)+":/usr/bin:/bin"), capture_output=True, text=True, check=True)
             args = json.loads(result.stdout)
             self.assertIn("--nohome_rc", args)
-            self.assertIn("--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"+CATALOG, args)
+            self.assertIn("--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/"+CATALOG, args)
             self.assertEqual(args[-2:], ["--disk_cache=/private/disk", "@sonic_swss//crates/countersyncd:common_rust_test"])
 
     def test_image_keeps_direct_debug_providers_and_library_only_metadata(self):

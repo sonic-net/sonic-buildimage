@@ -12,8 +12,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[3]
-URL = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/9697f3db62fc58a7a70b0d876abe0a849133a00d/ci/source_mirrors.cfg"
-SHA256 = "622830b8adf42d229a53b60ea0956de4a4a3c119d0639479be78817994d67327"
+URL = "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/f9a9baaeabad4a77c3ad5939fe257434e635e0dc/ci/source_mirrors.cfg"
+SHA256 = "c28e6882aa9ebed84fd32586112e5fbfe9684af4e4aaa9942170919a3cbd308e"
 SNAPSHOT_FIRST = (rb"rewrite snapshot\.debian\.org/(archive/(?:debian|debian-security)/"
                   rb"[0-9]{8}T[0-9]{6}Z/.+) https://snapshot.debian.org/$1" + b"\n")
 

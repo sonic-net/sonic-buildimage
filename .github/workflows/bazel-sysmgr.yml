@@ -103,8 +103,8 @@ jobs:
       - name: Check out the registry's verified Cosmos downloader
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: securely1g/sonic-bazel-registry
-          ref: 0f459395f8852b5c89e9895afeeea01b95b281ea
+          repository: sonic-net/sonic-bazel-registry
+          ref: f9a9baaeabad4a77c3ad5939fe257434e635e0dc
           path: .ci/sysmgr-registry
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -153,7 +153,7 @@ jobs:
           fi
           python3 -B src/sonic-sysmgr/bazel/ci.py "${package_args[@]}" \
             --startup-arg="--bazelrc=$GITHUB_WORKSPACE/.bazelrc.user" \
-            --registry https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
+            --registry https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main \
             --artifacts artifacts/sysmgr 2>&1 | tee artifacts/sysmgr/ci.log
       - name: Upload packages, original XML and installed-package evidence
         id: runner_cleanup_upload_0

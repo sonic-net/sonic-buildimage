@@ -156,7 +156,7 @@ jobs:
           test "$(uname -m)" = '${{ matrix.machine }}'
           test ! -e MODULE.bazel.lock
           git check-ignore MODULE.bazel.lock
-          registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+          registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
           options=(--registry="$registry" --registry=https://bcr.bazel.build --lockfile_mode=update)
           mkdir -p artifacts
           # The standalone module and image root use the same maintained registry.

@@ -32,7 +32,7 @@ avoids platform configuration during the path lookup while keeping the same
 wrapper and all build/query options; empty, malformed or missing roots fail.
 
 The native and OCI workflows use `tools/bazel/ci/source_mirrors.py` to verify the
-[shared registry configuration](https://github.com/securely1g/sonic-bazel-registry/blob/9697f3db62fc58a7a70b0d876abe0a849133a00d/ci/source_mirrors.cfg)
+[shared registry configuration](https://github.com/sonic-net/sonic-bazel-registry/blob/f9a9baaeabad4a77c3ad5939fe257434e635e0dc/ci/source_mirrors.cfg)
 and preserve local Debian mirrors ahead of its source fallbacks. This includes
 the verified pigz release without changing source checksums. Root `.bazelrc`
 keeps `tools/bazel/debian_mirrors.cfg` and canonical `sonic-bazel-registry/main`.
