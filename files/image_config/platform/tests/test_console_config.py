@@ -14,12 +14,18 @@ FLOW_FILE = (
     "serial-getty@ttyS12.service.d/20-sonic-console-flow-control.conf"
 )
 EXECSTARTS = [
-    r"ExecStart=-/sbin/agetty -o '-p -- \\u' --keep-baud "
-    "115200,57600,38400,9600 - $TERM",
-    r"ExecStart=-/sbin/agetty -o '-- \\u' --noreset --noclear "
-    "--keep-baud 115200,38400,9600 - ${TERM}",
-    r"ExecStart=-/usr/sbin/agetty -o '-p -- \\u' "
-    "115200,38400,9600 - $TERM",
+    (
+        r"ExecStart=-/sbin/agetty -o '-p -- \\u' --keep-baud "
+        "115200,57600,38400,9600 - $TERM"
+    ),
+    (
+        r"ExecStart=-/sbin/agetty -o '-- \\u' --noreset --noclear "
+        "--keep-baud 115200,38400,9600 - ${TERM}"
+    ),
+    (
+        r"ExecStart=-/usr/sbin/agetty -o '-p -- \\u' "
+        "115200,38400,9600 - $TERM"
+    ),
 ]
 
 
