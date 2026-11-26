@@ -181,6 +181,9 @@
     "DEVICE_METADATA_VALID_SUBTYPE3": {
         "desc": "Verifying valid subtype value downstreamLC"
     },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value L3EvpnMH"
+    },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
         "eStrKey": "Pattern"

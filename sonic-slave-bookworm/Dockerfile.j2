@@ -193,7 +193,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-all-dev \
 #{%- endif %}
         python3-twisted \
-        phpunit \
         libbit-vector-perl \
         openjdk-17-jdk \
         javahelper \
@@ -202,7 +201,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libhttpclient-java \
         libslf4j-java \
         libservlet3.1-java \
-        pkg-php-tools \
 # For mellanox sdk build
         libpcre3 \
         libpcre3-dev \
@@ -219,7 +217,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For mellanox sai build
         libtool-bin \
         libxml2-dev \
-# For BFN sdk build
+# For SDK builds
         libusb-1.0-0-dev \
         libcurl4-openssl-dev \
         libunwind8-dev \
@@ -263,6 +261,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         liblua5.1-0-dev \
         lua-bitop-dev  \
         lua-cjson-dev \
+# For sonic-py-common Redis authentication tests
+        redis-server \
 # For mft kernel module build
         dkms \
 # For Jenkins static analysis, unit testing and code coverage
@@ -583,7 +583,7 @@ RUN pip3 install pytest-runner==5.2
 RUN pip3 install mockredispy==2.9.3
 RUN pip3 install pyfakefs
 
-RUN pip3 install pillow==10.0.1
+RUN pip3 install --upgrade pillow
 
 # For p4 build
 RUN pip3 install \
@@ -678,9 +678,11 @@ RUN eatmydata apt-get install  libthrift-0.17 \
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
 {% if CONFIGURED_ARCH != "amd64" -%}
+{% if CONFIGURED_ARCH == "armhf" -%}
 # Install node.js for azure pipeline
 RUN eatmydata apt-get install -y nodejs
 
+{% endif -%}
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
 
@@ -766,8 +768,10 @@ RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsc
 RUN apt-get download python3.11-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
 {% endif %}
 
+{% if CONFIGURED_ARCH == "armhf" -%}
 # Tell azure pipeline to use node.js in the docker
 LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
+{% endif -%}
 {% endif -%}
 
 RUN eatmydata apt install -y python-is-python3
@@ -775,11 +779,11 @@ RUN eatmydata apt install -y python-is-python3
 # Install Bazel build system (amd64 and arm64 architectures are supported using this method)
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
 {%- if CONFIGURED_ARCH == "amd64" %}
-ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64
-ARG bazelisk_sha256=22e7d3a188699982f661cf4687137ee52d1f24fec1ec893d91a6c4d791a75de8
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.30.0/bazelisk-linux-amd64
+ARG bazelisk_sha256=a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8
 {%- elif CONFIGURED_ARCH == "arm64" %}
-ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64
-ARG bazelisk_sha256=8ded44b58a0d9425a4178af26cf17693feac3b87bdcfef0a2a0898fcd1afc9f2
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.30.0/bazelisk-linux-arm64
+ARG bazelisk_sha256=b2bcc040c213b44586b121bda6d983c35df121b917c3a7a66fb16f2fa0df1a4f
 {%- endif %}
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} \
@@ -808,10 +812,11 @@ RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 # Cargo.lock into the produced binary's .dep-v0 ELF section. Syft reads
 # that section at SBOM scan time, giving SONiC SBOMs full per-crate
 # visibility for Rust packages without source-tree changes to any
-# debian/rules file. Pinned for reproducibility. CARGO_HOME=$RUST_ROOT
+# debian/rules file. Pinned for reproducibility (>= 0.6.6 required to
+# parse Rust edition 2024 crates, see #29881). CARGO_HOME=$RUST_ROOT
 # ensures the binary lands at /usr/.cargo/bin/cargo-auditable (in PATH
 # for all users) rather than /root/.cargo/bin/ (root-only).
-RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.6.4
+RUN CARGO_HOME=$RUST_ROOT $RUST_ROOT/bin/cargo install --locked cargo-auditable@0.7.6
 
 # rust-audit-info is the official CLI for reading the .dep-v0 section
 # that cargo-auditable embedded. scripts/sbom_fragment.py invokes it

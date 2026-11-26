@@ -1,0 +1,35 @@
+[
+  {
+    "name": "CPU_CARD_FPGA_MEETS_MIN_VERSION_0x15",
+    "source": "fpga_version",
+    "bdf_var": "cpu_card_fpga_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xff",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x15"
+  },
+  {
+    "name": "fan_duty_packed_in_one_word",
+    "source": "fpga_version",
+    "bdf_var": "switchcard_fpga_1_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xfff",
+    "comparison": "LESS_THAN_OR_EQUAL",
+    "version": "0x304"
+  },
+  {
+    "name": "SWITCH_CARD_FPGA_0_MEETS_MIN_VERSION_0x8E",
+    "source": "fpga_version",
+    "bdf_var": "switchcard_fpga_0_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xff",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x8e"
+  },
+  {
+    "name": "NH4210_SWITCH_HOST_POWER_CYCLE_SUPPORTED",
+    "source": "onie_device_version",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0x2"
+  }
+]

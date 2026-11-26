@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+DEVPATH="/usr/share/sonic/device"
+COMMON_PLATFORM="cisco-8000"
+PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+PLATFORM_REBOOT_PRE_CHECK_HELPER_PATH="${DEVPATH}/${COMMON_PLATFORM}/platform_reboot_pre_check_helper"
+REBOOT_TYPE=$1
+
+source $PLATFORM_REBOOT_PRE_CHECK_HELPER_PATH
+
+syncd_pre_shutdown() {
+    # Calling syncd pre shutdown, non-blocking
+    /usr/bin/docker exec -i syncd /usr/share/sonic/platform/plugins/syncd_request_pre_shutdown  > /dev/null &
+}
+
+save_shared_memory_file_for_optics_lib "$REBOOT_TYPE"
+
+syncd_pre_shutdown
+
+# In case of reset-factory reboot
+PLATFORM_RESET_FACTORY_FLAG=${DEVPATH}/${PLATFORM}/reset_factory_flag
+PLATFORM_COMMON_RESET_FACTORY_SCRIPT=${DEVPATH}/${COMMON_PLATFORM}/reset_factory_hook
+PLATFORM_RESET_FACTORY_SCRIPT=${DEVPATH}/${PLATFORM}/reset_factory_hook
+if [ -e $PLATFORM_RESET_FACTORY_FLAG ]; then
+    echo "Executing $PLATFORM_COMMON_RESET_FACTORY_SCRIPT"
+    $PLATFORM_COMMON_RESET_FACTORY_SCRIPT
+    if [ -e $PLATFORM_RESET_FACTORY_SCRIPT ]; then
+        $PLATFORM_RESET_FACTORY_SCRIPT
+    fi
+    rm $PLATFORM_RESET_FACTORY_FLAG
+fi
+
+# If the platform has additional pre shutdown scripts, call it.
+PRE_SHUTDOWN_SCRIPT=${DEVPATH}/$PLATFORM/platform_pre_shutdown
+if [ -x $PRE_SHUTDOWN_SCRIPT ]; then                                                                                                                                 
+    $PRE_SHUTDOWN_SCRIPT                                                                                                                                              
+fi

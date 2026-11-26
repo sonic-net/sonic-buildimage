@@ -8,7 +8,7 @@ set -x
 #
 #  SPDX-License-Identifier:     GPL-2.0
 
-MEM=10240
+MEM=16384
 DISK=$1
 ONIE_RECOVERY_ISO=$2
 INSTALLER=$3
@@ -48,7 +48,7 @@ prepare_installer_disk()
     chmod 0755 "$tmpdir"
     cp --reflink=auto -- "$INSTALLER" "$tmpdir/onie-installer.bin"
 
-    fallocate -l 5120M "$INSTALLER_DISK"
+    fallocate -l 6144M "$INSTALLER_DISK"
     # Populate directly so this step does not require a host loop device.
     mkfs.ext2 -d "$tmpdir" "$INSTALLER_DISK"
 )

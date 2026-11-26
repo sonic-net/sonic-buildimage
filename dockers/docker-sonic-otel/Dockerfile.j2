@@ -28,35 +28,31 @@ RUN apt-get install -y \
     curl \
     wget
 
-# Install OpenTelemetry Collector from official .deb package
-ARG OTEL_VERSION=0.144.0
-
-# Download and install official .deb package with architecture-specific logic
+# Install OpenTelemetry Collector from official .deb package. Renovate updates
+# each architecture's OTEL_TAG and OTEL_SHA256 together, from the new release's
+# package, so keep the two lines adjacent; the new hash is reviewed in its PR.
 {% if CONFIGURED_ARCH == "armhf" %}
-RUN wget -v -O /tmp/otelcol-contrib.deb \
-        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_armv7.deb" && \
-    echo "2b0560837d875432d0675d6f5302389cb2ce48b555390c569302ae5f643e8b13  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
-    dpkg --info /tmp/otelcol-contrib.deb && \
-    (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
-    ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
-    rm /tmp/otelcol-contrib.deb
+ARG OTEL_ARCH=armv7
+ARG OTEL_TAG=v0.165.0
+ARG OTEL_SHA256=3dff58306830a91c2aa9fa1e19ef1fb336c7adbfd49f7607ddf6d7b3173720a6
 {% elif CONFIGURED_ARCH == "arm64" %}
-RUN wget -v -O /tmp/otelcol-contrib.deb \
-        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_arm64.deb" && \
-    echo "6e272d1c179d897e8d09877d5589979a01921887aed372447806dc7e1c54be18  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
-    dpkg --info /tmp/otelcol-contrib.deb && \
-    (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
-    ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
-    rm /tmp/otelcol-contrib.deb
+ARG OTEL_ARCH=arm64
+ARG OTEL_TAG=v0.165.0
+ARG OTEL_SHA256=4dcfb6b69dfa10132c593ed5782823eec79dc408a0d68291e1c4adc5879d0948
 {% else %}
-RUN wget -v -O /tmp/otelcol-contrib.deb \
-        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.deb" && \
-    echo "e83278a763b9c7779f9facf3ac2356b7add8975a5f14d4606a625605f50eee94  /tmp/otelcol-contrib.deb" | sha256sum -c - && \
-    dpkg --info /tmp/otelcol-contrib.deb && \
-    (dpkg -i /tmp/otelcol-contrib.deb || apt-get install -f -y) && \
-    ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
-    rm /tmp/otelcol-contrib.deb
+ARG OTEL_ARCH=amd64
+ARG OTEL_TAG=v0.165.0
+ARG OTEL_SHA256=dafb5174344dd15f339fd8208783b17122fb4cd37fa7e5461fb09d99df212b4b
 {% endif %}
+RUN version="${OTEL_TAG#v}" && \
+    deb="otelcol-contrib_${version}_linux_${OTEL_ARCH}.deb" && \
+    wget -v -O "/tmp/$deb" \
+        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/${OTEL_TAG}/$deb" && \
+    echo "${OTEL_SHA256}  /tmp/$deb" | sha256sum -c - && \
+    dpkg --info "/tmp/$deb" && \
+    (dpkg -i "/tmp/$deb" || apt-get install -f -y) && \
+    ln -sf /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
+    rm "/tmp/$deb"
 
 COPY ["start.sh", "otel.sh", "/usr/bin/"]
 RUN chmod +x /usr/bin/start.sh /usr/bin/otel.sh

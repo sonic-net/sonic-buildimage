@@ -1,6 +1,6 @@
 # socat packages
 
-SOCAT_VERSION = 1.8.0.2-1
+SOCAT_VERSION = 1.8.0.3-1+deb13u1
 
 export SOCAT_VERSION
 

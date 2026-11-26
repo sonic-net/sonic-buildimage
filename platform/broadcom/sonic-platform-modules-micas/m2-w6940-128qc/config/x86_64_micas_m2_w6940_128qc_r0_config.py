@@ -475,6 +475,9 @@ DRIVERLISTS = [
     {"name": "wb_i2c_dev_device", "delay": 0},
     {"name": "optoe", "delay": 0},
     {"name": "at24", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
 ]
 
 DEVICE = [

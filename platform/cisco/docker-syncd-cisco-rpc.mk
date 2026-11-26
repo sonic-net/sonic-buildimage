@@ -24,8 +24,6 @@ ifeq ($(ENABLE_SYNCD_RPC),y)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYNCD_CISCO_RPC)
 endif
 
-SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_CISCO_RPC)
-
 $(DOCKER_SYNCD_CISCO_RPC)_CONTAINER_NAME = syncd
 $(DOCKER_SYNCD_CISCO_RPC)_VERSION = 1.0.0+rpc
 $(DOCKER_SYNCD_CISCO_RPC)_PACKAGE_NAME = syncd
@@ -33,10 +31,12 @@ $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /var/run/docker-syncd:/var/run/sswsyncd
-$(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /var/cache/cisco:/var/cache/cisco
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /usr/lib/cisco:/usr/lib/cisco
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /opt/cisco/silicon-one:/opt/cisco/silicon-one
+$(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /opt/cisco/syncd:/opt/cisco/syncd:ro
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /var/run/config_gen:/var/run/config_gen
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -e LD_LIBRARY_PATH=/usr/lib/:/usr/lib/cisco/
+$(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -e CISCO_PLATFORM_CAPABILITIES=$(CISCO_PLATFORM_CAPABILITIES)
 $(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /usr/release_info:/usr/release_info
+$(DOCKER_SYNCD_CISCO_RPC)_RUN_OPT += -v /var/dump/:/var/dump/

@@ -4,13 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import click
-import jinja2
 import json
 import os
 import sys
 import syslog
 
-from nexthop import feature_flags_lib, pcie_lib
+from typing import Any
+
+from nexthop import feature_flags_lib, gen_lib, pcie_lib
 from sonic_py_common import device_info
 
 PLATFORM_FOLDER = "/usr/share/sonic/platform"
@@ -21,10 +22,13 @@ DEFAULT_PLATFORM_JSON_FILEPATH = f"{PLATFORM_FOLDER}/platform.json"
 
 DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.j2"
 DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.base"
-# Optional artifact: present only for platforms that declare FPGA-version
-# feature flags. Each flag is evaluated at boot and exposed as a Jinja boolean
-# for pddf-device.json.j2.
+# Optional artifact: present only for platforms that declare FPGA-version or
+# Device-Version feature flags. Each flag is evaluated at boot and exposed as a
+# Jinja boolean for pddf-device.json.j2 and pd-plugin.json.j2.
 DEFAULT_FEATURE_FLAGS_FILEPATH = f"{PDDF_FOLDER}/feature-flags.json"
+
+DEFAULT_PD_PLUGIN_JSON_TEMPLATE_FILEPATH = f"{PDDF_FOLDER}/pd-plugin.json.j2"
+DEFAULT_PD_PLUGIN_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pd-plugin.json"
 
 DEFAULT_PCIE_YAML_TEMPLATE_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml.j2"
 DEFAULT_PCIE_YAML_OUTPUT_FILEPATH = f"{PLATFORM_FOLDER}/pcie.yaml"
@@ -35,16 +39,11 @@ def check_file_exists_if_not_default(filepath: str, default_filepath: str, param
         raise click.BadParameter(f"{filepath} does not exist.", param_hint=param_name)
 
 def generate_file_from_jinja2_template(
-    template_filepath: str, variables: dict[str, str], output_filepath: str
+    template_filepath: str, variables: dict[str, Any], output_filepath: str
 ):
-    loader = jinja2.FileSystemLoader(os.path.dirname(template_filepath))
-    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-    j2_env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
-    template = j2_env.get_template(os.path.basename(template_filepath))
-    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-    output = template.render(variables)
-    with open(output_filepath, "w") as f:
-        f.write(output)
+    gen_lib.write_atomically(
+        gen_lib.render(template_filepath, variables), output_filepath
+    )
     syslog.syslog(syslog.LOG_INFO, f"Successfully generated {output_filepath}")
 
 def get_model_name(platform_json_filepath):
@@ -98,9 +97,7 @@ def cli():
     "--feature_flags_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_FEATURE_FLAGS_FILEPATH,
-    help="Filepath to feature-flags.json. Optional; only present for platforms that declare "
-    "FPGA-version feature flags. Each flag is evaluated against live hardware and exposed as "
-    "a Jinja boolean in the template.",
+    help="Filepath to feature-flags.json.",
 )
 @click.option(
     "--output_filepath",
@@ -136,8 +133,62 @@ def pddf_device_json_base(template_filepath, vars_filepath, platform_json_filepa
 
     vars["platform"] = platform
 
-    # Evaluate FPGA-version feature flags (if any) against live hardware and add
-    # them as Jinja booleans. Fail loudly rather than render the wrong layout.
+    # Evaluate the feature flags (if any) against live hardware and add them as
+    # Jinja booleans. Fail loudly rather than render the wrong layout.
+    try:
+        vars.update(feature_flags_lib.get_feature_flag_variables(feature_flags_filepath, vars))
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
+        sys.exit(1)
+
+    generate_file_from_jinja2_template(template_filepath, vars, output_filepath)
+
+
+# Computes variables from pcie-variables.yaml plus feature-flags.json and feeds
+# them to pd-plugin.json.j2 to generate pd-plugin.json.
+#
+# Original motivation: the DPM fault-cause vector differs between CPU-card FPGA
+# revisions, which are only known after boot.
+@cli.command("pd_plugin_json")
+@click.option(
+    "--template_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_PD_PLUGIN_JSON_TEMPLATE_FILEPATH,
+    help="Filepath to the jinja2 template for generating pd-plugin.json.",
+)
+@click.option(
+    "--vars_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_PCIE_VARS_FILEPATH,
+    help="Filepath to the yaml file containing variables to be substituted in the template.",
+)
+@click.option(
+    "--feature_flags_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_FEATURE_FLAGS_FILEPATH,
+    help="Filepath to feature-flags.json.",
+)
+@click.option(
+    "--output_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_PD_PLUGIN_JSON_OUTPUT_FILEPATH,
+    help="Filepath to store the generated pd-plugin.json. If the file already exists, it will be overwritten.",
+)
+def pd_plugin_json(template_filepath, vars_filepath, feature_flags_filepath, output_filepath):
+    check_file_exists_if_not_default(template_filepath, DEFAULT_PD_PLUGIN_JSON_TEMPLATE_FILEPATH, "--template_filepath")
+    check_file_exists_if_not_default(vars_filepath, DEFAULT_PCIE_VARS_FILEPATH, "--vars_filepath")
+    check_file_exists_if_not_default(feature_flags_filepath, DEFAULT_FEATURE_FLAGS_FILEPATH, "--feature_flags_filepath")
+    if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath):
+        syslog.syslog(syslog.LOG_INFO, f"Skipping {output_filepath} generation")
+        return
+    try:
+        vars = pcie_lib.get_pcie_variables(vars_filepath)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
+        sys.exit(1)
+
+    # Evaluate the feature flags (if any) against live hardware and add them as
+    # Jinja booleans. Fail loudly rather than render the wrong layout.
     try:
         vars.update(feature_flags_lib.get_feature_flag_variables(feature_flags_filepath, vars))
     except Exception as e:

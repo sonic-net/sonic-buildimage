@@ -202,8 +202,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             raise Exception("Value not found for {} in {}".format(keys, tableKey))
         # create the keyDict
         keyDict = dict()
+        # Let these new schemas validate the original keys. Trimming first hides
+        # forbidden whitespace and can change references or collapse distinct keys.
+        preserve_key = self.elementPath and self.elementPath[0] in (
+            "DHCP_SERVER_IPV4_MATCH", "DHCP_SERVER_IPV4_BINDING")
         for i in range(len(keyList)):
-            keyDict[keyList[i]] = value[i].strip()
+            keyDict[keyList[i]] = value[i] if preserve_key else value[i].strip()
 
         return keyDict
 
@@ -553,6 +557,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
     """
     xlate ConfigDB json to Yang json
+    Scope traversal state to each table, including when translation fails.
     """
     def _xlateConfigDBtoYang(self, jIn, yangJ):
 
@@ -566,10 +571,12 @@ class SonicYangExtMixin(SonicYangPathMixin):
             yangJ[key] = dict() if yangJ.get(key) is None else yangJ[key]
             yangJ[key][subkey] = dict()
             self.sysLog(msg="xlateConfigDBtoYang {}:{}".format(key, subkey))
-            self.elementPath.append(table)
-            self._xlateContainer(cmap['container'], yangJ[key][subkey], \
-                                jIn[table], table)
-            self.elementPath = []
+            self.elementPath = [table]
+            try:
+                self._xlateContainer(
+                    cmap['container'], yangJ[key][subkey], jIn[table], table)
+            finally:
+                self.elementPath = []
 
         return
 
@@ -776,8 +783,9 @@ class SonicYangExtMixin(SonicYangPathMixin):
     Rev xlate a container inside a yang container
     """
     def _revXlateContainerInContainer(self, modelContainer, yang, config, table):
-        # Pass matching list from Yang Json if exist
-        if yang.get(modelContainer.name()):
+        name = modelContainer.name()
+        if yang.get(name) or (name in yang and yang[name] == {} and
+                              modelContainer.presence() is not None):
             config[modelContainer.name()] = dict()
             self.sysLog(msg="revXlateContainerInContainer {}".format(modelContainer.name()))
             self.elementPath.append(modelContainer.name())

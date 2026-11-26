@@ -204,14 +204,21 @@ repack_sonic_initrd_for_tftp_installer() {
         cp -a "$_aspeed_repo_root/device/aspeed/." "$d/device/aspeed/"
     fi
     # sonic-machine-conf-init.sh also names nexthop/arista AST2700 platforms. Ship
-    # just their installer.conf -- those vendor trees are ~20 MB, this initrd is small.
+    # just their installer.conf and optional U-Boot env vendor hook (run by
+    # sonic-program-uboot-env.sh for the detected platform only) -- those vendor
+    # trees are ~20 MB, this initrd is small.
     for _ic in "$_aspeed_repo_root"/device/*/arm64-*/installer.conf; do
         [ -f "$_ic" ] || continue
         _rel="${_ic#"$_aspeed_repo_root"/}"
         mkdir -p "$d/$(dirname "$_rel")"
         cp "$_ic" "$d/$_rel"
+        _hook="$(dirname "$_ic")/sonic-uboot-env-vendor-hook"
+        # Keep the source mode: the ramdisk and the host apply the same executable check.
+        if [ -f "$_hook" ]; then
+            cp "$_hook" "$d/$(dirname "$_rel")/sonic-uboot-env-vendor-hook"
+        fi
     done
-    unset _aspeed_repo_root _ic _rel
+    unset _aspeed_repo_root _ic _rel _hook
     inject_fsroot_extras_into_initrd "$d"
     inject_fsroot_nss_into_initrd "$d"
     if [ ! -f "$d/lib/modules/ftgmac100.ko" ] && [ -d "$d/lib/modules" ]; then

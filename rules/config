@@ -89,6 +89,20 @@ BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
+# BMC (aspeed) images include ZTP support by default; build with ENABLE_ZTP=n
+# to leave it out.
+# ENABLE_BMC_ZTP - ZTP admin mode shipped in BMC (aspeed) images. Default n:
+# ZTP is installed but administratively disabled, so a BMC with no saved
+# configuration boots to the factory default. Admins opt in at runtime with
+# 'ztp enable' followed by 'ztp run -y'. Set to y to ship ZTP enabled: on first
+# boot the BMC runs ZTP discovery over eth0 until it is provisioned or an
+# admin runs 'ztp disable', e.g.
+# make PLATFORM=aspeed PLATFORM_ARCH=arm64 ENABLE_BMC_ZTP=y ...
+ENABLE_BMC_ZTP ?= n
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+ENABLE_ZTP ?= y
+endif
+
 # INCLUDE_PDE - Enable platform development environment
 # INCLUDE_PDE = y
 # SHUTDOWN_BGP_ON_START - if set to y all bgp sessions will be in admin down state when
@@ -183,8 +197,9 @@ SONIC_ENABLE_DEBUG_LAYER ?= n
 #   - $(SONIC_BAZEL_CACHE_SOURCE)/disk_cache for completed build results
 # Bazelisk downloads use bazelisk/. Each builder keeps its own output/server state.
 # Set empty to disable this mount and its system RC. The host directory must be
-# writable by the build user; this does not enable Make's package cache.
-SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
+# writable by the build user. An unavailable default per-user directory falls
+# back to container-local caches. Explicit paths are mounted as supplied.
+SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel/$(USER)
 
 # Reuse prepared external repositories across native buildimage commands and
 # disposable builders on this host. Make creates the per-user default. Set an
@@ -198,6 +213,16 @@ SONIC_BAZEL_REMOTE_CACHE ?=
 SONIC_BAZEL_REMOTE_UPLOAD ?= n
 SONIC_BAZEL_KERNEL_REMOTE_CACHE ?= $(SONIC_BAZEL_REMOTE_CACHE)
 SONIC_BAZEL_KERNEL_REMOTE_UPLOAD ?= $(SONIC_BAZEL_REMOTE_UPLOAD)
+
+# Lowest readiness a component must declare for it to be built with Bazel.
+# A component opts in by setting $(DOCKER_FOO)_BAZEL_READINESS in its recipe.
+# This selector applies to readiness declarations, independently of the
+# explicitly configured buildimage profiles above.
+#
+#	bazel_disabled :  never build with Bazel
+#	experimental   :  build dockers declaring `experimental` or `stable`
+#	stable         :  build only dockers declaring `stable`
+BAZEL_MIN_READINESS ?= bazel_disabled
 
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
@@ -216,6 +241,11 @@ INCLUDE_SYSTEM_TELEMETRY = n
 
 # INCLUDE_SYSTEM_OTEL - build docker-sonic-otel for High Frequency Telemetry (HFT) support
 INCLUDE_SYSTEM_OTEL = y
+
+# INCLUDE_HFT - build docker-hft, the container running countersyncd for High
+# Frequency Telemetry (HFT). The hft feature is disabled by default and has to
+# be enabled explicitly, e.g. "config feature state hft enabled".
+INCLUDE_HFT = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD ?= n
@@ -273,6 +303,10 @@ ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
+
+# GNMI_REDIS_POOL_SIZE - Set the Redis connection pool size for gNMI services.
+# Leave unset to use the go-redis default.
+GNMI_REDIS_POOL_SIZE ?=
 
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
@@ -340,12 +374,18 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # SECURE_UPGRADE_MODE - enum value for secure upgrade mode, valid options are "dev", "prod" and "no_sign"
 # SECURE_UPGRADE_PROD_SIGNING_TOOL - path to a vendor signing tool for production flow.
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
+# SECURE_BOOT_DB_CERT - path to the UEFI Secure Boot db certificate file (DB.auth). Only takes
+#                       effect when SECURE_UPGRADE_MODE is "dev" or "prod"; it is ignored in the
+#                       default "no_sign" mode. When set (in dev/prod), this file is embedded into
+#                       the image (under image-<version>/boot/) and enrolled into the DUT's UEFI
+#                       firmware during installation. Leave empty to disable key embedding/enrollment.
 SECURE_UPGRADE_DEV_SIGNING_KEY ?=
 SECURE_UPGRADE_SIGNING_CERT ?=
 SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
+SECURE_BOOT_DB_CERT ?=
 
 # BUILD_SNAPSHOT_URL - Default debian snapshot mirror url
 # Mirror of https://snapshot.debian.org/archive
@@ -436,10 +476,6 @@ DOCKER_LOAD_ON_BOOT ?= n
 # BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
 BUILD_REDUCE_IMAGE_SIZE = n
 
-# SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the
-# image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
-SONIC_PTF_ENV_PY_VER = py3
-
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
 
@@ -494,8 +530,9 @@ SBOM_INCLUDE_LICENSES ?= y
 
 # SBOM_STRICT - when y, the build fails if a critical SBOM input is
 # missing (host rootfs fsroot-<machine>/, any declared installer
-# docker .gz, or the scanner binary). Set n to downgrade to warnings
-# for debugging or one-off partial emits. Soft optional features
+# docker .gz, the scanner binary, or the recipe fragment of any .deb
+# the installer ships). Set n to downgrade to warnings for debugging or
+# one-off partial emits. Soft optional features
 # (SPDX conversion, provenance emit, license resolution) always
 # warn-and-continue regardless.
 SBOM_STRICT ?= y
