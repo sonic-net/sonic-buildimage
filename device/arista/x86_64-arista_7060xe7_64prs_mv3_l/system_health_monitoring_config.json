@@ -1,1 +1,17 @@
-../x86_64-arista_common/system_health_monitoring_config.json
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+        "asic",
+        "fan"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "amber_blink"
+    },
+    "include_devices": [
+        "liquid_cooling"
+    ]
+}
