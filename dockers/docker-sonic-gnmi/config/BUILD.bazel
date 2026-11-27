@@ -33,7 +33,7 @@ _CONFIGS = {
     "//dockers/docker-sonic-gnmi:gnmi-native.sh": "usr/bin/gnmi-native.sh",
     "//dockers/docker-sonic-gnmi:telemetry_vars.j2": "usr/share/sonic/templates/telemetry_vars.j2",
     "//dockers/docker-sonic-gnmi:critical_processes": "etc/supervisor/critical_processes",
-    "//files/image_config:rsyslog/rsyslog-container-gnmi.conf": "etc/rsyslog.conf",
+    "//files/image_config:rsyslog/rsyslog-container-relp-udp.conf": "etc/rsyslog.conf",
     ":supervisor": "etc/supervisor/conf.d/supervisord.conf",
 }
 

@@ -170,7 +170,7 @@ def validate_images(directory):
         configs["dialout.sh"] = "usr/bin/dialout.sh"
     expected_config = {destination: (ROOT / "dockers/docker-sonic-gnmi" / source).read_bytes()
                        for source, destination in configs.items()}
-    expected_config["etc/rsyslog.conf"] = (ROOT / "files/image_config/rsyslog/rsyslog-container-gnmi.conf").read_bytes()
+    expected_config["etc/rsyslog.conf"] = (ROOT / "files/image_config/rsyslog/rsyslog-container-relp-udp.conf").read_bytes()
     if not receipt["dialout_enabled"]:
         spec = importlib.util.spec_from_file_location("gnmi_supervisor", ROOT / "dockers/docker-sonic-gnmi/config/render_supervisor.py")
         render = importlib.util.module_from_spec(spec)

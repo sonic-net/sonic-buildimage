@@ -10,7 +10,7 @@ filegroup(
 )
 
 exports_files([
-    "rsyslog/rsyslog-container-gnmi.conf",
+    "rsyslog/rsyslog-container-relp-udp.conf",
     "sysctl/90-sonic.conf",
 ])
 
