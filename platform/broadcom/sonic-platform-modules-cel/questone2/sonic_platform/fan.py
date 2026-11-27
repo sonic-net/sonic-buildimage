@@ -133,7 +133,8 @@ class Fan(FanBase):
             rpm_speed = int(raw_speed, 16) * multiplier
             speed = int((rpm_speed/self.max_speed) * 100)
 
-        return speed
+        # Measured RPM may exceed the nominal maximum at full fan speed.
+        return min(100, max(0, speed))
 
     def get_target_speed(self):
         """
@@ -288,7 +289,8 @@ class Fan(FanBase):
 
         cmd = IPMI_GET_PRESENCE.format(self._fan_status_offset)
         status, output = self._api_helper.run_command(cmd)
-        if status and output == "00":
+        # ipmitool prefixes each byte with a space; getstatusoutput keeps it.
+        if status and output.strip() == "00":
             presence = True
 
         return presence
