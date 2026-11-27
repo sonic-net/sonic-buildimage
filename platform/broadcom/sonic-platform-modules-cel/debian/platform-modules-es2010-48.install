@@ -1,0 +1,12 @@
+es2010-48/systemd/pddf-platform-init.service etc/systemd/system
+es2010-48/scripts/pre_pddf_init.sh usr/local/bin
+es2010-48/scripts/pddf_pre_driver_install.sh usr/local/bin
+es2010-48/scripts/pddf_post_device_create.sh usr/local/bin
+es2010-48/scripts/sku_setup.sh usr/local/bin
+es2010-48/scripts/es2010_platform_shutdown.sh usr/local/bin
+es2010-48/utils/es2010_mgmt_interface.sh usr/local/bin
+build-es2010-48/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_es2010_48c-r0/pddf
+build-es2010-48/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_es2010_48cp-r0/pddf
+es2010-48/udev/70-persistent-net.rules etc/udev/rules.d
+es2010-48/scripts/sensors usr/bin
+es2010-48/scripts/platform_sensors.py usr/local/bin

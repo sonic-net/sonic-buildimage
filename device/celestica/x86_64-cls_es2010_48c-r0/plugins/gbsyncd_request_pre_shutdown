@@ -1,0 +1,20 @@
+#!/bin/bash
+
+
+REG_ADDR="0xa22e"
+BIT_MASK=0x20
+GET_REG_PATH="/sys/devices/platform/sys_cpld1/getreg"
+SET_REG_PATH="/sys/devices/platform/sys_cpld1/setreg"
+
+
+echo "$REG_ADDR" > "$GET_REG_PATH"
+CURRENT_VALUE=$(cat "$GET_REG_PATH")
+
+RESET_VALUE=$(printf "0x%x" $(( CURRENT_VALUE & (~BIT_MASK) )) )
+WRITE_VALUE_0="$REG_ADDR $RESET_VALUE"
+echo "$WRITE_VALUE_0" > "$SET_REG_PATH"
+
+
+SET_VALUE=$(printf "0x%x" $(( CURRENT_VALUE | BIT_MASK )) )
+WRITE_VALUE_1="$REG_ADDR $SET_VALUE"
+echo "$WRITE_VALUE_1" > "$SET_REG_PATH"
