@@ -1,0 +1,162 @@
+# This workflow queues a full Azure Pipelines build of a pull request, with the
+# selective build turned off, when a maintainer comments
+# "/azp rerun-full <pipeline name>" on it. The comment is ignored unless it is
+# exactly that text, with the pipeline name taken from the repository variable
+# AZURE_DEVOPS_PIPELINE_NAME (for example Azure.sonic-buildimage).
+#
+# The build is queued on refs/pull/<number>/merge with SELECTIVE_MODE=all, so
+# every platform build and the VS tests run. Nothing from the pull request is
+# checked out or executed here; the workflow only calls the Azure DevOps API.
+#
+# Required repository configuration:
+#   variables: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PIPELINE_ID,
+#              AZURE_DEVOPS_PIPELINE_NAME
+#   secret:    AZURE_DEVOPS_PAT, with the Build (Read & execute) scope
+
+name: Queue Azure full PR rerun
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  queue-full-rerun:
+    if: >
+      github.event.issue.pull_request &&
+      github.event.comment.body == format('/azp rerun-full {0}', vars.AZURE_DEVOPS_PIPELINE_NAME)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate configuration
+        shell: bash
+        env:
+          AZURE_DEVOPS_ORG: ${{ vars.AZURE_DEVOPS_ORG }}
+          AZURE_DEVOPS_PROJECT: ${{ vars.AZURE_DEVOPS_PROJECT }}
+          AZURE_DEVOPS_PIPELINE_ID: ${{ vars.AZURE_DEVOPS_PIPELINE_ID }}
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for variable in \
+            AZURE_DEVOPS_ORG \
+            AZURE_DEVOPS_PROJECT \
+            AZURE_DEVOPS_PIPELINE_ID \
+            AZURE_DEVOPS_PAT
+          do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::Missing required configuration: ${variable}"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Verify commenter permission
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // role_name is the exact repository role. The legacy permission
+            // field reports maintain as write and triage as read.
+            const result =
+              await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.payload.comment.user.login
+              });
+
+            const allowed = ["admin", "maintain", "write", "triage"];
+            const role = result.data.role_name || result.data.permission;
+
+            if (!allowed.includes(role)) {
+              core.setFailed(
+                `User ${context.payload.comment.user.login} is not authorized.`
+              );
+              return;
+            }
+
+            core.info(
+              `Authorized commenter: ${context.payload.comment.user.login}`
+            );
+
+      - name: Queue Azure full rerun
+        shell: bash
+        env:
+          AZURE_DEVOPS_ORG: ${{ vars.AZURE_DEVOPS_ORG }}
+          AZURE_DEVOPS_PROJECT: ${{ vars.AZURE_DEVOPS_PROJECT }}
+          AZURE_DEVOPS_PIPELINE_ID: ${{ vars.AZURE_DEVOPS_PIPELINE_ID }}
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          api_url="https://dev.azure.com/${AZURE_DEVOPS_ORG}/${AZURE_DEVOPS_PROJECT}/_apis/build/builds?api-version=7.1"
+
+          # SELECTIVE_MODE=all makes the pipeline build every platform.
+          request_body="$(python3 - <<'PY'
+          import json
+          import os
+
+          print(json.dumps({
+              "definition": {
+                  "id": int(os.environ["AZURE_DEVOPS_PIPELINE_ID"])
+              },
+              "sourceBranch": (
+                  f"refs/pull/{os.environ['PR_NUMBER']}/merge"
+              ),
+              "reason": "manual",
+              "message": (
+                  "Maintainer requested a full rerun without selective builds."
+              ),
+              "templateParameters": {
+                  "SELECTIVE_MODE": "all"
+              }
+          }))
+          PY
+          )"
+
+          response_file="$(mktemp)"
+
+          status_code="$(
+            curl \
+              --silent \
+              --show-error \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              --request POST \
+              --user ":${AZURE_DEVOPS_PAT}" \
+              --header "Content-Type: application/json" \
+              --data "$request_body" \
+              "$api_url"
+          )"
+
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 300 ]; then
+            echo "::error::Azure DevOps returned HTTP ${status_code}"
+            cat "$response_file"
+            exit 1
+          fi
+
+          build_id="$(python3 - "$response_file" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as file:
+              print(json.load(file).get("id", ""))
+          PY
+          )"
+
+          if [ -z "$build_id" ]; then
+            echo "::error::Azure did not return a build ID."
+            cat "$response_file"
+            exit 1
+          fi
+
+          echo "Azure full rerun queued successfully."
+          echo "Azure build ID: ${build_id}"

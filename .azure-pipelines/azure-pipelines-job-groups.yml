@@ -28,6 +28,19 @@ jobs:
 - ${{ each jobGroup in parameters.jobGroups }}:
   - ${{ if or(eq(parameters.jobFilters, ''), containsValue(parameters.jobFilters, jobGroup.name), endswith(variables['Build.DefinitionName'], format('.{0}{1}', jobGroup.name, jobGroup.extName))) }}:
     - job: ${{ replace(format('{0}{1}', jobGroup.name, jobGroup.extName), '-', '_') }}
+      # On pull requests only the job groups selected by the SelectiveDecision
+      # stage run. The job also runs when no selection is available, so that a
+      # pipeline without that stage keeps building every group.
+      condition: |
+        or(
+          ne(variables['Build.Reason'], 'PullRequest'),
+          eq(variables['SELECTIVE_RUN_ALL'], 'true'),
+          eq(variables['SELECTIVE_PLATFORMS'], ''),
+          contains(
+            format(',{0},', variables['SELECTIVE_PLATFORMS']),
+            format(',${{ jobGroup.name }},')
+          )
+        )
       ${{ each pair in jobGroup }}:
         ${{ if not(in(pair.key, 'job', 'name', 'extName', 'variables', 'steps', 'script', 'scriptEnv')) }}:
           ${{ pair.key }}: ${{ pair.value }}
