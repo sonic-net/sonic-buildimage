@@ -138,6 +138,7 @@ yang_files = [
     'sonic-fine-grained-ecmp.yang',
     'sonic-fips.yang',
     'sonic-flex_counter.yang',
+    'sonic-gearbox-sensors.yang',
     'sonic-gnmi.yang',
     'sonic-gnmi-client.yang',
     'sonic-grpcclient.yang',
