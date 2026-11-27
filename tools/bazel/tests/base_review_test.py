@@ -65,6 +65,7 @@ class BaseReviewTest(unittest.TestCase):
             registries = [arg for arg in result.splitlines() if arg.startswith("--registry=")]
             self.assertEqual(registries, [
                 "--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/" + "a" * 40,
+                "--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/54c01a5262ad4910f1fb6683152ea4123596df14",
                 "--registry=https://bcr.bazel.build",
             ])
             self.assertIn("--remote_upload_local_results=false", result.splitlines())

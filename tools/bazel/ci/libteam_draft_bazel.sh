@@ -25,12 +25,15 @@ if [[ $# == 1 && "$1" == --version ]]; then
 fi
 
 registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+upstream_registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
 if "$source_review" || [[ -n "$revision" ]]; then
   if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
     echo 'Expected a full lowercase registry commit for review.' >&2
     exit 2
   fi
   registry="${registry%/main}/$revision"
+  # A review must resolve against two immutable SONiC registry snapshots.
+  upstream_registry="${upstream_registry%/main}/54c01a5262ad4910f1fb6683152ea4123596df14"
 fi
 
 # The image exporter needs local top-level files. Accept its download policy
@@ -85,7 +88,7 @@ fi
 command=("$backend" "${startup_options[@]}" --nosystem_rc --nohome_rc --noworkspace_rc
   --bazelrc="$rc" "$bazel_command")
 if [[ $bazel_command != shutdown ]]; then
-  command+=(--registry="$registry" --registry=https://bcr.bazel.build --lockfile_mode=update)
+  command+=(--registry="$registry" --registry="$upstream_registry" --registry=https://bcr.bazel.build --lockfile_mode=update)
 fi
 command+=("${arguments[@]}")
 if "$source_review"; then

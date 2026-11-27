@@ -103,6 +103,7 @@ jobs:
           printf '%s\n' "$CI_HEAD_SHA" "$CI_BASE_SHA" "$CI_ARCHITECTURE" "$CI_DISTRIBUTION" "$SONIC_BAZEL_REGISTRY" > artifacts/inputs.txt
           options=(
             "--registry=$SONIC_BAZEL_REGISTRY"
+            --registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
             --registry=https://bcr.bazel.build
             "--host_platform=@sonic_build_infra//platforms:${CI_CPU}_trixie"
             "--platforms=@sonic_build_infra//platforms:${CI_CPU}_${CI_DISTRIBUTION}"

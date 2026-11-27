@@ -70,6 +70,7 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
                 self.assertEqual(command_args[-len(arguments):], arguments)
                 self.assertEqual([x for x in actual if x.startswith('--registry=')], [
                     '--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/' + REVISION,
+                    '--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/54c01a5262ad4910f1fb6683152ea4123596df14',
                     '--registry=https://bcr.bazel.build'])
                 self.assertEqual(actual[actual.index(command)-1], '--bazelrc=' + record['rc_path'])
                 self.assertIn('--nohome_rc', actual)
@@ -93,7 +94,10 @@ sys.exit(int(os.environ.get('REVIEW_TEST_EXIT','0')))
                 self.assertIn(EXPORT_POLICY, arguments[:arguments.index('build')])
                 self.assertEqual([arg for arg in arguments if arg.startswith('--registry=')], [
                     '--registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/' +
-                    (base_revision or 'main'), '--registry=https://bcr.bazel.build'])
+                    (base_revision or 'main'),
+                    '--registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/' +
+                    ('54c01a5262ad4910f1fb6683152ea4123596df14' if base_revision else 'main'),
+                    '--registry=https://bcr.bazel.build'])
 
     def test_read_only_flag_precedes_end_of_options(self):
         result = self.invoke(['build', '--remote_upload_local_results=true', '--', '//owner:runtime'])
@@ -174,7 +178,7 @@ try-import /not-imported
                             ['common', local_option + '=/verified mirrors/source.cfg']])
                         self.assertNotIn('example.invalid', record['configuration'])
                         self.assertEqual(len([arg for arg in record['arguments']
-                                              if arg.startswith('--registry=')]), 2)
+                                              if arg.startswith('--registry=')]), 3)
         for option in spellings:
             with self.subTest(missing_value=option):
                 (self.workspace / '.bazelrc.user').write_text('common ' + option + '\n')
