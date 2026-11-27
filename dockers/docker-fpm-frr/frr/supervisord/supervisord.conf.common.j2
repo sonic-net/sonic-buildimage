@@ -124,7 +124,13 @@ stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
+{% endif %}
 
+{# docker-sonic-vs renders this template without DEVICE_METADATA at image build
+   time. Its runtime cSONiC configuration can enable frrcfgd, which requires the
+   isisd socket before it can apply any routing configuration. #}
+{% if DEVICE_METADATA is not defined or
+      (DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true") %}
 [program:isisd]
 command=/usr/lib/frr/isisd -P 0
 priority={{ _pbase + 1 }}
@@ -140,7 +146,9 @@ stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
+{% endif %}
 
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:pimd]
 command=/usr/lib/frr/pimd -P 0
 priority={{ _pbase + 1 }}
