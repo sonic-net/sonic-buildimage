@@ -1,0 +1,866 @@
+module sonic-ospfv2 {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-ospfv2";
+    prefix ospfv2;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
+    import sonic-mgmt_port {
+        prefix mgmt-port;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization "SONiC";
+
+    contact "SONiC";
+
+    description "SONiC OSPF v2 YANG model.";
+
+    revision 2026-04-10 {
+        description "Initial revision.";
+    }
+
+    typedef ospf-area-id-type {
+        type inet:ipv4-address;
+        description
+            "OSPF area identifier in dotted-decimal notation (e.g. 0.0.0.0, 0.0.0.1).
+             Only dotted-decimal form is accepted to prevent duplicate keys, since
+             integer form (e.g. 1) and dotted-decimal (e.g. 0.0.0.1) represent the
+             same 32-bit area ID.";
+    }
+
+    container sonic-ospfv2 {
+
+        container OSPFV2_ROUTER {
+            description "OSPF global router configuration per VRF.";
+
+            list OSPFV2_ROUTER_LIST {
+                key "vrf_name";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name. Use 'default' for the default routing table.";
+                }
+
+                leaf enable {
+                    type stypes:boolean_type;
+                    default "true";
+                    description
+                        "Enable OSPF on this VRF. Defaults to 'true' — the presence of an
+                         OSPFV2_ROUTER row represents an active OSPF instance for the VRF.
+                         The OSPF instance is torn down by removing the row, not by setting
+                         this leaf to 'false'.";
+                }
+
+                leaf router-id {
+                    type inet:ipv4-address;
+                    description "OSPF router-id.";
+                }
+
+                leaf abr-type {
+                    type enumeration {
+                        enum "CISCO"    { description "Cisco ABR implementation."; }
+                        enum "IBM"      { description "IBM ABR implementation."; }
+                        enum "SHORTCUT" { description "Shortcut ABR."; }
+                        enum "STANDARD" { description "Standard ABR (RFC 2328)."; }
+                    }
+                    description "OSPF ABR type.";
+                }
+
+                leaf auto-cost-reference-bandwidth {
+                    type uint32 {
+                        range "1..4294967";
+                    }
+                    description "Reference bandwidth in Mbits/sec for OSPF cost calculation.";
+                }
+
+                leaf ospf-rfc1583-compatible {
+                    type stypes:boolean_type;
+                    description "Enable RFC 1583 compatibility mode.";
+                }
+
+                leaf passive-interface-default {
+                    type stypes:boolean_type;
+                    description "Set all interfaces as passive by default.";
+                }
+
+                leaf default-metric {
+                    type uint32 {
+                        range "0..16777214";
+                    }
+                    description "Default metric for redistributed routes.";
+                }
+
+                leaf write-multiplier {
+                    type uint8 {
+                        range "1..100";
+                    }
+                    description "Maximum number of interfaces serviced per write.";
+                }
+
+                leaf log-adjacency-changes {
+                    type enumeration {
+                        enum "BRIEF"  { description "Log only neighbor up/down events."; }
+                        enum "DETAIL" { description "Log all state changes."; }
+                    }
+                    description "Log OSPF adjacency state changes.";
+                }
+
+                leaf distance-all {
+                    type uint8 {
+                        range "1..255";
+                    }
+                    description "OSPF administrative distance for all route types.";
+                }
+
+                leaf distance-intra-area {
+                    type uint8 {
+                        range "1..255";
+                    }
+                    description "OSPF administrative distance for intra-area routes.";
+                }
+
+                leaf distance-inter-area {
+                    type uint8 {
+                        range "1..255";
+                    }
+                    description "OSPF administrative distance for inter-area routes.";
+                }
+
+                leaf distance-external {
+                    type uint8 {
+                        range "1..255";
+                    }
+                    description "OSPF administrative distance for external routes.";
+                }
+
+                leaf spf-initial-delay {
+                    type uint32 {
+                        range "0..600000";
+                    }
+                    must "../spf-maximum-delay and ../spf-throttle-delay" {
+                        error-message "spf-initial-delay, spf-maximum-delay and spf-throttle-delay must all be set together or not at all.";
+                    }
+                    description "Initial SPF delay in milliseconds.";
+                }
+
+                leaf spf-maximum-delay {
+                    type uint32 {
+                        range "0..600000";
+                    }
+                    must "../spf-initial-delay and ../spf-throttle-delay" {
+                        error-message "spf-initial-delay, spf-maximum-delay and spf-throttle-delay must all be set together or not at all.";
+                    }
+                    description "Maximum SPF delay in milliseconds.";
+                }
+
+                leaf spf-throttle-delay {
+                    type uint32 {
+                        range "0..600000";
+                    }
+                    must "../spf-initial-delay and ../spf-maximum-delay" {
+                        error-message "spf-initial-delay, spf-maximum-delay and spf-throttle-delay must all be set together or not at all.";
+                    }
+                    description "SPF throttle delay in milliseconds.";
+                }
+
+                leaf lsa-min-interval-timer {
+                    type uint32 {
+                        range "0..5000";
+                    }
+                    description "Minimum interval between same LSA transmissions in milliseconds.";
+                }
+
+                leaf lsa-min-arrival-timer {
+                    type uint32 {
+                        range "0..600000";
+                    }
+                    description "Minimum delay in receiving new version of LSA in milliseconds.";
+                }
+
+                leaf lsa-refresh-timer {
+                    type uint16 {
+                        range "10..1800";
+                    }
+                    description "LSA refresh interval in seconds.";
+                }
+
+                leaf max-metric-administrative {
+                    type stypes:boolean_type;
+                    description "Advertise maximum metric (stub router) administratively.";
+                }
+
+                leaf max-metric-on-startup {
+                    type uint32 {
+                        range "5..86400";
+                    }
+                    description "Advertise maximum metric on startup for given number of seconds.";
+                }
+
+                leaf max-metric-on-shutdown {
+                    type uint8 {
+                        range "5..100";
+                    }
+                    description "Advertise maximum metric prior to shutdown for given number of seconds.";
+                }
+
+                leaf graceful-restart-enable {
+                    type stypes:boolean_type;
+                    description "Enable OSPF graceful restart.";
+                }
+
+                leaf graceful-restart-grace-period {
+                    type uint16 {
+                        range "1..1800";
+                    }
+                    description "Graceful restart grace period in seconds.";
+                }
+
+                leaf graceful-restart-helper-enable {
+                    type stypes:boolean_type;
+                    description "Enable OSPF graceful restart helper mode.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_AREA {
+            description "OSPF area configuration table.";
+
+            list OSPFV2_ROUTER_AREA_LIST {
+                key "vrf_name area_id";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name. Use 'default' for the default routing table.";
+                }
+
+                leaf area_id {
+                    type ospf-area-id-type;
+                    description "OSPF area identifier.";
+                }
+
+                leaf stub {
+                    type stypes:boolean_type;
+                    description "Configure this area as a stub area.";
+                }
+
+                leaf stub-no-summary {
+                    type stypes:boolean_type;
+                    description "Do not send summary LSAs into this stub area (totally stubby).";
+                }
+
+                leaf stub-default-cost {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    description "Default cost advertised into stub area.";
+                }
+
+                leaf authentication {
+                    type enumeration {
+                        enum "TEXT"    { description "Simple password authentication."; }
+                        enum "MD5HMAC" { description "MD5 message-digest authentication."; }
+                        enum "NONE"    { description "Disable authentication."; }
+                    }
+                    description "Area-level authentication type.";
+                }
+
+                leaf import-list {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Access-list to filter networks from other areas into this area.";
+                }
+
+                leaf export-list {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Access-list to filter networks from this area to other areas.";
+                }
+
+                leaf filter-list-in {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Prefix-list to filter networks entering this area.";
+                }
+
+                leaf filter-list-out {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Prefix-list to filter networks leaving this area.";
+                }
+
+                leaf shortcut {
+                    type enumeration {
+                        enum "ENABLE"  { description "Enable shortcutting through this area."; }
+                        enum "DISABLE" { description "Disable shortcutting through this area."; }
+                        enum "DEFAULT" { description "Default shortcutting behavior."; }
+                    }
+                    description "OSPF area shortcut mode.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_AREA_NETWORK {
+            description
+                "OSPF network-to-area assignment table ('network A.B.C.D/M area
+                 <area-id>'). Key-only table: the assignment is fully described by the
+                 key (vrf_name, area_id, network), so the value object is empty '{}'.
+                 No data leaf is modeled. In CONFIG_DB such key-only rows are stored
+                 with an internal Redis placeholder 'NULL':'NULL' (a hash must have at
+                 least one field); this is not a real OSPF attribute and is stripped by
+                 ConfigDBConnector on read, so it is intentionally not a YANG leaf.";
+
+            list OSPFV2_ROUTER_AREA_NETWORK_LIST {
+                key "vrf_name area_id network";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name.";
+                }
+
+                leaf area_id {
+                    type ospf-area-id-type;
+                    description "OSPF area ID.";
+                }
+
+                leaf network {
+                    type inet:ipv4-prefix;
+                    must "count(/ospfv2:sonic-ospfv2/ospfv2:OSPFV2_INTERFACE/ospfv2:OSPFV2_INTERFACE_LIST[ospfv2:area-id][(ospfv2:vrf_name = current()/../ospfv2:vrf_name) or (not(ospfv2:vrf_name) and current()/../ospfv2:vrf_name = 'default')]) = 0" {
+                        error-message "Network-to-area assignment (OSPFV2_ROUTER_AREA_NETWORK) and interface area-id (OSPFV2_INTERFACE) are mutually exclusive within the same VRF; OSPF does not allow mixing them. Use one method only.";
+                    }
+                    description "IPv4 network prefix to assign to the area. Mutually exclusive with OSPFV2_INTERFACE area-id in the same VRF.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_AREA_VIRTUAL_LINK {
+            description "OSPF virtual link configuration table.";
+
+            list OSPFV2_ROUTER_AREA_VIRTUAL_LINK_LIST {
+                key "vrf_name area_id nbr_router_id";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name.";
+                }
+
+                leaf area_id {
+                    type ospf-area-id-type;
+                    description "Transit area ID for the virtual link.";
+                }
+
+                leaf nbr_router_id {
+                    type inet:ipv4-address;
+                    description "Router-ID of the remote ABR endpoint of the virtual link.";
+                }
+
+                leaf enable {
+                    type stypes:boolean_type;
+                    description "Enable this virtual link.";
+                }
+
+                leaf dead-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "Dead interval in seconds.";
+                }
+
+                leaf hello-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "Hello interval in seconds.";
+                }
+
+                leaf retransmission-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "LSA retransmit interval in seconds.";
+                }
+
+                leaf transmit-delay {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "LSA transmit delay in seconds.";
+                }
+
+                leaf authentication-type {
+                    type enumeration {
+                        enum "TEXT"    { description "Simple password authentication."; }
+                        enum "MD5HMAC" { description "MD5 message-digest authentication."; }
+                        enum "NONE"    { description "Disable authentication (null)."; }
+                    }
+                    description "Virtual link authentication type.";
+                }
+
+                leaf authentication-key {
+                    when "../authentication-type = 'TEXT'";
+                    type string {
+                        length "1..8";
+                    }
+                    description "Simple text authentication password (max 8 chars). Valid only when authentication-type is TEXT.";
+                }
+
+                leaf authentication-key-id {
+                    when "../authentication-type = 'MD5HMAC'";
+                    type uint8 {
+                        range "1..255";
+                    }
+                    must "../authentication-md5-key" {
+                        error-message "authentication-key-id and authentication-md5-key must be set together.";
+                    }
+                    description "MD5 key ID for message-digest authentication. Valid only when authentication-type is MD5HMAC.";
+                }
+
+                leaf authentication-md5-key {
+                    when "../authentication-type = 'MD5HMAC'";
+                    type string {
+                        length "1..16";
+                    }
+                    must "../authentication-key-id" {
+                        error-message "authentication-key-id and authentication-md5-key must be set together.";
+                    }
+                    description "MD5 key string for message-digest authentication (max 16 chars). Valid only when authentication-type is MD5HMAC.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE {
+            description "OSPF area range (summarization) configuration table.";
+
+            list OSPFV2_ROUTER_AREA_POLICY_ADDRESS_RANGE_LIST {
+                key "vrf_name area_id prefix";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name.";
+                }
+
+                leaf area_id {
+                    type ospf-area-id-type;
+                    description "OSPF area ID.";
+                }
+
+                leaf prefix {
+                    type inet:ipv4-prefix;
+                    description "Summary address range prefix.";
+                }
+
+                leaf advertise {
+                    type stypes:boolean_type;
+                    description "Advertise this range (true) or suppress it (false).";
+                }
+
+                leaf metric {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    description "Metric (cost) for the summary range.";
+                }
+
+                leaf substitue-prefix {
+                    type inet:ipv4-prefix;
+                    description "Network prefix to announce instead of the range.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_DISTRIBUTE_ROUTE {
+            description "OSPF redistribute and distribute-list configuration table.";
+
+            list OSPFV2_ROUTER_DISTRIBUTE_ROUTE_LIST {
+                key "vrf_name protocol direction";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name.";
+                }
+
+                leaf protocol {
+                    type enumeration {
+                        enum "BGP"           { description "BGP routes."; }
+                        enum "STATIC"        { description "Static routes."; }
+                        enum "KERNEL"        { description "Kernel routes."; }
+                        enum "CONNECTED"     { description "Connected routes."; }
+                        enum "DEFAULT_ROUTE" { description "Default route (default-information originate)."; }
+                    }
+                    description "Source protocol to redistribute into OSPF or to filter on export.";
+                }
+
+                leaf direction {
+                    type enumeration {
+                        enum "IMPORT" { description "Redistribute into OSPF (or default-information originate)."; }
+                        enum "EXPORT" { description "Apply distribute-list out of OSPF."; }
+                    }
+                    description "Traffic direction for this distribute/redistribute entry.";
+                }
+
+                leaf route-map {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Route-map name. Used with IMPORT direction only.";
+                }
+
+                leaf metric {
+                    type uint32 {
+                        range "0..16777214";
+                    }
+                    description "Metric for redistributed routes. Used with IMPORT direction only.";
+                }
+
+                leaf metric-type {
+                    type enumeration {
+                        enum "TYPE_1" { description "OSPF external metric type 1."; }
+                        enum "TYPE_2" { description "OSPF external metric type 2."; }
+                    }
+                    description "OSPF metric type for redistributed routes. Used with IMPORT direction only.";
+                }
+
+                leaf always {
+                    type stypes:boolean_type;
+                    description
+                        "Always advertise default route even when not in routing table.
+                         Applies only when protocol=DEFAULT_ROUTE and direction=IMPORT.";
+                }
+
+                leaf access-list {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Access-list name. Used with EXPORT direction only.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_INTERFACE {
+            description "OSPF per-interface configuration table.";
+
+            list OSPFV2_INTERFACE_LIST {
+                key "if_name if_addr";
+
+                leaf if_name {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type string {
+                            pattern 'Vlan(409[0-5]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[2-9])';
+                        }
+                        type leafref {
+                            path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+                        }
+                        type leafref {
+                            path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                    }
+                    description "Interface name (e.g. Ethernet0, PortChannel1, Vlan10). Validated against configured ports, port-channels, loopback and management interfaces.";
+                }
+
+                leaf if_addr {
+                    type union {
+                        type inet:ipv4-address;
+                        type string {
+                            pattern "0\\.0\\.0\\.0";
+                        }
+                    }
+                    description
+                        "Interface IP address.
+                         Use 0.0.0.0 to apply OSPF config to all IP addresses on the interface.";
+                }
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name for this interface.";
+                }
+
+                leaf area-id {
+                    type ospf-area-id-type;
+                    must "count(/ospfv2:sonic-ospfv2/ospfv2:OSPFV2_ROUTER_AREA_NETWORK/ospfv2:OSPFV2_ROUTER_AREA_NETWORK_LIST[(ospfv2:vrf_name = current()/../ospfv2:vrf_name) or (ospfv2:vrf_name = 'default' and not(current()/../ospfv2:vrf_name))]) = 0" {
+                        error-message "Interface area-id (OSPFV2_INTERFACE) and network-to-area assignment (OSPFV2_ROUTER_AREA_NETWORK) are mutually exclusive within the same VRF; OSPF does not allow mixing them. Use one method only.";
+                    }
+                    description "OSPF area to assign this interface to. Mutually exclusive with OSPFV2_ROUTER_AREA_NETWORK in the same VRF.";
+                }
+
+                leaf network-type {
+                    type enumeration {
+                        enum "BROADCAST_NETWORK"      { description "Broadcast network type."; }
+                        enum "POINT_TO_POINT_NETWORK" { description "Point-to-point network type."; }
+                    }
+                    must "../if_addr = '0.0.0.0'" {
+                        error-message "network-type is an interface-wide setting; it must only be set on the entry with if_addr = '0.0.0.0'.";
+                    }
+                    description "OSPF network type for this interface. Must be configured on the if_addr = '0.0.0.0' entry only.";
+                }
+
+                leaf metric {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "OSPF interface cost (metric).";
+                }
+
+                leaf priority {
+                    type uint8;
+                    description "Router priority for OSPF DR/BDR election (0=never DR/BDR).";
+                }
+
+                leaf mtu-ignore {
+                    type stypes:boolean_type;
+                    description "Disable MTU mismatch detection on this interface.";
+                }
+
+                leaf bfd-enable {
+                    type stypes:boolean_type;
+                    must "../if_addr = '0.0.0.0'" {
+                        error-message "bfd-enable is an interface-wide setting; it must only be set on the entry with if_addr = '0.0.0.0'.";
+                    }
+                    description "Enable BFD for this OSPF interface. Must be configured on the if_addr = '0.0.0.0' entry only.";
+                }
+
+                leaf hello-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "OSPF hello interval in seconds.";
+                }
+
+                leaf dead-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    must "not(../hello-multiplier)" {
+                        error-message "dead-interval and hello-multiplier are mutually exclusive; use one or the other.";
+                    }
+                    description "OSPF dead interval in seconds.";
+                }
+
+                leaf hello-multiplier {
+                    type uint8 {
+                        range "1..10";
+                    }
+                    must "not(../dead-interval)" {
+                        error-message "hello-multiplier and dead-interval are mutually exclusive; use one or the other.";
+                    }
+                    description
+                        "Multiplier for fast hello packets (dead-interval minimal mode).
+                         Mutually exclusive with dead-interval.";
+                }
+
+                leaf retransmission-interval {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "OSPF LSA retransmit interval in seconds.";
+                }
+
+                leaf transmit-delay {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "OSPF LSA transmit delay in seconds.";
+                }
+
+                leaf authentication-type {
+                    type enumeration {
+                        enum "TEXT"    { description "Simple password authentication."; }
+                        enum "MD5HMAC" { description "MD5 message-digest authentication."; }
+                        enum "NONE"    { description "Disable authentication (null)."; }
+                    }
+                    description "OSPF authentication type for this interface.";
+                }
+
+                leaf authentication-key {
+                    when "../authentication-type = 'TEXT'";
+                    type string {
+                        length "1..8";
+                    }
+                    description "Simple text authentication password (max 8 chars). Valid only when authentication-type is TEXT.";
+                }
+
+                leaf authentication-key-id {
+                    when "../authentication-type = 'MD5HMAC'";
+                    type uint8 {
+                        range "1..255";
+                    }
+                    must "../authentication-md5-key" {
+                        error-message "authentication-key-id and authentication-md5-key must be set together.";
+                    }
+                    description "MD5 key ID for message-digest authentication. Valid only when authentication-type is MD5HMAC.";
+                }
+
+                leaf authentication-md5-key {
+                    when "../authentication-type = 'MD5HMAC'";
+                    type string {
+                        length "1..16";
+                    }
+                    must "../authentication-key-id" {
+                        error-message "authentication-key-id and authentication-md5-key must be set together.";
+                    }
+                    description "MD5 key string for message-digest authentication (max 16 chars). Valid only when authentication-type is MD5HMAC.";
+                }
+
+            }
+
+        }
+
+        container OSPFV2_ROUTER_PASSIVE_INTERFACE {
+            description
+                "OSPF passive interface table ('passive-interface <ifname>').
+                 Interfaces listed here will not send/receive OSPF hello packets.
+                 Key-only table: the configuration is fully described by the key
+                 (vrf_name, if_name, if_addr), so the value object is empty '{}'.
+                 No data leaf is modeled. In CONFIG_DB such key-only rows are stored
+                 with an internal Redis placeholder 'NULL':'NULL' (a hash must have at
+                 least one field); this is not a real OSPF attribute and is stripped by
+                 ConfigDBConnector on read, so it is intentionally not a YANG leaf.";
+
+            list OSPFV2_ROUTER_PASSIVE_INTERFACE_LIST {
+                key "vrf_name if_name if_addr";
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description "VRF name.";
+                }
+
+                leaf if_name {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type string {
+                            pattern 'Vlan(409[0-5]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[2-9])';
+                        }
+                        type leafref {
+                            path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+                        }
+                        type leafref {
+                            path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                    }
+                    description "Interface name to configure as passive. Validated against configured ports, port-channels, loopback and management interfaces.";
+                }
+
+                leaf if_addr {
+                    type union {
+                        type inet:ipv4-address;
+                        type string {
+                            pattern "0\\.0\\.0\\.0";
+                        }
+                    }
+                    description
+                        "Interface IP address.
+                         Use 0.0.0.0 to make all addresses on the interface passive.";
+                }
+
+            }
+
+        }
+
+    }
+
+}
