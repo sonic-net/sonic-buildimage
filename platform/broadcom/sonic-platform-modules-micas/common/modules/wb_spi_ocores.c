@@ -47,6 +47,14 @@
 #define SPIOC_MAX_DIV         (0x0E)
 #define SPIOC_DIV(div)        (((div) & 0x0f) << 4)
 
+/* spioc_mode = 1: divider occupies bit3~bit7 (5 bits), valid range 0~0x1E */
+#define SPIOC_DIV_5BIT_MASK  (0xf8)
+#define SPIOC_DIV_5BIT_MAX   (0x1E)
+#define SPIOC_DIV_5BIT(div)  (((div) & 0x1f) << 3)
+
+#define SPIOC_MODE_DEFAULT    (0)
+#define SPIOC_MODE_DIV_5BIT   (1)
+
 #define SPIOC_STS             (0x01)
 #define SPIOC_INTR_STS        BIT(0)
 #define SPIOC_BUSY_STS        BIT(1)
@@ -126,6 +134,7 @@ struct spioc {
     uint32_t freq;
     uint32_t big_endian;
     uint32_t irq_flag;
+    uint32_t spioc_mode;
     struct device *dev;
     int transfer_busy_flag;
 };
@@ -455,10 +464,10 @@ static inline u32 oc_spi_getreg(struct spioc *spioc, int reg)
 
 static int spioc_get_clkdiv(struct spioc *spioc, u32 speed)
 {
-    u32 rate, div;
+    u32 rate, div, max_div;
 
     rate = spioc->freq;
-    SPI_OC_VERBOSE("clk get rate:%u, speed:%u\n", rate, speed);
+    SPI_OC_VERBOSE("clk get rate:%u, speed:%u, spioc_mode:%u\n", rate, speed, spioc->spioc_mode);
     /* fs = fw/((DIV+2)*2) */
 
     if (speed > (rate / 4)) {
@@ -468,8 +477,9 @@ static int spioc_get_clkdiv(struct spioc *spioc, u32 speed)
         return div;
     }
     div = (rate/(2 * speed)) - 2;
-    if (div > SPIOC_MAX_DIV) {
-        SPI_OC_ERROR("Unsupport spi device speed, div:%u.\n", div);
+    max_div = (spioc->spioc_mode == SPIOC_MODE_DIV_5BIT) ? SPIOC_DIV_5BIT_MAX : SPIOC_MAX_DIV;
+    if (div > max_div) {
+        SPI_OC_ERROR("Unsupport spi device speed, div:%u, max_div:%u.\n", div, max_div);
         return -1;
     }
     SPI_OC_VERBOSE("DIV is:0x%x\n", div);
@@ -609,7 +619,11 @@ static int spioc_setup_transfer(struct spi_device *spi, struct spi_transfer *tra
         SPI_OC_ERROR("get div error, div:%d.\n", div);
         return -EINVAL;
     }
-    ctrl |= SPIOC_DIV(div);
+    if (spioc->spioc_mode == SPIOC_MODE_DIV_5BIT) {
+        ctrl |= SPIOC_DIV_5BIT(div);
+    } else {
+        ctrl |= SPIOC_DIV(div);
+    }
 
     SPI_OC_VERBOSE("ctrl:[0x%x].\n", ctrl);
 
@@ -892,6 +906,10 @@ static int ocores_spi_config_init(struct spioc *spioc)
             spioc->irq_flag = 0;
             ret = 0;
         }
+        ret = of_property_read_u32(dev->of_node, "spioc_mode", &spioc->spioc_mode);
+        if (ret != 0) {
+            spioc->spioc_mode = SPIOC_MODE_DEFAULT;
+        }
     } else {
         if (spioc->dev->platform_data == NULL) {
             SPI_OC_ERROR("platform data config error.\n");
@@ -909,12 +927,13 @@ static int ocores_spi_config_init(struct spioc *spioc)
         spioc->reg_access_mode = spi_ocores_device->reg_access_mode;
         spioc->num_chipselect = spi_ocores_device->num_chipselect;
         spioc->irq_flag = spi_ocores_device->irq_flag;
+        spioc->spioc_mode = spi_ocores_device->spioc_mode;
     }
 
     SPI_OC_VERBOSE("name:%s, base:0x%x, reg_shift:0x%x, io_width:0x%x, clock-frequency:0x%x.\n",
         spioc->dev_name, spioc->base_addr, spioc->reg_shift, spioc->reg_io_width, spioc->freq);
-    SPI_OC_VERBOSE("reg access mode:%u, num_chipselect:%u, irq_flag: %u\n",
-        spioc->reg_access_mode, spioc->num_chipselect, spioc->irq_flag);
+    SPI_OC_VERBOSE("reg access mode:%u, num_chipselect:%u, irq_flag: %u, spioc_mode: %u\n",
+        spioc->reg_access_mode, spioc->num_chipselect, spioc->irq_flag, spioc->spioc_mode);
     return ret;
 }
 
