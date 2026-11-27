@@ -1,0 +1,5 @@
+# How this pull request gets its SONiC VS disk image.
+# One word: s3 or build.
+#   s3    — pull the objects in images.txt from the MinIO bucket on the KNE host
+#   build — placeholder; the step skips until a local sonic-vs build is added
+s3
