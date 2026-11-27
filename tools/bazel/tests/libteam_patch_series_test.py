@@ -16,7 +16,7 @@ def make_series():
     return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
 
 
-# Exact recipe from securely1g/sonic-bazel-registry#236 (libteam 1.31.0.sonic.1).
+# The fixture records the selected registry version and its ordered patch series.
 # Update only together with the declared owner version and parity review.
 RECIPE = ROOT / "tools/bazel/tests/fixtures/libteam-owner-source.json"
 

@@ -6,6 +6,12 @@ inputs. SWSS is owned by `dockers/docker-orchagent/`; Syncd VS is owned by
 `platform/vs/docker-syncd-vs/`, including its `BUILD.bazel`, `bazel/` and
 `config/` declarations. Syncd does not need a second directory under `dockers/`.
 
+Buildimage selects several SONiC components with `local_path_override`.
+A full recursive submodule checkout supplies their sources. For a partial
+checkout, run `bash tools/bazel/ci/prepare_image_submodules.sh --bazel-only`
+from the buildimage root before calling Bazel. The paths are listed in
+`tools/bazel/submodule_paths`. OCI source records use the exact gitlinks.
+
 Tracked scripts, templates and Make metadata are exported by `BUILD.bazel` files
 in `files/scripts`, `files/build_templates` and `rules`. The root `BUILD.bazel`
 declares the Make-generated manifests. SWSS builds Scapy through `@scapy//:wheel`

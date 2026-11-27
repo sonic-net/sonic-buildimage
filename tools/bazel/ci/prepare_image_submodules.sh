@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-workspace=${GITHUB_WORKSPACE:-$PWD}
+workspace=$PWD
 kernel=src/sonic-linux-kernel
 case "${1:-}" in
-    ''|--kernel-only|--populated-only) ;;
-    *) echo "Usage: $0 [--kernel-only|--populated-only]" >&2; exit 2 ;;
+    ''|--bazel-only|--kernel-only|--populated-only) ;;
+    *) echo "Usage: $0 [--bazel-only|--kernel-only|--populated-only]" >&2; exit 2 ;;
 esac
+
+# Root Bazel module resolution reads each local_path_override, even when a job
+# builds just one package. Artifact validators only need their own sources.
+if [[ -z ${1:-} || ${1:-} == --bazel-only ]]; then
+    mapfile -t paths < "$workspace/tools/bazel/submodule_paths"
+    if ((${#paths[@]})); then
+        git -c safe.directory="$workspace" -C "$workspace" submodule sync -- "${paths[@]}"
+        git -c safe.directory="$workspace" -C "$workspace" submodule update --init --checkout --depth 1 -- "${paths[@]}"
+    fi
+    if [[ ${1:-} == --bazel-only ]]; then
+        exit 0
+    fi
+fi
 
 # A nonrecursive checkout can leave a previous job's kernel at its old commit.
 # Jobs that only check source cleanliness do not need to clone the kernel.

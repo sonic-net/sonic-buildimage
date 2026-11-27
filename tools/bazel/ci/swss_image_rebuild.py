@@ -15,6 +15,7 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tools.bazel.ci.artifact_validation import require, sha
+from tools.bazel.submodule_provenance import git, gitlinks, verify
 
 SOURCE_LABEL = "@sonic_swss//fpmsyncd:bgp_eoiu_marker.py"
 SOURCE_PATH = Path("fpmsyncd/bgp_eoiu_marker.py")
@@ -39,28 +40,67 @@ def main():
     if job_temp:
         scratch = Path(job_temp) / "archive-bazel"
         scratch.mkdir(exist_ok=True)
-    output_base = Path(tempfile.mkdtemp(prefix="swss-source-probe.", dir=scratch)).resolve()
+    scratch = Path(tempfile.mkdtemp(prefix="swss-source-probe.", dir=scratch)).resolve()
+    workspace = scratch / "workspace"
+    output_base = scratch / "bazel"
     bazel = [args.bazel, "--output_base=" + str(output_base)]
     try:
-        probe_image(args, bazel, output_base)
+        private_owner, revision = checkout_probe_workspace(ROOT, workspace)
+    except BaseException:
+        shutil.rmtree(scratch)
+        raise
+    try:
+        probe_image(args, bazel, output_base, workspace, private_owner, revision)
     finally:
         # Preserve the base for post-job cleanup if Bazel cannot confirm shutdown.
-        subprocess.run([*bazel, "shutdown"], check=True)
-        shutil.rmtree(output_base)
+        subprocess.run([*bazel, "shutdown"], cwd=workspace, check=True)
+        shutil.rmtree(scratch)
 
 
-def probe_image(args, bazel, output_base):
+def clone_revision(source, destination, revision):
+    git(source, "clone", "--quiet", "--shared", "--no-checkout", str(source), str(destination))
+    git(destination, "checkout", "--quiet", "--detach", revision)
+
+
+def checkout_probe_workspace(source, workspace):
+    """Keep image provenance tied to its gitlink while editing a disposable SWSS checkout."""
+    records = gitlinks(source)
+    require("sonic-swss" in records, "buildimage must pin SWSS with a gitlink")
+    clone_revision(source, workspace, git(source, "rev-parse", "HEAD"))
+    swss_path, _, swss_revision = records["sonic-swss"]
+    for path, _, revision in records.values():
+        verify(source, path, revision)
+    declarations = git(source, "config", "--file", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$")
+    for entry in declarations.splitlines():
+        path = entry.split(maxsplit=1)[1]
+        owner, destination = source / path, workspace / path
+        if path == swss_path:
+            clone_revision(owner, destination, swss_revision)
+        elif (owner / ".git").exists():
+            # Also preserve initialized nested inputs of in-tree owners, such as sysmgr/gnoi.
+            destination.rmdir()
+            destination.symlink_to(owner, target_is_directory=True)
+    if (source / ".bazelrc.user").is_file():
+        (workspace / ".bazelrc.user").symlink_to(source / ".bazelrc.user")
+    # The preceding image build generated its Make labels outside Git.
+    manifests = Path("target/bazel-manifests")
+    if (source / manifests).is_dir():
+        shutil.copytree(source / manifests, workspace / manifests)
+    return workspace / swss_path, swss_revision
+
+
+def probe_image(args, bazel, output_base, workspace, private_owner, revision):
     options = [*args.bazel_arg, "--repo_contents_cache=", "--symlink_prefix=/"]
     result = subprocess.run([*bazel, "info", *options, "output_base"],
-                            capture_output=True, text=True, check=True)
+                            capture_output=True, text=True, cwd=workspace, check=True)
     require(result.stdout.splitlines() == [str(output_base)], "Bazel did not select the private output base")
-    # Materialize the registry-pinned source in this invocation's execroot.
-    subprocess.run([*bazel, "build", *options, SOURCE_LABEL], check=True)
+    # Resolve the disposable checkout through the same source label as the image.
+    subprocess.run([*bazel, "build", *options, SOURCE_LABEL], cwd=workspace, check=True)
     execution_root = output_base / "execroot" / "_main"
 
     def query(target):
         result = subprocess.run([*bazel, "cquery", *options, target, "--output=files"],
-                                capture_output=True, text=True, check=True)
+                                capture_output=True, text=True, cwd=workspace, check=True)
         paths = [execution_root / line for line in result.stdout.splitlines() if line.strip()]
         require(len(paths) == 1 and paths[0].is_file(), "missing SWSS source or archive: " + target)
         return paths[0]
@@ -72,7 +112,7 @@ def probe_image(args, bazel, output_base):
             relative.parts[1] not in (".", "..") and Path(*relative.parts[2:]) == SOURCE_PATH,
             "SWSS source is not the selected external owner file")
     owner = (execution_root / "external" / relative.parts[1]).resolve(strict=True)
-    require(owner == output_base / "external" / relative.parts[1] and not source.is_symlink() and
+    require(owner == private_owner and not source.is_symlink() and
             source.parent.resolve(strict=True) == owner / SOURCE_PATH.parent and source.stat().st_nlink == 1,
             "SWSS source escapes its selected owner")
     original = source.read_bytes()
@@ -86,7 +126,7 @@ def probe_image(args, bazel, output_base):
 
     def build(phase):
         start = time.monotonic()
-        subprocess.run([*bazel, "build", *options, "--build_event_json_file=" + str(args.output / (phase + "-events.json")), *targets], check=True)
+        subprocess.run([*bazel, "build", *options, "--build_event_json_file=" + str(args.output / (phase + "-events.json")), *targets], cwd=workspace, check=True)
         digests = {}
         for target in targets:
             digests[target] = sha(query(target))
@@ -112,6 +152,7 @@ def probe_image(args, bazel, output_base):
         source.chmod(original_mode)
         (args.output / "rebuild.json").write_text(json.dumps({
             "status": status, "source_label": SOURCE_LABEL, "source_path": str(SOURCE_PATH),
+            "source_revision": revision,
             "scope": "Same-output-base no-op and installed-source invalidation, not a cold-cache or C++ recompilation claim",
             "source_restored": source.read_bytes() == original and stat.S_IMODE(source.stat().st_mode) == original_mode,
             "builds": records,

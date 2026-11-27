@@ -316,7 +316,7 @@ class SourceWorkflowTest(unittest.TestCase):
         (self.directory / "artifacts/vs").mkdir(parents=True)
         for name in (".bazelversion", "tools/bazel/build_helpers.py",
                      "tools/bazel/image/file_copy.py",
-                     "tools/bazel/ci/prepare_image_submodules.sh",
+                     "tools/bazel/ci/prepare_image_submodules.sh", "tools/bazel/submodule_paths",
                      "tools/bazel/cache/credentials.py",
                      "platform/vs/docker-syncd-vs/BUILD.bazel"):
             fixture = self.directory / name

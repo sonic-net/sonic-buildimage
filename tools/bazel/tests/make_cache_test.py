@@ -2,9 +2,11 @@
 
 import copy
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci import make_cache
@@ -17,6 +19,37 @@ def action(name="common", *, hit=True):
 
 
 class MakeCacheTest(unittest.TestCase):
+    def test_seed_must_match_the_production_common_gitlink(self):
+        revision = "a" * 40
+        with patch.object(make_cache.submodule_provenance, "gitlinks",
+                          return_value={"sonic-swss-common": ("src/sonic-swss-common", "src/sonic-swss-common", revision)}):
+            with self.assertRaisesRegex(ValueError, revision):
+                make_cache.verify_common_source(Path("."), "b" * 40)
+        self.assertFalse(any(flag.startswith("--override_module=sonic-swss-common=")
+                             for flag in make_cache.container_options()))
+
+    def test_readback_only_imports_helpers_from_the_verified_seed_commit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "seed-workflow"
+            subprocess.run(["git", "init", "-q", checkout], check=True)
+            source = checkout / "tools/bazel/cache/cross_repo.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("# verified helper\n")
+            (checkout / "application.cc").touch()
+            subprocess.run(["git", "-C", checkout, "add", "."], check=True)
+            subprocess.run(["git", "-C", checkout, "-c", "user.name=CI", "-c", "user.email=ci@example.com",
+                            "commit", "-qm", "seed helpers"], check=True)
+            revision = make_cache.submodule_provenance.git(checkout, "rev-parse", "HEAD")
+            source.write_text("# uncommitted helper\n")
+            with patch.object(make_cache, "ROOT", root), patch.object(make_cache, "common_helpers") as load:
+                with self.assertRaisesRegex(ValueError, "verified seed workflow"):
+                    make_cache.seed_helpers(checkout, "0" * 40)
+                make_cache.seed_helpers(checkout, revision)
+                prepared = load.call_args.args[0]
+                self.assertEqual((prepared / "tools/bazel/cache/cross_repo.py").read_text(), "# verified helper\n")
+                self.assertFalse((prepared / "application.cc").exists())
+
     def test_seed_may_have_extra_actions(self):
         make_cache.compare_image_actions(
             {"common_actions": [action(hit=False), action("extra", hit=False)]},

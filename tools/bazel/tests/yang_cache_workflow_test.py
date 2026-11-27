@@ -229,6 +229,29 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             subprocess.run(["bash", "-euc", setup], cwd=work, env=dict(os.environ, HOME=str(home), BASH_ENV="/dev/null"), check=True)
             self.assertTrue((work / ".bazelrc.user").read_text().startswith(before))
 
+    def test_root_bazel_jobs_initialize_the_gitlinks(self):
+        # Archive consumers and the small device-data workspace can operate
+        # without initializing every module in the buildimage root.
+        prepare_script = "bash tools/bazel/ci/prepare_image_submodules.sh"
+        extra = {("bazel-oci.yml", "dhcp_relay_source_image"), ("bazel-oci.yml", "vs_container"),
+                 ("bazel-kernel-bundle.yml", "kernel-bundle"), ("bazel-make-cache.yml", "native")}
+        for path in WORKFLOW.parent.glob("bazel-*.yml"):
+            for name, job in yaml.safe_load(path.read_text())["jobs"].items():
+                steps = job.get("steps", [])
+                setup = [i for i, step in enumerate(steps) if
+                         step.get("uses", "").startswith("bazel-contrib/setup-bazel@")]
+                prepare = [i for i, step in enumerate(steps) if
+                           step.get("run", "").strip() in (prepare_script, prepare_script + " --bazel-only")
+                           or step.get("with", {}).get("submodules") == "recursive"]
+                root_job = bool(setup) or (path.name, name) in extra
+                with self.subTest(workflow=path.name, job=name):
+                    self.assertEqual(len(prepare), int(root_job))
+                    if root_job:
+                        self.assertTrue(any(s.get("uses", "").startswith("actions/checkout@")
+                                            for s in steps[:prepare[0] + 1]))
+                        if setup:
+                            self.assertLess(prepare[0], setup[0])
+
     def test_native_workflows_prepare_retained_submodules_consistently(self):
         steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]["steps"]
         prepare = next(step["run"] for step in steps
@@ -308,17 +331,18 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
             helper = Path("tools/bazel/ci/prepare_image_submodules.sh")
             (work / helper).parent.mkdir(parents=True)
             shutil.copyfile(ROOT / helper, work / helper)
+            (work / "tools/bazel/submodule_paths").write_text("src/sonic-swss-common\n")
             tracked = component / "setup.py"
             tracked.write_text("original source\n")
             git(work, "init", "--quiet")
             git(work, "-c", "protocol.file.allow=always", "submodule", "add",
                 str(source), "src/sonic-p4rt/sonic-pins")
-            for name in ("src/sonic-sysmgr/gnoi", "src/unused"):
+            for name in ("src/sonic-sysmgr/gnoi", "src/sonic-swss-common", "src/unused"):
                 git(work, "-c", "protocol.file.allow=always", "submodule", "add",
                     str(source), name)
             git(work, "add", ".")
             git(work, "commit", "--quiet", "-m", "Distribution and pinned source")
-            for name in ("src/sonic-sysmgr/gnoi", "src/unused"):
+            for name in ("src/sonic-sysmgr/gnoi", "src/sonic-swss-common", "src/unused"):
                 git(work, "submodule", "deinit", "--", name)
             git(work, "config", "submodule.src/unused.url", str(source))
             git(work / "src/sonic-p4rt/sonic-pins", "checkout", "--detach", previous)
@@ -352,6 +376,8 @@ Path(os.environ['RECORD']).write_text(json.dumps({'argv': args, 'explicit_rc': t
                 self.assertEqual(git(work / "src/sonic-p4rt/sonic-pins/nested",
                                      "rev-parse", "HEAD"), nested_expected)
                 self.assertTrue((work / "src/sonic-sysmgr/gnoi/.git").is_file())
+                self.assertEqual(git(work / "src/sonic-swss-common", "rev-parse", "HEAD"),
+                                 git(work, "rev-parse", "HEAD:src/sonic-swss-common"))
                 self.assertFalse((work / "src/unused/.git").exists())
 
             def check():

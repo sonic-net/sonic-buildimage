@@ -90,26 +90,21 @@ single_version_override(
     patch_strip = 1,
 )
 bazel_dep(name = "grub", version = "2.12.sonic.1")
-bazel_dep(
-    name = "sonic-dash-api",
-    version = "0.0.5-9b2893e890734a2db0c53a5e5c64b031ec0dcfbd",
-    repo_name = "sonic_dash_api",
-)
-bazel_dep(
-    name = "sonic-sairedis",
-    version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
-    repo_name = "sonic_sairedis",
-)
-bazel_dep(
-    name = "sonic-bmp",
-    version = "0.1.0-5548176381e6ea889276859b6dbf8a535e4c5182",
-    repo_name = "sonic_bmp",
-)
+bazel_dep(name = "sonic-dash-api", repo_name = "sonic_dash_api")
+local_path_override(module_name = "sonic-dash-api", path = "src/sonic-dash-api")
+bazel_dep(name = "sonic-sairedis", repo_name = "sonic_sairedis")
+local_path_override(module_name = "sonic-sairedis", path = "src/sonic-sairedis")
+bazel_dep(name = "sonic-bmp", repo_name = "sonic_bmp")
+local_path_override(module_name = "sonic-bmp", path = "src/sonic-bmp")
 
-bazel_dep(name = "sonic-swss", version = "0.0.3-9c3797990d4b5a79100a40fe7689927c18212361", repo_name = "sonic_swss")
-bazel_dep(name = "sonic-platform-common", version = "1.0.0", repo_name = "sonic_platform_common")
-bazel_dep(name = "sonic-snmpagent", version = "2.1.0-a27e093fac394f7871ec1b19bb12ca6739c29fa9", repo_name = "sonic_snmpagent")
-bazel_dep(name = "sonic-swss-common", version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-swss", repo_name = "sonic_swss")
+local_path_override(module_name = "sonic-swss", path = "src/sonic-swss")
+bazel_dep(name = "sonic-platform-common", repo_name = "sonic_platform_common")
+local_path_override(module_name = "sonic-platform-common", path = "src/sonic-platform-common")
+bazel_dep(name = "sonic-snmpagent", repo_name = "sonic_snmpagent")
+local_path_override(module_name = "sonic-snmpagent", path = "src/sonic-snmpagent")
+bazel_dep(name = "sonic-swss-common", repo_name = "sonic_swss_common")
+local_path_override(module_name = "sonic-swss-common", path = "src/sonic-swss-common")
 bazel_dep(name = "hsflowd", version = "2.1.26.sonic.1")
 bazel_dep(name = "sflowtool", version = "6.11.0.sonic.3")
 bazel_dep(name = "libpsample", version = "1.1.0.sonic.2")
@@ -366,8 +361,10 @@ use_repo(pip, "database_pip")
 bazel_dep(name = "socat", version = "1.8.0.2.sonic.7")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.9")
 bazel_dep(name = "libnl3", version = "3.7.0.sonic.8")
-bazel_dep(name = "libteam", version = "1.31.0.sonic.1")
-bazel_dep(name = "libyang", version = "3.12.2.sonic.8")
+# Preserve the versions selected by the published SWSS dependency graph.
+bazel_dep(name = "libteam", version = "1.31.0.sonic.2")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.9")
+single_version_override(module_name = "sai", version = "1.18.0.sonic.2")
 
 single_version_override(
     module_name = "sonic-rust-deps",
@@ -375,13 +372,8 @@ single_version_override(
 )
 
 bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")
-bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", repo_name = "sonic_wpa_supplicant")
-single_version_override(
-    module_name = "sonic-wpa-supplicant",
-    version = "2.9.0.sonic.1",
-    patches = ["//tools/bazel/registry:wpa-supplicant-fips-openssl.patch"],
-    patch_strip = 1,
-)
+bazel_dep(name = "sonic-wpa-supplicant", repo_name = "sonic_wpa_supplicant")
+local_path_override(module_name = "sonic-wpa-supplicant", path = "src/wpasupplicant/sonic-wpa-supplicant")
 
 
 # MACsec runtime/debug and private Redis checks share the production APT lock.
@@ -411,31 +403,51 @@ use_repo(apt_bookworm_metadata, "fib_bookworm_deps")
 # Bind image receipts to the modules that Bazel actually selected.
 source_modules = use_repo_rule("@sonic_build_infra//oci:source_modules.bzl", "source_modules")
 
+# Record the exact local source commits in OCI package manifests.
+gitlink_identities = use_repo_rule("//tools/bazel:submodule_provenance.bzl", "gitlink_identities")
+gitlink_identities(
+    name = "image_gitlinks",
+    modules = {
+        "@sonic_bmp//:MODULE.bazel": "sonic-bmp",
+        "@sonic_dash_api//:MODULE.bazel": "sonic-dash-api",
+        "@sonic_dash_ha//:MODULE.bazel": "sonic-dash-ha",
+        "@sonic_dhcp_relay//:MODULE.bazel": "sonic-dhcp-relay",
+        "@sonic_dhcpmon//:MODULE.bazel": "sonic-dhcpmon",
+        "@sonic_gnmi//:MODULE.bazel": "sonic-gnmi",
+        "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
+        "@sonic_mgmt_common//:MODULE.bazel": "sonic-mgmt-common",
+        "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
+        "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
+        "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
+        "@sonic_wpa_supplicant//:MODULE.bazel": "sonic-wpa-supplicant",
+    },
+)
+
 source_modules(
     name = "image_source_modules",
     modules = {
         "@lm_sensors//:MODULE.bazel": "lm-sensors",
         "@otelcol_contrib//:MODULE.bazel": "otelcol-contrib",
         "@isc_dhcp//:MODULE.bazel": "isc-dhcp",
-        "@sonic_dhcpmon//:MODULE.bazel": "sonic-dhcpmon",
-        "@sonic_dhcp_relay//:MODULE.bazel": "sonic-dhcp-relay",
-        "@sonic_mgmt_framework//:MODULE.bazel": "sonic-mgmt-framework",
-        "@sonic_linkmgrd//:MODULE.bazel": "sonic-linkmgrd",
-        "@sonic_bmp//:MODULE.bazel": "sonic-bmp",
+        "@image_gitlinks//:sonic-dhcpmon.MODULE.bazel": "sonic-dhcpmon",
+        "@image_gitlinks//:sonic-dhcp-relay.MODULE.bazel": "sonic-dhcp-relay",
+        "@image_gitlinks//:sonic-mgmt-framework.MODULE.bazel": "sonic-mgmt-framework",
+        "@image_gitlinks//:sonic-linkmgrd.MODULE.bazel": "sonic-linkmgrd",
+        "@image_gitlinks//:sonic-bmp.MODULE.bazel": "sonic-bmp",
         "@libteam//:MODULE.bazel": "libteam",
-        "@sonic_dash_api//:MODULE.bazel": "sonic-dash-api",
-        "@sonic_dash_ha//:MODULE.bazel": "sonic-dash-ha",
+        "@image_gitlinks//:sonic-dash-api.MODULE.bazel": "sonic-dash-api",
+        "@image_gitlinks//:sonic-dash-ha.MODULE.bazel": "sonic-dash-ha",
         "@socat//:MODULE.bazel": "socat",
         "@iproute2//:MODULE.bazel": "iproute2",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
-        "@sonic_wpa_supplicant//:MODULE.bazel": "sonic-wpa-supplicant",
-        "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
-        "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
+        "@image_gitlinks//:sonic-wpa-supplicant.MODULE.bazel": "sonic-wpa-supplicant",
+        "@image_gitlinks//:sonic-sairedis.MODULE.bazel": "sonic-sairedis",
+        "@image_gitlinks//:sonic-swss-common.MODULE.bazel": "sonic-swss-common",
         "@hsflowd//:MODULE.bazel": "hsflowd",
         "@sflowtool//:MODULE.bazel": "sflowtool",
         "@libpsample//:MODULE.bazel": "libpsample",
-        "@sonic_mgmt_common//:MODULE.bazel": "sonic-mgmt-common",
-        "@sonic_gnmi//:MODULE.bazel": "sonic-gnmi",
+        "@image_gitlinks//:sonic-mgmt-common.MODULE.bazel": "sonic-mgmt-common",
+        "@image_gitlinks//:sonic-gnmi.MODULE.bazel": "sonic-gnmi",
         "@scapy//:MODULE.bazel": "scapy",
         "@libyang//:MODULE.bazel": "libyang",
         "@libyang_python//:MODULE.bazel": "libyang-python",
@@ -447,15 +459,6 @@ source_modules(
     },
 )
 
-single_version_override(
-    module_name = "sonic-swss-common",
-    version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61",
-)
-
-single_version_override(
-    module_name = "sonic-sairedis",
-    version = "0.0.5-33443ea1666a23812365d03fb959066ee84c9aa0",
-)
 
 # Preserve Syncd's Vim debug roots independently of the shared Vim-nox set.
 use_repo(apt, "syncd_vs_debian", "syncd_vs_vim_debug_debian")
@@ -471,8 +474,8 @@ apt_inputs(
 source_modules(
     name = "syncd_source_modules",
     modules = {
-        "@sonic_swss_common//:MODULE.bazel": "sonic-swss-common",
-        "@sonic_sairedis//:MODULE.bazel": "sonic-sairedis",
+        "@image_gitlinks//:sonic-swss-common.MODULE.bazel": "sonic-swss-common",
+        "@image_gitlinks//:sonic-sairedis.MODULE.bazel": "sonic-sairedis",
         "@sonic_fips//:MODULE.bazel": "sonic-fips",
         "@libnl3//:MODULE.bazel": "libnl3",
         "@p4lang_pi//:MODULE.bazel": "p4lang-pi",
@@ -523,8 +526,10 @@ apt_inputs(
 
 # The gNMI and schema owners supply direct runtime TARs; the image adds only
 # its original startup/configuration files and pinned external dependencies.
-bazel_dep(name = "sonic-gnmi", version = "0.1.0-3cc2cba22ba980128518aafe4ddae14aeebebb08", repo_name = "sonic_gnmi")
-bazel_dep(name = "sonic-mgmt-common", version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b", repo_name = "sonic_mgmt_common")
+bazel_dep(name = "sonic-gnmi", repo_name = "sonic_gnmi")
+local_path_override(module_name = "sonic-gnmi", path = "src/sonic-gnmi")
+bazel_dep(name = "sonic-mgmt-common", repo_name = "sonic_mgmt_common")
+local_path_override(module_name = "sonic-mgmt-common", path = "src/sonic-mgmt-common")
 bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.1-20200309174518-a00bece872fc", repo_name = "com_github_openconfig_goyang")
 bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.1", repo_name = "com_github_openconfig_ygot")
 
@@ -608,15 +613,10 @@ go_patches.module_override(
     path = "github.com/msteinert/pam",
 )
 
-single_version_override(
-    module_name = "sonic-mgmt-common",
-    version = "1.0.1-05f83dcab8fe2e1a0e0fc37ac172b289d6968e2b",
-)
 
 # Framework shares the root gNMI Go selection and public generator identities.
-# Its registration follows the standard non-root go.mod dependency mechanism;
-# the reviewed registry entry supplies that wiring.
-bazel_dep(name = "sonic-mgmt-framework", version = "1.0.1-07de59606b0b37a105544284405e86e1a27051bf", repo_name = "sonic_mgmt_framework")
+bazel_dep(name = "sonic-mgmt-framework", repo_name = "sonic_mgmt_framework")
+local_path_override(module_name = "sonic-mgmt-framework", path = "src/sonic-mgmt-framework")
 
 # The old pre-flag.Parse glog diagnostic patch does not apply to glog1.2.4.
 # Preserve the shared root's current glog API and all other SONiC Go patches.
@@ -666,7 +666,8 @@ apt_inputs(
 # LLDP runtime comes from lldpd and DBSyncd. Select its six external runtime
 # library roots from the reviewed native build dependencies.
 bazel_dep(name = "lldpd", version = "1.0.16.sonic.3")
-bazel_dep(name = "sonic-dbsyncd", version = "2.0.0-8a3830704d3f6067823f7c10b3b31913965add81", repo_name = "sonic_dbsyncd")
+bazel_dep(name = "sonic-dbsyncd", repo_name = "sonic_dbsyncd")
+local_path_override(module_name = "sonic-dbsyncd", path = "src/sonic-dbsyncd")
 use_repo(apt, "lldpd_deps")
 
 apt_inputs(
@@ -679,7 +680,8 @@ apt_inputs(
 
 
 # MUX consumes the Linkmgrd runtime and debug TARs.
-bazel_dep(name = "sonic-linkmgrd", version = "1.0.0-92c78b468b678e3c2ed2877d2cb0a52306f2297f", repo_name = "sonic_linkmgrd")
+bazel_dep(name = "sonic-linkmgrd", repo_name = "sonic_linkmgrd")
+local_path_override(module_name = "sonic-linkmgrd", path = "src/linkmgrd")
 
 apt_inputs(
     name = "mux_runtime_apt_inputs",
@@ -694,7 +696,11 @@ apt_inputs(
     ],
 )
 
-bazel_dep(name = "sonic-dash-ha", version = "0.0.1-502377912f3530c9bb6c27007822919f6f32aeb7", repo_name = "sonic_dash_ha")
+bazel_dep(name = "sonic-dash-ha", repo_name = "sonic_dash_ha")
+local_path_override(module_name = "sonic-dash-ha", path = "src/sonic-dash-ha")
+
+# Keep the packet library selected by the published DHCP relay module.
+single_version_override(module_name = "pcapplusplus", version = "24.9.0.sonic.2")
 
 # The shared infrastructure lock provides separate runtime, debug and test collections.
 use_repo(apt, "dash_ha_debian", "dash_ha_debug_debian", "dash_ha_test_debian")
@@ -755,8 +761,10 @@ source_modules(
 
 # DHCP relay consumes native owner TARs and the shared locked runtime inputs.
 bazel_dep(name = "isc-dhcp", version = "4.4.3.sonic.1", repo_name = "isc_dhcp")
-bazel_dep(name = "sonic-dhcpmon", version = "0.1.0-b824589b2ba49a8ba59142289bfb04bb3ca68875", repo_name = "sonic_dhcpmon")
-bazel_dep(name = "sonic-dhcp-relay", version = "0.1.0-1bbc612265bfc8e7582cb699dc44326f62595739", repo_name = "sonic_dhcp_relay")
+bazel_dep(name = "sonic-dhcpmon", repo_name = "sonic_dhcpmon")
+local_path_override(module_name = "sonic-dhcpmon", path = "src/dhcpmon")
+bazel_dep(name = "sonic-dhcp-relay", repo_name = "sonic_dhcp_relay")
+local_path_override(module_name = "sonic-dhcp-relay", path = "src/dhcprelay")
 use_repo(apt, "dhcp_relay_runtime_debian", "dhcp_relay_test_debian")
 
 apt_inputs(
@@ -771,9 +779,10 @@ pip.parse(
 )
 use_repo(pip, "dhcp_relay_pip")
 
-# Existing DHCP CLI tests use the published utilities wheel and Make-pinned
+# Existing DHCP CLI tests use the selected utilities wheel and Make-pinned
 # SDK from config_engine_pip; this hub supplies only additional test imports.
-bazel_dep(name = "sonic-utilities", version = "1.2.0-6f1a8a16a947817d76b55dead8cce68e5a4536e4", repo_name = "sonic_utilities")
+bazel_dep(name = "sonic-utilities", repo_name = "sonic_utilities")
+local_path_override(module_name = "sonic-utilities", path = "src/sonic-utilities")
 pip.parse(
     hub_name = "dhcp_relay_cli_test_pip",
     python_version = "3.13",
@@ -808,11 +817,8 @@ apt_inputs(
 # Platform Daemons supplies the PMON service wheels. lm-sensors supplies the
 # native payloads and package metadata used by the installer and debug image.
 bazel_dep(name = "lm-sensors", version = "3.6.0.sonic.3", repo_name = "lm_sensors")
-bazel_dep(
-    name = "sonic-platform-daemons",
-    version = "1.0.0-2f8dea4661691ce7e6bfa3322576c8ab5591730f",
-    repo_name = "sonic_platform_daemons",
-)
+bazel_dep(name = "sonic-platform-daemons", repo_name = "sonic_platform_daemons")
+local_path_override(module_name = "sonic-platform-daemons", path = "src/sonic-platform-daemons")
 use_repo(apt, "pmon_runtime_debian")
 pip.parse(
     hub_name = "pmon_runtime_pip",
@@ -849,12 +855,9 @@ local_path_override(module_name = "bash-tacplus", path = "src/tacacs/bash_tacplu
 
 use_repo(apt, "vs_host_debian")
 
-# Published Python, data and Rust installation interfaces for the VS host.
-bazel_dep(
-    name = "sonic-host-services",
-    version = "1.0.0-0e4c6a355c80396345a31232e30d20168060ae10",
-    repo_name = "sonic_host_services",
-)
+# Python, data and Rust installation interfaces for the VS host.
+bazel_dep(name = "sonic-host-services", repo_name = "sonic_host_services")
+local_path_override(module_name = "sonic-host-services", path = "src/sonic-host-services")
 
 # Native VS assembler inputs.
 use_repo(apt, "image_tools", "initramfs_runtime")
@@ -896,13 +899,6 @@ pip.parse(
 
 use_repo(pip, "vs_runtime_pip")
 
-# Make takes generate_cert.go from the selected SDK; Trixie now selects1.26.5.
-single_version_override(
-    module_name = "sonic-mgmt-framework",
-    version = "1.0.1-07de59606b0b37a105544284405e86e1a27051bf",
-    patches = ["//tools/bazel/image/vs/patches:framework-selected-go-sdk.patch"],
-    patch_strip = 1,
-)
 
 # Utilities owns its data package; the image supplies the declared CLI environment.
 register_toolchains("//tools/bazel/image/vs/utilities_data:toolchain")

@@ -73,6 +73,8 @@ jobs:
           path: ${{ env.KERNEL_CHECKOUT }}
           ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Check out Bazel module submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --bazel-only
       - name: Initialize the pinned kernel source
         run: git submodule update --init -- src/sonic-linux-kernel src/sonic-frr src/sonic-supervisord-utilities-rs
       - name: Check the producer and artifact contracts

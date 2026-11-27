@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       seed_run:
-        description: Successful Common cache workflow run with seed_for_make enabled
+        description: Successful Common cache workflow run seeded at the buildimage Common gitlink
         type: string
         default: ""
       preflight_only:
@@ -160,7 +160,7 @@ jobs:
           github-token: ${{ github.token }}
           name: common-buildimage-cache-${{ matrix.architecture }}
           path: artifacts/make-cache/seed
-      - name: Checkout exactly the seeded Common source
+      - name: Check out the verified seed workflow helpers
         if: ${{ !inputs.preflight_only }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -168,6 +168,9 @@ jobs:
           ref: ${{ steps.seed.outputs.revision }}
           path: artifacts/private/common-checkout
           persist-credentials: false
+      - name: Check out Bazel module submodules
+        if: ${{ !inputs.preflight_only }}
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --bazel-only
       - name: Prepare fresh sources and probe the sandbox before host changes
         if: ${{ !inputs.preflight_only }}
         run: python3 -B tools/bazel/ci/make_cache.py prepare --architecture '${{ matrix.architecture }}'

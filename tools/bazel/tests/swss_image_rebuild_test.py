@@ -29,7 +29,7 @@ class SwssImageRebuildTest(unittest.TestCase):
         self.owner = self.output_base / "external/sonic-swss+"
         (self.owner / "fpmsyncd").mkdir(parents=True)
         (self.execution_root / "external/sonic-swss+").symlink_to(self.owner, target_is_directory=True)
-        self.registry_owner = self.owner
+        self.committed_owner = self.owner
         self.source = self.owner / probe.SOURCE_PATH
         self.original = probe.SHEBANG + b"\nprint('fixture')\n"
         self.expected_producer_bytes = self.original
@@ -54,6 +54,7 @@ class SwssImageRebuildTest(unittest.TestCase):
         self.assertTrue(argv[1].startswith("--output_base="))
         base = Path(argv[1].split("=", 1)[1])
         self.assertNotEqual(base, self.output_base)
+        self.assertEqual(kwargs["cwd"], base.parent / "workspace")
         argv = [argv[0], *argv[2:]]
         self.calls.append(list(argv))
         self.assertTrue(kwargs["check"])
@@ -73,8 +74,7 @@ class SwssImageRebuildTest(unittest.TestCase):
         if command == "build" and argv[-1] == probe.SOURCE_LABEL:
             self.private_exec = base / "execroot/_main"
             (self.private_exec / "external").mkdir(parents=True)
-            owner = base / "external/sonic-swss+"
-            shutil.copytree(self.registry_owner, owner, symlinks=True)
+            owner = base.parent / "workspace/src/sonic-swss"
             (self.private_exec / "external/sonic-swss+").symlink_to(owner, target_is_directory=True)
             self.private_source = owner / probe.SOURCE_PATH
             return subprocess.CompletedProcess(argv, 0)
@@ -118,7 +118,13 @@ class SwssImageRebuildTest(unittest.TestCase):
         for target in self.runtime[1:]:
             argv += ["--additional-runtime-target", target]
         argv += ["--unchanged-target", self.unchanged[1]]
-        with patch.object(sys, "argv", argv), patch.object(probe.subprocess, "run", side_effect=self.command):
+        def copy_committed(_workspace, destination):
+            owner = destination / "src/sonic-swss"
+            shutil.copytree(self.committed_owner, owner, symlinks=True)
+            return owner, "a" * 40
+
+        with patch.object(sys, "argv", argv), patch.object(probe, "checkout_probe_workspace", side_effect=copy_committed), \
+                patch.object(probe.subprocess, "run", side_effect=self.command):
             probe.main()
 
     def assert_restored(self):
@@ -127,9 +133,64 @@ class SwssImageRebuildTest(unittest.TestCase):
         receipt = json.loads((self.output / "rebuild.json").read_text())
         self.assertTrue(receipt["source_restored"])
         self.assertEqual(receipt["source_label"], probe.SOURCE_LABEL)
+        self.assertEqual(receipt["source_revision"], "a" * 40)
         self.assertEqual(receipt["source_path"], str(probe.SOURCE_PATH))
         self.assertNotIn(str(self.root), json.dumps(receipt))
         return receipt
+
+    def test_disposable_checkout_uses_the_gitlink_and_never_copies_dirty_files(self):
+        workspace = self.root / "buildimage"
+        swss = workspace / "src/sonic-swss"
+        swss.mkdir(parents=True)
+
+        def git(path, *args):
+            return subprocess.check_output(
+                ["git", "-C", path, "-c", "user.name=Probe", "-c", "user.email=probe@example.test",
+                 *args], text=True).strip()
+
+        git(workspace, "init", "--quiet")
+        (workspace / "MODULE.bazel").write_text(
+            'local_path_override(module_name = "sonic-swss", path = "src/sonic-swss")\n'
+            'local_path_override(module_name = "other", path = "src/other")\n'
+            'local_path_override(module_name = "nested", path = "src/other/nested")\n')
+        git(workspace, "config", "--file", ".gitmodules", "submodule.swss.path", "src/sonic-swss")
+        git(workspace, "config", "--file", ".gitmodules", "submodule.other.path", "src/other")
+        git(workspace, "config", "--file", ".gitmodules", "submodule.gnoi.path", "src/sonic-sysmgr/gnoi")
+        git(workspace, "add", "MODULE.bazel", ".gitmodules")
+        (workspace / ".bazelrc.user").write_text("common --distdir=/worker/dist")
+        manifest = Path("target/bazel-manifests/docker-orchagent/manifest.json")
+        (workspace / manifest).parent.mkdir(parents=True)
+        (workspace / manifest).write_text('{"version":"probe"}')
+        git(swss, "init", "--quiet")
+        marker = swss / "marker"
+        marker.write_text("committed")
+        git(swss, "add", "marker")
+        git(swss, "commit", "--quiet", "-m", "Pinned source")
+        pin = git(swss, "rev-parse", "HEAD")
+        peer = workspace / "src/other"
+        git(workspace, "clone", "--quiet", str(swss), str(peer))
+        gnoi = workspace / "src/sonic-sysmgr/gnoi"
+        gnoi.parent.mkdir()
+        git(workspace, "clone", "--quiet", str(swss), str(gnoi))
+        for path in ("src/sonic-swss", "src/other", "src/sonic-sysmgr/gnoi"):
+            git(workspace, "update-index", "--add", "--cacheinfo", f"160000,{pin},{path}")
+        git(workspace, "commit", "--quiet", "-m", "Pin SWSS")
+        marker.write_text("user edit")
+        private = self.root / "isolated checkout"
+        probe_owner, revision = probe.checkout_probe_workspace(workspace, private)
+        self.assertEqual(revision, pin)
+        self.assertEqual(probe_owner, private / "src/sonic-swss")
+        self.assertEqual((probe_owner / "marker").read_text(), "committed")
+        self.assertEqual(git(private, "rev-parse", "HEAD:src/sonic-swss"), pin)
+        self.assertEqual((private / "src/other").resolve(), peer)
+        self.assertEqual((private / "src/sonic-sysmgr/gnoi").resolve(), gnoi)
+        self.assertEqual((private / manifest).read_bytes(), (workspace / manifest).read_bytes())
+        self.assertEqual((private / ".bazelrc.user").read_text(), "common --distdir=/worker/dist")
+        self.assertEqual(marker.read_text(), "user edit")
+
+        git(swss, "commit", "-qam", "Different revision")
+        with self.assertRaisesRegex(ValueError, "gitlink"):
+            probe.checkout_probe_workspace(workspace, self.root / "wrong revision")
 
     def test_four_phases_resolve_actual_owner_and_preserve_all_options_and_outputs(self):
         self.invoke()
@@ -152,9 +213,9 @@ class SwssImageRebuildTest(unittest.TestCase):
                 self.assertEqual(self.assert_restored()["status"], "failed")
 
     def test_interrupted_probe_base_and_producer_are_never_reused(self):
-        # The old producer extraction is marked. Every new base must fetch the archive again.
-        self.registry_owner = self.root / "registry-source"
-        shutil.copytree(self.owner, self.registry_owner)
+        # A marked checkout cannot affect new probes, which start at the committed gitlink.
+        self.committed_owner = self.root / "committed-source"
+        shutil.copytree(self.owner, self.committed_owner)
         self.expected_producer_bytes = probe.SHEBANG + probe.PROBE + self.original[len(probe.SHEBANG):]
         self.source.write_bytes(self.expected_producer_bytes)
         self.fault = {"fail_phase": "source-edit"}
@@ -177,7 +238,7 @@ class SwssImageRebuildTest(unittest.TestCase):
             self.assertTrue(base.is_dir())
             self.assertEqual(self.assert_restored()["status"], "passed")
         finally:
-            shutil.rmtree(base, ignore_errors=True)
+            shutil.rmtree(base.parent, ignore_errors=True)
 
     def test_output_and_invalidation_failures_restore_source(self):
         faults = [{"inert_edit": True}, {"changed_phase": "no-op"}, {"changed_phase": "restored"}]

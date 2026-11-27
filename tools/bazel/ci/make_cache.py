@@ -20,7 +20,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from tools.bazel import build_helpers
+from tools.bazel import build_helpers, submodule_provenance
 from tools.bazel.ci import make_cache_sandbox
 
 ARCHITECTURES = {"amd64": "x86_64", "arm64": "aarch64"}
@@ -143,6 +143,18 @@ def common_helpers(checkout):
     return importlib.import_module("cross_repo")
 
 
+def seed_helpers(checkout, revision):
+    """Make the verified seed workflow's helpers available inside the Make builder."""
+    require(submodule_provenance.git(checkout, "rev-parse", "HEAD") == revision,
+            "Common validation helpers must match the verified seed workflow run")
+    archive = subprocess.check_output(["git", "-C", str(checkout), "archive", revision, "tools/bazel/cache"])
+    destination = ROOT / PRIVATE / "seed-helpers"
+    destination.mkdir(parents=True)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as source:
+        source.extractall(destination, filter="data")
+    return common_helpers(destination)
+
+
 def seed_receipt(architecture):
     path = ROOT / PUBLIC / "seed/cross-repo.json"
     seed = json.loads(path.read_text())
@@ -158,39 +170,14 @@ def seed_receipt(architecture):
     return seed, sha256(path)
 
 
-def verify_common_source(checkout, revision):
-    """Verify the tracked export, without copying a producer's Bazel state."""
-    actual = command(["git", "-C", str(checkout), "rev-parse", "HEAD"]).strip()
-    require(actual == revision, "Common checkout does not match the successful seed")
-    require(not command(["git", "-C", str(checkout), "status", "--porcelain", "--untracked-files=no"]),
-            "Common checkout has uncommitted tracked changes")
-    archive = subprocess.check_output(["git", "-C", str(checkout), "archive", "HEAD"])
-    destination = ROOT / PRIVATE / "common-source"
-    with tarfile.open(fileobj=io.BytesIO(archive)) as source:
-        if not destination.exists():
-            destination.mkdir(parents=True)
-            source.extractall(destination, filter="data")
-        expected = set()
-        for member in source.getmembers():
-            path = destination / member.name
-            if member.isdir():
-                continue
-            expected.add(member.name)
-            if member.issym():
-                require(path.is_symlink() and os.readlink(path) == member.linkname,
-                        "Common exported symlink differs from its seed revision")
-            else:
-                require(member.isfile() and path.is_file() and not path.is_symlink(),
-                        "Common exported file is missing")
-                with source.extractfile(member) as data:
-                    require(hashlib.sha256(data.read()).hexdigest() == sha256(path),
-                            "Common exported source differs from its seed revision")
-                require(bool(path.stat().st_mode & 0o111) == bool(member.mode & 0o111),
-                        "Common exported executable mode differs from its seed revision")
-        actual_files = {str(path.relative_to(destination)) for path in destination.rglob("*")
-                        if path.is_symlink() or path.is_file()}
-        require(actual_files == expected, "Common export contains untracked files or build outputs")
-    (ROOT / PRIVATE / "common-source.revision").write_text(revision + "\n")
+def verify_common_source(root, seed_revision):
+    """Only compare remote hits for the Common revision production Make will use."""
+    path, _, revision = submodule_provenance.gitlinks(root)["sonic-swss-common"]
+    require(seed_revision == revision, f"Common cache seed must match the buildimage gitlink {revision}")
+    source = submodule_provenance.verify(root, path, revision)
+    require(not submodule_provenance.git(source, "status", "--porcelain", "--untracked-files=all", "--ignored"),
+            "Seed proof requires a clean Common submodule without local outputs")
+    archive = subprocess.check_output(["git", "-C", str(source), "archive", "HEAD"])
     return hashlib.sha256(archive).hexdigest()
 
 
@@ -217,7 +204,7 @@ def bazel_invocation(arguments):
 
 def container_options():
     from tools.bazel.ci.resources import build_options
-    return [*build_options(), "--override_module=sonic-swss-common=" + str(CONTAINER_PRIVATE / "common-source"),
+    return [*build_options(),
             "--spawn_strategy=linux-sandbox", "--strategy=Genrule=linux-sandbox",
             # Upstream OCI layout copies declare no-sandbox. Keep this exception
             # specific to copying; compilation and linking still use the sandbox.
@@ -255,13 +242,14 @@ def make_environment():
 def prepare(architecture, checkout):
     native_architecture(architecture)
     require(os.geteuid() != 0, "Run outer Make as the hosted runner user, not root")
-    helpers = common_helpers(checkout)
     seed, seed_hash = seed_receipt(architecture)
+    source_hash = verify_common_source(ROOT, seed["common_revision"])
+    seed_run = json.loads((ROOT / PUBLIC / "seed-run.json").read_bytes())
+    helpers = seed_helpers(checkout, seed_run["head_sha"])
     helpers.check_actions(seed["phases"][0], remote=False)
     revision = command(["git", "rev-parse", "HEAD"]).strip()
     require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)), "Buildimage must have a full commit revision")
     require_fresh_workspace(ROOT)
-    source_hash = verify_common_source(checkout, seed["common_revision"])
     builder = json.loads((ROOT / PUBLIC / "builder.json").read_text())
     require(builder["architecture"] == architecture, "Builder preflight used a different architecture")
     local_image = json.loads(command(["docker", "image", "inspect",
@@ -302,7 +290,7 @@ def build(architecture):
     native_architecture(architecture)
     require(os.geteuid() != 0, "Run outer Make as the hosted runner user, not root")
     build_helpers.credentials.authorization()
-    helpers = common_helpers(ROOT / PRIVATE / "common-source")
+    helpers = common_helpers(ROOT / PRIVATE / "seed-helpers")
     private = ROOT / PRIVATE
     plan = json.loads((private / "make-plan.json").read_text())
     require(plan["architecture"] == architecture and command(["git", "rev-parse", "HEAD"]).strip()
@@ -336,7 +324,7 @@ def sandbox_probe(architecture, phase):
     native_architecture(architecture)
     require(ROOT == Path("/sonic") and Path("/.dockerenv").is_file() and os.geteuid() != 0,
             "Probe must run as Make's non-root user inside sonic-slave")
-    helpers = common_helpers(ROOT / PRIVATE / "common-source")
+    helpers = common_helpers(ROOT / PRIVATE / "seed-helpers")
     restriction_before = make_cache_sandbox.restriction_value()
     host = {"installed": False, "restriction_before": restriction_before}
     if phase == "after":
@@ -419,7 +407,7 @@ def inspect(architecture):
     require(ROOT == Path("/sonic") and Path("/.dockerenv").is_file(),
             "Inspect must run inside the real sonic-slave through outer Make")
     build_helpers.credentials.authorization()
-    helpers = common_helpers(ROOT / PRIVATE / "common-source")
+    helpers = common_helpers(ROOT / PRIVATE / "seed-helpers")
     seed, seed_hash = seed_receipt(architecture)
     receipt_path = ROOT / PUBLIC / "result.json"
     receipt = json.loads(receipt_path.read_text())

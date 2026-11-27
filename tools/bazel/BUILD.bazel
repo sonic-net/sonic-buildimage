@@ -2,5 +2,6 @@
 
 exports_files([
     "cargo-config.toml",
+    "submodule_provenance.py",
     "test_equivalence.sh",
 ])

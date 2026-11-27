@@ -236,7 +236,13 @@ class VerificationWorkflowTest(unittest.TestCase):
         python_frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr-python.yml").read_text())["jobs"]["packages"]
         steps = python_frr["steps"]
         register = next(i for i, step in enumerate(steps) if step.get("id") == "runner_cleanup")
-        restore_python_frr = steps[register + 1]["run"]
+        prepare = next(i for i, step in enumerate(steps)
+                       if step.get("name") == "Check out Bazel module submodules")
+        restore = next(i for i, step in enumerate(steps)
+                       if step.get("run") == f"bash {script} --populated-only")
+        self.assertLess(register, prepare)
+        self.assertLess(prepare, restore)
+        restore_python_frr = steps[restore]["run"]
 
         frr = yaml.safe_load((ROOT / ".github/workflows/bazel-frr.yml").read_text())["jobs"]["native"]
         self.assertIn(f"bash {script} --populated-only", [step.get("run") for step in frr["steps"]])
@@ -257,7 +263,10 @@ class VerificationWorkflowTest(unittest.TestCase):
             helper = parent / script
             helper.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / script, helper)
-            git(parent, "add", str(script))
+            path_list = Path("tools/bazel/submodule_paths")
+            bazel_source = "src/sonic-swss"
+            (parent / path_list).write_text(bazel_source + "\n")
+            git(parent, "add", str(script), str(path_list))
             (source / "input").write_text("old\n")
             git(source, "add", "input")
             git(source, "commit", "-qm", "old")
@@ -277,9 +286,28 @@ class VerificationWorkflowTest(unittest.TestCase):
 
             gnoi, pins, unused = "src/sonic-sysmgr/gnoi", "src/sonic-p4rt/sonic-pins", "unused module"
             kernel = "src/sonic-linux-kernel"
-            for path in (gnoi, pins, unused, kernel):
+            for path in (gnoi, pins, unused, kernel, bazel_source):
                 git(parent, "submodule", "add", "-q", str(source), path)
             git(parent, "commit", "-qm", "pin submodules")
+
+            # The runner owns the mounted checkout; the Debian job container runs Git as another user.
+            for name, job in (("frr", frr), ("frr-python", python_frr)):
+                with self.subTest(workflow=name):
+                    mounted = root / name
+                    git(root, "clone", "-q", str(parent), str(mounted))
+                    git(mounted, "submodule", "update", "--init", "--", bazel_source)
+                    git(mounted / bazel_source, "checkout", "-q", old)
+                    mounted_env = dict(env, GITHUB_WORKSPACE=str(root), GIT_ALLOW_PROTOCOL="", BASH_ENV="/dev/null",
+                                       GIT_CONFIG_GLOBAL=str(root / f"{name}.gitconfig"),
+                                       GIT_CONFIG_NOSYSTEM="1", GIT_TEST_ASSUME_DIFFERENT_OWNER="1")
+                    step = next(step for step in job["steps"]
+                                if step.get("name") == "Check out Bazel module submodules")
+                    self.assertNotIn("if", step)
+                    subprocess.run(["bash", "-e", "-o", "pipefail", "-c", step["run"]], cwd=mounted,
+                                   env=mounted_env, check=True, stdout=subprocess.DEVNULL)
+                    self.assertEqual(git(mounted / bazel_source, "rev-parse", "HEAD"), pinned)
+                    self.assertFalse((mounted / gnoi / ".git").exists())
+
             git(root, "clone", "-q", str(parent), str(checkout))
             git(checkout, "submodule", "init", "--", unused)
 
@@ -290,7 +318,7 @@ class VerificationWorkflowTest(unittest.TestCase):
 
             # A fresh artifact validator needs no unrelated clones, even with all transports disabled.
             prepare("--populated-only", protocol="")
-            for submodule in (kernel, pins, gnoi, unused):
+            for submodule in (kernel, pins, gnoi, unused, bazel_source):
                 self.assertFalse((checkout / submodule / ".git").exists())
             prepare("--kernel-only", protocol="")
             self.assertFalse((checkout / kernel / ".git").exists())
@@ -340,7 +368,11 @@ class VerificationWorkflowTest(unittest.TestCase):
             self.assertFalse((checkout / unused / ".git").exists())
             git(checkout, "submodule", "deinit", "-f", "--", pins)
 
+            # A retained checkout can still point to the old .gitmodules URL.
+            git(checkout, "config", f"submodule.{bazel_source}.url", str(root / "old-remote"))
             prepare()
+            self.assertEqual(git(checkout / bazel_source, "rev-parse", "HEAD"), pinned)
+            self.assertEqual(git(checkout, "config", f"submodule.{bazel_source}.url"), str(source))
             self.assertEqual(git(checkout / gnoi, "rev-parse", "HEAD"), pinned)
             self.assertFalse((checkout / pins / ".git").exists())
             self.assertFalse((checkout / unused / ".git").exists())
