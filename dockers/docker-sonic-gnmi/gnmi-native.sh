@@ -136,10 +136,13 @@ if [ -n "$SAVE_ON_SET" ]; then
     TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
 fi
 
-# Enable ZMQ for SmartSwitch
+# Enable ZMQ and preserve the larger DASH message limits for SmartSwitch.
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
+else
+    # Full-table COUNTERS_DB polls may exceed the default 4 MiB send limit.
+    TELEMETRY_ARGS+=" -max_send_msg_size=$((8*1024*1024)) -max_recv_msg_size=$((8*1024*1024))"
 fi
 
 GNMI_VRF=$(extract_field "$GNMI" '.vrf')
