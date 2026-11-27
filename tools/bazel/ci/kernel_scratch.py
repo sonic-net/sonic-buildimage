@@ -9,7 +9,8 @@ import re
 import stat
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
 from tools.bazel.kernel.prepare import remove_build_tree, require
 from tools.bazel.kernel import prepare as kernel
 
@@ -123,7 +124,7 @@ def main():
     root = Path(os.environ["KERNEL_RUN_TEMP"])
     workspace = Path(os.environ["GITHUB_WORKSPACE"])
     if args.command == "prepare":
-        configuration, _ = kernel.contract(workspace, args.architecture or kernel.native_architecture())
+        configuration, _ = kernel.contract(ROOT, args.architecture or kernel.native_architecture())
         check_path_budget(root, configuration["kernel_version"])
         prepare_root(root, Path(os.environ["RUNNER_TEMP"]), workspace, os.environ["RUNNER_NAME"])
     else:

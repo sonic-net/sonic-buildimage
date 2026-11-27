@@ -1392,7 +1392,7 @@ class KernelWorkflowTest(unittest.TestCase):
         self.assertLess(self.workflow.index("- name: Provision short kernel scratch root"),
                         self.workflow.index("- name: Prepare short kernel scratch root"))
         for name, step in self.steps.items():
-            if name not in ("Restore workspace access before checkout", "Provision short kernel scratch root"):
+            if name not in ("Create a fresh kernel checkout", "Provision short kernel scratch root"):
                 self.assertNotIn("$RUNNER_TEMP", step, name)
         self.assertIn("os.environ['KERNEL_RUN_TEMP']", self.steps["Check available scratch space"])
         with tempfile.TemporaryDirectory() as temporary:
@@ -1514,8 +1514,20 @@ class KernelWorkflowTest(unittest.TestCase):
                 if scenario != "parent-symlink":
                     self.assertEqual(build.stat().st_mode & 0o777, 0o755)
         for name, content in self.steps.items():
-            if name not in ("Restore workspace access before checkout", "Provision short kernel scratch root"):
+            if name not in ("Create a fresh kernel checkout", "Provision short kernel scratch root"):
                 self.assertNotIn("sudo", content, name)
+
+    def test_scratch_preparation_reads_contract_from_kernel_checkout(self):
+        env = {"KERNEL_RUN_TEMP": "/mnt/build/k", "RUNNER_TEMP": "/runner/temp",
+               "GITHUB_WORKSPACE": "/runner/outer-workspace", "RUNNER_NAME": "agent"}
+        with patch.dict(os.environ, env), patch.object(sys, "argv", ["kernel_scratch.py", "prepare",
+                                                                     "--architecture", "arm64"]), \
+                patch.object(kernel, "contract", return_value=({"kernel_version": "6.12.41"}, {})) as contract, \
+                patch.object(kernel_cleanup, "prepare_root") as prepare:
+            kernel_cleanup.main()
+        contract.assert_called_once_with(ROOT, "arm64")
+        prepare.assert_called_once_with(Path("/mnt/build/k"), Path("/runner/temp"),
+                                        Path("/runner/outer-workspace"), "agent")
 
     def test_short_scratch_root_is_private_and_bound_to_one_runner(self):
         for scenario in ("reuse", "other-runner", "other-temp", "symlink", "dangling-symlink",
@@ -1700,106 +1712,111 @@ class KernelWorkflowTest(unittest.TestCase):
                     else:
                         probe.assert_called_once_with(12345, 0)
 
-    def test_workspace_repair_is_scoped_and_preserves_cache_links(self):
-        name = "Restore workspace access before checkout"
-        step = self.steps[name]
-        self.assertLess(self.workflow.index("- name: " + name),
+    def test_kernel_consumers_use_the_isolated_checkout(self):
+        directory = "${{ env.KERNEL_CHECKOUT }}"
+        self.assertIn("KERNEL_CHECKOUT: kernel-${{ github.run_id }}-${{ github.run_attempt }}-"
+                      "${{ matrix.arch }}-${{ inputs.vs_artifact_id && 'vs' || 'standalone' }}", self.workflow)
+        self.assertIn("defaults:\n      run:\n        working-directory: " + directory, self.workflow)
+        create = self.steps["Create a fresh kernel checkout"]
+        remove = self.steps["Remove this job's kernel checkout"]
+        self.assertIn("id: kernel_checkout", create)
+        self.assertIn("working-directory: ${{ runner.temp }}", create)
+        self.assertIn("working-directory: ${{ runner.temp }}", remove)
+        self.assertIn("if: always() && steps.kernel_checkout.outcome == 'success'", remove)
+        checkout = self.workflow.split("- uses: actions/checkout@", 1)[1].split("      - ", 1)[0]
+        self.assertIn("path: " + directory, checkout)
+        self.assertLess(self.workflow.index("name: Create a fresh kernel checkout"),
                         self.workflow.index("- uses: actions/checkout@"))
-        self.assertIn("working-directory: ${{ runner.temp }}", step)
-        self.assertIn("RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}", step)
-        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
-        for scenario in ("repair", "separate-temp", "aliased-work-root",
-                         "absent", "outside", "symlink", "sudo-failure"):
-            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
-                root = Path(temporary)
-                work_root = root / "work"
-                scratch = (root / "separate-disk/_temp" if scenario == "separate-temp"
-                           else work_root / "_temp")
-                scratch.mkdir(parents=True)
-                workspace = work_root / "sonic-buildimage/sonic-buildimage"
-                workspace.mkdir(parents=True)
-                outside = root / "cache"
-                outside.mkdir()
-                payload = outside / "object"
-                payload.write_text("shared cache object")
-                payload.chmod(0o444)
-                linked = workspace / "hardlink"
-                os.link(payload, linked)
-                (workspace / "symlink").symlink_to(outside, target_is_directory=True)
-                regular = workspace / "tracked-file"
-                regular.write_text("tracked")
-                regular.chmod(0o444)
-                nested = workspace / ".git"
-                nested.mkdir()
-                nested.chmod(0o555)
-                outside.chmod(0o555)
-                commands = root / "commands"
-                commands.mkdir()
-                calls = root / "sudo-calls.jsonl"
-                changed = root / "chown-calls.jsonl"
-                sudo = commands / "sudo"
-                sudo.write_text(
-                    "#!" + sys.executable + "\n"
-                    "import json, os, sys\n"
-                    "with open(os.environ['SUDO_CALLS'], 'a') as f:\n"
-                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
-                    "if int(os.environ['SUDO_EXIT']):\n"
-                    "    sys.exit(int(os.environ['SUDO_EXIT']))\n"
-                    "assert sys.argv[1] == '-n'\n"
-                    "os.execvp(sys.argv[2], sys.argv[2:])\n")
-                sudo.chmod(0o755)
-                chown = commands / "chown"
-                chown.write_text(
-                    "#!" + sys.executable + "\n"
-                    "import json, os, sys\n"
-                    "with open(os.environ['CHOWN_CALLS'], 'a') as f:\n"
-                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n")
-                chown.chmod(0o755)
-                selected = workspace
-                pipeline = workspace.parent
-                if scenario == "absent":
-                    selected = work_root / "missing/missing"
-                    pipeline = selected.parent
-                elif scenario == "outside":
-                    selected = outside
-                elif scenario == "symlink":
-                    shutil.rmtree(workspace)
-                    workspace.symlink_to(outside, target_is_directory=True)
-                elif scenario == "aliased-work-root":
-                    alias = root / "work-link"
-                    alias.symlink_to(work_root, target_is_directory=True)
-                    selected = alias / "sonic-buildimage/sonic-buildimage"
-                    pipeline = selected.parent
-                repository = "missing" if scenario == "absent" else "sonic-buildimage"
-                result = subprocess.run(
-                    ["bash", "-e", "-o", "pipefail", "-c", script],
-                    cwd=scratch, capture_output=True, text=True,
-                    env=dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"],
-                             RUNNER_TEMP=str(scratch), GITHUB_WORKSPACE=str(selected),
-                             RUNNER_PIPELINE_WORKSPACE=str(pipeline),
-                             GITHUB_REPOSITORY="owner/" + repository,
-                             SUDO_CALLS=str(calls), CHOWN_CALLS=str(changed),
-                             SUDO_EXIT="23" if scenario == "sudo-failure" else "0"))
-                expected_exit = {"outside": 1, "symlink": 1, "sudo-failure": 23}.get(scenario, 0)
-                self.assertEqual(result.returncode, expected_exit, result.stdout + result.stderr)
-                if scenario in ("repair", "separate-temp", "aliased-work-root"):
-                    self.assertEqual(nested.stat().st_mode & 0o777, 0o755)
-                    self.assertEqual(regular.stat().st_mode & 0o777, 0o444)
-                    ownership_calls = [json.loads(line) for line in changed.read_text().splitlines()]
-                    paths = [path for call in ownership_calls for path in call[3:]]
-                    self.assertIn(str(regular), paths)
-                    self.assertNotIn(str(linked), paths)
-                    self.assertNotIn(str(workspace / "symlink"), paths)
-                    self.assertTrue(all(path.startswith(str(workspace)) for path in paths))
-                    self.assertEqual(len(calls.read_text().splitlines()), 3)
-                elif scenario != "sudo-failure":
-                    self.assertFalse(calls.exists())
-                self.assertEqual(payload.read_text(), "shared cache object")
-                self.assertEqual(payload.stat().st_mode & 0o777, 0o444)
-                self.assertEqual(outside.stat().st_mode & 0o777, 0o555)
-                outside.chmod(0o755)
-                if nested.exists():
-                    nested.chmod(0o755)
+        self.assertLess(self.workflow.index("name: Clean fixed kernel scratch state"),
+                        self.workflow.index("name: Remove this job's kernel checkout"))
+        self.assertIn("path: " + directory + "/target/debs/trixie",
+                      self.steps["Download kernel DEBs consumed by the VS installer"])
+        self.assertIn("module-root: " + directory, self.steps["Set up pinned Bazel"])
+        self.assertIn("src=$PWD,dst=/sonic,readonly",
+                      self.steps["Validate already-built DEB installation, modules and initramfs"])
+
+    def test_fresh_kernel_checkout_isolates_stale_submodules_and_preserves_caches(self):
+        def script(step):
+            return textwrap.dedent(self.steps[step].split("        run: |\n", 1)[1])
+
+        create = script("Create a fresh kernel checkout")
+        cleanup = script("Remove this job's kernel checkout")
+        initialize = self.steps["Initialize the pinned kernel source"].strip().removeprefix("run: ")
+        pinned = ("src/sonic-linux-kernel", "src/sonic-frr", "src/sonic-supervisord-utilities-rs")
+        stale = "src/sonic-swss"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            parent = root / "_work/sonic-buildimage/sonic-buildimage"
+            parent.mkdir(parents=True)
+            scratch = root / "_work/_temp"
+            scratch.mkdir()
+            cache = root / "bazel_cache/cas/object"
+            cache.parent.mkdir(parents=True)
+            cache.write_text("content-addressed object")
+            cache.chmod(0o444)
+            module = root / "module"
+            module.mkdir()
+            env = dict(os.environ, GITHUB_REPOSITORY="owner/sonic-buildimage",
+                       RUNNER_WORKSPACE=str(parent.parent), GITHUB_WORKSPACE=str(parent),
+                       GITHUB_OUTPUT=str(scratch / "output"), GIT_ALLOW_PROTOCOL="file")
+
+            def git(cwd, *args):
+                return subprocess.run(["git", "-c", "user.name=CI", "-c", "user.email=ci@example.org",
+                                       "-c", "commit.gpgsign=false", *args], cwd=cwd, env=env,
+                                      check=True, capture_output=True, text=True).stdout.strip()
+
+            def run(command, **overrides):
+                return subprocess.run(["bash", "-eu", "-o", "pipefail", "-c", command],
+                                      cwd=scratch, env=dict(env, **overrides), capture_output=True, text=True)
+
+            git(module, "init", "-q")
+            git(module, "commit", "--allow-empty", "-qm", "module fixture")
+            commit = git(module, "rev-parse", "HEAD")
+            git(parent, "init", "-q")
+            for name in (*pinned, stale):
+                (parent / name).mkdir(parents=True)
+                git(parent, "config", "-f", ".gitmodules", "submodule." + name + ".path", name)
+                git(parent, "config", "-f", ".gitmodules", "submodule." + name + ".url", str(module))
+                git(parent, "update-index", "--add", "--cacheinfo", f"160000,{commit},{name}")
+            git(parent, "add", ".gitmodules")
+            git(parent, "commit", "-qm", "fixture with an unrelated gitlink")
+            git(parent, "submodule", "update", "--init", "--", stale)
+            git(parent / stale, "commit", "--allow-empty", "-qm", "revision left by another job")
+            # Match the whole-tree check used to verify the VS-to-Make package handoff.
+            handoff_diff = ("diff", "--no-ext-diff", "--name-only", "--ignore-submodules=none", "HEAD", "--")
+            self.assertEqual(git(parent, *handoff_diff), stale)
+
+            for attempt in (1, 2):
+                env["KERNEL_CHECKOUT"] = f"kernel-123-{attempt}-arm64-standalone"
+                checkout = parent / env["KERNEL_CHECKOUT"]
+                result = run(create)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(list(checkout.iterdir()), [])
+                self.assertEqual(stat.S_IMODE(checkout.stat().st_mode), 0o700)
+                self.assertNotEqual(run(create).returncode, 0, "preflight reused an existing checkout")
+                identity = Path(env["GITHUB_OUTPUT"]).read_text().splitlines()[-1].removeprefix("identity=")
+                git(root, "clone", "--no-local", "--no-recurse-submodules", str(parent), str(checkout))
+                subprocess.run(["bash", "-eu", "-c", initialize], cwd=checkout, env=env,
+                               check=True, capture_output=True, text=True)
+                self.assertEqual({p for p in (*pinned, stale) if (checkout / p / ".git").exists()},
+                                 set(pinned))
+                self.assertEqual(git(checkout, *handoff_diff), "")
+                (checkout / "bazel-out").symlink_to(cache.parent, target_is_directory=True)
+                os.link(cache, checkout / "cache-hardlink")
+                self.assertNotEqual(run(cleanup, CHECKOUT_IDENTITY="0:0").returncode, 0)
+                self.assertTrue((checkout / ".git").is_dir())
+                result = run(cleanup, CHECKOUT_IDENTITY=identity)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse(checkout.exists())
+                self.assertTrue((parent / stale / ".git").is_file())
+                self.assertEqual(cache.read_text(), "content-addressed object")
+                self.assertEqual(stat.S_IMODE(cache.stat().st_mode), 0o444)
+
+            redirected = parent.with_name("outside")
+            parent.rename(redirected)
+            parent.symlink_to(redirected, target_is_directory=True)
+            self.assertNotEqual(run(create).returncode, 0, "accepted a redirected workspace")
+            self.assertFalse((redirected / env["KERNEL_CHECKOUT"]).exists())
 
     def test_build_cache_flags_and_failure_propagation(self):
         step = self.steps["Build registry kernel outputs in the root module graph"]

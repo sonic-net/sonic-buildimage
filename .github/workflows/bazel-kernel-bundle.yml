@@ -34,46 +34,43 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, "${{ matrix.arch == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
     timeout-minutes: 300
+    defaults:
+      run:
+        working-directory: ${{ env.KERNEL_CHECKOUT }}
     env:
+      KERNEL_CHECKOUT: kernel-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arch }}-${{ inputs.vs_artifact_id && 'vs' || 'standalone' }}
       KERNEL_RUN_TEMP: /mnt/build/k
       KERNEL_REMOTE_CACHE: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache && 'http://127.0.0.1:8080' || 'grpc://172.16.0.4:9092' }}
       UPLOAD_KERNEL_CACHE: ${{ (github.event_name == 'workflow_dispatch' && inputs.verify_cold_cache) || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
     steps:
-      - name: Restore workspace access before checkout
+      - name: Create a fresh kernel checkout
+        id: kernel_checkout
         working-directory: ${{ runner.temp }}
         shell: bash
-        env:
-          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
         run: |
           set -euo pipefail
           repository="${GITHUB_REPOSITORY##*/}"
-          pipeline_workspace="${RUNNER_PIPELINE_WORKSPACE%/}"
-          expected="$pipeline_workspace/$repository"
-          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
-            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
-              "$expected" "$GITHUB_WORKSPACE" >&2
+          pipeline="${RUNNER_WORKSPACE%/}"
+          work_root="$(realpath -e -- "${pipeline%/*}")"
+          if [[ "$GITHUB_WORKSPACE" != "$pipeline/$repository" ||
+                "$(realpath -e -- "$pipeline")" != "$work_root/$repository" ||
+                -L "$GITHUB_WORKSPACE" ]]; then
+            echo 'Refusing a redirected runner workspace.' >&2
             exit 1
           fi
-          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
-            echo 'No existing workspace to repair.'
-            exit 0
+          mkdir -p -- "$GITHUB_WORKSPACE"
+          # Earlier containers can leave the workspace root owned by root.
+          if [[ ! -w "$GITHUB_WORKSPACE" || ! -x "$GITHUB_WORKSPACE" ]]; then
+            sudo -n chown --no-dereference -- "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+            sudo -n chmod u+rwx -- "$GITHUB_WORKSPACE"
           fi
-          work_root="$(realpath -e -- "$pipeline_workspace/..")"
-          physical_workspace="$work_root/$repository/$repository"
-          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
-            echo 'Refusing permission repair on a redirected workspace.' >&2
-            exit 1
-          fi
-          expected="$physical_workspace"
-          owner="$(id -u):$(id -g)"
-          sudo -n find -P "$expected" -xdev -type d \
-            -exec chown --no-dereference -- "$owner" {} +
-          sudo -n find -P "$expected" -xdev -type d \
-            -exec chmod u+rwx -- {} +
-          sudo -n find -P "$expected" -xdev -type f -links 1 \
-            -exec chown --no-dereference -- "$owner" {} +
+          checkout="$GITHUB_WORKSPACE/$KERNEL_CHECKOUT"
+          mkdir -m 0700 -- "$checkout"
+          identity=$(stat -c '%d:%i' -- "$checkout")
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: ${{ env.KERNEL_CHECKOUT }}
           ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Initialize the pinned kernel source
@@ -138,6 +135,7 @@ jobs:
       - name: Set up pinned Bazel
         uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
+          module-root: ${{ env.KERNEL_CHECKOUT }}
           bazelisk-version: 1.29.0
           output-base: ${{ env.KERNEL_RUN_TEMP }}/kernel-bundle-state/build/output
       - name: Allow local kernel actions when the shared cache is unavailable
@@ -173,7 +171,7 @@ jobs:
         with:
           artifact-ids: ${{ inputs.vs_artifact_id }}
           merge-multiple: true
-          path: target/debs/trixie
+          path: ${{ env.KERNEL_CHECKOUT }}/target/debs/trixie
       - name: Verify the downloaded package set before exercising Make reuse
         id: vs_handoff
         if: inputs.vs_artifact_id != ''
@@ -270,7 +268,7 @@ jobs:
           test -f "$verification_script"
           verification_tools="$(dirname -- "$(realpath -e -- "$verification_script")")"
           docker run --rm --platform "linux/${{ matrix.arch }}" \
-            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/sonic,readonly" \
+            --mount "type=bind,src=$PWD,dst=/sonic,readonly" \
             --mount "type=bind,src=$verification_tools,dst=/kernel-verification,readonly" \
             --workdir /sonic \
             debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c \
@@ -308,3 +306,18 @@ jobs:
       - name: Clean fixed kernel scratch state
         if: always() && steps.kernel_state.outcome == 'success' && (steps.kernel_cache_stop.outcome == 'success' || steps.kernel_cache_stop.outcome == 'skipped')
         run: python3 -B tools/bazel/ci/kernel_scratch.py cleanup
+      - name: Remove this job's kernel checkout
+        if: always() && steps.kernel_checkout.outcome == 'success'
+        working-directory: ${{ runner.temp }}
+        env:
+          CHECKOUT_IDENTITY: ${{ steps.kernel_checkout.outputs.identity }}
+        run: |
+          set -euo pipefail
+          checkout="$(realpath -e -- "$GITHUB_WORKSPACE")/${KERNEL_CHECKOUT:?}"
+          if [[ -L "$checkout" || ! -d "$checkout" || "$(stat -c '%d:%i' -- "$checkout")" != "$CHECKOUT_IDENTITY" ]]; then
+            echo 'Refusing to remove a replaced kernel checkout.' >&2
+            exit 1
+          fi
+          findmnt --json --list --output TARGET | jq -e --arg path "$checkout" \
+            'all(.filesystems[].target; . != $path and (startswith($path + "/") | not))' > /dev/null
+          rm -rf --one-file-system -- "$checkout"

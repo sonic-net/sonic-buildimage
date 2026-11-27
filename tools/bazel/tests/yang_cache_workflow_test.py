@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -16,22 +17,110 @@ WORKFLOW = ROOT / ".github/workflows/bazel-yang-models.yml"
 
 
 class YangCacheWorkflowTest(unittest.TestCase):
-    def test_checkout_uses_guarded_kernel_workspace_repair(self):
-        workflow = yaml.safe_load(WORKFLOW.read_text())
-        steps = workflow["jobs"]["package"]["steps"]
-        kernel = yaml.safe_load(
-            (ROOT / ".github/workflows/bazel-kernel-bundle.yml").read_text()
-        )
-        repair = next(
-            step for step in kernel["jobs"]["kernel-bundle"]["steps"]
-            if step.get("name") == "Restore workspace access before checkout"
-        )
-        self.assertEqual(steps[0], repair)
-        self.assertTrue(steps[1]["uses"].startswith("actions/checkout@"))
+    def test_workspace_repair_is_scoped_and_preserves_cache_links(self):
+        steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["package"]["steps"]
+        repair, checkout = steps[:2]
+        self.assertEqual(repair["name"], "Restore workspace access before checkout")
+        self.assertEqual(repair["working-directory"], "${{ runner.temp }}")
+        self.assertEqual(repair["env"]["RUNNER_PIPELINE_WORKSPACE"], "${{ runner.workspace }}")
+        self.assertTrue(checkout["uses"].startswith("actions/checkout@"))
         self.assertEqual(
-            steps[1]["with"]["ref"],
+            checkout["with"]["ref"],
             "${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}",
         )
+        script = repair["run"]
+        for scenario in ("repair", "separate-temp", "aliased-work-root",
+                         "absent", "outside", "symlink", "sudo-failure"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                work_root = root / "work"
+                scratch = (root / "separate-disk/_temp" if scenario == "separate-temp"
+                           else work_root / "_temp")
+                scratch.mkdir(parents=True)
+                workspace = work_root / "sonic-buildimage/sonic-buildimage"
+                workspace.mkdir(parents=True)
+                outside = root / "cache"
+                outside.mkdir()
+                payload = outside / "object"
+                payload.write_text("shared cache object")
+                payload.chmod(0o444)
+                linked = workspace / "hardlink"
+                os.link(payload, linked)
+                (workspace / "symlink").symlink_to(outside, target_is_directory=True)
+                regular = workspace / "tracked-file"
+                regular.write_text("tracked")
+                regular.chmod(0o444)
+                nested = workspace / ".git"
+                nested.mkdir()
+                nested.chmod(0o555)
+                outside.chmod(0o555)
+                commands = root / "commands"
+                commands.mkdir()
+                calls = root / "sudo-calls.jsonl"
+                changed = root / "chown-calls.jsonl"
+                sudo = commands / "sudo"
+                sudo.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import json, os, sys\n"
+                    "with open(os.environ['SUDO_CALLS'], 'a') as f:\n"
+                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                    "if int(os.environ['SUDO_EXIT']):\n"
+                    "    sys.exit(int(os.environ['SUDO_EXIT']))\n"
+                    "assert sys.argv[1] == '-n'\n"
+                    "os.execvp(sys.argv[2], sys.argv[2:])\n")
+                sudo.chmod(0o755)
+                chown = commands / "chown"
+                chown.write_text(
+                    "#!" + sys.executable + "\n"
+                    "import json, os, sys\n"
+                    "with open(os.environ['CHOWN_CALLS'], 'a') as f:\n"
+                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n")
+                chown.chmod(0o755)
+                selected = workspace
+                pipeline = workspace.parent
+                if scenario == "absent":
+                    selected = work_root / "missing/missing"
+                    pipeline = selected.parent
+                elif scenario == "outside":
+                    selected = outside
+                elif scenario == "symlink":
+                    shutil.rmtree(workspace)
+                    workspace.symlink_to(outside, target_is_directory=True)
+                elif scenario == "aliased-work-root":
+                    alias = root / "work-link"
+                    alias.symlink_to(work_root, target_is_directory=True)
+                    selected = alias / "sonic-buildimage/sonic-buildimage"
+                    pipeline = selected.parent
+                repository = "missing" if scenario == "absent" else "sonic-buildimage"
+                result = subprocess.run(
+                    ["bash", "-e", "-o", "pipefail", "-c", script],
+                    cwd=scratch, capture_output=True, text=True,
+                    env=dict(os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"],
+                             RUNNER_TEMP=str(scratch), GITHUB_WORKSPACE=str(selected),
+                             RUNNER_PIPELINE_WORKSPACE=str(pipeline),
+                             GITHUB_REPOSITORY="owner/" + repository,
+                             SUDO_CALLS=str(calls), CHOWN_CALLS=str(changed),
+                             SUDO_EXIT="23" if scenario == "sudo-failure" else "0"))
+                expected_exit = {"outside": 1, "symlink": 1, "sudo-failure": 23}.get(scenario, 0)
+                self.assertEqual(result.returncode, expected_exit, result.stdout + result.stderr)
+                if scenario in ("repair", "separate-temp", "aliased-work-root"):
+                    self.assertEqual(nested.stat().st_mode & 0o777, 0o755)
+                    self.assertEqual(regular.stat().st_mode & 0o777, 0o444)
+                    ownership_calls = [json.loads(line) for line in changed.read_text().splitlines()]
+                    paths = [path for call in ownership_calls for path in call[3:]]
+                    self.assertIn(str(regular), paths)
+                    self.assertNotIn(str(linked), paths)
+                    self.assertNotIn(str(workspace / "symlink"), paths)
+                    self.assertTrue(all(path.startswith(str(workspace)) for path in paths))
+                    self.assertEqual(len(calls.read_text().splitlines()), 3)
+                elif scenario != "sudo-failure":
+                    self.assertFalse(calls.exists())
+                self.assertEqual(payload.read_text(), "shared cache object")
+                self.assertEqual(payload.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(outside.stat().st_mode & 0o777, 0o555)
+                outside.chmod(0o755)
+                if nested.exists():
+                    nested.chmod(0o755)
 
     def copy_helper(self, work):
         relative = "tools/bazel/ci/preserve_setup_bazel_cache.py"
