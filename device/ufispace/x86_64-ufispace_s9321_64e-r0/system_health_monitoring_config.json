@@ -1,5 +1,5 @@
 {
-    "services_to_ignore": [],
+    "services_to_ignore": ["ufispace-asic-thermal.service"],
     "devices_to_ignore": [
         "asic",
         "psu",
