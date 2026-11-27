@@ -167,15 +167,22 @@ filegroup(
         "NOTICE*",
         "AUTHORS*",
     ], allow_empty = True),
-    visibility = ["//tools/bazel/tests:__pkg__"],
+    visibility = ["//visibility:public"],
+)
+
+# Image CI can supply the models staged from sonic-vs.bin. Standalone users
+# get the same public model payload as SWSS Common's schema generator.
+label_flag(
+    name = "runtime_test_models",
+    build_setting_default = "@sonic_yang_models//:yang_models",
 )
 
 # Preserve the registered module's public production-model consumer check.
 py_test(
     name = "sonic_yang_mgmt_runtime_test",
     srcs = ["sonic_yang_mgmt_runtime_test.py"],
-    args = ["$(rootpath @sonic_yang_models//:test_models)"],
-    data = ["@sonic_yang_models//:test_models"],
+    args = ["$(rootpath :runtime_test_models)"],
+    data = [":runtime_test_models"],
     python_version = "3.13",
     deps = [":sonic_yang_mgmt"],
 )

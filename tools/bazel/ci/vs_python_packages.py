@@ -15,7 +15,7 @@ from tools.bazel.ci.artifact_validation import sha
 WHEELS = {
     "redis_dump_load-1.1-py3-none-any.whl": "@redis_dump_load//:wheel",
     "sonic_supervisord_utilities-1.0-py3-none-any.whl": "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
-    "sonic_yang_mgmt-1.0-py3-none-any.whl": "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+    "sonic_yang_mgmt-1.0-py3-none-any.whl": "@sonic_yang_mgmt//:sonic_yang_mgmt_wheel",
     "sonic_containercfgd-1.0-py3-none-any.whl": "//src/sonic-containercfgd:sonic_containercfgd_wheel",
     "sonic_py_common-1.0-py3-none-any.whl": "//src/sonic-py-common:sonic_py_common_wheel",
     "sonic_config_engine-1.0-py3-none-any.whl": "//src/sonic-config-engine:sonic_config_engine_wheel",
@@ -223,6 +223,7 @@ def flags(group, package, architecture):
     selected = WHEEL_GROUPS[group]
     if group == "config-engine":
         print(f"--@sonic_yang_models//:test_models=//{path}:test_models")
+        print(f"--@sonic_yang_mgmt//:runtime_test_models=//{path}:test_models")
     if architecture == "arm64":
         verify_portable(path, selected)
     for name in selected:

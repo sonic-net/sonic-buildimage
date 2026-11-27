@@ -313,7 +313,7 @@ label_flag(
 
 label_flag(
     name = "sonic_yang_mgmt_test_wheel",
-    build_setting_default = "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+    build_setting_default = "@sonic_yang_mgmt//:sonic_yang_mgmt_wheel",
 )
 
 label_flag(
@@ -479,13 +479,13 @@ py_test(
     size = "large",
     srcs = ["integration/component_pytest_runner.py"],
     args = [
-        "--component-setup=$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "--component-setup=$(rootpath @sonic_yang_mgmt//:setup.py)",
         "--models=$(rootpath @sonic_yang_models//:test_models)",
         "--yang-config=$(rootpath //src/sonic-yang-models:tests/files/sample_config_db.json)",
     ],
     data = [
-        "//src/sonic-yang-mgmt:setup.py",
-        "//src/sonic-yang-mgmt:test_sources",
+        "@sonic_yang_mgmt//:setup.py",
+        "@sonic_yang_mgmt//:test_sources",
         "//src/sonic-yang-models:tests/files/sample_config_db.json",
         "@sonic_yang_models//:test_models",
     ],
@@ -493,7 +493,7 @@ py_test(
     main = "integration/component_pytest_runner.py",
     python_version = "3.13",
     deps = [
-        "//src/sonic-yang-mgmt:sonic_yang_mgmt",
+        "@sonic_yang_mgmt//:sonic_yang_mgmt",
         requirement("pytest"),
     ],
 )
@@ -503,13 +503,13 @@ py_test(
     srcs = ["integration/yang_mgmt_wheel_test.py"],
     args = [
         "$(rootpath :sonic_yang_mgmt_test_wheel)",
-        "$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "$(rootpath @sonic_yang_mgmt//:setup.py)",
         "$(rootpath @sonic_yang_models//:test_models)",
     ],
     data = [
-        "//src/sonic-yang-mgmt:setup.py",
+        "@sonic_yang_mgmt//:setup.py",
         ":sonic_yang_mgmt_test_wheel",
-        "//src/sonic-yang-mgmt:test_sources",
+        "@sonic_yang_mgmt//:test_sources",
         "@sonic_yang_models//:test_models",
     ],
     legacy_create_init = False,
@@ -1523,15 +1523,15 @@ py_test(
     args = [
         "--redis-wheel=$(rootpath :redis_dump_load_test_wheel)",
         "--yang-mgmt-dependencies",
-        "$(rootpaths //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata)",
+        "$(rootpaths @sonic_yang_mgmt//:sonic-yang-mgmt.runtime_metadata)",
         "--metadata",
         "$(rootpaths :source_installation_metadata)",
         "--package=sonic-config-engine=$(rootpath //src/sonic-config-engine:sonic-config-engine.runtime)",
         "--setup=sonic-config-engine=$(rootpath //src/sonic-config-engine:setup.py)",
         "--package=sonic-py-common=$(rootpath //src/sonic-py-common:sonic-py-common.runtime)",
         "--setup=sonic-py-common=$(rootpath //src/sonic-py-common:setup.py)",
-        "--package=sonic-yang-mgmt=$(rootpath //src/sonic-yang-mgmt:sonic-yang-mgmt.runtime)",
-        "--setup=sonic-yang-mgmt=$(rootpath //src/sonic-yang-mgmt:setup.py)",
+        "--package=sonic-yang-mgmt=$(rootpath @sonic_yang_mgmt//:sonic-yang-mgmt.runtime)",
+        "--setup=sonic-yang-mgmt=$(rootpath @sonic_yang_mgmt//:setup.py)",
         "--package=sonic-yang-models=$(rootpath //src/sonic-yang-models:sonic-yang-models.runtime)",
         "--setup=sonic-yang-models=$(rootpath //src/sonic-yang-models:setup.py)",
         "--package=sonic-containercfgd=$(rootpath //src/sonic-containercfgd:sonic-containercfgd.runtime)",
@@ -1554,10 +1554,10 @@ py_test(
         "//src/sonic-supervisord-utilities:setup.py",
         "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
         "//src/sonic-supervisord-utilities:source_install_test_sources",
-        "//src/sonic-yang-mgmt:setup.py",
-        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
-        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime_metadata",
-        "//src/sonic-yang-mgmt:source_install_test_sources",
+        "@sonic_yang_mgmt//:setup.py",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime_metadata",
+        "@sonic_yang_mgmt//:source_install_test_sources",
         "//src/sonic-yang-models:setup.py",
         "//src/sonic-yang-models:sonic-yang-models.runtime",
         "//src/sonic-yang-models:source_install_test_sources",
@@ -1583,7 +1583,7 @@ python_runtime_packages(
         "//src/sonic-containercfgd:sonic-containercfgd.runtime",
         "//src/sonic-py-common:sonic-py-common.runtime",
         "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
-        "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
         "//src/sonic-yang-models:sonic-yang-models.runtime",
     ],
 )

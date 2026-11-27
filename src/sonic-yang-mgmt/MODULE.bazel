@@ -1,22 +1,22 @@
 module(
     name = "sonic-yang-mgmt",
-    version = "1.0.0",
+    version = "1.0.1",
 )
 
 # Match the image root's published native library and execution interfaces.
-bazel_dep(name = "libyang", version = "3.12.2.sonic.8")
-bazel_dep(name = "libyang-python", version = "3.1.0.sonic.6", repo_name = "libyang_python")
-bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.25", repo_name = None)
-bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
+bazel_dep(name = "libyang", version = "3.12.2.sonic.9")
+bazel_dep(name = "libyang-python", version = "3.1.0.sonic.7", repo_name = "libyang_python")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.26", repo_name = None)
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.2")
 bazel_dep(
     name = "sonic-build-infra",
-    version = "0.0.39-81476192bf2cdb70bb646e85935c5d698b6de8a0",
+    version = "0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de",
     repo_name = "sonic_build_infra",
 )
 
 # Both source modules are maintained together in sonic-buildimage. This also
 # keeps standalone checks on the same source model set as the parent checkout.
-bazel_dep(name = "sonic-yang-models", version = "1.0.1", repo_name = "sonic_yang_models")
+bazel_dep(name = "sonic-yang-models", version = "1.0.1-dd732f9512a84966487951250adae8e3e5c9943e", repo_name = "sonic_yang_models")
 local_path_override(
     module_name = "sonic-yang-models",
     path = "../sonic-yang-models",
@@ -37,5 +37,5 @@ use_repo(pip, config_engine_pip = "sonic_yang_mgmt_pip")
 
 single_version_override(
     module_name = "sonic-build-infra",
-    version = "0.0.39-81476192bf2cdb70bb646e85935c5d698b6de8a0",
+    version = "0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de",
 )

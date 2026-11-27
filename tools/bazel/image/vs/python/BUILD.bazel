@@ -90,7 +90,7 @@ _APT_SOURCES = [":" + package for package in _APT_DISTRIBUTIONS]
 _SOURCES = [
     "//src/sonic-py-common:sonic-py-common.runtime",
     "//src/sonic-config-engine:sonic-config-engine.runtime",
-    "//src/sonic-yang-mgmt:sonic-yang-mgmt.runtime",
+    "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
     "@sonic_yang_models//:sonic-yang-models.runtime",
     ":platform_common_runtime",
     ":utilities_runtime",

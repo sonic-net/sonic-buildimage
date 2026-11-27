@@ -74,7 +74,7 @@ wheel_layer(
     wheels = [
         "//src/sonic-config-engine:sonic_config_engine_wheel",
         "//src/sonic-py-common:sonic_py_common_wheel",
-        "//src/sonic-yang-mgmt:sonic_yang_mgmt_wheel",
+        "@sonic_yang_mgmt//:sonic_yang_mgmt_wheel",
         "//src/sonic-containercfgd:sonic_containercfgd_wheel",
         "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
         "@redis_dump_load//:wheel",
