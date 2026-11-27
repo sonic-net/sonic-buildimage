@@ -1,4 +1,4 @@
-#include "logger.h"
+#include <swss/logger.h>
 #include "eventd.h"
 
 void run_eventd_service();

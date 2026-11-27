@@ -1,7 +1,7 @@
 #include <thread>
 #include <memory>
+#include <swss/dbconnector.h>
 #include "eventd.h"
-#include "dbconnector.h"
 #include "zmq.h"
 
 /*

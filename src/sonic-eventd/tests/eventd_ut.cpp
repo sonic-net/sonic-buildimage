@@ -5,9 +5,9 @@
 #include <deque>
 #include <regex>
 #include <chrono>
+#include <swss/events_common.h>
+#include <swss/events.h>
 #include "gtest/gtest.h"
-#include "events_common.h"
-#include "events.h"
 #include "../src/eventd.h"
 
 using namespace std;
