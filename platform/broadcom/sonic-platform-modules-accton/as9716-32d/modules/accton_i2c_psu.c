@@ -530,6 +530,7 @@ static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *d
             if (status < 0) {
                 dev_dbg(&client->dev, "reg %d, err %d\n",
                         regs_byte[i].reg, status);
+                *(regs_byte[i].value) = 0;
             }
             else {
                 *(regs_byte[i].value) = status;
@@ -543,6 +544,7 @@ static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *d
             if (status < 0) {
                 dev_dbg(&client->dev, "reg %d, err %d\n",
                         regs_word[i].reg, status);
+                *(regs_word[i].value) = 0;
             }
             else {
                 *(regs_word[i].value) = status;
@@ -550,33 +552,33 @@ static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *d
             
         }
         /* Read mfr_id */
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_ID, data->mfr_id,
-										 ARRAY_SIZE(data->mfr_id));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_ID, status);
-			goto exit;
-		}		
-		/* Read mfr_model */		
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_MODEL, data->mfr_model,
-										 ARRAY_SIZE(data->mfr_model));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_MODEL, status);
-			goto exit;
-		}
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_ID, data->mfr_id,
+                                                 ARRAY_SIZE(data->mfr_id));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_ID, status);
+            goto exit;
+        }		
+        /* Read mfr_model */		
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_MODEL, data->mfr_model,
+                                                 ARRAY_SIZE(data->mfr_model));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_MODEL, status);
+            goto exit;
+        }
         /* Read mfr_revsion */		
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_REVISION, data->mfr_revsion,
-										 ARRAY_SIZE(data->mfr_revsion));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_REVISION, status);
-			goto exit;
-		}
-		/* Read mfr_serial */
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_SERIAL, data->mfr_serial,
-										 ARRAY_SIZE(data->mfr_serial));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_SERIAL, status);
-			goto exit;
-		}
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_REVISION, data->mfr_revsion,
+                                                ARRAY_SIZE(data->mfr_revsion));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_REVISION, status);
+            goto exit;
+        }
+        /* Read mfr_serial */
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_SERIAL, data->mfr_serial,
+                                                ARRAY_SIZE(data->mfr_serial));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_SERIAL, status);
+            goto exit;
+        }
         
         data->last_updated = jiffies;
         data->valid = 1;
