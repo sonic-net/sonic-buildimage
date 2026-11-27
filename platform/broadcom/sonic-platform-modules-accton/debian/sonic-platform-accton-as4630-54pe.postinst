@@ -8,3 +8,5 @@ systemctl start pddf-platform-init.service
 systemctl enable as4630-54pe-pddf-platform-monitor.service
 systemctl start as4630-54pe-pddf-platform-monitor.service
 /usr/local/bin/restart_ixgbe.sh
+systemctl enable as4630-54pe-platform-handle-mgmt-interface.service
+systemctl start as4630-54pe-platform-handle-mgmt-interface.service
