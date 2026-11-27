@@ -92,6 +92,20 @@ default_cmdline_blacklist="crashkernel"
 # for backward compatibility with the sonic_upgrade= behavior
 install="${install:-${sonic_upgrade:-}}"
 
+# sets the boot device to boot from
+boot_device="flash"
+
+if grep -q block_drive= /etc/cmdline; then
+    boot_device="drive"
+
+      # ensure boot-config is up to date on flash
+    if [ -f "$boot_config" ] && [ "$(<"$boot_config" md5sum)" != "$(</mnt/flash/boot-config md5sum)" ]; then
+          cp "$boot_config" "/mnt/flash/boot-config"
+          reboot
+    fi
+
+fi
+
 is_secureboot_enabled() {
     if $in_aboot; then
         if [ -x /bin/securebootctl ] && securebootctl sb -display | grep -q "Secure Boot enabled"; then
@@ -148,6 +162,11 @@ update_boot_config() {
         sed -i "s#^$key=.*\$#$key=$value#" "$boot_config"
     else
         echo "$key=$value" >> "$boot_config"
+    fi
+
+    # Ensure boot_config at flash drive
+    if [ "$boot_device" != "flash" ]; then
+        cp "$boot_config" "/mnt/flash/boot-config"
     fi
 }
 
@@ -397,7 +416,7 @@ extract_image() {
     fi
 
     ## use new reduced-size boot swi
-    local swi_boot_path="flash:$image_name/$boot_image"
+    local swi_boot_path="$boot_device:$image_name/$boot_image"
     update_boot_config SWI "$swi_boot_path"
     update_boot_config SWI_DEFAULT "$swi_boot_path"
 
@@ -420,7 +439,7 @@ extract_image_secureboot() {
     chmod a+r "$installer_image_path"
     swipath="$installer_image_path"
 
-    local swi_boot_path="flash:$image_name/$installer_image"
+    local swi_boot_path="$boot_device:$image_name/$installer_image"
     update_boot_config SWI "$swi_boot_path"
     update_boot_config SWI_DEFAULT "$swi_boot_path"
 
