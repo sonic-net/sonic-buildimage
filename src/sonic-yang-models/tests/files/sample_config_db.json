@@ -13,6 +13,11 @@
                     "vni" : "200"
                 }
         },
+        "KERNEL_VRF_FALLBACK": {
+            "GLOBAL": {
+                "status": "disabled"
+            }
+        },
         "SUBNET_DECAP": {
             "AZURE": {
                 "status": "enable",
