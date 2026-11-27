@@ -111,6 +111,22 @@
             {
                 "name": "Switch chip diode 2 sensor",
                 "controllable": false
+            },
+            {
+                "name": "POS0V9_TH4_CORE",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75A_TH4",
+                "controllable": false
+            },
+            {
+                "name": "POS3V3_OPTICS_LT",
+                "controllable": false
+            },
+            {
+                "name": "POS3V3_OPTICS_RT",
+                "controllable": false
             }
         ],
         "sfps": [
