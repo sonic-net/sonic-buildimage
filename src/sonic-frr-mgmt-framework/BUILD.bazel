@@ -68,7 +68,7 @@ py_test(
     legacy_create_init = False,
     main = "//tools/bazel/tests:integration/component_pytest_runner.py",
     python_version = "3.13",
-    deps = [":frrcfgd", requirement("pytest")],
+    deps = [":frrcfgd", requirement("jinja2"), requirement("pytest")],
 )
 
 py_binary(
