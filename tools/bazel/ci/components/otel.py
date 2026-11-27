@@ -69,7 +69,8 @@ def verify(directory, *, debug):
                         "--dependencies", directory / "components.bzl",
                         *(arg for name in GENERATED for arg in ("--source", directory / name))], check=True)
         subprocess.run([sys.executable, "-B", "-m", "bazel.components_output_test",
-                        directory / "release-components.txt"], cwd=scratch, env={**env, "PYTHONPATH": str(scratch)}, check=True)
+                        directory / "release-components.txt", directory / "release-buildinfo.json"],
+                       cwd=scratch, env={**env, "PYTHONPATH": str(scratch)}, check=True)
         inputs = {
             "runtime": "runtime.tar", "sources": "sources.tar", "binary": "collector", "metadata": "metadata.json",
             "baseline-version": "release-version.txt", "baseline-components": "release-components.txt",
