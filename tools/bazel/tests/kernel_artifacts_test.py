@@ -18,6 +18,32 @@ from tools.bazel.tests import kernel_test
 
 
 class KernelArtifactsTest(unittest.TestCase):
+    def test_public_socket_patch_names_are_scoped_to_exact_source_records(self):
+        patches = kernel_artifacts.PUBLIC_SOCKET_PATCHES
+        self.output.mkdir()
+        manifest = self.fixture.root / kernel.MANIFEST
+        metadata = {"source_files": list(patches), "kernel_config": {}}
+
+        def check(data):
+            manifest.write_text(json.dumps(data))
+            kernel_artifacts.checked_metadata(manifest.parent, self.output, kernel.MANIFEST,
+                                              kernel.sha256(manifest), set(metadata))
+
+        check(metadata)
+        self.assertEqual((self.output / kernel.MANIFEST).read_bytes(), manifest.read_bytes())
+        token = "sk-" + "x" * 32
+        for record in (
+            {**patches[0], "sha256": "0" * 64},
+            {**patches[0], "mode": 0o755},
+            {**patches[0], "mode": float(0o644)},
+            {**patches[0], "name": "patches-sonic/security/" + token + ".patch"},
+            {**patches[0], "comment": token},
+        ):
+            with self.subTest(record=record), self.assertRaisesRegex(ValueError, "credential-pattern"):
+                check({**metadata, "source_files": [record]})
+        with self.assertRaisesRegex(ValueError, "credential-pattern"):
+            check({**metadata, "kernel_config": {"value": patches[0]["name"]}})
+
     def setUp(self):
         self.fixture = kernel_test.KernelBundleTest()
         self.fixture.setUp()
