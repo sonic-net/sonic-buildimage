@@ -77,6 +77,19 @@
     "BGP_DEVICE_GLOBAL_CONFED" : {
         "desc": "Load bgp device global table with confederation asn and peers"
     },
+    "BGP_DEVICE_GLOBAL_CONFED_PEERS_SINGLE_VALID" : {
+        "desc": "Load bgp device global table with a single confederation sub-ASN and no separator"
+    },
+    "BGP_DEVICE_GLOBAL_CONFED_PEERS_TRAILING_SEPARATOR_INVALID" : {
+        "desc": "A trailing semi-colon in the confederation peers list must be rejected",
+        "eStrKey": "Pattern",
+        "eStr": ["peers"]
+    },
+    "BGP_DEVICE_GLOBAL_CONFED_PEERS_NON_NUMERIC_INVALID" : {
+        "desc": "A non-numeric sub-ASN in the confederation peers list must be rejected",
+        "eStrKey": "Pattern",
+        "eStr": ["peers"]
+    },
     "BGP_DEVICE_GLOBAL_CONFED_INVALID_ASN" : {
         "desc": "Load bgp device global table with confederation invalid asn",
         "eStrKey": "InvalidValue",
