@@ -1022,6 +1022,8 @@ jobs:
     env:
       SONIC_CI_CONTAINER_LABEL: io.sonic-buildimage.ci-job=${{ github.repository }}:${{ github.run_id }}:${{ github.run_attempt }}:vs
       BAZEL: bazel
+      # Keep the full container graph resident through the validation export queries.
+      VS_BAZEL_JVM_HEAP_MB: "4096"
       # Use the explicitly selected gRPC service, not the legacy HTTPS override.
       BAZEL_REMOTE_AUTH: ""
       SONIC_BAZEL_REMOTE_CACHE: grpc://172.16.0.4:9092
@@ -1083,7 +1085,7 @@ jobs:
           printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
 
       - name: Configure Bazel action memory budget
-        run: python3 -B tools/bazel/ci/resources.py --configure
+        run: python3 -B tools/bazel/ci/resources.py --configure --jvm-heap-mb "$VS_BAZEL_JVM_HEAP_MB"
 
       - name: Validate shared NFS package cache
         run: bash tools/ci/runner/nfs_package_cache.sh
@@ -1209,7 +1211,7 @@ jobs:
 
       - name: Set the VS builder action memory budget
         run: |
-          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          memory_option=$(python3 -B tools/bazel/ci/resources.py --jvm-heap-mb "$VS_BAZEL_JVM_HEAP_MB") || exit
           printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
 
       - name: Prepare private VS host-base cache

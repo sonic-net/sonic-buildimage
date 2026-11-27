@@ -59,7 +59,7 @@ VS_REMOTE_CACHE = "grpc://172.16.0.4:9092"
 CACHE_FALLBACK_FLAGS = {"--remote_local_fallback", "--incompatible_remote_local_fallback_for_remote_cache"}
 # resources.py --configure emits these two lines into the VS workspace before
 # the slave starts. They only budget the JVM heap and local action scheduler.
-VS_RESOURCE_RC = re.compile(rb"startup --host_jvm_args=-Xmx2048m\nbuild --local_ram_resources=[1-9][0-9]*\n")
+VS_RESOURCE_RC = re.compile(rb"startup --host_jvm_args=-Xmx(?:2048|4096)m\nbuild --local_ram_resources=[1-9][0-9]*\n")
 SLAVE_RC = Path("/etc/bazel.bazelrc")
 BAZELISK = Path("/usr/local/bin/bazel")
 BAZELISK_HOME = Path("/bazel_cache/bazelisk")

@@ -152,11 +152,11 @@ class RootKernelRequestTest(unittest.TestCase):
         original = self.key()
         home = Path(self.environment["HOME"])
         rc = self.repo / ".bazelrc.user"
-        for budget, role in ((23989, "false"), (23990, "true")):
+        for heap, budget, role in ((2048, 23989, "false"), (4096, 22351, "true")):
             for path in (rc, home / ".bazelrc"):
                 path.unlink(missing_ok=True)
             with patch.object(resources, "action_memory_mb", return_value=budget):
-                resources.configure(self.repo, home)
+                resources.configure(self.repo, home, heap_mb=heap)
             self.assertEqual(self.key(options=[*self.options[:-1], "--remote_upload_local_results=" + role]), original)
         for extra in (b"import %workspace%/extra.rc\n", b"build --action_env=CFLAGS=-g\n",
                       b"common --remote_cache=grpc://elsewhere:9092\n", b"startup --host_jvm_args=-Xmx4g\n"):
@@ -164,6 +164,9 @@ class RootKernelRequestTest(unittest.TestCase):
                 rc.write_bytes((home / ".bazelrc").read_bytes() + extra)
                 with self.assertRaisesRegex(ValueError, "unexpected root kernel configuration"):
                     self.key()
+        rc.write_bytes((home / ".bazelrc").read_bytes().replace(b"-Xmx4096m", b"-Xmx8192m"))
+        with self.assertRaisesRegex(ValueError, "unexpected root kernel configuration"):
+            self.key()
         rc.unlink()
         rc.symlink_to(home / ".bazelrc")
         with self.assertRaisesRegex(ValueError, "redirected root kernel configuration"):

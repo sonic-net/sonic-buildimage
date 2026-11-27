@@ -139,6 +139,17 @@ else:
                                         f"SONIC_ENABLE_DEBUG_LAYER={debug_layer}"])
         self.assertEqual(call["bazel_args"], self.environment["BAZEL_CONTAINER_ARGS"])
 
+    def test_vs_job_reserves_its_full_server_heap_in_the_slave_action_budget(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]
+        job = jobs["vs_container"]
+        self.assertEqual(job["env"]["VS_BAZEL_JVM_HEAP_MB"], "4096")
+        steps = {step["name"]: step["run"] for step in job["steps"] if "run" in step}
+        configure = steps["Configure Bazel action memory budget"]
+        scheduler = steps["Set the VS builder action memory budget"]
+        flag = '--jvm-heap-mb "$VS_BAZEL_JVM_HEAP_MB"'
+        self.assertIn("resources.py --configure " + flag, configure)
+        self.assertIn("resources.py " + flag + ")", scheduler)
+
     def test_actions_install_only_the_downloaded_kernel_index_and_publish_only_on_master(self):
         job = yaml.safe_load((ROOT / ".github/workflows/bazel-oci.yml").read_text())["jobs"]["vs_container"]
         steps = {step["id"]: step for step in job["steps"] if "id" in step}
