@@ -1,0 +1,21 @@
+module test-configfalse-list {
+    namespace "http://github.com/Azure/test-configfalse-list";
+    prefix tclist;
+
+    revision 2026-11-03 {
+        description "Test YANG model with config-false top-level container only contains list node";
+    }
+
+    container test-configfalse-list {
+    config false;
+        list TEST_CONFIGFALSE_LIST {
+           key "name";
+           leaf name {
+              type string;
+           }
+           leaf value {
+              type string;
+           }
+        }
+    }
+}

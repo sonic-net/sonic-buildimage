@@ -1,0 +1,38 @@
+module test-cfgfalse-container-cfg-list {
+    namespace "http://github.com/Azure/test-cfgfalse-container-cfg-list";
+    prefix tcombined;
+
+    revision 2026-11-03 {
+        description "Test combined YANG model with child container is config-false and list leaf leaf-list default are config-true";
+    }
+
+    container test-cfgfalse-container-cfg-list {
+        container TEST_NONCONFIG {
+			config false;
+            list TEST_NONCONFIG_LIST {
+                key "name";
+                leaf name {
+                    type string;
+                }
+                leaf value {
+                    type string;
+                }
+            }
+        }
+        list TEST_CONFIG_LIST {
+           key "name";
+           leaf name {
+              type string;
+           }
+           leaf value {
+              type string;
+           }
+        }
+        leaf name {
+            type string;
+        }
+        leaf-list value {
+            type string;
+        }
+    }
+}
