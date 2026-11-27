@@ -51,6 +51,7 @@ SONIC_BUILD_QUIETER := 1
 CONFIGURED_PLATFORM := vs
 CONFIGURED_ARCH := amd64
 BLDENV := trixie
+SLAVE_BASE_TAG := test-trixie-v1
 artifact.bin_CACHE_MODE := GIT_CONTENT_SHA
 artifact.bin_DEP_FILES := source.txt
 artifact.bin_DEP_FLAGS = $(SONIC_COMMON_FLAGS_LIST)
@@ -111,6 +112,12 @@ target/artifact.bin: target/artifact.bin.dep
         self.assertNotIn("[ CACHE::LOADED ]", log)
         self.assertEqual((changed_flags / "producer.log").read_text(), "produced\n")
         self.assertEqual(len(set(self.cache.glob("*.tgz")) - source_entries), 1)
+
+        changed_slave = self.workspace("changed-slave")
+        log = self.build(changed_slave, "SLAVE_BASE_TAG=test-trixie-v2")
+        self.assertIn("[ CACHE::SAVED ]", log)
+        self.assertNotIn("[ CACHE::LOADED ]", log)
+        self.assertEqual((changed_slave / "producer.log").read_text(), "produced\n")
 
 
 if __name__ == "__main__":
