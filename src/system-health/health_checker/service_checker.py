@@ -439,7 +439,7 @@ class ServiceChecker(HealthChecker):
         for bad_container in self.bad_containers:
             self.set_object_not_ok('Service', bad_container, 'Syntax of critical_processes file is incorrect')
 
-    def check(self, config):
+    def check(self, config, chassis=None):
         """Check critical system service status.
 
         Args:

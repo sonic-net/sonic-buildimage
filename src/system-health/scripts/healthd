@@ -11,9 +11,10 @@ RestartWaiter.waitAdvancedBootDone()
 import signal
 import threading
 import time
+from datetime import datetime, timezone
 
 from sonic_py_common.daemon_base import DaemonBase
-from swsscommon.swsscommon import SonicV2Connector
+from swsscommon.swsscommon import SonicV2Connector, RedisTransactioner, RedisCommand
 
 from health_checker.manager import HealthCheckerManager
 from health_checker.sysmonitor import Sysmonitor
@@ -36,6 +37,7 @@ class HealthDaemon(DaemonBase):
         DaemonBase.__init__(self, SYSLOG_IDENTIFIER)
         self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
+        self._txn = RedisTransactioner(self._db.get_redis_client(self._db.STATE_DB))
         self.stop_event = threading.Event()
 
     def deinit(self):
@@ -104,16 +106,36 @@ class HealthDaemon(DaemonBase):
             return False
         return True
 
+    REDIS_REPLY_INTEGER = 3
+
     def _process_stat(self, chassis, config, stat):
         from health_checker.health_checker import HealthChecker
-        self._clear_system_health_table()
+        table = HealthDaemon.SYSTEM_HEALTH_TABLE_NAME
+
+        self._txn.multi()
+
+        cmd = RedisCommand()
+        cmd.formatDEL(table)
+        self._txn.enqueue(cmd, self.REDIS_REPLY_INTEGER)
+
         for category, info in stat.items():
             for obj_name, obj_data in info.items():
-                if obj_data[HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK:
-                    self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, obj_name,
-                                 obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG])
+                field = 'BMC:{}'.format(obj_name) if category == 'BMC' else obj_name
+                cmd = RedisCommand()
+                cmd.formatHSET(table, field,
+                               obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG])
+                self._txn.enqueue(cmd, self.REDIS_REPLY_INTEGER)
 
-        self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, 'summary', HealthChecker.summary)
+        for field, value in (
+            ('summary', HealthChecker.summary),
+            ('last_updated', datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')),
+            ('polling_interval', str(config.interval)),
+        ):
+            cmd = RedisCommand()
+            cmd.formatHSET(table, field, value)
+            self._txn.enqueue(cmd, self.REDIS_REPLY_INTEGER)
+
+        self._txn._exec()
 
 
 #

@@ -36,7 +36,7 @@ class UserDefinedChecker(HealthChecker):
     def get_category(self):
         return self._category
 
-    def check(self, config):
+    def check(self, config, chassis=None):
         """
         Execute the user defined command and parse the output.
         :param config: Health checker configuration.

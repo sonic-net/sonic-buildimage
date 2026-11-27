@@ -37,10 +37,11 @@ class HealthChecker(object):
         """
         return self._info
 
-    def check(self, config):
+    def check(self, config, chassis=None):
         """
         Perform the check.
         :param config: Health checker configuration.
+        :param chassis: Platform chassis object, passed from HealthCheckerManager.
         :return:
         """
         pass
