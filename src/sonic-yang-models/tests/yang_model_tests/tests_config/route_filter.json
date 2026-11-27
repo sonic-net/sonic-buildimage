@@ -635,8 +635,61 @@
                 ]
             }
         }
+    },
+    "ROUTE_MAP_VALID_SET_SRC_IPV4": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "RM_SET_SRC",
+                        "stmt_name": 10,
+                        "route_operation": "permit",
+                        "set_src": "10.1.0.32"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_VALID_SET_SRC_IPV6": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "RM_SET_SRC",
+                        "stmt_name": 10,
+                        "route_operation": "permit",
+                        "set_src": "fc00:1::32"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_SET_SRC": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "RM_SET_SRC",
+                        "stmt_name": 10,
+                        "route_operation": "permit",
+                        "set_src": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "ROUTE_MAP_INVALID_SET_SRC_ZONE": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                    {
+                        "name": "RM_SET_SRC",
+                        "stmt_name": 10,
+                        "route_operation": "permit",
+                        "set_src": "fe80::1%Ethernet0"
+                    }
+                ]
+            }
+        }
     }
 }
-
-
-

@@ -109,7 +109,19 @@
     "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
         "desc": "Configure route map table with more than one match tag in list.",
         "eStr": "Too many match_tag elements"
+    },
+    "ROUTE_MAP_VALID_SET_SRC_IPV4": {
+        "desc": "Configure route map with an IPv4 set src."
+    },
+    "ROUTE_MAP_VALID_SET_SRC_IPV6": {
+        "desc": "Configure route map with an IPv6 set src."
+    },
+    "ROUTE_MAP_INVALID_SET_SRC": {
+        "desc": "Configure route map with a set src that is not an IP address.",
+        "eStrKey": "InvalidValue"
+    },
+    "ROUTE_MAP_INVALID_SET_SRC_ZONE": {
+        "desc": "Configure route map with a set src that carries a zone suffix, which FRR rejects.",
+        "eStrKey": "InvalidValue"
     }
-
 }
-
