@@ -3,3 +3,4 @@
 0012-agent-Makefile.in-Unbreak-the-enable-minimalist-buil.patch  
 0013-enable-parallel-build-for-net-snmp.patch  
 cross-compile-changes.patch 
+0014-SNMP-ipv6-link-local-under-MGMT-VRF.patch
