@@ -50,7 +50,7 @@ exports_files(_SCRIPTS + _TEMPLATES + [
 filegroup(
     name = "config_engine_test_data",
     testonly = True,
-    srcs = _TEMPLATES,
+    srcs = _TEMPLATES + ["zsocket.sh"],
     visibility = ["//dockers:__pkg__"],
 )
 
