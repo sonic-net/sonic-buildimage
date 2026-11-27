@@ -213,5 +213,10 @@ if [ -f "$PATHS_BLACKLIST_FILE" ]; then
     TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
 fi
 
+# gNOI OS.Install writes the image to --img_dir and the host's image_service
+# installs it from there, so it must be on the /var/tmp bind mount
+# (/var/tmp on the host); the default /tmp/host_tmp is private to the container.
+TELEMETRY_ARGS+=" --img_dir /mnt/host/var/tmp"
+
 echo "gnmi args: $TELEMETRY_ARGS"
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
