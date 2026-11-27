@@ -1,0 +1,8 @@
+---
+bcm_device:
+    0:
+        port:
+            "*":
+                encap_mode: IEEE
+...
+---
