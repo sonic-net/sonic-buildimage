@@ -1,0 +1,14 @@
+[Unit]
+Description= Checking Dell Z9100 SSD upgrade status
+After=pmon.service
+DefaultDependencies=no
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/usr/local/bin/z9100_ssd_upgrade_status.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+

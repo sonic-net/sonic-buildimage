@@ -17,15 +17,15 @@ try:
     from sonic_platform.fan_drawer import FanDrawer
     from sonic_platform.psu import Psu
     from sonic_platform.thermal import Thermal
+    from sonic_platform.watchdog import Watchdog, WatchdogTCO
     from sonic_platform.component import Component
     from sonic_platform.eeprom import Eeprom
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-
 MAX_Z9100_FANTRAY = 5
 MAX_Z9100_PSU = 2
-MAX_Z9100_THERMAL = 8
+MAX_Z9100_THERMAL = 12
 MAX_Z9100_COMPONENT = 6
 
 
@@ -73,13 +73,29 @@ class Chassis(ChassisBase):
     power_reason_dict[33] = ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC
     power_reason_dict[44] = ChassisBase.REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED
 
+    status_led_reg_to_color = {
+        0x00: 'green', 0x01: 'blinking green', 0x02: 'amber',
+        0x04: 'amber', 0x08: 'blinking amber', 0x10: 'blinking amber'
+    }
+
+    color_to_status_led_reg = {
+        'green': 0x00, 'blinking green': 0x01,
+        'amber': 0x02, 'blinking amber': 0x08
+    }
+
+    _global_port_pres_dict = {}
+
     def __init__(self):
         ChassisBase.__init__(self)
+        self.status_led_reg = "sys_status_led"
+        self.supported_led_color = ['green', 'blinking green', 'amber', 'blinking amber']
+        
         self.oir_fd = -1
         self.epoll = -1
         PORT_START = 0
         PORT_END = 31
         PORTS_IN_BLOCK = (PORT_END + 1)
+
 
         # sfp.py will read eeprom contents and retrive the eeprom data.
         # It will also provide support sfp controls like reset and setting
@@ -95,6 +111,10 @@ class Chassis(ChassisBase):
             sfp_node = Sfp(index, 'QSFP', eeprom_path, sfp_control,
                            self.PORT_I2C_MAPPING[index][1])
             self._sfp_list.append(sfp_node)
+
+        # Append 10 G SFP ports
+        self._sfp_list.append(Sfp(33,'SFP',"/sys/bus/i2c/devices/i2c-11/11-0050/eeprom","",33))
+        self._sfp_list.append(Sfp(34,'SFP',"/sys/bus/i2c/devices/i2c-12/12-0050/eeprom","",34))
 
         # Initialize EEPROM
         self._eeprom = Eeprom()
@@ -115,12 +135,37 @@ class Chassis(ChassisBase):
             component = Component(i)
             self._component_list.append(component)
 
+        for i in self._sfp_list:
+            presence = i.get_presence()
+            if presence:
+                self._global_port_pres_dict[i.index] = '1'
+            else:
+                self._global_port_pres_dict[i.index] = '0'
+
+        bios_ver = self.get_component(0).get_firmware_version()
+        bios_minor_ver = bios_ver.split("-")[-1]
+        if bios_minor_ver.isdigit() and (int(bios_minor_ver) >= 9):
+            self._watchdog = WatchdogTCO()
+        else:
+            self._watchdog = Watchdog()
+
     def __del__(self):
         if self.oir_fd != -1:
             self.epoll.unregister(self.oir_fd.fileno())
             self.epoll.close()
             self.oir_fd.close()
 
+    def _get_reboot_reason_smf_register(self):
+        # In S6100, mb_poweron_reason register will
+        # Returns 0xaa or 0xcc on software reload
+        # Returns 0x88 on cold-reboot happened during software reload
+        # Returns 0xff or 0xbb on power-cycle
+        # Returns 0xdd on Watchdog
+        # Returns 0xee on Thermal Shutdown
+        # Returns 0x99 on Unknown reset
+        smf_mb_reg_reason = self._get_pmc_register('mb_poweron_reason')
+        return int(smf_mb_reg_reason, 16)
+    
     def _get_pmc_register(self, reg_name):
         # On successful read, returns the value read from given
         # reg_name and on failure returns 'ERR'
@@ -139,7 +184,24 @@ class Chassis(ChassisBase):
         rv = rv.rstrip('\r\n')
         rv = rv.lstrip(" ")
         return rv
+    
+    def _set_pmc_register(self, reg_name, value):
+        # On successful write, returns the length of value written on
+        # reg_name and on failure returns 'ERR'
+        rv = 'ERR'
+        mb_reg_file = self.MAILBOX_DIR + '/' + reg_name
 
+        if (not os.path.isfile(mb_reg_file)):
+            return rv
+
+        try:
+            with open(mb_reg_file, 'w') as fd:
+                rv = fd.write(str(value))
+        except IOError:
+            rv = 'ERR'
+
+        return rv
+    
     def _get_register(self, reg_file):
         # On successful read, returns the value read from given
         # reg_name and on failure returns 'ERR'
@@ -221,6 +283,23 @@ class Chassis(ChassisBase):
         """
         return True
 
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether Chassis is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
     def get_base_mac(self):
         """
         Retrieves the base MAC address for the chassis
@@ -230,7 +309,16 @@ class Chassis(ChassisBase):
             'XX:XX:XX:XX:XX:XX'
         """
         return self._eeprom.base_mac_addr()
+    
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
 
+        Returns:
+            string: Revision value of device
+        """
+        return self._eeprom.revision_str()
+    
     def get_system_eeprom_info(self):
         """
         Retrieves the full content of system EEPROM information for the chassis
@@ -241,6 +329,20 @@ class Chassis(ChassisBase):
             values.
         """
         return self._eeprom.system_eeprom_info()
+
+
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, prefixed by SUPERVISOR, LINE-CARD or FABRIC-CARD
+            Ex. SUPERVISOR0, LINE-CARD1, FABRIC-CARD5
+        Returns:
+            An integer, the index of the ModuleBase object in the module_list
+        """
+        module_index = re.match(r'IOM([1-4])', module_name).group(1)
+        return int(module_index) - 1
 
     def get_reboot_cause(self):
         """
@@ -254,20 +356,26 @@ class Chassis(ChassisBase):
         """
         reset_reason = int(self._get_pmc_register('smf_reset_reason'))
         power_reason = int(self._get_pmc_register('smf_poweron_reason'))
+        smf_mb_reg_reason = self._get_reboot_reason_smf_register()
 
-        # Reset_Reason = 11 ==> PowerLoss
-        # So return the reboot reason from Last Power_Reason Dictionary
-        # If Reset_Reason is not 11 return from Reset_Reason dictionary
-        # Also check if power_reason, reset_reason are valid values by
-        # checking key presence in dictionary else return
-        # REBOOT_CAUSE_HARDWARE_OTHER as the Power_Reason and Reset_Reason
-        # registers returned invalid data
-        if (reset_reason == 11):
-            if (power_reason in self.power_reason_dict):
-                return (self.power_reason_dict[power_reason], None)
+        if ((smf_mb_reg_reason == 0xbb) or (smf_mb_reg_reason == 0xff)):
+            return (ChassisBase.REBOOT_CAUSE_POWER_LOSS, None)
+        elif ((smf_mb_reg_reason == 0xaa) or (smf_mb_reg_reason == 0xcc)):
+            return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
+        elif (smf_mb_reg_reason == 0x88):
+            return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Reset")
+        elif (smf_mb_reg_reason == 0xdd):
+            return (ChassisBase.REBOOT_CAUSE_WATCHDOG, None)
+        elif (smf_mb_reg_reason == 0xee):
+            return (self.power_reason_dict[power_reason], None)
+        elif (reset_reason == 66):
+            return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER,
+                    "Emulated Cold Reset")
+        elif (reset_reason == 77):
+            return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER,
+                    "Emulated Warm Reset")
         else:
-            if (reset_reason in self.reset_reason_dict):
-                return (self.reset_reason_dict[reset_reason], None)
+            return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
 
         return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Invalid Reason")
 
@@ -399,3 +507,41 @@ class Chassis(ChassisBase):
                 self.oir_fd.close()
                 self.oir_fd = -1
                 self.epoll = -1
+
+    def initizalize_system_led(self):
+        return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Args:
+            color: A string representing the color with which to set the
+                   system LED
+
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        if color not in self.supported_led_color:
+            return False
+
+        value = self.color_to_status_led_reg[color]
+        rv = self._set_pmc_register(self.status_led_reg, value)
+        if (rv != 'ERR'):
+            return True
+        else:
+            return False
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Returns:
+            A string, one of the valid LED color strings which could be
+            vendor specified.
+        """
+        reg_val = self._get_pmc_register(self.status_led_reg)
+        if (reg_val != 'ERR'):
+            return self.status_led_reg_to_color.get(int(reg_val, 16), None)
+        else:
+            return "N/A"
