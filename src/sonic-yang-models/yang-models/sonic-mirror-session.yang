@@ -32,6 +32,13 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-11-24 {
+        description
+            "Add the HWSFLOW session type. It sets sample_rate, truncate_size,
+             udp_src_port and udp_dst_port on MIRROR_SESSION. ERSPAN keeps
+             sample_rate and truncate_size on PORT_MIRROR_SAMPLE.";
+    }
+
     revision 2026-10-16 {
         description
             "Move sample_rate and truncate_size from MIRROR_SESSION to
@@ -58,6 +65,11 @@ module sonic-mirror-session {
             enum SPAN {
                 description "SPAN session";
             }
+            enum HWSFLOW {
+                description
+                    "Hardware sFlow session. The session sets the sample rate
+                     and the truncate size.";
+            }
         }
     }
 
@@ -82,6 +94,12 @@ module sonic-mirror-session {
             list MIRROR_SESSION_LIST {
                 key "name";
 
+                must "not(sms:type = 'HWSFLOW') or not(/sflow:sonic-sflow/sflow:SFLOW/sflow:global)" {
+                    error-message
+                        "SFLOW global configuration and HWSFLOW mirror sessions cannot coexist.";
+                    error-app-tag "sampling-config-conflict";
+                }
+
                 leaf name {
                     type string {
                         pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
@@ -95,8 +113,8 @@ module sonic-mirror-session {
                 }
 
                 leaf type {
-                    must "current() = 'ERSPAN' or count(/sms:sonic-mirror-session/sms:PORT_MIRROR_SAMPLE/sms:PORT_MIRROR_SAMPLE_LIST[sms:mirror_session=current()/../sms:name]) = 0" {
-                        error-message "The referenced mirror session must be ERSPAN.";
+                    must "current() = 'ERSPAN' or current() = 'HWSFLOW' or count(/sms:sonic-mirror-session/sms:PORT_MIRROR_SAMPLE/sms:PORT_MIRROR_SAMPLE_LIST[sms:mirror_session=current()/../sms:name]) = 0" {
+                        error-message "The referenced mirror session must be ERSPAN or HWSFLOW.";
                         error-app-tag "sample-mirror-session-type-invalid";
                     }
                     type session_type;
@@ -106,7 +124,7 @@ module sonic-mirror-session {
                 }
 
                 leaf src_ip {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'HWSFLOW'";
                     must "(contains(current(), ':') and contains(../dst_ip, ':')) or (not(contains(current(), ':')) and not(contains(../dst_ip, ':')))" {
                         error-message "src_ip and dst_ip must have the same IP version.";
                     }
@@ -117,7 +135,7 @@ module sonic-mirror-session {
                 }
 
                 leaf dst_ip {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'HWSFLOW'";
                     must "(contains(current(), ':') and contains(../src_ip, ':')) or (not(contains(current(), ':')) and not(contains(../src_ip, ':')))" {
                         error-message "src_ip and dst_ip must have the same IP version.";
                     }
@@ -142,7 +160,7 @@ module sonic-mirror-session {
                 }
 
                 leaf dscp {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'HWSFLOW'";
                     type uint8 {
                         range "0..63" {
                             error-message "Invalid dscp value";
@@ -154,7 +172,7 @@ module sonic-mirror-session {
                 }
 
                 leaf ttl {
-                    when "current()/../type = 'ERSPAN'";
+                    when "current()/../type = 'ERSPAN' or current()/../type = 'HWSFLOW'";
                     type uint8 {
                         range "0..255" {
                             error-message "Invalid TTL value";
@@ -165,7 +183,35 @@ module sonic-mirror-session {
                         "ERSPAN outer header TTL value. Mirrored frames will be sent with configured TTL value";
                 }
 
+                leaf udp_src_port {
+                    when "current()/../type = 'HWSFLOW'";
+                    type inet:port-number {
+                        range "1..65535" {
+                            error-message "UDP port must be in range 1..65535";
+                        }
+                    }
+                    default 6343;
+                    description
+                        "HWSFLOW outer header UDP source port.";
+                }
+
+                leaf udp_dst_port {
+                    when "current()/../type = 'HWSFLOW'";
+                    type inet:port-number {
+                        range "1..65535" {
+                            error-message "UDP port must be in range 1..65535";
+                        }
+                    }
+                    default 6343;
+                    description
+                        "HWSFLOW outer header UDP destination port.";
+                }
+
                 leaf queue {
+                    must "current()/../type != 'HWSFLOW'" {
+                        error-message "An HWSFLOW session must not configure queue.";
+                        error-app-tag "hwsflow-queue-invalid";
+                    }
                     type uint8;
                     description
                         "ERSPAN Queue. Mirrored frames will be sent to this queue";
@@ -185,9 +231,40 @@ module sonic-mirror-session {
                         "Destination port configuration for port mirroring(SPAN).";
                 }
 
+                leaf sample_rate {
+                    when "current()/../type = 'HWSFLOW'";
+                    mandatory true;
+                    type uint32 {
+                        range "2..max" {
+                            error-message "Sample rate must be in range 2..max";
+                            error-app-tag "sample-rate-invalid";
+                        }
+                    }
+                    description
+                        "Sampling probability of 1/N packets for all
+                         PORT_MIRROR_SAMPLE bindings that reference this session.";
+                }
+
+                leaf truncate_size {
+                    when "current()/../type = 'HWSFLOW'";
+                    type uint32 {
+                        range "64..9216" {
+                            error-message "Truncate size must be 64..9216";
+                            error-app-tag truncate-size-invalid;
+                        }
+                    }
+                    default 128;
+                    description
+                        "Truncation size in bytes for sampled packets.";
+                }
+
                 leaf src_port {
                     must "count(/sms:sonic-mirror-session/sms:PORT_MIRROR_SAMPLE/sms:PORT_MIRROR_SAMPLE_LIST[sms:mirror_session=current()/../sms:name]) = 0" {
                         error-message "A sampled export session must not configure src_port.";
+                        error-app-tag "sample-mirror-source-conflict";
+                    }
+                    must "current()/../type != 'HWSFLOW'" {
+                        error-message "An HWSFLOW session must not configure src_port.";
                         error-app-tag "sample-mirror-source-conflict";
                     }
                     type string {
@@ -199,6 +276,7 @@ module sonic-mirror-session {
                 }
 
                 leaf direction {
+                    when "current()/../type != 'HWSFLOW'";
                     type session_direction;
                     default "BOTH";
                     description
@@ -210,6 +288,10 @@ module sonic-mirror-session {
                 }
 
                 leaf policer {
+                    must "current()/../type != 'HWSFLOW'" {
+                        error-message "An HWSFLOW session must not configure policer.";
+                        error-app-tag "hwsflow-policer-invalid";
+                    }
                     type leafref {
                         path "/policer:sonic-policer/policer:POLICER/policer:POLICER_LIST/policer:name";
                     }
@@ -220,7 +302,7 @@ module sonic-mirror-session {
         }
 
         container PORT_MIRROR_SAMPLE {
-            description "Sampled ERSPAN source bindings.";
+            description "Sampled ERSPAN and HWSFLOW source bindings.";
 
             list PORT_MIRROR_SAMPLE_LIST {
                 key "port direction";
@@ -270,18 +352,19 @@ module sonic-mirror-session {
                     type leafref {
                         path "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST/sms:name";
                     }
-                    must "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:type = 'ERSPAN'" {
-                        error-message "The referenced mirror session must be ERSPAN.";
+                    must "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:type = 'ERSPAN' or /sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:type = 'HWSFLOW'" {
+                        error-message "The referenced mirror session must be ERSPAN or HWSFLOW.";
                         error-app-tag "sample-mirror-session-type-invalid";
                     }
                     must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()]/sms:src_port)" {
                         error-message "A sampled export session must not configure src_port.";
                         error-app-tag "sample-mirror-source-conflict";
                     }
-                    description "ERSPAN export session referenced by this binding.";
+                    description "ERSPAN or HWSFLOW export session referenced by this binding.";
                 }
 
                 leaf sample_rate {
+                    when "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()/../sms:mirror_session]/sms:type = 'HWSFLOW')";
                     mandatory true;
                     type uint32 {
                         range "2..max" {
@@ -293,6 +376,7 @@ module sonic-mirror-session {
                 }
 
                 leaf truncate_size {
+                    when "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:name=current()/../sms:mirror_session]/sms:type = 'HWSFLOW')";
                     type uint32 {
                         range "64..9216" {
                             error-message "Truncate size must be 64..9216";

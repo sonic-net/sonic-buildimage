@@ -118,6 +118,71 @@
     "PORT_MIRROR_SAMPLE_SHARED_EXPORT_DISTINCT_POLICIES": {
         "desc": "Accept bindings sharing an export with independent rates and optional truncation, including both truncation boundaries."
     },
+    "PORT_MIRROR_SAMPLE_HWSFLOW_SHARED_SESSION_POLICY": {
+        "desc": "Accept an HWSFLOW session with its sampling policy and UDP ports, shared by bindings that carry no policy."
+    },
+    "PORT_MIRROR_SAMPLE_HWSFLOW_MISSING_SESSION_SAMPLE_RATE": {
+        "desc": "Reject an HWSFLOW session without its mandatory session-level sample rate.",
+        "eStrKey": "Mandatory"
+    },
+    "PORT_MIRROR_SAMPLE_HWSFLOW_BINDING_SAMPLE_RATE_REJECTED": {
+        "desc": "Reject a binding-level sample rate when the referenced HWSFLOW session owns the policy.",
+        "eStrKey": "When"
+    },
+    "PORT_MIRROR_SAMPLE_HWSFLOW_BINDING_TRUNCATE_SIZE_REJECTED": {
+        "desc": "Reject a binding-level truncate size when the referenced HWSFLOW session owns the policy.",
+        "eStrKey": "When"
+    },
+    "MIRROR_HWSFLOW_SRC_PORT_REJECTED": {
+        "desc": "Reject src_port on an HWSFLOW session.",
+        "eStr": [
+            "An HWSFLOW session must not configure src_port."
+        ]
+    },
+    "MIRROR_HWSFLOW_INVALID_SAMPLE_RATE": {
+        "desc": "Reject an HWSFLOW session with sample_rate=1.",
+        "eStr": [
+            "Sample rate must be in range 2..max"
+        ]
+    },
+    "MIRROR_HWSFLOW_INVALID_TRUNCATE_SIZE": {
+        "desc": "Reject an HWSFLOW session with truncate_size=63.",
+        "eStr": [
+            "Truncate size must be 64..9216"
+        ]
+    },
+    "MIRROR_HWSFLOW_INVALID_UDP_DST_PORT": {
+        "desc": "Reject an HWSFLOW session with udp_dst_port=0.",
+        "eStr": [
+            "UDP port must be in range 1..65535"
+        ]
+    },
+    "MIRROR_HWSFLOW_GRE_TYPE_REJECTED": {
+        "desc": "Reject gre_type on an HWSFLOW session.",
+        "eStrKey": "When"
+    },
+    "MIRROR_HWSFLOW_POLICER_REJECTED": {
+        "desc": "Reject policer on an HWSFLOW session.",
+        "eStr": [
+            "An HWSFLOW session must not configure policer."
+        ]
+    },
+    "MIRROR_HWSFLOW_QUEUE_REJECTED": {
+        "desc": "Reject queue on an HWSFLOW session.",
+        "eStr": [
+            "An HWSFLOW session must not configure queue."
+        ]
+    },
+    "MIRROR_HWSFLOW_DIRECTION_REJECTED": {
+        "desc": "Reject direction on an HWSFLOW session.",
+        "eStrKey": "When"
+    },
+    "MIRROR_HWSFLOW_SFLOW_GLOBAL_CONFLICT": {
+        "desc": "Reject an HWSFLOW session together with explicit sFlow global configuration, whatever its admin_state.",
+        "eStr": [
+            "SFLOW global configuration and HWSFLOW mirror sessions cannot coexist."
+        ]
+    },
     "PORT_MIRROR_SAMPLE_INVALID_SAMPLE_RATE_ONE": {
         "desc": "Reject a sampled binding with sample_rate=1.",
         "eStr": [
@@ -185,7 +250,7 @@
     "PORT_MIRROR_SAMPLE_SPAN_EXPORT_REJECTED": {
         "desc": "Reject a sampled binding referencing a SPAN session.",
         "eStr": [
-            "The referenced mirror session must be ERSPAN."
+            "The referenced mirror session must be ERSPAN or HWSFLOW."
         ]
     },
     "PORT_MIRROR_SAMPLE_EXPORT_WITH_SRC_PORT_REJECTED": {
