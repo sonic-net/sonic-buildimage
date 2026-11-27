@@ -1024,9 +1024,9 @@ static SENSOR_DEVICE_ATTR(fan2_dir, S_IRUGO, fan_dir_show, NULL, FAN_2);
 static SENSOR_DEVICE_ATTR(fan0_prs, S_IRUGO, fan_prs_show, NULL, FAN_0);
 static SENSOR_DEVICE_ATTR(fan1_prs, S_IRUGO, fan_prs_show, NULL, FAN_1);
 static SENSOR_DEVICE_ATTR(fan2_prs, S_IRUGO, fan_prs_show, NULL, FAN_2);
-static SENSOR_DEVICE_ATTR(fan0_led, S_IRUGO, fani_led_show, fani_led_store, FAN_0);
-static SENSOR_DEVICE_ATTR(fan1_led, S_IRUGO, fani_led_show, fani_led_store, FAN_1);
-static SENSOR_DEVICE_ATTR(fan2_led, S_IRUGO, fani_led_show, fani_led_store, FAN_2);
+static SENSOR_DEVICE_ATTR(fan0_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_0);
+static SENSOR_DEVICE_ATTR(fan1_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_1);
+static SENSOR_DEVICE_ATTR(fan2_led, S_IRUGO | S_IWUSR, fani_led_show, fani_led_store, FAN_2);
 
 static struct attribute *n3248te_cpld_attrs[] = {
     &dev_attr_sfp_txdis.attr,
