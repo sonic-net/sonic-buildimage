@@ -62,6 +62,11 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
+        # the handler is for the whole BGP_DEVICE_GLOBAL table. It has 2 components, state and confed
+        # we only handle the update BGP_DEVICE_GLOBAL|STATE here
+        if key != "STATE":
+            return True
+
         # TSA configuration
         self.configure_tsa(data)
         # W-ECMP configuration
@@ -73,6 +78,11 @@ class DeviceGlobalCfgMgr(Manager):
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        # the handler is for the whole BGP_DEVICE_GLOBAL table. It has 2 components, state and confed
+        # we only handle the update BGP_DEVICE_GLOBAL|STATE here
+        if key != "STATE":
+            return True
 
         # TSA configuration
         self.configure_tsa()
