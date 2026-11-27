@@ -1,6 +1,8 @@
 """Exercise the FRR Make selector without building a package or container."""
 
+import ast
 from pathlib import Path
+import re
 import subprocess
 import unittest
 
@@ -9,6 +11,32 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class FrrMakeIntegrationTest(unittest.TestCase):
+    def test_bazel_uses_the_native_frr_release_and_patch_series(self):
+        component = ROOT / "src/sonic-frr"
+        spec = ast.parse((component / "deps.MODULE.bazel").read_text())
+        archive = next(
+            node.value for node in spec.body
+            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name) and node.value.func.id == "http_archive"
+        )
+        attributes = {item.arg: ast.literal_eval(item.value) for item in archive.keywords}
+        lines = (component / "patch/series").read_text().splitlines()
+        tag = re.search(r"commit ([0-9a-f]+) \(frr-([0-9.]+)\)", lines[0])
+        self.assertIsNotNone(tag)
+        revision = attributes["urls"][0].rsplit("/", 1)[-1]
+        self.assertTrue(revision.startswith(tag[1]))
+        self.assertEqual(attributes["strip_prefix"], "frr-" + revision)
+        make = (ROOT / "rules/frr.mk").read_text()
+        self.assertIn("FRR_VERSION = " + tag[2] + "\n", make)
+        patches = [entry for entry in lines if entry and not entry.startswith("#")]
+        self.assertEqual(
+            [label.split(":patch/")[1] for label in attributes["patches"] if ":patch/" in label],
+            patches,
+        )
+        module_make = (component / "Makefile").read_text()
+        native_files = set(re.findall(r"^\s*(dplane_fpm_sonic/[\w./]+)", module_make, re.MULTILINE))
+        self.assertEqual(set(attributes["files"].values()), {"//src/sonic-frr:" + path for path in native_files})
+
     def select(self, **overrides):
         settings = {
             "BUILD_WITH_BAZEL_WHEN_AVAILABLE": "y", "BLDENV": "trixie",
