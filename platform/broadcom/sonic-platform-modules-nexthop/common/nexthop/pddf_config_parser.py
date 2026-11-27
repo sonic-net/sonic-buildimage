@@ -11,8 +11,9 @@ import re
 
 from enum import Enum
 from sonic_py_common import device_info
+from nexthop import pddf_loader
 
-PDDF_DEVICE_JSON_PATH = "/usr/share/sonic/platform/pddf/pddf-device.json"
+PDDF_DEVICE_JSON_PATH = pddf_loader.PDDF_DEVICE_JSON_PATH
 PD_PLUGIN_JSON_PATH = "/usr/share/sonic/platform/pddf/pd-plugin.json"
 
 
@@ -24,9 +25,7 @@ class FpgaDeviceName(str, Enum):
 
 def load_pddf_device_config():
     """Load and parse pddf-device.json configuration. Raises exception on error."""
-    with open(PDDF_DEVICE_JSON_PATH, "r") as f:
-        config = json.load(f)
-    return config
+    return pddf_loader.load_pddf_device_config()
 
 
 def load_pd_plugin_config() -> dict:

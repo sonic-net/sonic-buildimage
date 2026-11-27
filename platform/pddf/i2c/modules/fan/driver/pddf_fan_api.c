@@ -557,14 +557,15 @@ int fan_multifpgapci_read(FAN_DATA_ATTR *udata, int *output)
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL) {
-        printk(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
+        printk_ratelimited(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
         status = -1;
         goto ret;
     }
 
     pci_dev = (struct pci_dev *)get_device_table(udata->devname);
     if (pci_dev == NULL) {
-        printk(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n", udata->devname, udata->aname);
+        printk_ratelimited(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n",
+                           udata->devname, udata->aname);
         status = -1;
         goto ret;
     }
@@ -573,7 +574,7 @@ int fan_multifpgapci_read(FAN_DATA_ATTR *udata, int *output)
 
 ret:
     if (status)
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
 
     return status;
 }
@@ -587,13 +588,14 @@ int fan_multifpgapci_write(FAN_DATA_ATTR *udata, uint32_t val)
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
-        printk(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
+        printk_ratelimited(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
         return -1;
     }
 
     pci_dev = (struct pci_dev *)get_device_table(udata->devname);
     if (pci_dev == NULL) {
-        printk(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n", udata->devname, udata->aname);
+        printk_ratelimited(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n",
+                           udata->devname, udata->aname);
         status = -1;
         goto ret;
     }
@@ -607,7 +609,7 @@ int fan_multifpgapci_write(FAN_DATA_ATTR *udata, uint32_t val)
 
 ret:
     if (status)
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
 
     return status;
 }

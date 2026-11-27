@@ -175,13 +175,13 @@ int led_multifpgapci_read(LED_OPS_DATA *ops_ptr, uint32_t *output) {
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL) {
-        printk(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
+        printk_ratelimited(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
         return -1;
     }
 
     pci_dev = (struct pci_dev *)get_device_table(ops_ptr->attr_devname);
     if (pci_dev == NULL) {
-      printk(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
+      printk_ratelimited(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
              ops_ptr->attr_devname, ops_ptr->device_name);
       return -1;
     }
@@ -193,13 +193,13 @@ int led_multifpgapci_write(LED_OPS_DATA *ops_ptr, uint32_t val) {
     struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
-        printk(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
+        printk_ratelimited(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
         return -1;
     }
 
     pci_dev = (struct pci_dev *)get_device_table(ops_ptr->attr_devname);
     if (pci_dev == NULL) {
-      printk(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
+      printk_ratelimited(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
              ops_ptr->attr_devname, ops_ptr->device_name);
       return -1;
     }
@@ -274,7 +274,7 @@ found_match:
 
 ret:
     if (ret) {
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
     }
 
     return(ret);
@@ -370,7 +370,7 @@ ssize_t set_status_led(struct device_attribute *da)
 
 ret:
     if (ret) {
-        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
+        printk_ratelimited(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
     }
 
     return(ret);

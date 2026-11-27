@@ -84,6 +84,19 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 
 int add_fpgapci_id(unsigned short vendor, unsigned short device)
 {
+	int i;
+
+	for (i = 0; i < num_pci_ids; i++) {
+		if (fpgapci_ids[i].vendor == vendor &&
+		    fpgapci_ids[i].device == device) {
+			pddf_dbg(MULTIFPGA,
+				 KERN_INFO
+				 "%s vendor: 0x%04x, device: 0x%04x already registered\n",
+				 __FUNCTION__, vendor, device);
+			return 0;
+		}
+	}
+
 	if (num_pci_ids < MAX_PCI_IDS) {
 		fpgapci_ids[num_pci_ids].vendor = vendor;
 		fpgapci_ids[num_pci_ids].device = device;
