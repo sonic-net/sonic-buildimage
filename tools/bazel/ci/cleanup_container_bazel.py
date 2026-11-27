@@ -57,6 +57,14 @@ def owner(workspace):
     return identity
 
 
+def job_directory_prefix(identity):
+    run = f"{identity['run_id']}-{identity['run_attempt']}"
+    if identity["job"] == "native-vs-installer":
+        # The kernel's Speakup map generators accept at most 255 pathname bytes.
+        return f"n-{run}-"
+    return f"sonic-bazel-job-{run}-{identity['job']}-"
+
+
 def prepare(workspace, runner_temp):
     identity = owner(workspace)
     if (not runner_temp.is_absolute() or ".." in runner_temp.parts or
@@ -65,8 +73,7 @@ def prepare(workspace, runner_temp):
     with ExitStack() as descriptors:
         open_directory(workspace, descriptors)
         open_directory(runner_temp, descriptors)
-    prefix = f"sonic-bazel-job-{identity['run_id']}-{identity['run_attempt']}-{identity['job']}-"
-    directory = Path(tempfile.mkdtemp(prefix=prefix, dir=runner_temp))
+    directory = Path(tempfile.mkdtemp(prefix=job_directory_prefix(identity), dir=runner_temp))
     stat = directory.stat()
     (directory / IDENTITY).write_text(json.dumps({
         "schema": 1, **identity, "device": stat.st_dev, "inode": stat.st_ino,
@@ -76,7 +83,7 @@ def prepare(workspace, runner_temp):
 
 def job_identity(workspace, runner_temp, directory):
     identity = owner(workspace)
-    prefix = f"sonic-bazel-job-{identity['run_id']}-{identity['run_attempt']}-{identity['job']}-"
+    prefix = job_directory_prefix(identity)
     if (not directory.is_absolute() or directory.parent != runner_temp or
             not re.fullmatch(re.escape(prefix) + r"[a-z0-9_]{8}", directory.name)):
         raise ValueError("Refusing cleanup outside the registered runner job directory")

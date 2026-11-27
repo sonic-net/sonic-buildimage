@@ -84,6 +84,45 @@ class MigratedCleanupTest(unittest.TestCase):
         self.assertEqual((self.cache / "shared").read_text(), "keep")
         self.assertTrue(self.workspace.is_dir())
 
+    def test_native_vs_directory_fits_speakup_and_is_private_to_the_job(self):
+        other_job = self.directory
+        self.assertRegex(other_job.name, r"^sonic-bazel-job-123-2-checks-[a-z0-9_]{8}$")
+        with mock.patch.dict(os.environ, GITHUB_JOB="native-vs-installer",
+                             GITHUB_RUN_ID="45986961663", GITHUB_RUN_ATTEMPT="99"):
+            self.directory = subject.prepare(self.workspace, self.runner_temp)
+            sibling = subject.prepare(self.workspace, self.runner_temp)
+            self.assertNotEqual(self.directory, sibling)
+            self.assertRegex(self.directory.name, r"^n-45986961663-99-[a-z0-9_]{8}$")
+            self.assertEqual(self.directory.stat().st_mode & 0o777, 0o700)
+            sandbox = (Path("/__w/_temp") / self.directory.name / "bazel-startup/user-root"
+                       / ("a" * 32) / "sandbox/linux-sandbox/2147483647/execroot/_main")
+            source = sandbox / "external/sonic-linux-kernel++kernel_sources+kernel_prepared"
+            longest_input = source / "drivers/accessibility/speakup/spk_priv_keyinfo.h"
+            self.assertLess(len(os.fsencode(longest_input)), 256)
+            self.authorize()
+            self.cleanup()
+            self.assertFalse(self.directory.exists())
+            self.assertTrue(sibling.is_dir())
+            self.assertTrue(other_job.is_dir())
+
+    def test_native_vs_directory_rejects_foreign_owners_and_copied_markers(self):
+        with mock.patch.dict(os.environ, GITHUB_JOB="native-vs-installer"):
+            directory = subject.prepare(self.workspace, self.runner_temp)
+            malformed = directory.with_name(directory.name + "x")
+            with self.assertRaisesRegex(ValueError, "registered runner job directory"):
+                subject.job_identity(self.workspace, self.runner_temp, malformed)
+            for changed in ({"GITHUB_RUN_ID": "124"}, {"GITHUB_RUN_ATTEMPT": "3"},
+                            {"GITHUB_JOB": "checks"}):
+                with self.subTest(changed=changed), mock.patch.dict(os.environ, changed), \
+                        self.assertRaisesRegex(ValueError, "registered runner job directory"):
+                    subject.job_identity(self.workspace, self.runner_temp, directory)
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                subject.job_identity(self.root, self.runner_temp, directory)
+            sibling = subject.prepare(self.workspace, self.runner_temp)
+            shutil.copyfile(sibling / subject.IDENTITY, directory / subject.IDENTITY)
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                subject.job_identity(self.workspace, self.runner_temp, directory)
+
     def test_failed_cancelled_or_skipped_upload_retains_evidence(self):
         for outcome in ("failure", "cancelled", "skipped"):
             with self.subTest(outcome=outcome):
