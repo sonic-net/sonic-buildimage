@@ -1319,6 +1319,30 @@ class TestConfigDHCPServerMatch:
         assert result.exit_code == 2
         assert "is not a member of vlan Vlan100" in result.output
 
+    @pytest.mark.parametrize("matches", ["port-etp2,vendor-a", "vendor-a,port-etp2"])
+    def test_stale_binding_cannot_become_generation_fatal(self, mock_db, matches):
+        # maia-a is skipped by dhcp_cfggen while Ethernet2 is outside the VLAN, but
+        # retyping port-etp2 to option60 gives it two option60 matches, which
+        # dhcp_cfggen rejects for the whole configuration instead of skipping.
+        mock_db.delete("CONFIG_DB", "VLAN_MEMBER|Vlan100|Ethernet2")
+        mock_db.set("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a", "matches@", matches)
+
+        result = invoke(mock_db, MATCH_COMMAND.commands["update"], ["port-etp2", "--type=option60", "--value=NEW"])
+
+        assert result.exit_code == 2
+        assert "cannot reference multiple matches of type option60" in result.output
+        assert mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|port-etp2") == {
+            "type": "circuit_id", "value": "etp2"
+        }
+
+    def test_stale_binding_can_stay_stale(self, mock_db):
+        mock_db.delete("CONFIG_DB", "VLAN_MEMBER|Vlan100|Ethernet2")
+
+        result = invoke(mock_db, MATCH_COMMAND.commands["update"], ["port-etp2", "--value=etp5"])
+
+        assert result.exit_code == 0, result.output
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|port-etp2", "value") == "etp5"
+
 
 @pytest.fixture
 def overlapping_prefix_db(prefix_db):

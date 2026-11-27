@@ -121,6 +121,10 @@ class AmbiguousPoolError(click.UsageError):
     """A pool fits more than one VLAN prefix, which dhcp_cfggen rejects for the whole configuration."""
 
 
+class StaleBindingError(click.UsageError):
+    """A binding references a missing match or a port outside its VLAN, which dhcp_cfggen skips."""
+
+
 def add_pool_interval(intervals, subnets, start, end, dhcp_interface):
     """Record an address interval under the single VLAN prefix that contains it."""
     start = ipaddress.ip_address(start)
@@ -180,7 +184,7 @@ def get_match_entry(dbconn, match_name, match_overrides=None):
     else:
         key = "DHCP_SERVER_IPV4_MATCH|" + match_name
         if not dbconn.exists("CONFIG_DB", key):
-            click.get_current_context().fail("Match {} does not exist".format(match_name))
+            raise StaleBindingError("Match {} does not exist".format(match_name), ctx=click.get_current_context())
         entry = dbconn.get_all("CONFIG_DB", key)
     if entry.get("type") not in SUPPORTED_MATCH_TYPE:
         click.get_current_context().fail("Match {} has unsupported type {}".format(match_name, entry.get("type", "")))
@@ -210,7 +214,7 @@ def resolve_port_alias(dbconn, alias, port_alias_map=None):
             port_alias_map.setdefault(portchannel, []).append(portchannel)
     ports = port_alias_map.get(alias, [])
     if not ports:
-        click.get_current_context().fail("Circuit ID alias {} does not exist".format(alias))
+        raise StaleBindingError("Circuit ID alias {} does not exist".format(alias), ctx=click.get_current_context())
     if len(ports) > 1:
         click.get_current_context().fail("Circuit ID alias {} is ambiguous".format(alias))
     return ports[0]
@@ -240,9 +244,9 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
         if match_type == "circuit_id":
             port = resolve_port_alias(dbconn, match["value"], port_alias_map)
             if not dbconn.exists("CONFIG_DB", "VLAN_MEMBER|{}|{}".format(dhcp_interface, port)):
-                click.get_current_context().fail(
-                    "Circuit ID alias {} is not a member of vlan {}".format(match["value"], dhcp_interface)
-                )
+                raise StaleBindingError(
+                    "Circuit ID alias {} is not a member of vlan {}".format(match["value"], dhcp_interface),
+                    ctx=click.get_current_context())
 
     has_ips = bool(entry.get("ips@"))
     has_ranges = bool(entry.get("ranges@"))
@@ -322,7 +326,7 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
         except AmbiguousPoolError:
             # dhcp_cfggen fails the whole generation here, not just this binding.
             raise
-        except click.UsageError:
+        except click.UsageError as error:
             if is_candidate:
                 raise
             # dhcp_cfggen skips a binding that is already invalid (for example after
@@ -333,6 +337,12 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
                     validate_binding_entry(dbconn, dhcp_interface, binding_name, bindings[binding_name],
                                            port_alias_map=port_alias_map, allow_missing_ranges=True,
                                            allow_off_subnet=True)
+                except StaleBindingError:
+                    # A skipped binding must stay skippable: errors other than a stale
+                    # match or port make dhcp_cfggen fail the whole generation.
+                    if isinstance(error, StaleBindingError):
+                        continue
+                    raise error
                 except click.UsageError:
                     continue
                 raise
