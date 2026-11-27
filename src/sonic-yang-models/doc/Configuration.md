@@ -36,6 +36,7 @@
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
   * [EVPN](#evpn)
+  * [FDB_SYNC](#fdb_sync)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
@@ -43,6 +44,7 @@
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
   * [GNMI](#gnmi)
+  * [GNMI_CLIENT](#gnmi_client)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -1436,6 +1438,23 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
 }
 ```
 
+### FDB_SYNC
+
+The **FDB_SYNC** table selects how MAC (FDB) state is synchronized between SONiC and FRR. It has a single `global` entry with one field, `mac_sync_mode`:
+
+- `kernel` (default): fdbsyncd synchronizes MACs through the Linux kernel bridge FDB.
+- `fpm`: fpmsyncd exchanges MACs with zebra over the FPM channel.
+
+```json
+{
+    "FDB_SYNC": {
+        "global": {
+            "mac_sync_mode": "fpm"
+        }
+    }
+}
+```
+
 ### FG_NHG
 
 The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
@@ -1630,6 +1649,22 @@ GNMI (gRPC Network Management Interface) related configuration is defined in the
     "GNMI_CLIENT_CERT": {
         "client.sonic.net": {
             "role": ["admin", "operator"]
+        }
+    }
+}
+```
+
+### GNMI_CLIENT
+
+The **GNMI_CLIENT** table holds the credentials this device presents when it acts as a gRPC client of another SONiC device's gNMI server (mTLS). On a BMC, the BMC daemon uses them for the gNOI System.Reboot handshake with the switch host; the files must be visible inside the BMC's PMON container, and an absent field falls back to the daemon's default path. File names follow the GNMI table's rules: certificates end in `.cer`, keys in `.key`. `ca_crt` is the CA certificate that the client uses to verify the server. When one CA issues the gNMI certificates, use the same CA file as `ca_crt` in the GNMI table. GNMI_CLIENT_CERT is the opposite direction: the clients this device's own gNMI server accepts.
+
+```
+{
+    "GNMI_CLIENT": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "client_crt": "/etc/sonic/credentials/gnmi_client.cer",
+            "client_key": "/etc/sonic/credentials/gnmi_client.key"
         }
     }
 }
@@ -3094,6 +3129,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
 - CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
+- INSTALL_ON_KERNEL: Flag to also program the route into the kernel routing table (optional). It should be a boolean value, e.g. "true".
 
 ```
 {
@@ -3102,7 +3138,8 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
         "vni": "10010,10011",
-        "consistent_hashing_buckets": "10"
+        "consistent_hashing_buckets": "10",
+        "install_on_kernel": "true"
     },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
@@ -3892,6 +3929,80 @@ The **NODE_CFG** table defines the node configuration details for platform compo
 **node-id**: Unique numeric identifier for the node.
 
 **fully-qualified-name**: Fully qualified hierarchy path for the component.
+
+### SAI_PROFILE
+
+The **SAI_PROFILE** table provides a generic, vendor-agnostic mechanism
+to inject arbitrary SAI init-config key/value pairs. Each entry is
+rendered as one `KEY=VALUE` line into a vendor's final SAI profile file
+(e.g. `/etc/sai.d/sai.profile` for Broadcom, `/tmp/sai.profile` for
+Mellanox), which is read by `syncd` at startup and passed to the
+vendor SAI implementation. This avoids needing a schema or template
+change every time a new, vendor-specific SAI tunable needs to be
+exposed.
+
+> **Scope of this PR (sonic-net/sonic-buildimage#29813):** this PR adds
+> only the `SAI_PROFILE` YANG model (`sonic-sai-profile.yang`) and the
+> shared rendering template
+> (`src/sonic-config-engine/data/sai_profile_dynamic.j2`, installed to
+> `/usr/share/sonic/templates` via `sonic-config-engine`'s packaging).
+> No hwsku `sai.profile`/`sai.profile.j2` in this repo is modified, and
+> no code in this repo actually invokes the template at `syncd`
+> startup — configuring `SAI_PROFILE` has no effect until the
+> `syncd`-side integration below merges. That integration lives in a
+> separate repo/PR, sonic-net/sonic-sairedis#2098, described next.
+
+Rendering is applied by `syncd`'s startup scripts
+(`syncd/scripts/syncd_init_common.sh` in `sonic-sairedis`, see
+sonic-net/sonic-sairedis#2098), via a
+generic, vendor-agnostic helper, `apply_sai_profile_configdb()`, that
+renders the shared `src/sonic-config-engine/data/sai_profile_dynamic.j2`
+template (installed to `/usr/share/sonic/templates` on every container
+image built from `docker-config-engine-trixie`) with `sonic-cfggen -d`
+and appends its output as the very last step before a vendor's final
+profile file is handed to `syncd` (`-p <file>`). This is a no-op when
+`SAI_PROFILE` is empty/absent, so **no per-hwsku `sai.profile`/
+`sai.profile.j2` template change is required** to support this table —
+it currently covers Broadcom (`config_syncd_bcm`) and Mellanox
+(`config_syncd_mlnx`); other vendors can adopt it with a single call to
+the same helper. `SAI_INIT_CONFIG_FILE` is reserved (it is a structural
+key selected by each platform's own template logic) and is rejected by
+both YANG validation and the renderer if set via this table.
+
+`syncd` parses the final profile file line by line, splitting each
+line on the first `=` and overwriting a `std::map` entry per key with
+no duplicate-key detection (`Syncd::loadProfileMap()` in
+`sonic-sairedis`). Because `apply_sai_profile_configdb()` appends last,
+after any vendor-specific static defaults or de-duplication, an entry
+in `SAI_PROFILE` always silently overrides a hardcoded static default
+with the same key — this is intentional, and is how tuning a key
+without an image rebuild is meant to work. Duplicate keys cannot occur
+within `SAI_PROFILE` itself, since CONFIG_DB stores it as a hash keyed
+uniquely by `name`.
+
+```json
+{
+    "SAI_PROFILE": {
+        "SAI_NUM_ECMP_MEMBERS": {
+            "value": "128"
+        },
+        "SAI_NHG_HIERARCHICAL_NEXTHOP": {
+            "value": "false"
+        }
+    }
+}
+```
+
+**name** (list key): SAI profile key name. Must exactly match the SAI
+environment variable name expected by the vendor's SAI/SDK
+implementation, e.g. `SAI_NUM_ECMP_MEMBERS`. `SAI_INIT_CONFIG_FILE` is
+reserved and not allowed.
+
+**value**: Value for this SAI profile key, rendered verbatim as a
+string. Interpretation/validation of the value is the vendor SAI/SDK
+implementation's responsibility, not this schema's. Carriage return and
+line feed characters are not allowed, since each entry is rendered as
+exactly one `KEY=VALUE` line.
 
 # For Developers
 

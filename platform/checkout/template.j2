@@ -1,3 +1,5 @@
+{# SPDX-License-Identifier: Apache-2.0 #}
+
 {% if module.path is defined %}
 {% set path = module.path %}
 {% else %}
@@ -8,6 +10,27 @@
 {% set platform_repo = env('PLATFORM_REPO') or module.repo %}
 {# PLATFORM_REF overrides module.ref #}
 {% set platform_ref = env('PLATFORM_REF') or (module.ref if module.ref is defined else None) %}
+{% set optional_checkout = module.optional_checkout is defined and module.optional_checkout|lower == 'true' %}
+{% if optional_checkout %}
+if [ ! -d {{ path }}/.git ]; then
+    if [ ! -e {{ path }} ]; then
+        git clone {{ platform_repo }} {{ path }} || echo "WARNING: unable to fetch {{ platform_repo }}; using local platform files if available";
+    else
+        echo "WARNING: {{ path }} exists but is not a git checkout; using local platform files if available";
+    fi;
+fi;
+
+if [ -d {{ path }}/.git ]; then (cd {{ path }} &&
+
+{% if platform_ref %}
+git checkout {{ platform_ref }} && git submodule update --init --recursive
+{% else %}
+git submodule update --init --recursive
+{% endif %}
+    ) || echo "WARNING: unable to prepare {{ path }}; using local platform files if available";
+
+else echo "WARNING: {{ path }}/.git not found; using local platform files if available"; fi
+{% else %}
 if [ ! -d {{ path }} ]; then git clone {{ platform_repo }} {{ path }}; fi;
 if [ -d {{ path }}/.git ]; then cd {{ path }} &&
 
@@ -18,3 +41,4 @@ git submodule update --init --recursive;
 {% endif %}
 
 else echo "{{ path }}/.git not found"; exit 1; fi
+{% endif %}

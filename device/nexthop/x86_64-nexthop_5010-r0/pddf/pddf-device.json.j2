@@ -10,7 +10,7 @@
     "num_asic_temps": 52,
     "num_voltage_sensors": 82,
     "num_current_sensors": 20,
-    "num_components": 36,
+    "num_components": 38,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -1149,6 +1149,66 @@
       }
     ]
   },
+  "COMPONENT37": {
+    "comp_attr": {
+      "name": "PSU1",
+      "type": "psu",
+      "description": "Power Supply Unit 1",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "python3 -m nexthop.psu_fw_version --bus 85 --address 0x58"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "cat /sys/bus/i2c/devices/85-0058/psu_model_name"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "cat /sys/bus/i2c/devices/85-0058/psu_serial_num"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU1 {}"
+      }
+    ]
+  },
+  "COMPONENT38": {
+    "comp_attr": {
+      "name": "PSU2",
+      "type": "psu",
+      "description": "Power Supply Unit 2",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "python3 -m nexthop.psu_fw_version --bus 86 --address 0x58"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "cat /sys/bus/i2c/devices/86-0058/psu_model_name"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "cat /sys/bus/i2c/devices/86-0058/psu_serial_num"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU2 {}"
+      }
+    ]
+  },
   "SYSTEM": {
     "dev_info": {
       "device_type": "CPU",
@@ -1237,8 +1297,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
@@ -2668,8 +2726,6 @@
       "dev_attr": {}
     },
     "dev_attr": {
-      "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef",
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
@@ -3714,6 +3770,14 @@
           "attr_cmpval": "0xff"
         },
         {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
           "attr_name": "psu_p_out",
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
@@ -3976,6 +4040,14 @@
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
           "attr_cmpval": "0xff"
+        },
+        {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_p_out",
@@ -16061,10 +16133,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -16086,10 +16154,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -16214,10 +16278,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -16239,10 +16299,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -16367,10 +16423,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -16392,10 +16444,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -16520,10 +16568,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -16545,10 +16589,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -16673,10 +16713,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -16698,10 +16734,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -17512,10 +17544,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -17537,10 +17565,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -17650,10 +17674,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -17675,10 +17695,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -17788,10 +17804,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -17813,10 +17825,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -17926,10 +17934,6 @@
           "drv_attr_name": "curr3_input"
         },
         {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
-        },
-        {
           "attr_name": "current1_crit_high_threshold",
           "drv_attr_name": "curr3_crit"
         }
@@ -17951,10 +17955,6 @@
         {
           "attr_name": "current1_input",
           "drv_attr_name": "curr4_input"
-        },
-        {
-          "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
@@ -18282,6 +18282,18 @@
         "hw_irq": 0,
         "watchdog_counter_msi_reg": "0x1D8"
       }{% else %}{}{% endif %}
+    }
+  },
+  "FPGA_REBOOT_CONF": {
+    "cpu_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{cpu_card_fpga_bdf}}",
+      "reg_offset": "0x8",
+      "enable_word": "0xdeadbeef"
+    },
+    "switch_card_fpga_0_chassis_pwrcyc": {
+      "fpga_bdf": "{{switchcard_fpga_bdf}}",
+      "reg_offset": "0x4",
+      "enable_word": "0xdeadbeef"
     }
   }
 }

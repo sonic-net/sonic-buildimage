@@ -1,1 +1,0 @@
-../../common/modules/pegatron_hwmon_mcu.c

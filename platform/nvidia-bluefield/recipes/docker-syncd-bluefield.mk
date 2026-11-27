@@ -45,6 +45,8 @@ $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugep
 # Allow NASA/DPDK to lock its RDMA memory region without --privileged.
 $(DOCKER_SYNCD_BASE)_RUN_OPT += --cap-add=IPC_LOCK --ulimit memlock=-1:-1
 
-# Allow runtime-mounted DOCA RDMA and VFIO devices without --privileged.
-$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='c 231:* rw'
-$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='c 10:196 rw'
+# Allow mounting all devices without --privileged.
+# MST devices currently get a dynamic major, so every device is allowed, similar to mellanox platform syncd.
+# VFIO devices match 10:196
+# DOCA RDMA devices match 231:*
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --device-cgroup-rule='a *:* rwm'

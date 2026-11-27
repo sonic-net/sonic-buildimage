@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Cisco Systems, Inc. and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 
-PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/src
+PLATFORM_SRC_PATH ?= $(if $(wildcard $(PLATFORM_PATH)/src/rules.mk),$(PLATFORM_PATH)/src,$(PLATFORM_PATH)/embedded)
 
-# We augment the DEP_FILES list to include cisco-8000 device files
+# We augment the DEP_FILES list to include the selected Cisco device files.
 # In publicly exposed platform repos, we wouldn't need this, as it's covered
 # by rules/sonic-device-data.dep in sonic-buildimage
 

@@ -6,6 +6,7 @@ import re
 import tempfile
 
 from unittest import TestCase
+from jinja2 import Environment, FileSystemLoader
 import tests.common_utils as utils
 from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 
@@ -517,6 +518,85 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ports.json'), self.output_file))
 
+    def test_dhcpmon_upstream_address_families(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        interfaces = [
+            ("VLAN_INTERFACE", "Vlan1000", ("192.0.2.1/24", "2001:db8:1000::1/64")),
+            ("VLAN_INTERFACE", "Vlan2000", ("198.51.100.1/24", "2001:db8:2000::1/64")),
+            ("INTERFACE", "Ethernet0", ("203.0.113.1/24", "2001:db8:3::1/64")),
+            ("PORTCHANNEL_INTERFACE", "PortChannel01", ("10.0.0.1/31", "2001:db8:4::1/64")),
+        ]
+        for sonic_backend in (False, True):
+            for families in (("ipv4",), ("ipv6",), ("ipv4", "ipv6")):
+                case = "sonic_backend={}, families={}".format(sonic_backend, families)
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN": {},
+                    "VLAN_INTERFACE": {},
+                    "INTERFACE": {},
+                    "PORTCHANNEL_INTERFACE": {},
+                    "DHCPV4_RELAY": {},
+                    "DHCP_RELAY": {},
+                    "MGMT_INTERFACE": {"eth0|192.0.2.2/24": {}},
+                }
+                for table, name, prefixes in interfaces:
+                    data[table][name] = {}
+                    for prefix in prefixes:
+                        data[table]["{}|{}".format(name, prefix)] = {}
+                data["INTERFACE"]["Ethernet4|2001:db8:5::1/64"] = {}
+                data["INTERFACE"]["Ethernet8|198.51.100.2/24"] = {}
+                if "ipv4" in families:
+                    table, field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                        "VLAN", "dhcp_servers")
+                    data[table]["Vlan1000"] = {field: ["198.18.0.10"]}
+                if "ipv6" in families:
+                    data["DHCP_RELAY"]["Vlan1000"] = {"dhcpv6_servers": ["2001:db8:6::10"]}
+
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+
+                commands = [
+                    line.partition("=")[2].split()
+                    for line in rendered.splitlines() if line.startswith("command=")
+                ]
+                self.assertEqual(len(commands), 1, case)
+                command = commands[0]
+                self.assertEqual(command[:3], ["/usr/sbin/dhcpmon", "-id", "Vlan1000"], case)
+                upstreams = [
+                    command[index + 1] for index, arg in enumerate(command[:-1]) if arg == "-iu"
+                ]
+                expected_upstreams = ["Vlan2000", "Ethernet0", "PortChannel01"]
+                if "ipv4" in families:
+                    expected_upstreams.append("Ethernet8")
+                if "ipv6" in families:
+                    expected_upstreams.append("Ethernet4")
+                self.assertEqual(sorted(upstreams), sorted(expected_upstreams), case)
+                self.assertEqual(command[-2:], ["-im", "eth0"], case)
+
+    def test_dhcpmon_requires_matching_vlan_address(self):
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers',
+                                     'docker-dhcp-relay', 'dhcp-relay.monitors.j2')
+        for sonic_backend in (False, True):
+            v4_table, v4_field = ("DHCPV4_RELAY", "dhcpv4_servers") if sonic_backend else (
+                "VLAN", "dhcp_servers")
+            for table, field, server, prefix in (
+                (v4_table, v4_field, "198.18.0.10", "2001:db8:1000::1/64"),
+                ("DHCP_RELAY", "dhcpv6_servers", "2001:db8:6::10", "192.0.2.1/24"),
+            ):
+                data = {
+                    "DEVICE_METADATA": {"localhost": {"has_sonic_dhcpv4_relay": str(sonic_backend)}},
+                    "VLAN_INTERFACE": {"Vlan1000|{}".format(prefix): {}},
+                    table: {"Vlan1000": {field: [server]}},
+                }
+                with tempfile.NamedTemporaryFile(mode="w") as config:
+                    json.dump(data, config)
+                    config.flush()
+                    rendered = self.run_script(['-j', config.name, '-t', template_path])
+                self.assertNotIn("dhcpmon-Vlan1000", rendered, repr(data))
+
     def test_dhcp_relay(self):
         # Test generation of wait_for_intf.sh
         dhc_sample_data = os.path.join(self.test_dir, "dhcp-relay-sample.json")
@@ -546,11 +626,47 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-secondary-subnets.supervisord.conf'), self.output_file))
 
-        # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is True and dhcp relay config is present
+        # Test generation when SONiC DHCPv4 is enabled and only DHCPv6 relay servers are configured.
         sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
                                      'docker-dhcp-relay.supervisord.conf.j2')
         argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        with open(self.output_file, 'r') as output:
+            rendered = output.read()
+        self.assertIn("programs=dhcprelayd,dhcp6relay,dhcp4relay", rendered)
+        self.assertIn("[program:dhcp6relay]", rendered)
+        self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
+        self.assertNotIn("[program:dhcpmon-Vlan2000]", rendered)
+
+        # Test generation when only SONiC DHCPv4 relay servers are configured.
+        sonic_dhcpv4_only_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]}
+            }
+        }
+        argument = ['-m', self.sonic_dhcp4relay_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(sonic_dhcpv4_only_data), '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        with open(self.output_file, 'r') as output:
+            rendered = output.read()
+        self.assertIn("programs=dhcprelayd,dhcp4relay", rendered)
+        self.assertIn("[program:dhcpmon-Vlan1000]", rendered)
+        self.assertNotIn("[program:dhcp6relay]", rendered)
+        self.assertNotIn("[program:dhcpmon-Vlan2000]", rendered)
+
+        # Test generation when SONiC DHCPv4 and DHCPv6 relay servers are both configured.
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        sonic_dhcpv4_relay_data = {
+            "DHCPV4_RELAY": {
+                "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]},
+                "Vlan2000": {"dhcpv4_servers": ["192.0.0.3", "192.0.0.4"]}
+            }
+        }
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(sonic_dhcpv4_relay_data), '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
@@ -1461,6 +1577,279 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
         assert match, diff
 
+    def test_buffers_mellanox_spc6_empty_data_port_profile_lists(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P64O128C2', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600', ['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        common_dir = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates')
+        for platform, sku, service_ports in test_data:
+            dir_path = os.path.join(
+                self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku
+            )
+            environment = Environment(
+                loader=FileSystemLoader([dir_path, common_dir]),
+                trim_blocks=True
+            )
+            template = environment.get_template('buffers_defaults_t0.j2')
+            service_port_names = ','.join(service_ports)
+            scenarios = [
+                ('Ethernet0', service_port_names, ['Ethernet0'] + service_ports),
+                (service_port_names, '', service_ports),
+            ]
+
+            for context in ({}, {'dynamic_mode': True}):
+                module = template.make_module(context)
+                for active_ports, inactive_ports, expected_ports in scenarios:
+                    rendered = '{{{}}}'.format(
+                        module.generate_profile_lists_with_inactive_ports(
+                            active_ports, inactive_ports
+                        )
+                    )
+                    buffer_config = json.loads(rendered)
+
+                    self.assertEqual(
+                        set(buffer_config['BUFFER_PORT_INGRESS_PROFILE_LIST']),
+                        set(expected_ports)
+                    )
+                    self.assertEqual(
+                        set(buffer_config['BUFFER_PORT_EGRESS_PROFILE_LIST']),
+                        set(expected_ports)
+                    )
+
+    def test_buffers_mellanox_spc6_service_port_activity(self):
+
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        root = os.path.abspath(os.path.join(self.test_dir, '..', '..', '..'))
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD'),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2'),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P64O128C2'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'ACS-SN6600_LD'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'Mellanox-SN6600_LD-P128C2'),
+            ('x86_64-nvidia_sn6600_ld_simx-r0', 'Mellanox-SN6600_LD-P64O128C2'),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600'),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD'),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD'),
+        ]
+
+        def unique_objects(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise AssertionError('Duplicate JSON key: {}'.format(key))
+                result[key] = value
+            return result
+
+        for platform, sku in test_data:
+            sku_dir = os.path.join(root, 'device', 'mellanox', platform, sku)
+            environment = Environment(loader=FileSystemLoader([
+                sku_dir, os.path.join(root, 'files', 'build_templates')
+            ]))
+            service_ports = (['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']
+                             if sku == 'ACS-SN6600' else ['Ethernet512', 'Ethernet513'])
+            for role in ('ToRRouter', 'LeafRouter'):
+                for dynamic in (False, True):
+                    for active_ports in ([], service_ports[:1], ['Ethernet0'],
+                                         ['Ethernet0'] + service_ports[:1], ['Ethernet0'] + service_ports):
+                        active_service_ports = [port for port in service_ports if port in active_ports]
+                        with self.subTest(platform=platform, sku=sku, role=role,
+                                          dynamic=dynamic, active=active_ports):
+                            context = {
+                                'PORT': {port: {} for port in ['Ethernet0', 'Ethernet8'] + service_ports},
+                                'DEVICE_METADATA': {'localhost': {'type': role}},
+                                'DEVICE_NEIGHBOR': {
+                                    port: {'name': 'neighbor'}
+                                    for port in active_ports
+                                },
+                                'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': 'LeafRouter'}},
+                            }
+                            template = environment.get_template(
+                                'buffers_dynamic.json.j2' if dynamic else 'buffers.json.j2'
+                            )
+                            config = json.loads(template.render(**context), object_pairs_hook=unique_objects)
+                            for table in ('BUFFER_PG', 'BUFFER_QUEUE',
+                                          'BUFFER_PORT_INGRESS_PROFILE_LIST', 'BUFFER_PORT_EGRESS_PROFILE_LIST'):
+                                self.assertEqual({key.split('|')[0] for key in config[table]}, set(context['PORT']))
+                            for port in service_ports:
+                                inactive = port not in active_service_ports and not dynamic
+                                expected_ingress = (
+                                    'ingress_lossless_zero_profile' if 'P128C2' in sku or 'P64O128C2' in sku
+                                    else 'ingress_lossy_zero_profile'
+                                ) if inactive else 'sp_ingress_port_profile'
+                                self.assertEqual(
+                                    config['BUFFER_PORT_INGRESS_PROFILE_LIST'][port]['profile_list'],
+                                    expected_ingress
+                                )
+                                self.assertEqual(config['BUFFER_PG'][port + '|0']['profile'],
+                                                 'ingress_lossy_pg_zero_profile' if inactive else 'sp_pg_lossy_profile')
+                                self.assertEqual([key for key in config['BUFFER_PG'] if key.startswith(port + '|')],
+                                                 [port + '|0'])
+                                self.assertEqual(
+                                    config['BUFFER_PORT_EGRESS_PROFILE_LIST'][port]['profile_list'],
+                                    'egress_lossy_zero_profile' if inactive else 'egress_lossy_profile'
+                                )
+                                for table, field in [('BUFFER_PG', 'profile'), ('BUFFER_QUEUE', 'profile'),
+                                                     ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'),
+                                                     ('BUFFER_PORT_EGRESS_PROFILE_LIST', 'profile_list')]:
+                                    entries = [value for key, value in config[table].items()
+                                               if key == port or key.startswith(port + '|')]
+                                    self.assertTrue(entries)
+                                    for entry in entries:
+                                        for name in entry[field].split(','):
+                                            self.assertIn(name, config['BUFFER_PROFILE'])
+                                            if table in ('BUFFER_PG', 'BUFFER_PORT_INGRESS_PROFILE_LIST'):
+                                                self.assertEqual(name.endswith('_zero_profile'), inactive)
+                                                if inactive:
+                                                    self.assertEqual(config['BUFFER_PROFILE'][name]['size'], '0')
+                                    if table == 'BUFFER_QUEUE' and (
+                                            port not in active_ports or 'Ethernet0' in active_ports):
+                                        data_port = 'Ethernet8' if port not in active_service_ports else 'Ethernet0'
+                                        data_entries = {key[len(data_port):]: value for key, value in config[table].items()
+                                                        if key == data_port or key.startswith(data_port + '|')}
+                                        service_entries = {key[len(port):]: value for key, value in config[table].items()
+                                                           if key == port or key.startswith(port + '|')}
+                                        if '|3-4' in service_entries:
+                                            # On SKUs with a lossless queue 3-4, service ports carry only
+                                            # lossy traffic, so that queue takes the lossy profile instead;
+                                            # every other queue still matches a data port. SKUs whose queues
+                                            # are all lossy have no |3-4 range key and need no special-casing.
+                                            lossy_34 = ('egress_lossy_zero_profile' if inactive
+                                                        else 'q_lossy_profile')
+                                            self.assertEqual(service_entries['|3-4']['profile'], lossy_34)
+                                            service_entries.pop('|3-4', None)
+                                            data_entries.pop('|3-4', None)
+                                        self.assertEqual(service_entries, data_entries)
+                            self.assertEqual(config['BUFFER_PG']['Ethernet0|0']['profile'],
+                                             'ingress_lossy_profile' if dynamic or 'Ethernet0' in active_ports
+                                             else 'ingress_lossy_pg_zero_profile')
+                            self.assertEqual(config['BUFFER_PG']['Ethernet8|0']['profile'],
+                                             'ingress_lossy_profile' if dynamic else 'ingress_lossy_pg_zero_profile')
+                            self.assertNotIn('|0', config['BUFFER_PG'])
+
+    def test_buffers_mellanox_spc6_service_port_cable_length(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        common_dir = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates')
+        test_data = [
+            ('x86_64-nvidia_sn6600_ld-r0', 'ACS-SN6600_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_simx-r0', 'ACS-SN6600', ['Ethernet512', 'Ethernet520', 'Ethernet528', 'Ethernet536']),
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6810_ld_simx-r0', 'ACS-SN6810_LD', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        for platform, sku, service_ports in test_data:
+            sku_dir = os.path.join(self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku)
+            environment = Environment(loader=FileSystemLoader([sku_dir, common_dir]))
+            template = environment.get_template('buffers.json.j2')
+            for role, neighbor_role, expected_length in [
+                ('ToRRouter', 'LeafRouter', '40m'),
+                ('LeafRouter', 'SpineRouter', '300m'),
+            ]:
+                ports = {'Ethernet0': {}, 'Ethernet8': {'role': 'Dpc'}}
+                ports.update({port: {} for port in service_ports})
+                context = {
+                    'PORT': ports,
+                    'DEVICE_METADATA': {'localhost': {'type': role}},
+                    'DEVICE_NEIGHBOR': {'Ethernet0': {'name': 'neighbor'}},
+                    'DEVICE_NEIGHBOR_METADATA': {'neighbor': {'type': neighbor_role}},
+                }
+                cable_lengths = json.loads(template.render(**context))['CABLE_LENGTH']['AZURE']
+                self.assertEqual(cable_lengths['Ethernet0'], expected_length)
+                self.assertEqual(cable_lengths['Ethernet8'], '0m')
+                for port in service_ports:
+                    self.assertEqual(cable_lengths[port], '0m')
+
+    def test_buffers_mellanox_spc6_service_ports_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        def render_buffer_config_template(platform, sku, minigraph, buffer_template):
+            file_exist, dir_exist = self.create_machine_conf(platform, 'mellanox')
+            dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', 'mellanox', platform, sku)
+            buffers_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
+            buffers_config_file_new = os.path.join(dir_path, 'buffers_config.j2')
+
+            try:
+                shutil.copy2(buffers_config_file, dir_path)
+                buffers_file = os.path.join(dir_path, buffer_template)
+                minigraph_file = os.path.join(self.test_dir, minigraph)
+                port_config_ini_file = os.path.join(dir_path, 'port_config.ini')
+                argument = ['-m', minigraph_file, '-p', port_config_ini_file, '-t', buffers_file]
+
+                return json.loads(self.run_script(argument))
+            finally:
+                if os.path.exists(buffers_config_file_new):
+                    os.remove(buffers_config_file_new)
+                self.remove_machine_conf(file_exist, dir_exist)
+
+        def assert_service_port_buffer_config(buffer_config, service_ports, dynamic=False):
+            for port in service_ports:
+                # The sample minigraph has no service-port neighbors.
+                self.assertEqual(
+                    buffer_config['BUFFER_PORT_INGRESS_PROFILE_LIST'][port]['profile_list'],
+                    'sp_ingress_port_profile' if dynamic else (
+                        'ingress_lossless_zero_profile' if sku == 'Mellanox-SN6600_LD-P128C2'
+                        else 'ingress_lossy_zero_profile'
+                    )
+                )
+                self.assertEqual(
+                    buffer_config['BUFFER_PG']['{}|0'.format(port)]['profile'],
+                    'sp_pg_lossy_profile' if dynamic else 'ingress_lossy_pg_zero_profile'
+                )
+                self.assertEqual(
+                    sorted(key for key in buffer_config['BUFFER_PG'] if key.startswith('{}|'.format(port))),
+                    ['{}|0'.format(port)]
+                )
+                # Egress paths (queue + egress profile list) are not filtered:
+                # service ports carry the same egress buffers as data ports.
+                self.assertTrue(any(key.startswith('{}|'.format(port)) for key in buffer_config['BUFFER_QUEUE']))
+                self.assertIn(port, buffer_config['BUFFER_PORT_EGRESS_PROFILE_LIST'])
+
+        test_data = [
+            ('x86_64-nvidia_sn6810_ld-r0', 'ACS-SN6810_LD', 't1-sample-graph-mlnx.xml', ['Ethernet512', 'Ethernet513']),
+            ('x86_64-nvidia_sn6600_ld-r0', 'Mellanox-SN6600_LD-P128C2', 't1-sample-graph-mlnx.xml', ['Ethernet512', 'Ethernet513']),
+        ]
+
+        for platform, sku, minigraph, service_ports in test_data:
+            buffer_config = render_buffer_config_template(
+                platform=platform,
+                sku=sku,
+                minigraph=minigraph,
+                buffer_template='buffers.json.j2'
+            )
+
+            assert_service_port_buffer_config(buffer_config, service_ports)
+            # Guard against a vacuous pass: assert a data port has queues before
+            # asserting no queue uses priority 7. Otherwise a template that
+            # excluded all data ports (empty BUFFER_QUEUE) would pass this test.
+            self.assertTrue(any(queue.startswith('Ethernet0|') for queue in buffer_config['BUFFER_QUEUE']))
+            self.assertFalse(any(queue.endswith('|7') for queue in buffer_config['BUFFER_QUEUE']))
+
+            # Also render the dynamic-buffer template: it sets dynamic_mode, a
+            # shipped path for these SKUs. The service-port PG invariant
+            # (a service port carries only a '|0' PG) must hold there too -
+            # without the data-port filter, the dynamic path would emit a
+            # spurious lossless '|3-4' PG on every service port.
+            dynamic_buffer_config = render_buffer_config_template(
+                platform=platform,
+                sku=sku,
+                minigraph=minigraph,
+                buffer_template='buffers_dynamic.json.j2'
+            )
+            assert_service_port_buffer_config(dynamic_buffer_config, service_ports, dynamic=True)
+
     def test_buffers_dell6100_render_template(self):
         self._test_buffers_render_template('dell', 'x86_64-dell_s6100_c2538-r0', 'Force10-S6100', 'sample-dell-6100-t0-minigraph.xml', 'buffers.json.j2', 'buffers-dell6100.json', copy_files=True)
 
@@ -1703,6 +2092,24 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_dpu_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch_dpu.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_empty_src_intf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_empty_src_intf.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
+
+        argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_conf_with_mgmt_interface(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_with_mgmt_interface.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_with_mgmt_interface.conf")
 
         argument = ['-j', config_db_ntp_json, '-a', '{"switch_bmc": 0}', '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
@@ -2099,6 +2506,43 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             argument = ["-j", input_file, "-t", acl_template]
             sample_output_file = os.path.join(
                 self.test_dir, 'data', 'backend_acl', v['output']
+            )
+            self.run_script(argument, output_file=self.output_file)
+            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
+    def test_sai_profile_dynamic_template_render(self):
+        sai_profile_dynamic_template = os.path.join(
+            self.test_dir, '..', 'data', 'sai_profile_dynamic.j2'
+        )
+        test_list = {
+            'populated': {
+                'input': 'populated.json',
+                'output': 'sai_profile_dynamic_populated.txt'
+            },
+            'empty': {
+                'input': 'empty.json',
+                'output': 'sai_profile_dynamic_empty.txt'
+            },
+            # Exercises the direct-CONFIG_DB-write safety guards (which
+            # exist because such writes bypass YANG validation): a key
+            # that is exactly the reserved SAI_INIT_CONFIG_FILE, a key
+            # that embeds '=' to smuggle that reserved key past a
+            # first-'='-split parser, and a key containing CR/LF must
+            # all be dropped entirely; CR/LF in a value must be
+            # normalized (CR stripped, LF collapsed to a space) rather
+            # than allowed to produce extra profile lines.
+            'malicious': {
+                'input': 'malicious.json',
+                'output': 'sai_profile_dynamic_malicious.txt'
+            },
+        }
+        for _, v in test_list.items():
+            input_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['input']
+            )
+            argument = ["-j", input_file, "-t", sai_profile_dynamic_template]
+            sample_output_file = os.path.join(
+                self.test_dir, 'data', 'sai_profile', v['output']
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)

@@ -57,17 +57,23 @@ class RebootCause():
             gettype = item.get('gettype', None)
             okval = item.get('okval', None)
             compare_mode = item.get('compare_mode', "equal")
+
+            read_len = item.get('read_len', 1)
+            default_mask = (1 << (read_len * 8)) - 1
+            mask = item.get('mask', default_mask)
+
             ret, value = get_value(item)
             if ret is True:
+                masked_value = value & mask
                 if compare_mode == "equal":
                     if isinstance(okval, list):
-                        if value in okval:
+                        if masked_value in okval:
                             return True
                     else:
-                        if value == okval:
+                        if masked_value == okval:
                             return True
                 elif compare_mode == "great":
-                    if value > okval:
+                    if masked_value > okval:
                         return True
                 elif compare_mode == "ignore":
                     return True

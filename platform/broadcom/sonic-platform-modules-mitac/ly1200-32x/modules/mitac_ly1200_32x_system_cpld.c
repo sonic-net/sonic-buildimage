@@ -276,13 +276,14 @@ static void wdt_set_timeout(int index)
 {
     struct device *dev = &system_cpld->client->dev;
     struct device_attribute *fake_attr=NULL;
-    char buf[1];
-    if ( WD_TIMO_MAX_NUM == 16 ) {
-        sprintf(buf,"%x",index);
-        system_cpld_wd_timer_raw_write(dev, fake_attr, buf, (size_t)0);
-    }
-    else
-        printk(KERN_INFO "%s: It is out of spec.\n", __FUNCTION__);
+    char buf[sizeof(index) * 2 + 2];
+    int len;
+
+    if (index < 0 || index >= WD_TIMO_MAX_NUM)
+        return;
+
+    len = scnprintf(buf, sizeof(buf), "%x", (unsigned int)index);
+    system_cpld_wd_timer_raw_write(dev, fake_attr, buf, (size_t)len);
 }
 
 /**
@@ -538,4 +539,3 @@ module_exit(system_cpld_exit);
 MODULE_DESCRIPTION("mitac_ly1200_32x_system_cpld driver");
 MODULE_AUTHOR("Eddy Weng <eddy.weng@mic.com.tw>");
 MODULE_LICENSE("GPL");
-
