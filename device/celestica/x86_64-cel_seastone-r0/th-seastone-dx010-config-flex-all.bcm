@@ -206,6 +206,7 @@ dport_map_port_131=126
 dport_map_port_132=127
 dport_map_port_133=128
 
+dport_map_port_100=129
 
 # port/lane mapping, 96x25G + 16x50G
 portmap_68=65:100
@@ -370,7 +371,7 @@ portmap_132=127:25:50:i
 portmap_133=128:25:i
 
 #portmap_66=129:10
-#portmap_100=131:10
+portmap_100=131:10
 
 #WC16
 xgxs_tx_lane_map_68=0x3201
@@ -695,6 +696,8 @@ xgxs_rx_lane_map_132=0x2310
 xgxs_tx_lane_map_133=0x1302
 xgxs_rx_lane_map_133=0x2310
 
+xgxs_tx_lane_map_100=0x3210
+xgxs_rx_lane_map_100=0x3210
 
 #Polarity flip settings
 
@@ -1065,5 +1068,8 @@ phy_xaui_rx_polarity_flip_131=0x0000
 phy_xaui_rx_polarity_flip_132=0x0000
 phy_xaui_rx_polarity_flip_133=0x0000
 
+phy_xaui_tx_polarity_flip_100=0x0000
+phy_xaui_rx_polarity_flip_100=0x0000
 
+phy_an_c37_100=2
 

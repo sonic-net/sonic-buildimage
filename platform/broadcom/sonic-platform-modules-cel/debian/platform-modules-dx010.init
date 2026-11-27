@@ -147,11 +147,15 @@ start)
         echo 0x00000000 > /sys/devices/platform/dx010_cpld/qsfp_lpmode
 
         # Attach 32 instances of EEPROM driver QSFP ports
-        for ((n=26;n<=58;n++));
+        for ((n=26;n<=57;n++));
         do
-                echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-$n/new_device
-        sleep 0.1
+            echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-$n/new_device
+            sleep 0.1
         done
+
+        # Attach SFP EEPROM
+        echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-59/new_device
+        sleep 0.1
 
 	# Set pca9548 idle_state
 	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0071/idle_state
@@ -161,11 +165,11 @@ start)
 
 	bus_en=8
 	cfg_r=`i2cget -y -f 8 0x60 0xD1`
-	((cfg_w=$cfg_r+$bus_en))	
+	((cfg_w=$cfg_r+$bus_en))
 	i2cset -y -f 8 0x60 0xD1 $cfg_w
 	sleep 0.1
 	cfg_r=`i2cget -y -f 9 0x20 0xD1`
-	((cfg_w=$cfg_r+$bus_en))	
+	((cfg_w=$cfg_r+$bus_en))
 	i2cset -y -f 9 0x20 0xD1 $cfg_w
 	sleep 0.1
 

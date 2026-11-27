@@ -19,6 +19,7 @@ except ImportError as e:
 
 SFP_I2C_START = 26
 I2C_EEPROM_PATH = '/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom'
+SFPP_INDEX = 32
 
 
 class SfpOptoe(SfpOptoeBase):
@@ -27,6 +28,7 @@ class SfpOptoe(SfpOptoeBase):
     RESET_PATH = "/sys/devices/platform/dx010_cpld/qsfp_reset"
     LP_PATH = "/sys/devices/platform/dx010_cpld/qsfp_lpmode"
     PRS_PATH = "/sys/devices/platform/dx010_cpld/qsfp_modprs"
+    SFPABS_PATH = "/sys/devices/platform/dx010_cpld/sfp_modabs"
 
     def __init__(self, sfp_index=0, sfp_name=None):
         SfpOptoeBase.__init__(self)
@@ -55,6 +57,8 @@ class SfpOptoe(SfpOptoeBase):
 
     def get_eeprom_path(self):
         port_to_i2c_mapping = SFP_I2C_START + self._index
+        if self._index == SFPP_INDEX:
+            port_to_i2c_mapping += 1
         port_eeprom_path = I2C_EEPROM_PATH.format(port_to_i2c_mapping)
         return port_eeprom_path
 
@@ -87,6 +91,8 @@ class SfpOptoe(SfpOptoeBase):
         Returns:
             A Boolean, True if reset enabled, False if disabled
         """
+        if self._index == SFPP_INDEX:
+            return False
         reset_status_raw = self._api_helper.read_txt_file(
             self.RESET_PATH).rstrip()
         if not reset_status_raw:
@@ -98,10 +104,16 @@ class SfpOptoe(SfpOptoeBase):
 
     def get_presence(self):
         """
-        Retrieves the presence of the PSU
+        Retrieves the presence of the SFP
         Returns:
-            bool: True if PSU is present, False if not
+            bool: True if SFP is present, False if not
         """
+        if self._index == SFPP_INDEX:
+            modabs_raw = self._api_helper.read_txt_file(self.SFPABS_PATH)
+            if not modabs_raw: return False
+            modabs_val = int(modabs_raw.rstrip(), 16)
+            return (modabs_val & 0x02) == 0x00
+
         presence_status_raw = self._api_helper.read_txt_file(
             self.PRS_PATH).rstrip()
         if not presence_status_raw:
@@ -128,6 +140,8 @@ class SfpOptoe(SfpOptoeBase):
         Returns:
             A Boolean, True if lpmode is enabled, False if disabled
         """
+        if self._index == SFPP_INDEX:
+            return False
         try:
             reg_file = open(self.LP_PATH, "r")
             content = reg_file.readline().rstrip()
@@ -157,6 +171,8 @@ class SfpOptoe(SfpOptoeBase):
             A boolean, True if successful, False if not
         """
         # Check for invalid port_num
+        if self._index == SFPP_INDEX:
+            return True
 
         try:
             reg_file = open(self.RESET_PATH, "r+")
@@ -211,6 +227,8 @@ class SfpOptoe(SfpOptoeBase):
         Returns:
             A boolean, True if lpmode is set successfully, False if not
         """
+        if self._index == SFPP_INDEX:
+            return False
         try:
             reg_file = open(self.LP_PATH, "r+")
         except IOError as e:
