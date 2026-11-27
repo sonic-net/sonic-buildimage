@@ -1,0 +1,15 @@
+#!/bin/sh
+# postinst script for sonic-platform-s6500-32x
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/s6500-32x-init.sh
+depmod -a
+systemctl restart kmod
+systemctl enable s6500-32x-init.service
+systemctl start s6500-32x-init.service
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable fan-auto-control-32x-init.service
+systemctl start fan-auto-control-32x-init.service
+exit 0
