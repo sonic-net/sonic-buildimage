@@ -7,6 +7,8 @@ $(SONIC_UTILITIES_PY3)_SRC_PATH = $(SRC_PATH)/sonic-utilities
 $(SONIC_UTILITIES_PY3)_PYTHON_VERSION = 3
 $(SONIC_UTILITIES_PY3)_NAME = $(SONIC_UTILITIES_PY3_NAME)
 $(SONIC_UTILITIES_PY3)_VERSION = $(SONIC_UTILITIES_PY3_VERSION)
+# Bazel supplies the archive and Debian manifest to this standalone contract test.
+$(PYTHON_WHEELS_PATH)/$(SONIC_UTILITIES_PY3): private override export PYTEST_ADDOPTS += --ignore=bazel/data/contract_test.py
 $(SONIC_UTILITIES_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                   $(SONIC_CONFIG_ENGINE_PY3) \
                                   $(SONIC_PLATFORM_COMMON_PY3) \
