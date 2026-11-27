@@ -1,0 +1,6 @@
+#DPKG FRK
+include $(PLATFORM_PATH)/grandtrans-modules.dep
+include $(PLATFORM_PATH)/sai.dep
+include $(PLATFORM_PATH)/docker-syncd-grandtrans.dep
+include $(PLATFORM_PATH)/docker-syncd-grandtrans-rpc.dep
+include $(PLATFORM_PATH)/one-image.dep

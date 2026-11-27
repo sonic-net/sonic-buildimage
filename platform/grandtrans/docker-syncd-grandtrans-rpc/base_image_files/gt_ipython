@@ -1,0 +1,5 @@
+#!/bin/bash
+
+docker exec -it syncd gt_diag ipy
+docker exec -it syncd jupyter-console --existing gt-ipython-shell.json
+

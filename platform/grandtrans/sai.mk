@@ -1,0 +1,14 @@
+GRANDTRANS_SAI_VERSION=1.1.0-1.17.5+260602.GT
+
+GRANDTRANS_SAI = libsaigt_$(GRANDTRANS_SAI_VERSION)_$(CONFIGURED_ARCH).deb
+GRANDTRANS_SAI_DEV = libsaigt-dev_$(GRANDTRANS_SAI_VERSION)_$(CONFIGURED_ARCH).deb
+
+$(GRANDTRANS_SAI)_URL = "https://github.com/grandtrans/grandtrans-sai/raw/main/libsaigt_$(GRANDTRANS_SAI_VERSION)_$(CONFIGURED_ARCH).deb"
+
+$(GRANDTRANS_SAI_DEV)_DEPENDS += $(GRANDTRANS_SAI)
+$(GRANDTRANS_SAI_DEV)_URL = "https://github.com/grandtrans/grandtrans-sai/raw/main/libsaigt-dev_$(GRANDTRANS_SAI_VERSION)_$(CONFIGURED_ARCH).deb"
+
+SONIC_ONLINE_DEBS+= $(GRANDTRANS_SAI) $(GRANDTRANS_SAI_DEV)
+
+
+$(eval $(call add_conflict_package,$(GRANDTRANS_SAI_DEV),$(LIBSAIVS_DEV)))
