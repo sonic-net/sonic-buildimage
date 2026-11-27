@@ -8,6 +8,7 @@ load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@sonic_build_infra//python:source_package.bzl", "python_runtime_packages")
+load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tools_runtime")
 load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
 load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
 load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
@@ -557,12 +558,28 @@ py_test(
     ],
 )
 
+build_tools_runtime(
+    name = "py_common_redis_runtime",
+    testonly = True,
+    architecture = select({
+        "@platforms//cpu:aarch64": "arm64",
+        "@platforms//cpu:x86_64": "amd64",
+    }),
+    elf_tools = {"redis-server": "usr/bin/redis-server"},
+    packages = ["@trixie//redis-server:raw_packages"],
+    profile = "elf",
+)
+
 py_test(
     name = "sonic_py_common_full_test",
     size = "large",
     srcs = ["integration/component_pytest_runner.py"],
-    args = ["--component-setup=$(rootpath //src/sonic-py-common:setup.py)"],
+    args = [
+        "--component-setup=$(rootpath //src/sonic-py-common:setup.py)",
+        "--redis-server=$(rootpath :py_common_redis_runtime)/bin/redis-server",
+    ],
     data = [
+        ":py_common_redis_runtime",
         "//src/sonic-py-common:setup.py",
         "//src/sonic-py-common:test_sources",
     ],

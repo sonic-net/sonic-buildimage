@@ -37,6 +37,7 @@ class CollectionReceipt:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--component-setup", type=Path, required=True)
+    parser.add_argument("--redis-server", type=Path)
     parser.add_argument("--models", type=Path)
     parser.add_argument("--yang-config", type=Path)
     parser.add_argument("--cfggen", type=Path)
@@ -57,6 +58,9 @@ def main():
     os.environ.pop("PYTHONSAFEPATH", None)
     os.environ["SONIC_TEST_PYTHON"] = sys.executable
     os.environ["SONIC_TEST_WRITABLE_FIXTURES"] = "1"
+    if args.redis_server:
+        commands = args.redis_server.resolve(strict=True).parent
+        os.environ["PATH"] = str(commands) + os.pathsep + os.environ.get("PATH", "")
     if models:
         os.environ["SONIC_TEST_YANG_MODELS"] = str(models)
     if args.yang_config:
