@@ -66,6 +66,12 @@ clean_sys() {
 trap_push clean_sys
 sudo LANG=C chroot $FILESYSTEM_ROOT mount sysfs /sys -t sysfs
 
+# cgroup2 unified mode
+# https://github.com/systemd/systemd/blob/main/docs/CGROUP_DELEGATION.md#three-different-tree-setups-
+if [ "$(stat -fc '%T' /sys/fs/cgroup)" = "cgroup2fs" ]; then
+    sudo LANG=C chroot $FILESYSTEM_ROOT mount sysfs /sys/fs/cgroup -t cgroup2
+fi
+
 sudo bash -c "echo \"DOCKER_OPTS=\"--storage-driver=overlay2\"\" >> $FILESYSTEM_ROOT/etc/default/docker"
 # Copy docker start script to be able to start docker in chroot
 sudo mkdir -p "$FILESYSTEM_ROOT/$DOCKER_CTL_DIR"
