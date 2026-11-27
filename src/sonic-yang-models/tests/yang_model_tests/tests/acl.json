@@ -60,6 +60,13 @@
     "ACL_RULE_VALID_L4_SRC_PORT_RANGE": {
         "desc": "Configure l4_src_port_range as 1024-65535 in ACL_RULE"
     },
+    "ACL_RULE_VALID_ECN_ACTION": {
+        "desc": "Configure an ECN action with a UDP source port in ACL_RULE"
+    },
+    "ACL_RULE_INVALID_ECN_ACTION": {
+        "desc": "Configure ECN action outside 0..3 in ACL_RULE",
+        "eStrKey" : "Range"
+    },
     "ACL_RULE_VALID_L4_DST_PORT_RANGE": {
         "desc": "Configure l4_src_port_range as 0-65535 in ACL_RULE"
     },

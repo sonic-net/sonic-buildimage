@@ -253,6 +253,25 @@ and migration plan
 }
 ```
 
+***ECN marking action***
+
+`ECN_ACTION` sets the ECN field of matching traffic to a value from `0` to `3`
+(0=Not-ECT, 1=ECT(1), 2=ECT(0), 3=CE). For example, mark traffic selected
+by UDP source port:
+
+```
+{
+    "ACL_RULE": {
+        "DATAACL|ECN_RULE": {
+            "PRIORITY": "999",
+            "IP_PROTOCOL": "17",
+            "L4_SRC_PORT": "5000",
+            "ECN_ACTION": "3"
+        }
+    }
+}
+```
+
 ***Below ACL table added as per the mail***
 ```
 {

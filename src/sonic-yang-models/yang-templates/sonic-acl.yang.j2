@@ -74,6 +74,13 @@ module sonic-acl {
 					type stypes:packet_action;
 				}
 
+				leaf ECN_ACTION {
+					description "ECN value to set on matching packets: 0=Not-ECT, 1=ECT(1), 2=ECT(0), 3=CE";
+					type uint8 {
+						range 0..3;
+					}
+				}
+
 				/* Validating 'PACKET_ACTION' exist if ACL type is 'CTRLPLANE' */
 				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'CTRLPLANE')) or (boolean(PACKET_ACTION))";
 
