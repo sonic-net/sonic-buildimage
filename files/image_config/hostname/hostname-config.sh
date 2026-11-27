@@ -17,6 +17,12 @@ if [ $CURRENT_HOSTNAME == $HOSTNAME ] ;  then
     exit 0
 fi
 
+# Create /etc/hosts file if the file is not existed
+if [ ! -f "/etc/hosts" ]; then
+    echo "127.0.0.1       localhost" > /etc/hosts
+    sync;sync;sync;
+fi
+
 # Remove the old hostname entry from hosts file.
 # But, 'localhost' entry is used by multiple applications. Don't remove it altogether.
 # Edit contents of /etc/hosts and put in /etc/hosts.new
@@ -31,3 +37,4 @@ echo "127.0.0.1 $HOSTNAME" >> /etc/hosts.new
 # Swap file: hosts.new and hosts
 mv -f /etc/hosts     /etc/hosts.old
 mv -f /etc/hosts.new /etc/hosts
+sync;sync;sync;
