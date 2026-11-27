@@ -10,6 +10,7 @@ try:
     import json
     from . import pddfapi
     from sonic_platform_base.platform_base import PlatformBase
+    from sonic_platform_pddf_base.pddf_logger import logger
     from sonic_platform.chassis import Chassis
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -29,7 +30,7 @@ class PddfPlatform(PlatformBase):
             self.pddf_plugin_data = json.load(pd)
 
         if not self.pddf_data or not self.pddf_plugin_data:
-            print("Error: PDDF JSON data is not loaded properly ... Exiting")
+            logger.log_error("Error: PDDF JSON data is not loaded properly ... Exiting")
             raise ValueError
 
         PlatformBase.__init__(self)
