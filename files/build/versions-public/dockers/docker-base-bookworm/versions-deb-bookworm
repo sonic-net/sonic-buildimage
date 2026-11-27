@@ -47,8 +47,8 @@ libpython3.11-stdlib==3.11.2-6+deb12u9
 libreadline8==8.2-1.3
 librelp0==1.11.0-1
 librtmp1==2.4+20151223.gitfa8646d.1-2+b2
-libsasl2-2==2.1.28+dfsg-10
-libsasl2-modules-db==2.1.28+dfsg-10
+libsasl2-2==2.1.28+dfsg-10+deb12u1
+libsasl2-modules-db==2.1.28+dfsg-10+deb12u1
 libsodium23==1.0.18-1+deb12u1
 libsqlite3-0==3.40.1-2+deb12u2
 libssh2-1==1.10.0-3+deb12u1
@@ -78,9 +78,9 @@ python3.11==3.11.2-6+deb12u9
 python3.11-minimal==3.11.2-6+deb12u9
 readline-common==8.2-1.3
 redis-tools==5:7.0.15-1~deb12u10
-rsync==3.2.7-1+deb12u6
-rsyslog==8.2302.0-1+deb12u1
-rsyslog-relp==8.2302.0-1+deb12u1
+rsync==3.5.0+ds1-0+deb12u1
+rsyslog==8.2302.0-1+deb12u2
+rsyslog-relp==8.2302.0-1+deb12u2
 socat==1.7.4.1-3
 symcrypt-openssl==0.1
 tzdata==2026f-0+deb12u1
