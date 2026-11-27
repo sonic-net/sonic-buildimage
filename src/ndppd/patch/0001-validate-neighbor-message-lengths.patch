@@ -1,0 +1,102 @@
+From: Ashutosh Agrawal <ashutosh.agrawal@cisco.com>
+Date: Fri, 26 Sep 2026 11:55:00 -0700
+Subject: [PATCH] Validate neighbor lengths and source address storage
+
+Reject truncated Neighbor Solicitations and Neighbor Advertisements before
+reading their target addresses. Pass the full caller-provided sockaddr size
+to recvmsg and reject short source addresses, so IPv6 neighbor addresses
+cannot contain uninitialized bytes.
+
+Signed-off-by: Ashutosh Agrawal <ashutosh.agrawal@cisco.com>
+---
+ debian/changelog | 6 ++++++
+ src/iface.cc     | 19 ++++++++++++++-----
+ src/iface.h      |  3 ++-
+ 3 files changed, 22 insertions(+), 6 deletions(-)
+
+diff --git a/debian/changelog b/debian/changelog
+index 8a920f1..143e1f4 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -0,0 +1,6 @@
++ndppd (0.2.5-6+sonic1) unstable; urgency=medium
++
++  * Validate neighbor message and IPv6 source-address lengths before parsing.
++
++ -- SONiC Build <sonic-dev@lists.sonicfoundation.dev>  Fri, 26 Sep 2026 18:55:00 +0000
++
+diff --git a/src/iface.h b/src/iface.h
+--- a/src/iface.h
++++ b/src/iface.h
+@@ -21,6 +21,7 @@
+ #include <map>
+ 
+ #include <sys/poll.h>
++#include <sys/socket.h>
+ #include <net/ethernet.h>
+ 
+ #include "ndppd.h"
+@@ -45,1 +46,1 @@
+-    static ssize_t read(int fd, struct sockaddr* saddr, uint8_t* msg, size_t size);
++    static ssize_t read(int fd, struct sockaddr* saddr, socklen_t addr_len, uint8_t* msg, size_t size);
+diff --git a/src/iface.cc b/src/iface.cc
+--- a/src/iface.cc
++++ b/src/iface.cc
+@@ -286,13 +286,13 @@
+     return ifa;
+ }
+ 
+-ssize_t iface::read(int fd, struct sockaddr* saddr, uint8_t* msg, size_t size)
++ssize_t iface::read(int fd, struct sockaddr* saddr, socklen_t addr_len, uint8_t* msg, size_t size)
+ {
+     struct msghdr mhdr;
+     struct iovec iov;
+     int len;
+ 
+-    if (!msg || (size < 0))
++    if (!saddr || !msg || addr_len == 0 || size == 0)
+         return -1;
+ 
+     iov.iov_len = size;
+@@ -300,13 +300,16 @@
+ 
+     memset(&mhdr, 0, sizeof(mhdr));
+     mhdr.msg_name = (caddr_t)saddr;
+-    mhdr.msg_namelen = sizeof(struct sockaddr);
++    mhdr.msg_namelen = addr_len;
+     mhdr.msg_iov =& iov;
+     mhdr.msg_iovlen = 1;
+ 
+     if ((len = recvmsg(fd,& mhdr, 0)) < 0)
+         return -1;
+ 
++    if (mhdr.msg_namelen < addr_len)
++        return -1;
++
+     if (len < sizeof(struct icmp6_hdr))
+         return -1;
+ 
+@@ -352,7 +355,10 @@
+     uint8_t msg[256];
+     ssize_t len;
+ 
+-    if ((len = read(_pfd, (struct sockaddr*)&t_saddr, msg, sizeof(msg))) < 0)
++    if ((len = read(_pfd, (struct sockaddr*)&t_saddr, sizeof(t_saddr), msg, sizeof(msg))) < 0)
++        return -1;
++
++    if (len < ETH_HLEN + sizeof(struct ip6_hdr) + sizeof(struct nd_neighbor_solicit))
+         return -1;
+ 
+     struct ip6_hdr* ip6h =
+@@ -447,7 +453,10 @@
+     uint8_t msg[256];
+     ssize_t len;
+ 
+-    if ((len = read(_ifd, (struct sockaddr* )&t_saddr, msg, sizeof(msg))) < 0)
++    if ((len = read(_ifd, (struct sockaddr* )&t_saddr, sizeof(t_saddr), msg, sizeof(msg))) < 0)
++        return -1;
++
++    if (len < sizeof(struct nd_neighbor_advert))
+         return -1;
+ 
+     saddr = t_saddr.sin6_addr;
