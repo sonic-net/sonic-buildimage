@@ -441,7 +441,14 @@ SONIC_OS_VERSION ?= 13
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
 
+# DOCKERFS_COMPRESSION_ALGO - configures the algorightm used for dockerfs compression
+# supported options:
+#     gzip: - default if not set
+#     zstd:
+# DOCKERFS_COMPRESSION_ALGO = zstd
+
 # BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
+# If y - overrides DOCKERFS_COMPRESSION_ALGO with zstd
 BUILD_REDUCE_IMAGE_SIZE = n
 
 # Add timeout on some process which may hangs
