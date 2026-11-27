@@ -1,0 +1,793 @@
+Description: fail PEAP MSCHAPv2 closed on digest errors
+ Load the OpenSSL 3 legacy provider before fetching MD4, check every
+ provider and EVP operation, and propagate failures to the PEAP response
+ composer. Include RFC 2759 vectors and injected provider/fetch/digest
+ failures.
+Author: Ashutosh Agrawal <ashu@cisco.com>
+Forwarded: no
+Last-Update: 2026-09-26
+
+diff --git a/Makefile b/Makefile
+index eeeb1a2..fb2ab18 100644
+--- a/Makefile
++++ b/Makefile
+@@ -45,6 +45,25 @@ $(if $(wildcard src/config.h),,$(error You must run './configure [options]' befo
+ #
+ all: pam_radius_auth.so
+ 
++OPENSSL3_TEST := $(shell printf '#include <openssl/opensslv.h>\n#if OPENSSL_VERSION_NUMBER < 0x30000000L\n#error OpenSSL 3 required\n#endif\n' | $(CC) -E - >/dev/null 2>&1 && echo yes)
++MSCHAPV2_TEST_WRAP_FLAGS = \
++	-Wl,--wrap=EVP_DigestInit_ex \
++	-Wl,--wrap=EVP_DigestUpdate \
++	-Wl,--wrap=EVP_DigestFinal_ex
++ifeq ($(OPENSSL3_TEST),yes)
++MSCHAPV2_TEST_WRAP_FLAGS += \
++	-Wl,--wrap=OSSL_PROVIDER_load \
++	-Wl,--wrap=EVP_MD_fetch
++endif
++
++.PHONY: check
++check: tests/test_mschapv2
++	./tests/test_mschapv2
++
++tests/test_mschapv2: tests/test_mschapv2.c src/mschapv2.c src/mschapv2.h
++	$(CC) $(CFLAGS) -Isrc $< src/mschapv2.c -o $@ -lcrypto \
++		$(MSCHAPV2_TEST_WRAP_FLAGS)
++
+ ######################################################################
+ #
+ #  Build the object file from the C source.
+@@ -106,4 +121,4 @@ dist:
+ #
+ .PHONY: clean
+ clean:
+-	@rm -f *~ *.so *.o src/*.o src/*~ build-stamp
++	@rm -f *~ *.so *.o src/*.o src/*~ tests/test_mschapv2 build-stamp
+diff --git a/src/mschapv2.c b/src/mschapv2.c
+index 3df20b4..d24c21f 100644
+--- a/src/mschapv2.c
++++ b/src/mschapv2.c
+@@ -45,6 +45,9 @@
+ 
+ #include <openssl/ssl.h>
+ #include <openssl/des.h>
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/provider.h>
++#endif
+ #include <string.h>
+ #include <strings.h>
+ #include <ctype.h>
+@@ -63,39 +66,112 @@
+ #include <efence.h>
+ #endif
+ 
+-void ChallengeHash(char *PeerChallenge, char *AuthenticatorChallenge,
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++static OSSL_PROVIDER *default_provider;
++static OSSL_PROVIDER *legacy_provider;
++
++static int md4_providers_init(void)
++{
++  if (default_provider != NULL && legacy_provider != NULL)
++    return 1;
++
++  default_provider = OSSL_PROVIDER_load(NULL, "default");
++  if (default_provider == NULL)
++    return 0;
++
++  legacy_provider = OSSL_PROVIDER_load(NULL, "legacy");
++  if (legacy_provider == NULL)
++    {
++      OSSL_PROVIDER_unload(default_provider);
++      default_provider = NULL;
++      return 0;
++    }
++
++  return 1;
++}
++#endif
++
++static int md4_digest(const void *data, size_t data_len, unsigned char *digest)
++{
++  EVP_MD_CTX *cntx = NULL;
++  unsigned char result[EVP_MAX_MD_SIZE] = {0};
++  unsigned int digest_len = 0;
++  int ret = 0;
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD *md4 = NULL;
++
++  if (!md4_providers_init())
++    goto done;
++  md4 = EVP_MD_fetch(NULL, "MD4", "provider=legacy");
++  if (md4 == NULL)
++    goto done;
++#else
++  const EVP_MD *md4 = EVP_md4();
++
++  if (md4 == NULL)
++    goto done;
++#endif
++
++  cntx = EVP_MD_CTX_new();
++  if (cntx == NULL)
++    goto done;
++
++  if (EVP_DigestInit_ex(cntx, md4, NULL) != 1 ||
++      EVP_DigestUpdate(cntx, data, data_len) != 1 ||
++      EVP_DigestFinal_ex(cntx, result, &digest_len) != 1 ||
++      digest_len != 16)
++    goto done;
++
++  memcpy(digest, result, 16);
++  ret = 1;
++
++done:
++  EVP_MD_CTX_free(cntx);
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_free(md4);
++#endif
++  return ret;
++}
++
++int ChallengeHash(char *PeerChallenge, char *AuthenticatorChallenge,
+ 		   char *UserName, char *Challenge)
+ {
+   EVP_MD_CTX * cntx = EVP_MD_CTX_new();
+   char Digest[30];
+-  int retLen;
++  unsigned int retLen;
++  int ret = 0;
+ 
+   if (cntx == NULL)
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((AuthenticatorChallenge != NULL),
+ 		   "AuthenticatorChallenge != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((Challenge != NULL), "Challenge != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   bzero(Digest, 30);
+-  EVP_DigestInit(cntx, EVP_sha1());
+-  EVP_DigestUpdate(cntx, PeerChallenge, 16);
+-  EVP_DigestUpdate(cntx, AuthenticatorChallenge, 16);
+-  EVP_DigestUpdate(cntx, UserName, strlen(UserName));
+-  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &retLen);
+-
+-  EVP_MD_CTX_free(cntx);
++  if (EVP_DigestInit_ex(cntx, EVP_sha1(), NULL) != 1 ||
++      EVP_DigestUpdate(cntx, PeerChallenge, 16) != 1 ||
++      EVP_DigestUpdate(cntx, AuthenticatorChallenge, 16) != 1 ||
++      EVP_DigestUpdate(cntx, UserName, strlen(UserName)) != 1 ||
++      EVP_DigestFinal_ex(cntx, (uint8_t *)&Digest, &retLen) != 1 ||
++      retLen < 8)
++    goto done;
+ 
+   memcpy(Challenge, Digest, 8);
++  ret = 1;
++
++done:
++  EVP_MD_CTX_free(cntx);
++  return ret;
+ }
+ 
+ char *to_unicode(char *non_uni)
+@@ -121,54 +197,48 @@ char *to_unicode(char *non_uni)
+   return retUni;
+ }
+ 
+-void NtPasswordHash(char *Password, char *PasswordHash)
++int NtPasswordHash(char *Password, char *PasswordHash)
+ {
+-  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
+-  char retVal[20];
+-  int i, len;
+-  char *uniPassword;
+-
+-  if (cntx == NULL)
+-    return;
++  unsigned char retVal[16];
++  size_t len;
++  char *uniPassword = NULL;
++  int ret = 0;
+ 
+   if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((PasswordHash != NULL), "PasswordHash != NULL", FALSE))
+-    return;
++    return 0;
+ 
+-  bzero(retVal, 20);
++  bzero(PasswordHash, 16);
++  bzero(retVal, sizeof(retVal));
+   uniPassword = to_unicode(Password);
+-  len = (strlen(Password))*2;
++  if (uniPassword == NULL)
++    goto done;
+ 
+-  EVP_DigestInit(cntx, EVP_md4());
+-  EVP_DigestUpdate(cntx, uniPassword, len);
+-  EVP_DigestFinal(cntx, (uint8_t *)&retVal, (u_int *)&i);
+-  EVP_MD_CTX_free(cntx);
++  len = strlen(Password) * 2;
++  if (!md4_digest(uniPassword, len, retVal))
++    goto done;
++
++  memcpy(PasswordHash, retVal, 16);
++  ret = 1;
+ 
+-  memcpy(PasswordHash, &retVal, 16);
++done:
+   free(uniPassword);
++  return ret;
+ }
+ 
+-void HashNtPasswordHash(char *PasswordHash, char *PasswordHashHash)
++int HashNtPasswordHash(char *PasswordHash, char *PasswordHashHash)
+ {
+-  EVP_MD_CTX * cntx = EVP_MD_CTX_new();
+-  int i;
+-
+-  if (cntx == NULL)
+-    return;
+-
+   if (!xsup_assert((PasswordHash != NULL), "PasswordHash != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((PasswordHashHash != NULL), "PasswordHashHash != NULL",
+-		   FALSE)) return;
+-
+-  EVP_DigestInit(cntx, EVP_md4());
+-  EVP_DigestUpdate(cntx, PasswordHash, 16);
+-  EVP_DigestFinal(cntx, (uint8_t *) PasswordHashHash, (u_int *) &i);
+-  EVP_MD_CTX_free(cntx);
++		   FALSE)) return 0;
+ 
++  bzero(PasswordHashHash, 16);
++  return md4_digest(PasswordHash, 16,
++		    (unsigned char *)PasswordHashHash);
+ }
+ 
+ // Shamelessly take from the hostap code written by Jouni Malinen
+@@ -250,17 +320,18 @@ void process_hex(char *instr, int size, char *outstr)
+     }
+ }
+ 
+-void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
++int GenerateAuthenticatorResponse(char *Password, char *NTResponse,
+ 				   char *PeerChallenge,
+ 				   char *AuthenticatorChallenge, char *UserName,
+ 				   char *AuthenticatorResponse, int nthash)
+ {
+-  char PasswordHash[16];
+-  char PasswordHashHash[16];
++  char PasswordHash[16] = {0};
++  char PasswordHashHash[16] = {0};
+   EVP_MD_CTX * cntx = EVP_MD_CTX_new();
+-  int Digest_len;
+-  char Digest[20];
+-  char Challenge[8];
++  unsigned int Digest_len;
++  char Digest[20] = {0};
++  char Challenge[8] = {0};
++  int ret = 0;
+ 
+   char Magic1[39] =
+     {0x4D, 0x61, 0x67, 0x69, 0x63, 0x20, 0x73, 0x65, 0x72, 0x76,
+@@ -276,54 +347,68 @@ void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
+      0x6E};
+ 
+   if (cntx == NULL)
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((NTResponse != NULL), "NTResponse != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((AuthenticatorChallenge != NULL),
+ 		   "AuthenticatorChallenge != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
+-    return;
++    goto done;
+ 
+   if (!xsup_assert((AuthenticatorResponse != NULL),
+ 		   "AuthenticatorResponse != NULL", FALSE))
+-    return;
++    goto done;
++
++  bzero(AuthenticatorResponse, 20);
+ 
+   if (nthash == 0)
+     {
+-      NtPasswordHash(Password, (char *)&PasswordHash);
++      if (!NtPasswordHash(Password, (char *)&PasswordHash))
++	goto done;
+     } else {
+       process_hex(Password, strlen(Password), (char *)&PasswordHash);
+     }
+ 
+-  HashNtPasswordHash((char *)&PasswordHash, (char *)&PasswordHashHash);
+-
+-  EVP_DigestInit(cntx, EVP_sha1());
+-  EVP_DigestUpdate(cntx, &PasswordHashHash, 16);
+-  EVP_DigestUpdate(cntx, NTResponse, 24);
+-  EVP_DigestUpdate(cntx, Magic1, 39);
+-  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &Digest_len);
+-
+-  ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName, Challenge);
++  if (!HashNtPasswordHash((char *)&PasswordHash,
++			  (char *)&PasswordHashHash))
++    goto done;
++
++  if (EVP_DigestInit_ex(cntx, EVP_sha1(), NULL) != 1 ||
++      EVP_DigestUpdate(cntx, &PasswordHashHash, 16) != 1 ||
++      EVP_DigestUpdate(cntx, NTResponse, 24) != 1 ||
++      EVP_DigestUpdate(cntx, Magic1, 39) != 1 ||
++      EVP_DigestFinal_ex(cntx, (uint8_t *)&Digest, &Digest_len) != 1 ||
++      Digest_len != 20)
++    goto done;
++
++  if (!ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName,
++		     Challenge))
++    goto done;
++
++  if (EVP_DigestInit_ex(cntx, EVP_sha1(), NULL) != 1 ||
++      EVP_DigestUpdate(cntx, &Digest, 20) != 1 ||
++      EVP_DigestUpdate(cntx, &Challenge, 8) != 1 ||
++      EVP_DigestUpdate(cntx, Magic2, 41) != 1 ||
++      EVP_DigestFinal_ex(cntx, (uint8_t *)&Digest, &Digest_len) != 1 ||
++      Digest_len != 20)
++    goto done;
+ 
+-  EVP_DigestInit(cntx, EVP_sha1());
+-  EVP_DigestUpdate(cntx, &Digest, 20);
+-  EVP_DigestUpdate(cntx, &Challenge, 8);
+-  EVP_DigestUpdate(cntx, Magic2, 41);
+-  EVP_DigestFinal(cntx, (uint8_t *)&Digest, (u_int *) &Digest_len);
++  memcpy(AuthenticatorResponse, &Digest, Digest_len);
++  ret = 1;
+ 
++done:
+   EVP_MD_CTX_free(cntx);
+-
+-  memcpy(AuthenticatorResponse, &Digest, Digest_len);
++  return ret;
+ }
+ 
+ 
+@@ -358,9 +443,13 @@ void CheckAuthenticatorResponse(char *Password, char *NtResponse,
+   if (!xsup_assert((ResponseOK != NULL), "ResponseOK != NULL", FALSE))
+     return;
+ 
+-  GenerateAuthenticatorResponse(Password, NtResponse, PeerChallenge,
+-				AuthenticatorChallenge, UserName,
+-				(char *)&MyResponse, nthash);
++  *ResponseOK = 0;
++  bzero(MyResponse, sizeof(MyResponse));
++  bzero(procResp, sizeof(procResp));
++  if (!GenerateAuthenticatorResponse(Password, NtResponse, PeerChallenge,
++				     AuthenticatorChallenge, UserName,
++				     (char *)&MyResponse, nthash))
++    return;
+ 
+   process_hex(ReceivedResponse, strlen(ReceivedResponse), (char *)&procResp);
+ 
+@@ -395,52 +484,59 @@ void ChallengeResponse(char *Challenge, char *PasswordHash, char *Response)
+   des_encrypt((uint8_t *) Challenge, zpwd, (uint8_t *) Response+16);
+ }
+ 
+-void NtChallengeResponse(char *Challenge, char *Password, char *Response,
++int NtChallengeResponse(char *Challenge, char *Password, char *Response,
+ 			 int nthash)
+ {
+-  char password_hash[16];
++  char password_hash[16] = {0};
+ 
+   if (!xsup_assert((Challenge != NULL), "Challenge != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((Response != NULL), "Response != NULL", FALSE))
+-    return;
++    return 0;
++
++  bzero(Response, 24);
+ 
+   if (nthash == 0)
+     {
+-      NtPasswordHash(Password, (char *)&password_hash);
++      if (!NtPasswordHash(Password, (char *)&password_hash))
++	return 0;
+     } else {
+       process_hex(Password, strlen(Password), (char *)&password_hash);
+     }
+   ChallengeResponse(Challenge, (char *)&password_hash, Response);
++  return 1;
+ }
+ 
+-void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
++int GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
+ 			char *UserName, char *Password, char *Response,
+ 			int nthash)
+ {
+-  char Challenge[8], PasswordHash[16];
++  char Challenge[8] = {0}, PasswordHash[16] = {0};
+ 
+   if (!xsup_assert((AuthenticatorChallenge != NULL),
+ 		   "AuthenticatorChallenge != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((PeerChallenge != NULL), "PeerChallenge != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((UserName != NULL), "UserName != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((Password != NULL), "Password != NULL", FALSE))
+-    return;
++    return 0;
+ 
+   if (!xsup_assert((Response != NULL), "Response != NULL", FALSE))
+-    return;
++    return 0;
+ 
+-  ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName, (char *)&Challenge);
++  bzero(Response, 24);
++  if (!ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName,
++		     (char *)&Challenge))
++    return 0;
+   debug_printf(DEBUG_AUTHTYPES, "PeerChallenge : ");
+   debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) PeerChallenge, 8);
+   debug_printf(DEBUG_AUTHTYPES, "AuthenticatorChallenge : ");
+@@ -451,7 +547,8 @@ void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
+ 
+   if (nthash == 0)
+     {
+-      NtPasswordHash(Password, (char *)&PasswordHash);
++      if (!NtPasswordHash(Password, (char *)&PasswordHash))
++	return 0;
+     } else {
+       process_hex(Password, strlen(Password), (char *)&PasswordHash);
+     }
+@@ -461,6 +558,7 @@ void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
+   ChallengeResponse(Challenge, (char *)&PasswordHash, Response);
+   debug_printf(DEBUG_AUTHTYPES, "Response : ");
+   debug_hex_printf(DEBUG_AUTHTYPES, (uint8_t *) Response, 24);
++  return 1;
+ }
+ 
+ void GetMasterKey(char *PasswordHashHash, char *NTResponse, char *MasterKey)
+@@ -622,4 +720,3 @@ void GetAsymetricStartKey(char *MasterKey, char *SessionKey,
+ 
+   memcpy(SessionKey, &Digest, SessionKeyLength);
+ }
+-
+diff --git a/src/mschapv2.h b/src/mschapv2.h
+--- a/src/mschapv2.h
++++ b/src/mschapv2.h
+@@ -4,1 +4,3 @@
+-void GenerateAuthenticatorResponse(char *Password, char *NTResponse,
++int NtPasswordHash(char *Password, char *PasswordHash);
++int HashNtPasswordHash(char *PasswordHash, char *PasswordHashHash);
++int GenerateAuthenticatorResponse(char *Password, char *NTResponse,
+@@ -9,1 +11,1 @@
+-void GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
++int GenerateNTResponse(char *AuthenticatorChallenge, char *PeerChallenge,
+diff --git a/src/radpeapclient.c b/src/radpeapclient.c
+index 28f6403..dd13057 100644
+--- a/src/radpeapclient.c
++++ b/src/radpeapclient.c
+@@ -2370,8 +2370,15 @@ compose_mschap_response(int * mschap_rep_len)
+ 		/*
+ 		 * Generate authenticator response
+ 		 */
+-		GenerateAuthenticatorResponse(passwd, cached_nt_response,							cached_peer_challenge,cached_auth_challenge,
+-					username, auth_response, nthash);
++		if (!GenerateAuthenticatorResponse(passwd,
++					   (char *)cached_nt_response,
++					   (char *)cached_peer_challenge,
++					   (char *)cached_auth_challenge,
++					   username, (char *)auth_response,
++					   nthash)) {
++			peap_log_debug("compose_mschap_response: Failed to generate authenticator response");
++			return 0;
++		}
+ 		/*
+ 		 * Encode the 20 bytes response to 40 bytes ascii
+ 		 */
+@@ -2432,8 +2439,14 @@ compose_mschap_response(int * mschap_rep_len)
+ 	memset(mschap_rep->reserved, 0, MS_RESERVED_BYTES);	/* 8 bytes */
+ 
+ 	/* Get Ms-Chap response as per the RFC */
+-	GenerateNTResponse(mschap_req->auth_challenge, mschap_rep->peer_challenge,
+-			username, passwd, mschap_rep->nt_response, nthash);
++	if (!GenerateNTResponse((char *)mschap_req->auth_challenge,
++				(char *)mschap_rep->peer_challenge,
++				username, passwd,
++				(char *)mschap_rep->nt_response, nthash)) {
++		peap_log_debug("compose_mschap_response: Failed to generate NT response");
++		free(ptr);
++		return 0;
++	}
+ 	/* Cache the challenges and responses for future use */
+ 	memcpy(cached_auth_challenge, mschap_req->auth_challenge,
+ 			MAX_CHALLENGE_LEN);
+@@ -3376,4 +3389,3 @@ pam_peap_authenticate(const char * user_name, const char * user_password,
+ 		return 0;
+ 	}
+ }
+-
+diff --git a/tests/test_mschapv2.c b/tests/test_mschapv2.c
+new file mode 100644
+index 0000000..639696b
+--- /dev/null
++++ b/tests/test_mschapv2.c
+@@ -0,0 +1,234 @@
++#include <assert.h>
++#include <openssl/evp.h>
++#include <openssl/opensslv.h>
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/provider.h>
++#endif
++#include <stdio.h>
++#include <string.h>
++#include <strings.h>
++
++#include "mschapv2.h"
++
++enum failure_stage {
++	FAIL_NONE,
++	FAIL_DEFAULT_PROVIDER,
++	FAIL_LEGACY_PROVIDER,
++	FAIL_FETCH,
++	FAIL_INIT,
++	FAIL_UPDATE,
++	FAIL_FINAL,
++};
++
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#define FIRST_DIGEST_FAILURE FAIL_FETCH
++#else
++#define FIRST_DIGEST_FAILURE FAIL_INIT
++#endif
++
++static enum failure_stage fail_stage;
++static int fail_occurrence;
++static int stage_calls;
++
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++OSSL_PROVIDER *__real_OSSL_PROVIDER_load(OSSL_LIB_CTX *libctx,
++					 const char *name);
++EVP_MD *__real_EVP_MD_fetch(OSSL_LIB_CTX *ctx, const char *algorithm,
++			    const char *properties);
++#endif
++int __real_EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type,
++			     ENGINE *impl);
++int __real_EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *data, size_t count);
++int __real_EVP_DigestFinal_ex(EVP_MD_CTX *ctx, unsigned char *md,
++			      unsigned int *size);
++
++static int fail_now(enum failure_stage stage)
++{
++	if (fail_stage != stage)
++		return 0;
++
++	stage_calls++;
++	return stage_calls == fail_occurrence;
++}
++
++static int is_md4(const EVP_MD *md)
++{
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++	const char *name = md == NULL ? NULL : EVP_MD_get0_name(md);
++
++	return name != NULL && strcasecmp(name, "MD4") == 0;
++#else
++	return md != NULL && EVP_MD_type(md) == NID_md4;
++#endif
++}
++
++static const EVP_MD *ctx_md(EVP_MD_CTX *ctx)
++{
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++	return EVP_MD_CTX_get0_md(ctx);
++#else
++	return EVP_MD_CTX_md(ctx);
++#endif
++}
++
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++OSSL_PROVIDER *__wrap_OSSL_PROVIDER_load(OSSL_LIB_CTX *libctx,
++					 const char *name)
++{
++	if (strcmp(name, "default") == 0 && fail_now(FAIL_DEFAULT_PROVIDER))
++		return NULL;
++	if (strcmp(name, "legacy") == 0 && fail_now(FAIL_LEGACY_PROVIDER))
++		return NULL;
++	return __real_OSSL_PROVIDER_load(libctx, name);
++}
++
++EVP_MD *__wrap_EVP_MD_fetch(OSSL_LIB_CTX *ctx, const char *algorithm,
++			    const char *properties)
++{
++	if (strcasecmp(algorithm, "MD4") == 0 && fail_now(FAIL_FETCH))
++		return NULL;
++	return __real_EVP_MD_fetch(ctx, algorithm, properties);
++}
++#endif
++
++int __wrap_EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type,
++			     ENGINE *impl)
++{
++	if (is_md4(type) && fail_now(FAIL_INIT))
++		return 0;
++	return __real_EVP_DigestInit_ex(ctx, type, impl);
++}
++
++int __wrap_EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *data, size_t count)
++{
++	if (is_md4(ctx_md(ctx)) && fail_now(FAIL_UPDATE))
++		return 0;
++	return __real_EVP_DigestUpdate(ctx, data, count);
++}
++
++int __wrap_EVP_DigestFinal_ex(EVP_MD_CTX *ctx, unsigned char *md,
++			      unsigned int *size)
++{
++	if (is_md4(ctx_md(ctx)) && fail_now(FAIL_FINAL))
++		return 0;
++	return __real_EVP_DigestFinal_ex(ctx, md, size);
++}
++
++static void set_failure(enum failure_stage stage, int occurrence)
++{
++	fail_stage = stage;
++	fail_occurrence = occurrence;
++	stage_calls = 0;
++}
++
++static int all_zero(const unsigned char *buf, size_t len)
++{
++	size_t i;
++
++	for (i = 0; i < len; i++)
++		if (buf[i] != 0)
++			return 0;
++	return 1;
++}
++
++static void test_rfc2759_vectors(void)
++{
++	unsigned char auth_challenge[16] = {
++		0x5b, 0x5d, 0x7c, 0x7d, 0x7b, 0x3f, 0x2f, 0x3e,
++		0x3c, 0x2c, 0x60, 0x21, 0x32, 0x26, 0x26, 0x28,
++	};
++	unsigned char peer_challenge[16] = {
++		0x21, 0x40, 0x23, 0x24, 0x25, 0x5e, 0x26, 0x2a,
++		0x28, 0x29, 0x5f, 0x2b, 0x3a, 0x33, 0x7c, 0x7e,
++	};
++	unsigned char expected_hash[16] = {
++		0x44, 0xeb, 0xba, 0x8d, 0x53, 0x12, 0xb8, 0xd6,
++		0x11, 0x47, 0x44, 0x11, 0xf5, 0x69, 0x89, 0xae,
++	};
++	unsigned char expected_hash_hash[16] = {
++		0x41, 0xc0, 0x0c, 0x58, 0x4b, 0xd2, 0xd9, 0x1c,
++		0x40, 0x17, 0xa2, 0xa1, 0x2f, 0xa5, 0x9f, 0x3f,
++	};
++	unsigned char expected_nt_response[24] = {
++		0x82, 0x30, 0x9e, 0xcd, 0x8d, 0x70, 0x8b, 0x5e,
++		0xa0, 0x8f, 0xaa, 0x39, 0x81, 0xcd, 0x83, 0x54,
++		0x42, 0x33, 0x11, 0x4a, 0x3d, 0x85, 0xd6, 0xdf,
++	};
++	unsigned char expected_auth_response[20] = {
++		0x40, 0x7a, 0x55, 0x89, 0x11, 0x5f, 0xd0, 0xd6,
++		0x20, 0x9f, 0x51, 0x0f, 0xe9, 0xc0, 0x45, 0x66,
++		0x93, 0x2c, 0xda, 0x56,
++	};
++	unsigned char password_hash[16];
++	unsigned char password_hash_hash[16];
++	unsigned char nt_response[24];
++	unsigned char auth_response[20];
++
++	set_failure(FAIL_NONE, 0);
++	assert(NtPasswordHash("clientPass", (char *)password_hash));
++	assert(memcmp(password_hash, expected_hash, sizeof(password_hash)) == 0);
++	assert(HashNtPasswordHash((char *)password_hash,
++				  (char *)password_hash_hash));
++	assert(memcmp(password_hash_hash, expected_hash_hash,
++		      sizeof(password_hash_hash)) == 0);
++	assert(GenerateNTResponse((char *)auth_challenge, (char *)peer_challenge,
++				  "User", "clientPass", (char *)nt_response, 0));
++	assert(memcmp(nt_response, expected_nt_response, sizeof(nt_response)) == 0);
++	assert(GenerateAuthenticatorResponse(
++		"clientPass", (char *)nt_response, (char *)peer_challenge,
++		(char *)auth_challenge, "User", (char *)auth_response, 0));
++	assert(memcmp(auth_response, expected_auth_response,
++		      sizeof(auth_response)) == 0);
++}
++
++static void test_failures_propagate(void)
++{
++	unsigned char auth_challenge[16] = {0};
++	unsigned char peer_challenge[16] = {0};
++	unsigned char nt_response[24];
++	unsigned char auth_response[20];
++	enum failure_stage stage;
++	int occurrence;
++
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++	for (stage = FAIL_DEFAULT_PROVIDER; stage <= FAIL_LEGACY_PROVIDER;
++	     stage++) {
++		memset(nt_response, 0xa5, sizeof(nt_response));
++		set_failure(stage, 1);
++		assert(!GenerateNTResponse((char *)auth_challenge,
++					   (char *)peer_challenge, "User",
++					   "clientPass", (char *)nt_response, 0));
++		assert(all_zero(nt_response, sizeof(nt_response)));
++	}
++#endif
++
++	for (stage = FIRST_DIGEST_FAILURE; stage <= FAIL_FINAL; stage++) {
++		memset(nt_response, 0xa5, sizeof(nt_response));
++		set_failure(stage, 1);
++		assert(!GenerateNTResponse((char *)auth_challenge,
++					   (char *)peer_challenge, "User",
++					   "clientPass", (char *)nt_response, 0));
++		assert(all_zero(nt_response, sizeof(nt_response)));
++	}
++
++	memset(nt_response, 0, sizeof(nt_response));
++	for (stage = FIRST_DIGEST_FAILURE; stage <= FAIL_FINAL; stage++) {
++		for (occurrence = 1; occurrence <= 2; occurrence++) {
++			memset(auth_response, 0xa5, sizeof(auth_response));
++			set_failure(stage, occurrence);
++			assert(!GenerateAuthenticatorResponse(
++				"clientPass", (char *)nt_response,
++				(char *)peer_challenge, (char *)auth_challenge,
++				"User", (char *)auth_response, 0));
++			assert(all_zero(auth_response, sizeof(auth_response)));
++		}
++	}
++}
++
++int main(void)
++{
++	test_failures_propagate();
++	test_rfc2759_vectors();
++	puts("MSCHAPv2 digest tests passed");
++	return 0;
++}

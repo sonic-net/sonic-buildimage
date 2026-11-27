@@ -16,6 +16,13 @@ export DEB_CPPFLAGS_MAINT_APPEND=-DCONF_FILE="\\\"$(RADIUS_CONF_FILE)\\\""
 override_dh_auto_build:
 	CFLAGS="$(CFLAGS) $(CPPFLAGS)" dh_auto_build -Smakefile
 
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
+	$(MAKE) check
+else
+	@echo "Skipping tests because nocheck is enabled"
+endif
+
 # Skip
 override_dh_auto_install:
 
