@@ -1,0 +1,89 @@
+{
+  "container": "snmp",
+  "ctl_script": "/usr/bin/snmp.sh",
+  "redis_user": "snmp",
+  "secret_file": "/etc/sonic/firebreak/snmp.redis.secret",
+  "acl_strict_patterns": true,
+  "instances": {
+    "redis": {
+      "unix_socket": "/var/run/redis/redis.sock",
+      "tcp_port": 6379,
+      "select": [
+        0,
+        2,
+        4,
+        6,
+        7
+      ],
+      "commands": [
+        "ping",
+        "auth",
+        "hello",
+        "select",
+        "info",
+        "echo",
+        "get",
+        "mget",
+        "hget",
+        "hmget",
+        "hgetall",
+        "hexists",
+        "hlen",
+        "hkeys",
+        "hvals",
+        "scan",
+        "hscan",
+        "keys",
+        "type",
+        "strlen",
+        "exists",
+        "ttl",
+        "subscribe",
+        "psubscribe",
+        "unsubscribe",
+        "punsubscribe",
+        "pubsub",
+        "hset",
+        "hmset",
+        "config|get",
+        "client|info",
+        "client|setname",
+        "client|getname",
+        "acl|whoami",
+        "multi",
+        "exec",
+        "discard"
+      ],
+      "read_key_patterns": [
+        "*"
+      ],
+      "write_key_patterns": [],
+      "channel_patterns": [
+        "__keyspace@4__:*",
+        "__keyspace@0__:LLDP_ENTRY_TABLE:*",
+        "__keyspace@6__:TRANSCEIVER_INFO|*",
+        "__keyspace@6__:PSU_INFO|*",
+        "__keyspace@6__:CHASSIS_MODULE_TABLE|FABRIC-CARD*",
+        "__keyspace@6__:FAN_DRAWER_INFO|*",
+        "__keyspace@6__:FAN_INFO|*",
+        "__keyspace@6__:TEMPERATURE_INFO|*"
+      ]
+    }
+  },
+  "omit_sockets": [
+    "redis_bmp.sock",
+    "redis2.sock",
+    "redis3.sock"
+  ],
+  "egress_allow_ipv4": [
+    "127.0.0.1"
+  ],
+  "egress_from_config_db": true,
+  "egress_deny_default": true,
+  "egress_approved_ipv4": [],
+  "required_processes": [
+    "snmpd",
+    "snmp-subagent",
+    "supervisor-proc-exit-listener"
+  ]
+}

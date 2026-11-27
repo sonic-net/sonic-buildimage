@@ -1,0 +1,5 @@
+debbuild/
+sonic-firebreak_*.deb
+debian/files
+__pycache__/
+.DS_Store

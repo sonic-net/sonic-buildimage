@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload || true
+        # Do not enable/start here — preserve admin disable across upgrades.
+        # Operators: systemctl enable --now firebreak.service
+        # or: config firebreak enable
+    fi
+    # Register SONiC show/config firebreak plugins
+    for pair in \
+        "show/plugins:/opt/firebreak/cli/show_firebreak_plugin.py" \
+        "config/plugins:/opt/firebreak/cli/config_firebreak_plugin.py"
+    do
+        sub=${pair%%:*}
+        src=${pair#*:}
+        [ -f "$src" ] || continue
+        for base in /usr/local/lib/python3.*/dist-packages /usr/lib/python3/dist-packages; do
+            for dir in $base/$sub; do
+                if [ -d "$dir" ]; then
+                    cp -f "$src" "$dir/firebreak.py"
+                fi
+            done
+        done
+    done
+fi
+exit 0
