@@ -5,8 +5,6 @@ load("//src/sonic-supervisord-utilities-rs:bazel/release.bzl", "release_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["bazel/shared-crate-dependencies.patch"])
-
 rust_binary(
     name = "sonic-containercfgd-rs",
     srcs = glob(["src/*.rs"]),

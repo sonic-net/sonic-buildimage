@@ -68,9 +68,8 @@ The shared graph's established release logging cap remains in effect.
 
 ## Shared dependency validation
 
-Local commands and native CI select `sonic-rust-deps` version
-`0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e` from SONiC registry `main`.
-This registration uses landed `sonic-build-infra` source
-`5bf69bc0a7d9ea9f4a5606264be592867cd29d1e` for the supervisor aliases
-and native linking support. Both paths use ordinary module resolution without
-a local source checkout or module override.
+The buildimage root includes [deps.MODULE.bazel](deps.MODULE.bazel) to select the
+published `sonic-rust-deps` release for local builds and native CI. The release
+comes from the [SONiC registry](https://github.com/sonic-net/sonic-bazel-registry/tree/main/modules/sonic-rust-deps).
+Build Infra owns the Cargo lock, crate aliases and Linux API tests in
+[rust/deps](https://github.com/sonic-net/sonic-build-infra/tree/master/rust/deps).

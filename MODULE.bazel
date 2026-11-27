@@ -369,13 +369,6 @@ bazel_dep(name = "libnl3", version = "3.7.0.sonic.10")
 bazel_dep(name = "libteam", version = "1.31.0.sonic.3")
 bazel_dep(name = "libyang", version = "3.12.2.sonic.10")
 
-single_version_override(
-    module_name = "sonic-rust-deps",
-    patches = ["//src/sonic-containercfgd-rs:bazel/shared-crate-dependencies.patch"],
-    patch_strip = 1,
-    version = "0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e",
-)
-
 bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")
 bazel_dep(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.3", repo_name = "sonic_wpa_supplicant")
 
