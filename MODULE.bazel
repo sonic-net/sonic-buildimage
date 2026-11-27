@@ -534,7 +534,7 @@ bazel_dep(name = "openconfig_goyang", version = "0.0.0.sonic.1-20200309174518-a0
 bazel_dep(name = "openconfig_ygot", version = "0.7.1.sonic.1", repo_name = "com_github_openconfig_ygot")
 
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.25.9")
+go_sdk.download(version = "1.26.7")
 
 use_repo(apt, "gnmi_debian", "gnmi_debug_debian", "gnmi_test_debian")
 
