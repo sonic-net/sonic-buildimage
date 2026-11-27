@@ -138,6 +138,7 @@ int set_peer_link(int mid, const char* ifname)
             iccp_get_port_member_list(lif);
 
         set_peerlink_learn_kernel(csm, 0, 4);
+        mlacp_peer_link_learning_disable(csm);
     }
 
     /*disconnect the link for mac and arp sync up*/

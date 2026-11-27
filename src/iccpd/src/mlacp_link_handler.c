@@ -464,6 +464,20 @@ static void mlacp_clean_fdb(void)
 }
 #endif
 
+/* The MCLAG peer link never learns MAC addresses, whether or not the ICCP
+ * session is up. Both peers forward before the session comes up, and a frame
+ * one of them floods across the peer link, such as BUM traffic it took in on
+ * an anycast VTEP's tunnel, would otherwise move the frame's source MAC onto
+ * the peer link on the other. Learning is only turned back on when the MCLAG
+ * domain is removed (iccp_csm_finalize). */
+void mlacp_peer_link_learning_disable(struct CSM *csm)
+{
+    if (csm == NULL || csm->peer_link_if == NULL)
+        return;
+
+    set_peerlink_mlag_port_learn(csm->peer_link_if, 0);
+}
+
 void set_peerlink_mlag_port_learn(struct LocalInterface *lif, int enable)
 {
     struct IccpSyncdHDr * msg_hdr;
@@ -2576,6 +2590,7 @@ void mlacp_mlag_link_del_handler(struct CSM *csm, struct LocalInterface *lif)
 int iccp_connect_syncd()
 {
     struct System* sys = NULL;
+    struct CSM* csm = NULL;
     int ret = 0;
     int fd = 0;
     struct sockaddr_in serv;
@@ -2627,6 +2642,12 @@ int iccp_connect_syncd()
     event.data.fd = fd;
     event.events = EPOLLIN;
     ret = epoll_ctl(sys->epoll_fd, EPOLL_CTL_ADD, fd, &event);
+
+    /* A peer link configured before mclagsyncd was reachable */
+    LIST_FOREACH(csm, &(sys->csm_list), next)
+    {
+        mlacp_peer_link_learning_disable(csm);
+    }
 
     count = 0;
     return 0;
