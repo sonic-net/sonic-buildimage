@@ -74,9 +74,10 @@ class SetupBazelCacheTest(unittest.TestCase):
                         self.assertEqual(job["runs-on"], ["self-hosted", "linux",
                                          "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"])
                         continue
-                    if (path.name, name) in {
-                            ("bazel-sysmgr.yml", "native"),
-                            ("bazel-image-rules.yml", "native-vs-installer")}:
+                    if (path.name, name) == ("bazel-image-rules.yml", "native-vs-installer"):
+                        self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64", "vs"])
+                        continue
+                    if (path.name, name) == ("bazel-sysmgr.yml", "native"):
                         self.assertEqual(job["runs-on"], ["self-hosted", "linux", "bazel-x64"])
                         continue
                     self.assertEqual(job["runs-on"], "${{ matrix.runner }}")

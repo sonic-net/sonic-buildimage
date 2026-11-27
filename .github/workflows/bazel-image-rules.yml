@@ -5,6 +5,7 @@ on:
     paths:
       - .github/actions/bazel-post-job-cleanup/**
       - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/ci/private_server_diagnostics.py
       - tools/bazel/tests/migrated_job_cleanup_test.py
       - src/sonic-device-data/**
       - scripts/install_device_data.py
@@ -27,6 +28,7 @@ on:
     paths:
       - .github/actions/bazel-post-job-cleanup/**
       - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/ci/private_server_diagnostics.py
       - tools/bazel/tests/migrated_job_cleanup_test.py
       - src/sonic-device-data/**
       - scripts/install_device_data.py
@@ -195,7 +197,7 @@ jobs:
     if: >-
       (github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off') &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, linux, bazel-x64]
+    runs-on: [self-hosted, linux, bazel-x64, vs]
     # The first native build took 79 minutes; allow time for checks and cleanup.
     timeout-minutes: 120
     container:
@@ -234,6 +236,7 @@ jobs:
       - name: Preserve standard native repository and remote caches
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
       - name: Configure and verify job-private Bazel startup
+        id: native_bazel_startup
         run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
       - name: Configure source download mirrors
         run: |
@@ -257,6 +260,14 @@ jobs:
           bazel shutdown
           bazel build --nobuild --config=syncd-dash \
             --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
+      - name: Record Bazel server and runner diagnostics on failure
+        if: failure() && steps.native_bazel_startup.outcome == 'success'
+        env:
+          NATIVE_VS_OUTPUT_BASE: ${{ steps.native_bazel_startup.outputs.output_base }}
+        run: |
+          mkdir -p artifacts/native-vs
+          python3 -B tools/bazel/ci/private_server_diagnostics.py "$NATIVE_VS_OUTPUT_BASE" artifacts/native-vs
+          cat artifacts/native-vs/startup-diagnostics.json
       - name: Retain the acceptance results
         id: runner_cleanup_upload_0
         if: always()

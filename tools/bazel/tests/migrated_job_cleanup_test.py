@@ -315,9 +315,14 @@ class MigratedCleanupTest(unittest.TestCase):
         rc = self.workspace / ".bazelrc.user"
         rc.write_text("common --repository_cache=/retained/repository\n")
         state = self.directory / "bazel-startup"
-        with mock.patch.object(subject.subprocess, "run", return_value=subprocess.CompletedProcess(
-                [], 0, str(state / "user-root" / ("a" * 32)) + "\n")) as probe:
+        base = state / "user-root" / ("a" * 32)
+        output = self.root / "github-output"
+        output.write_text("other=preserved\n")
+        with mock.patch.dict(os.environ, GITHUB_OUTPUT=str(output)), \
+                mock.patch.object(subject.subprocess, "run", return_value=subprocess.CompletedProcess(
+                    [], 0, str(base) + "\n")) as probe:
             subject.configure_startup(self.workspace, self.home, self.runner_temp, self.directory)
+        self.assertEqual(output.read_text(), f"other=preserved\noutput_base={base}\n")
         probe.assert_called_once_with(
             ["bazel", "info", "output_base"], cwd=self.workspace, text=True,
             stdout=subprocess.PIPE, check=True, timeout=120)

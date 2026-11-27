@@ -125,6 +125,10 @@ def configure_startup(workspace, home, runner_temp, directory):
     if (base.parent != state / "user-root" or
             not re.fullmatch(r"[0-9a-f]{32}", base.name)):
         raise ValueError(f"Bazel did not select the registered job-private output base: {base}")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with Path(output).open("a") as stream:
+            stream.write(f"output_base={base}\n")
     print(f"Verified job-private Bazel startup: {state}")
 
 
