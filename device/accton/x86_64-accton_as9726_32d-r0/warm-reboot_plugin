@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "Stop as9726-32d-platform-monitor-fan.service"
+systemctl stop as9726-32d-platform-monitor-fan.service
+
+echo "Stop as9726-32d-platform-monitor-psu.service"
+systemctl stop as9726-32d-platform-monitor-psu.service
+
+echo "Stop as9726-32d-platform-monitor.service"
+systemctl stop as9726-32d-platform-monitor.service
+
