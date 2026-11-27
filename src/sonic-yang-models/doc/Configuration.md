@@ -2479,6 +2479,8 @@ name as object key and member list as attribute.
 
 The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
 
+The optional **learn_mode** field sets the MAC learning mode of the PortChannel's bridge port (drop, disable, hardware, cpu_trap, cpu_log or notification; hardware when unset). An MCLAG peer link sets it to disable so it never learns, including before iccpd starts.
+
 
 ### Portchannel member
 

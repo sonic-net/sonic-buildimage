@@ -774,5 +774,31 @@
                 ]
             }
         }
+    },
+    "PORTCHANNEL_VALID_LEARN_MODE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "learn_mode": "disable"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INVALID_LEARN_MODE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "learn_mode": "learn"
+                    }
+                ]
+            }
+        }
     }
 }

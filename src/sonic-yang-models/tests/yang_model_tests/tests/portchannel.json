@@ -110,5 +110,12 @@
     "PORTCHANNEL_INVALID_LAG_TYPE": {
         "desc": "Verify rejection of invalid lag_type enumeration.",
         "eStrKey": "InvalidValue"
+    },
+    "PORTCHANNEL_VALID_LEARN_MODE": {
+        "desc": "Configure PortChannel MAC learn mode disable."
+    },
+    "PORTCHANNEL_INVALID_LEARN_MODE": {
+        "desc": "Verify rejection of invalid learn_mode enumeration.",
+        "eStrKey": "InvalidValue"
     }
 }

@@ -120,7 +120,8 @@
                 "lacp_key": "auto",
                 "mode":"trunk",
                 "system_mac": "02:26:9b:73:c1:1a",
-                "lag_type": "LACP"
+                "lag_type": "LACP",
+                "learn_mode": "disable"
             },
             "PortChannel0004": {
                 "admin_status": "up",

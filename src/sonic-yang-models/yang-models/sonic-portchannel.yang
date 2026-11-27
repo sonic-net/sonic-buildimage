@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2026-11-16 {
+        description "Add PortChannel MAC learn mode";
+    }
+
     revision 2025-06-24 {
         description "Add LACP System MAC address";
     }
@@ -48,6 +52,17 @@ module sonic-portchannel {
         type enumeration {
             enum LACP;
             enum STATIC;
+        }
+    }
+
+    typedef learn-mode {
+        type enumeration {
+            enum drop;
+            enum disable;
+            enum hardware;
+            enum cpu_trap;
+            enum cpu_log;
+            enum notification;
         }
     }
 
@@ -147,6 +162,13 @@ module sonic-portchannel {
                 leaf lag_type {
                     type lag-type;
                     description "Describes how the LAG is defined and managed; either statically or with LACP";
+                }
+
+                leaf learn_mode {
+                    type learn-mode;
+                    description "MAC learning mode of the PortChannel's bridge port; teammgrd passes it to
+                                orchagent through APPL_DB LAG_TABLE. Set it to disable for an MCLAG peer
+                                link, which must not learn from the moment it is bridged";
                 }
 
             } /* end of list PORTCHANNEL_LIST */
