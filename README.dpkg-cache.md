@@ -150,6 +150,33 @@ suppress failures: check all uses covered by a waiver and explain why none creat
 an untracked cached-content input. If the audit fails to recognize existing
 tracking, prefer a focused analyzer correction with a regression test.
 
+Check 21 also recognizes optional file inputs copied into the rootfs when their
+staged bytes are in `RFS_DEP_FILES` and their enable state is in
+`RFS_INLINE_ENV_FLAGS`. Recognition requires a matching mode/nonempty-source
+guard, a forced content-preserving staging copy, and no additional content uses
+of the source path. An enable flag alone does not track file contents.
+The enable definition must precede its flag snapshot and conditional file
+declarations. The staged path must precede its file-list addition, which must
+precede the RFS target snapshot. Source assignments after the enable snapshot
+and local mode redefinitions retain the finding. Parameter-expansion uses are
+checked too; inline shell conditional bodies retain the finding.
+The recipe must forward the same mode explicitly or inherit it through the
+matching `Makefile.work` environment binding. Unknown or overridden modes and
+continued source-path logging retain the finding, as do redirected or continued
+shell group closures that could capture earlier logging.
+Source forwarding must use the shell-escaped single-quote form used by staging;
+double-quoted Make expansion can reinterpret literal shell characters in paths.
+Each source-bearing prefix must directly invoke `./build_debian.sh`, optionally
+followed by `$(LOG)`; wrappers, overrides, and extra arguments retain the finding.
+Declarations mentioning the source or mode, and source uses following a continued
+line, also retain the finding rather than being treated as safe forwarding/logging.
+Consumer uses of either input must match the supported read-only guards, copy,
+or simple logging forms. Bare write destinations (`read`, `+=`, `printf -v`,
+`unset`) and parameter assignments therefore retain the finding too. Logging
+with command/arithmetic substitutions or complex parameter expansions is not
+exempted: expanding an `echo` argument can itself mutate state or rootfs content.
+Unsupported Make or shell forms remain findings rather than being auto-cleared.
+
 Changes to the analyzer or waiver file should include the before/after findings
 and evidence that genuine missing inputs are still reported. Separate broader
 audit corrections from unrelated package changes when practical.
