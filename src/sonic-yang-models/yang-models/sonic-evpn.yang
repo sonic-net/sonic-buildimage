@@ -154,6 +154,18 @@ module sonic-evpn {
                     }
                     default 1080;
                 }
+
+                leaf l3_neigh_down_peering_time {
+                    description
+                        "Optional L3MH down-peering timer override in seconds.
+                         When omitted, Zebra uses its 60-second default.";
+                    type uint32 {
+                        range "1..86400" {
+                            error-message "L3 neighbor down-peering time value out of range";
+                            error-app-tag l3-neigh-down-peering-time-invalid;
+                        }
+                    }
+                }
             }
         }
     }

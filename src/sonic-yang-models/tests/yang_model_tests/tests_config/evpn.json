@@ -274,7 +274,8 @@
                         "name": "default",
                         "startup_delay": 1800,
                         "mac_holdtime": 1000,
-                        "neigh_holdtime": 600
+                        "neigh_holdtime": 600,
+                        "l3_neigh_down_peering_time": 86400
                     }
                 ]
             }
@@ -317,6 +318,30 @@
                         "startup_delay": 1800,
                         "mac_holdtime": 1000,
                         "neigh_holdtime": 86401
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_L3_NEIGH_DOWN_PEERING_TIME_ZERO": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "name": "default",
+                        "l3_neigh_down_peering_time": 0
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_L3_NEIGH_DOWN_PEERING_TIME_ABOVE_MAXIMUM": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "name": "default",
+                        "l3_neigh_down_peering_time": 86401
                     }
                 ]
             }

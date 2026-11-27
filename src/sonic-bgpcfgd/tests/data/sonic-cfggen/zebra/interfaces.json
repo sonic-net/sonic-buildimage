@@ -3,6 +3,9 @@
         "Ethernet0|10.20.30.40/24": {},
         "Ethernet4|20.20.30.40/24": {}
     },
+    "EVPN_MH_GLOBAL": {
+        "default": {"l3_neigh_down_peering_time": "45"}
+    },
     "PORTCHANNEL": {
         "PortChannel10": {},
         "PortChannel20": {}

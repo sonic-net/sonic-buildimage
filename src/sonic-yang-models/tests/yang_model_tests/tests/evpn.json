@@ -52,6 +52,14 @@
         "desc": "Global Neighbor Holdtime value out of range",
         "eStr": "Neighbor Holdtime value out of range"
     },
+    "EVPN_L3_NEIGH_DOWN_PEERING_TIME_ZERO": {
+        "desc": "Global L3 neighbor down-peering time outside the allowed range",
+        "eStr": "L3 neighbor down-peering time value out of range"
+    },
+    "EVPN_L3_NEIGH_DOWN_PEERING_TIME_ABOVE_MAXIMUM": {
+        "desc": "Global L3 neighbor down-peering time outside the allowed range",
+        "eStr": "L3 neighbor down-peering time value out of range"
+    },
     "EVPN_INVALID_IFNAME_NOT_EXISTS": {
         "desc": "Invalid ifname that doesn't exist in PORT table",
         "eStrKey" : "InvalidValue",
