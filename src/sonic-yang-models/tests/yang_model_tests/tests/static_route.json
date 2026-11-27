@@ -188,5 +188,29 @@
     },
     "STATIC_ROUTE_TEMPLATE_TEST_ECMP_ALL_FIELDS": {
         "desc": "Accept every per-nexthop field with one entry per nexthop on the prefix-keyed list"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_TAG_MAX": {
+        "desc": "Accept the largest uint32 tag on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEST_TAG_MAX": {
+        "desc": "Accept the largest uint32 tag on a VRF-qualified static route"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_TAG_OVERFLOW": {
+        "desc": "Reject a tag one past the uint32 maximum on a bare-prefix static route",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_TAG_OVERFLOW": {
+        "desc": "Reject a ten-digit tag above the uint32 maximum on a VRF-qualified static route",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_TAG_ECMP_OVERFLOW": {
+        "desc": "Reject an ECMP tag list whose second entry exceeds the uint32 maximum",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEMPLATE_TEST_IFNAME_INTERNAL_PORTS": {
+        "desc": "Accept backplane, inband and recirculation port names in ifname on a bare-prefix static route"
+    },
+    "STATIC_ROUTE_TEST_IFNAME_INTERNAL_PORTS": {
+        "desc": "Accept backplane, inband and recirculation port names in ifname on a VRF-qualified static route"
     }
 }
