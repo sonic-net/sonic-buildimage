@@ -37,6 +37,11 @@ static int radius_update_cache( char * prog, const char * nam, int mpl) {
     struct stat sb;
     FILE * fp = NULL;
 
+    if (!radius_user_name_ok(nam)) {
+        syslog(LOG_ERR, "%s: Unsafe username; not updating cache", prog);
+        return STATUS_EINVAL;
+    }
+
     /* Umask save, change.
      */
     mask = umask(022);
@@ -125,7 +130,7 @@ int main(int ac, char * av[]) {
      */
 
     if (   ((user = getenv("PAM_USER")) == NULL)
-        || (user[0] == 0)) {
+        || !radius_user_name_ok(user)) {
         syslog(LOG_WARNING,
             "%s: Missing or bad PAM_USER in environment:\"%s\"\n",
             av[0], user ? user : "(null)");
