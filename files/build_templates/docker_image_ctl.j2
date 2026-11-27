@@ -1,5 +1,6 @@
 #!/bin/bash
 {%- set bridged_containers = ["dhcp_server"] %}
+{%- set brcm_sdk_capture = sonic_asic_platform == "broadcom" and docker_container_name == "syncd" and docker_image_name is defined and docker_image_name.rsplit("/", 1)[-1] in ["docker-syncd-brcm", "docker-syncd-brcm-dbg"] %}
 
 # single instance containers are still supported (even though it might not look like it)
 # if no instance number is passed to this script, $DEV will simply be unset, resulting in docker
@@ -837,7 +838,20 @@ start() {
         [ -n "$_pmon_rule" ] && PMON_DEVICE_CGROUP_RULES+=( "--device-cgroup-rule=$_pmon_rule" )
     done < <(get_pmon_device_cgroup_rules)
 {%- endif %}
+{%- if brcm_sdk_capture %}
+    # Host /var/log is included by generate_dump; isolate multi-ASIC captures.
+    BRCM_SDK_LOG_DIR="/var/log/broadcom-sdk/${DEV:-default}"
+    BRCM_SDK_LOG_MOUNT=()
+    if mkdir -p "$BRCM_SDK_LOG_DIR" && chmod 0700 "$BRCM_SDK_LOG_DIR"; then
+        BRCM_SDK_LOG_MOUNT=( -v "$BRCM_SDK_LOG_DIR:/var/log/broadcom-sdk:rw" )
+    else
+        echo "Warning: persistent Broadcom SDK diagnostics unavailable" >&2
+    fi
+{%- endif %}
     docker create {{docker_image_run_opt}} \
+{%- if brcm_sdk_capture %}
+        "${BRCM_SDK_LOG_MOUNT[@]}" \
+{%- endif %}
         -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
