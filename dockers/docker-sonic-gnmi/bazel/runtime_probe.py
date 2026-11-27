@@ -116,6 +116,18 @@ def supervisor_startup(work, environment, config_client, state_client, dialout):
             require(state_client.hget("FEATURE|gnmi", "current_owner") == b"local" and
                     state_client.hget("FEATURE|gnmi", "container_version") == environment["IMAGE_VERSION"].encode(),
                     "original container_startup state/version differs")
+            # Supervisor can report RUNNING before telemetry opens its gRPC listener.
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                require(process.poll() is None and Path(f"/proc/{pid}/exe").exists(),
+                        f"supervisor or telemetry PID {pid} exited before 127.0.0.1:{port} was ready")
+                try:
+                    with socket.create_connection(("127.0.0.1", port), timeout=1):
+                        break
+                except ConnectionRefusedError:
+                    time.sleep(0.1)
+            else:
+                raise AssertionError(f"telemetry PID {pid} did not listen on 127.0.0.1:{port} within 15s")
             values = ["gnmi-launcher-first", "gnmi-launcher-second"]
             get = ["/usr/sbin/gnmi_get", "-notls", "-target_addr", "127.0.0.1:" + str(port),
                    "-time_out", "2s", "-xpath", "/sonic-db:CONFIG_DB/localhost/DEVICE_METADATA/localhost/hostname"]
