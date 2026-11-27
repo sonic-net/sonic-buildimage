@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 import ctypes
+import errno
 import os
 import pytest
 import shutil
@@ -281,11 +282,11 @@ class TestSfp:
         mock_read_int.reset_mock()
         mock_is_sw_control.return_value = False
         mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
-        mock_read_eeprom.return_value = 0  # EEPROM readable -> present
+        mock_read_eeprom.return_value = (0, None)  # EEPROM readable -> present
         assert sfp.get_presence()
         mock_read_int.reset_mock()
         mock_read_int.side_effect = [1, 1]  # config file ready=1, present=1
-        mock_read_eeprom.return_value = None  # EEPROM not readable -> not present
+        mock_read_eeprom.return_value = (None, errno.EIO)  # EEPROM not readable -> not present
         assert not sfp.get_presence()
         # Verify the presence file path was checked with present (not hw_present)
         assert mock_read_int.call_args_list[-1] == mock.call('/sys/module/sx_core/asic0/module0/present', log_func=None)
