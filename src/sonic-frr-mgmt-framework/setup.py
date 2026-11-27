@@ -27,6 +27,7 @@ setuptools.setup(
     ],
     data_files = [('sonic/frrcfgd', ['templates/bgpd/bgpd.conf.j2',
                                      'templates/bgpd/bgpd.conf.db.j2',
+                                     'templates/bgpd/bgpd.conf.db.tsa.j2',
                                      'templates/bgpd/bgpd.conf.db.route_map.j2',
                                      'templates/bgpd/bgpd.conf.db.pref_list.j2',
                                      'templates/bgpd/bgpd.conf.db.nbr_or_peer.j2',
