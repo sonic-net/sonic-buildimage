@@ -22,7 +22,7 @@ serdes_if_type_xe=13
 serdes_if_type_ce=14
 pbmp_gport_stack.0=0x0000000000000000000000000000000000000000000000000000000000000000
 #pbmp_xport_xe=0x48878787f8787808dfe1e0203e1e1e022
-pbmp_xport_xe=0x8808787f87808088221e1e1fe1e1e1fe
+pbmp_xport_xe=0xffffffffffffffffffffffffffffffffe
 
 
 portmap_1.0=1:100
