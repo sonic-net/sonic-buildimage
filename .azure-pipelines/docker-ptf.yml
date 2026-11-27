@@ -146,6 +146,7 @@ stages:
     steps:
     - download: current
       artifact: 'sonic-buildimage.vs'
+      patterns: '**/docker-ptf.gz'
       displayName: "Download docker-ptf artifact"
     - script: |
         set -ex

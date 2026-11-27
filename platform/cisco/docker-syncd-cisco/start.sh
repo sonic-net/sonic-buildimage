@@ -6,7 +6,7 @@
 PLATFORM_DIR=/usr/share/sonic/platform
 HWSKU_DIR=/usr/share/sonic/hwsku
 
-CISCO_PLATFORM_CAPABILITIES=${CISCO_PLATFORM_CAPABILITIES-}
+CISCO_PLATFORM_CAPABILITIES=${CISCO_PLATFORM_CAPABILITIES-dshell}
 
 cisco_platform_capability_supported()
 {
