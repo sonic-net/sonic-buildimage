@@ -309,9 +309,27 @@ class LldpManager(daemon_base.DaemonBase):
         sst_device_confdb = swsscommon.SubscriberStateTable(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
         sel.addSelectable(sst_device_confdb)
 
+        # After this many consecutive swsscommon.Select errors the process
+        # exits: swsscommon cannot recover a lost Redis connection, and
+        # continuing turns this loop into a tight spin that burns a CPU core
+        # while no LLDP configuration events are processed. lldpmgrd is a
+        # critical process, so its exit restarts the lldp container with
+        # fresh connections.
+        MAX_CONSECUTIVE_SELECT_ERRORS = 10
+        consecutive_select_errors = 0
+
         # Listen for changes to the PORT table in the CONFIG_DB and APP_DB
         while True:
             (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS, interrupt_on_signal=True)
+
+            if state != swsscommon.Select.OBJECT and state != swsscommon.Select.TIMEOUT:
+                consecutive_select_errors += 1
+                if consecutive_select_errors >= MAX_CONSECUTIVE_SELECT_ERRORS:
+                    self.log_error("persistent select error, exiting for supervised restart")
+                    sys.exit(1)
+                time.sleep(1)
+            else:
+                consecutive_select_errors = 0
 
             if state == swsscommon.Select.OBJECT:
                 if selectableObj.getFd() == sst_mgmt_ip_confdb.getFd():
