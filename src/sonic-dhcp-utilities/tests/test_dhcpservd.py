@@ -59,7 +59,7 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker, tm
         )
         dhcpservd.enabled_checker = enabled_checker
         assert dhcpservd.dump_dhcp4_config()
-        # Verfiy whether generate() func of dhcp_cfggen is called
+        # Verify whether generate() func of dhcp_cfggen is called
         dhcp_cfg_generator.generate.assert_called_once_with()
         validate_args = mock_validate.call_args.args[0]
         assert validate_args[:2] == ["kea-dhcp4", "-t"]

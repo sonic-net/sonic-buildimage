@@ -679,6 +679,20 @@ class TestConfigDHCPServerMatch:
         assert result.exit_code == 2
         assert "Match value must be between 1 and 255 characters" in result.output
 
+    @pytest.mark.parametrize("hostname, accepted", [("h" * 9, True), ("h" * 10, False)])
+    def test_match_update_circuit_id_counts_hostname(self, mock_db, hostname, accepted):
+        mock_db.hmset("CONFIG_DB", "DEVICE_METADATA|localhost", {"hostname": hostname})
+        mock_db.hmset("CONFIG_DB", "PORT|Ethernet2", {"alias": "e" * 245})
+
+        result = invoke(mock_db, MATCH_COMMAND.commands["update"], ["port-etp2", "--value", "e" * 245])
+
+        if accepted:
+            assert result.exit_code == 0, result.output
+        else:
+            assert result.exit_code == 2
+            assert "Match port-etp2 has an invalid value or exceeds 255 UTF-8 bytes" in result.output
+            assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|port-etp2", "value") == "etp2"
+
     def test_match_update_referenced_value(self, mock_db):
         result = invoke(
             mock_db,

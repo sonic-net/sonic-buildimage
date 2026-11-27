@@ -189,7 +189,13 @@ def get_match_entry(dbconn, match_name, match_overrides=None):
         entry = dbconn.get_all("CONFIG_DB", key)
     if entry.get("type") not in SUPPORTED_MATCH_TYPE:
         click.get_current_context().fail("Match {} has unsupported type {}".format(match_name, entry.get("type", "")))
-    if not entry.get("value") or len(entry["value"].encode("utf-8")) > 255:
+    payload = entry.get("value") or ""
+    if entry["type"] == "circuit_id":
+        # dhcp_relay stamps "<hostname>:<value>", which must fit in the 255-byte option payload
+        hostname = dbconn.get("CONFIG_DB", "DEVICE_METADATA|localhost", "hostname")
+        if hostname:
+            payload = "{}:{}".format(hostname, payload)
+    if not entry.get("value") or len(payload.encode("utf-8")) > 255:
         click.get_current_context().fail("Match {} has an invalid value or exceeds 255 UTF-8 bytes".format(match_name))
     return entry
 
