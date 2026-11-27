@@ -21,7 +21,11 @@ function print_targets {
 
 count=1
 for i in $(cat ${target_list_file}); do
-    printf "[ %02d ] [ %s ]\n" "${count}" "$i"
+    if [[ -v SONIC_BUILD_JOBS && "${SONIC_BUILD_JOBS}" -eq 1 ]]; then
+        printf "[ %02d ] [ %s ]\n\n" "${count}" "$i"
+    else
+        printf "[ %02d ] [ %s ]\n" "${count}" "$i"
+    fi
     ((count++))
 done
 }

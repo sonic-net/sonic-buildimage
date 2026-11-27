@@ -34,6 +34,11 @@ ifeq ($(INCLUDE_SYSTEM_GNMI), y)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_GNMI_DBG)
 endif
 
+# NOTE: unlike most optional features, DOCKER_GNMI's build (SONIC_DOCKER_IMAGES)
+# is intentionally NOT gated by INCLUDE_SYSTEM_GNMI, because docker-telemetry
+# and docker-telemetry-watchdog load it as a base image via *_LOAD_DOCKERS
+# regardless of INCLUDE_SYSTEM_GNMI. Only installation into the final image is gated.
+
 $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
 $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro

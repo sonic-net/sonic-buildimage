@@ -29,6 +29,18 @@ $(info [aspeed] Disabling feature flags: $(DISABLED_FEATURE_FLAGS))
 SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
 $(foreach feature, $(DISABLED_FEATURE_FLAGS), $(eval override $(feature)=n))
 
+# This installer ships DOCKER_LLDP and DOCKER_TELEMETRY directly in
+# $(SONIC_ONE_IMAGE)_DOCKERS below, independent of their INCLUDE_<FEATURE>
+# state initialized by top level Makefile.
+#
+# Force them to always be built here so a stock build - or any SONIC_PROFILE
+# that leaves these features disabled - does not leave this installer with a
+# missing docker image. (DOCKER_GNMI, also referenced below, always builds
+# unconditionally already and needs no such override.)
+REQUIRED_BUILD_DOCKERS := $(DOCKER_LLDP) $(DOCKER_TELEMETRY)
+MISSING_REQUIRED_DOCKERS := $(filter-out $(SONIC_DOCKER_IMAGES),$(REQUIRED_BUILD_DOCKERS))
+SONIC_DOCKER_IMAGES += $(MISSING_REQUIRED_DOCKERS)
+
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(ASPEED_PLATFORM_SERVICES)
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(ASPEED_EVB_AST2700_PLATFORM_MODULE)
