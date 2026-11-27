@@ -1,7 +1,7 @@
 [Unit]
 Description=Router advertiser container
 Requires=config-setup.service
-After=config-setup.service swss.service syncd.service
+After=config-setup.service mega.service syncd.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200

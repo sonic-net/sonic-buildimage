@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Drop-in supervisorctl shim backed by s6.
+
+SONiC health tooling (system-health's service_checker, monit) runs
+    docker exec <c> bash -c "supervisorctl status"
+and parses each line as "<name> <STATUS> ...", treating a critical process as
+healthy only when STATUS == RUNNING (names absent from the output are ignored).
+Since s6 replaced supervisord, this shim answers `status` from the live s6
+scandir so those checks keep working - avoiding false "process down" alarms,
+their event/log spam, and the repeated docker-exec churn a failing exec causes.
+
+Only `status` needs to be faithful; start/stop/restart are mapped to s6-svc
+best-effort for the rare manual/monit action.
+
+In a --pid=host container (e.g. EMBEDDED's "mega"), s6 never runs at all
+-- supervisord2s6.py falls back to the real supervisord there instead
+(s6-overlay's /init refuses to run as anything but true PID 1). SCANDIR
+then never exists, which is exactly the signal to hand off to the real
+supervisorctl instead of silently reporting nothing.
+"""
+import os
+import re
+import sys
+import subprocess
+
+SCANDIR = "/run/service"
+REAL_SUPERVISORCTL = "/usr/local/bin/supervisorctl.real"
+# s6-overlay puts its tools in /command; fall back to PATH.
+S6_SVSTAT = "/command/s6-svstat" if os.path.exists("/command/s6-svstat") else "s6-svstat"
+S6_SVC = "/command/s6-svc" if os.path.exists("/command/s6-svc") else "s6-svc"
+
+# s6-rc/s6 internal services that are not SONiC processes.
+SKIP_PREFIXES = ("s6-", "s6rc-", ".s6")
+SKIP_EXACT = {"s6rc-fdholder", "s6rc-oneshot-runner", "s6-linux-init-shutdownd"}
+
+
+def _svstat(path):
+    try:
+        r = subprocess.run([S6_SVSTAT, path], capture_output=True, text=True, timeout=5)
+    except Exception:
+        return None
+    if r.returncode != 0:
+        return None
+    return r.stdout.strip()
+
+
+def _fmt_uptime(seconds):
+    try:
+        s = int(seconds)
+    except (TypeError, ValueError):
+        return "0:00:00"
+    return "%d:%02d:%02d" % (s // 3600, (s % 3600) // 60, s % 60)
+
+
+def cmd_status(_args):
+    try:
+        entries = sorted(os.listdir(SCANDIR))
+    except FileNotFoundError:
+        return 0
+    for name in entries:
+        path = os.path.join(SCANDIR, name)
+        if not os.path.isdir(path):
+            continue
+        if name in SKIP_EXACT or name.startswith(SKIP_PREFIXES):
+            continue
+        st = _svstat(path)
+        if st is None:
+            continue
+        toks = st.split()
+        if toks and toks[0] == "up":
+            m = re.search(r"\(pid (\d+)\)", st)
+            pid = m.group(1) if m else "0"
+            secs = toks[2] if len(toks) > 2 and toks[2].isdigit() else "0"
+            print("%-32s RUNNING   pid %s, uptime %s" % (name, pid, _fmt_uptime(secs)))
+        else:
+            # down/exited -> report a non-RUNNING state so checks can react
+            print("%-32s EXITED    %s" % (name, st))
+    return 0
+
+
+def cmd_ctl(action, args):
+    if not args:
+        return 1
+    flag = {"start": "-u", "stop": "-d", "restart": "-r"}[action]
+    rc = 0
+    for name in args:
+        path = os.path.join(SCANDIR, name)
+        if not os.path.isdir(path):
+            print("%s: ERROR (no such process)" % name)
+            rc = 1
+            continue
+        try:
+            subprocess.run([S6_SVC, flag, path], timeout=10)
+            print("%s: %s" % (name, "started" if action == "start"
+                              else "stopped" if action == "stop" else "restarted"))
+        except Exception as e:
+            print("%s: ERROR (%s)" % (name, e))
+            rc = 1
+    return rc
+
+
+def main(argv):
+    if not os.path.isdir(SCANDIR) and os.path.exists(REAL_SUPERVISORCTL):
+        os.execv(REAL_SUPERVISORCTL, ["supervisorctl"] + argv)
+    if not argv or argv[0] == "status":
+        return cmd_status(argv[1:])
+    if argv[0] in ("start", "stop", "restart"):
+        return cmd_ctl(argv[0], argv[1:])
+    # Unknown subcommands (e.g. reread/update/tail): no-op success so callers
+    # that probe supervisorctl don't error out.
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
