@@ -2,6 +2,9 @@
     "SWITCH_HASH_VALID": {
         "desc": "Configure SWITCH_HASH."
     },
+    "SWITCH_HASH_PKT_TYPE_VALID": {
+        "desc": "Configure SWITCH_HASH with per-packet-type hash fields including RDMA."
+    },
     "SWITCH_HASH_INVALID_ECMP_HASH": {
         "desc": "Configure invalid ECMP_HASH in SWITCH_HASH.",
         "eStrKey": "InvalidValue"
@@ -16,6 +19,14 @@
     },
     "SWITCH_HASH_INVALID_LAG_HASH_ALGORITHM": {
         "desc": "Configure invalid LAG_HASH_ALGORITHM in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    },
+    "SWITCH_HASH_INVALID_ECMP_HASH_IPV4": {
+        "desc": "Configure invalid ECMP_HASH_IPV4 in SWITCH_HASH.",
+        "eStrKey": "InvalidValue"
+    },
+    "SWITCH_HASH_INVALID_LAG_HASH_IPV4_RDMA": {
+        "desc": "Configure invalid LAG_HASH_IPV4_RDMA in SWITCH_HASH.",
         "eStrKey": "InvalidValue"
     }
 }
