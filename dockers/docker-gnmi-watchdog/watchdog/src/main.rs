@@ -614,11 +614,12 @@ fn read_tcp_tables() -> Result<String, String> {
     Err(last_err)
 }
 
-// gnmi creates its unix socket only in uds-only mode (GNMI_LISTENER_MODE=uds-only), where it
-// opens no TCP listener whatever GNMI|gnmi.port says; a live socket counts as the listener.
+// In uds-only mode (GNMI_LISTENER_MODE=uds-only) gnmi has no TCP listener; with no port
+// configured, a live unix socket counts as the listener being up.
 fn listener_status(
     tables: Result<String, String>,
     port: u16,
+    port_configured: bool,
     socket_live: impl FnOnce() -> bool,
 ) -> String {
     let tables = match tables {
@@ -627,7 +628,7 @@ fn listener_status(
     };
     if tcp_listening(&tables, port) {
         "OK".to_string()
-    } else if socket_live() {
+    } else if !port_configured && socket_live() {
         "OK (unix socket)".to_string()
     } else {
         format!("ERROR: no TCP listener on port {port}")
@@ -679,7 +680,7 @@ fn run_health_checks() -> (bool, HealthStatus) {
     let gnmi = redis_hgetall("GNMI|gnmi");
     let port = parse_gnmi_port(field(&gnmi, "port"));
     let socket = usable_socket(&env_or_default(UNIX_SOCKET_ENV_VAR, DEFAULT_UNIX_SOCKET));
-    let gnmi_status = listener_status(read_tcp_tables(), port, || {
+    let gnmi_status = listener_status(read_tcp_tables(), port, field(&gnmi, "port").is_some(), || {
         socket.as_deref().map(|s| UnixStream::connect(s).is_ok()).unwrap_or(false)
     });
     // Only run xpath probes if the listener is up
@@ -1187,15 +1188,14 @@ mod tests {
     #[test]
     fn listener_status_rules() {
         let never = || -> bool { panic!("socket consulted") };
-        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 8080, never), "OK");
-        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, || false),
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 8080, true, never), "OK");
+        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, true, || true),
                    "ERROR: no TCP listener on port 50052");
-        // uds-only: no TCP listener (even with GNMI|gnmi.port set), live socket.
-        assert_eq!(listener_status(Ok("header\n".into()), 8080, || true), "OK (unix socket)");
-        assert_eq!(listener_status(Ok(LISTEN_8080.into()), 50052, || true), "OK (unix socket)");
-        assert_eq!(listener_status(Ok("header\n".into()), 8080, || false),
+        // uds-only: no port configured, no TCP listener, live socket.
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || true), "OK (unix socket)");
+        assert_eq!(listener_status(Ok("header\n".into()), 8080, false, || false),
                    "ERROR: no TCP listener on port 8080");
-        assert_eq!(listener_status(Err("cannot read".into()), 8080, || true), "ERROR: cannot read");
+        assert_eq!(listener_status(Err("cannot read".into()), 8080, false, || true), "ERROR: cannot read");
     }
 
     #[test]
