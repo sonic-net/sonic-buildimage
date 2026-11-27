@@ -1,0 +1,369 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// Generic Network Operation Interface, GNOI, defines a set of RPC's used for
+// the operational aspects of network targets. These services are meant to be
+// used in conjunction with GNMI for all target state and operational aspects
+// of a network target. The gnoi.system.Service is the only mandatory vendor
+// implementation.
+
+syntax = "proto3";
+
+package gnoi.system;
+
+import "common/common.proto";
+import "types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/system";
+
+option (types.gnoi_version) = "1.4.0";
+
+// The gNOI service is a collection of operational RPC's that allow for the
+// management of a target outside of the configuration and telemetry pipeline.
+service System {
+  // Ping executes the ping command on the target and streams back
+  // the results.  Some targets may not stream any results until all
+  // results are in.  The stream should provide single ping packet responses
+  // and must provide summary statistics.
+  rpc Ping(PingRequest) returns (stream PingResponse) {}
+
+  // Traceroute executes the traceroute command on the target and streams back
+  // the results.  Some targets may not stream any results until all
+  // results are in.  If a hop count is not explicitly provided,
+  // 30 is used.
+  rpc Traceroute(TracerouteRequest) returns (stream TracerouteResponse) {}
+
+  // Time returns the current time on the target.  Time is typically used to
+  // test if a target is actually responding.
+  rpc Time(TimeRequest) returns (TimeResponse) {}
+
+  // SetPackage places a software package (possibly including bootable images)
+  // on the target. The file is sent in sequential messages, each message
+  // up to 64KB of data. A final message must be sent that includes the hash
+  // of the data sent. An error is returned if the location does not exist or
+  // there is an error writing the data. If no checksum is received, the target
+  // must assume the operation is incomplete and remove the partially
+  // transmitted file. The target should initially write the file to a temporary
+  // location so a failure does not destroy the original file.
+  rpc SetPackage(stream SetPackageRequest) returns (SetPackageResponse) {}
+
+  // SwitchControlProcessor will switch from the current route processor to the
+  // provided route processor. If the current route processor is the same as the
+  // one provided it is a NOOP. If the target does not exist an error is
+  // returned.
+  rpc SwitchControlProcessor(SwitchControlProcessorRequest)
+    returns (SwitchControlProcessorResponse) {}
+
+  // Reboot causes the target to reboot, possibly at some point in the future.
+  // If the method of reboot is not supported then the Reboot RPC will fail.
+  // If the reboot is immediate the command will block until the subcomponents
+  // have restarted.
+  // If a reboot on the active control processor is pending the service must
+  // reject all other reboot requests.
+  // If a reboot request for active control processor is initiated with other
+  // pending reboot requests it must be rejected.
+  rpc Reboot(RebootRequest) returns (RebootResponse) {}
+
+  // RebootStatus returns the status of reboot for the target.
+  rpc RebootStatus(RebootStatusRequest) returns (RebootStatusResponse) {}
+
+  // CancelReboot cancels any pending reboot request.
+  rpc CancelReboot(CancelRebootRequest) returns (CancelRebootResponse) {}
+
+  // KillProcess kills an OS process and optionally restarts it.
+  rpc KillProcess(KillProcessRequest) returns (KillProcessResponse) {}
+}
+
+message SwitchControlProcessorRequest {
+  // Path to the target Control Processor.
+  types.Path control_processor = 1;
+}
+
+message SwitchControlProcessorResponse {
+  // Path to the Control Processor that the system switched to.
+  types.Path control_processor = 1;
+  // Current software version of the target Control Processor.
+  string version = 2;
+  // Uptime of the target Control Processor in nanoseconds.
+  int64 uptime = 3;
+}
+
+// A RebootRequest requests the specified target be rebooted using the specified
+// method after the specified delay.  Only the COLD method with a delay of 0
+// is guaranteed to be accepted for all target types.
+message RebootRequest {
+  RebootMethod method = 1;
+  // Delay in nanoseconds before issuing reboot.
+  uint64 delay = 2;
+  // Informational reason for the reboot.
+  string message = 3;
+  // Optional sub-components to reboot.
+  repeated types.Path subcomponents = 4;
+  // Force reboot if sanity checks fail. (ex. uncommited configuration)
+  bool force = 5;
+}
+
+message RebootResponse {
+}
+
+// A RebootMethod determines what should be done with a target when a Reboot is
+// requested.  Only the COLD method is required to be supported by all
+// targets.  A target should return 'INVALID_ARGUMENT` if UNKNOWN or any other
+// unsupported method is called.
+//
+// It is vendor defined if a WARM reboot is the same as an NSF reboot.
+enum RebootMethod {
+  UNKNOWN = 0;     // Invalid default method.
+  COLD = 1;        // Shutdown and restart OS and all hardware.
+  POWERDOWN = 2;   // Halt and power down, if possible.
+  HALT = 3;        // Halt, if possible.
+  WARM = 4;        // Reload configuration but not underlying hardware.
+  NSF = 5;         // Non-stop-forwarding reboot, if possible.
+  // RESET method is deprecated in favor of the gNOI FactoryReset.Start().
+  reserved 6;
+  POWERUP = 7;     // Apply power, no-op if power is already on.
+}
+
+// A CancelRebootRequest requests the cancelation of any outstanding reboot
+// request.
+message CancelRebootRequest {
+  string message = 1;      // informational reason for the cancel
+  repeated types.Path subcomponents = 2; // optional sub-components.
+}
+
+message CancelRebootResponse {
+}
+
+message RebootStatusRequest {
+  repeated types.Path subcomponents = 1; // optional sub-component.
+}
+
+message RebootStatusResponse {
+  bool active = 1;      // If reboot is active.
+  uint64 wait = 2;      // Time left until reboot.
+  uint64 when = 3;      // Time to reboot in nanoseconds since the epoch.
+  string reason = 4;    // Reason for reboot.
+  uint32 count = 5;     // Number of reboots since active.
+  RebootMethod method = 6; // Type of reboot.
+  RebootStatus status = 7; // Applicable only when active = false.
+}
+
+message RebootStatus {
+  enum Status {
+    STATUS_UNKNOWN = 0;
+    STATUS_SUCCESS = 1;
+    STATUS_RETRIABLE_FAILURE = 2;
+    STATUS_FAILURE = 3;
+  }
+
+  Status status = 1;
+  string message = 2;
+}
+
+// A TimeRequest requests the current time accodring to the target.
+message TimeRequest {
+}
+
+message TimeResponse {
+  uint64 time = 1;           // Current time in nanoseconds since epoch.
+}
+
+// A PingRequest describes the ping operation to perform.  Only the destination
+// fields is required.  Any field not specified is set to a reasonable server
+// specified value.  Not all fields are supported by all vendors.
+//
+// A count of 0 defaults to a vendor specified value, typically 5.  A count of
+// -1 means continue until the RPC times out or is canceled.
+//
+// If the interval is -1 then a flood ping is issued.
+//
+// If the size is 0, the vendor default size will be used (typically 56 bytes).
+message PingRequest {
+  string destination = 1;   // Destination address to ping. required.
+  string source = 2;        // Source address to ping from.
+  int32 count = 3;          // Number of packets.
+  int64 interval = 4;       // Nanoseconds between requests.
+  int64 wait = 5;           // Nanoseconds to wait for a response.
+  int32 size = 6;           // Size of request packet. (excluding ICMP header)
+  bool do_not_fragment = 7; // Set the do not fragment bit. (IPv4 destinations)
+  bool do_not_resolve = 8;  // Do not try resolve the address returned.
+  types.L3Protocol l3protocol = 9; // Layer3 protocol requested for the ping.
+  string network_instance = 10; // Network instance to ping the destination in
+}
+
+// A PingResponse represents either the reponse to a single ping packet
+// (the bytes field is non-zero) or the summary statistics (sent is non-zero).
+//
+// For a single ping packet, time is the round trip time, in nanoseconds.  For
+// summary statistics, it is the time spent by the ping operation.  The time is
+// not always present in summary statistics.  The std_dev is not always present
+// in summary statistics.
+message PingResponse {
+  string source = 1;        // Source of received bytes.
+  int64 time = 2;
+
+  int32 sent = 3;           // Total packets sent.
+  int32 received = 4;       // Total packets received.
+  int64 min_time = 5;       // Minimum round trip time in nanoseconds.
+  int64 avg_time = 6;       // Average round trip time in nanoseconds.
+  int64 max_time = 7;       // Maximum round trip time in nanoseconds.
+  int64 std_dev = 8;        // Standard deviation in round trip time.
+
+  int32 bytes = 11;         // Bytes received.
+  int32 sequence = 12;      // Sequence number of received packet.
+  int32 ttl = 13;           // Remaining time to live value.
+}
+
+// A TracerouteRequest describes the traceroute operation to perform.  Only the
+// destination field is required.  Any field not specified is set to a
+// reasonable server specified value.  Not all fields are supported by all
+// vendors.
+//
+// If the hop_count is -1 the traceroute will continue forever.
+//
+message TracerouteRequest {
+  string source = 1;         // Source address to ping from.
+  string destination = 2;    // Destination address to ping.
+  uint32 initial_ttl = 3;    // Initial TTL. (default=1)
+  int32 max_ttl = 4;         // Maximum number of hops. (default=30)
+  int64 wait = 5;            // Nanoseconds to wait for a response.
+  bool do_not_fragment = 6;  // Set the do not fragment bit. (IPv4 destinations)
+  bool do_not_resolve = 7;   // Do not try resolve the address returned.
+  types.L3Protocol l3protocol = 8; // Layer-3 protocol requested for the ping.
+  enum L4Protocol {
+    ICMP = 0; // Use ICMP ECHO for probes.
+    TCP = 1;  // Use TCP SYN for probes.
+    UDP = 2;  // Use UDP for probes.
+  }
+  L4Protocol l4protocol = 9;
+  bool do_not_lookup_asn = 10; // Do not try to lookup ASN
+  string network_instance = 11; // Network instance to trace the destination in
+}
+
+// A TraceRouteResponse contains the result of a single traceoute packet.
+//
+// There may be an optional initial response that provides information about the
+// traceroute request itself and contains at least one of the fields in the the
+// initial block of fields and none of the fields following that block.  All
+// subsequent responses should not contain any of these fields.
+//
+// Typically multiple responses are received for each hop, as the packets are
+// received.
+//
+// The mpls field maps names to values.  Example names include "Label", "CoS",
+// "TTL", "S", and "MRU".
+// [Perhaps we should list the canonical names that must be used when
+// applicable].
+message TracerouteResponse {
+  // The following fields are only filled in for the first message.
+  // If any of these fields are specified, all fields following this
+  // block are left unspecified.
+  string destination_name = 1;
+  string destination_address = 2;
+  int32 hops = 3;
+  int32 packet_size = 4;
+
+  // State is the resulting state of a single traceoroute packet.
+  enum State {
+    DEFAULT = 0;               // Normal hop response.
+    NONE = 1;                  // No response.
+    UNKNOWN = 2;               // Unknown response state.
+    ICMP = 3;                  // See icmp_code field.
+    HOST_UNREACHABLE = 4;      // Host unreachable.
+    NETWORK_UNREACHABLE = 5;   // Network unreachable.
+    PROTOCOL_UNREACHABLE = 6;  // Protocol unreachable.
+    SOURCE_ROUTE_FAILED = 7;   // Source route failed.
+    FRAGMENTATION_NEEDED = 8;  // Fragmentation needed.
+    PROHIBITED = 9;            // Communication administratively prohibited.
+    PRECEDENCE_VIOLATION = 10; // Host precedence violation.
+    PRECEDENCE_CUTOFF = 11;    // Precedence cutoff in  effect.
+  }
+
+  message IcmpExtData{
+    uint32 class = 1;      // class number
+    uint32 type = 2;       // class type
+    repeated uint32 data = 3;     // raw words associated with this data
+  }
+
+  // The following fields provide the disposition of a single traceroute
+  // packet.
+  int32 hop = 5;                // Hop number. required.
+  string address = 6;           // Address of responding hop. required.
+  string name = 7;              // Name of responding hop.
+  int64 rtt = 8;                // Round trip time in nanoseconds.
+  State state = 9;              // State of this hop.
+  int32 icmp_code = 10;          // Code terminating hop.
+  map<string, string> mpls = 11; // MPLS key/value pairs.
+  repeated int32 as_path = 12;   // AS path.
+  repeated IcmpExtData icmp_ext_data = 13;  // ICMP extension data
+}
+
+// Package defines a single package file to be placed on the target.
+message Package  {
+  // Destination path and filename of the package.
+  string filename = 1;
+  // Version of the package. (vendor internal name)
+  string version = 4;
+  // Indicates that the package should be made active after receipt on
+  // the device. For system image packages, the new image is expected to
+  // be active after a reboot.
+  bool activate = 5;
+  // Details for the device to download the package from a remote location.
+  common.RemoteDownload remote_download = 6;
+}
+
+// SetPackageRequest will place the package onto the target and optionally mark
+// it as the next bootable image. The initial message must be a package
+// message containing the filename and information about the file. Following the
+// initial message the contents are then streamed in maximum 64k chunks. The
+// final message must be a hash message contains the hash of the file contents.
+message SetPackageRequest {
+  oneof request {
+    Package package = 1;
+    bytes contents = 2;
+    types.HashType hash = 3;    // Verification hash of data.
+  }
+}
+
+message SetPackageResponse {
+}
+
+// KillProcessRequest describes the process kill operation. Either a pid or
+// process name must be specified, and a termination signal must be specified.
+message KillProcessRequest {
+  // Process ID of the process to be killed.
+  uint32 pid = 1;
+  // Name of the process to be killed.
+  string name = 2;
+  // Termination signal sent to the process.
+  enum Signal {
+    SIGNAL_UNSPECIFIED = 0;  // Invalid default.
+    SIGNAL_TERM = 1;         // Terminate the process gracefully.
+    SIGNAL_KILL = 2;         // Terminate the process immediately.
+    SIGNAL_HUP = 3;          // Reload the process configuration.
+    // Terminate the process immediately and dump a core file.
+    SIGNAL_ABRT = 4;
+  }
+
+  Signal signal = 3;
+  // Whether the process should be restarted after termination.
+  // This value is ignored when the termination signal is SIGHUP.
+  bool restart = 4;
+}
+
+// KillProcessResponse describes the result of the process kill operation.
+message KillProcessResponse {
+}
