@@ -24,6 +24,11 @@ module sonic-bgp-peergroup {
     description
         "SONIC BGP Peer Group YANG";
 
+    revision 2026-11-13 {
+        description
+            "Add SRv6 encapsulation mode to BGP peer-group AF configuration.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -65,6 +70,14 @@ module sonic-bgp-peergroup {
                         path "../../../BGP_PEER_GROUP/BGP_PEER_GROUP_LIST[vrf_name=current()/../vrf_name]/peer_group_name";
                     }
                     description "Peer group name";
+                }
+
+                leaf encapsulation_type {
+                    type enumeration {
+                        enum srv6;
+                        enum srv6-relax;
+                    }
+                    description "SRv6 encapsulation mode for routes advertised to this peer group in this address family.";
                 }
 
                 uses bgpcmn:sonic-bgp-cmn-af;
