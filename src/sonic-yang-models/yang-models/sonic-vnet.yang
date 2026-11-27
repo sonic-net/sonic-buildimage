@@ -106,6 +106,18 @@ module sonic-vnet {
                     description "source mac address for the Vnet";
                     type yang:mac-address;
                 }
+
+                leaf evpn_enabled {
+                    description "Flag to enable EVPN for the Vnet.";
+                    type boolean;
+                }
+
+                leaf decap_tunnel_list {
+                    description "Additional existing VXLAN tunnel to decapsulate into this Vnet.";
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
             }
             /* end of list VNET_LIST */
         }
