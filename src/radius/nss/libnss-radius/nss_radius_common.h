@@ -34,9 +34,11 @@ The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 
 #define RADIUS_ATTRIBUTE_CACHE_DIR "/var/cache/radius/user"
 #define RADIUS_CACHE_DIR "/var/cache/radius"
+#define RADIUS_USER_LOCK RADIUS_CACHE_DIR "/user.lock"
 #define RADIUS_ATTR_MPL "Management-Privilege-Level"
 
 #define ETC_PASSWD "/etc/passwd"
+#define ETC_GROUP "/etc/group"
 
 #define USERADD "/usr/sbin/useradd"
 #define USERMOD "/usr/sbin/usermod"
@@ -64,6 +66,8 @@ The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 
 #undef ETC_PASSWD
 #define ETC_PASSWD "passwd"
+#undef ETC_GROUP
+#define ETC_GROUP "group"
 
 #undef USERADD
 #define USERADD "/bin/echo"
@@ -126,7 +130,14 @@ int is_sshd_lookup(RADIUS_NSS_CONF_B * conf, const char * nam);
 int radius_getpwnam_r(char * prog, const char * name,
     struct passwd * pwd, char * buf, int buflen, struct passwd ** result);
 int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl);
+int radius_reconcile_user(RADIUS_NSS_CONF_B * conf, const char * user,
+    int mpl);
 int radius_create_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl,
     int unconfirmed);
 int radius_clear_unconfirmed_users(RADIUS_NSS_CONF_B * conf);
 
+#if defined(TEST_RADIUS_NSS)
+extern char radius_test_last_user_mod_gid[16];
+extern char radius_test_last_user_mod_groups[128];
+extern int radius_test_user_mod_calls;
+#endif

@@ -90,6 +90,7 @@ static int main_cleanup(int status, RADIUS_NSS_CONF_B * conf, int * pncfd) {
 int main(int ac, char * av[]) {
 
     int mpl = 1, cached_mpl = 1;
+    int user_reconciled = 0;
     int status = 0;
     int my_errno = 0;
     char * user = NULL, * privilege;
@@ -165,9 +166,16 @@ int main(int ac, char * av[]) {
         if (radius_getpwnam_r(conf->prog, rnm->gecos, &pw, buf, sizeof(buf),
                 &result) != 0) {
             radius_create_user(conf, rnm->gecos, mpl, RADIUS_CONFIRMED);
+        } else {
+            user_reconciled = radius_reconcile_user(conf, rnm->gecos, mpl);
+            if (user_reconciled < 0) {
+                syslog(LOG_ERR, "%s: Failed to reconcile groups for %s",
+                    conf->prog, rnm->gecos);
+                exit(main_cleanup(STATUS_EPERM, conf, &ncfd));
+            }
         }
 
-        if (mpl != cached_mpl) {
+        if (user_reconciled || mpl != cached_mpl) {
 
             syslog(LOG_WARNING, "%s: Management-Privilege-Level init/changed:"
                 " %d --> %d\n", conf->prog, cached_mpl, mpl);
