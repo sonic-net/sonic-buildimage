@@ -98,6 +98,24 @@ def verify_state_directory(files):
                   ("directory", 101, 102, 0o755), "snmpd state ownership changed")
 
 
+def startup_files():
+    """Read the standalone Dockerfile's local COPY records, including its shared SNMP fragment."""
+    from jinja2 import Environment, FileSystemLoader, StrictUndefined
+
+    owner = ROOT / "dockers/docker-snmp"
+    environment = Environment(loader=FileSystemLoader([owner, ROOT]), undefined=StrictUndefined)
+    recipe = environment.get_template("Dockerfile.j2").render(
+        DOCKER_USERNAME="sonic", DOCKER_USERTAG="local", docker_snmp_debs="", docker_snmp_whls="",
+    )
+    files = {}
+    for line in recipe.splitlines():
+        if line.startswith("COPY "):
+            *sources, directory = json.loads(line.removeprefix("COPY "))
+            for source in sources:
+                files[source] = str(Path(directory.lstrip("/")) / source)
+    return files
+
+
 def validate_images(directory):
     receipt = json.loads((directory / "build-receipt.json").read_text())
     check.require(receipt["status"] == "built", "build did not complete")
@@ -133,12 +151,11 @@ def validate_images(directory):
 
         for path, expected in check.payload(directory / "snmp_install.tar").items():
             check.require(files.get(path) == expected, "SNMP install TAR differs: " + path)
-        for source, destination in {
-            "docker-snmp-init.sh": "usr/bin/docker-snmp-init.sh", "start.sh": "usr/bin/start.sh",
-            "snmp_yml_to_configdb.py": "usr/bin/snmp_yml_to_configdb.py", "critical_processes": "etc/supervisor/critical_processes",
-            **{path.name: "usr/share/sonic/templates/" + path.name for path in (ROOT / "dockers/docker-snmp").glob("*.j2")},
-        }.items():
-            check.require(files[destination]["sha256"] == check.sha(ROOT / "dockers/docker-snmp" / source), "startup input changed: " + source)
+        for source, destination in startup_files().items():
+            image_validation.verify_file(files, destination, {
+                "sha256": check.sha(ROOT / "dockers/docker-snmp" / source),
+                "mode": 0o755 if destination.startswith("usr/bin/") else 0o644,
+            })
         verify_state_directory(files)
         selected, origins = source_base_validation.inventory(layout)
         with tempfile.TemporaryDirectory() as temp:

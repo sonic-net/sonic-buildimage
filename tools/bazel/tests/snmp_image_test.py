@@ -1,7 +1,9 @@
 """Check inspected OCI layout materialization without running image producers."""
 
+import ast
 import json
 from pathlib import Path
+import re
 import subprocess
 from types import SimpleNamespace
 import tempfile
@@ -14,6 +16,21 @@ from tools.bazel.ci import snmp_loaded
 
 
 class SnmpImageBuildTest(unittest.TestCase):
+    def test_wheel_lock_matches_make_version_pins(self):
+        def pins(file):
+            records = re.findall(r"^([\w.-]+)==([^\s\\]+)", file.read_text(), re.MULTILINE)
+            return {name.replace("_", "-").lower(): version for name, version in records}
+
+        self.assertEqual(pins(image.ROOT / "dockers/docker-snmp/requirements_lock.txt"),
+                         pins(image.ROOT / "files/build/versions-public/dockers/docker-snmp/versions-py3"))
+
+    def test_startup_layer_matches_the_standalone_dockerfile_copies(self):
+        owner = image.ROOT / "dockers/docker-snmp"
+        build = ast.parse((owner / "config/BUILD.bazel").read_text())
+        mapping = next(node.value for node in build.body
+                       if isinstance(node, ast.Assign) and node.targets[0].id == "_CONFIGS")
+        self.assertEqual(ast.literal_eval(mapping), image.startup_files())
+
     def build(self, *, failure=None):
         self.events = []
         self.parent = "//dockers/docker-config-engine-trixie:docker-config-engine-trixie"

@@ -64,6 +64,7 @@ def main():
         work = Path(temporary)
         env = dict(os.environ, MIBS='', SNMP_PERSISTENT_DIR=str(work/'persist'), PLATFORM='sonic-bazel-build')
         (work/'persist').mkdir()
+        command('/usr/bin/wait_for_snmp_config.sh', env={**env, 'IMAGE_VERSION': 'bazel-snmp-ci'})
         data={'DEVICE_METADATA':{'localhost':{'hostname':'bazel-snmp-image','hwsku':'Force10-S6000','switch_type':'switch'}},
               'build_version':'bazel-snmp-ci','debian_version':'13','kernel_version':'test',
               'SNMP_COMMUNITY':{'bazel-test':{'TYPE':'RO'}}}
