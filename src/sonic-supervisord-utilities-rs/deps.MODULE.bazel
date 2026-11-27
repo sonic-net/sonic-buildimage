@@ -2,6 +2,6 @@
 
 bazel_dep(
     name = "sonic-rust-deps",
-    version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
+    version = "0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e",
     repo_name = "sonic_rust_deps",
 )

@@ -368,7 +368,7 @@ single_version_override(module_name = "sai", version = "1.18.0.sonic.2")
 
 single_version_override(
     module_name = "sonic-rust-deps",
-    version = "0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e",
+    version = "0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e",
 )
 
 bazel_dep(name = "sonic-fips", version = "1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6", repo_name = "sonic_fips")

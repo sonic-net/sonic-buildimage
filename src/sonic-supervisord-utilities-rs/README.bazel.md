@@ -68,9 +68,7 @@ The shared graph's established release logging cap remains in effect.
 
 ## Shared dependency validation
 
-Local commands and native CI select `sonic-rust-deps` version
-`0.0.5-5bf69bc0a7d9ea9f4a5606264be592867cd29d1e` from SONiC registry `main`.
-This registration uses landed `sonic-build-infra` source
-`5bf69bc0a7d9ea9f4a5606264be592867cd29d1e` for the supervisor aliases
-and native linking support. Both paths use ordinary module resolution without
-a local source checkout or module override.
+The buildimage workspace uses the published `sonic-rust-deps` module
+`0.0.5-4064a814e8530300a7acbad4a9aff0621e2fb98e`. It provides the
+listener’s crate aliases and the versions of `procfs` and `sysinfo` used by
+Host Services in the same image.
