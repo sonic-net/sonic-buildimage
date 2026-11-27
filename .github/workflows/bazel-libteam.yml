@@ -152,6 +152,9 @@ jobs:
               @libteam//:consumer_test @libteam//:lacp_port_removal_test \
               2>&1 | tee artifacts/test.log
             output() { run_bazel cquery "//src/libteam:$1" --output=files; }
+            # Bazel reports source files relative to the execution root.
+            consumer_source="$(run_bazel cquery @libteam//:bazel/consumer_test.c --output=files)"
+            exec_root="$(python3 -c 'from tools.bazel.ci.build import execution_root_from_bep; print(execution_root_from_bep("artifacts/build-events.json"))')"
             python3 -B src/libteam/verify_runtime.py \
               --libteam "$(output libteam_runtime)" \
               --libteam-symbols "$(output libteam_runtime.debug_symbols)" \
@@ -161,6 +164,7 @@ jobs:
               --libteam-utils-symbols "$(output libteam_utils_runtime.debug_symbols)" \
               --development "$(output libteam_dev)" \
               --dependency-development "$(run_bazel cquery @libnl3//:libnl-3-dev_files --output=files)" \
+              --consumer "$exec_root/$consumer_source" \
               --output artifacts/installed-runtime.json
           fi
           # Resolve the selected owner's probe in this same Bazel execution

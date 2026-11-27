@@ -66,7 +66,8 @@ with open(os.environ["CALLS"], "a") as output:
             required.update((package + "_runtime", package + "_runtime.debug_symbols"))
         self.assertTrue(required <= aliases.keys())
         # The old root-owned producer and its inert edit probe must not coexist.
-        for filename in ("deps.MODULE.bazel", "libteam.BUILD.bazel", "config.h.in", "verify_rebuild.py"):
+        for filename in ("deps.MODULE.bazel", "libteam.BUILD.bazel", "config.h.in",
+                         "verify_rebuild.py", "consumer_test.c"):
             self.assertFalse((ROOT / "src/libteam" / filename).exists(), filename)
 
     def test_probe_uses_the_same_wrapper_execution_root_and_preserves_flags(self):

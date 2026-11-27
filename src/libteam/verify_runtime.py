@@ -30,7 +30,7 @@ def verify_development_timestamps(development):
     return len(members)
 
 
-def verify(archives, development, dependency_development):
+def verify(archives, development, dependency_development, consumer):
     machine, triplet = {"x86_64": (62, "x86_64-linux-gnu"),
                         "aarch64": (183, "aarch64-linux-gnu")}[platform.machine()]
     libdir = "usr/lib/" + triplet
@@ -100,7 +100,7 @@ def verify(archives, development, dependency_development):
         artifacts.require({"-lteam", "-lteamdctl", "-lnl-3", "-L" + str(root / libdir)} <= set(libs),
                           "incorrect installed pkg-config linker interface")
         artifacts.command(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", *flags,
-                           "-c", str(Path(__file__).parent / "consumer_test.c"),
+                           "-c", str(consumer),
                            "-o", str(root / "consumer.o")])
         artifacts.require(artifacts.elf_header((root / "consumer.o").read_bytes()[:64], "consumer")["elf_machine"] == machine,
                           "SDK compiler is not native")
@@ -141,11 +141,13 @@ def main():
         parser.add_argument("--" + name + "-symbols", required=True, type=Path)
     parser.add_argument("--development", required=True, type=Path)
     parser.add_argument("--dependency-development", required=True, type=Path)
+    parser.add_argument("--consumer", required=True, type=Path, help="C fixture from the selected libteam module")
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     archives = {name: (getattr(args, name), getattr(args, name + "_symbols"))
                 for name in ("libteam", "libteamdctl", "libteam_utils")}
-    args.output.write_text(json.dumps(verify(archives, args.development, args.dependency_development), indent=2) + "\n")
+    result = verify(archives, args.development, args.dependency_development, args.consumer)
+    args.output.write_text(json.dumps(result, indent=2) + "\n")
 
 
 if __name__ == "__main__":

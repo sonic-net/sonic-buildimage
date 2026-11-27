@@ -21,8 +21,10 @@ registered SWSS and libteam versions.
 CI validates 11 outputs on AMD64 and ARM64, runs the owner's consumer and
 LACP port-removal tests, and checks the installed SDK and debug files.
 The installed check verifies all five ELF/debug pairs, SONAME and SDK links, public headers,
-pkg-config flags and zero development-TAR timestamps. The shared owner's
-incremental probe performs baseline, no-op, config-edit and restoration builds
+pkg-config flags and zero development-TAR timestamps. Both the native check and
+the VS artifact verifier compile `@libteam//:bazel/consumer_test.c` from the
+selected module against the installed headers. The shared owner's incremental
+probe performs baseline, no-op, config-edit and restoration builds
 using the same Bazel entry point, flags, caches and execution root. The consumer
 resolves the owner's script through its public source label and does not edit a
 second local configuration file.
