@@ -36,6 +36,10 @@ module sonic-bgp-neighbor {
         prefix svnet;
     }
 
+    import sonic-device_metadata {
+        prefix sdm;
+    }
+
     organization
         "SONiC";
 
@@ -44,6 +48,14 @@ module sonic-bgp-neighbor {
 
     description
         "SONIC BGP Neighbor";
+
+    revision 2026-11-13 {
+        description
+            "Require an asn on both BGP neighbor lists, since a neighbor without one establishes no
+             session. On BGP_NEIGHBOR_LIST it may be omitted only when frr_mgmt_framework_config is
+             true and the neighbor has a peer_group_name or is attached to an interface. A neighbor
+             that validated before this revision may now be rejected.";
+    }
 
     revision 2026-07-22 {
         description
@@ -57,9 +69,18 @@ module sonic-bgp-neighbor {
 
     container sonic-bgp-neighbor {
         container BGP_NEIGHBOR {
+            // Rows on this list are keyed on the neighbor alone and are consumed only by bgpcfgd;
+            // frrcfgd skips a single-key BGP_NEIGHBOR row outright. bgpcfgd renders the peer's
+            // remote-as from asn alone -- neither the PEER_V4/PEER_V6 peer-group nor DEVICE_METADATA
+            // supplies one -- so a row with no asn hands FRR a remote-as with no value and the whole
+            // neighbor is rejected. Hence the must below.
             list BGP_NEIGHBOR_TEMPLATE_LIST {
-                description "This list is to support template based BGP neighbor configuration handled by bgpcfgd";
+                description "This list is to support template based BGP neighbor configuration.";
                 key "neighbor";
+
+                must "boolean(asn)" {
+                    error-message "A template based BGP neighbor must carry an asn.";
+                }
 
                 leaf neighbor {
                     type union {
@@ -89,10 +110,33 @@ module sonic-bgp-neighbor {
                 }
             }
 
+            // Rows on this list are keyed on vrf_name and neighbor, and both BGP configuration
+            // daemons consume them: frrcfgd, which requires frr_mgmt_framework_config to be true in
+            // DEVICE_METADATA and reads no other neighbor list, and bgpcfgd, which reads this list
+            // and BGP_NEIGHBOR_TEMPLATE_LIST alike. Only one of the two runs on a given device.
+            // A row with no asn fails differently under each and is silent in both: frrcfgd emits
+            // nothing at all for it, while bgpcfgd renders the peer's remote-as from asn alone --
+            // never from peer_group_name -- and hands FRR a remote-as with no value. Hence the must
+            // below, and why its exemptions are scoped to frrcfgd.
+            // The mode test anchors on hostname, not on the localhost container and not on
+            // frr_mgmt_framework_config itself: localhost is a non-presence container holding
+            // leaves with defaults, so libyang materialises it -- and a "false" for the mode --
+            // before any must is evaluated, which makes not(localhost) and a not() on the mode leaf
+            // both dead. hostname has no default, so its absence is what actually says
+            // DEVICE_METADATA was never supplied and the tree is a subset. (A when statement is
+            // evaluated before defaults are added and can test the container; a must cannot.)
             list BGP_NEIGHBOR_LIST {
-                description "This list is to support generic BGP neighbor configuration handled by frrcfgd and
-                frr_mgmt_framework_config field should be set to true in DEVICE_METADATA talbe for accepting the generic BGP table configurations.";
+                description "This list is to support generic BGP neighbor configuration.";
                 key "vrf_name neighbor";
+
+                must "boolean(asn) or
+                      ((not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hostname) or
+                        /sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:frr_mgmt_framework_config = 'true')
+                       and (boolean(peer_group_name) or
+                            starts-with(neighbor, 'Eth') or starts-with(neighbor, 'Po') or
+                            starts-with(neighbor, 'Vlan')))" {
+                    error-message "A BGP neighbor must carry an asn.";
+                }
 
                 leaf vrf_name {
                     type union {
