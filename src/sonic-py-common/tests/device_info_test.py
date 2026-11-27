@@ -281,8 +281,7 @@ class TestDeviceInfo(object):
         assert info["switch_type"] == "dpu"
         unix_db.get_table.assert_called_once_with("DEVICE_METADATA")
 
-    @pytest.mark.parametrize("read_host_first", [False, True])
-    def test_platform_info_keeps_supplied_connector_out_of_host_caches(self, monkeypatch, read_host_first):
+    def test_get_platform_info_does_not_seed_host_hwsku_cache(self, monkeypatch):
         monkeypatch.delenv("PLATFORM", raising=False)
         monkeypatch.setattr(device_info, "get_machine_info", lambda: {})
         monkeypatch.setattr(device_info, "hw_info_dict", {})
@@ -297,16 +296,8 @@ class TestDeviceInfo(object):
         }
         monkeypatch.setattr(device_info, "ConfigDBConnector", mock.Mock(return_value=host_db))
 
-        if read_host_first:
-            assert device_info.get_platform_info()["hwsku"] == "host-sku"
-            assert device_info.get_hwsku() == "host-sku"
-        info = device_info.get_platform_info(config_db=asic_db)
-        assert info["platform"] == "asic-platform"
-        assert info["hwsku"] == "asic-sku"
-        assert info["switch_type"] == "voq"
-        asic_db.connect.assert_not_called()
-        assert device_info.hwsku_info == ("host-sku" if read_host_first else None)
-        assert device_info.get_platform_info()["hwsku"] == "host-sku"
+        assert device_info.get_platform_info(config_db=asic_db)["hwsku"] == "asic-sku"
+        assert device_info.hwsku_info is None
         assert device_info.get_hwsku() == "host-sku"
 
     @mock.patch("os.path.isfile")

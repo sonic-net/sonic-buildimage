@@ -702,15 +702,14 @@ def get_platform_info(config_db=None, use_tcp=True):
     """
     global hw_info_dict
 
-    use_host_cache = config_db is None
-    if use_host_cache and hw_info_dict:
+    if hw_info_dict:
         return hw_info_dict
 
     from .multi_asic import get_asic_presence_list
 
     version_info = get_sonic_version_info()
 
-    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info if use_host_cache else None}
+    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info if config_db is None else None}
     if version_info:
         hw_info['asic_type'] = version_info.get('asic_type')
     try:
@@ -731,7 +730,7 @@ def get_platform_info(config_db=None, use_tcp=True):
         switch_type = metadata.get('switch_type')
         if switch_type:
             hw_info['switch_type'] = switch_type
-        if use_host_cache and hw_info['platform'] and hw_info['hwsku']:
+        if hw_info['platform'] and hw_info['hwsku']:
             hw_info_dict = hw_info
     except Exception:
         pass
