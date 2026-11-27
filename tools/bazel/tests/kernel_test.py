@@ -346,6 +346,18 @@ class KernelBundleTest(unittest.TestCase):
             kernel.inspect_resolution(workdir, consumer, self.state, kernel.DEFAULT_REGISTRY,
                                       fetch=lambda url: metadata[url])
 
+    def test_upstream_kernel_fallback_preserves_fork_tool_resolution(self):
+        workdir, consumer = self.root / "resolution", self.root / "consumer"
+        consumer.mkdir()
+        metadata = self.resolution_files(workdir, consumer)
+        previous = next(url for url in metadata if "/modules/sonic-linux-kernel/" in url)
+        upstream = previous.replace(kernel.DEFAULT_REGISTRY, kernel.UPSTREAM_REGISTRY)
+        metadata[upstream] = metadata.pop(previous)
+        hashes = {url: hashlib.sha256(data).hexdigest() for url, data in metadata.items()}
+        hashes[previous.replace("/source.json", "/MODULE.bazel")] = "not found"
+        (consumer / "MODULE.bazel.lock").write_text(json.dumps({"registryFileHashes": hashes}))
+        kernel.inspect_resolution(workdir, consumer, self.state, kernel.DEFAULT_REGISTRY, fetch=metadata.__getitem__)
+
     def test_stored_graph_failure_reports_primary_command_without_fetching(self):
         """Keep a post-build graph failure visible through the kernel's direct inspection path."""
         workdir, consumer = self.root / "resolution", self.root / "consumer"
@@ -762,7 +774,7 @@ class KernelBundleTest(unittest.TestCase):
     def test_make_native_mode_keeps_legacy_deb_contract(self):
         makefile = self.make_fixture()
         with makefile.open("a") as stream:
-            stream.write("native:\n\t@test -n '$(SONIC_MAKE_DEBS)'\n\t@test '$(words $(SONIC_DERIVED_DEBS))' = 3\n"
+            stream.write("native:\n\t@test -n '$(SONIC_MAKE_DEBS)'\n\t@test '$(sort $(SONIC_DERIVED_DEBS))' = '$(sort $(LINUX_KBUILD) $(LINUX_KERNEL) $(LINUX_KERNEL_DBG) $(LINUX_HEADERS))'\n"
                          "\t@test -z '$(SONIC_COPY_DEBS)'\n"
                          "\t@test '$($(LINUX_HEADERS_COMMON)_CACHE_MODE)' = GIT_CONTENT_SHA\n"
                          "\t@test -z '$($(LINUX_HEADERS_COMMON)_CACHE_FORCE_RESTORE)'\n")
@@ -1167,7 +1179,7 @@ class KernelBundleTest(unittest.TestCase):
         start = script.index("kernel_image_debs=()")
         selection = script[start:script.index("sudo cp", start)]
         selected = subprocess.check_output(["bash", "-c", selection + '\nprintf "%s\\n" "${kernel_image_debs[@]}"'],
-            env={"debs_path": str(output), "LINUX_KERNEL_VERSION": "6.12.41+deb13", "CONFIGURED_ARCH": self.architecture}, text=True).splitlines()
+            env={"debs_path": str(output), "LINUX_KERNEL_VERSION": self.config["kernel_version"] + self.config["kernel_config"]["KERNEL_ABISUFFIX"], "CONFIGURED_ARCH": self.architecture}, text=True).splitlines()
         runtime = next(name for name, item in self.packages.items() if item["kind"] == "runtime")
         self.assertEqual(selected, [str(output / runtime)])
 
@@ -1194,7 +1206,7 @@ class KernelConfigurationTest(unittest.TestCase):
             self.assertEqual((retained / "package.deb").read_bytes(), b"verified package")
             self.assertEqual(retained.stat().st_mode, before)
 
-    def test_registry_requires_exactly_one_maintained_endpoint(self):
+    def test_registry_requires_the_fork_upstream_and_central_selection_order(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             shutil.copyfile(ROOT / "tools/bazel/kernel/.bazelrc", workspace / ".bazelrc")
@@ -1207,7 +1219,7 @@ class KernelConfigurationTest(unittest.TestCase):
                 original + "common --registry=https://example.test/registry\n",
             ):
                 (workspace / ".bazelrc").write_text(invalid)
-                with self.assertRaisesRegex(ValueError, "one SONiC registry endpoint on main"):
+                with self.assertRaisesRegex(ValueError, "fork, upstream, and central registries in order"):
                     kernel.configure_registry(workspace)
                 self.assertEqual((workspace / ".bazelrc").read_text(), invalid)
 
@@ -1256,7 +1268,8 @@ class KernelConfigurationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             (workspace / "rules").mkdir()
-            contents = (ROOT / "rules/linux-kernel.mk").read_text().replace("KERNEL_VERSION = 6.12.41", "KERNEL_VERSION = 6.12.42")
+            contents = re.sub(r"^KERNEL_VERSION = .*?$", "KERNEL_VERSION = 6.12.42",
+                              (ROOT / "rules/linux-kernel.mk").read_text(), count=1, flags=re.MULTILINE)
             (workspace / "rules/linux-kernel.mk").write_text(contents)
             expected, packages = kernel.contract(workspace, "amd64")
             self.assertEqual(expected["kernel_version"], "6.12.42")

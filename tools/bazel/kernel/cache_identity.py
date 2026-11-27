@@ -27,6 +27,7 @@ from tools.bazel.kernel import cache_facts
 
 
 SONIC_REGISTRY = "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/"
+UPSTREAM_REGISTRY = "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main"
 BCR = "https://bcr.bazel.build"
 MAX_LOCK_BYTES = 128 * 1024 * 1024
 MAX_REGISTRY_FILE_BYTES = 4 * 1024 * 1024
@@ -139,6 +140,7 @@ def _template(workspace, source):
         raise CacheUnverifiable("cannot verify the kernel consumer template") from error
     allowed = {
         ("common", "--registry=" + SONIC_REGISTRY + "main"),
+        ("common", "--registry=" + UPSTREAM_REGISTRY),
         ("common", "--registry=" + BCR),
         ("common", "--lockfile_mode=update"),
         ("common", "--downloader_config=debian_mirrors.cfg"),
@@ -146,7 +148,9 @@ def _template(workspace, source):
         ("build", "--remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$"),
     }
     actual = [tuple(line) for line in lines if line]
-    require(set(actual) == allowed and len(actual) == len(allowed),
+    registries = [row[1] for row in actual if len(row) == 2 and row[1].startswith("--registry=")]
+    require(set(actual) == allowed and len(actual) == len(allowed)
+            and registries == ["--registry=" + url for url in (SONIC_REGISTRY + "main", UPSTREAM_REGISTRY, BCR)],
             "kernel consumer has an unbound Bazel option or import")
 
 
@@ -229,7 +233,7 @@ def _fetch(url):
 
 def _registry_path(url, registry):
     require(isinstance(url, str), "invalid registry URL in kernel lock")
-    for origin in (registry, BCR):
+    for origin in (registry, UPSTREAM_REGISTRY, BCR):
         if url.startswith(origin + "/"):
             relative = url[len(origin) + 1:]
             require(_relative(relative) and not any(char in relative for char in "?#%"),

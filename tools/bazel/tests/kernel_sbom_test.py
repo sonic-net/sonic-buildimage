@@ -34,11 +34,11 @@ def chdir(path):
 
 
 class RegistryPatchPedigreeTest(unittest.TestCase):
-    def test_selected_kernel_and_previous_release_use_their_published_overlays(self):
-        # These two releases published the same patch bytes. Exercise the version
+    def test_selected_kernel_and_previous_releases_use_their_published_overlays(self):
+        # These releases published the same patch bytes. Exercise the version
         # selected by buildimage even when CI has no checkout or kernel packages.
         version = packages.module_version(ROOT)
-        source_commit = "96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
+        previous_source = "96c621843a2bc9dbbe17eb890c8c6e1cea5e834b"
         hashes = {
             "patches-debian/bazel-install-outputs.patch": "ce84bcecd9c98abcdd5c4d7e65e4cc57c66f97fb8f654c78604ab066201a4611",
             "patches-debian/bazel-relocatable-tools.patch": "d4f28a1e44b37532e1fa4476525d0ff575bc4e74f03a36e72133fe6ddd728414",
@@ -49,15 +49,16 @@ class RegistryPatchPedigreeTest(unittest.TestCase):
             (source / "patches-debian").mkdir(parents=True)
             (source / "patches-sonic").mkdir()
             (source / "patches-debian/bazel-relocatable-tools.patch").write_text("Original gitlink patch\n")
-            for release, revision in (
-                (version, "bfde140643a14e408e5bd9aa3c4610870685ae04"),
-                ("0.0.3-" + source_commit, "066e962d36592590d2f6634202b5176922aad07c"),
+            for release, owner, revision in (
+                ("0.0.3-" + previous_source, "securely1g", "066e962d36592590d2f6634202b5176922aad07c"),
+                ("0.0.4-" + previous_source, "securely1g", "bfde140643a14e408e5bd9aa3c4610870685ae04"),
+                (version, "sonic-net", "872ed827b70638f667f5ef6e0bab64c4f3e177b4"),
             ):
                 with self.subTest(release=release):
                     manifest = {"source_files": [{"name": p, "sha256": h} for p, h in hashes.items()]}
-                    args = (workspace, manifest, source_commit, release)
+                    args = (workspace, manifest, release.split("-", 1)[1], release)
                     patches, properties = sbom_kernel_deb._patches(*args)
-                    prefix = (f"https://github.com/securely1g/sonic-bazel-registry/blob/{revision}/"
+                    prefix = (f"https://github.com/{owner}/sonic-bazel-registry/blob/{revision}/"
                               f"modules/sonic-linux-kernel/{release}/overlay/")
                     self.assertEqual({p["diff"]["url"] for p in patches}, {prefix + p for p in hashes})
                     self.assertEqual({p["value"] for p in properties}, {h + "  " + p for p, h in hashes.items()})
@@ -101,7 +102,7 @@ class KernelSbomTest(unittest.TestCase):
         self.assertEqual(props["sonic:installed_vmlinuz_sha256"],
                          hashlib.sha256(b"kernel fixture").hexdigest())
         ancestor = component["pedigree"]["ancestors"][0]
-        self.assertEqual(ancestor["purl"], "pkg:deb/debian/linux@6.12.41-1?arch=source")
+        self.assertEqual(ancestor["purl"], f"pkg:deb/debian/linux@{self.fixture.config['package_version']}?arch=source")
         self.assertEqual(len(ancestor["externalReferences"]), 3)
         self.assertEqual(component["externalReferences"][1]["hashes"][0]["content"],
                          kernel.sha256(self.rootfs / self.copyright))

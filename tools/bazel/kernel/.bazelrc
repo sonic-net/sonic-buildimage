@@ -1,5 +1,6 @@
 # Local builds and normal CI use the maintained SONiC registry.
 common --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+common --registry=https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main
 common --registry=https://bcr.bazel.build
 common --lockfile_mode=update
 common --downloader_config=debian_mirrors.cfg

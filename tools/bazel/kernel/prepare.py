@@ -24,6 +24,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from tools.bazel.ci import resolution, time_vs_image, resources
 from tools.bazel.kernel import remote_bundle
+from tools.bazel.kernel.cache_identity import UPSTREAM_REGISTRY
 
 MANIFEST = "kernel-packages.json"
 PROVENANCE = "kernel-provenance.json"
@@ -118,10 +119,12 @@ def consumer_modules(workspace, source, kernel_gitlink):
     require(root == {"name": "sonic-kernel-cache-consumer"}, "unexpected kernel consumer module")
     require(set(modules) == {"sonic-linux-kernel", "sonic-build-infra"},
             "kernel consumer must declare only the kernel and shared tools modules")
+    # Registry revisions can add packaging patches to the same upstream module.
+    # source.json is checked against the gitlink and resolution lock before use.
+    kernel = modules["sonic-linux-kernel"]
     require(source_root.get("name") == "sonic-linux-kernel"
-            and modules["sonic-linux-kernel"] == {
-                "name": "sonic-linux-kernel", "version": source_root.get("version") + "-" + kernel_gitlink,
-                "repo_name": "sonic_linux_kernel"},
+            and kernel.get("repo_name") == "sonic_linux_kernel"
+            and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-" + re.escape(kernel_gitlink), kernel.get("version", "")),
             "registered kernel version differs from the checked-out gitlink")
     infra = modules["sonic-build-infra"]
     require(infra == source_modules.get("sonic-build-infra")
@@ -450,8 +453,8 @@ def configure_registry(workspace):
                               contents, re.MULTILINE))
     registries = re.findall(r"(?<!\S)--registry=(\S+)", contents)
     require(len(matches) == 1 and matches[0][1] == DEFAULT_REGISTRY
-            and registries == [DEFAULT_REGISTRY, "https://bcr.bazel.build"],
-            "kernel workspace must select one SONiC registry endpoint on main plus BCR")
+            and registries == [DEFAULT_REGISTRY, UPSTREAM_REGISTRY, "https://bcr.bazel.build"],
+            "kernel workspace must select fork, upstream, and central registries in order")
     registry = selected_registry()
     if registry != DEFAULT_REGISTRY:
         rc.write_text(contents[:matches[0].start(1)] + registry + contents[matches[0].end(1):])
@@ -481,8 +484,15 @@ def inspect_resolution(workdir, consumer, source, registry, *, fetch=None):
             "resolved graph selected a different kernel tools module")
     lock = regular(consumer / "MODULE.bazel.lock")
     hashes = json.loads(lock.read_text()).get("registryFileHashes", {})
+    def source_url(module, version):
+        path = "/modules/" + module + "/" + version
+        origin = registry
+        if hashes.get(registry + path + "/MODULE.bazel") == "not found":
+            origin = UPSTREAM_REGISTRY
+        return origin + path + "/source.json"
+
     kernel_version = source["modules"]["sonic-linux-kernel"]
-    kernel_url = registry + "/modules/sonic-linux-kernel/" + kernel_version + "/source.json"
+    kernel_url = source_url("sonic-linux-kernel", kernel_version)
     require(isinstance(hashes.get(kernel_url), str), "generated lock omitted the kernel source metadata")
     if fetch is None:
         with urllib.request.urlopen(kernel_url, timeout=30) as response:
@@ -501,7 +511,7 @@ def inspect_resolution(workdir, consumer, source, registry, *, fetch=None):
             and len(base64.b64decode(integrity[7:], validate=True)) == 32,
             "kernel registry source has no SHA256 integrity")
     (workdir / "kernel-source.json").write_bytes(kernel_data)
-    url = registry + "/modules/sonic-build-infra/" + infra_version + "/source.json"
+    url = source_url("sonic-build-infra", infra_version)
     require(isinstance(hashes.get(url), str) and re.fullmatch(r"[0-9a-f]{64}", hashes[url]),
             "generated lock omitted the selected kernel tools source metadata")
     if fetch is None:

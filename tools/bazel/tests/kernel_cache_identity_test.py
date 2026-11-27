@@ -111,13 +111,16 @@ def fixture_policy(source, lock_bytes):
 
 
 class IsolatedKernelTemplateTest(unittest.TestCase):
-    def test_shipped_legacy_template_still_selects_the_audited_producer(self):
+    def test_shipped_legacy_template_selects_the_registered_gitlink(self):
         from tools.bazel.kernel import prepare
         _, declarations = prepare.module_declarations(ROOT / "tools/bazel/kernel/MODULE.bazel")
         modules = {name: spec["version"] for name, spec in declarations.items()}
         gitlink = prepare.git(ROOT, "rev-parse", "HEAD:src/sonic-linux-kernel")
-        self.assertEqual(modules["sonic-linux-kernel"], "0.0.2-" + gitlink)
-        identity._producer({"kernel_gitlink": gitlink, "modules": modules})
+        self.assertRegex(modules["sonic-linux-kernel"], r"^[0-9]+\.[0-9]+\.[0-9]+-" + gitlink + "$")
+        # This source pair has no retained, audited legacy index. Its first
+        # use must go through Bazel and verify the registry source metadata.
+        with self.assertRaisesRegex(identity.CacheUnverifiable, "has not been audited"):
+            identity._producer({"kernel_gitlink": gitlink, "modules": modules})
         source = ROOT / prepare.KERNEL_PATH
         if (source / "MODULE.bazel").is_file():
             self.assertEqual(prepare.consumer_modules(ROOT, source, gitlink), modules)
