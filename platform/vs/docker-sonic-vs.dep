@@ -3,11 +3,12 @@ DPATH       := $($(DOCKER_SONIC_VS)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-sonic-vs.mk platform/vs/docker-sonic-vs.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
-# docker-snmp sources are consumed through COPY --from=snmp, but add_docker_feature
-# does not propagate _DEP_FILES, so they are not covered by the line above. Without
-# them a change confined to dockers/docker-snmp can restore a stale docker-sonic-vs.
-# Spelled literally: an undefined variable here would expand to a bare `git ls-files`
-# and silently hash the whole tree.
+# docker-fpm-frr and docker-snmp sources are consumed through COPY --from, but
+# add_docker_feature does not propagate _DEP_FILES, so they are not covered by
+# the line above. Without them, a feature-only change can restore a stale
+# docker-sonic-vs. Spelled literally: an undefined variable here would expand
+# to a bare `git ls-files` and silently hash the whole tree.
+DEP_FILES   += $(shell git ls-files dockers/docker-fpm-frr)
 DEP_FILES   += $(shell git ls-files dockers/docker-snmp)
 # Both Dockerfile.j2 templates import dockers/dockerfile-macros.j2, but it lives
 # outside $(DPATH) and is listed by neither SONIC_COMMON_FILES_LIST (.platform,

@@ -18,6 +18,7 @@ COPY {{ _from }}["TSB", "/usr/bin/TSB"]
 COPY {{ _from }}["TSC", "/usr/bin/TSC"]
 COPY {{ _from }}["TS", "/usr/bin/TS"]
 COPY {{ _from }}["zsocket.sh", "/usr/bin/"]
+COPY {{ _from }}["frr_startup_init.sh", "/usr/bin/"]
 COPY {{ _from }}["vtysh.conf", "/etc/frr/"]
 RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSB && \

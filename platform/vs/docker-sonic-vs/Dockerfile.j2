@@ -133,7 +133,8 @@ RUN rm -rf /debs ~/.cache
 {% include "docker-database/Dockerfile.common.j2" %}
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
-COPY ["start.sh", "/usr/bin/"]
+COPY ["start.sh", "supervisord_entrypoint.sh", "/usr/bin/"]
+RUN chmod +x /usr/bin/supervisord_entrypoint.sh
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
 COPY --from=fpm-frr frr/supervisord/supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2
@@ -223,4 +224,4 @@ ENV PLATFORM=x86_64-kvm_x86_64-r0
 ENV HWSKU=Force10-S6000
 ENV ASIC_VENDOR=vs
 
-ENTRYPOINT ["/usr/local/bin/supervisord"]
+ENTRYPOINT ["/usr/bin/supervisord_entrypoint.sh"]
