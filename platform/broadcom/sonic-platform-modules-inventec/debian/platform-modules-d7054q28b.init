@@ -41,12 +41,27 @@ do_monitor_stop() {
     /sbin/start-stop-daemon --quiet --oknodo --stop --pidfile $PLATFORM_STATUS_PIDFILE --retry 10
 }
 
+# Check Fast-Reboot cause
+FAST_REBOOT='no'
+case "$(cat /proc/cmdline)" in
+  *fast-reboot*)
+    FAST_REBOOT='yes'
+    ;;
+  **)
+    FAST_REBOOT='no'
+    ;;
+esac
+
 case "$1" in
 start)
 	echo -n "Setting up board... "
-	
-	depmod -a    
-	/usr/local/bin/inventec_d7054_util.py -f install
+
+	if [ "$FAST_REBOOT" = "yes" ] ; then
+          /usr/local/bin/inventec_d7054_util.py -f fast-reboot-install
+        else	
+	  /usr/local/bin/inventec_d7054_util.py -f install
+        fi
+
         do_monitor_${1}
 	echo "done."
 	;;
