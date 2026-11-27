@@ -142,6 +142,54 @@
             {
                 "name": "JE0_C Diode",
                 "controllable": false
+            },
+            {
+                "name": "POS0V75_VDDC_JE0",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_RTVDD_JE0",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_VDDC_JE1",
+                "controllable": false
+            },
+            {
+                "name": "POS0V75_RTVDD_JE1",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM0_VDD_JE0",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM1_VDD_JE0",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_TVDD_JE0",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM0_VDD_JE1",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_HBM1_VDD_JE1",
+                "controllable": false
+            },
+            {
+                "name": "POS1V2_TVDD_JE1",
+                "controllable": false
+            },
+            {
+                "name": "QSFP_3V3_LEFT",
+                "controllable": false
+            },
+            {
+                "name": "QSFP_3V3_RIGHT",
+                "controllable": false
             }
         ],
         "sfps": [
