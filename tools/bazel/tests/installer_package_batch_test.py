@@ -81,7 +81,7 @@ elif args[0] == "chroot" and args[2] == "pip3":
         self.assertEqual(self.installs(calls, "pip3"), [
             ["redis==3.5.3", "redis_dump_load.whl"],
             ["psutil", "blkinfo", "ipaddr", "grpcio==1.71.0", "grpcio-tools==1.71.0",
-             "smbus2", "telnetlib3", "sonic_py_common.whl"],
+             "smbus2", "python-ipmi", "telnetlib3", "sonic_py_common.whl"],
         ])
         self.assertEqual(list(self.filesystem.iterdir()), [])
 
@@ -102,7 +102,7 @@ elif args[0] == "chroot" and args[2] == "pip3":
                 self.assertEqual(self.installs(calls, "pip3"), [
                     ["redis==3.5.3"], ["redis_dump_load.whl"], ["psutil"], ["blkinfo"],
                     ["ipaddr"], ["grpcio==1.71.0"], ["grpcio-tools==1.71.0"], ["smbus2"],
-                    ["telnetlib3"], ["sonic_py_common.whl"],
+                    ["python-ipmi"], ["telnetlib3"], ["sonic_py_common.whl"],
                 ])
 
     def test_missing_optional_wheels_keep_runtime_requirements(self):
@@ -111,7 +111,7 @@ elif args[0] == "chroot" and args[2] == "pip3":
         self.assertEqual(self.installs(calls, "pip3"), [
             ["redis==3.5.3"],
             ["psutil", "blkinfo", "ipaddr", "grpcio==1.71.0", "grpcio-tools==1.71.0",
-             "smbus2", "telnetlib3"],
+             "smbus2", "python-ipmi", "telnetlib3"],
         ])
         self.assertFalse(any(args[0] in ("cp", "rm") for args in calls))
 

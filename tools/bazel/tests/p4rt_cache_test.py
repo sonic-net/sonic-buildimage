@@ -17,7 +17,8 @@ class P4rtCacheTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         for name in ('Makefile.cache', 'rules/functions', 'rules/p4rt.mk', 'rules/p4rt.dep',
-                     'tools/bazel/private_server.sh'):
+                     'scripts/prepare_docker_buildinfo.sh', 'scripts/build_mirror_config.sh',
+                     'scripts/versions_manager.py', 'tools/bazel/private_server.sh'):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
