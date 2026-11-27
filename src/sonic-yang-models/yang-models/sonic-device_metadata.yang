@@ -19,6 +19,10 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-11-16 {
+        description "Added nexthop_on_demand to defer neighbor next-hop creation until referenced.";
+    }
+
     revision 2026-06-05 {
         description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
     }
@@ -336,6 +340,14 @@ module sonic-device_metadata {
                         enum disabled;
                     }
                     default disabled;
+                }
+
+                leaf nexthop_on_demand {
+                    type boolean;
+                    description "Defer creation of a resolved neighbor's hardware next hop until a route
+                                 or next-hop group references it, instead of creating it at resolution.
+                                 This value only takes effect during boot time.";
+                    default "false";
                 }
 
                 leaf ring_thread_enabled {

@@ -840,6 +840,24 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_NEXTHOP_ON_DEMAND": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "nexthop_on_demand": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_NEXTHOP_ON_DEMAND": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "sonic"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_RING_THREAD_ENABLED": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
