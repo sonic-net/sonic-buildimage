@@ -8,6 +8,7 @@
 
 import sys
 import time
+import threading
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
@@ -56,6 +57,7 @@ class Chassis(ChassisBase):
         self._eeprom = Tlv()
         self._api_helper = APIHelper()
         self.sfp_module_initialized = False
+        self.lock = threading.Lock()
 
         for fant_index in range(NUM_FAN_TRAY):
             fandrawer = FanDrawer(fant_index)
@@ -73,23 +75,33 @@ class Chassis(ChassisBase):
             self._thermal_list.append(thermal)
 
     def __initialize_sfp(self):
-        if self.sfp_module_initialized:
-            return
-        self.sfp_module_initialized = True
+        with self.lock:
+            if self.sfp_module_initialized:
+                return
 
-        self.num_sfp = NUM_SFP
+            self.num_sfp = NUM_SFP
 
-        from sonic_platform.sfp import Sfp
-        for index in range(1, self.num_sfp+1):    # start from 1
-            sfp = Sfp(index)
-            self._sfp_list.append(sfp)
+            from portconfig import get_port_config
+            from sonic_py_common import device_info
+            (platform, hwsku) = device_info.get_platform_and_hwsku()
+            ports, _, _ = get_port_config(hwsku, platform)
 
-        for port_num in range(1, self.num_sfp+1):    # start from 1
-            # sfp get uses front port index start from 1
-            presence = self.get_sfp(port_num).get_presence()
-            self._global_port_pres_dict[port_num] = '1' if presence else '0'
-            if presence == True and self.get_sfp(port_num).get_reset_status() == True:
-                self.get_sfp(port_num).no_reset()
+            from natsort import natsorted
+            from sonic_platform.sfp import Sfp
+            for index in range(1, self.num_sfp+1):    # start from 1
+                names = natsorted([p for p in ports if ports[p]['index'] == str(index)])
+                sfp = Sfp(index, names)
+                self._sfp_list.append(sfp)
+
+            for port_num in range(1, self.num_sfp+1):    # start from 1
+                # get_sfp() uses front port index start from 1
+                sfp = self._sfp_list[port_num-1]
+                presence = sfp.get_presence()
+                self._global_port_pres_dict[port_num] = '1' if presence else '0'
+                if presence == True and sfp.get_reset_status() == True:
+                    sfp.no_reset()
+
+            self.sfp_module_initialized = True
 
     def get_base_mac(self):
         """
@@ -210,15 +222,23 @@ class Chassis(ChassisBase):
             for port_num in range(1, self.num_sfp+1):
                 # get_presence() no wait for MgmtInit duration
                 presence = self.get_sfp(port_num).get_presence()
-                if(presence and self._global_port_pres_dict[port_num] == '0'):
-                    self._global_port_pres_dict[port_num] = '1'
-                    port_dict[port_num] = '1'
-                    if self.get_sfp(port_num).get_reset_status() == True:
+                if self._global_port_pres_dict[port_num] == '0':
+                    if presence:
+                        self._global_port_pres_dict[port_num] = '1'
+                        port_dict[port_num] = '1'
                         self.get_sfp(port_num).no_reset()
-                elif(not presence and
-                        self._global_port_pres_dict[port_num] == '1'):
-                    self._global_port_pres_dict[port_num] = '0'
-                    port_dict[port_num] = '0'
+                else:
+                    if presence:
+                        if (self.get_sfp(port_num).get_reset_status() == True and
+                            self.get_sfp(port_num).doing_reset == False):
+                            # reset by CPLD, so there was a remove un-detected by this function
+                            presence = False
+                    if not presence:
+                        self._global_port_pres_dict[port_num] = '0'
+                        port_dict[port_num] = '0'
+                        # xcvr_api should be refreshed
+                        self.get_sfp(port_num)._xcvr_api = None
+                        self.get_sfp(port_num).xcvr_id = 0
 
             if(len(port_dict) > 0):
                 return True, change_dict
@@ -227,6 +247,15 @@ class Chassis(ChassisBase):
                 now_ms = time.time() * 1000
                 if (now_ms - start_ms >= timeout):
                     return True, change_dict
+
+    def get_thermal_manager(self):
+        """
+        Retrieves thermal manager class on this chassis
+        :return: A class derived from ThermalManagerBase representing the
+        specified thermal manager. ThermalManagerBase is returned as default
+        """
+        from .thermal_manager import ThermalManager
+        return ThermalManager
 
     ##############################################################
     ######################## SFP methods #########################
@@ -564,3 +593,37 @@ class Chassis(ChassisBase):
         str_dir = {0b000:'1.00', 0b001:'1.01', 0b010:'1.02'}
         rev_str = str_dir.get(board_ver, 'Unknown({:#05b})'.format(board_ver))
         return rev_str
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the chassis
+        Returns:
+            bool: True if chassis is present, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether Chassis is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the chassis
+        Returns:
+            bool: A boolean value, True if chassis is operating properly
+            False if not
+        """
+        return True

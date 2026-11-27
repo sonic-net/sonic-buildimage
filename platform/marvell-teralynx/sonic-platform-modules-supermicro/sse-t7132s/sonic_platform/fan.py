@@ -7,6 +7,7 @@
 #############################################################################
 
 import subprocess
+import re
 
 try:
     from sonic_platform_base.fan_base import FanBase
@@ -18,8 +19,6 @@ except ImportError as e:
 
 FAN_NAME_LIST = ["FAN-1", "FAN-2", "FAN-3", "FAN-4", "FAN-5", "FAN-6"]
 
-IPMI_SENSOR_NETFN = "0x04"
-IPMI_SS_READ_CMD = "0x2D {}"
 IPMI_OEM_NETFN = "0x30"
 IPMI_GET_FAN_SPEED_CMD = "0x70 0x66 0x00 {}"
 IPMI_SET_FAN_SPEED_CMD = "0x70 0x66 0x01 {} {}"
@@ -32,7 +31,7 @@ IPMI_FAN_LED_AMBER_BLINK = 0x03
 IPMI_GET_PSU_FAN_SPEED_CMD = "0x89 0x04 0x{:02x} {}"
 
 MAX_OUTLET = 29500
-MAX_INLET = 25500
+MAX_INLET = 36200
 #MAX_PSU_FAN_OUTLET = 11200    # not a fixed value
 #MAX_PSU_FAN_INLET = 11200     # not a fixed value
 SPEED_TOLERANCE = 20    # based on the speed graph the slowest is about 20%
@@ -69,6 +68,8 @@ class Fan(FanBase):
         self.led_number = FAN_LIST[self.index][2]
         self.led_set = self.STATUS_LED_COLOR_OFF
         self.speed_set = None
+        self.dir = None
+        self.max_speed = None
 
     def get_direction(self):
         """
@@ -80,10 +81,17 @@ class Fan(FanBase):
         """
         # read part number from eeprom
         # psu fan follows the same rule
-        db = SonicV2Connector()
-        db.connect(db.STATE_DB)
-        eeprom_table = db.get_all(db.STATE_DB, 'EEPROM_INFO|0x22')
-        if "Name" in eeprom_table and eeprom_table["Name"] == "Part Number" and "Value" in eeprom_table:
+        if self.dir:
+            return self.dir
+
+        try:
+            db = SonicV2Connector()
+            db.connect(db.STATE_DB)
+            eeprom_table = db.get_all(db.STATE_DB, 'EEPROM_INFO|0x22')
+        except:
+            eeprom_table = None
+
+        if eeprom_table and "Name" in eeprom_table and eeprom_table["Name"] == "Part Number" and "Value" in eeprom_table:
             part_number = eeprom_table["Value"]
         else:
             part_number_cmd = "sudo decode-syseeprom | grep 'Part Number' | grep -oE '[^ ]+$'"
@@ -92,11 +100,15 @@ class Fan(FanBase):
         if "T7132SR" in part_number:
             # "SSE-T7132SR"
             direction = self.FAN_DIRECTION_INTAKE
+        elif "T7132DR" in part_number:
+            # "SSE-T7132DR"
+            direction = self.FAN_DIRECTION_INTAKE
         else:
-            # "SSE-T7132S"
+            # "SSE-T7132S", "SSE-T7132D"
             direction = self.FAN_DIRECTION_EXHAUST
 
-        return direction
+        self.dir = direction
+        return self.dir
 
     def get_speed_rpm(self):
         """
@@ -110,10 +122,12 @@ class Fan(FanBase):
                 IPMI_OEM_NETFN, IPMI_GET_PSU_FAN_SPEED_CMD.format(self.psu_index + 1, "0x08"))
             rpm_speed = int("".join(raw_ss_read.split()[::-1]), 16) if status else 0
         else:
-            status, raw_ss_read = self._api_helper.ipmi_raw(
-                IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(self.sensor_reading_addr))
-            # factor 140 should read from SDR
-            rpm_speed = int(raw_ss_read.split()[0], 16) * 140 if status else 0
+            output_sdr = subprocess.getoutput ('ipmitool sdr get {}'.format(FAN_LIST[self.index][0]))
+            re_read = re.search(" Sensor Reading        : ([0-9]*)", output_sdr)
+            if re_read:
+                rpm_speed = int(re_read.group(1))
+            else:
+                rpm_speed = 0
 
         return rpm_speed
 
@@ -133,9 +147,10 @@ class Fan(FanBase):
             if speed <= 100:
                 speed = 0       # to prevent be taken as percentage
         else:
-            # when intake, the whole fan module is reversed, so still MAX_OUTLET
-            max = MAX_OUTLET
-            speed = int(float(rpm_speed)/max * 100)
+            if not self.max_speed:
+                dir = self.get_direction()
+                self.max_speed = MAX_INLET if dir == self.FAN_DIRECTION_INTAKE else MAX_OUTLET
+            speed = int(float(rpm_speed)/self.max_speed * 100)
 
         return speed
 
@@ -175,6 +190,34 @@ class Fan(FanBase):
                  considered tolerable
         """
         return SPEED_TOLERANCE
+
+    def is_under_speed(self):
+        """
+        Calculates if the fan speed is under the tolerated low speed threshold
+        Default calculation requires get_speed_tolerance to be implemented, and checks
+        if the current fan speed (expressed as a percentage) is lower than <get_speed_tolerance>
+        percent below the target fan speed (expressed as a percentage)
+        Returns:
+            A boolean, True if fan speed is under the low threshold, False if not
+        """
+        if self.is_psu_fan:
+            # not support
+            return False
+        return super().is_under_speed()
+
+    def is_over_speed(self):
+        """
+        Calculates if the fan speed is over the tolerated high speed threshold
+        Default calculation requires get_speed_tolerance to be implemented, and checks
+        if the current fan speed (expressed as a percentage) is higher than <get_speed_tolerance>
+        percent above the target fan speed (expressed as a percentage)
+        Returns:
+            A boolean, True if fan speed is over the high threshold, False if not
+        """
+        if self.is_psu_fan:
+            # not support
+            return False
+        return super().is_over_speed()
 
     def set_speed(self, speed):
         """
@@ -266,7 +309,7 @@ class Fan(FanBase):
             string: The name of the device
         """
         if self.is_psu_fan:
-            fan_name = "PSU {} FAN-{}".format(self.psu_index+1, self.index+1)
+            fan_name = "{} FAN-{}".format(self.psu.get_name(), self.index+1)
         else:
             fan_name = FAN_NAME_LIST[self.index]
 
