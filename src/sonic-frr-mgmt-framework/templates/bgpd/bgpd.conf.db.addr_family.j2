@@ -25,6 +25,9 @@
 {% if 'import_vrf_route_map' in af_val %}
   import vrf route-map {{af_val['import_vrf_route_map']}}
 {% endif %}
+{% if vrf == 'default' and af in ['ipv4_unicast', 'ipv6_unicast'] and af_val.get('srv6_sid_advertise') == 'true' %}
+  sid export auto behavior dt46{% if af_val.get('srv6_sid_advertise_route_map') %} route-map {{af_val['srv6_sid_advertise_route_map']}}{% endif %}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}

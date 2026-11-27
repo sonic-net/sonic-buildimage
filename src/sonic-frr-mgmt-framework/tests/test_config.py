@@ -423,10 +423,500 @@ def data_set_del_test(test_data, run_cmd, skip_del=False):
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
 
+
+def _new_bgp_config_daemon():
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.bgp_asn = {'default': '65000'}
+    return daemon
+
+
+def _bgp_af_sid_advertise_command(af, command):
+    return ['vtysh', '-c', 'configure terminal',
+            '-c', 'router bgp 65000 vrf default',
+            '-c', 'address-family {} unicast'.format(af),
+            '-c', command]
+
+
+def _apply_bgp_af_config(daemon, run_cmd, af, data):
+    run_cmd.reset_mock()
+    daemon.bgp_af_handler('BGP_GLOBALS_AF', 'default|{}_unicast'.format(af), data)
+    return [call.args[1] for call in run_cmd.call_args_list]
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv4_without_route_map(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {'srv6_sid_advertise': 'true'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {'srv6_sid_advertise': 'true'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv4_with_route_map(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    data = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP_V4'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', data.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map SID_ADVERTISE_MAP_V4')]
+    assert daemon.table_data_cache[table_key] == data
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv6_without_route_map(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv6_unicast'
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', {'srv6_sid_advertise': 'true'}) == [
+        _bgp_af_sid_advertise_command('ipv6', 'sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {'srv6_sid_advertise': 'true'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv6_with_route_map(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv6_unicast'
+    data = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP_V6'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', data.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv6', 'sid export auto behavior dt46 route-map SID_ADVERTISE_MAP_V6')]
+    assert daemon.table_data_cache[table_key] == data
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv4_disabled(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+        'srv6_sid_advertise': 'false'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {'srv6_sid_advertise': 'false'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_ipv6_disabled(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv6_unicast'
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', {
+        'srv6_sid_advertise': 'false'}) == [
+        _bgp_af_sid_advertise_command('ipv6', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {'srv6_sid_advertise': 'false'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_enable_disable_update(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    config = {'srv6_sid_advertise': 'true',
+              'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', config.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map SID_ADVERTISE_MAP')]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+        'srv6_sid_advertise': 'false',
+        'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {
+        'srv6_sid_advertise': 'false',
+        'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', config.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map SID_ADVERTISE_MAP')]
+    assert daemon.table_data_cache[table_key] == config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_disable_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    original_config = {'srv6_sid_advertise': 'true'}
+    _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy())
+
+    run_cmd.side_effect = [False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+        'srv6_sid_advertise': 'false'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_route_map_removal_while_disabled(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    disabled_config = {'srv6_sid_advertise': 'false',
+                       'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', disabled_config.copy()) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+        'srv6_sid_advertise': 'false'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == {'srv6_sid_advertise': 'false'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_route_map_update_removal_and_restore(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    original_config = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map ORIGINAL_MAP')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy()) == []
+    assert daemon.table_data_cache[table_key] == original_config
+
+    updated_config = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'UPDATED_MAP'}
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', updated_config.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map UPDATED_MAP')]
+    assert daemon.table_data_cache[table_key] == updated_config
+
+    base_config = {'srv6_sid_advertise': 'true'}
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', base_config.copy()) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46'),
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == base_config
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map ORIGINAL_MAP')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_delete_and_restore(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key_v4 = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    table_key_v6 = 'BGP_GLOBALS_AF&&default|ipv6_unicast'
+    original_v4 = {'srv6_sid_advertise': 'true'}
+    original_v6 = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP_V6'}
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_v4.copy()) == [
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', original_v6.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv6', 'sid export auto behavior dt46 route-map ORIGINAL_MAP_V6')]
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', None) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert table_key_v4 not in daemon.table_data_cache
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', None) == [
+        _bgp_af_sid_advertise_command('ipv6', 'no sid export auto behavior dt46')]
+    assert table_key_v6 not in daemon.table_data_cache
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_v4.copy()) == [
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv6', original_v6.copy()) == [
+        _bgp_af_sid_advertise_command(
+            'ipv6', 'sid export auto behavior dt46 route-map ORIGINAL_MAP_V6')]
+    assert daemon.table_data_cache[table_key_v4] == original_v4
+    assert daemon.table_data_cache[table_key_v6] == original_v6
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_initial_set_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    run_cmd.side_effect = [False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {'srv6_sid_advertise': 'true'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert table_key not in daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_route_map_update_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    original_config = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP'}
+    _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy())
+
+    run_cmd.side_effect = [False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+            'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'UPDATED_MAP'}) == [
+        _bgp_af_sid_advertise_command(
+            'ipv4', 'sid export auto behavior dt46 route-map UPDATED_MAP')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_unset_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    original_config = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP'}
+    _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy())
+
+    run_cmd.side_effect = [False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {'srv6_sid_advertise': 'true'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_reapply_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    _apply_bgp_af_config(
+        daemon, run_cmd, 'ipv4', {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP'})
+
+    run_cmd.side_effect = [True, False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {'srv6_sid_advertise': 'true'}) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46'),
+        _bgp_af_sid_advertise_command('ipv4', 'sid export auto behavior dt46')]
+    assert table_key not in daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_delete_failure(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+    original_config = {'srv6_sid_advertise': 'true', 'srv6_sid_advertise_route_map': 'ORIGINAL_MAP'}
+    _apply_bgp_af_config(daemon, run_cmd, 'ipv4', original_config.copy())
+
+    run_cmd.side_effect = [False]
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', None) == [
+        _bgp_af_sid_advertise_command('ipv4', 'no sid export auto behavior dt46')]
+    assert daemon.table_data_cache[table_key] == original_config
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_rejects_invalid_boolean(run_cmd):
+    daemon = _new_bgp_config_daemon()
+    table_key = 'BGP_GLOBALS_AF&&default|ipv4_unicast'
+
+    assert _apply_bgp_af_config(daemon, run_cmd, 'ipv4', {
+        'srv6_sid_advertise': 'auto'}) == []
+    run_cmd.assert_not_called()
+    assert table_key not in daemon.table_data_cache
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_af_sid_advertise_rejects_unsupported_context(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.bgp_asn = {'default': '65000', 'Vrf_red': '65001'}
+
+    daemon.bgp_af_handler(
+        'BGP_GLOBALS_AF', 'Vrf_red|ipv4_unicast', {'srv6_sid_advertise': 'true'})
+    run_cmd.assert_not_called()
+
+    daemon.bgp_af_handler(
+        'BGP_GLOBALS_AF', 'default|l2vpn_evpn', {'srv6_sid_advertise': 'true'})
+    run_cmd.assert_not_called()
+
+    daemon.bgp_af_handler(
+        'BGP_GLOBALS_AF', 'default|ipv4_unicast',
+        {'srv6_sid_advertise_route_map': 'ORPHAN_MAP'})
+    run_cmd.assert_not_called()
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_globals_srv6_locator_set_update_delete(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.bgp_asn = {'default': '65000'}
+    daemon.table_data_cache = {}
+
+    def locator_command(command):
+        cmd = ['vtysh', '-c', 'configure terminal',
+               '-c', 'router bgp 65000 vrf default',
+               '-c', 'segment-routing srv6']
+        if command.startswith('locator '):
+            cmd += ['-c', 'encap-behavior H_Encaps_Red']
+        return cmd + ['-c', command]
+
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'srv6_locator': 'loc1'})
+    run_cmd.assert_called_once_with(
+        'BGP_GLOBALS', locator_command('locator loc1'), True, None)
+    table_key = 'BGP_GLOBALS&&default'
+    assert daemon.table_data_cache[table_key]['srv6_locator'] == 'loc1'
+
+    run_cmd.reset_mock()
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'srv6_locator': 'loc2'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        locator_command('no locator loc1'), locator_command('locator loc2')]
+    assert daemon.table_data_cache[table_key]['srv6_locator'] == 'loc2'
+
+    run_cmd.reset_mock()
+    run_cmd.side_effect = [True, False]
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'srv6_locator': 'loc3'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        locator_command('no locator loc2'), locator_command('locator loc3')]
+    assert 'srv6_locator' not in daemon.table_data_cache.get(table_key, {})
+    run_cmd.side_effect = None
+
+    run_cmd.reset_mock()
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {'srv6_locator': 'loc4'})
+    assert run_cmd.call_args.args[1] == locator_command('locator loc4')
+    assert daemon.table_data_cache[table_key]['srv6_locator'] == 'loc4'
+
+    run_cmd.reset_mock()
+    daemon.bgp_global_handler('BGP_GLOBALS', 'default', {})
+    run_cmd.assert_called_once_with(
+        'BGP_GLOBALS', locator_command('no locator loc4'), True, None)
+    assert 'srv6_locator' not in daemon.table_data_cache.get(table_key, {})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_srv6_my_locator_format_usid_f3216(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    daemon.bgp_table_handler_common(
+        'SRV6_MY_LOCATORS', 'MAIN',
+        {'prefix': 'fcbb:bbbb:1::', 'format': 'usid-f3216'})
+
+    cmd = ['vtysh', '-c', 'configure terminal',
+           '-c', 'segment-routing', '-c', 'srv6', '-c', 'locators',
+           '-c', 'locator MAIN', '-c', 'prefix fcbb:bbbb:1::/48',
+           '-c', 'format usid-f3216']
+    run_cmd.assert_called_once_with('SRV6_MY_LOCATORS', cmd, True, None)
+    assert daemon.table_data_cache['SRV6_MY_LOCATORS&&MAIN'] == {
+        'prefix': 'fcbb:bbbb:1::', 'format': 'usid-f3216'}
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_srv6_my_locator_rejects_unsupported_format(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    daemon.bgp_table_handler_common(
+        'SRV6_MY_LOCATORS', 'MAIN',
+        {'format': 'unknown', 'prefix': 'fcbb:bbbb:1::'})
+
+    run_cmd.assert_not_called()
+
+
 def test_bgp_neighbor_af():
     # The neighbor AF test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_af_data, skip_del=True)
+
+
+def _assert_bgp_af_encapsulation_type_lifecycle(run_cmd, table, peer, af):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.metadata_asn = '65000'
+    key = 'default|{}|{}_unicast'.format(peer, af)
+    cmd_prefix = ['vtysh', '-c', 'configure terminal',
+                  '-c', 'router bgp 65000 vrf default',
+                  '-c', 'address-family {} unicast'.format(af)]
+
+    daemon.bgp_table_handler_common(
+        table, key, {'encapsulation_type': 'srv6'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        cmd_prefix + ['-c', 'neighbor {} encapsulation-srv6'.format(peer)]]
+    table_key = '{}&&{}'.format(table, key)
+    assert daemon.table_data_cache[table_key]['encapsulation_type'] == 'srv6'
+
+    run_cmd.reset_mock()
+    daemon.bgp_table_handler_common(
+        table, key, {'encapsulation_type': 'srv6-relax'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        cmd_prefix + ['-c', 'no neighbor {} encapsulation-srv6'.format(peer)],
+        cmd_prefix + ['-c', 'neighbor {} encapsulation-srv6-relax'.format(peer)]]
+    assert daemon.table_data_cache[table_key]['encapsulation_type'] == 'srv6-relax'
+
+    run_cmd.reset_mock()
+    daemon.bgp_table_handler_common(table, key, {})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        cmd_prefix + ['-c', 'no neighbor {} encapsulation-srv6-relax'.format(peer)]]
+    assert 'encapsulation_type' not in daemon.table_data_cache.get(table_key, {})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_af_encapsulation_type_ipv4(run_cmd):
+    _assert_bgp_af_encapsulation_type_lifecycle(
+        run_cmd, 'BGP_NEIGHBOR_AF', '10.0.0.1', 'ipv4')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_af_encapsulation_type_ipv6(run_cmd):
+    _assert_bgp_af_encapsulation_type_lifecycle(
+        run_cmd, 'BGP_NEIGHBOR_AF', '2001:db8::1', 'ipv6')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_peer_group_af_encapsulation_type_ipv4(run_cmd):
+    _assert_bgp_af_encapsulation_type_lifecycle(
+        run_cmd, 'BGP_PEER_GROUP_AF', 'PG1', 'ipv4')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_peer_group_af_encapsulation_type_ipv6(run_cmd):
+    _assert_bgp_af_encapsulation_type_lifecycle(
+        run_cmd, 'BGP_PEER_GROUP_AF', 'PG1', 'ipv6')
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_neighbor_af_encapsulation_type_update_failure(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    daemon.metadata_asn = '65000'
+    key = 'default|10.0.0.1|ipv4_unicast'
+    cmd_prefix = ['vtysh', '-c', 'configure terminal',
+                  '-c', 'router bgp 65000 vrf default',
+                  '-c', 'address-family ipv4 unicast']
+    table_key = 'BGP_NEIGHBOR_AF&&{}'.format(key)
+
+    daemon.bgp_table_handler_common(
+        'BGP_NEIGHBOR_AF', key, {'encapsulation_type': 'srv6'})
+    assert daemon.table_data_cache[table_key]['encapsulation_type'] == 'srv6'
+
+    run_cmd.reset_mock()
+    run_cmd.side_effect = [False]
+    daemon.bgp_table_handler_common(
+        'BGP_NEIGHBOR_AF', key, {'encapsulation_type': 'srv6-relax'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        cmd_prefix + ['-c', 'no neighbor 10.0.0.1 encapsulation-srv6']]
+    assert daemon.table_data_cache[table_key]['encapsulation_type'] == 'srv6'
+
+    run_cmd.reset_mock()
+    run_cmd.side_effect = [True, False]
+    daemon.bgp_table_handler_common(
+        'BGP_NEIGHBOR_AF', key, {'encapsulation_type': 'srv6-relax'})
+    assert [call.args[1] for call in run_cmd.call_args_list] == [
+        cmd_prefix + ['-c', 'no neighbor 10.0.0.1 encapsulation-srv6'],
+        cmd_prefix + ['-c', 'neighbor 10.0.0.1 encapsulation-srv6-relax']]
+    assert 'encapsulation_type' not in daemon.table_data_cache.get(table_key, {})
+
 
 def test_bgp_peer_group_af():
     # The peer group AF test cases explicitly verify delete behavior, so skip the delete
@@ -529,3 +1019,111 @@ def test_bgp_confederation_template():
         BGP_GLOBALS={'default': {'local_asn': '65100'}}
     )
     assert 'bgp confederation' not in result
+
+
+def test_bgp_globals_af_sid_advertise_template():
+    """Verify enabled default IPv4/IPv6 SID advertisement renders with its optional route-map."""
+    from jinja2 import Environment, FileSystemLoader
+    import os
+
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates', 'bgpd')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    env.filters['ipv4'] = lambda v: False
+    env.filters['ipv6'] = lambda v: False
+    template = env.get_template('bgpd.conf.db.j2')
+
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100'},
+                     'Vrf_red': {'local_asn': '65101'}},
+        BGP_GLOBALS_AF={
+            ('default', 'ipv4_unicast'):
+                {'srv6_sid_advertise': 'true'},
+            ('default', 'ipv6_unicast'):
+                {'srv6_sid_advertise': 'true',
+                 'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'},
+            ('default', 'l2vpn_evpn'):
+                {'srv6_sid_advertise': 'true'},
+            ('Vrf_red', 'ipv4_unicast'):
+                {'srv6_sid_advertise': 'true'}})
+
+    ipv4_af = result.split('address-family ipv4 unicast', 1)[1].split(
+        'exit-address-family', 1)[0]
+    ipv6_af = result.split('address-family ipv6 unicast', 1)[1].split(
+        'exit-address-family', 1)[0]
+    assert 'sid export auto behavior dt46' in ipv4_af
+    assert 'sid export auto behavior dt46 route-map SID_ADVERTISE_MAP' in ipv6_af
+    assert 'route-map' not in ipv4_af
+    assert result.count('sid export auto behavior dt46') == 2
+
+    disabled_result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100'}},
+        BGP_GLOBALS_AF={
+            ('default', 'ipv4_unicast'):
+                {'srv6_sid_advertise': 'false'},
+            ('default', 'ipv6_unicast'):
+                {'srv6_sid_advertise': 'false',
+                 'srv6_sid_advertise_route_map': 'SID_ADVERTISE_MAP'}})
+    assert 'sid export auto behavior dt46' not in disabled_result
+
+
+def test_bgp_neighbor_af_encapsulation_type_template():
+    """Verify encapsulation type renders under its neighbor's address family."""
+    from jinja2 import Environment, FileSystemLoader
+    import os
+
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates', 'bgpd')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    env.filters['ipv4'] = lambda v: False
+    env.filters['ipv6'] = lambda v: False
+    template = env.get_template('bgpd.conf.db.j2')
+
+    result = template.render(
+        BGP_GLOBALS={'default': {'local_asn': '65100'}},
+        BGP_NEIGHBOR_AF={
+            ('default', '10.0.0.1', 'ipv4_unicast'):
+                {'encapsulation_type': 'srv6'},
+            ('default', '2001:db8::1', 'ipv6_unicast'):
+                {'encapsulation_type': 'srv6-relax'}},
+        BGP_PEER_GROUP_AF={
+            ('default', 'PG1', 'ipv6_unicast'):
+                {'encapsulation_type': 'srv6'}})
+
+    ipv4_af = result.split('address-family ipv4 unicast', 1)[1].split(
+        'exit-address-family', 1)[0]
+    ipv6_af = result.split('address-family ipv6 unicast', 1)[1].split(
+        'exit-address-family', 1)[0]
+    assert 'neighbor 10.0.0.1 encapsulation-srv6' in ipv4_af
+    assert 'neighbor 2001:db8::1 encapsulation-srv6-relax' not in ipv4_af
+    assert 'neighbor 2001:db8::1 encapsulation-srv6-relax' in ipv6_af
+    assert 'neighbor PG1 encapsulation-srv6' in ipv6_af
+    assert 'neighbor 10.0.0.1 encapsulation-srv6' not in ipv6_af
+
+
+def test_bgp_globals_srv6_locator_template():
+    """Verify each BGP instance renders its configured SRv6 locator and reduced encapsulation."""
+    from jinja2 import Environment, FileSystemLoader
+    import os
+
+    template_dir = os.path.join(os.path.dirname(__file__), '..', 'templates', 'bgpd')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    env.filters['ipv4'] = lambda v: False
+    env.filters['ipv6'] = lambda v: False
+    template = env.get_template('bgpd.conf.db.j2')
+
+    result = template.render(
+        BGP_GLOBALS={
+            'default': {'local_asn': '65100', 'srv6_locator': 'LOC_DEFAULT'},
+            'Vrf_red': {'local_asn': '65101', 'srv6_locator': 'LOC_RED'}})
+    default_bgp = result.split('router bgp 65100', 1)[1].split(
+        'router bgp 65101', 1)[0]
+    red_bgp = result.split('router bgp 65101', 1)[1]
+    assert 'segment-routing srv6' in default_bgp
+    assert 'encap-behavior H_Encaps_Red' in default_bgp
+    assert 'locator LOC_DEFAULT' in default_bgp
+    assert 'locator LOC_DEFAULT\n exit' in default_bgp
+    assert 'segment-routing srv6' in red_bgp
+    assert 'encap-behavior H_Encaps_Red' in red_bgp
+    assert 'locator LOC_RED' in red_bgp
+
+    result = template.render(BGP_GLOBALS={'default': {'local_asn': '65100'}})
+    assert 'segment-routing srv6' not in result
