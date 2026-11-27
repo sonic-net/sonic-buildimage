@@ -13,7 +13,6 @@ ifeq ($(BLDENV),trixie)
 $(LIBYANG)_DEPENDS += $(LIBPCRE3_DEV) $(LIBPCRE3) $(LIBPCRE16_3) $(LIBPCRE32_3) $(LIBPCRECPP0V5)
 $(LIBYANG)_RDEPENDS += $(LIBPCRE3)
 endif
-$(LIBYANG)_PHONIES += $(LIBYANG3-DEV-DONE)
 $(LIBYANG)_SRC_PATH = $(SRC_PATH)/libyang
 SONIC_MAKE_DEBS += $(LIBYANG)
 
@@ -41,6 +40,11 @@ $(LIBYANG_PY3_DBG)_DEPENDS += $(LIBYANG_PY3)
 $(LIBYANG_PY3_DBG)_RDEPENDS += $(LIBYANG_PY3)
 $(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_PY3_DBG)))
 
+# libyang1 is built for its runtime and Python bindings only (python3-yang,
+# which sonic-yang-mgmt uses). Nothing may build against $(LIBYANG_DEV): it
+# and $(LIBYANG3_DEV) are the same package, libyang-dev, and whichever was
+# installed last is the one a compile finds. C and Go consumers depend on
+# $(LIBYANG3_DEV).
 #$(eval $(call add_conflict_package,$(LIBYANG),$(LIBYANG3)))
 $(eval $(call add_conflict_package,$(LIBYANG_DEV),$(LIBYANG3_DEV)))
 
