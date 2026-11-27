@@ -1,8 +1,7 @@
 [Unit]
 Description=STP container
-Requires=updategraph.service swss.service
-After=updategraph.service swss.service syncd.service
-Before=ntp-config.service
+Requires=swss.service
+After=swss.service syncd.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
@@ -16,4 +15,4 @@ ExecStop=/usr/bin/{{docker_container_name}}.sh stop
 RestartSec=30
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sonic.target
