@@ -1110,7 +1110,7 @@
       "version": "2.8.0"
     }
   },
-  "plan_sha256": "25ce5f64778f34fec6033599de634fb028c639384db966dac31f15c51e851023",
+  "plan_sha256": "124b502d759ecee48abb8974ecf267d89c9ad95ac3588843b9f17ab791c029ac",
   "requirements_sha256": "4abed0c69871090ca4075cef448106d285a3eb7184f1c51f3c3b8e13cc260748",
   "schema_version": 1,
   "uv_version": "0.11.0"
