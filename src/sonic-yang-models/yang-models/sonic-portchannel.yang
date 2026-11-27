@@ -234,6 +234,13 @@ module sonic-portchannel {
 			default disable;
 		}
 
+		leaf proxy_arp {
+			description "Enable or disable proxy ARP on the PortChannel interface";
+			type string {
+				pattern "enabled|disabled";
+			}
+		}
+
                 leaf mac_addr {
                     description "Assign administrator-provided MAC address to Interface";
                     type yang:mac-address;

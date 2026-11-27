@@ -4,7 +4,8 @@
             "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
                 "VLAN_SUB_INTERFACE_LIST": [
                     {
-                        "name": "Ethernet8.10"
+                        "name": "Ethernet8.10",
+                        "proxy_arp": "enabled"
                     }
                 ],
                 "VLAN_SUB_INTERFACE_IPPREFIX_LIST": [

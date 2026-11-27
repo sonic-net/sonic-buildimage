@@ -182,6 +182,12 @@
                 ]
             },
             "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "proxy_arp": "disabled"
+                    }
+                ],
                 "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
                     {
                         "name": "PortChannel0001",
