@@ -27,6 +27,14 @@ CPO_FILE = "cpo.json"
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
+# BMC OS file name, located in the hardware SKU directory
+BMC_OS_FILE = 'bmc_os.json'
+
+BMC_OS_OPENBMC = 'openbmc'
+BMC_OS_SONIC = 'sonic'
+BMC_OS_DEFAULT = BMC_OS_SONIC
+_VALID_BMC_OS_VALUES = frozenset({BMC_OS_OPENBMC, BMC_OS_SONIC})
+
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
 
@@ -1286,6 +1294,27 @@ def get_bmc_address():
     if not bmc_data:
         return None
     return bmc_data.get('bmc_addr')
+
+
+def get_bmc_os():
+    """
+    Return the BMC operating system used for Switch-Host communication.
+
+    Reads 'os' from bmc_os.json in the hardware SKU directory. When the file
+    is missing, unreadable or holds an invalid value, returns BMC_OS_DEFAULT (sonic).
+
+    Returns:
+        BMC_OS_OPENBMC or BMC_OS_SONIC.
+    """
+    try:
+        bmc_os_file = os.path.join(get_path_to_hwsku_dir(), BMC_OS_FILE)
+        with open(bmc_os_file, "r") as f:
+            bmc_os = json.load(f).get('os')
+        if bmc_os in _VALID_BMC_OS_VALUES:
+            return bmc_os
+    except Exception:
+        pass
+    return BMC_OS_DEFAULT
 
 
 def get_switch_host_address():

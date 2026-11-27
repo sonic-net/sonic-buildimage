@@ -38,7 +38,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
-LINUX_KERNEL_VERSION=6.12.41+deb13
+LINUX_KERNEL_VERSION=6.12.94+deb13
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -789,6 +789,18 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         # verifying vmlinuz file.
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT
+    fi
+
+    # Embed the UEFI Secure Boot db certificate (DB.auth) into the image so the installer can
+    # enroll it into the DUT firmware. The file is placed under /boot so it ships at
+    # image-<version>/boot/ alongside the signed shim/grub.
+    if [ -n "$SECURE_BOOT_DB_CERT" ]; then
+        echo "Secure Boot support build stage: embedding Secure Boot db certificate from $SECURE_BOOT_DB_CERT"
+        if [ ! -f "$SECURE_BOOT_DB_CERT" ]; then
+            echo "Error: SECURE_BOOT_DB_CERT=$SECURE_BOOT_DB_CERT is set but the file is missing"
+            exit 1
+        fi
+        sudo cp "$SECURE_BOOT_DB_CERT" "$FILESYSTEM_ROOT/boot/DB.auth"
     fi
     echo "Secure Boot support build stage: END."
 fi

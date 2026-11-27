@@ -21,7 +21,10 @@ The gate does not build an image or compare binaries. It runs in parallel
 with platform builds. In PR mode (`--base <target-branch-ref>`), it uses the
 PR diff and finding provenance to identify blocking gaps. A pre-existing gap
 can become blocking when a PR touches the relevant build-input file; a failure
-does not necessarily mean the PR introduced the original omission.
+does not necessarily mean the PR introduced the original omission. An exported
+variable counts as touched when any line the PR adds or removes exports or
+references it, including a line that is only edited or moved; if such a
+variable provably cannot reach a cached artifact, record that in a waiver.
 
 | Result | Meaning |
 | --- | --- |

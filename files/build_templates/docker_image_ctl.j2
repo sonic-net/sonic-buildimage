@@ -582,6 +582,12 @@ start() {
     fi
     {%- endif %}
 
+    {%- if sonic_asic_platform == "nvidia-bluefield" and docker_container_name == "syncd" %}
+    # A mount point survives 'mst stop', so syncd keeps seeing the nodes mst creates in it.
+    mkdir -p /dev/mst
+    mountpoint -q /dev/mst || mount --bind /dev/mst /dev/mst
+    {%- endif %}
+
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
         {%- if docker_container_name == "database" %}
@@ -809,10 +815,11 @@ start() {
     # creates via --device=. This covers all broadcom syncd images (standard XGS, legacy-th,
     # and dnx). Which nodes exist depends on is_ltsw_chip (a runtime setting from
     # platform_env.conf, not known at image-build time): most chip families pick their set at
-    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. Check each
-    # path individually so only the devices actually present on this host get mounted.
+    # runtime, dnx creates linux_ngbde alongside the classic set unconditionally. XGS LTSW
+    # also uses linux_ngedk and linux_ngst for HFT. Only pass nodes present on this host.
     BRCM_DEV_MNT=""
     for _brcm_dev in /dev/linux_ngbde /dev/linux_ngknet /dev/linux_ngknetcb \
+                     /dev/linux_ngedk /dev/linux_ngst \
                      /dev/linux-kernel-bde /dev/linux-user-bde /dev/linux-bcm-knet /dev/linux-bcm-bde /dev/linux-knet-cb; do
         if [ -e "$_brcm_dev" ]; then
             BRCM_DEV_MNT="$BRCM_DEV_MNT --device=$_brcm_dev:$_brcm_dev:rwm"
@@ -876,6 +883,7 @@ start() {
         $(if [ -d /dev/infiniband ]; then echo "-v /dev/infiniband:/dev/infiniband"; fi) \
         $(if [ -d /dev/vfio ]; then echo "-v /dev/vfio:/dev/vfio"; fi) \
         $(if [ -e /dev/infiniband/rdma_cm ]; then echo "--device=/dev/infiniband/rdma_cm:/dev/infiniband/rdma_cm"; fi) \
+        -v /dev/mst:/dev/mst \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}

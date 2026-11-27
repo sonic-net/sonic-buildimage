@@ -1,0 +1,28 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+# Dependencies for the Cisco embedded platform data path.
+PLATFORM_SRC_PATH ?= $(PLATFORM_PATH)/embedded
+
+DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/rules.mk \
+             $(PLATFORM_PATH)/rules.dep $(PLATFORM_PATH)/sonic-device-data.dep \
+             $(PLATFORM_PATH)/platform_setup.sh \
+             $(PLATFORM_SRC_PATH)/platform.conf \
+             $(PLATFORM_SRC_PATH)/platform_setup.sh
+DEP_FILES += $(wildcard $(PLATFORM_SRC_PATH)/*.mk)
+DEP_FILES += $(shell find $(PLATFORM_SRC_PATH)/device -type f -print)
+
+include $(PLATFORM_SRC_PATH)/prebuilt.dep
+include $(PLATFORM_SRC_PATH)/python-wheels.dep
+
+# The RPC option changes the dependency set of syncd in rules.mk.
+$(SYNCD)_DEP_FLAGS += $(ENABLE_SYNCD_RPC)
+$(SYNCD)_DEP_FILES += $(PLATFORM_SRC_PATH)/rules.mk $(PLATFORM_SRC_PATH)/rules.dep
+
+ifeq ($(ENABLE_SYNCD_RPC),y)
+DEP_FILES += $(PLATFORM_PATH)/libsaithrift-dev.mk
+include $(PLATFORM_PATH)/libsaithrift-dev.dep
+endif
+
+$(SONIC_DEVICE_DATA)_DEP_FILES += $(shell find $(PLATFORM_SRC_PATH)/device -type f -print)

@@ -15,5 +15,5 @@ https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x8
 https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.1.tar.gz==42deeb4b2e4a73b4a913734c281b7185
 https://github.com/sonic-net/DASH/archive/refs/heads/main.tar.gz==316918c50ec2216fe6e576ce67e46f4f
 https://packages.microsoft.com/keys/microsoft.asc==ea6fe6b411de7800159372ea536c7ef9
-https://sh.rustup.rs==ec8a4c36c2ee60d06fb8a29fec169d91
-https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==3fa0f2a99bcebb3350cb1bef6775e1a2
+https://sh.rustup.rs==71ea992d4eb30d95cc3e081581d7b0b3
+https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==2b26500d629b468a6d6c8d6c004d0b90

@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Copilot <223556219+Copilot@users.noreply.github.com>
+Date: Sun, 22 Nov 2026 03:15:00 +0000
+Subject: [PATCH] [build] Remove --locked when building dash-ha
+
+sonic-buildimage replaces dash-ha's locked git dependencies with local
+paths. Allow Cargo to update those source entries before building.
+
+---
+ debian/rules | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/rules b/debian/rules
+--- a/debian/rules
++++ b/debian/rules
+@@ -10 +10 @@ override_dh_auto_build:
+-	cargo build --locked --release --all
++	cargo build --release --all

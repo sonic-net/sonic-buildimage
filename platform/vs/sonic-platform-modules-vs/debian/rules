@@ -37,7 +37,7 @@ binary-indep:
 	dh_installdirs
 
 	# Custom package commands
-	$(PYTHON) setup.py install --root=$(SRC_DIR)/debian/$(PACKAGE_PRE_NAME) --install-layout=deb;
+	$(PYTHON) setup.py install --root=$(SRC_DIR)/debian/$(PACKAGE_PRE_NAME) --prefix=/usr --install-lib=/usr/lib/python3/dist-packages;
 
 	# Resuming debhelper scripts
 	dh_testroot

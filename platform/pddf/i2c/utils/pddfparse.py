@@ -1126,10 +1126,34 @@ class PddfParse():
 
         bdf = dev['dev_info']['device_bdf']
 
+        # Each FPGA i2c adapter and MDIO bus holds a reference on the module that provides
+        # its algorithm, and nothing else removes them, so leaving them keeps the whole
+        # multifpgapci stack loaded through `pddf_util.py clean`. Only the ones that exist
+        # are deleted: an i2c adapter is numbered virt_bus + channel under the PCI device,
+        # an MDIO bus is pci-mdio-<channel>.
+        # Every step runs even if an earlier one fails, so as much as possible is torn down;
+        # the first failure is returned.
+        rc = 0
+        virt_bus = int(dev['i2c']['dev_attr']['virt_bus'], 16)
+        for bus in range(int(dev['i2c']['dev_attr']['num_virt_ch'], 16)):
+            if os.path.exists("/sys/bus/pci/devices/{}/i2c-{}".format(bdf, virt_bus + bus)):
+                cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/i2c/del_i2c_adapter".format(bus, bdf)
+                ret = self.runcmd(cmd)
+                rc = rc or ret
+        if 'mdio' in dev:
+            for bus in range(int(dev['mdio']['dev_attr']['num_virt_ch'], 16)):
+                if os.path.exists("/sys/bus/pci/devices/{}/mdio_bus/pci-mdio-{}".format(bdf, bus)):
+                    cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/mdio/del_mdio_bus".format(bus, bdf)
+                    ret = self.runcmd(cmd)
+                    rc = rc or ret
+
         cmd = "echo '{}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c_name".format(dev['dev_info']['device_name'], bdf)
-        self.runcmd(cmd)
+        ret = self.runcmd(cmd)
+        rc = rc or ret
         cmd = "echo 'fpgapci_deinit' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
-        self.runcmd(cmd)
+        ret = self.runcmd(cmd)
+        rc = rc or ret
+        return rc
 
     #################################################################################################################################
     #   SHOW ATTRIBIUTES DEFS
@@ -2275,17 +2299,23 @@ class PddfParse():
 
     def multifpgapci_parse(self, dev, ops):
         val = []
-        ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
-        if ret:
-            if str(ret[0]).isdigit():
-                if ret[0] != 0:
-                    # in case if 'create' functions
-                    logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
-                    return ret
-            else:
-                val.extend(ret)
+        # Delete in the reverse of creation: the clients on the FPGA's buses go before the
+        # FPGA's adapters, since deleting an adapter waits for every client still on it.
+        if ops['cmd'] == 'delete':
+            channels = reversed(dev['i2c']['channel'])
+        else:
+            ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
+            if ret:
+                if str(ret[0]).isdigit():
+                    if ret[0] != 0:
+                        # in case if 'create' functions
+                        logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
+                        return ret
+                else:
+                    val.extend(ret)
+            channels = dev['i2c']['channel']
 
-        for bus in dev['i2c']['channel']:
+        for bus in channels:
             ret = self.dev_parse(self.data[bus['dev']], ops)
             if ret:
                  if str(ret[0]).isdigit():
@@ -2294,6 +2324,12 @@ class PddfParse():
                            return ret
                  else:
                       val.extend(ret)
+
+        if ops['cmd'] == 'delete':
+            rc = self.delete_multifpgapci_device(dev, ops)
+            if rc != 0:
+                logger.error("%s_multifpgapci_device() cmd failed", ops['cmd'])
+                return [rc]
         return val
 
     def multifpgapci_spi_controller_parse(

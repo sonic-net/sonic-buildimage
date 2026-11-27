@@ -19,6 +19,6 @@
     "watchdog": {
         "boot_arm": true,
         "shutdown_protect": true,
-        "stage_scratch_reg": "0x14c3704c"
+        "stage_marker_cmd": "/usr/local/bin/watchdog-stage-marker.sh"
     }
 }

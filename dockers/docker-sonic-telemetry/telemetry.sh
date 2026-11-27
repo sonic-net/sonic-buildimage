@@ -25,6 +25,7 @@ EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
 INVALID_TLS_CONFIGURATION=3
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
+PATHS_BLACKLIST_FILE=/etc/telemetry/paths_blacklist.txt
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
@@ -175,6 +176,11 @@ if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
     else
         TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
     fi
+fi
+
+# Reject requests for paths listed in the blacklist, when one is installed
+if [ -f "$PATHS_BLACKLIST_FILE" ]; then
+    TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
 fi
 
 echo "telemetry args: $TELEMETRY_ARGS"
