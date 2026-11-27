@@ -25,6 +25,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.base_ref || github.ref_name }}
         run: |
           set -euo pipefail
           for commit in "$BASE_SHA" "$HEAD_SHA"; do
@@ -47,6 +48,21 @@ jobs:
           protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
           changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- "${protected_files[@]}")
           if [[ -n "$changed_files" ]]; then
+            # The fork can import upstream's exact files when syncing master.
+            if [[ "$GITHUB_REPOSITORY" == securely1g/sonic-buildimage && "$TARGET_BRANCH" == master ]]; then
+              git fetch --no-tags --depth=1 https://github.com/sonic-net/sonic-buildimage.git refs/heads/master
+              upstream=$(git rev-parse --verify 'FETCH_HEAD^{commit}')
+              while IFS= read -r path; do
+                expected=$(git ls-tree "$upstream" -- "$path")
+                actual=$(git ls-tree "$HEAD_SHA" -- "$path")
+                if [[ -z "$expected" || "$actual" != "$expected" ]]; then
+                  echo "Error: $path differs from sonic-net/sonic-buildimage master."
+                  exit 1
+                fi
+              done <<< "$changed_files"
+              echo "Protected files match sonic-net/sonic-buildimage at $upstream."
+              exit 0
+            fi
             echo "Error: You are trying to modify protected files:"
             printf '%s\n' "$changed_files"
             exit 1
