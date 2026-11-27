@@ -248,6 +248,12 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
                     "Circuit ID alias {} is not a member of vlan {}".format(match["value"], dhcp_interface),
                     ctx=click.get_current_context())
 
+    return conditions, get_binding_pools(dbconn, dhcp_interface, entry, range_overrides,
+                                         allow_missing_ranges, allow_off_subnet)
+
+
+def get_binding_pools(dbconn, dhcp_interface, entry, range_overrides=None, allow_missing_ranges=False,
+                      allow_off_subnet=False):
     has_ips = bool(entry.get("ips@"))
     has_ranges = bool(entry.get("ranges@"))
     if has_ips == has_ranges:
@@ -260,7 +266,7 @@ def validate_binding_entry(dbconn, dhcp_interface, binding_name, entry, match_ov
     else:
         intervals = validate_range_pool(dbconn, split_csv(entry["ranges@"], "Range list"), subnets,
                                         dhcp_interface, range_overrides, allow_missing_ranges, allow_off_subnet)
-    return conditions, {subnet: merge_pool_intervals(pool) for subnet, pool in intervals.items()}
+    return {subnet: merge_pool_intervals(pool) for subnet, pool in intervals.items()}
 
 
 def merge_pool_intervals(intervals):
@@ -340,20 +346,30 @@ def validate_vlan_bindings(dbconn, dhcp_interface, candidate=None, match_overrid
                 except StaleBindingError:
                     # A skipped binding must stay skippable: errors other than a stale
                     # match or port make dhcp_cfggen fail the whole generation.
-                    if isinstance(error, StaleBindingError):
-                        continue
-                    raise error
+                    if not isinstance(error, StaleBindingError):
+                        raise error
                 except click.UsageError:
                     continue
-                raise
+                else:
+                    raise error
+            if isinstance(error, StaleBindingError):
+                # The binding returns once its match or port does, so keep its pools
+                # reserved against the other bindings.
+                try:
+                    stale_pools = get_binding_pools(dbconn, dhcp_interface, bindings[binding_name], range_overrides,
+                                                    allow_missing_ranges=True, allow_off_subnet=True)
+                except click.UsageError:
+                    continue
+                if stale_pools:
+                    pools[binding_name] = stale_pools
 
     validate_single_prefix(dhcp_interface, (subnet for pool in pools.values() for subnet in pool))
-    binding_names = sorted(predicates)
+    binding_names = sorted(pools)
     for index, first_name in enumerate(binding_names):
         for second_name in binding_names[index + 1:]:
-            first = predicates[first_name]
-            second = predicates[second_name]
-            if len(first) == len(second) and predicates_overlap(first, second):
+            first = predicates.get(first_name)
+            second = predicates.get(second_name)
+            if first and second and len(first) == len(second) and predicates_overlap(first, second):
                 click.get_current_context().fail(
                     "Bindings {} and {} overlap with equal specificity on {}".format(
                         first_name, second_name, dhcp_interface

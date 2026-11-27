@@ -1343,6 +1343,26 @@ class TestConfigDHCPServerMatch:
         assert result.exit_code == 0, result.output
         assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_MATCH|port-etp2", "value") == "etp5"
 
+    @pytest.mark.parametrize("operation", ["binding-add", "range-update"])
+    def test_stale_binding_pool_stays_reserved(self, mock_db, operation):
+        # fallback (range3 = 100.1.1.10) is skipped while Ethernet2 is outside the VLAN, but
+        # re-adding the port restores it, so a partial overlap would then fail generation.
+        mock_db.delete("CONFIG_DB", "VLAN_MEMBER|Vlan100|Ethernet2")
+        mock_db.hmset("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|maia-a",
+                      {"matches@": "vendor-a", "ips@": "100.1.1.20"})
+        if operation == "binding-add":
+            command, args = BINDING_COMMAND.commands["add"], ["Vlan100", "new", "--match=vendor-b",
+                                                              "100.1.1.10,100.1.1.11"]
+        else:
+            command, args = RANGE_COMMAND.commands["update"], ["range3", "100.1.1.20", "100.1.1.21"]
+
+        result = invoke(mock_db, command, args)
+
+        assert result.exit_code == 2
+        assert "partially overlapping pools" in result.output
+        assert not mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_BINDING|Vlan100|new")
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range3", "range@") == "100.1.1.10"
+
 
 @pytest.fixture
 def overlapping_prefix_db(prefix_db):
