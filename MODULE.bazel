@@ -849,7 +849,7 @@ radius_prepared_source(name="pam_radius_src",build_file="//src/radius/pam:pam_ra
 use_repo(apt, "radius_pam_build_debian")
 
 # Buildimage owns the Bash TACACS plugin sources.
-bazel_dep(name = "pam-tacplus", version = "1.4.1.sonic.1")
+bazel_dep(name = "pam-tacplus", version = "1.4.1.sonic.3")
 bazel_dep(name = "bash-tacplus", version = "1.0.0.sonic.1", repo_name = "bash_tacplus")
 local_path_override(module_name = "bash-tacplus", path = "src/tacacs/bash_tacplus")
 
