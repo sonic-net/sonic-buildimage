@@ -151,6 +151,7 @@ qsfp_compliance_code_tup = ('10/40G Ethernet Compliance Code', 'SONET Compliance
 
 SFP_TYPE = "SFP"
 QSFP_TYPE = "QSFP"
+QSFP_DD_TYPE = "QSFP_DD"
 
 
 class Sfp(SfpBase):
@@ -307,7 +308,7 @@ class Sfp(SfpBase):
             port_eeprom_path = eeprom_path.format(i2c_idx)
             self.port_to_eeprom_mapping[int(port_cfg.index)] = port_eeprom_path
 
-        self.info_dict_keys = ['type', 'hardware_rev', 'serial', 'manufacturer',
+        self.info_dict_keys = ['type', 'vendor_rev', 'serial', 'manufacturer',
             'model', 'connector', 'encoding', 'ext_identifier',
             'ext_rateselect_compliance', 'cable_type', 'cable_length',
             'nominal_bit_rate', 'specification_compliance', 'vendor_date',
@@ -533,7 +534,7 @@ class Sfp(SfpBase):
         keys                       |Value Format   |Information
         ---------------------------|---------------|----------------------------
         type                       |1*255VCHAR     |type of SFP
-        hardware_rev               |1*255VCHAR     |hardware version of SFP
+        vendor_rev               |1*255VCHAR     |hardware version of SFP
         serial                     |1*255VCHAR     |serial number of the SFP
         manufacturer               |1*255VCHAR     |SFP vendor name
         model                      |1*255VCHAR     |SFP model name
@@ -630,7 +631,7 @@ class Sfp(SfpBase):
             ['data']['Vendor Name']['value']
         transceiver_info_dict['model'] = sfp_vendor_pn_data \
             ['data']['Vendor PN']['value']
-        transceiver_info_dict['hardware_rev'] = sfp_vendor_rev_data \
+        transceiver_info_dict['vendor_rev'] = sfp_vendor_rev_data \
             ['data']['Vendor Rev']['value']
         transceiver_info_dict['serial'] = sfp_vendor_sn_data \
             ['data']['Vendor SN']['value']
@@ -967,6 +968,173 @@ class Sfp(SfpBase):
                 transceiver_dom_threshold_info_dict[key] = self.__convert_string_to_num(transceiver_dom_threshold_info_dict[key])
 
             return transceiver_dom_threshold_info_dict
+
+        else:
+            return None
+
+    def get_transceiver_status(self):
+        """
+        Retrieves transceiver status of this SFP (applicable for CMIS/C-CMIS)
+
+        Returns:
+            A dict which may contain following keys/values (there could be more for C-CMIS) :
+        ================================================================================
+        key                          = TRANSCEIVER_STATUS|ifname        ; Error information for module on port
+        ; field                      = value
+        module_state                 = 1*255VCHAR                       ; current module state (ModuleLowPwr, ModulePwrUp, ModuleReady, ModulePwrDn, Fault)
+        module_fault_cause           = 1*255VCHAR                       ; reason of entering the module fault state
+        datapath_firmware_fault      = BOOLEAN                          ; datapath (DSP) firmware fault
+        module_firmware_fault        = BOOLEAN                          ; module firmware fault
+        module_state_changed         = BOOLEAN                          ; module state changed
+        datapath_hostlane1           = 1*255VCHAR                       ; data path state indicator on host lane 1
+        datapath_hostlane2           = 1*255VCHAR                       ; data path state indicator on host lane 2
+        datapath_hostlane3           = 1*255VCHAR                       ; data path state indicator on host lane 3
+        datapath_hostlane4           = 1*255VCHAR                       ; data path state indicator on host lane 4
+        datapath_hostlane5           = 1*255VCHAR                       ; data path state indicator on host lane 5
+        datapath_hostlane6           = 1*255VCHAR                       ; data path state indicator on host lane 6
+        datapath_hostlane7           = 1*255VCHAR                       ; data path state indicator on host lane 7
+        datapath_hostlane8           = 1*255VCHAR                       ; data path state indicator on host lane 8
+        txoutput_status              = BOOLEAN                          ; tx output status on media lane
+        rxoutput_status_hostlane1    = BOOLEAN                          ; rx output status on host lane 1
+        rxoutput_status_hostlane2    = BOOLEAN                          ; rx output status on host lane 2
+        rxoutput_status_hostlane3    = BOOLEAN                          ; rx output status on host lane 3
+        rxoutput_status_hostlane4    = BOOLEAN                          ; rx output status on host lane 4
+        rxoutput_status_hostlane5    = BOOLEAN                          ; rx output status on host lane 5
+        rxoutput_status_hostlane6    = BOOLEAN                          ; rx output status on host lane 6
+        rxoutput_status_hostlane7    = BOOLEAN                          ; rx output status on host lane 7
+        rxoutput_status_hostlane8    = BOOLEAN                          ; rx output status on host lane 8
+        txfault                      = BOOLEAN                          ; tx fault flag on media lane
+        txlos_hostlane1              = BOOLEAN                          ; tx loss of signal flag on host lane 1
+        txlos_hostlane2              = BOOLEAN                          ; tx loss of signal flag on host lane 2
+        txlos_hostlane3              = BOOLEAN                          ; tx loss of signal flag on host lane 3
+        txlos_hostlane4              = BOOLEAN                          ; tx loss of signal flag on host lane 4
+        txlos_hostlane5              = BOOLEAN                          ; tx loss of signal flag on host lane 5
+        txlos_hostlane6              = BOOLEAN                          ; tx loss of signal flag on host lane 6
+        txlos_hostlane7              = BOOLEAN                          ; tx loss of signal flag on host lane 7
+        txlos_hostlane8              = BOOLEAN                          ; tx loss of signal flag on host lane 8
+        txcdrlol_hostlane1           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 1
+        txcdrlol_hostlane2           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 2
+        txcdrlol_hostlane3           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 3
+        txcdrlol_hostlane4           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 4
+        txcdrlol_hostlane5           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 5
+        txcdrlol_hostlane6           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 6
+        txcdrlol_hostlane7           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 7
+        txcdrlol_hostlane8           = BOOLEAN                          ; tx clock and data recovery loss of lock on host lane 8
+        rxlos                        = BOOLEAN                          ; rx loss of signal flag on media lane
+        rxcdrlol                     = BOOLEAN                          ; rx clock and data recovery loss of lock on media lane
+        config_state_hostlane1       = 1*255VCHAR                       ; configuration status for the data path of host line 1
+        config_state_hostlane2       = 1*255VCHAR                       ; configuration status for the data path of host line 2
+        config_state_hostlane3       = 1*255VCHAR                       ; configuration status for the data path of host line 3
+        config_state_hostlane4       = 1*255VCHAR                       ; configuration status for the data path of host line 4
+        config_state_hostlane5       = 1*255VCHAR                       ; configuration status for the data path of host line 5
+        config_state_hostlane6       = 1*255VCHAR                       ; configuration status for the data path of host line 6
+        config_state_hostlane7       = 1*255VCHAR                       ; configuration status for the data path of host line 7
+        config_state_hostlane8       = 1*255VCHAR                       ; configuration status for the data path of host line 8
+        dpinit_pending_hostlane1     = BOOLEAN                          ; data path configuration updated on host lane 1
+        dpinit_pending_hostlane2     = BOOLEAN                          ; data path configuration updated on host lane 2
+        dpinit_pending_hostlane3     = BOOLEAN                          ; data path configuration updated on host lane 3
+        dpinit_pending_hostlane4     = BOOLEAN                          ; data path configuration updated on host lane 4
+        dpinit_pending_hostlane5     = BOOLEAN                          ; data path configuration updated on host lane 5
+        dpinit_pending_hostlane6     = BOOLEAN                          ; data path configuration updated on host lane 6
+        dpinit_pending_hostlane7     = BOOLEAN                          ; data path configuration updated on host lane 7
+        dpinit_pending_hostlane8     = BOOLEAN                          ; data path configuration updated on host lane 8
+        temphighalarm_flag           = BOOLEAN                          ; temperature high alarm flag
+        temphighwarning_flag         = BOOLEAN                          ; temperature high warning flag
+        templowalarm_flag            = BOOLEAN                          ; temperature low alarm flag
+        templowwarning_flag          = BOOLEAN                          ; temperature low warning flag
+        vcchighalarm_flag            = BOOLEAN                          ; vcc high alarm flag
+        vcchighwarning_flag          = BOOLEAN                          ; vcc high warning flag
+        vcclowalarm_flag             = BOOLEAN                          ; vcc low alarm flag
+        vcclowwarning_flag           = BOOLEAN                          ; vcc low warning flag
+        txpowerhighalarm_flag        = BOOLEAN                          ; tx power high alarm flag
+        txpowerlowalarm_flag         = BOOLEAN                          ; tx power low alarm flag
+        txpowerhighwarning_flag      = BOOLEAN                          ; tx power high warning flag
+        txpowerlowwarning_flag       = BOOLEAN                          ; tx power low alarm flag
+        rxpowerhighalarm_flag        = BOOLEAN                          ; rx power high alarm flag
+        rxpowerlowalarm_flag         = BOOLEAN                          ; rx power low alarm flag
+        rxpowerhighwarning_flag      = BOOLEAN                          ; rx power high warning flag
+        rxpowerlowwarning_flag       = BOOLEAN                          ; rx power low warning flag
+        txbiashighalarm_flag         = BOOLEAN                          ; tx bias high alarm flag
+        txbiaslowalarm_flag          = BOOLEAN                          ; tx bias low alarm flag
+        txbiashighwarning_flag       = BOOLEAN                          ; tx bias high warning flag
+        txbiaslowwarning_flag        = BOOLEAN                          ; tx bias low warning flag
+        lasertemphighalarm_flag      = BOOLEAN                          ; laser temperature high alarm flag
+        lasertemplowalarm_flag       = BOOLEAN                          ; laser temperature low alarm flag
+        lasertemphighwarning_flag    = BOOLEAN                          ; laser temperature high warning flag
+        lasertemplowwarning_flag     = BOOLEAN                          ; laser temperature low warning flag
+        prefecberhighalarm_flag      = BOOLEAN                          ; prefec ber high alarm flag
+        prefecberlowalarm_flag       = BOOLEAN                          ; prefec ber low alarm flag
+        prefecberhighwarning_flag    = BOOLEAN                          ; prefec ber high warning flag
+        prefecberlowwarning_flag     = BOOLEAN                          ; prefec ber low warning flag
+        postfecberhighalarm_flag     = BOOLEAN                          ; postfec ber high alarm flag
+        postfecberlowalarm_flag      = BOOLEAN                          ; postfec ber low alarm flag
+        postfecberhighwarning_flag   = BOOLEAN                          ; postfec ber high warning flag
+        postfecberlowwarning_flag    = BOOLEAN                          ; postfec ber low warning flag
+        ================================================================================
+
+        If there is an issue with reading the xcvr, None should be returned.
+        """
+        # add by qianj,refer to other plf latter
+        if self.sfp_type == QSFP_DD_TYPE:
+            return None
+
+        else:
+            return None
+
+    def get_transceiver_pm(self):
+        """
+        Retrieves PM (Performance Monitoring) info for this xcvr (applicable for C-CMIS)
+
+        Returns:
+            A dict containing the following keys/values :
+        ========================================================================
+        key                          = TRANSCEIVER_PM|ifname            ; information of PM on port
+        ; field                      = value
+        prefec_ber_avg               = FLOAT                            ; prefec ber avg
+        prefec_ber_min               = FLOAT                            ; prefec ber min
+        prefec_ber_max               = FLOAT                            ; prefec ber max
+        uncorr_frames_avg            = FLOAT                            ; uncorrected frames ratio avg
+        uncorr_frames_min            = FLOAT                            ; uncorrected frames ratio min
+        uncorr_frames_max            = FLOAT                            ; uncorrected frames ratio max
+        cd_avg                       = FLOAT                            ; chromatic dispersion avg
+        cd_min                       = FLOAT                            ; chromatic dispersion min
+        cd_max                       = FLOAT                            ; chromatic dispersion max
+        dgd_avg                      = FLOAT                            ; differential group delay avg
+        dgd_min                      = FLOAT                            ; differential group delay min
+        dgd_max                      = FLOAT                            ; differential group delay max
+        sopmd_avg                    = FLOAT                            ; second order polarization mode dispersion avg
+        sopmd_min                    = FLOAT                            ; second order polarization mode dispersion min
+        sopmd_max                    = FLOAT                            ; second order polarization mode dispersion max
+        pdl_avg                      = FLOAT                            ; polarization dependent loss avg
+        pdl_min                      = FLOAT                            ; polarization dependent loss min
+        pdl_max                      = FLOAT                            ; polarization dependent loss max
+        osnr_avg                     = FLOAT                            ; optical signal to noise ratio avg
+        osnr_min                     = FLOAT                            ; optical signal to noise ratio min
+        osnr_max                     = FLOAT                            ; optical signal to noise ratio max
+        esnr_avg                     = FLOAT                            ; electrical signal to noise ratio avg
+        esnr_min                     = FLOAT                            ; electrical signal to noise ratio min
+        esnr_max                     = FLOAT                            ; electrical signal to noise ratio max
+        cfo_avg                      = FLOAT                            ; carrier frequency offset avg
+        cfo_min                      = FLOAT                            ; carrier frequency offset min
+        cfo_max                      = FLOAT                            ; carrier frequency offset max
+        soproc_avg                   = FLOAT                            ; state of polarization rate of change avg
+        soproc_min                   = FLOAT                            ; state of polarization rate of change min
+        soproc_max                   = FLOAT                            ; state of polarization rate of change max
+        tx_power_avg                 = FLOAT                            ; tx output power avg
+        tx_power_min                 = FLOAT                            ; tx output power min
+        tx_power_max                 = FLOAT                            ; tx output power max
+        rx_tot_power_avg             = FLOAT                            ; rx total power avg
+        rx_tot_power_min             = FLOAT                            ; rx total power min
+        rx_tot_power_max             = FLOAT                            ; rx total power max
+        rx_sig_power_avg             = FLOAT                            ; rx signal power avg
+        rx_sig_power_min             = FLOAT                            ; rx signal power min
+        rx_sig_power_max             = FLOAT                            ; rx signal power max
+
+        If there is an issue with reading the xcvr, None should be returned.
+        """
+        # add by qianj,refer to other plf latter
+        if self.sfp_type == QSFP_DD_TYPE:
+            return None
 
         else:
             return None

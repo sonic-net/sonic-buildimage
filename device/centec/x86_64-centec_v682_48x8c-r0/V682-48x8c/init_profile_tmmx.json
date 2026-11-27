@@ -1,0 +1,695 @@
+{
+    "local_chip_num" : 1,
+    "gchip" : [0,1],
+    "rchain_en" : 0,
+    "rchain_gchip" : 0,
+    "init_config":[{
+        "init_feature" : {
+            "mpls":1,
+            "aps":1,
+            "oam":1,
+            "ptp":1,        
+            "synce":1,
+            "stacking":1,
+            "bpe":0,
+            "ipfix":1,
+            "monitor":1,
+            "overlay":1,
+            "efd":1,
+            "fcoe":0,
+            "trill":0,
+            "wlan":0,
+            "npm":1,
+            "dot1ae":1,
+            "srv6":1,
+            "dtel":1,
+            "sc_oam":0,
+            "flexe":0
+        }, 
+        "chip_cfg": {
+            "cpu_port_en": 0, 
+            "cpu_mac_sa": 0, 
+            "cut_through_speed_bitmap": 0, 
+            "rchain_gchip": 0, 
+            "ecc_recover_en": 0, 
+            "normal_affinity_mask": 0, 
+            "vlanid": 0, 
+            "cpu_mac_da": [0], 
+            "rchain_en": 0, 
+            "cut_through_en": 0, 
+            "sdb_mem_size": 0,            #If pmem(mmap)mode enablethe cfg size can be shown by command(show chip sdb status)#
+            "wb_dm_mem_size" : 33554432,  #If DM(mmap) mode enable,the cfg size can be shown by command(show warmboot status)#
+            "alpm_affinity_mask": 0, 
+            "lchip": 0, 
+            "cpu_port": 0, 
+            "tcam_scan_en": 0, 
+            "tpid": 0, 
+            "sdb_en": 0, 
+            "sdb_type": 0, 
+            "sdb_mem_addr": 0, 
+            "cut_through_speed": 0
+        }, 
+        "vlan_cfg": {
+            "vlanptr_mode": 0, 
+            "rsv0": []
+        }, 
+        "stats_cfg": {
+            "query_mode": 0, 
+            "stats_bitmap": "0x1d3", 
+            "policer_stats_num": 512, 
+            "mac_timer": 0, 
+            "stats_mode": 0
+        }, 
+        "intr_cfg": {
+            "irq": 69, 
+            "intr_mode": 1
+        }, 
+        "nh_cfg": {
+            "max_ecmp": 0, 
+            "max_external_nhid": 16384,
+            "max_tunnel_id": 1024, 
+            "acl_redirect_fwd_ptr_num": 0, 
+            "nh_edit_mode": 0, 
+            "rsv": [], 
+            "h_ecmp_en": 1,
+            "dsnh2_offset_en":0
+        }, 
+        "dma_cfg": {
+            "func_en_bitmap": "0x173", 
+            "stats": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 0, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "table_w_desc_num": 100, 
+            "ipfix": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 64, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_tx_ext": [{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 32, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 32, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }
+            ], 
+            "learning_proc_func": 0, 
+            "pkt_tx": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 0, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_rx_chan_num": 4, 
+            "learning": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 128, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_rx": [{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            }
+            ], 
+            "pkt_rx_size_per_desc": 256, 
+            "hw_learning_sync_en": 0, 
+            "table_r_desc_num": 100, 
+            "pkt_tx_desc_num": 32
+        }, 
+        "ipfix_cfg": {
+            "aging_interval": 0, 
+            "new_flow_export_en": 0, 
+            "conflict_export": 0, 
+            "latency_type": 0, 
+            "threshold": 0, 
+            "dest_port_type": 0, 
+            "ignore_drop_reason": 0, 
+            "times_interval": 1000, 
+            "jitter_thrd": 0, 
+            "bytes_cnt": 9600, 
+            "pkt_cnt": 100, 
+            "drop_pkt_cnt": 0, 
+            "mirror_pkt_enable": 0, 
+            "tcp_end_detect_en": 1, 
+            "latency_thrd": 0, 
+            "max_export_entry_num": 1024, 
+            "unkown_pkt_dest_type": 0, 
+            "conflict_cnt": 0, 
+            "export_interval": 100, 
+            "queue_drop_en": 0, 
+            "sample_mode": 0, 
+            "latency_ewma_weight": 0, 
+            "sw_learning_en": 0, 
+            "jitter_ewma_weight": 0, 
+            "egs_ipfix_disable": 0
+        }, 
+        "npm_cfg": {
+            "rsv": [], 
+            "emix_size": [0, 0, 0],
+            "session_mode": 0
+        }, 
+        "ipuc_cfg": {
+            "host_use_lpm": 2, 
+            "prefix64_mode": 0, 
+            "user_data": 0, 
+            "callback": 0, 
+            "arc_disable": 0, 
+            "default_route_mode": 0, 
+            "use_hash8": 0, 
+            "rpf_check_port": 0
+        }, 
+        "l3if_cfg": {
+            "ipv6_vrf_en": 1, 
+            "keep_ivlan_en": 0, 
+            "max_vrfid_num": 512, 
+            "ipv4_vrf_en": 1,
+            "rtmac_mode": 0
+        }, 
+        "pkt_cfg": {
+            "raw_mode_en": 0, 
+            "dma_tx_cb": 0, 
+            "rx_cb": 0, 
+            "socket_tx_cb": 0
+        }, 
+        "ptp_cfg": {
+            "intf_selected": 0, 
+            "delay_request_process_en": 1, 
+            "sync_copy_to_cpu_en": 0, 
+            "management_copy_to_cpu_en": 0, 
+            "port_based_ptp_en": 1, 
+            "ptp_ucast_en": 1, 
+            "use_internal_clock_en": 1, 
+            "signaling_copy_to_cpu_en": 0, 
+            "cache_aging_time": 60, 
+            "rsv": []
+        }, 
+        "oam_cfg": {
+            "tp_section_oam_based_l3if": 1, 
+            "tp_csf_clear": "0x1", 
+            "tp_csf_fdi": "0x1", 
+            "tp_csf_ach_chan_type": "0x40", 
+            "tp_y1731_ach_chan_type": "0x8902", 
+            "mpls_pw_vccv_with_ip_en": 0, 
+            "mep_index_alloc_by_sdk": 1, 
+            "maid_len_format": 1, 
+            "mep_1ms_num": 500, 
+            "tp_csf_los": "0x7", 
+            "tp_bfd_333ms": 0, 
+            "tp_csf_rdi": "0x2"
+        }, 
+        "qos_cfg": {
+            "policer_level": {
+                "ingress_port_level": 0, 
+                "egress_vlan_level": 0, 
+                "ingress_vlan_level": 0, 
+                "egress_port_level": 0
+            }, 
+            "queue_num_per_network_port": 8, 
+            "resrc_pool": {
+                "egs_pool_size": [0, 0, 0, 0, 0, 0], 
+                "igs_pool_mode": 0, 
+                "egs_pool_mode": 0, 
+                "igs_pool_size": [0, 0, 0, 0, 0, 0, 0]
+            }, 
+            "ingress_vlan_policer_num": 0, 
+            "queue_num_per_internal_port": 0, 
+            "service_queue_mode": 0, 
+            "max_cos_level": 0, 
+            "egress_vlan_policer_num": 0, 
+            "queue_num_for_cpu_reason": 128, 
+            "policer_merge_mode": 0, 
+        }, 
+        "overlay_cfg": {
+            "nvgre_mode": 0, 
+            "vxlan_mode": 0, 
+            "vni_mapping_mode": 1, 
+            "cloud_sec_en": 0
+        }, 
+        "diag_cfg": {
+            "rsv": 0
+        }, 
+        "linkagg_cfg": {
+            "linkagg_mode": 6,
+            "bind_gport_disable": 1,
+            "rsv0": []
+        }, 
+        "port_cfg": {
+            "use_isolation_id": 0, 
+            "default_logic_port_en": 0, 
+            "isolation_group_mode": 0, 
+            "rsv0": 0
+        }, 
+        "srv6_cfg": {
+            "usid_prefix_len": 0,
+            "sid_format_bmp": 1,
+            "gsid_prefix_len": 0
+        }, 
+        "bpe_cfg": {
+            "is_port_extender": 0, 
+            "port_base": 0, 
+            "logic_port_en": 0, 
+            "intlk_mode": 0, 
+            "max_uc_ecid_id": 4096, 
+            "max_mc_ecid_id": 12288
+        }, 
+        "parser_cfg": {
+            "lb_hash_mode": 1, 
+            "dlb_efd_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "ecmp_hash_type": 1, 
+            "linkagg_hash_type": 1, 
+            "ecmp_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "linkagg_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "small_frag_offset": 0
+        }, 
+        "l2_fdb_cfg": {
+            "hw_learn_en": 0, 
+            "static_fdb_limit_en": 1,
+            "logic_port_num": 2048, 
+            "default_entry_rsv_num": 5120,
+            "trie_sort_en": 0
+        }, 
+        "acl_cfg": {
+            "udf_fpa_en": 1,
+        },
+        "stacking_cfg": {
+            "hdr_glb": {
+                "cos": 7, 
+                "ether_type": "0x55bb", 
+                "ip_dscp": 63, 
+                "vlan_tpid": "0x8100", 
+                "ip_protocol": 255, 
+                "ip_ttl": 255, 
+                "ether_type_chk_en": 0, 
+                "ipv4": 0, 
+                "ipv6": "0,0,0,0", 
+                "udp_en": 0, 
+                "is_ipv4": 1, 
+                "mac_da_chk_en": 0
+            }, 
+            "trunk_mode": 0, 
+            "connect_glb": {
+                "member_port": [], 
+                "mode": 0, 
+                "member_num": 0
+            }, 
+            "fabric_mode": 0, 
+            "version": 0, 
+            "learning_mode": 2, 
+            "src_port_mode": 0, 
+            "mcast_mode": 0
+        }
+    },
+#lchip1#
+    {
+        #"init_flag" : "0XFFFFFFFF",#
+        "init_feature" : {
+            "mpls":1,
+            "aps":1,
+            "oam":1,
+            "ptp":1,        
+            "synce":1,
+            "stacking":1,
+            "bpe":0,
+            "ipfix":1,
+            "monitor":1,
+            "overlay":1,
+            "efd":1,
+            "fcoe":0,
+            "trill":0,
+            "wlan":0,
+            "npm":1,
+            "dot1ae":1,
+            "srv6":0,
+            "dtel":0,
+            "sc_oam":0,
+            "flexe":0
+        }, 
+        "chip_cfg": {
+            "cpu_port_en": 0, 
+            "cpu_mac_sa": 0, 
+            "cut_through_speed_bitmap": 0, 
+            "rchain_gchip": 0, 
+            "ecc_recover_en": 0, 
+            "normal_affinity_mask": 0, 
+            "vlanid": 0, 
+            "cpu_mac_da": [0], 
+            "rchain_en": 0, 
+            "cut_through_en": 0, 
+            "sdb_mem_size": 24341480,     #the cfg size can be shown by command(show chip sdb status)#
+            "wb_dm_mem_size" : 32047080,  #the cfg size can be shown by command(show warmboot status)#
+            "alpm_affinity_mask": 0, 
+            "lchip": 0, 
+            "cpu_port": 0, 
+            "tcam_scan_en": 0, 
+            "tpid": 0, 
+            "sdb_en": 1, 
+            "sdb_type": 1, 
+            "sdb_mem_addr": 0, 
+            "cut_through_speed": 0
+        }, 
+        "vlan_cfg": {
+            "vlanptr_mode": 0, 
+            "rsv0": []
+        }, 
+        "stats_cfg": {
+            "query_mode": 0, 
+            "stats_bitmap": "0x1d3", 
+            "policer_stats_num": 512, 
+            "mac_timer": 0, 
+            "stats_mode": 0
+        }, 
+        "intr_cfg": {
+            "irq": 69, 
+            "intr_mode": 1
+        }, 
+        "nh_cfg": {
+            "max_ecmp": 0, 
+            "max_external_nhid": 0, 
+            "max_tunnel_id": 1024, 
+            "acl_redirect_fwd_ptr_num": 0, 
+            "nh_edit_mode": 0, 
+            "rsv": [], 
+            "h_ecmp_en": 1,
+            "dsnh2_offset_en":0
+        }, 
+        "dma_cfg": {
+            "func_en_bitmap": "0x173", 
+            "stats": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 0, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "table_w_desc_num": 100, 
+            "ipfix": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 64, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_tx_ext": [{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 32, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 32, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }
+            ], 
+            "learning_proc_func": 0, 
+            "pkt_tx": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 0, 
+                "priority": 0, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_rx_chan_num": 4, 
+            "learning": {
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 128, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 0
+            }, 
+            "pkt_rx": [{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            },{
+                "dmasel": 0, 
+                "pkt_knet_en": 0, 
+                "desc_num": 1024, 
+                "priority": 120, 
+                "rsv": [], 
+                "data": 256
+            }
+            ], 
+            "pkt_rx_size_per_desc": 256, 
+            "hw_learning_sync_en": 0, 
+            "table_r_desc_num": 100, 
+            "pkt_tx_desc_num": 32
+        }, 
+        "ipfix_cfg": {
+            "aging_interval": 0, 
+            "new_flow_export_en": 0, 
+            "conflict_export": 0, 
+            "latency_type": 0, 
+            "threshold": 0, 
+            "dest_port_type": 0, 
+            "ignore_drop_reason": 0, 
+            "times_interval": 1000, 
+            "jitter_thrd": 0, 
+            "bytes_cnt": 9600, 
+            "pkt_cnt": 100, 
+            "drop_pkt_cnt": 0, 
+            "mirror_pkt_enable": 0, 
+            "tcp_end_detect_en": 1, 
+            "latency_thrd": 0, 
+            "max_export_entry_num": 0, 
+            "unkown_pkt_dest_type": 0, 
+            "conflict_cnt": 0, 
+            "export_interval": 100, 
+            "queue_drop_en": 0, 
+            "sample_mode": 0, 
+            "latency_ewma_weight": 0, 
+            "sw_learning_en": 0, 
+            "jitter_ewma_weight": 0, 
+            "egs_ipfix_disable": 0
+        }, 
+        "npm_cfg": {
+            "rsv": [], 
+            "emix_size": [0, 0, 0], 
+            "session_mode": 0
+        }, 
+        "ipuc_cfg": {
+            "host_use_lpm": 0, 
+            "prefix64_mode": 0, 
+            "user_data": 0, 
+            "callback": 0, 
+            "arc_disable": 0, 
+            "default_route_mode": 0, 
+            "use_hash8": 0, 
+            "rpf_check_port": 0
+        }, 
+        "l3if_cfg": {
+            "ipv6_vrf_en": 1, 
+            "keep_ivlan_en": 0, 
+            "max_vrfid_num": 256, 
+            "ipv4_vrf_en": 1
+        }, 
+        "pkt_cfg": {
+            "raw_mode_en": 0, 
+            "dma_tx_cb": 0, 
+            "rx_cb": 0, 
+            "socket_tx_cb": 0
+        }, 
+        "ptp_cfg": {
+            "intf_selected": 0, 
+            "delay_request_process_en": 1, 
+            "sync_copy_to_cpu_en": 0, 
+            "management_copy_to_cpu_en": 0, 
+            "port_based_ptp_en": 1, 
+            "ptp_ucast_en": 1, 
+            "use_internal_clock_en": 1, 
+            "signaling_copy_to_cpu_en": 0, 
+            "cache_aging_time": 60, 
+            "rsv": []
+        }, 
+        "oam_cfg": {
+            "tp_section_oam_based_l3if": 0, 
+            "tp_csf_clear": "0x1", 
+            "tp_csf_fdi": "0x1", 
+            "tp_csf_ach_chan_type": "0x40", 
+            "tp_y1731_ach_chan_type": "0x8902", 
+            "mpls_pw_vccv_with_ip_en": 0, 
+            "mep_index_alloc_by_sdk": 1, 
+            "maid_len_format": 3, 
+            "mep_1ms_num": 500, 
+            "tp_csf_los": "0x7", 
+            "tp_bfd_333ms": 0, 
+            "tp_csf_rdi": "0x2"
+        }, 
+        "qos_cfg": {
+            "policer_level": {
+                "ingress_port_level": 0, 
+                "egress_vlan_level": 0, 
+                "ingress_vlan_level": 0, 
+                "egress_port_level": 0
+            }, 
+            "queue_num_per_network_port": 8, 
+            "resrc_pool": {
+                "egs_pool_size": [0, 0, 0, 0, 0, 0], 
+                "igs_pool_mode": 0, 
+                "egs_pool_mode": 0, 
+                "igs_pool_size": [0, 0, 0, 0, 0, 0, 0]
+            }, 
+            "ingress_vlan_policer_num": 0, 
+            "queue_num_per_internal_port": 0, 
+            "service_queue_mode": 0, 
+            "max_cos_level": 0, 
+            "egress_vlan_policer_num": 0, 
+            "queue_num_for_cpu_reason": 128, 
+            "policer_merge_mode": 0, 
+        },  
+        "overlay_cfg": {
+            "nvgre_mode": 0, 
+            "vxlan_mode": 0, 
+            "vni_mapping_mode": 0, 
+            "cloud_sec_en": 0
+        }, 
+        "diag_cfg": {
+            "rsv": 0
+        }, 
+        "linkagg_cfg": {
+            "linkagg_mode": 6, 
+            "bind_gport_disable": 0, 
+            "rsv0": []
+        }, 
+        "port_cfg": {
+            "use_isolation_id": 0, 
+            "default_logic_port_en": 0, 
+            "isolation_group_mode": 0, 
+            "rsv0": 0
+        }, 
+        "srv6_cfg": {
+            "usid_prefix_len": 0,
+            "sid_format_bmp": 1,
+            "gsid_prefix_len": 0
+        }, 
+        "bpe_cfg": {
+            "is_port_extender": 0, 
+            "port_base": 0, 
+            "logic_port_en": 0, 
+            "intlk_mode": 0, 
+            "max_uc_ecid_id": 4096, 
+            "max_mc_ecid_id": 12288
+        }, 
+        "parser_cfg": {
+            "lb_hash_mode": 1, 
+            "dlb_efd_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "ecmp_hash_type": 1, 
+            "linkagg_hash_type": 1, 
+            "ecmp_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "linkagg_tunnel_hash_mode": [0, 0, 0, 0, 0, 0, 0, 0, 0], 
+            "small_frag_offset": 0
+        }, 
+        "l2_fdb_cfg": {
+            "hw_learn_en": 1, 
+            "flush_fdb_cnt_per_loop": 0, 
+            "static_fdb_limit_en": 1,
+            "logic_port_num": 1024, 
+            "equal": 0, 
+            "stp_mode": 3, 
+            "default_entry_rsv_num": 5120, 
+            "trie_sort_en": 0
+        }, 
+        "acl_cfg": {
+            "udf_fpa_en": 1,
+        },
+        "stacking_cfg": {
+            "hdr_glb": {
+                "cos": 7, 
+                "ether_type": "0x55bb", 
+                "ip_dscp": 63, 
+                "vlan_tpid": "0x8100", 
+                "ip_protocol": 255, 
+                "ip_ttl": 255, 
+                "ether_type_chk_en": 0, 
+                "ipv4": 0, 
+                "ipv6": "0,0,0,0", 
+                "udp_en": 0, 
+                "is_ipv4": 1, 
+                "mac_da_chk_en": 0
+            }, 
+            "trunk_mode": 0, 
+            "connect_glb": {
+                "member_port": [], 
+                "mode": 0, 
+                "member_num": 0
+            }, 
+            "fabric_mode": 0, 
+            "version": 0, 
+            "learning_mode": 2, 
+            "src_port_mode": 0, 
+            "mcast_mode": 0
+        }
+    }]
+}
+

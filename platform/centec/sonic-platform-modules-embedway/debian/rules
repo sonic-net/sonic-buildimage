@@ -10,19 +10,14 @@ MOD_SRC_DIR:= $(shell pwd)
 	dh $@
 
 override_dh_auto_build:
-	rm $(MOD_SRC_DIR)/centec-dal -rf
-	cp $(MOD_SRC_DIR)/../centec-dal $(MOD_SRC_DIR)/centec-dal -rf
-	make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/centec-dal
+	true
 
 override_dh_auto_install:
 	dh_installdirs -pplatform-modules-embedway-es6220 \
 		$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-	cp -f $(MOD_SRC_DIR)/centec-dal/*.ko debian/platform-modules-embedway-es6220/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)
+	true
 
 override_dh_usrlocal:
 
 override_dh_clean:
 	dh_clean
-	make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/centec-dal clean; \
-		rm -rf $(MOD_SRC_DIR)/centec-dal/*.ko; \
-		rm $(MOD_SRC_DIR)/centec-dal/ -rf

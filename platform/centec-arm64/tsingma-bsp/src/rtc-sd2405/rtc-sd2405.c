@@ -186,7 +186,7 @@ static const struct rtc_class_ops sd2405_rtc_ops = {
 };
 
 static int
-sd2405_probe(struct i2c_client *client, const struct i2c_device_id *id)
+sd2405_probe(struct i2c_client *client)
 {
 	int ret = 0;
 	struct rtc_device *rtc;

@@ -31,6 +31,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/udp.h>
@@ -170,7 +171,7 @@ error:
 	return err;
 }
 
-static int ctc_mdio_remove(struct platform_device *pdev)
+static void ctc_mdio_remove(struct platform_device *pdev)
 {
 	struct device *device = &pdev->dev;
 	struct mii_bus *bus = dev_get_drvdata(device);
@@ -180,8 +181,6 @@ static int ctc_mdio_remove(struct platform_device *pdev)
 
 	iounmap(priv->map);
 	mdiobus_free(bus);
-
-	return 0;
 }
 
 static struct platform_driver ctc_mdio_driver = {

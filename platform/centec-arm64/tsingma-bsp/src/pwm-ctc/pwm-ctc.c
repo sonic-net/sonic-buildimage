@@ -41,12 +41,11 @@
 struct ctc_pwm_chip {
 	void __iomem *base;
 	struct regmap *regmap_base;
-	struct pwm_chip chip;
 };
 
 static inline struct ctc_pwm_chip *to_ctc_pwm_chip(struct pwm_chip *chip)
 {
-	return container_of(chip, struct ctc_pwm_chip, chip);
+	return pwmchip_get_drvdata(chip);
 }
 
 static inline void ctc_pwm_writel(struct ctc_pwm_chip *chip, unsigned int num,
@@ -206,12 +205,12 @@ static const struct pwm_ops ctc_pwm_ops = {
 	//.disable = ctc_pwm_disable,
 	.get_state = ctc_pwm_get_state,
 	.capture = ctc_pwm_capture,
-	.owner = THIS_MODULE,
 };
 
 static int ctc_pwm_probe(struct platform_device *pdev)
 {
 	struct pinctrl_dev *pctldev;
+	struct pwm_chip *chip;
 	struct ctc_pwm_chip *pc;
 	struct pinctrl_state *state;
 
@@ -219,9 +218,10 @@ static int ctc_pwm_probe(struct platform_device *pdev)
 	int i;
 	u32 cur_value;
 
-	pc = devm_kzalloc(&pdev->dev, sizeof(*pc), GFP_KERNEL);
-	if (!pc)
-		return -ENOMEM;
+	chip = devm_pwmchip_alloc(&pdev->dev, CTC_NUM_PWM, sizeof(*pc));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+	pc = to_ctc_pwm_chip(chip);
 
 	pc->regmap_base = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 							  "ctc,sysctrl");
@@ -240,28 +240,13 @@ static int ctc_pwm_probe(struct platform_device *pdev)
 		ctc_pwm_writel(pc, i, CTC_CR_PWM, cur_value);
 	}
 
-	platform_set_drvdata(pdev, pc);
-	pc->chip.dev = &pdev->dev;
-	pc->chip.ops = &ctc_pwm_ops;
-	pc->chip.base = -1;
-	pc->chip.npwm = CTC_NUM_PWM;
+	chip->ops = &ctc_pwm_ops;
 
-	ret = pwmchip_add(&pc->chip);
+	ret = devm_pwmchip_add(&pdev->dev, chip);
 	if (ret < 0)
-		return -1;
+		return ret;
 
 	return 0;
-}
-
-static void ctc_pwm_remove(struct platform_device *pdev)
-{
-	struct ctc_pwm_chip *pc = platform_get_drvdata(pdev);
-	int i;
-
-	for (i = 0; i < CTC_NUM_PWM; i++)
-		pwm_disable(&pc->chip.pwms[i]);
-
-	pwmchip_remove(&pc->chip);
 }
 
 static const struct of_device_id ctc_pwm_of_match[] = {
@@ -277,7 +262,6 @@ static struct platform_driver ctc_pwm_driver = {
 		   .of_match_table = ctc_pwm_of_match,
 		   },
 	.probe = ctc_pwm_probe,
-	.remove_new = ctc_pwm_remove,
 };
 
 module_platform_driver(ctc_pwm_driver);

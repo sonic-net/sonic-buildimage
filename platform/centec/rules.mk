@@ -2,6 +2,7 @@ include $(PLATFORM_PATH)/platform-modules-centec-e582.mk
 include $(PLATFORM_PATH)/platform-modules-embedway.mk
 include $(PLATFORM_PATH)/platform-modules-centec-v682.mk
 include $(PLATFORM_PATH)/sai.mk
+include $(PLATFORM_PATH)/dal.mk
 include $(PLATFORM_PATH)/docker-syncd-centec.mk
 include $(PLATFORM_PATH)/docker-syncd-centec-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-centec.mk
@@ -15,6 +16,8 @@ $(SYNCD)_DEPENDS += $(CENTEC_SAI) $(CENTEC_SAI_DEV)
 $(SYNCD)_UNINSTALLS += $(CENTEC_SAI_DEV) $(CENTEC_SAI)
 
 ifeq ($(ENABLE_SYNCD_RPC),y)
+# Remove the libthrift_0.11.0 dependency injected by rules/syncd.mk
+$(SYNCD)_DEPENDS := $(filter-out $(LIBTHRIFT_DEV),$($(SYNCD)_DEPENDS))
 $(SYNCD)_DEPENDS += $(LIBSAITHRIFT_DEV)
 endif
 

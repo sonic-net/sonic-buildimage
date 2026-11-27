@@ -42,16 +42,16 @@ function load_kernel_modules()
     depmod -a
     modprobe i2c-dev
     modprobe centec_v682_48y8c_d_platform
-    modprobe dal
     modprobe tun
     modprobe tap
+    modprobe psample
 }
 
 function remove_kernel_modules()
 {
+    modprobe -r psample
     modprobe -r tap
     modprobe -r tun
-    modprobe -r dal
     modprobe -r centec_v682_48y8c_d_platform
     modprobe -r i2c-dev
 }
