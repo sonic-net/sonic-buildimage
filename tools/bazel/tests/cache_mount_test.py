@@ -130,6 +130,9 @@ print(json.dumps({'output': str(args.output)}))
              "SONIC_DPKG_CACHE_SOURCE ?=", "sonic_bazel_dev_repo_contents =",
              "SONIC_BAZEL_REPO_CONTENTS_SOURCE ?=")))
         environment = dict(os.environ)
+        # The real Makefile sets USER from id -un before it reads the defaults.
+        uid = os.geteuid() if run_as is None else run_as.pw_uid
+        environment["USER"] = pwd.getpwuid(uid).pw_name
         for name in ("BUILD_WITH_BAZEL_WHEN_AVAILABLE", "SONIC_BAZEL_CACHE_SOURCE",
                      "SONIC_DPKG_CACHE_SOURCE", "SONIC_BAZEL_REPO_CONTENTS_SOURCE", "MAKEFLAGS", "MFLAGS"):
             environment.pop(name, None)
@@ -183,14 +186,15 @@ check:
                          developer_home=directory / "developer's home")
 
     def test_default_uses_package_cache_location_independently_of_selector(self):
-        """Retain the shared cache location for all Bazel consumers and allow an explicit opt-out."""
+        """Both selector modes mount the build user's cache and honor explicit paths."""
+        user = pwd.getpwuid(os.geteuid()).pw_name
         # Only expand the default: never create or alter the user's real cache.
         makefile = ".PHONY: check\ncheck:\n\t@printf '%s\\n' '$(SONIC_BAZEL_CACHE_SOURCE)'\n"
         for mode, source, package_cache, expected in (
-            ("n", None, None, "/var/cache/sonic/artifacts/bazel"),
-            ("y", None, None, "/var/cache/sonic/artifacts/bazel"),
-            ("n", None, "/example/packages", "/example/packages/bazel"),
-            ("y", None, "/example/packages", "/example/packages/bazel"),
+            ("n", None, None, f"/var/cache/sonic/artifacts/bazel/{user}"),
+            ("y", None, None, f"/var/cache/sonic/artifacts/bazel/{user}"),
+            ("n", None, "/example/packages", f"/example/packages/bazel/{user}"),
+            ("y", None, "/example/packages", f"/example/packages/bazel/{user}"),
             ("y", "", "/example/packages", ""),
             ("n", "/example/cache", "/example/packages", "/example/cache"),
         ):
@@ -235,7 +239,7 @@ check:
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 directory = Path(temporary)
                 package_cache = directory / "packages"
-                source = package_cache / "bazel"
+                source = package_cache / "bazel" / pwd.getpwuid(os.geteuid()).pw_name
                 result = self.cache_mount(directory, mode, package_cache=package_cache)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 record = json.loads(result.stdout)
@@ -250,6 +254,7 @@ check:
                 self.assertTrue(json.loads(repeat.stdout)["reused_prepared"])
                 self.assertEqual(record["mounts"]["/bazel_cache"], [str(source), "rw"])
                 self.assertEqual(record["source_owner"], os.getuid())
+                self.assertEqual(source.stat().st_mode & 0o777, 0o700)
                 self.assertTrue((source / "container-cache-write").is_file())
                 self.assert_system_cache_settings(record)
 
