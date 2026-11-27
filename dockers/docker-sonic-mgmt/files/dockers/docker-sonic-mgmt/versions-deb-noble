@@ -15,7 +15,6 @@ binutils-x86-64-linux-gnu==2.42-4ubuntu2.10
 build-essential==12.10ubuntu1
 bzip2==1.0.8-5.1ubuntu0.1
 ca-certificates==20260816ubuntu0.24.04.1
-ca-certificates-java==20240118
 cmake==3.28.3-1build7
 cmake-data==3.28.3-1build7
 conserver-client==8.2.7-2build2
@@ -32,8 +31,6 @@ dbus-system-bus-common==1.14.10-4ubuntu4.1
 dbus-user-session==1.14.10-4ubuntu4.1
 dconf-gsettings-backend==0.40.0-4ubuntu0.1
 dconf-service==0.40.0-4ubuntu0.1
-default-jre==2:1.21-75+exp1
-default-jre-headless==2:1.21-75+exp1
 dirmngr==2.4.4-2ubuntu17.6
 distro-info-data==2026.10.12-0ubuntu0.24.04.1
 dmsetup==2:1.02.185-3ubuntu3.2
@@ -82,7 +79,6 @@ iputils-ping==3:20240117-1ubuntu0.1
 isc-dhcp-client==4.4.3-P1-4ubuntu2
 isc-dhcp-common==4.4.3-P1-4ubuntu2
 iso-codes==4.16.0-1
-java-common==0.75+exp1
 javascript-common==11+nmu1
 jq==1.7.1-3ubuntu0.24.04.2
 keyboxd==2.4.4-2ubuntu17.6
@@ -100,8 +96,6 @@ libasan8==14.2.0-4ubuntu2~24.04.1
 libasound2-data==1.2.11-1ubuntu0.3
 libasound2t64==1.2.11-1ubuntu0.3
 libatk-bridge2.0-0t64==2.52.0-1build1
-libatk-wrapper-java==0.40.0-3build2
-libatk-wrapper-java-jni==0.40.0-3build2
 libatk1.0-0t64==2.52.0-1build1
 libatm1t64==1:2.5.1-5.1build1
 libatomic1==14.2.0-4ubuntu2~24.04.1
@@ -349,8 +343,6 @@ mesa-vulkan-drivers==25.2.8-0ubuntu0.24.04.4
 ncurses-term==6.4+20240113-1ubuntu2.2
 netbase==6.4
 networkd-dispatcher==2.2.4-1
-openjdk-21-jre==21.0.12.1+1-1~24.04.4
-openjdk-21-jre-headless==21.0.12.1+1-1~24.04.4
 openssh-client==1:9.6p1-3ubuntu13.20
 openssh-server==1:9.6p1-3ubuntu13.20
 openssh-sftp-server==1:9.6p1-3ubuntu13.20
