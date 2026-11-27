@@ -31,11 +31,23 @@ miim_intr_enable=0
 module_64ports=1
 port_flex_enable=1
 schan_intr_enable=0
-stable_size=0x5500000 ;Specify the stable cache size in bytes used for Warm boot operations
-tdma_timeout_usec=3000000 
+stable_size=0x5800000 ;Specify the stable cache size in bytes used for Warm boot operations
+tdma_timeout_usec=3000000
 skip_L2_USER_ENTRY=0
 bcm_tunnel_term_compatible_mode=1
 l3_alpm_ipv6_128b_bkt_rsvd=1
+
+#riot vxlan
+#dport_map_direct=1
+flow_init_mode=1
+riot_enable=1
+riot_overlay_l3_intf_mem_size=4096
+riot_overlay_l3_egress_mem_size=8192
+l3_ecmp_levels=2
+riot_overlay_ecmp_resilient_hash_size=16384
+use_all_splithorizon_groups=1
+host_as_route_disable=1
+sai_tunnel_support=1
 
 #FC0
 dport_map_port_1=2
@@ -527,8 +539,8 @@ phy_chain_tx_polarity_flip_physical{76.0}=0x0
 
 #FC19
 
-dport_map_port_64=64
-portmap_64=81:10:m
-phy_chain_rx_polarity_flip_physical{81.0}=0x1
-phy_chain_tx_polarity_flip_physical{81.0}=0x1
+#dport_map_port_64=64
+#portmap_64=81:10:m
+#phy_chain_rx_polarity_flip_physical{81.0}=0x1
+#phy_chain_tx_polarity_flip_physical{81.0}=0x1
 
