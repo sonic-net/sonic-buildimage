@@ -232,7 +232,8 @@ jobs:
         run: |
           test "$(uname -m)" = x86_64
           test "$(bazel --version)" = 'bazel 8.5.1'
-          python3 -B tools/bazel/ci/resources.py --configure
+          # The full installer graph needs extra server heap when retrying evicted cache entries.
+          python3 -B tools/bazel/ci/resources.py --configure --jvm-heap-mb 4096
       - name: Preserve standard native repository and remote caches
         run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
       - name: Configure and verify job-private Bazel startup

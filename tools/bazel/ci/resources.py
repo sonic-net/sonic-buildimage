@@ -9,6 +9,8 @@ JVM_HEAP_MB = 2048
 
 
 def memory_budget_mb(host_bytes, limits, heap_mb=JVM_HEAP_MB):
+    if heap_mb <= 0:
+        raise ValueError("JVM heap reserve must be positive")
     available = min([host_bytes, *limits]) // 1024**2
     budget = int((available - heap_mb) * .8)
     if budget <= 0:
@@ -16,7 +18,7 @@ def memory_budget_mb(host_bytes, limits, heap_mb=JVM_HEAP_MB):
     return budget
 
 
-def action_memory_mb(cgroup_root=Path('/sys/fs/cgroup'), proc=Path('/proc')):
+def action_memory_mb(cgroup_root=Path('/sys/fs/cgroup'), proc=Path('/proc'), *, heap_mb=JVM_HEAP_MB):
     host_bytes = os.sysconf('SC_PHYS_PAGES') * os.sysconf('SC_PAGE_SIZE')
     limits = []
     # Cgroup namespaces may expose the job group directly as the mount root.
@@ -36,31 +38,33 @@ def action_memory_mb(cgroup_root=Path('/sys/fs/cgroup'), proc=Path('/proc')):
             value = path.read_text().strip()
             if value != 'max':
                 limits.append(int(value))
-    return memory_budget_mb(host_bytes, limits)
+    return memory_budget_mb(host_bytes, limits, heap_mb)
 
 
-def build_options():
+def build_options(heap_mb=JVM_HEAP_MB):
     # Bazel 6.4 in the P4 runtime checks and Bazel 8.5.1 both accept this flag.
-    return ['--local_ram_resources=' + str(action_memory_mb())]
+    return ['--local_ram_resources=' + str(action_memory_mb(heap_mb=heap_mb))]
 
 
-def configure(workspace, home):
-    budget = action_memory_mb()
-    lines = f'startup --host_jvm_args=-Xmx{JVM_HEAP_MB}m\nbuild --local_ram_resources={budget}\n'
+def configure(workspace, home, heap_mb=JVM_HEAP_MB):
+    budget = action_memory_mb(heap_mb=heap_mb)
+    lines = f'startup --host_jvm_args=-Xmx{heap_mb}m\nbuild --local_ram_resources={budget}\n'
     # Preserve cache settings and all existing non-resource configuration.
     for path in {workspace / '.bazelrc.user', home / '.bazelrc'}:
         current = path.read_text() if path.exists() else ''
         separator = '\n' if current and not current.endswith('\n') else ''
         path.write_text(current + separator + lines)
-    print(json.dumps({'jvm_heap_mb': JVM_HEAP_MB, 'action_memory_mb': budget,
+    print(json.dumps({'jvm_heap_mb': heap_mb, 'action_memory_mb': budget,
                       'cpu_policy': 'bazel_default'}))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--configure', action='store_true')
+    parser.add_argument('--jvm-heap-mb', type=int, default=JVM_HEAP_MB,
+                        help='Reserve this many MiB for the Bazel server before budgeting actions')
     args = parser.parse_args()
     if args.configure:
-        configure(Path.cwd(), Path.home())
+        configure(Path.cwd(), Path.home(), args.jvm_heap_mb)
     else:
-        print(build_options()[0])
+        print(build_options(args.jvm_heap_mb)[0])
