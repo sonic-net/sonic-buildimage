@@ -1,6 +1,8 @@
 import json
 import subprocess
 import os
+import shutil
+import tempfile
 import tests.common_utils as utils
 
 from unittest import TestCase
@@ -92,6 +94,41 @@ class TestCfgGen(TestCase):
         argument = ['-v', "(MGMT_INTERFACE.keys()|list)[0]", '-M', self.sample_device_desc]
         output = self.run_script(argument)
         self.assertEqual(output.strip(), "('eth0', '10.0.1.5/28')")
+
+    def test_device_desc_does_not_import_full_minigraph_parser(self):
+        guard_dir = tempfile.mkdtemp()
+        marker_file = os.path.join(guard_dir, 'sitecustomize-loaded')
+        try:
+            sitecustomize = os.path.join(guard_dir, 'sitecustomize.py')
+            with open(sitecustomize, 'w') as f:
+                f.write(
+                    "import sys\n"
+                    "with open({0!r}, 'w') as marker:\n"
+                    "    marker.write('loaded')\n"
+                    "class BlockMinigraphImports(object):\n"
+                    "    def _check(self, fullname):\n"
+                    "        if fullname in ('minigraph', 'minigraph_ext'):\n"
+                    "            raise ImportError('blocked full minigraph parser import: ' + fullname)\n"
+                    "    def find_spec(self, fullname, path=None, target=None):\n"
+                    "        self._check(fullname)\n"
+                    "        return None\n"
+                    "    def find_module(self, fullname, path=None):\n"
+                    "        self._check(fullname)\n"
+                    "        return None\n"
+                    "sys.meta_path.insert(0, BlockMinigraphImports())\n".format(marker_file)
+                )
+
+            env = os.environ.copy()
+            env['PYTHONPATH'] = guard_dir + os.pathsep + env.get('PYTHONPATH', '')
+            argument = ['-v', "DEVICE_METADATA['localhost']['hwsku']", '-M', self.sample_device_desc]
+            output = subprocess.check_output(self.script_file + argument, env=env)
+            if utils.PY3x:
+                output = output.decode()
+
+            self.assertTrue(os.path.isfile(marker_file))
+            self.assertEqual(output.strip(), 'ACS-MSN2700')
+        finally:
+            shutil.rmtree(guard_dir)
 
     def test_minigraph_hostname(self):
         argument = ['-v', "DEVICE_METADATA[\'localhost\'][\'hostname\']", '-m', self.sample_graph, "-p", self.port_config]
