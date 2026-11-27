@@ -1,5 +1,6 @@
 import copy
 import re
+import threading
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
 def mock_is_vrf_name_valid(name):
@@ -20,7 +21,11 @@ mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 def test_contructor():
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
+    subscription_ready = threading.Event()
+    pubsub = daemon.config_db.get_redis_client.return_value.pubsub.return_value
+    pubsub.psubscribe.side_effect = lambda *args, **kwargs: subscription_ready.set()
     daemon.start()
+    assert subscription_ready.wait(timeout=5), "listener thread did not subscribe within 5 seconds"
     for table, hdlr in daemon.table_handler_list:
         daemon.config_db.subscribe.assert_any_call(table, hdlr)
     daemon.config_db.pubsub.psubscribe.assert_called_once()
