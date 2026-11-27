@@ -12,7 +12,6 @@ from decimal import Decimal
 from fru import ipmifru
 from cust_fru import CustFru
 
-
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
 BOARD_ID_PATH = "/sys/module/platform_common/parameters/dfd_my_type"
 BOARD_AIRFLOW_PATH = "/etc/sonic/.airflow"
