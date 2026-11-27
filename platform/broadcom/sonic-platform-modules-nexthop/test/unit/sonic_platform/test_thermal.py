@@ -9,6 +9,7 @@ These tests run in isolation from the SONiC environment using pytest:
 python -m pytest test/unit/sonic_platform/test_thermal.py -v
 """
 
+import threading
 import time
 import types
 from unittest.mock import Mock, call, patch
@@ -1138,6 +1139,48 @@ class TestSfpThermal:
             # Values should remain cached (unchanged)
             assert sfp_th.get_high_threshold() == 75.0
             assert sfp_th.get_low_threshold() == 10.5
+
+    def test_state_db_reads_do_not_overlap(self, thermal_module, pddf_platform):
+        """thermalctld reads the same thermal from ThermalMonitor and from the policy loop.
+        The thermal's STATE_DB connector is not thread-safe, so two reads must never overlap."""
+        mock_data_in_swsscommon("STATE_DB", "TRANSCEIVER_DOM_TEMPERATURE", {
+            "Ethernet48": {"temperature": "40.0"},
+        })
+        mock_data_in_swsscommon("STATE_DB", "TRANSCEIVER_DOM_THRESHOLD", {
+            "Ethernet48": {"temphighwarning": "70.0"},
+        })
+        sfp = Mock()
+        sfp.get_name.return_value = 'sfp13'
+        sfp.get_presence.return_value = True
+        sfp.get_position_in_parent.return_value = 13
+
+        with patch.object(thermal_module.PortIndexMapper, 'get_interface_name', return_value='Ethernet48'):
+            sfp_th = thermal_module.SfpThermal(sfp, pddf_platform)
+            db = sfp_th._get_state_db()
+            real_get_all = db.get_all
+            first_in, release, second_in = threading.Event(), threading.Event(), threading.Event()
+
+            def get_all(*args, **kwargs):
+                if first_in.is_set():
+                    second_in.set()
+                else:
+                    first_in.set()
+                    release.wait(5)
+                return real_get_all(*args, **kwargs)
+
+            with patch.object(db, 'get_all', side_effect=get_all):
+                t1 = threading.Thread(target=sfp_th.get_temperature)
+                t2 = threading.Thread(target=sfp_th.maybe_update_threshold_info)
+                t1.start()
+                assert first_in.wait(5)
+                t2.start()
+                overlapped = second_in.wait(0.2)
+                release.set()
+                t1.join(5)
+                t2.join(5)
+
+            assert not overlapped
+            assert second_in.is_set()
 
     @pytest.mark.parametrize("tz", ["UTC", "Asia/Shanghai", "America/Los_Angeles"])
     def test_temperature_stale_check_uses_utc(self, thermal_module, pddf_platform, monkeypatch, tz):
