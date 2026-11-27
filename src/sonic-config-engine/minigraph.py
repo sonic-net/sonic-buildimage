@@ -88,6 +88,7 @@ CHASSIS_CARD_FABRIC = 'Fabric'
 voq_internal_intfs =  ['cpu', 'recirc', 'inband']
 hwskus_mtu1500 = ['M2-W5000-48CON2SFP']
 
+
 def get_asic_switch_id(slot_index, asic_name):
     asic_id = 0
     if slot_index is None:
