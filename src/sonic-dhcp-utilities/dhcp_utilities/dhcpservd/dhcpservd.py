@@ -18,6 +18,8 @@ from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
 KEA_DHCP4_PROC_NAME = "kea-dhcp4"
+# Mode the config had before candidates were written through NamedTemporaryFile, which creates 0600 files
+KEA_DHCP4_CONFIG_MODE = 0o644
 KEA_VALIDATION_TIMEOUT = 30
 KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DHCPSERVD_READY_FLAG = "/tmp/dhcpservd_ready"
@@ -107,6 +109,7 @@ class DhcpServd(object):
                 delete=False
             ) as candidate:
                 candidate_path = candidate.name
+                os.fchmod(candidate.fileno(), KEA_DHCP4_CONFIG_MODE)
                 candidate.write(kea_dhcp4_config)
                 candidate.flush()
                 os.fsync(candidate.fileno())

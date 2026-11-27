@@ -100,6 +100,7 @@ def get_vlan_subnets(dbconn, dhcp_interface):
     return subnets
 
 
+# hiredis REDIS_REPLY_INTEGER; the swsscommon Python bindings do not expose reply type constants
 REDIS_REPLY_INTEGER = 3
 
 

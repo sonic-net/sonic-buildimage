@@ -2,6 +2,8 @@ import pytest
 import json
 import psutil
 import sys
+import os
+import stat
 import time
 from types import SimpleNamespace
 from common_utils import MockProc, mock_get_config_db_table
@@ -67,6 +69,7 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker, tm
             expected_content = file.read()
             actual_content = output.read()
             assert json.loads(expected_content) == json.loads(actual_content)
+        assert stat.S_IMODE(os.stat(config_path).st_mode) == 0o644
         # Verify whether notify func of dhcpservd is called, which is expected to call after new config generated
         mock_notify_kea_dhcp4_proc.assert_called_once_with()
         if enabled_checker is None:
