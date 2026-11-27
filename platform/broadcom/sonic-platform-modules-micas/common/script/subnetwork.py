@@ -28,6 +28,7 @@ def start():
     retry_count = 10
     subnet_cmds = []
     subnet_cmds.append("ip link add link eth0 name eth0.4088 type vlan id 4088")
+    subnet_cmds.append("sysctl net/ipv6/conf/eth0.4088/disable_ipv6=0")    
     subnet_cmds.append("ip -6 addr replace fe80::2/64 dev eth0.4088")
     subnet_cmds.append("ip link set dev eth0.4088 up")
 
