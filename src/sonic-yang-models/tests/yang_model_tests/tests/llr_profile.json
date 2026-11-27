@@ -1,0 +1,44 @@
+{
+    "LLR_PROFILE_VALID": {
+        "desc": "Valid LLR_PROFILE entry with all fields."
+    },
+    "LLR_PROFILE_VALID_DEFAULTS_ONLY": {
+        "desc": "Valid LLR_PROFILE entry with only mandatory fields set."
+    },
+    "LLR_PROFILE_MISSING_MANDATORY_FRAMES": {
+        "desc": "Missing mandatory max_outstanding_frames.",
+        "eStrKey": "Mandatory"
+    },
+    "LLR_PROFILE_MISSING_MANDATORY_BYTES": {
+        "desc": "Missing mandatory max_outstanding_bytes.",
+        "eStrKey": "Mandatory"
+    },
+    "LLR_PROFILE_INVALID_INIT_ACTION": {
+        "desc": "Invalid init_action enum value.",
+        "eStrKey": "InvalidValue"
+    },
+    "LLR_PROFILE_INVALID_FLUSH_ACTION": {
+        "desc": "Invalid flush_action enum value.",
+        "eStrKey": "InvalidValue"
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_REPLAY_COUNT": {
+        "desc": "max_replay_count out of range (>255, exceeds uint8 max bound).",
+        "eStrKey": "Bounds"
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_REPLAY_COUNT_ZERO": {
+        "desc": "max_replay_count out of range (0, min is 1).",
+        "eStrKey": "Range"
+    },
+    "LLR_PROFILE_CTLOS_BELOW_MIN": {
+        "desc": "ctlos_spacing_bytes below minimum (400).",
+        "eStrKey": "Range"
+    },
+    "LLR_PROFILE_CTLOS_ABOVE_MAX": {
+        "desc": "ctlos_spacing_bytes above maximum (16384).",
+        "eStrKey": "Range"
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_OUTSTANDING_FRAMES": {
+        "desc": "max_outstanding_frames out of range (>524288).",
+        "eStrKey": "Range"
+    }
+}
