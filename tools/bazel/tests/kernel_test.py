@@ -1316,7 +1316,8 @@ class KernelWorkflowTest(unittest.TestCase):
 
     def test_amd64_vs_handoff_and_standalone_kernel_lanes(self):
         self.assertIn("""inputs.vs_artifact_id && '["amd64"]' || github.event_name == 'workflow_dispatch' && '["amd64","arm64"]' || '["arm64"]'""", self.workflow)
-        self.assertIn("inputs.vs_artifact_id && 'vs' || 'standalone'", self.workflow)
+        group = re.search(r"^  group: (.+)$", self.workflow, re.MULTILINE).group(1)
+        self.assertIn("inputs.vs_artifact_id && format('vs-{0}', github.sha) || 'standalone'", group)
         self.assertIn("inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha", self.workflow)
         self.assertIn("artifact-ids: ${{ inputs.vs_artifact_id }}", self.steps["Download kernel DEBs consumed by the VS installer"])
         self.assertIn("if: inputs.vs_artifact_id == ''", self.steps["Build registry kernel outputs in the root module graph"])

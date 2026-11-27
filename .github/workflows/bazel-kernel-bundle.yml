@@ -21,7 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: bazel-kernel-bundle-${{ inputs.vs_artifact_id && 'vs' || 'standalone' }}-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}
+  # VS installers may finish out of order. Each revision must validate its own handoff.
+  group: bazel-kernel-bundle-${{ inputs.vs_artifact_id && format('vs-{0}', github.sha) || 'standalone' }}-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
