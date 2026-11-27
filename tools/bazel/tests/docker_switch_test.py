@@ -169,6 +169,7 @@ class DockerSwitchCacheTest(ArchiveRecipeFixture, unittest.TestCase):
             subprocess.run(command, cwd=self.root, check=True, capture_output=True, text=True)
         self.makefile += """
 RULES_PATH = rules
+SLAVE_BASE_TAG = fixture-trixie
 SONIC_DPKG_CACHE_METHOD = rwcache
 SONIC_DOCKER_IMAGES = telemetry.gz routing.gz
 SONIC_DOCKER_DBG_IMAGES = telemetry-dbg.gz routing-dbg.gz
