@@ -9,5 +9,9 @@
     "DHCPv6_OPTION_WITH_INVALID_BOOLEAN_TYPE": {
         "desc": "Add dhcpv6 option with invalid option boolean types.",
         "eStrKey": "Pattern"
+    },
+    "DHCPV6_RELAY_VLAN_MISSING": {
+        "desc": "Reject DHCP_RELAY on a VLAN that does not exist.",
+        "eStrKey": "LeafRef"
     }
 }

@@ -168,5 +168,44 @@
     "VLAN_INTERFACE_WITH_MISSING_VNET": {
         "desc": "Attempt to reference VNET name without the VNET being present.",
         "eStrKey": "LeafRef"
+    },
+    "VLAN_DHCPV4_WITH_NO_IP": {
+        "desc": "Reject VLAN.dhcp_servers with no ip.",
+        "eStr": [
+            "DHCPv4 servers require an IPv4 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_DHCPV4_WITH_WRONG_IP_FAMILY": {
+        "desc": "Reject VLAN.dhcp_servers with wrong ip family.",
+        "eStr": [
+            "DHCPv4 servers require an IPv4 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_DHCPV4_WITH_IP_ON_OTHER_VLAN": {
+        "desc": "Reject VLAN.dhcp_servers with ip on other vlan.",
+        "eStr": [
+            "DHCPv4 servers require an IPv4 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_DHCPV6_WITH_NO_IP": {
+        "desc": "Reject VLAN.dhcpv6_servers with no ip.",
+        "eStr": [
+            "DHCPv6 servers require an IPv6 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_DHCPV6_WITH_WRONG_IP_FAMILY": {
+        "desc": "Reject VLAN.dhcpv6_servers with wrong ip family.",
+        "eStr": [
+            "DHCPv6 servers require an IPv6 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_DHCPV6_WITH_IP_ON_OTHER_VLAN": {
+        "desc": "Reject VLAN.dhcpv6_servers with ip on other vlan.",
+        "eStr": [
+            "DHCPv6 servers require an IPv6 prefix on the same VLAN"
+        ]
+    },
+    "VLAN_EMPTY_DHCP_SERVER_LISTS_WITHOUT_IP": {
+        "desc": "Allow a bare VLAN without an IP when both DHCP server lists are empty."
     }
 }

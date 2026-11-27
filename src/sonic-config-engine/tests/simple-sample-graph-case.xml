@@ -182,6 +182,21 @@
           <AttachTo>ab1</AttachTo>
           <Prefix>192.168.1.1/27</Prefix>
         </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>ab1</AttachTo>
+          <Prefix>fc02:1000::1/64</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>ab2</AttachTo>
+          <Prefix>192.168.200.1/27</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>ab2</AttachTo>
+          <Prefix>fc02:1001::1/64</Prefix>
+        </IPInterface>
       </IPInterfaces>
       <DataAcls/>
       <AclInterfaces>
