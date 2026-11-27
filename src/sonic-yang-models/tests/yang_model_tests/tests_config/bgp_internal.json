@@ -170,5 +170,176 @@
                 }
             }
         }
+    },
+    "BGP_INTERNAL_VLAN_NEIGHBOR_VALID": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "Vlan100",
+                        "asn": "65001",
+                        "name": "ASIC0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_VLAN_NEIGHBOR_MISSING": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "Vlan100",
+                        "asn": "65001",
+                        "name": "ASIC0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_SUBINTF_NEIGHBOR_VALID": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "Ethernet0.10",
+                        "asn": "65001",
+                        "name": "ASIC0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0",
+                        "speed": 25000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0.10"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_SUBINTF_NEIGHBOR_MISSING": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "Ethernet0.10",
+                        "asn": "65001",
+                        "name": "ASIC0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0",
+                        "speed": 25000,
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
+    },
+    "BGP_INTERNAL_VLAN_NEIGHBOR_4095": {
+        "sonic-bgp-internal-neighbor:sonic-bgp-internal-neighbor": {
+            "sonic-bgp-internal-neighbor:BGP_INTERNAL_NEIGHBOR": {
+                "BGP_INTERNAL_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "Vlan4095",
+                        "asn": "65001",
+                        "name": "ASIC0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "MASIC",
+                    "platform": "multi-asic"
+                }
+            }
+        }
     }
 }

@@ -97,6 +97,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_WITH_INVALID_VLAN": {
@@ -130,6 +139,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
@@ -144,6 +162,15 @@
                         "netmask": "255.255.255.300",
                         "customized_options": [],
                         "state": "enabled"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
                     }
                 ]
             }
@@ -163,6 +190,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_MODE_WRONG_VALUE": {
@@ -176,6 +212,15 @@
                         "mode": "pool",
                         "netmask": "255.255.255.0",
                         "state": "enabled"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
                     }
                 ]
             }
@@ -232,6 +277,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_PORT_WITH_NO_EXIST_NAME": {
@@ -285,6 +339,15 @@
                         "ips": [
                             "192.168.0.4"
                         ]
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
                     }
                 ]
             }
@@ -538,6 +601,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_LEASE_TIME_ABSENT": {
@@ -617,6 +689,15 @@
                         "ips": [
                             "192.168.0.4"
                         ]
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
                     }
                 ]
             }
@@ -702,6 +783,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_NETMASK_ABSENT": {
@@ -781,6 +871,15 @@
                         "ips": [
                             "192.168.0.4"
                         ]
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
                     }
                 ]
             }
@@ -866,6 +965,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1000"
+                    }
+                ]
+            }
         }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ID_ABSENT": {
@@ -930,6 +1038,47 @@
                             "192.168.0.3",
                             "192.168.0.4"
                         ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_VLAN_MISSING": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_VLAN_4095": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan4095",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
                     }
                 ]
             }

@@ -14,10 +14,9 @@ module sonic-dhcp-server-ipv4 {
         prefix stypes;
     }
 
-    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
-    // import sonic-vlan {
-    //     prefix vlan;
-    // }
+    import sonic-vlan {
+        prefix vlan;
+    }
 
     import sonic-port {
         prefix port;
@@ -32,6 +31,13 @@ module sonic-dhcp-server-ipv4 {
     }
 
     description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
+
+    revision 2026-11-19 {
+        description
+            "DHCP_SERVER_IPV4 name names a VLAN by leafref to VLAN, so a server cannot name a
+             VLAN that does not exist and the VLAN's removal finds the server that uses it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2026-08-22 {
         description "Add match condition based DHCPv4 address assignment";
@@ -53,17 +59,18 @@ module sonic-dhcp-server-ipv4 {
                 key "name";
 
                 leaf name {
-                    description "Interface name for DHCP server";
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
+                    description
+                        "The VLAN or midplane bridge the DHCP server serves; it must exist in its
+                         table.";
                     type union {
-                        // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-                        // type leafref {
-                        //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                        // }
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
-                        }
                         type leafref {
                             path "/smartswitch:sonic-smart-switch/smartswitch:MID_PLANE_BRIDGE/smartswitch:GLOBAL/smartswitch:bridge";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                         }
                     }
                 }

@@ -506,6 +506,10 @@
                 "vlanid": "12",
                 "mtu": "9216",
                 "admin_status": "up"
+            },
+            "Vlan222": {
+                "description": "dhcpv4 relay",
+                "vlanid": "222"
             }
 
         },
