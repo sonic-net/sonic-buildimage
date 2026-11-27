@@ -255,6 +255,79 @@ module sonic-port{
 					description "Enable or disable fast link-up on the port";
 				}
 
+				leaf link_event_damping_algorithm {
+					description "Link event damping algorithm.
+								 'disabled' - no damping applied to this interface.
+								 'aied' - Additive Increase Exponential Decrease algorithm
+										  based on RFC 2439. Actively suppresses link events
+										  when penalty exceeds suppress threshold.
+								 'aied-monitor' - Same AIED algorithm but monitor-only mode.
+										  Calculates penalties and emits syslog messages but
+										  does NOT suppress link events. Use to safely tune
+										  parameters in production before enabling full
+										  dampening. Recommended by RFC 7196.";
+					type string {
+						pattern "disabled|aied|aied-monitor";
+					}
+					default "disabled";
+				}
+
+				leaf max_suppress_time {
+					description "Maximum time in seconds that an interface can remain
+								 in damped (suppressed) state since the last link-down
+								 event, regardless of accumulated penalty.
+								 A value of 0 means this parameter is not configured.
+								 Industry default: 20 seconds.";
+					type uint32;
+					default 0;
+				}
+
+				leaf decay_half_life {
+					description "Time in seconds after which the accumulated penalty
+								 is halved if the interface remains stable (no flaps).
+								 Must be less than or equal to max_suppress_time.
+								 A value of 0 means this parameter is not configured.
+								 Industry default: 5 seconds.";
+					must "current() = 0 or ../max_suppress_time = 0 or current() <= ../max_suppress_time" {
+						error-message "decay_half_life must be less than or equal to max_suppress_time";
+					}
+					type uint32;
+					default 0;
+				}
+
+				leaf suppress_threshold {
+					description "Penalty threshold above which damping is activated
+								 on the interface. Link events are suppressed when the
+								 accumulated penalty exceeds this value.
+								 A value of 0 means this parameter is not configured.
+								 Industry default: 2000.";
+					type uint32;
+					default 0;
+				}
+
+				leaf reuse_threshold {
+					description "Penalty threshold at or below which damping is
+								 deactivated. The interface returns to normal operation
+								 when penalty decays to this value.
+								 Must be less than or equal to suppress_threshold.
+								 A value of 0 means this parameter is not configured.
+								 Industry default: 1000.";
+					must "current() = 0 or ../suppress_threshold = 0 or current() <= ../suppress_threshold" {
+						error-message "reuse_threshold must be less than or equal to suppress_threshold";
+					}
+					type uint32;
+					default 0;
+				}
+
+				leaf flap_penalty {
+					description "Penalty value added to accumulated penalty for each
+								 link-down (UP to DOWN) transition event.
+								 A value of 0 means this parameter is not configured.
+								 Industry standard: 1000.";
+					type uint32;
+					default 0;
+				}
+
 
 			} /* end of list PORT_LIST */
 
