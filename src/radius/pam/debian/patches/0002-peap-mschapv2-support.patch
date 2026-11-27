@@ -4396,8 +4396,8 @@ Index: pam_radius/src/radpeapclient.c
 +		peap_log_debug("setup_client:No server info available");
 +		return -1 ;
 +	}
-+	if (strlen(user_name) >= MAX_NT_USERNAME) {
-+		peap_log_debug("setup_client:Username length is greater than allowed");
++	if (strlen(user_name) > PEAP_MAX_IDENTITY_LEN) {
++		peap_log_debug("setup_client:Username does not fit in an EAP Identity message");
 +		return -1 ;
 +	}
 +	if (strlen(user_password) >= MAX_NT_PASSWORD) {

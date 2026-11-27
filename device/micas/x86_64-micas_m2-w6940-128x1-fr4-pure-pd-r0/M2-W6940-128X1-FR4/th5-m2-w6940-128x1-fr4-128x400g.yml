@@ -20,6 +20,11 @@ device:
 bcm_device:
     0:
         global:
+            # to support overlay ECMP
+            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_secondary_mem_size: 4096
+            # to support IPinIP and SRv6
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 2048
             l3_alpm_template: 1
@@ -1381,4 +1386,46 @@ device:
                 TX_POST3_SIGN: 0
                 TX_POST3: 0
                 TX_POST3_AUTO: 0
+...
+---
+device:
+    0:
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[1, 4],
+                          [11, 14],
+                          [22, 25],
+                          [33, 36],
+                          [44, 47],
+                          [55, 58],
+                          [66, 69],
+                          [77, 80],
+                          [88, 91],
+                          [99, 102],
+                          [110, 113],
+                          [121, 124],
+                          [132, 135],
+                          [143, 146],
+                          [154, 157],
+                          [165, 168],
+                          [176, 179],
+                          [187, 190],
+                          [198, 201],
+                          [209, 212],
+                          [220, 223],
+                          [231, 234],
+                          [242, 245],
+                          [253, 256],
+                          [264, 267],
+                          [275, 278],
+                          [286, 289],
+                          [297, 300],
+                          [308, 311],
+                          [319, 322],
+                          [330, 333],
+                          [341, 344]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
 ...

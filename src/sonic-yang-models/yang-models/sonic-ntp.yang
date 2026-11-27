@@ -171,11 +171,8 @@ module sonic-ntp {
             description "NTP upstream server and pool configuration.";
 
             list NTP_SERVER_LIST {
-                max-elements 10;
                 description
-                    "Number of upstream NTP servers is discussed at
-                     https://support.ntp.org/bin/view/Support/SelectingOffsiteNTPServers
-                     (5.3.4. Excessive Number of Upstream Time Servers).";
+                    "List of all upstream servers to use.";
 
                 key "server_address";
 

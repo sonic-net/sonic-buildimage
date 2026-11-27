@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import libyang as ly
 import syslog
+from _libyang import ffi
+from libyang.util import ly_array_iter
 
 from json import dump
 from glob import glob
@@ -159,6 +161,20 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         # legacy yJson consumers don't read those branches.
         return None, d
 
+    @staticmethod
+    def union_member_types(type_obj: ly.Type) -> List[ly.Type]:
+        """Return the compiled member types of a union, in compiled order.
+
+        A nested union (such as inet:ip-address) is already flattened into its
+        members by libyang. A non-union returns []. Use this over
+        `Type.union_types()`, which pairs compiled members with parsed ones
+        and so drops the trailing members of a union holding a nested union.
+        """
+        if type_obj.base() != ly.Type.UNION:
+            return []
+        union = ffi.cast('struct lysc_type_union *', type_obj.cdata)
+        return [ly.Type(type_obj.context, member, None) for member in ly_array_iter(union.types)]
+
     def _yjson_type(self, type_obj: Any) -> Dict[str, Any]:
         # Prefer the typedef-aware name (e.g. "stypes:hwsku") so consumers
         # that text-match on prefixed type names continue to work; fall back
@@ -171,7 +187,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
             if path:
                 d['path'] = {'@value': path}
         elif base == 'union':
-            members = [self._yjson_type(t) for t in type_obj.union_types()]
+            member_types = SonicYang.union_member_types(type_obj)
+            named = list(type_obj.union_types())
+            if len(named) == len(member_types):
+                # The same members, carrying their typedef names.
+                member_types = named
+            members = [self._yjson_type(t) for t in member_types]
             if members:
                 d['type'] = members[0] if len(members) == 1 else members
         return d

@@ -20,6 +20,11 @@ module sonic-bgp-sentinel {
     description
         "SONIC BGP Sentinel YANG";
 
+    revision 2026-09-18 {
+        description
+            "Reject newline characters in BGP Sentinel names.";
+    }
+
     revision 2023-06-06 {
         description
             "Initial revision.";
@@ -31,12 +36,16 @@ module sonic-bgp-sentinel {
                 key "sentinel_name";
 
                 leaf sentinel_name {
-                    type string;
+                    type string {
+                        pattern '[^\n\r]*';
+                    }
                     description "BGP Sentinel name";
                 }
 
                 leaf name {
-                    type string;
+                    type string {
+                        pattern '[^\n\r]*';
+                    }
                     must "(current() = current()/../sentinel_name)" {
                         error-message "Invalid BGP Sentinel name";
                     }

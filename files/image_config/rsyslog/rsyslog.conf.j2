@@ -29,9 +29,6 @@ module(load="omprog")
 # provides UDP syslog reception
 module(load="imudp")
 input(type="imudp" address="{{udp_server_ip}}" port="514")
-{% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
-input(type="imudp" address="{{docker0_ip}}" port="514")
-{% endif%}
 
 # provides TCP syslog reception
 #module(load="imtcp")
@@ -41,7 +38,9 @@ input(type="imudp" address="{{docker0_ip}}" port="514")
 module(load="imrelp")
 input(type="imrelp" address="{{udp_server_ip}}" port="2514")
 {% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
-input(type="imrelp" address="{{docker0_ip}}" port="2514")
+
+# docker0 inputs, written by rsyslog-config.sh once docker0 exists
+include(file="/run/sonic-rsyslog/docker0-inputs.conf" mode="optional")
 {% endif%}
 
 

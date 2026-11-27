@@ -1,0 +1,55 @@
+module sonic-gnmi-client {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-gnmi-client";
+    prefix gnmi-client;
+
+    organization "SONiC";
+    contact "SONiC";
+    description "GNMI client YANG Module for SONiC OS";
+
+    revision 2026-11-07 {
+        description "First Revision";
+    }
+
+    container sonic-gnmi-client {
+        container GNMI_CLIENT {
+            description
+                "Credentials this device presents when it is the gRPC client of
+                 another SONiC device's gNMI server (mTLS). On a BMC, bmcctld uses
+                 them for gNOI System.Reboot to the switch host. GNMI_CLIENT_CERT in
+                 sonic-gnmi.yang is the opposite direction: the clients this device's
+                 own server accepts.";
+
+            container certs {
+                description
+                    "TLS certificate paths for the gNMI client, read once per
+                     operation. The files must be visible to the consumer (on a BMC,
+                     inside the PMON container). An absent field uses the default
+                     named in its leaf description; a configured path is used as
+                     given, with no fallback. Deployment installs the files.";
+
+                leaf ca_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
+                    }
+                    description "Local path for ca_crt; /etc/sonic/credentials/gnmi_root.cer when absent.";
+                }
+
+                leaf client_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
+                    }
+                    description "Local path for client_crt; /etc/sonic/credentials/gnmi_client.cer when absent.";
+                }
+
+                leaf client_key {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).key';
+                    }
+                    description "Local path for client_key; /etc/sonic/credentials/gnmi_client.key when absent.";
+                }
+            }
+        }
+    }
+}

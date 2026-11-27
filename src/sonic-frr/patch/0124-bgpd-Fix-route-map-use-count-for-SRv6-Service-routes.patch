@@ -1,0 +1,123 @@
+From a7ba4e9d91d3a89e5239b92cbbcc3f1cb7cc92ee Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 9 Aug 2026 17:59:19 +0200
+Subject: [PATCH 1/2] bgpd: Fix route-map use count for SRv6 Service routes
+
+SRv6 Service routes can be configured with a route-map. When the
+route-map is configured, bgpd increments the route-map use count to
+record that configuration reference.
+
+After configuration, bgp_srv6_unicast_announce() walks the selected
+unicast routes and calls bgp_srv6_unicast_register_route() for each
+route. That helper applies the route-map, but it also increments the
+route-map use count again for every permitted route.
+
+As a result, the same route-map is counted multiple times. With
+multiple permitted routes, removing the SRv6 Service route-map
+configuration decrements only the configuration reference and leaves
+the route-map incorrectly marked as still in use.
+
+Fix this by removing the per-route use count increment from
+bgp_srv6_unicast_register_route().
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_srv6.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index a97cefc13f9d..408deb137205 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -355,7 +355,6 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 			}
+ 
+ 			bgp_attr_extra_discard(&attr_tmp);
+-			route_map_counter_increment(rmap);
+ 		} else {
+ 			zlog_warn("route-map %s was no found, ignored",
+ 				  bgp->srv6_unicast[afi].rmap_name);
+
+From c4127f4d338792625e50540e6b597f40293ac4da Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 9 Aug 2026 17:59:31 +0200
+Subject: [PATCH 2/2] tests: Add use count coverage for SRv6 Service routes
+
+Advertise multiple SRv6 Service routes and verify the route-map
+becomes unused after detaching it from the SRv6 Service route
+configuration. This covers the per-route counter inflation fixed in
+bgpd.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../bgp_srv6_unicast/test_bgp_srv6_unicast.py | 57 +++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+diff --git a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+index d256cac7933b..663286a014e7 100644
+--- a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
++++ b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+@@ -338,6 +338,63 @@ def test_bgp_srv6_sid_rmap_update():
+     assert res is True, res
+ 
+ 
++def test_bgp_srv6_sid_rmap_use_count():
++    """
++    Verify SRv6 Service routes do not inflate the route-map use count while
++    walking/re-announcing multiple routes.
++    """
++    tgen = get_topogen()
++    r1 = tgen.gears["r1"]
++
++    r1.vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        network 10.0.0.4/32
++        network 10.0.0.5/32
++        """
++    )
++
++    logger.info("Check newly announced SRv6 Service routes have SRv6 encap on R2")
++    for prefix in ("10.0.0.4/32", "10.0.0.5/32"):
++        res = check_route(
++            tgen.gears["r2"], "show ip route %s json" % prefix, prefix, r1_unicast_sid
++        )
++        assert res is True, res
++
++    logger.info("Detach route-map filter for SRv6 Service routes")
++    r1.vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export auto route-map filter
++        sid export auto
++        """
++    )
++
++    def _check_route_map_unused():
++        output = json.loads(r1.vtysh_cmd("show route-map-unused json"))
++        if "filter" not in output.get("bgpd", {}):
++            return "filter route-map is still in use"
++        return None
++
++    _, result = topotest.run_and_expect(_check_route_map_unused, None, count=20, wait=1)
++    assert result is None, "filter should be unused after removing it from sid export"
++
++    logger.info("Restore route-map filter for SRv6 Service routes")
++    r1.vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export auto
++        sid export auto route-map filter
++        """
++    )
++
++
+ def test_bgp_srv6_sid_unexport():
+     """
+     Unconfigure sid export on R1, then check prefixes 10.0.0.1-3/32

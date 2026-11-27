@@ -68,7 +68,9 @@ else
     echo "FAIL"
 fi
 
-DISK_SIZE=$(lsblk -d | grep disk | head -1 | awk '{print $4}' | cut -d 'G' -f 1)
+# Largest physical disk, in GiB (lsblk's "G"); skip RAM, loop and zram block devices
+DISK_SIZE=$(lsblk -dnbo NAME,TYPE,SIZE | awk '$2 == "disk" && $1 !~ /^(ram|loop|zram)/ {print $3}' | sort -n | tail -1)
+DISK_SIZE=$(expr ${DISK_SIZE:-0} / 1073741824)
 echo -n "DISK:       ${DISK_SIZE} GB ..........."
 if [ $(expr ${DISK_SIZE} \>= ${TST_DISKSZ}) -eq 1 ]; then
     echo "pass"
@@ -102,8 +104,9 @@ else
 fi
 
 # Disk tests
-DISK_RD=$(ioping -DRL -w 5 ./ | tail -n 2 | head -n 1 | cut -d ',' -f 4 | awk '{print $1}')
-echo -n "DISK READ:  ${DISK_RD} MB/s ......"
+# ioping -B prints raw statistics; field 4 is the transfer speed in bytes/s
+DISK_RD=$(ioping -DRL -w 5 -B ./ | awk '{printf "%.0f", $4 / 1048576}')
+echo -n "DISK READ:  ${DISK_RD} MiB/s ....."
 if [ $(echo "${DISK_RD} >= ${TST_DISKRD}" | bc) -eq 1 ]; then
     echo "pass"
 else
@@ -111,9 +114,10 @@ else
 fi
 
 rm -f dummy.bin
-DISK_WR=$(dd if=/dev/zero of=dummy.bin bs=64k count=16k conv=fdatasync 2>&1 | tail -1 | awk '{print $10}')
+# dd's summary line: "<bytes> bytes (...) copied, <seconds> s, <rate>"; the rate's unit varies, so compute MiB/s
+DISK_WR=$(dd if=/dev/zero of=dummy.bin bs=64k count=16k conv=fdatasync 2>&1 | tail -1 | awk '{printf "%.0f", $1 / $(NF-3) / 1048576}')
 rm -f dummy.bin
-echo -n "DISK WRITE: ${DISK_WR} MB/s ......."
+echo -n "DISK WRITE: ${DISK_WR} MiB/s ......"
 if [ $(echo "${DISK_WR} >= ${TST_DISKWR}" | bc) -eq 1 ]; then
     echo "pass"
 else

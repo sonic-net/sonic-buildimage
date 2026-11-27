@@ -2,6 +2,7 @@ DPATH       := $($(DOCKER_GNMI_SIDECAR)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-gnmi-sidecar.mk rules/docker-gnmi-sidecar.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
+DEP_FILES   += dockers/dockerfile-macros.j2
 
 $(DOCKER_GNMI_SIDECAR)_CACHE_MODE  := GIT_CONTENT_SHA
 $(DOCKER_GNMI_SIDECAR)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)

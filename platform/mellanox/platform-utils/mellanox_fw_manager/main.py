@@ -28,6 +28,7 @@ import logging.handlers
 import fcntl
 import subprocess
 from contextlib import contextmanager
+from typing import Optional
 import click
 from .fw_manager import create_firmware_manager, EXIT_SUCCESS, EXIT_FAILURE, FW_UPGRADE_IS_REQUIRED, FirmwareManagerError, FirmwareUpgradeError, FirmwareUpgradePartialError
 from .firmware_coordinator import FirmwareCoordinator
@@ -108,6 +109,15 @@ def _lock_state_change():
                 logger.warning(f"Failed to unlock: {e}")
 
 
+def _get_vmod_status(manager) -> Optional[str]:
+    """The OE status line. It is report only, so a failure never changes the exit code."""
+    try:
+        return manager.get_vmod_status()
+    except Exception as e:
+        logger.warning(f"ASIC {manager.asic_index}: OE firmware status unavailable: {e}")
+        return "unknown, status unavailable"
+
+
 def handle_status(asic_id_arg: str, verbose: bool, upgrade: bool) -> int:
     """
     Handle firmware status check - reports if firmware version matches.
@@ -163,6 +173,9 @@ def handle_status(asic_id_arg: str, verbose: bool, upgrade: bool) -> int:
                 else:
                     up_to_date_asics.append(manager.asic_index)
                     print(f"ASIC {manager.asic_index}: Up to date")
+                vmod_status = _get_vmod_status(manager)
+                if vmod_status:
+                    print(f"  OE: {vmod_status}")
             except Exception as e:
                 error_asics.append(manager.asic_index)
                 print(f"ASIC {manager.asic_index}: Error checking status - {e}")
@@ -213,14 +226,17 @@ def handle_dry_run(verbose: bool, upgrade: bool) -> int:
     """
     try:
         fw_coordinator = FirmwareCoordinator(verbose=verbose, from_image=upgrade)
-        if fw_coordinator.check_upgrade_required():
-            print("Firmware upgrade is required.")
+        upgrade_required = fw_coordinator.check_upgrade_required()
+        print("Firmware upgrade is required." if upgrade_required else "Firmware is up to date.")
+        for manager in fw_coordinator.managers:
+            vmod_status = _get_vmod_status(manager)
+            if vmod_status:
+                print(f"  ASIC {manager.asic_index} OE: {vmod_status}")
+        if upgrade_required:
             logger.info(f"Dry-run check: upgrade required, exiting with {FW_UPGRADE_IS_REQUIRED}")
             return FW_UPGRADE_IS_REQUIRED
-        else:
-            print("Firmware is up to date.")
-            logger.info(f"Dry-run check: up to date, exiting with {EXIT_SUCCESS}")
-            return EXIT_SUCCESS
+        logger.info(f"Dry-run check: up to date, exiting with {EXIT_SUCCESS}")
+        return EXIT_SUCCESS
     except Exception as e:
         print(f"Firmware check failed: {e}")
         logger.error(f"Dry-run check failed, exiting with {EXIT_FAILURE}")

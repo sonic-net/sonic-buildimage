@@ -30,5 +30,59 @@
 				]
 			}
 		}
+	},
+	"PVST_VLAN_VALID": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{
+						"name": "Vlan120",
+						"vlanid": "120",
+						"enabled": "true",
+						"priority": "32768"
+					}
+				]
+			}
+		},
+		"sonic-vlan:sonic-vlan": {
+			"sonic-vlan:VLAN": {
+				"VLAN_LIST": [
+					{
+						"name": "Vlan120",
+						"vlanid": 120
+					}
+				]
+			}
+		}
+	},
+	"PVST_VLAN_MISSING_VLAN": {
+		"sonic-spanning-tree:sonic-spanning-tree": {
+			"sonic-spanning-tree:STP": {
+				"STP_LIST": [
+					{
+						"keyleaf": "GLOBAL",
+						"mode": "pvst"
+					}
+				]
+			},
+			"sonic-spanning-tree:STP_VLAN": {
+				"STP_VLAN_LIST": [
+					{
+						"name": "Vlan120",
+						"vlanid": "120",
+						"enabled": "true",
+						"priority": "32768"
+					}
+				]
+			}
+		}
 	}
 }

@@ -1,19 +1,26 @@
-[PATCH] From 92ab2d74fca06f86c00d886ac249f7f2d89e93fe Mon Sep 17
-
+From a28a787730c3d7fcf2ad6e11f1886d537dab9075 Mon Sep 17 00:00:00 2001
 From: Akhilesh Samineni <akhilesh.samineni@broadcom.com>
 Date: Mon, 5 Apr 2021 13:21:40 -0700
- 00:00:00 2001 Subject: [PATCH 8/8] Link local scope was not set while binding
- socket  with local address causing socket errors for bgp ipv6 link local
- neighbors.
+Subject: [PATCH] bgpd: set scope for IPv6 link-local update-source
+
+Set sin6_scope_id from the selected interface before binding a BGP
+socket to an IPv6 link-local source address. This preserves the
+SONiC-carried behavior on FRR 10.7.1 and avoids ambiguous link-local
+binds.
+
+Original SONiC patch commit: 92ab2d74fca06f86c00d886ac249f7f2d89e93fe
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
 ---
- bgpd/bgp_network.c |    5 +++++
+ bgpd/bgp_network.c | 5 +++++
  1 file changed, 5 insertions(+)
 
 diff --git a/bgpd/bgp_network.c b/bgpd/bgp_network.c
-index d535c3d87..c9b019424 100644
+index 6178213d7e..ef2675dc20 100644
 --- a/bgpd/bgp_network.c
 +++ b/bgpd/bgp_network.c
-@@ -753,6 +753,11 @@ int bgp_update_address(struct interface *ifp, const union sockunion *dst,
+@@ -802,6 +802,11 @@ int bgp_update_address(struct interface *ifp, const union sockunion *dst,
  		return 1;
  
  	prefix2sockunion(sel, addr);
@@ -25,3 +32,6 @@ index d535c3d87..c9b019424 100644
  	return 0;
  }
  
+-- 
+2.34.1
+

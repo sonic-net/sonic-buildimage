@@ -1,0 +1,1 @@
+SUBSYSTEM=="watchdog", ACTION=="add", ATTR{identity}=="wdat_wdt", SYMLINK+="watchdog-runtime"

@@ -202,7 +202,7 @@ class Component(ComponentBase):
             RuntimeError: update failed
         """
         if not os.path.isfile(image_path):
-            raise RuntimeError("ERROR: %s not found" % image_path)
+            return False
 
         if self.get_warm_upgrade_flag() == 1:  # use warm upgrade
             cmdstr = "upgrade.py warm %s %d" % (image_path, self.get_slot())
@@ -217,7 +217,7 @@ class Component(ComponentBase):
                 print("INFO: %s firmware update succeeded" % self.get_name())
                 print("INFO: %s firmware version up-to-date" % self.get_name())
             return None
-        raise RuntimeError(output)
+        return False
 
     def auto_update_firmware(self, image_path, boot_type):
         """

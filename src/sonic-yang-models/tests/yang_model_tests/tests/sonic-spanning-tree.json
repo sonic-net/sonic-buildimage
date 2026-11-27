@@ -2,5 +2,12 @@
     "PVST_GLOBAL_VALID": {
         "desc": "Configure valid global PVST settings",
         "eStr": []
+    },
+    "PVST_VLAN_VALID": {
+        "desc": "An STP_VLAN row naming an existing VLAN is accepted."
+    },
+    "PVST_VLAN_MISSING_VLAN": {
+        "desc": "An STP_VLAN row naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
     }
 }

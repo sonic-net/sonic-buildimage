@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+import logging
+import os
+import time
+import syslog
+import glob
+import cisco.pacific.power as power
+from sonic_platform.obfl import OBFLService
+from sonic_platform import reboot_constants as reboot
+
+def update_reboot_cause():
+
+    for file in glob.iglob('/sys/bus/platform/devices/lrstr*/fifo'):
+        try:
+            # Protect against simulator emulation failures
+            maximum_events = 64
+            for i in range(maximum_events):
+                with open(file, 'r') as f:
+                    data = f.readline().strip()
+                    if not data:
+                        break
+                    if 'x86 watchdog' in data:
+                        syslog.syslog(syslog.LOG_INFO, "reboot: Update reboot-cause to watchdog")
+                        with open(reboot.REBOOT_CAUSE_FILE, 'w') as f:
+                            now = time.strftime("%a %d %b %Y %I:%M:%S %p %Z", time.localtime())
+                            f.write('Watchdog [Time: {}]\n'.format(now))
+                        break
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, 'Error reading lrstr log {}'.format(e))
+
+
+def main():
+
+    # We have a /proc/vmcore, then we just kdump'ed 
+    # Update reboot cause if there was a watchdog reset
+    if os.path.exists('/proc/vmcore'):
+        syslog.syslog(syslog.LOG_INFO, "reboot: In crash kernel")
+        os.system("/opt/cisco/bin/cisco_platform.py kdump")
+        update_reboot_cause()
+
+    #Log reboot cause into OBFL
+    try:
+        obfl = OBFLService()
+        with open(reboot.REBOOT_CAUSE_FILE, 'r') as f:
+            for line in f:
+                obfl.obfl_cache_reboot_cause(line)
+                os.sync()
+                obfl.obfl_log_reboot_cause()
+                time.sleep(3)
+    except FileNotFoundError:
+        syslog.syslog(syslog.LOG_ERR, "Failed to OBFL cache reboot cause")
+
+    syslog.syslog(syslog.LOG_INFO, "reboot: Initiate shutdown command")
+    # Close /var/log/obfl.log opened by OBFLService; this process outlives
+    # the shutdown request and would otherwise keep var-log.mount busy.
+    logging.shutdown()
+    ret = os.system('shutdown -r now')
+    if ret == 0:
+        # stay here until system goes down
+        while os.system('ping -c 1 127.0.0.1 > /dev/null') == 0:
+            time.sleep(1)
+
+
+if __name__ == '__main__':
+    main()

@@ -11,6 +11,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_MULTIPLE_SERVERS": {
@@ -23,6 +32,15 @@
                             "192.168.20.100",
                             "10.11.12.13"
                         ]
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
                     }
                 ]
             }
@@ -63,6 +81,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan888"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_LINK_SELECT": {
@@ -88,6 +115,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_DISCARD": {
@@ -100,6 +136,15 @@
                             "192.168.20.100"
                         ],
                         "agent_relay_mode": "discard"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
                     }
                 ]
             }
@@ -118,6 +163,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_REPLACE": {
@@ -130,6 +184,15 @@
                             "192.168.20.100"
                         ],
                         "agent_relay_mode": "replace"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
                     }
                 ]
             }
@@ -148,6 +211,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
@@ -163,12 +235,30 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_MISSING_SERVER_IP": {
         "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
             "sonic-dhcpv4-relay:DHCPV4_RELAY": {
                 "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
                     {
                         "name": "Vlan777"
                     }
@@ -210,6 +300,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan888"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_VRF_SELECT_OPTION": {
@@ -243,6 +342,15 @@
                         "source_interface": "Loopback0",
                         "server_id_override": "enable",
                         "link_selection": "enable"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan888"
                     }
                 ]
             }
@@ -282,6 +390,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan888"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SOURCE_INTERFACE_OPTION": {
@@ -318,6 +435,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan888"
+                    }
+                ]
+            }
         }
     },
     "DHCPv4_RELAY_WITH_INVALID_MAX_HOP_CNT": {
@@ -330,6 +456,133 @@
                             "192.168.20.100"
                         ],
                         "max_hop_count": 17
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan999"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_VLAN_MISSING": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_VALID": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "link_selection": "enable",
+                        "source_interface": "Vlan778"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    },
+                    {
+                        "name": "Vlan778"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_MISSING": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "link_selection": "enable",
+                        "source_interface": "Vlan778"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_VLAN_4095": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan4095",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan4095"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_4095": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "link_selection": "enable",
+                        "source_interface": "Vlan4095"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan777"
+                    },
+                    {
+                        "name": "Vlan4095"
                     }
                 ]
             }

@@ -3,7 +3,6 @@ ifeq ($(ENABLE_PY2_MODULES), y)
 
     SONIC_PY_COMMON_PY2 = sonic_py_common-1.0-py2-none-any.whl
     $(SONIC_PY_COMMON_PY2)_SRC_PATH = $(SRC_PATH)/sonic-py-common
-    $(SONIC_PY_COMMON_PY2)_DEPENDS += $(SWSSSDK_PY2)
     $(SONIC_PY_COMMON_PY2)_DEBS_DEPENDS = $(LIBSWSSCOMMON) \
                                           $(PYTHON_SWSSCOMMON)
     $(SONIC_PY_COMMON_PY2)_PYTHON_VERSION = 2

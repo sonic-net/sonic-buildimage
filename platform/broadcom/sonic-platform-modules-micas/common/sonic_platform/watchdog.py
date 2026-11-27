@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import fcntl
+import logging
 import os
 import array
 
@@ -55,7 +56,7 @@ WDIOS_DISABLECARD = 0x0001
 WDIOS_ENABLECARD = 0x0002
 
 WDT_COMMON_ERROR = -1
-WDT_IDENTITY = ["CPLD Watchdog", "iTCO_wdt"]
+WDT_IDENTITY = ["iTCO_wdt"]
 WDT_SYSFS_PATH = "/sys/class/watchdog/"
 
 DEFAULT_TIMEOUT = 180
@@ -67,14 +68,29 @@ class Watchdog(WatchdogBase):
     """
 
     def __init__(self):
-        self.watchdog, self.wdt_main_dev_name = self._get_wdt()
-        self.status_path = "/sys/class/watchdog/%s/status" % self.wdt_main_dev_name
-        self.state_path = "/sys/class/watchdog/%s/state" % self.wdt_main_dev_name
-        self.timeout_path = "/sys/class/watchdog/%s/timeout" % self.wdt_main_dev_name
-        # Set default value
-        self._disable()
-        self.armed = False
-        self.timeout = self._gettimeout()
+        # Opening /dev/watchdog starts or refreshes the timer. Query commands
+        # must use sysfs, including when each command creates a new object.
+        self.watchdog = None
+        self.wdt_main_dev_name = None
+        try:
+            devices = [dev for dev in os.listdir("/dev/")
+                       if dev.startswith("watchdog") and self._is_wd_main(dev)]
+            if devices:
+                self.wdt_main_dev_name = devices[0]
+        except OSError:
+            pass
+        base = "{}/{}".format(WDT_SYSFS_PATH.rstrip('/'), self.wdt_main_dev_name)
+        self.state_path = base + "/state"
+        self.timeout_path = base + "/timeout"
+        self.timeleft_path = base + "/timeleft"
+
+    def _open_watchdog(self):
+        """Open the device only when intentionally changing the watchdog."""
+        if self.watchdog is None:
+            device = self._get_wdt()
+            if device is None:
+                raise OSError("Watchdog device not found")
+            self.watchdog, self.wdt_main_dev_name = device
 
     def _is_wd_main(self, dev):
         """
@@ -111,14 +127,14 @@ class Watchdog(WatchdogBase):
         """
         Turn on the watchdog timer
         """
-        req = array.array('h', [WDIOS_ENABLECARD])
+        req = array.array('i', [WDIOS_ENABLECARD])
         fcntl.ioctl(self.watchdog, WDIOC_SETOPTIONS, req, False)
 
     def _disable(self):
         """
         Turn off the watchdog timer
         """
-        req = array.array('h', [WDIOS_DISABLECARD])
+        req = array.array('i', [WDIOS_DISABLECARD])
         fcntl.ioctl(self.watchdog, WDIOC_SETOPTIONS, req, False)
 
     def _keepalive(self):
@@ -158,85 +174,85 @@ class Watchdog(WatchdogBase):
         return int(req[0])
 
     def arm(self, seconds):
-        """
-        Arm the hardware watchdog with a timeout of <seconds> seconds.
-        If the watchdog is currently armed, calling this function will
-        simply reset the timer to the provided value. If the underlying
-        hardware does not support the value provided in <seconds>, this
-        method should arm the watchdog with the *next greater* available
-        value.
+        """Arm or refresh the timer; return the actual timeout, or -1."""
+        if (isinstance(seconds, bool) or not isinstance(seconds, int)):
+            return WDT_COMMON_ERROR
 
-        Returns:
-            An integer specifying the *actual* number of seconds the watchdog
-            was armed with. On failure returns -1.
-        """
-        ret = WDT_COMMON_ERROR
-        if seconds < 0:
-            return ret
-
+        # Read state before opening: opening an inactive device starts it.
+        state = self._read_file(self.state_path)
+        if state not in ("active", "inactive"):
+            return WDT_COMMON_ERROR
+        was_armed = state == "active"
         try:
-            if self.timeout != seconds:
-                self.timeout = self._settimeout(seconds)
-            if self.armed:
-                self._keepalive()
-            else:
-                self._settimeout(seconds)
-                self._enable()
-                self.armed = True
-            ret = self.timeout
-        except IOError:
-            pass
-
-        return ret
+            # Opening the device is part of the arm operation. Do not disable
+            # it before configuring the requested timeout.
+            self._open_watchdog()
+            timeout = self._settimeout(seconds)
+            # The API tests require the actual timeout to meet the request.
+            # Do not report success if the driver silently shortens it.
+            if timeout < seconds:
+                raise ValueError("Actual watchdog timeout is less than requested")
+            self._enable()
+            self._keepalive()
+            if not self.is_armed():
+                raise OSError("Watchdog is not active after enabling")
+            return timeout
+        except (OSError, ValueError, OverflowError):
+            if not was_armed and self.watchdog is not None:
+                # Also cover failures during enable/keepalive, not just timeout.
+                try:
+                    self._disable()
+                except OSError:
+                    logging.getLogger(__name__).exception(
+                        "Failed to disable watchdog after arm failure; "
+                        "watchdog may still be armed")
+            return WDT_COMMON_ERROR
 
     def disarm(self):
-        """
-        Disarm the hardware watchdog
-
-        Returns:
-            A boolean, True if watchdog is disarmed successfully, False if not
-        """
-        disarmed = False
-        if self.is_armed():
-            try:
-                self._disable()
-                self.armed = False
-                disarmed = True
-            except IOError:
-                pass
-
-        return disarmed
+        """Disable the hardware watchdog; return whether it is disarmed."""
+        # Opening an inactive device would itself start the watchdog.
+        if self._read_file(self.state_path) == "inactive":
+            return True
+        try:
+            self._open_watchdog()
+            self._disable()
+            # A successful ioctl alone is not proof of the resulting state.
+            return self._read_file(self.state_path) == "inactive"
+        except OSError:
+            return False
 
     def is_armed(self):
-        """
-        Retrieves the armed state of the hardware watchdog.
-
-        Returns:
-            A boolean, True if watchdog is armed, False if not
-        """
-        return self.armed
+        """Read live state without starting or refreshing the watchdog."""
+        return self._read_file(self.state_path) == "active"
 
     def get_remaining_time(self):
-        """
-        If the watchdog is armed, retrieve the number of seconds remaining on
-        the watchdog timer
+        """Return remaining seconds, or -1 when inactive or unavailable."""
+        if not self.is_armed():
+            return WDT_COMMON_ERROR
+        try:
+            remaining = int(self._read_file(self.timeleft_path))
+        except (TypeError, ValueError):
+            remaining = WDT_COMMON_ERROR
+        if remaining >= 0:
+            return remaining
 
-        Returns:
-            An integer specifying the number of seconds remaining on thei
-            watchdog timer. If the watchdog is not armed, returns -1.
-        """
-        timeleft = WDT_COMMON_ERROR
-
-        if self.armed:
+        # Some drivers expose GETTIMELEFT but no usable sysfs timeleft.
+        # Reuse an existing descriptor only; opening here would refresh time.
+        if self.watchdog is not None:
             try:
-                timeleft = self._gettimeleft()
-            except IOError:
+                remaining = self._gettimeleft()
+                return remaining if remaining >= 0 else WDT_COMMON_ERROR
+            except OSError:
                 pass
-
-        return timeleft
+        return WDT_COMMON_ERROR
 
     def __del__(self):
-        """
-        Close watchdog
-        """
-        os.close(self.watchdog)
+        """Release our descriptor without sending a magic-close character."""
+        watchdog = getattr(self, "watchdog", None)
+        if watchdog is not None:
+            try:
+                os.close(watchdog)
+            except OSError:
+                pass
+            self.watchdog = None
+

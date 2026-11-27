@@ -1,0 +1,45 @@
+From 679630e705bb94c01ef436f35e28df954b8dfaec Mon Sep 17 00:00:00 2001
+From: Ashwini Reddy <ashred@nvidia.com>
+Date: Wed, 7 Oct 2026 14:18:17 -0700
+Subject: [PATCH] lib: fix use-after-free in agentx_events_update()
+
+The "need listener" branch stored the newly allocated event cell in thr,
+and a later iteration of the same loop cancelled and freed the
+new listener's cell instead of ln's own and left the list pointing at
+freed memory.  Use a separate variable, as the branch already does for
+the new listnode.
+
+Fixes: 7640e3c60b33 ("*: don't pass pointers to a local variables to thread_add_*")
+Signed-off-by: Ashwini Reddy <ashred@nvidia.com>
+(cherry picked from commit 679630e705bb94c01ef436f35e28df954b8dfaec)
+---
+ lib/agentx.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/lib/agentx.c b/lib/agentx.c
+index 821955ca9a32..fa8c34fe075d 100644
+--- a/lib/agentx.c
++++ b/lib/agentx.c
+@@ -131,13 +131,18 @@ static void agentx_events_update(void)
+ 			thr = ln ? listgetdata(ln) : NULL;
+ 			thr_fd = thr ? EVENT_FD(*thr) : -1;
+ 		}
+-		/* need listener, but haven't hit one where it would be */
++		/* need listener, but haven't hit one where it would be.
++		 * The new cell must not be stored in thr: thr is part of the
++		 * ln/thr/thr_fd cursor and has to keep describing ln's own
++		 * cell, which a later iteration cancels and frees.
++		 */
+ 		else if (netsnmp_large_fd_is_set(fd, &lfds)) {
++			struct event **newthr;
+ 			struct listnode *newln;
+ 
+-			thr = XCALLOC(MTYPE_TMP, sizeof(struct event *));
+-			newln = listnode_add_before(events, ln, thr);
+-			event_add_read(agentx_tm, agentx_read, newln, fd, thr);
++			newthr = XCALLOC(MTYPE_TMP, sizeof(struct event *));
++			newln = listnode_add_before(events, ln, newthr);
++			event_add_read(agentx_tm, agentx_read, newln, fd, newthr);
+ 		}
+ 	}
+ 

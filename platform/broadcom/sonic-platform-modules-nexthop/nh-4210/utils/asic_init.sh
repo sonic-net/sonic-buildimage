@@ -93,6 +93,13 @@ fpga_1_read() {
   echo "$result"
 }
 
+function cleanup() {
+  # --end before the unlock, or a queued run's rows get deleted by ours.
+  nh_asic_powercycle --end
+  /usr/bin/flock -u ${LOCKFD}
+  logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
+}
+
 function acquire_lock() {
   if [[ ! -f $LOCKFILE ]]; then
     touch $LOCKFILE
@@ -102,14 +109,9 @@ function acquire_lock() {
 
   exec {LOCKFD}>${LOCKFILE}
   /usr/bin/flock -x ${LOCKFD}
-  trap "/usr/bin/flock -u ${LOCKFD}" EXIT
+  trap cleanup EXIT
 
   logger -t $LOG_TAG -p $LOG_PRIO "Acquired ${LOCKFILE}"
-}
-
-function release_lock() {
-  /usr/bin/flock -u ${LOCKFD}
-  logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
 }
 
 function clear_sticky_bits() {
@@ -201,7 +203,6 @@ override_hw_fan_speed_clamp
 
 if [ -f /disable_asic ]; then
   logger -p user.warning -t $LOG_TAG "ASIC init disabled due to /disable_asic file"
-  release_lock
   exit 0
 fi
 
@@ -211,6 +212,9 @@ if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
   logger -t $LOG_TAG -p $LOG_PRIO "Removing ASIC modules"
   /etc/init.d/opennsl-modules stop
 fi
+
+# The ASIC is down from here until cleanup runs.
+LOG_TAG="$LOG_TAG" nh_asic_powercycle --begin --xcvr-cache
 
 # Set DP_PWR_ON = 1
 # DP_PWR_ON should already be 1 in normal circumstances, but it's possible
@@ -231,7 +235,17 @@ for attempt in {0..2}; do
   fpga_0_write 0x90 0x1 "9:9"
   logger -t $LOG_TAG -p $LOG_PRIO "Waiting for power-up sequence"
 
-  sleep 8
+  # Wait for ASIC_PGOOD (0x98 bit 23) to assert, then for the ASIC to show
+  # up on PCIe. Poll at 100ms: PGOOD asserts ~2s in, coarser just adds boot time.
+  pcie_ok=0
+  for _ in {1..100}; do
+    pgood=$(fpga read32 "$FPGA_0_BDF" 0x98 --bits "23:23" 2>/dev/null)
+    if [ "$(( pgood ))" -eq 1 ] 2>/dev/null && lspci -n | grep -q "$ASIC_BDF"; then
+      pcie_ok=1
+      break
+    fi
+    sleep 0.1
+  done
 
   clear_sticky_bits
 
@@ -244,37 +258,35 @@ for attempt in {0..2}; do
     logger -t "$LOG_TAG" -p "$LOG_ERR" "ASIC power good bit not set"
   fi
 
-  lspci -n | grep -q "$ASIC_BDF"
-  if [ $? -eq 0 ]; then
-    if [ "$attempt" -eq 0 ]; then
-        logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up"
-    else
-        logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up after power cycle $attempt"
-    fi
-
-    logger -t $LOG_TAG -p $LOG_PRIO "Current lspci error(s) output"
-    output=$(lspci -vvv 2>/dev/null | grep -i -e '^0' -e 'CESta' | grep -B 1 -e 'CESta' | grep -B 1 -e '+ ' -e '+$')
-    logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
-
-    logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
-    setpci -s "$ASIC_BRIDGE" 0x160.l=$(setpci -s "$ASIC_BRIDGE" 0x160.l)
-
-    # CPU enables common clk during pcie link training.
-
-    if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
-      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
-      /etc/init.d/opennsl-modules start
-      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
-    fi
-
-    release_lock
-    exit 0
+  if [ "$pcie_ok" -ne 1 ]; then
+    continue
   fi
+
+  if [ "$attempt" -eq 0 ]; then
+    logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up"
+  else
+    logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up after power cycle $attempt"
+  fi
+
+  logger -t $LOG_TAG -p $LOG_PRIO "Current lspci error(s) output"
+  output=$(lspci -vvv 2>/dev/null | grep -i -e '^0' -e 'CESta' | grep -B 1 -e 'CESta' | grep -B 1 -e '+ ' -e '+$')
+  logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
+
+  logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
+  setpci -s "$ASIC_BRIDGE" 0x160.l=$(setpci -s "$ASIC_BRIDGE" 0x160.l)
+
+  # CPU enables common clk during pcie link training.
+
+  if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+    logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
+    /etc/init.d/opennsl-modules start
+    logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
+  fi
+
+  exit 0
 done
 
 logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempts, giving up, powering it down."
 fpga_0_write 0x90 0x0 "9:9"
-
-release_lock
 
 exit 1

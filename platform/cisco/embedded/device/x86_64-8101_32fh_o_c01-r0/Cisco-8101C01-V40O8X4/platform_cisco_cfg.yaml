@@ -1,0 +1,56 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+#
+# *** NOT to be used when "interfaces{ }" node has valid information 
+#     in platform.json and co-exist with hwsku.json ***
+# *** Used only in static method with port_config.ini ***
+#
+# Update the "port_mode:" container with list of
+#    - ports (this refer to the front port number)
+#      mode (4x100G/2x200G/2x100G/...)
+#      media ("COPPER"/"OPTIC") (default is COPPER)
+#
+# By default all ports are configured as 400G
+#
+# port_mode:
+#    -
+#       ports: 1,2,3
+#       mode: 1x400G
+#       media: OPTIC
+#    -
+#       ports: 4,5,6
+#       mode: 1x200G
+#    -
+#       ports: 7,8,9
+#       speed: 1x100G
+#       media: OPTIC
+#    -
+#       ports: 10,11,12
+#       mode: 2x200G
+#       media: OPTIC
+#    -
+#       ports: 13,14,15
+#       mode: 2x100G
+#       media: OPTIC
+#    -
+#       ports: 16,17
+#       mode: 4x100G
+#       media: OPTIC
+
+port_mode:
+    -
+      ports: 0-5,10-13,18-21,26-31
+      mode : 2x200G
+      media: COPPER
+    -
+      ports: 6-9,22-25
+      mode : 1x400G
+      media: COPPER
+    -
+      ports: 14-17
+      mode : 1x25G
+      media: COPPER
+
+enable_dpb: True

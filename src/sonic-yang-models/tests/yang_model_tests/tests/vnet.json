@@ -79,7 +79,17 @@
     },
 
     "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
-        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address, vni, and metric) in VNET_ROUTE_TUNNEL_LIST table."
+        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address, vni, metric and install_on_kernel) in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INSTALL_ON_KERNEL_FALSE": {
+        "desc": "VNET route tunnel configuration with install_on_kernel set to false in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_INSTALL_ON_KERNEL": {
+        "desc": "VNET route tunnel configuration with a non-boolean install_on_kernel value in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["install_on_kernel"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {

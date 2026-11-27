@@ -5,8 +5,8 @@ Subject: [PATCH 2/2] Fix build rules
 
 ---
  debian/libthrift0.install |  1 -
- debian/rules              | 83 +++++++++++----------------------------
- 2 files changed, 24 insertions(+), 60 deletions(-)
+ debian/rules              | 87 +++++++++++----------------------------
+ 2 files changed, 26 insertions(+), 62 deletions(-)
 
 diff --git a/debian/libthrift0.install b/debian/libthrift0.install
 index ec74efc5c..d4ca21e5e 100644
@@ -142,13 +142,13 @@ index d0de50872..3a50319ee 100755
  	dh_install -i
 
  install-arch:
-@@ -154,7 +125,6 @@ install-arch:
- 	# Python
- 	cd $(CURDIR)/lib/py && \
+@@ -156,5 +127,4 @@ install-arch:
  	python2 setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python-thrift && \
 -	python2-dbg setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python-thrift-dbg && \
- 	python3 setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python3-thrift && \
- 	python3-dbg setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python3-thrift-dbg
+-	python3 setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python3-thrift && \
+-	python3-dbg setup.py install --install-layout=deb --no-compile --root=$(CURDIR)/debian/python3-thrift-dbg
++	python3 setup.py install --prefix=/usr --install-lib=/usr/lib/python3/dist-packages --no-compile --root=$(CURDIR)/debian/python3-thrift && \
++	python3-dbg setup.py install --prefix=/usr --install-lib=/usr/lib/python3/dist-packages --no-compile --root=$(CURDIR)/debian/python3-thrift-dbg
 
 @@ -174,11 +144,6 @@ install-arch:
  	find $(CURDIR)/debian/python3-thrift-dbg -name "*.egg-info" -print0 | xargs -0 rm -rf

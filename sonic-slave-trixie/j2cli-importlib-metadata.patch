@@ -1,0 +1,8 @@
+--- a/j2cli/__init__.py
++++ b/j2cli/__init__.py
+@@ -4 +4 @@
+-import pkg_resources
++from importlib.metadata import version
+@@ -8 +8 @@
+-__version__ = pkg_resources.get_distribution('j2cli').version
++__version__ = version('j2cli')

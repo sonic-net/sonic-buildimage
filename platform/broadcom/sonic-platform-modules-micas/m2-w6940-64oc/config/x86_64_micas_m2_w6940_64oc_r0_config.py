@@ -1057,6 +1057,10 @@ DRIVERLISTS = [
     {"name": "curr_sensor_device_driver", "delay": 0},
     {"name": "fpga_device_driver", "delay": 0},
     {"name": "watchdog_device_driver", "delay": 0},
+    {"name": "firmware_driver_cpld", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
 ]
 
 DEVICE = [

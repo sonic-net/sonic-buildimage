@@ -18,10 +18,9 @@ module sonic-route-map {
     import sonic-routing-policy-sets {
         prefix rpolsets;
     }
-// Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
-//    import sonic-vlan {
-//        prefix vlan;
-//    }
+    import sonic-vlan {
+        prefix vlan;
+    }
 
     import sonic-vrf {
         prefix vrf;
@@ -40,6 +39,14 @@ module sonic-route-map {
     description
         "SONIC Route map YANG";
 
+    revision 2026-11-19 {
+        description
+            "match_interface and match_neighbor name a VLAN by leafref to VLAN, so a route map
+             cannot match a VLAN that does not exist and the VLAN's removal finds the route maps
+             that match it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -56,14 +63,12 @@ module sonic-route-map {
             type leafref {
                 path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
             }
-            // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-            //type leafref {
-            //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-            //}
-            type string {
-                pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+            type leafref {
+                path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
             }
         }
+        description
+            "A port, port channel, loopback or VLAN; it must exist in its table.";
     }
 
     typedef bgp-origin-attr-type {
@@ -156,6 +161,9 @@ module sonic-route-map {
                 }
 
                 leaf match_interface{
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type route-map-intf;
                     description "Match based on interface";
                 }
@@ -201,6 +209,9 @@ module sonic-route-map {
                 }
 
                 leaf-list match_neighbor {
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
                     type union {
                         type inet:ip-address;
                         type leafref {
@@ -209,17 +220,14 @@ module sonic-route-map {
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
-                        // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-                        //type leafref {
-                        //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                        //}
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                         }
                     }
                     ordered-by user;
                     description
-                        "IP addresse or interface for match operation.";
+                        "The neighbor address, or the port, port channel or VLAN of an unnumbered
+                         neighbor, to match; the interface must exist in its table.";
                     max-elements 1;
                 }
 

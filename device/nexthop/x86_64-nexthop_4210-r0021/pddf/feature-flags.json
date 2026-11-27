@@ -1,6 +1,16 @@
 [
   {
+    "name": "CPUCARD_FPGA_WATCHDOG_SUPPORTED",
+    "source": "fpga_version",
+    "bdf_var": "cpu_card_fpga_bdf",
+    "reg_offset": "0x0",
+    "mask": "0xff",
+    "comparison": "GREATER_THAN_OR_EQUAL",
+    "version": "0xe"
+  },
+  {
     "name": "fan_duty_packed_in_one_word",
+    "source": "fpga_version",
     "bdf_var": "switchcard_fpga_1_bdf",
     "reg_offset": "0x0",
     "mask": "0xfff",

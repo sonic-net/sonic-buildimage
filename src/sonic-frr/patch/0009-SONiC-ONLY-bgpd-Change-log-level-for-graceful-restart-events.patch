@@ -1,70 +1,82 @@
-[PATCH] From c423bce4db804c1d07d65ce3d06a9e62c4eceb2b Mon Sep 17 00:00:00 2001
-
+From a606eef710401180293a9f589edac511fb942bd3 Mon Sep 17 00:00:00 2001
 From: stormliang <stormliang@microsoft.com>
+Date: Fri, 18 Sep 2026 22:41:44 +0000
+Subject: [PATCH] bgpd: promote graceful restart lifecycle logs
 
-Subject: [PATCH] change log level for graceful restart events
+SONiC relies on graceful-restart timer lifecycle messages for operational
+diagnosis even when neighbor-event debugging is disabled. Emit the carried
+start, stop, and expiry messages at informational level on FRR 10.7.1.
 
-SONiC ONLY: Change log level for graceful restart events from
-zlog_debug (only shown when debug is enabled) to zlog_info
-(always shown) for easier diagnosis.
+Original SONiC patch commit: c423bce4db804c1d07d65ce3d06a9e62c4eceb2b
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
 ---
+ bgpd/bgp_fsm.c | 39 ++++++++++++++++-----------------------
+ bgpd/bgpd.c    |  8 ++------
+ 2 files changed, 18 insertions(+), 29 deletions(-)
+
 diff --git a/bgpd/bgp_fsm.c b/bgpd/bgp_fsm.c
-index 58ea2d6c9..29c4daaa5 100644
+index 734c32d303..d305d98a3b 100644
 --- a/bgpd/bgp_fsm.c
 +++ b/bgpd/bgp_fsm.c
-@@ -775,8 +775,8 @@ static void bgp_graceful_restart_timer_expire(struct event *thread)
+@@ -818,9 +818,8 @@ static void bgp_graceful_restart_timer_expire(struct event *event)
  	afi_t afi;
  	safi_t safi;
  
 -	if (bgp_debug_neighbor_events(peer))
 -		zlog_debug("%pBP graceful restart timer expired and graceful restart stalepath timer stopped for %s",
-+	if (peer)
-+		zlog_info("%pBP graceful restart timer expired and graceful restart stalepath timer stopped for %s",
- 			   peer, bgp_peer_get_connection_direction(connection));
+-			   peer, bgp_peer_get_connection_direction_string(connection));
++	zlog_info("%pBP graceful restart timer expired and graceful restart stalepath timer stopped for %s",
++		  peer, bgp_peer_get_connection_direction_string(connection));
  
  	FOREACH_AFI_SAFI (afi, safi) {
-@@ -834,8 +834,8 @@ static void bgp_graceful_stale_timer_expire(struct event *thread)
+ 		if (!peer->nsf[afi][safi])
+@@ -877,9 +876,8 @@ static void bgp_graceful_stale_timer_expire(struct event *event)
  	afi_t afi;
  	safi_t safi;
  
 -	if (bgp_debug_neighbor_events(peer))
 -		zlog_debug("%pBP graceful restart stalepath timer expired for %s", peer,
-+	if (peer)
-+		zlog_info("%pBP graceful restart stalepath timer expired for %s", peer,
- 			   bgp_peer_get_connection_direction(connection));
+-			   bgp_peer_get_connection_direction_string(connection));
++	zlog_info("%pBP graceful restart stalepath timer expired for %s", peer,
++		  bgp_peer_get_connection_direction_string(connection));
  
- 	/* NSF delete stale route */
-@@ -1683,19 +1683,16 @@ enum bgp_fsm_state_progress bgp_stop(struct peer_connection *connection)
+ 	/*
+ 	 * RFC 9494 §4.3: for LLGR-negotiated AFI/SAFI, retention is bounded
+@@ -2192,20 +2190,17 @@ enum bgp_fsm_state_progress bgp_stop(struct peer_connection *connection)
  		/* graceful restart */
- 		if (connection->t_gr_stale) {
+ 		if (event_is_scheduled(connection->t_gr_stale)) {
  			event_cancel(&connection->t_gr_stale);
 -			if (bgp_debug_neighbor_events(peer))
 -				zlog_debug("%pBP graceful restart stalepath timer stopped for %s",
--					   peer, bgp_peer_get_connection_direction(connection));
+-					   peer,
+-					   bgp_peer_get_connection_direction_string(connection));
 +			zlog_info("%pBP graceful restart stalepath timer stopped for %s",
-+				peer, bgp_peer_get_connection_direction(connection));
++				  peer,
++				  bgp_peer_get_connection_direction_string(connection));
  		}
  		if (CHECK_FLAG(peer->sflags, PEER_STATUS_NSF_WAIT)) {
 -			if (bgp_debug_neighbor_events(peer)) {
 -				zlog_debug("%pBP graceful restart timer started for %d sec for %s",
 -					   peer, peer->v_gr_restart,
--					   bgp_peer_get_connection_direction(connection));
+-					   bgp_peer_get_connection_direction_string(connection));
 -				zlog_debug("%pBP graceful restart stalepath timer started for %d sec for %s",
 -					   peer, bgp->stalepath_time,
--					   bgp_peer_get_connection_direction(connection));
+-					   bgp_peer_get_connection_direction_string(connection));
 -			}
 +			zlog_info("%pBP graceful restart timer started for %d sec for %s",
-+				peer, peer->v_gr_restart,
-+				bgp_peer_get_connection_direction(connection));
++				  peer, peer->v_gr_restart,
++				  bgp_peer_get_connection_direction_string(connection));
 +			zlog_info("%pBP graceful restart stalepath timer started for %d sec for %s",
-+				peer, bgp->stalepath_time,
-+				bgp_peer_get_connection_direction(connection));
++				  peer, bgp->stalepath_time,
++				  bgp_peer_get_connection_direction_string(connection));
  			BGP_TIMER_ON(connection->t_gr_restart,
  				     bgp_graceful_restart_timer_expire,
  				     peer->v_gr_restart);
-@@ -2320,8 +2317,7 @@ static void bgp_peer_process_gr_cap_clear_stale(struct peer *peer)
+@@ -2852,8 +2847,7 @@ static void bgp_peer_process_gr_cap_clear_stale(struct peer *peer)
  
- 	if (peer->connection->t_gr_restart) {
+ 	if (event_is_scheduled(peer->connection->t_gr_restart)) {
  		event_cancel(&peer->connection->t_gr_restart);
 -		if (bgp_debug_neighbor_events(peer))
 -			zlog_debug("%pBP: graceful restart timer stopped", peer);
@@ -72,39 +84,40 @@ index 58ea2d6c9..29c4daaa5 100644
  	}
  
  	UNSET_FLAG(peer->sflags, PEER_STATUS_NSF_WAIT);
-@@ -2362,9 +2358,8 @@ static void bgp_peer_process_gr_cap_clear_stale(struct peer *peer)
+@@ -2895,9 +2889,8 @@ static void bgp_peer_process_gr_cap_clear_stale(struct peer *peer)
  		UNSET_FLAG(peer->sflags, PEER_STATUS_NSF_MODE);
- 		if (peer->connection->t_gr_stale) {
+ 		if (event_is_scheduled(peer->connection->t_gr_stale)) {
  			event_cancel(&peer->connection->t_gr_stale);
 -			if (bgp_debug_neighbor_events(peer))
 -				zlog_debug("%s: graceful restart stalepath timer stopped",
 -					   peer->host);
 +			zlog_info("%s: graceful restart stalepath timer stopped",
-+				peer->host);
++				  peer->host);
  		}
  	}
  }
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index e3b26b37a..a725e9ea0 100644
+index 925b23c7eb..b57c624234 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
-@@ -2723,15 +2723,13 @@ void peer_nsf_stop(struct peer *peer)
+@@ -2935,15 +2935,11 @@ void peer_nsf_stop(struct peer *peer)
  
- 	if (peer->connection->t_gr_restart) {
+ 	if (event_is_scheduled(peer->connection->t_gr_restart)) {
  		event_cancel(&peer->connection->t_gr_restart);
 -		if (bgp_debug_neighbor_events(peer))
 -			zlog_debug("%pBP graceful restart timer stopped", peer);
 +		zlog_info("%pBP graceful restart timer stopped", peer);
  	}
- 	if (peer->connection->t_gr_stale) {
+ 	if (event_is_scheduled(peer->connection->t_gr_stale)) {
  		event_cancel(&peer->connection->t_gr_stale);
 -		if (bgp_debug_neighbor_events(peer))
 -			zlog_debug(
 -				"%pBP graceful restart stalepath timer stopped",
 -				peer);
-+		zlog_info(
-+			"%pBP graceful restart stalepath timer stopped",
-+			peer);
++		zlog_info("%pBP graceful restart stalepath timer stopped", peer);
  	}
  	bgp_clear_route_all(peer);
  }
+-- 
+2.34.1
+

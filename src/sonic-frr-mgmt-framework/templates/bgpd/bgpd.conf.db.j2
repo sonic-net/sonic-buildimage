@@ -42,6 +42,14 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
 {% if 'always_compare_med' in bgp_sess and bgp_sess['always_compare_med'] == 'true' %}
  bgp always-compare-med
 {% endif %}
+{# --------------------------bgp confederation - start -------------------------------- #}
+{% if 'confed_id' in bgp_sess %}
+ bgp confederation identifier {{bgp_sess['confed_id']}}
+{% endif %}
+{% if 'confed_peers' in bgp_sess and bgp_sess['confed_peers']|length > 0 %}
+ bgp confederation peers {{bgp_sess['confed_peers'] | join(' ')}}
+{% endif %}
+{# --------------------------bgp confederation - end ---------------------------------- #}
 {# --------------------------bgp default - start -------------------------------------- #}
 {% if 'default_ipv4_unicast' in bgp_sess and bgp_sess['default_ipv4_unicast'] == 'true' %}
  bgp default ipv4-unicast

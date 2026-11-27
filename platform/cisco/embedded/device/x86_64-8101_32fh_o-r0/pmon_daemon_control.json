@@ -1,0 +1,5 @@
+{
+    "include_sensormond": true,
+    "skip_sensors": true,
+    "skip_xcvrd_cmis_mgr": false
+}

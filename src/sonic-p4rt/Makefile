@@ -16,6 +16,13 @@ endif
 # Newer version of gcc has spurious warnings in boringssl package.
 BAZEL_BUILD_OPTS += --copt=-Wno-array-bounds
 BAZEL_BUILD_OPTS += --copt=-Wno-stringop-overflow
+
+BAZEL_BUILD_OPTS += --jobs=auto
+BAZEL_BUILD_OPTS += --local_ram_resources=HOST_RAM*0.5
+BAZEL_BUILD_OPTS += --local_cpu_resources=HOST_CPUS*0.5
+BAZEL_BUILD_OPTS += --local_test_jobs=1
+
+# Build optimized, stripped binaries.
 BAZEL_BUILD_OPTS += -c opt
 
 # Use a host directory to store Bazel cache, if mounted. This will speed up

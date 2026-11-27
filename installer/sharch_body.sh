@@ -8,7 +8,12 @@
 ## Shell archive template
 ##
 ## Strings of the form %%VAR%% are replaced during construction.
+## %%PLATFORM_METADATA%% is replaced with optional platform metadata lines from
+## platform/${TARGET_MACHINE}/platform_metadata (or removed) by onie-mk-demo.sh.
+## Only lines beginning with optional whitespace and '#' are included.
 ##
+
+%%PLATFORM_METADATA%%
 
 echo -n "Verifying image checksum ..."
 payload_image_size=%%PAYLOAD_IMAGE_SIZE%%

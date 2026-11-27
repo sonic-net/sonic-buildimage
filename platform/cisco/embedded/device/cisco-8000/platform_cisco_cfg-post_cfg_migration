@@ -1,0 +1,72 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+BACKUP_PATH="/etc/sonic/old_config"
+HELPER="/usr/share/sonic/device/cisco-8000/dpb_config_db_migration.py"
+PLATFORM_JSON="/usr/share/sonic/device/${PLATFORM}/platform.json"
+CONFIG_DB_FILES="/etc/sonic/config_db.json /etc/sonic/config_db[0-9]*.json"
+updated_platform_cfg=false
+dpb_enabled=false
+
+echo "Executing platform_cisco_cfg-post_cfg_migration ${PLATFORM}"
+
+# The pre-migration hook saves one file for the active HWSKU. Do not guess which
+# configuration to restore if multiple files are present.
+if [ -d "${BACKUP_PATH}" ]; then
+    mapfile -t platform_cfg_files < <(
+        find "${BACKUP_PATH}" -maxdepth 1 -type f -name 'platform_cisco_cfg.yaml*'
+    )
+
+    if [ "${#platform_cfg_files[@]}" -gt 1 ]; then
+        echo "Skipping platform Cisco config migration: expected one preserved platform_cisco_cfg.yaml file, found ${#platform_cfg_files[@]}"
+    elif [ "${#platform_cfg_files[@]}" -eq 1 ]; then
+        file="${platform_cfg_files[0]}"
+        hwsku=${file#"${BACKUP_PATH}"/platform_cisco_cfg.yaml}
+        cfg_dir="/usr/share/sonic/device/${PLATFORM}/${hwsku}"
+        cfg_file="${cfg_dir}/platform_cisco_cfg.yaml"
+        reference_cfg=""
+
+        if [ -z "${hwsku}" ] || [ ! -d "${cfg_dir}" ]; then
+            echo "Skipping ${file}: cannot resolve target HWSKU directory ${cfg_dir}"
+        else
+            # Preserve the target image's packaged config before restoring the old
+            # config; it determines whether enable_dpb may be introduced.
+            if [ -f "${cfg_file}" ]; then
+                reference_cfg=$(mktemp /tmp/platform_cisco_cfg.XXXXXX)
+                cp "${cfg_file}" "${reference_cfg}"
+            fi
+
+            cp "${file}" "${cfg_file}"
+            echo "Copied ${file} to ${cfg_file}"
+
+            # Evaluate the final restored config so newly and already enabled DPB
+            # configurations are eligible. Helper failures are intentionally nonfatal.
+            if [ -f "${HELPER}" ]; then
+                if [ -n "${reference_cfg}" ]; then
+                    python3 "${HELPER}" ensure-enable-dpb --config "${cfg_file}" --reference "${reference_cfg}" || true
+                fi
+                dpb_enabled=$(python3 "${HELPER}" get-enable-dpb --config "${cfg_file}") || dpb_enabled=false
+            fi
+            [ -n "${reference_cfg}" ] && rm -f "${reference_cfg}"
+            updated_platform_cfg=true
+        fi
+    fi
+fi
+
+if [ "${updated_platform_cfg}" = true ]; then
+    # Regenerate platform.json and hwsku.json before deriving BREAKOUT_CFG from
+    # the active interface capabilities.
+    /opt/cisco/bin/platform_cisco_cfg.py
+
+    if [ -f "${HELPER}" ] && [ "${dpb_enabled}" = true ]; then
+        for config_db_file in ${CONFIG_DB_FILES}; do
+            [ -f "${config_db_file}" ] || continue
+            python3 "${HELPER}" migrate-config-db --config-db "${config_db_file}" --platform-json "${PLATFORM_JSON}" || true
+        done
+    elif [ -f "${HELPER}" ]; then
+        echo "Skipping BREAKOUT_CFG migration: DPB is not enabled for ${hwsku}"
+    fi
+fi

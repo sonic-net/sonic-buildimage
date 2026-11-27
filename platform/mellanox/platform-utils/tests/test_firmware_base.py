@@ -391,7 +391,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
         self.assertTrue(result)
 
     def test_is_upgrade_required_false(self):
-        """Test is_upgrade_required when no upgrade needed (line 189)"""
+        """Versions match and device does not advertise prod_image_dev_capable_device."""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -402,8 +402,98 @@ class TestFirmwareManagerBase(unittest.TestCase):
         manager.current_version = "2.0.0"
         manager.available_version = "2.0.0"
 
-        result = manager.is_upgrade_required()
+        with patch.object(manager, '_has_prod_image_dev_capable_device', return_value=False):
+            result = manager.is_upgrade_required()
         self.assertFalse(result)
+
+    def test_is_upgrade_required_security_state_unknown_raises(self):
+        """When security state can't be determined, surface a FirmwareManagerError."""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        manager.current_version = "2.0.0"
+        manager.available_version = "2.0.0"
+
+        with patch.object(manager, '_has_prod_image_dev_capable_device', return_value=None):
+            with self.assertRaises(FirmwareManagerError):
+                manager.is_upgrade_required()
+
+    def test_has_prod_image_dev_capable_device_present(self):
+        """flint reports the attribute among Security Attributes -> True."""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = (
+            "FW Version:            39.2020.0248\n"
+            "PSID:                  MSF0000000068\n"
+            "Security Attributes:   secure-fw, prod_image_dev_capable_device\n"
+            "Default Update Method: fw_ctrl\n"
+        )
+        mock_result.stderr = ""
+
+        with patch.object(manager, '_run_command', return_value=mock_result):
+            self.assertTrue(manager._has_prod_image_dev_capable_device())
+
+    def test_has_prod_image_dev_capable_device_absent(self):
+        """flint reports Security Attributes without the token -> False."""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Security Attributes:   secure-fw\n"
+        mock_result.stderr = ""
+
+        with patch.object(manager, '_run_command', return_value=mock_result):
+            self.assertFalse(manager._has_prod_image_dev_capable_device())
+
+    def test_has_prod_image_dev_capable_device_no_security_line(self):
+        """flint output without a Security Attributes line -> False (normal device)."""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "FW Version:            39.2020.0248\nPSID: MSF0000000068\n"
+        mock_result.stderr = ""
+
+        with patch.object(manager, '_run_command', return_value=mock_result):
+            self.assertFalse(manager._has_prod_image_dev_capable_device())
+
+    def test_has_prod_image_dev_capable_device_flint_failure_returns_none(self):
+        """flint returns non-zero -> None (unknown)."""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "flint: device not found"
+
+        with patch.object(manager, '_run_command', return_value=mock_result):
+            self.assertIsNone(manager._has_prod_image_dev_capable_device())
 
     def test_report_status_with_queue(self):
         """Test _report_status with status queue (lines 193-202)"""

@@ -265,3 +265,42 @@ class TestThermalUpdater:
         # Simulate process exit and confirm cleanup uses the bound SFP list
         exit_callback()
         mock_clean.assert_called_once_with([sfp])
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_mlxsw_ready', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.os.unlink')
+    @mock.patch('sonic_platform.thermal_updater.glob.iglob')
+    def test_unlink_hw_mgmt_thermal_files_waits_for_mlxsw_sysfs(
+            self, mock_iglob, mock_unlink, mock_ensure_mlxsw, mock_is_spc1, mock_logger):
+        mock_iglob.side_effect = [
+            ['/run/hw-management/thermal/asic'],
+            ['/run/hw-management/thermal/module1_temp_input',
+             '/run/hw-management/thermal/module2_temp_input'],
+        ]
+        with mock.patch('sonic_platform.thermal_updater.os.path.islink',
+                         side_effect=lambda f: 'module2' not in f):
+            updater = ThermalUpdater(None)
+            updater.unlink_hw_mgmt_thermal_files()
+
+        mock_ensure_mlxsw.assert_called_once()
+        mock_logger.log_notice.assert_any_call('All ASIC and modules thermal files are created')
+        unlinked = {c.args[0] for c in mock_unlink.call_args_list}
+        assert unlinked == {'/run/hw-management/thermal/asic',
+                             '/run/hw-management/thermal/module1_temp_input'}
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_mlxsw_ready', return_value=False)
+    @mock.patch('sonic_platform.thermal_updater.os.unlink')
+    @mock.patch('sonic_platform.thermal_updater.glob.iglob')
+    def test_unlink_hw_mgmt_thermal_files_mlxsw_sysfs_timeout(
+            self, mock_iglob, mock_unlink, mock_ensure_mlxsw, mock_is_spc1, mock_logger):
+        updater = ThermalUpdater(None)
+        updater.unlink_hw_mgmt_thermal_files()
+
+        mock_ensure_mlxsw.assert_called_once()
+        mock_logger.log_error.assert_called_once_with(
+            'Failed to wait for thermal files to be created')
+        mock_iglob.assert_not_called()
+        mock_unlink.assert_not_called()

@@ -1,36 +1,33 @@
-From b439c5cfcb36eff8316d7eb6d3178eba9d1d9a70 Mon Sep 17 00:00:00 2001
+From 83619333fc5c7913c07b665bbe4d19fe4ff9f820 Mon Sep 17 00:00:00 2001
 From: Mrinmoy Ghosh <mrghosh@cisco.com>
 Date: Tue, 19 Aug 2025 23:18:29 +0000
-Subject: doc: zebra: Doc update for zebra option kernel-mac-ext-learn
+Subject: [PATCH] doc: zebra: Doc update for zebra option kernel-mac-ext-learn
 
-Doc update for new zebra option '--kernel-mac-ext-learn'
+Document that --kernel-mac-ext-learn signals zebra to operate in MAC
+external-learn mode without duplicating the broader option documentation
+introduced by the preceding production patch.
 
 Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
 Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
 Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 (cherry picked from commit 12d3632f8677004ea7f14cece117cb7ed8478a91)
+---
+ doc/user/zebra.rst | 2 ++
+ 1 file changed, 2 insertions(+)
 
 diff --git a/doc/user/zebra.rst b/doc/user/zebra.rst
-index 91b1c9299..1716fc9cd 100644
+index 81fbbc9682..cc9f9e1452 100644
 --- a/doc/user/zebra.rst
 +++ b/doc/user/zebra.rst
-@@ -120,6 +120,16 @@ Besides the common invocation options (:ref:`common-invocation-options`), the
-    8 bit values are scaled to a range of 1-254 and 16 bit values are
-    scaled to a range of 1-65534.
+@@ -126,6 +126,8 @@ Besides the common invocation options (:ref:`common-invocation-options`), the
  
-+.. option:: --kernel-mac-ext-learn
-+
-+   Signal to zebra that its operating in MAC external learn mode.
-+   In this mode, both MAC learning and the aging timer are managed
-+   by the underlying hardware. As a result, kernel-based MAC learning
-+   and aging are disabled. MAC addresses learned via both the
-+   control plane and data plane are programmed in the kernel with the
-+   'extern_learn' attribute. ARP and Neighbor Discovery (ND) suppression
-+   are not supported in this mode.
-+
- .. _interface-commands:
+    **Global option** that enables hardware-based MAC learning and aging mode.
  
- Configuration Addresses behaviour
++   This option signals to zebra that it is operating in MAC external-learn mode.
++
+    This is a system-wide zebra option (not EVPN-MH specific) designed for
+    platforms with hardware ASIC capabilities that perform MAC learning and
+    aging in hardware rather than kernel software.
 -- 
-2.43.0
+2.34.1
 

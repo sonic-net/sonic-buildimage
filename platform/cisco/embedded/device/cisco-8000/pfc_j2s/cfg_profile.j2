@@ -1,0 +1,43 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{%- import 'globals.j2' as globals with context %}
+
+{%- set supported_platforms = [
+    'x86_64-8101_32fh_o-r0',
+    'x86_64-8101_32fh_o_c01-r0',
+    'x86_64-8102_64h_o-r0'
+] %}
+{%- if DEVICE_METADATA['localhost'].get('platform') not in supported_platforms %}
+    {{ globals.throw('Unsupported Cisco embedded platform') }}
+{%- endif %}
+
+{% if globals.default_cable is defined %}
+    {%- set default_cable = globals.default_cable %}
+{%- endif %}
+
+{%- set cfg_profile = 'generic' %}
+{%- if 'cfg_profile' in DEVICE_METADATA['localhost'] %}
+    {%- set cfg_profile = DEVICE_METADATA['localhost']['cfg_profile'] %}
+{%- endif %}
+
+{%- set cfg_profiles = ['generic'] %}
+{%- if cfg_profile not in cfg_profiles %}
+    {{ globals.throw("Invalid DEVICE_METADATA['localhost']['cfg_profile'] = '%s', must be one of %s" % (cfg_profile, cfg_profiles)) }}
+{% endif %}
+
+{%- set opfile = '%s_%s.j2' % (file_type, cfg_profile) %}
+
+{%- if file_type == "buffers" -%}
+    {# Define 'defs' for buffers_config.j2 #}
+    {%- import opfile as defs with context %}
+
+    {# Must be end of file for buffers code, no further definitions after this
+       line as buffers_config.j2 will not be able to access them. #}
+    {%- include 'buffers_config.j2' -%}
+{%- else -%}
+    {# Must be end of file for qos code, no further definitions after this
+       line as qos_config.j2 will not be able to access them. #}
+    {%- include opfile %}
+{%- endif -%}

@@ -7,6 +7,7 @@ import abc
 import re
 import threading
 import time
+from datetime import UTC, datetime
 
 from nexthop import fpga_lib
 from sonic_platform_base.thermal_base import ThermalBase
@@ -424,7 +425,9 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         last_update = data.get("last_update_time")
         if temp is not None and last_update:
             try:
-                age = time.time() - time.mktime(time.strptime(last_update, "%a %b %d %H:%M:%S %Y"))
+                # xcvrd writes last_update_time in UTC
+                updated = datetime.strptime(last_update, "%a %b %d %H:%M:%S %Y").replace(tzinfo=UTC)
+                age = (datetime.now(UTC) - updated).total_seconds()
                 if age > self.TEMP_STALE_SEC:
                     thermal_syslogger.log_warning(
                         f"Stale TRANSCEIVER_DOM_TEMPERATURE for {intf_name} "

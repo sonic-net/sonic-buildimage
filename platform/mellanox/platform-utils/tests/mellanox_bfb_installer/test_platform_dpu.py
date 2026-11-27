@@ -412,23 +412,133 @@ class TestPlatformDpu(unittest.TestCase):
         self.assertEqual(result["dpu1"][DpuInterfaceEnum.PCIE_INT.value], "0000:03:00.0")
         self.assertEqual(result["dpu1"][DpuInterfaceEnum.RSHIM_PCIE_INT.value], "0000:03:00.1")
 
-    def test_remove_cx7_pci_device_logs_and_writes_remove_when_present(self):
-        """remove_cx7_pci_device logs and writes to sysfs remove path."""
+    def test_get_rshim_pci_mappings_preserves_platform_order(self):
+        from mellanox_bfb_installer import platform_dpu
+        from sonic_platform.device_data import DpuInterfaceEnum
+
+        detected = {
+            "dpu0": {DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:08:00.1"},
+            "dpu2": {DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:0a:00.1"},
+        }
+        with (
+            mock.patch.object(platform_dpu, "list_dpus", return_value=["dpu0", "dpu2"]),
+            mock.patch.object(
+                platform_dpu,
+                "dpu2rshim",
+                side_effect=lambda dpu: {"dpu0": "rshim0", "dpu2": "rshim2"}[dpu],
+            ),
+            mock.patch.object(
+                platform_dpu, "get_dpus_detected_pci_bus_ids", return_value=detected
+            ),
+        ):
+            result = platform_dpu.get_rshim_pci_mappings()
+
+        self.assertEqual(
+            list(result.items()),
+            [("rshim0", "0000:08:00.1"), ("rshim2", "0000:0a:00.1")],
+        )
+
+    def test_get_rshim_pci_mappings_rejects_incomplete_or_duplicate_mappings(self):
+        from mellanox_bfb_installer import platform_dpu
+        from sonic_platform.device_data import DpuInterfaceEnum
+
+        cases = (
+            (
+                "missing rshim name",
+                ["dpu0"],
+                {"dpu0": None},
+                {"dpu0": "0000:08:00.1"},
+                "incomplete",
+            ),
+            (
+                "missing live BDF",
+                ["dpu0"],
+                {"dpu0": "rshim0"},
+                {"dpu0": None},
+                "incomplete",
+            ),
+            (
+                "duplicate name",
+                ["dpu0", "dpu1"],
+                {"dpu0": "rshim0", "dpu1": "rshim0"},
+                {"dpu0": "0000:08:00.1", "dpu1": "0000:09:00.1"},
+                "Duplicate RShim name",
+            ),
+        )
+        for name, dpus, rshims, bus_ids, error_pattern in cases:
+            detected = {
+                dpu: {DpuInterfaceEnum.RSHIM_PCIE_INT.value: bus_id}
+                for dpu, bus_id in bus_ids.items()
+                if bus_id
+            }
+            with (
+                self.subTest(name=name),
+                mock.patch.object(platform_dpu, "list_dpus", return_value=dpus),
+                mock.patch.object(platform_dpu, "dpu2rshim", side_effect=rshims.get),
+                mock.patch.object(
+                    platform_dpu, "get_dpus_detected_pci_bus_ids", return_value=detected
+                ),
+                self.assertRaisesRegex(ValueError, error_pattern),
+            ):
+                platform_dpu.get_rshim_pci_mappings()
+
+    def test_get_rshim_pci_mappings_uses_detected_isolated_mode_bus_id(self):
+        """In ISOLATED MODE the RShim device is live-detected at the CX slot."""
+        from mellanox_bfb_installer import platform_dpu
+        from sonic_platform.device_data import DpuInterfaceEnum
+
+        detected = {
+            "dpu0": {DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:08:00.0"},
+            "dpu2": {DpuInterfaceEnum.RSHIM_PCIE_INT.value: "0000:0a:00.1"},
+        }
+        with (
+            mock.patch.object(platform_dpu, "list_dpus", return_value=["dpu0", "dpu2"]),
+            mock.patch.object(
+                platform_dpu,
+                "dpu2rshim",
+                side_effect=lambda dpu: {"dpu0": "rshim0", "dpu2": "rshim2"}[dpu],
+            ),
+            mock.patch.object(
+                platform_dpu, "get_dpus_detected_pci_bus_ids", return_value=detected
+            ),
+        ):
+            result = platform_dpu.get_rshim_pci_mappings()
+
+        self.assertEqual(
+            result,
+            {"rshim0": "0000:08:00.0", "rshim2": "0000:0a:00.1"},
+        )
+
+    def test_unbind_cx7_pci_device_writes_driver_unbind(self):
+        """unbind_cx7_pci_device writes the BDF to the driver's unbind file."""
         from mellanox_bfb_installer import platform_dpu
 
         mock_log = mock.MagicMock()
         bus_id = "0000:08:00.0"
         with (
             mock.patch.object(platform_dpu, "logger", mock_log),
+            mock.patch.object(platform_dpu.os.path, "exists", return_value=True),
             mock.patch("builtins.open", mock.mock_open()) as mock_open,
         ):
-            platform_dpu.remove_cx7_pci_device(bus_id, "rshim0: ")
-            mock_log.info.assert_called_once_with("%sRemoving CX PCI device %s", "rshim0: ", bus_id)
-            mock_open.assert_called_once_with(f"/sys/bus/pci/devices/{bus_id}/remove", "w")
-            mock_open().write.assert_called_once_with("1")
+            self.assertTrue(platform_dpu.unbind_cx7_pci_device(bus_id, "rshim0: "))
+            mock_log.info.assert_called_once_with(
+                "%sUnbinding CX PCI device %s from its driver", "rshim0: ", bus_id
+            )
+            mock_open.assert_called_once_with(
+                f"/sys/bus/pci/devices/{bus_id}/driver/unbind", "w"
+            )
+            mock_open().write.assert_called_once_with(bus_id)
 
-    def test_remove_cx7_pci_device_logs_error_when_open_fails(self):
-        """remove_cx7_pci_device logs error and does not raise when open raises OSError."""
+    def test_unbind_cx7_pci_device_succeeds_when_no_driver_is_bound(self):
+        """An unbound device needs no action and is not reported as a failure."""
+        from mellanox_bfb_installer import platform_dpu
+
+        bus_id = "0000:08:00.0"
+        with mock.patch.object(platform_dpu.os.path, "exists", return_value=False):
+            self.assertTrue(platform_dpu.unbind_cx7_pci_device(bus_id, "rshim0: "))
+
+    def test_unbind_cx7_pci_device_reports_failure_when_open_fails(self):
+        """unbind_cx7_pci_device reports an OSError to its caller without raising."""
         from mellanox_bfb_installer import platform_dpu
 
         mock_log = mock.MagicMock()
@@ -436,12 +546,14 @@ class TestPlatformDpu(unittest.TestCase):
         err = OSError(2, "No such file or directory")
         with (
             mock.patch.object(platform_dpu, "logger", mock_log),
+            mock.patch.object(platform_dpu.os.path, "exists", return_value=True),
             mock.patch("builtins.open", side_effect=err),
         ):
-            platform_dpu.remove_cx7_pci_device(bus_id, "rshim0: ")
-        # Does not raise.
-        mock_log.info.assert_called_once_with("%sRemoving CX PCI device %s", "rshim0: ", bus_id)
-        mock_log.error.assert_called_once_with("Failed to remove PCI device %s: %s", bus_id, err)
+            self.assertFalse(platform_dpu.unbind_cx7_pci_device(bus_id, "rshim0: "))
+        mock_log.info.assert_called_once_with(
+            "%sUnbinding CX PCI device %s from its driver", "rshim0: ", bus_id
+        )
+        mock_log.error.assert_called_once_with("Failed to unbind PCI device %s: %s", bus_id, err)
 
 
 if __name__ == "__main__":

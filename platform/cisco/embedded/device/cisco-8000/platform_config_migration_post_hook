@@ -1,0 +1,12 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+SCRIPT="/etc/sonic/old_config/platform/platform_data_post_migration.py"
+
+if [ -f "${SCRIPT}" ]; then
+    python3 "${SCRIPT}"
+else
+    echo "Skipping platform data migration: no cached migration payload found at ${SCRIPT}"
+fi

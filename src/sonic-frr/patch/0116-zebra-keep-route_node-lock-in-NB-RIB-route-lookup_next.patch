@@ -1,44 +1,53 @@
-From 19e6c1b652a4fb7263108d3b65b9b84d2b3f2d31 Mon Sep 17 00:00:00 2001
+From 98db741ce3d4a680ab9639717355847f7a23e632 Mon Sep 17 00:00:00 2001
 From: Deepak Singhal <deepsinghal@microsoft.com>
-Date: Wed, 1 Jul 2026 18:07:22 +0000
-Subject: [PATCH] zebra: keep route_node lock in NB RIB route lookup_next
+Date: Mon, 28 Sep 2026 22:34:46 +0000
+Subject: [PATCH] zebra: preserve locks during NB RIB iteration
 
-The northbound oper-state iterator for the
-/frr-vrf:lib/vrf/frr-zebra:zebra/ribs/rib/route list uses lookup_next()
-to resume a yielded walk. lookup_next() calls route_table_get_next(),
-which returns a route_node with the lock it acquired held, and then
-immediately released it with route_unlock_node() before returning the
-node.
+Carry both fixes from FRRouting/frr PR 22490.
 
-That node is carried back into the walk as args->list_entry and passed
-to lib_vrf_zebra_ribs_rib_route_get_next() -> srcdest_route_next() ->
-route_next(), which unlocks its input node as part of advancing. Because
-lookup_next() had already dropped the lock, route_next() under-runs the
-lock count to zero and trips:
+Keep the route_node lock returned by lookup_next so get_next can consume it, and skip link-local nodes through route_next so the walk releases locks and continues enumeration.
 
-  zebra: assertion (node->lock > 0) failed
+Upstream: https://github.com/FRRouting/frr/commit/f98b50784ad56f231fa2cfc540595ec79a26c92a
 
-aborting zebra. This is hit when the oper-state notification walk (on by
-default since the FRR VRF YANG state was added) traverses a large RIB
-and yields, then resumes through lookup_next().
+Upstream: https://github.com/FRRouting/frr/commit/8b5dc38355ac79c3e7d61717a6826edace8567de
 
-lookup_entry() is a self-contained point lookup and correctly unlocks
-the node it returns. lookup_next(), by contrast, seeds an iteration
-whose first step (route_next) expects the carried node to still be
-locked. Remove the erroneous route_unlock_node() so the iterator lock
-contract holds.
-
-Link: https://github.com/sonic-net/sonic-buildimage/issues/27788
 Signed-off-by: Deepak Singhal <deepsinghal@microsoft.com>
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ---
- zebra/zebra_nb_state.c | 10 ++++++++--
- 1 file changed, 8 insertions(+), 2 deletions(-)
+ zebra/zebra_nb_state.c | 26 +++++++++++++++++---------
+ 1 file changed, 17 insertions(+), 9 deletions(-)
 
 diff --git a/zebra/zebra_nb_state.c b/zebra/zebra_nb_state.c
-index 543d4b38b3..d1d214281f 100644
+index 2a489d9e1e..6d14593dd0 100644
 --- a/zebra/zebra_nb_state.c
 +++ b/zebra/zebra_nb_state.c
-@@ -399,8 +399,14 @@ lib_vrf_zebra_ribs_rib_route_lookup_next(struct nb_cb_lookup_entry_args *args)
+@@ -411,15 +411,17 @@ lib_vrf_zebra_ribs_rib_route_get_next(struct nb_cb_get_next_args *args)
+ 		rn = route_top(zrt->table);
+ 	else
+ 		rn = srcdest_route_next(rn);
+-	/* Optimization: skip empty route nodes. */
+-	while (rn && rn->info == NULL)
++	/*
++	 * Skip empty route nodes and link-local IPv6 routes. Link-locals are
++	 * excluded because the multiple connected link-local routes a router
++	 * holds (one per interface) collapse to identical YANG keys
++	 * (route[prefix='fe80::/64']/route-entry[protocol='connected']), which
++	 * breaks key-based resume of the async walk.
++	 */
++	while (rn && (rn->info == NULL ||
++		      (rn->p.family == AF_INET6 && IN6_IS_ADDR_LINKLOCAL(&rn->p.u.prefix6))))
+ 		rn = route_next(rn);
+ 
+-	/* Skip link-local routes. */
+-	if (rn && rn->p.family == AF_INET6
+-	    && IN6_IS_ADDR_LINKLOCAL(&rn->p.u.prefix6))
+-		return NULL;
+-
+ 	return rn;
+ }
+ 
+@@ -466,8 +468,14 @@ lib_vrf_zebra_ribs_rib_route_lookup_next(struct nb_cb_lookup_entry_args *args)
  	if (!rn)
  		return NULL;
  

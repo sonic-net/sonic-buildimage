@@ -4,7 +4,9 @@ EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
 INVALID_LISTENER_MODE=3
 SOCKET_DIRECTORY_ERROR=4
+INVALID_TLS_CONFIGURATION=5
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
+PATHS_BLACKLIST_FILE=/etc/telemetry/paths_blacklist.txt
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
@@ -51,18 +53,19 @@ export GRPC_GO_LOG_VERBOSITY_LEVEL=99
 export GRPC_GO_LOG_SEVERITY_LEVEL=info
 
 TELEMETRY_ARGS=" -logtostderr"
+NO_TLS_FALLBACK=false
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
 if [[ "$DPU_EPHEMERAL_TLS" == "true" ]]; then
     TELEMETRY_ARGS+=" --insecure"
 elif [ -n "$CERTS" ]; then
-    SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
-    SERVER_KEY=$(extract_field "$CERTS" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
-        TELEMETRY_ARGS+=" --insecure"
-    else
-        TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
+    SERVER_CRT=$(extract_field "$CERTS" '.server_crt // empty')
+    SERVER_KEY=$(extract_field "$CERTS" '.server_key // empty')
+    if [[ -z "$SERVER_CRT" || -z "$SERVER_KEY" ]]; then
+        echo "TLS configuration requires both server_crt and server_key" >&2
+        exit $INVALID_TLS_CONFIGURATION
     fi
+    TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
 
     CA_CRT=$(extract_field "$CERTS" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
@@ -70,13 +73,13 @@ elif [ -n "$CERTS" ]; then
     fi
 
 elif [ -n "$X509" ]; then
-    SERVER_CRT=$(extract_field "$X509" '.server_crt')
-    SERVER_KEY=$(extract_field "$X509" '.server_key')
-    if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
-        TELEMETRY_ARGS+=" --insecure"
-    else
-        TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
+    SERVER_CRT=$(extract_field "$X509" '.server_crt // empty')
+    SERVER_KEY=$(extract_field "$X509" '.server_key // empty')
+    if [[ -z "$SERVER_CRT" || -z "$SERVER_KEY" ]]; then
+        echo "TLS configuration requires both server_crt and server_key" >&2
+        exit $INVALID_TLS_CONFIGURATION
     fi
+    TELEMETRY_ARGS+=" --server_crt $SERVER_CRT --server_key $SERVER_KEY "
 
     CA_CRT=$(extract_field "$X509" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
@@ -84,17 +87,16 @@ elif [ -n "$X509" ]; then
     fi
 else
     TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    NO_TLS_FALLBACK=true
 fi
 
-# If no configuration entry exists for TELEMETRY, create one default port
-if [ -z "$GNMI" ]; then
+# Use the default port if GNMI|gnmi or its port field is missing or empty
+PORT=$(extract_field "$GNMI" '.port // empty')
+if [ -z "$PORT" ]; then
     PORT=8080
-else
-    PORT=$(extract_field "$GNMI" '.port')
-    if ! [[ $PORT =~ ^[0-9]+$ ]]; then
-        echo "Incorrect port value ${PORT}, expecting positive integers" >&2
-        exit $INCORRECT_TELEMETRY_VALUE
-    fi
+elif ! [[ $PORT =~ ^[0-9]+$ ]]; then
+    echo "Incorrect port value ${PORT}, expecting positive integers" >&2
+    exit $INCORRECT_TELEMETRY_VALUE
 fi
 
 case "${GNMI_LISTENER_MODE-config}" in
@@ -128,6 +130,12 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
+# Save-on-set is off unless GNMI|gnmi save_on_set is set.
+SAVE_ON_SET=$(extract_field "$GNMI" '.save_on_set // empty')
+if [ -n "$SAVE_ON_SET" ]; then
+    TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
+fi
+
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
@@ -136,7 +144,11 @@ fi
 
 GNMI_VRF=$(extract_field "$GNMI" '.vrf')
 if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
-    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+    if [[ "$NO_TLS_FALLBACK" == "true" && "$GNMI_VRF" != "default" ]]; then
+        echo "Ignoring gNMI VRF '$GNMI_VRF': certificate-free fallback is restricted to localhost; configure TLS certificates for management-VRF access" >&2
+    else
+        TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+    fi
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
@@ -194,6 +206,11 @@ if [ -n "$USER_AUTH" ] && [ "$USER_AUTH" != "null" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
         fi
     fi
+fi
+
+# Reject requests for paths listed in the blacklist, when one is installed
+if [ -f "$PATHS_BLACKLIST_FILE" ]; then
+    TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
 fi
 
 echo "gnmi args: $TELEMETRY_ARGS"

@@ -6,6 +6,7 @@
 import json
 import os
 import tempfile
+from unittest.mock import Mock
 
 import pytest
 
@@ -28,6 +29,7 @@ def _write(tmp, flags):
 def _flag(name, comparison, version, bdf_var="switchcard_fpga_1_bdf", reg_offset="0x0", mask="0xfff"):
     return {
         "name": name,
+        "source": "fpga_version",
         "bdf_var": bdf_var,
         "reg_offset": reg_offset,
         "mask": mask,
@@ -112,3 +114,47 @@ def test_missing_field_raises(feature_flags_lib_module, read_303):
         del bad["mask"]
         with pytest.raises(ValueError):
             feature_flags_lib_module.get_feature_flag_variables(_write(tmp, [bad]), PCIE_VARS)
+
+
+def _device_version_flag(name, comparison, version):
+    return {"name": name, "source": "onie_device_version", "comparison": comparison, "version": version}
+
+
+@pytest.mark.parametrize("device_version, expected", [(2, False), (3, True), (4, True)])
+def test_device_version_flag_compares_the_idprom_value(feature_flags_lib_module, device_version, expected):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = _write(tmp, [_device_version_flag("DEVICE_VERSION_3", "GREATER_THAN_OR_EQUAL", "0x3")])
+        template_vars = {**PCIE_VARS, "device_version": device_version}
+        out = feature_flags_lib_module.get_feature_flag_variables(path, template_vars)
+    assert out == {"DEVICE_VERSION_3": expected}
+
+
+def test_device_version_is_read_only_for_a_device_version_flag(feature_flags_lib_module, read_303, monkeypatch):
+    from nexthop import nexthop_device_info
+
+    get_device_version = Mock(return_value=3)
+    monkeypatch.setattr(nexthop_device_info, "get_device_version", get_device_version)
+    with tempfile.TemporaryDirectory() as tmp:
+        template_vars = dict(PCIE_VARS)
+        feature_flags_lib_module.get_feature_flag_variables(
+            _write(tmp, [_flag("FPGA_FLAG", "EQUAL", "0x303")]), template_vars
+        )
+        get_device_version.assert_not_called()
+
+        out = feature_flags_lib_module.get_feature_flag_variables(
+            _write(tmp, [_device_version_flag("DEVICE_VERSION_3", "GREATER_THAN_OR_EQUAL", "0x3")]), template_vars
+        )
+    assert out == {"DEVICE_VERSION_3": True}
+    assert template_vars["device_version"] == 3
+
+
+def test_unreadable_device_version_is_unprogrammed(feature_flags_lib_module, monkeypatch):
+    from nexthop import nexthop_device_info
+
+    monkeypatch.setattr(nexthop_device_info, "get_device_version", Mock(side_effect=RuntimeError()))
+    with tempfile.TemporaryDirectory() as tmp:
+        path = _write(tmp, [_device_version_flag("DEVICE_VERSION_0", "EQUAL", "0x0")])
+        template_vars = dict(PCIE_VARS)
+        out = feature_flags_lib_module.get_feature_flag_variables(path, template_vars)
+    assert out == {"DEVICE_VERSION_0": True}
+    assert template_vars["device_version"] == nexthop_device_info.UNPROGRAMMED_DEVICE_VERSION

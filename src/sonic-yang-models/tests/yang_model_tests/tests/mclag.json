@@ -28,5 +28,18 @@
     "MCLAG_UNIQUE_IP_DOMAIN_ABSENT_TEST": {
         "desc": "mclag unique ip configured without domain",
         "eStr" : "mclag not configured"
+    },
+    "MCLAG_UNIQUE_IP_VALID_TEST": {
+        "desc": "MCLAG unique ip on an existing VLAN is accepted."
+    },
+    "MCLAG_UNIQUE_IP_VLAN_MISSING_TEST": {
+        "desc": "MCLAG unique ip naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "MCLAG_UNIQUE_IP_VLAN_4095_TEST": {
+        "desc": "MCLAG unique ip on Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
 }

@@ -44,6 +44,13 @@ module sonic-portchannel {
         description "First Revision";
     }
 
+    typedef lag-type {
+        type enumeration {
+            enum LACP;
+            enum STATIC;
+        }
+    }
+
     container sonic-portchannel {
 
         container PORTCHANNEL {
@@ -135,6 +142,11 @@ module sonic-portchannel {
                          deployments that require peer devices to advertise a shared LACP system ID.
                          When unset, the device's default system MAC is used.";
                     type yang:mac-address;
+                }
+
+                leaf lag_type {
+                    type lag-type;
+                    description "Describes how the LAG is defined and managed; either statically or with LACP";
                 }
 
             } /* end of list PORTCHANNEL_LIST */

@@ -86,7 +86,8 @@ class BMC(BMCBase):
     It also acts as wrapper of RedfishClient.
     """
 
-    BMC_FIRMWARE_ID = 'MGX_FW_BMC_0'
+    # BMC firmware IDs in the Redfish firmware inventory, in resolution order.
+    BMC_FIRMWARE_IDS = ('FW_BMC_0', 'MGX_FW_BMC_0')
     BMC_EEPROM_ID = 'BMC_eeprom'
     _instance = None
 
@@ -95,6 +96,7 @@ class BMC(BMCBase):
         self._bmc_nos_account_username = bmc_nos_account_username
         self._bmc_root_account_default_password = bmc_root_account_default_password
         self._nos_account_provisioning_tried = False
+        self._firmware_id = None
 
     @staticmethod
     def get_instance():
@@ -151,8 +153,75 @@ class BMC(BMCBase):
         logger.log_notice("BMC NOS account configured successfully")
         return True
 
+    def _get_firmware_inventory_entry(self):
+        """
+        Resolve the BMC's own entry in the Redfish firmware inventory.
+
+        Queries each known ID's own inventory-member endpoint directly, in
+        resolution order, and stops at the first that reports a version. This
+        avoids listing the full firmware inventory, which would query every
+        component's version just to find the BMC's one entry.
+
+        Handles the session instead of @with_session_management: this is also
+        called from inside an open session (BMCBase.update_firmware() resolves
+        the firmware ID while its own session is held), and the decorator would
+        log that session out.
+
+        Returns:
+            A tuple (fw_id, version), or (None, None) if none of the known IDs
+            reported a version from the BMC firmware inventory
+        """
+        caller_has_session = self.rf_client.has_login()
+        try:
+            if not caller_has_session:
+                ret = self._login()
+                if ret != RedfishClient.ERR_CODE_OK:
+                    logger.log_error(f"Failed to get the BMC firmware inventory: {ret}")
+                    return None, None
+            for fw_id in BMC.BMC_FIRMWARE_IDS:
+                ret, version = self.rf_client.redfish_api_get_firmware_version(fw_id)
+                # An ID the BMC does not carry answers 404 with a Redfish error
+                # body, which still reads back as ERR_CODE_OK with a version of
+                # 'N/A'. A missing version is therefore the only signal that the
+                # ID is not this BMC's, so keep looking rather than accepting it.
+                if ret == RedfishClient.ERR_CODE_OK and version and version != 'N/A':
+                    return fw_id, version
+            logger.log_error(f"None of the known BMC firmware IDs {list(BMC.BMC_FIRMWARE_IDS)} "
+                             f"reported a version from the BMC firmware inventory")
+            return None, None
+        except Exception as e:
+            logger.log_error(f"Exception in _get_firmware_inventory_entry: {str(e)}")
+            return None, None
+        finally:
+            if not caller_has_session:
+                self._logout()
+
     def get_firmware_id(self):
-        return BMC.BMC_FIRMWARE_ID
+        """
+        Get the BMC firmware ID, resolving and caching it on first use.
+
+        Returns:
+            A string containing the BMC firmware ID. Falls back to
+            BMC_FIRMWARE_IDS[0] (unresolved and not cached) if the inventory
+            could not be read or holds none of the known IDs.
+        """
+        if self._firmware_id is None:
+            self._firmware_id, _ = self._get_firmware_inventory_entry()
+        return self._firmware_id or BMC.BMC_FIRMWARE_IDS[0]
+
+    def get_version(self):
+        """
+        Retrieves the BMC firmware version
+
+        Overrides BMCBase.get_version(): the inventory lookup that finds the BMC's
+        own entry already carries the version, so there is nothing left to query.
+
+        Returns:
+            A string containing the BMC firmware version.
+            Returns 'N/A' if the BMC firmware version cannot be retrieved
+        """
+        fw_id, version = self._get_firmware_inventory_entry()
+        return version if fw_id else 'N/A'
 
     def _get_eeprom_id(self):
         return BMC.BMC_EEPROM_ID

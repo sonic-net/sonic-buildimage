@@ -1,8 +1,9 @@
 [Unit]
-Description=Update the epoch file with the current time daily
+Description=Update the epoch file with the current time hourly
 
 [Timer]
-OnCalendar=daily
+OnCalendar=hourly
+OnClockChange=yes
 Persistent=true
 
 [Install]

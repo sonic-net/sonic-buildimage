@@ -1408,10 +1408,13 @@ class Chassis(ChassisBase):
                 return 'fast-reboot'
         return None
 
+    def _is_reboot_cause_ready(self):
+        return utils.read_int_from_file(REBOOT_CAUSE_READY_FILE, log_func=None) == 1
+
     def _wait_reboot_cause_ready(self):
         max_wait_time = REBOOT_CAUSE_MAX_WAIT_TIME
         while max_wait_time > 0:
-            if utils.read_int_from_file(REBOOT_CAUSE_READY_FILE, log_func=None) == 1:
+            if self._is_reboot_cause_ready():
                 return True
             time.sleep(REBOOT_CAUSE_CHECK_INTERVAL)
             max_wait_time -= REBOOT_CAUSE_CHECK_INTERVAL
@@ -1438,7 +1441,13 @@ class Chassis(ChassisBase):
             if reboot_cause:
                 return self.REBOOT_CAUSE_NON_HARDWARE, ''
 
-        if not self._wait_reboot_cause_ready():
+        if DeviceDataManager.is_simx_platform():
+            # The ready flag may never be set on SimX, so check once without waiting
+            if not self._is_reboot_cause_ready():
+                logger.log_notice("Hardware reboot cause is not available on SimX, "
+                                  "skipping the hardware reboot cause check")
+                return self.REBOOT_CAUSE_NON_HARDWARE, ''
+        elif not self._wait_reboot_cause_ready():
             logger.log_error("Hardware reboot cause is not ready")
             return self.REBOOT_CAUSE_NON_HARDWARE, ''
 

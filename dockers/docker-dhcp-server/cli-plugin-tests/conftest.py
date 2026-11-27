@@ -80,9 +80,9 @@ def mock_db():
     def set_(table, key, k, v):
         assert table == "CONFIG_DB" or table == "STATE_DB"
         if table == "CONFIG_DB":
-            mock_config_db[key][k] = v
+            mock_config_db.setdefault(key, {})[k] = v
         if table == "STATE_DB":
-            mock_state_db[key][k] = v
+            mock_state_db.setdefault(key, {})[k] = v
 
     def get_redis_client(table):
         assert table == "CONFIG_DB" or table == "STATE_DB"

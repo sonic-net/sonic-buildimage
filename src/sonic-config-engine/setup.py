@@ -34,8 +34,7 @@ if sys.version_info.major == 3:
 else:
     # Python 2-only dependencies
     dependencies += [
-        # Jinja2 v3.0.0+ dropped support for Python 2.7 and causes setuptools to
-        # malfunction on stretch slave docker.
+        # Jinja2 v3.0.0+ dropped support for Python 2.7.
         'future',
         'Jinja2<3.0.0',
         'pyangbind==0.6.0',

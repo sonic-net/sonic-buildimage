@@ -1,0 +1,26 @@
+steps:
+- script: |
+    set +x
+    set -euo pipefail
+    : "${SIGNING_MATERIAL_DIR:?Signing material directory is required}"
+    temp_root=${AGENT_TEMPDIRECTORY:?}
+    temp_root=${temp_root%/}
+    if [[ "$(dirname -- "$SIGNING_MATERIAL_DIR")" != "$temp_root" ||
+          "$(basename -- "$SIGNING_MATERIAL_DIR")" != sonic-signing.* ||
+          -L "$SIGNING_MATERIAL_DIR" ]]; then
+      echo "Refusing to remove an unexpected signing material directory" >&2
+      exit 1
+    fi
+    if [[ ! -e "$SIGNING_MATERIAL_DIR" ]]; then
+      exit 0
+    fi
+    if [[ ! -d "$SIGNING_MATERIAL_DIR" ||
+          "$(stat -c %u -- "$SIGNING_MATERIAL_DIR")" != "$(id -u)" ]]; then
+      echo "Signing material directory is not owned by this job user" >&2
+      exit 1
+    fi
+    rm -rf -- "$SIGNING_MATERIAL_DIR"
+  env:
+    SIGNING_MATERIAL_DIR: $(SONIC_SIGNING_DIR)
+  condition: and(always(), ne(variables['SONIC_SIGNING_DIR'], ''))
+  displayName: "Remove signing material"

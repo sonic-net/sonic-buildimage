@@ -77,19 +77,38 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 
 	pushd $(MFT_NAME)/SDEBS
 
-	# put a lock here because dpkg does not allow installing packages in parallel
-	flock $(DEST)/dpkg_lock.lk sudo dpkg -i $(SRC_DEB)
+	# put a lock here because dpkg does not allow installing packages in parallel.
+	# kernel-mft-dkms postinst otherwise DKMS-builds the running kernel (uname -r),
+	# which is the build-host kernel and typically has no headers in the image
+	# build container. Disable AUTOINSTALL and pass KVERSION so configure does
+	# not require host headers. IGNORE_BUILD_ERROR keeps dpkg from failing if
+	# postinst still probes uname -r; the explicit dkms build below compiles
+	# for the SONiC kernel.
+	flock $(DEST)/dpkg_lock.lk bash -ec '\
+		sudo dpkg --unpack "$(SRC_DEB)"; \
+		for conf in /usr/src/kernel-mft-dkms-*/dkms.conf; do \
+			[ -f "$$conf" ] || continue; \
+			if grep -q "^AUTOINSTALL=" "$$conf"; then \
+				sudo sed -i "s/^AUTOINSTALL=.*/AUTOINSTALL=\"no\"/" "$$conf"; \
+			else \
+				echo "AUTOINSTALL=\"no\"" | sudo tee -a "$$conf" >/dev/null; \
+			fi; \
+		done; \
+		sudo env KVERSION="$(KVERSION)" IGNORE_BUILD_ERROR=1 dpkg --configure kernel-mft-dkms \
+	'
 
 	popd
 
 	if [ -d /usr/src/kernel-mft-dkms-$(MFT_VERSION).$(MFT_REVISION) ]; then
-		sudo dkms build kernel-mft-dkms/$(MFT_VERSION).$(MFT_REVISION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+		dkms_module_version=$(MFT_VERSION).$(MFT_REVISION)
 	else
-		sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+		dkms_module_version=$(MFT_VERSION)
 	fi
+	sudo dkms build kernel-mft-dkms/$$dkms_module_version -k $(KVERSION) -a $(CONFIGURED_ARCH)
 
-	# copy the built modules
-	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/*.ko \
+	# copy the built modules. dkms creates the kernel-<kernel>-<arch> symlink only
+	# on install, so read the build tree that dkms build populates directly.
+	cp -r $(DKMS_CTRL)/$$dkms_module_version/$(KVERSION)/$(CONFIGURED_ARCH)/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 
 	pushd $(MFT_NAME)/DEBS

@@ -1,10 +1,12 @@
 import typing
 from natsort import natsorted
 import datetime
-import pickle
+import hashlib
+import json
 import os
 import copy
-import json
+import re
+import tempfile
 import click
 from tabulate import tabulate
 
@@ -14,10 +16,186 @@ from utilities_common.cli import UserCache
 from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
-CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
+CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}.json")
 
 DB_CONNECTOR = None
 COUNTER_TABLE = None
+
+MKA_SESSION_TABLE = "MACSEC_MKA_SESSION_TABLE"
+MKA_PARTICIPANT_TABLE = "MACSEC_MKA_PARTICIPANT_TABLE"
+MKA_OBSERVED_SESSION_FIELDS = (
+    "kay_status",
+    "authenticated",
+    "secured",
+    "failed",
+    "actor_sci",
+    "key_server_sci",
+    "actor_priority",
+    "key_server_priority",
+    "is_key_server",
+    "keys_distributed",
+    "keys_received",
+    "mka_hello_time_ms",
+)
+MKA_SESSION_FIELDS = (
+    "profile",
+    *MKA_OBSERVED_SESSION_FIELDS,
+    "config_status",
+    "config_error",
+)
+MKA_PARTICIPANT_FIELDS = (
+    "mi",
+    "mn",
+    "active",
+    "is_principal",
+    "is_primary",
+    "live_peers",
+    "potential_peers",
+    "is_key_server",
+    "is_elected",
+)
+
+
+def _allowlisted_fields(entry, allowlist):
+    return {field: entry[field] for field in allowlist if field in entry}
+
+
+def _safe_enum(value, values):
+    return value if value in values else "-"
+
+
+def _safe_bool(value):
+    return _safe_enum(value, ("true", "false"))
+
+
+def _safe_uint(value):
+    try:
+        parsed = int(value)
+        return str(parsed) if parsed >= 0 else "-"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _matches_known_secret(value, secrets):
+    return (
+        isinstance(value, str) and
+        any(
+            value.lower() == secret.lower() or
+            (len(secret) in (66, 130) and value.lower() == secret[2:].lower())
+            for secret in secrets
+        )
+    )
+
+
+def _safe_uint_not_secret(value, secrets):
+    if isinstance(value, str) and len(value) > 20:
+        return "-"
+    if _matches_known_secret(value, secrets):
+        return "-"
+    sanitized = _safe_uint(value)
+    return sanitized if len(sanitized) <= 20 else "-"
+
+
+def _safe_hex(value, lengths, secrets=()):
+    if not isinstance(value, str) or len(value) not in lengths:
+        return "-"
+    if _matches_known_secret(value, secrets):
+        return "-"
+    if re.fullmatch(r"[0-9a-fA-F]+", value) is None:
+        return "-"
+    return value.lower()
+
+
+def _format_milliseconds(value, secrets=()):
+    sanitized = _safe_uint_not_secret(value, secrets)
+    return "{} ms".format(sanitized) if sanitized != "-" else "-"
+
+
+def _safe_sci(value, secrets=(), hide_zero=False):
+    sci = _safe_hex(value, (16,), secrets)
+    if hide_zero and sci == "0000000000000000":
+        return "-"
+    return sci
+
+
+def _controlled_port_mode(session):
+    kay_status = session.get("kay_status")
+    authenticated = session.get("authenticated")
+    secured = session.get("secured")
+    failed = session.get("failed")
+
+    if kay_status not in ("active", "not-active"):
+        return "-"
+    if any(value not in ("true", "false")
+           for value in (authenticated, secured, failed)):
+        return "-"
+    if failed == "true":
+        return "failed"
+    if kay_status == "active":
+        if authenticated == "false" and secured == "true":
+            return "secured"
+        if authenticated == "true" and secured == "false":
+            return "authenticated-only"
+        return "inconsistent"
+    if authenticated == "false" and secured == "false":
+        return "inactive"
+    return "inconsistent"
+
+
+def _role_live_peers(participants, expected_is_primary, secrets=()):
+    if any(
+        participant.get("is_primary") not in ("true", "false")
+        for participant in participants
+    ):
+        return "-"
+    role_participants = [
+        participant for participant in participants
+        if participant.get("is_primary") == expected_is_primary
+    ]
+    if len(role_participants) != 1:
+        return "-"
+    return _safe_uint_not_secret(
+        role_participants[0].get("live_peers"), secrets
+    )
+
+
+def _redact_known_secrets(value, secrets):
+    result = str(value)
+    expanded_secrets = set()
+    for secret in secrets:
+        if not secret:
+            continue
+        expanded_secrets.add(secret)
+        if (len(secret) in (66, 130) and
+                re.fullmatch(r"[0-9a-fA-F]+", secret)):
+            expanded_secrets.add(secret[2:])
+    for secret in sorted(expanded_secrets, key=len, reverse=True):
+        result = re.sub(
+            re.escape(secret), "[redacted]", result, flags=re.IGNORECASE
+        )
+    result = re.sub(
+        r"(?i)(?<![0-9a-f])(?:[0-9a-f]{130}|[0-9a-f]{128}|[0-9a-f]{66})(?![0-9a-f])",
+        "[redacted]",
+        result,
+    )
+    result = re.sub(
+        r"(?i)(\b(?:(?:(?:primary|fallback|new|old|previous|stale|decoded|raw|"
+        r"current|replacement|configured)[_ -]?)?cak|"
+        r"(?:decoded|raw|secret)[_ -]?key|key[_ -]?material)\b"
+        r"\s*(?:[:=]|\bis\b)?\s*)"
+        r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
+        r"\1[redacted]",
+        result,
+    )
+    return result
+
+
+def _compact_ckn(ckn, secrets=()):
+    safe_ckn = _safe_hex(ckn, (32, 64), secrets)
+    if safe_ckn == "-":
+        return safe_ckn
+    return "{}...{}".format(safe_ckn[:6], safe_ckn[-6:])
+
 
 class MACsecCfgMeta(object):
     def __init__(self, *args) -> None:
@@ -63,9 +241,10 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         meta = sorted(self.meta.items(), key=lambda x: x[0])
         counters = copy.deepcopy(self.counters)
         if cache:
+            cached_counters = cache.get("counters", {})
             for k, v in counters.items():
-                if k in cache.counters and k.startswith("SAI_MACSEC_SA_STAT"):
-                    counters[k] = int(counters[k]) - int(cache.counters[k])
+                if k in cached_counters and k.startswith("SAI_MACSEC_SA_STAT"):
+                    counters[k] = int(counters[k]) - int(cached_counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)
         buffer = "\n".join(["\t\t" + line for line in buffer.splitlines()])
@@ -156,7 +335,7 @@ class MACsecPort(MACsecAppMeta, MACsecCfgMeta):
         buffer = self.get_header()
 
         # Add the profile information to the meta dict from config meta dict
-        self.meta["profile"] = self.cfgMeta["macsec"]
+        self.meta["profile"] = self.cfgMeta.get("macsec", "")
 
         buffer += tabulate(sorted(self.meta.items(), key=lambda x: x[0]))
         return buffer
@@ -216,7 +395,9 @@ def create_macsec_profile_obj(key: str) -> MACsecCfgMeta:
 
 def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     objs = []
-    objs.append(create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name))
+    port = create_macsec_obj(MACsecPort.get_appl_table_name() + ":" + interface_name)
+    if port is not None:
+        objs.append(port)
     egress_scs = DB_CONNECTOR.keys(DB_CONNECTOR.APPL_DB, MACsecEgressSC.get_appl_table_name() + ":" + interface_name + ":*")
     for sc_name in natsorted(egress_scs):
         sc = create_macsec_obj(sc_name)
@@ -250,17 +431,85 @@ def create_macsec_profiles_objs(profile_name: str) -> typing.List[MACsecCfgMeta]
     return objs
 
 
-def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
+def cache_find(cache: dict, target: MACsecAppMeta) -> dict:
     if not cache or not cache["objs"]:
         return None
     for obj in cache["objs"]:
-        if type(obj) == type(target) and obj.key == target.key:
+        if obj["type"] == type(target).__name__ and obj["key"] == target.key:
             # MACsec SA may be refreshed by a cycle that use the same key
             # So, use the SA as the identifier
-            if isinstance(obj, MACsecSA) and obj.sak != target.sak:
+            if isinstance(target, MACsecSA) and obj["sak_hash"] != _sak_hash(target.sak):
                 continue
             return obj
     return None
+
+
+def _sak_hash(sak: str) -> str:
+    return hashlib.sha256(sak.encode("utf-8")).hexdigest()
+
+
+def _cache_entry(obj: MACsecAppMeta) -> dict:
+    entry = {
+        "type": type(obj).__name__,
+        "key": obj.key,
+    }
+    if isinstance(obj, MACsecSA):
+        entry["sak_hash"] = _sak_hash(obj.sak)
+        entry["counters"] = obj.counters
+    return entry
+
+
+def _save_cache(path: str, cache: dict) -> None:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=os.path.dirname(path),
+                prefix=".macsecstats-", delete=False) as cache_file:
+            temp_path = cache_file.name
+            json.dump(cache, cache_file)
+            cache_file.flush()
+            os.fsync(cache_file.fileno())
+        os.replace(temp_path, path)
+        temp_path = None
+    finally:
+        if temp_path is not None and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _load_cache(path: str) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as cache_file:
+            cache = json.load(cache_file)
+    except (OSError, UnicodeError, ValueError):
+        return {}
+
+    if (not isinstance(cache, dict) or type(cache.get("version")) is not int or
+            cache["version"] != 1):
+        return {}
+    if not isinstance(cache.get("time"), str) or not isinstance(cache.get("objs"), list):
+        return {}
+
+    sa_types = {"MACsecIngressSA", "MACsecEgressSA"}
+    for obj in cache["objs"]:
+        if (not isinstance(obj, dict) or not isinstance(obj.get("type"), str) or
+                not isinstance(obj.get("key"), str)):
+            return {}
+        if obj["type"] in sa_types:
+            sak_hash = obj.get("sak_hash")
+            counters = obj.get("counters")
+            if (not isinstance(sak_hash, str) or len(sak_hash) != 64 or
+                    any(char not in "0123456789abcdef" for char in sak_hash) or
+                    not isinstance(counters, dict)):
+                return {}
+            for name, value in counters.items():
+                if (not isinstance(name, str) or isinstance(value, bool) or
+                        not isinstance(value, (str, int))):
+                    return {}
+                try:
+                    int(value)
+                except ValueError:
+                    return {}
+    return cache
 
 
 @click.command()
@@ -269,19 +518,29 @@ def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
 @click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
 @click.option('--post-status', is_flag=True, required=False, default=False, help="show macsec FIPS POST(Pre-Operational Self-Test) status")
 @click.option('--fips-module', is_flag=True, required=False, default=False, help="show macsec FIPS module")
+@click.option('--mka', is_flag=True, required=False, default=False, help="show MACsec MKA operational state")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display, profile, post_status, fips_module):
+def macsec(interface_name, dump_file, namespace, display, profile, post_status,
+           fips_module, mka):
     if post_status:
-        if interface_name is not None or profile or dump_file or fips_module:
+        if interface_name is not None or profile or dump_file or fips_module or mka:
             click.echo('POST status is not valid with other options/arguments')
             return
         MacsecContext(namespace, display).show_post_status()
         return
     if fips_module:
-        if interface_name is not None or profile or dump_file or post_status:
+        if interface_name is not None or profile or dump_file or post_status or mka:
             click.echo('fips-module is not valid with other options/arguments')
             return
         MacsecContext(namespace, display).show_fips_module()
+        return
+    if mka:
+        if profile or dump_file:
+            click.echo('mka is not valid with profile or dump-file')
+            return
+        context = MacsecContext(namespace, display)
+        context.collect_mka(interface_name)
+        context.show_mka(interface_name)
         return
     if interface_name is not None and profile:
         click.echo('Interface name is not valid with profile option')
@@ -295,6 +554,7 @@ class MacsecContext(object):
         self.multi_asic = multi_asic_util.MultiAsic(
             display_option, namespace_option)
         self.macsec_profiles = []
+        self.mka_records = []
 
     @multi_asic_util.run_on_multi_asic
     def show(self, interface_name, dump_file, profile):
@@ -336,8 +596,9 @@ class MacsecContext(object):
                     objs += create_macsec_profiles_objs(profile_name)
 
         cache = {}
-        if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):
-            cache = pickle.load(open(CACHE_FILE.format(self.multi_asic.current_namespace), "rb"))
+        cache_path = CACHE_FILE.format(self.multi_asic.current_namespace)
+        if not dump_file and os.path.isfile(cache_path):
+            cache = _load_cache(cache_path)
 
         if not dump_file:
             if cache and cache["time"] and objs:
@@ -347,13 +608,252 @@ class MacsecContext(object):
                 print(obj.dump_str(cache_obj))
         else:
             dump_obj = {
-                "time": datetime.datetime.now(),
-                "objs": objs
+                "version": 1,
+                "time": str(datetime.datetime.now()),
+                "objs": [_cache_entry(obj) for obj in objs]
             }
-            with open(CACHE_FILE.format(self.multi_asic.current_namespace), 'wb') as dump_file:
-                pickle.dump(dump_obj, dump_file)
-                dump_file.flush()
+            _save_cache(cache_path, dump_obj)
 
+    @multi_asic_util.run_on_multi_asic
+    def collect_mka(self, interface_name):
+        separator = self.db.get_db_separator(self.db.STATE_DB)
+        session_prefix = MKA_SESSION_TABLE + separator
+        session_keys = self.db.keys(
+            self.db.STATE_DB, session_prefix + "*"
+        ) or []
+
+        for session_key in natsorted(session_keys):
+            current_interface = session_key[len(session_prefix):]
+            if interface_name is not None and current_interface != interface_name:
+                continue
+
+            raw_session = self.db.get_all(self.db.STATE_DB, session_key)
+            if not raw_session or not all(
+                field in raw_session for field in MKA_OBSERVED_SESSION_FIELDS
+            ):
+                continue
+            session = _allowlisted_fields(raw_session, MKA_SESSION_FIELDS)
+            participant_prefix = separator.join(
+                (MKA_PARTICIPANT_TABLE, current_interface)
+            ) + separator
+            participant_keys = self.db.keys(
+                self.db.STATE_DB, participant_prefix + "*"
+            ) or []
+            participants = []
+            complete_snapshot = True
+            for participant_key in natsorted(participant_keys):
+                ckn = participant_key[len(participant_prefix):]
+                raw_participant = self.db.get_all(
+                    self.db.STATE_DB, participant_key
+                )
+                if not raw_participant or not all(
+                    field in raw_participant for field in MKA_PARTICIPANT_FIELDS
+                ):
+                    complete_snapshot = False
+                    break
+                participant = _allowlisted_fields(
+                    raw_participant, MKA_PARTICIPANT_FIELDS
+                )
+                participant["ckn"] = ckn
+                participants.append(participant)
+            if not complete_snapshot:
+                continue
+
+            port = self.config_db.get_entry("PORT", current_interface)
+            profile_name = port.get("macsec") or session.get("profile")
+            profile = (
+                self.config_db.get_entry("MACSEC_PROFILE", profile_name)
+                if profile_name else {}
+            )
+            encoded_secrets = [
+                profile.get("primary_cak"),
+                profile.get("fallback_cak"),
+            ]
+            secrets = []
+            for secret in encoded_secrets:
+                if not secret:
+                    continue
+                secrets.append(secret)
+                if len(secret) in (66, 130):
+                    secrets.append(secret[2:])
+            self.mka_records.append({
+                "namespace": self.multi_asic.current_namespace,
+                "interface": current_interface,
+                "session": session,
+                "participants": participants,
+                "secrets": secrets,
+            })
+
+    def show_mka(self, interface_name):
+        records = natsorted(
+            self.mka_records,
+            key=lambda record: (record["interface"], record["namespace"] or ""),
+        )
+        if not records:
+            return
+
+        if interface_name is None:
+            self._show_mka_compact(records)
+        else:
+            self._show_mka_detail(records)
+
+    def _show_mka_compact(self, records):
+        show_namespace = any(record["namespace"] for record in records)
+        rows = []
+        for record in records:
+            session = record["session"]
+            principals = [
+                participant for participant in record["participants"]
+                if participant.get("is_principal") == "true"
+            ]
+            principal = principals[0] if len(principals) == 1 else {}
+            principal_ckn = (
+                "ambiguous" if len(principals) > 1
+                else _compact_ckn(principal.get("ckn"), record["secrets"])
+            )
+            role = {
+                "true": "primary",
+                "false": "fallback",
+            }.get(principal.get("is_primary"), "-")
+            primary_live_peers = _role_live_peers(
+                record["participants"], "true", record["secrets"]
+            )
+            fallback_live_peers = _role_live_peers(
+                record["participants"], "false", record["secrets"]
+            )
+            live_peers = "{}/{}".format(
+                primary_live_peers, fallback_live_peers
+            )
+            row = [
+                record["interface"],
+                _safe_enum(session.get("kay_status"), ("active", "not-active")),
+                _safe_bool(session.get("secured")),
+                principal_ckn,
+                role,
+                live_peers,
+                _safe_bool(session.get("is_key_server")),
+                _safe_uint_not_secret(
+                    session.get("keys_distributed"), record["secrets"]
+                ),
+            ]
+            if show_namespace:
+                row.insert(0, record["namespace"] or "-")
+            rows.append(row)
+
+        headers = [
+            "Interface",
+            "KaY",
+            "Secured",
+            "Principal CKN",
+            "Role",
+            "prim./fall. live peers",
+            "Local-KS",
+            "Keys distributed",
+        ]
+        if show_namespace:
+            headers.insert(0, "Namespace")
+        click.echo(tabulate(
+            rows,
+            headers=headers,
+        ))
+
+    def _show_mka_detail(self, records):
+        for index, record in enumerate(records):
+            if index:
+                click.echo("")
+            if record["namespace"]:
+                click.echo("Namespace:            {}".format(record["namespace"]))
+
+            session = record["session"]
+            fields = [
+                ("Interface", record["interface"]),
+                ("Profile", _redact_known_secrets(
+                    session.get("profile", "-"), record["secrets"]
+                )),
+                ("PAE KaY status", _safe_enum(
+                    session.get("kay_status"), ("active", "not-active")
+                )),
+                ("Controlled port mode", _controlled_port_mode(session)),
+                ("Failed", _safe_bool(session.get("failed"))),
+                ("Actor SCI", _safe_sci(
+                    session.get("actor_sci"), record["secrets"]
+                )),
+                ("Key server SCI", _safe_sci(
+                    session.get("key_server_sci"), record["secrets"]
+                )),
+                ("Actor priority", _safe_uint_not_secret(
+                    session.get("actor_priority"), record["secrets"]
+                )),
+                ("Key server priority", _safe_uint_not_secret(
+                    session.get("key_server_priority"), record["secrets"]
+                )),
+                ("Local key server", _safe_bool(session.get("is_key_server"))),
+                ("Keys distributed", _safe_uint_not_secret(
+                    session.get("keys_distributed"), record["secrets"]
+                )),
+                ("Keys received", _safe_uint_not_secret(
+                    session.get("keys_received"), record["secrets"]
+                )),
+                ("MKA hello time", _format_milliseconds(
+                    session.get("mka_hello_time_ms"), record["secrets"]
+                )),
+                ("Config status", _safe_enum(
+                    session.get("config_status"), ("in-sync", "degraded")
+                )),
+            ]
+            for label, value in fields:
+                click.echo("{:<22} {}".format(label + ":", value))
+
+            config_error = session.get("config_error")
+            if config_error:
+                click.echo("CONFIG ERROR:          {}".format(
+                    _redact_known_secrets(config_error, record["secrets"])
+                ))
+
+            participant_rows = []
+            for participant in record["participants"]:
+                role = {
+                    "true": "primary",
+                    "false": "fallback",
+                }.get(participant.get("is_primary"), "-")
+                participant_rows.append([
+                    _safe_hex(
+                        participant.get("ckn"), (32, 64), record["secrets"]
+                    ),
+                    role,
+                    _safe_bool(participant.get("is_principal")),
+                    _safe_bool(participant.get("active")),
+                    _safe_uint_not_secret(
+                        participant.get("live_peers"), record["secrets"]
+                    ),
+                    _safe_uint_not_secret(
+                        participant.get("potential_peers"), record["secrets"]
+                    ),
+                    _safe_bool(participant.get("is_key_server")),
+                    _safe_bool(participant.get("is_elected")),
+                    _safe_hex(
+                        participant.get("mi"), (24,), record["secrets"]
+                    ),
+                    _safe_uint_not_secret(participant.get("mn"), record["secrets"]),
+                ])
+
+            if participant_rows:
+                click.echo("")
+                click.echo(tabulate(
+                    participant_rows,
+                    headers=[
+                        "CKN",
+                        "Role",
+                        "Principal",
+                        "Active",
+                        "Live",
+                        "Potential",
+                        "Key-server",
+                        "Elected",
+                        "MI",
+                        "MN",
+                    ],
+                ))
     @multi_asic_util.run_on_multi_asic
     def show_post_status(self):
         """Show POST (Pre-Operational Self-Test) status"""

@@ -11,17 +11,29 @@ logging the causes to a history file.
 import datetime
 import os
 import re
+import traceback
 
 from dateutil import parser
+from collections.abc import Iterable
 from typing import Any
 from sonic_platform.adm1266 import Adm1266
 from sonic_platform.dpm_logger import DpmLogger
-from sonic_platform.dpm_base import DpmBase, DpmPowerUpEntry, RebootCause, UNKNOWN_TIMESTAMP
+from sonic_platform.dpm_base import (
+    DpmBase,
+    DpmPowerUpEntry,
+    RebootCause,
+    UNKNOWN_TIMESTAMP,
+    pick_power_fault_cause,
+)
 from sonic_py_common import syslogger
 
 
 SYSLOG_IDENTIFIER = "sonic_platform.reboot_cause_manager"
 logger = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+# Nexthop's SW cold "reboot" and "Kernel Panic" are always followed by a power cycle within 3 m (plus 10 s buffer).
+SW_REBOOT_TO_POWER_CYCLE = datetime.timedelta(minutes=3, seconds=10)
+SW_REBOOT_CLOCK_SKEW = datetime.timedelta(seconds=5)
 
 UNKNOWN_HW_REBOOT_CAUSE = RebootCause(
     type=RebootCause.Type.HARDWARE,
@@ -139,19 +151,23 @@ def squash_dpms_powerups_to_cause_per_reboot(
         does not have the capability to detect the cause, or the DPM did not log anything.
 
     To determine the reboot cause for each powerup, we look at each column from top to bottom,
-    and arbitrarily take the first known fault cause that we encounter. This works because HWs
+    and arbitrarily take the first known fault cause that we encounter. A fallback cause is
+    taken only when no DPM reports a non-fallback cause for that powerup. This works because HWs
     are generally designed to not log the same cause across DPMs. Except for CPUCARD-driven
     event where the SWITCHCARD also logs a record (as exampled in DPM2's fault_4).
     To handle this case, we place the CPUCARD's DPM before the SWITCHCARD's DPM in `pd-plugin.json`.
 
     For this example, we return `[fault_2, fault_3, fault_1]`.
 
+    No-powerup reboots (records whose rule sets no_powerup_event) leave the DPM powered, so they do not
+    end a powerup: each one is its own reboot, placed before the cause of the power cycle that ended
+    its powerup. Those in the current powerup are the newest reboots.
+
     Args:
         dpm_to_powerups: Dictionary of DPM to list of powerups (must be sorted old->new).
 
     Returns:
-        List of reboot causes, one per power cycle. The length of the list is the number of
-        power cycles experienced by the system (as seen by the DPMs).
+        List of reboot causes, one per reboot, oldest first.
     """
     if not dpm_to_powerups:
         return []
@@ -164,14 +180,12 @@ def squash_dpms_powerups_to_cause_per_reboot(
     # Second, for each powerup (`p`), pick the first-seen DPM that reports a power fault.
     results = []
     for p in range(num_power_cycles):
-        picked = next(
-            (
-                powerup.power_fault_cause
-                for powerups in dpm_to_all_previous_powerups.values()
-                if (powerup := powerups[p]) and powerup.power_fault_cause
-            ),
-            None,
-        )
+        # one entry per DPM: the powerup this power cycle ended on that DPM, if it has records of it
+        powerups_ended_by_cycle = [
+            powerup for powerups in dpm_to_all_previous_powerups.values() if (powerup := powerups[p])
+        ]
+        results.extend(no_powerup_reboot_causes_of_first_dpm(powerups_ended_by_cycle))
+        picked = pick_power_fault_cause(powerup.power_fault_cause for powerup in powerups_ended_by_cycle)
         if picked:
             results.append(picked)
         else:
@@ -179,7 +193,23 @@ def squash_dpms_powerups_to_cause_per_reboot(
                 f"Cannot determine power fault cause for the {ordinal(num_power_cycles - p)} previous reboot."
             )
             results.append(UNKNOWN_HW_REBOOT_CAUSE)
+
+    current_powerups = [
+        powerup
+        for dpm, powerups in dpm_to_powerups.items()
+        for powerup in powerups
+        if powerup.powerup_counter == dpm.get_powerup_counter()
+    ]
+    results.extend(no_powerup_reboot_causes_of_first_dpm(current_powerups))
     return results
+
+
+def no_powerup_reboot_causes_of_first_dpm(powerups: Iterable[DpmPowerUpEntry]) -> list[RebootCause]:
+    """Returns the no-powerup reboot causes of the first powerup (one per DPM, pd-plugin order) that has any.
+
+    Only the controlling DPM's rules flag them, so a second DPM never repeats them.
+    """
+    return next((powerup.no_powerup_reboot_causes for powerup in powerups if powerup.no_powerup_reboot_causes), [])
 
 
 def parse_timestamp(timestamp_str: str) -> datetime.datetime:
@@ -215,7 +245,9 @@ def merge_sw_and_hw_causes(
             or hw_cause == UNKNOWN_HW_REBOOT_CAUSE
         ):
             continue
-        if hw_cause.timestamp < sw_cause.timestamp:  # type: ignore
+        # the DPM and host clocks are set in whole seconds and can disagree by one or two
+        skew = SW_REBOOT_CLOCK_SKEW if hw_cause.no_powerup_event else datetime.timedelta(0)
+        if hw_cause.timestamp + skew < sw_cause.timestamp:  # type: ignore
             insert_idx = i + 1
 
     # Insert the SW cause.
@@ -223,43 +255,40 @@ def merge_sw_and_hw_causes(
     return ret
 
 
+def time_diff(cause1: RebootCause, cause2: RebootCause) -> datetime.timedelta | None:
+    """Returns cause2's time minus cause1's, or None if either has no UTC timestamp."""
+    if not isinstance(cause1.timestamp, datetime.datetime) or cause1.timestamp == UNKNOWN_TIMESTAMP:
+        return None
+    if not isinstance(cause2.timestamp, datetime.datetime) or cause2.timestamp == UNKNOWN_TIMESTAMP:
+        return None
+    return cause2.timestamp - cause1.timestamp
+
+
+def triggered_by(hw_cause: RebootCause, sw_cause: RebootCause) -> bool:
+    """Returns True if hw_cause is the record of the reboot sw_cause triggered.
+
+    That is a power cycle, or a reboot the DPM logged without power-cycling.
+    """
+    if sw_cause.type != RebootCause.Type.SOFTWARE or hw_cause.type != RebootCause.Type.HARDWARE:
+        return False
+    if sw_cause.cause != "reboot" and "Kernel Panic" not in sw_cause.cause:
+        return False
+    # a Switch Host reset logged before the DPM clock was set after a power cycle
+    if hw_cause.no_powerup_event and not isinstance(hw_cause.timestamp, datetime.datetime):
+        return True
+    delta = time_diff(sw_cause, hw_cause)
+    return delta is not None and delta <= SW_REBOOT_TO_POWER_CYCLE
+
+
 def squash_sw_and_hw_causes(sorted_causes: list[RebootCause]) -> list[RebootCause]:
-    """Squahes the SW cause and HW cause if they refer to the same reboot."""
-
-    def time_diff(cause1: RebootCause, cause2: RebootCause) -> datetime.timedelta | None:
-        if (
-            not isinstance(cause1.timestamp, datetime.datetime)
-            or cause1.timestamp == UNKNOWN_TIMESTAMP
-        ):
-            return None
-        if (
-            not isinstance(cause2.timestamp, datetime.datetime)
-            or cause2.timestamp == UNKNOWN_TIMESTAMP
-        ):
-            return None
-        return cause2.timestamp - cause1.timestamp
-
+    """Squashes the SW cause and HW cause if they refer to the same reboot."""
     ret = []
     i = 0
     while i < len(sorted_causes):
         cause = sorted_causes[i]
         next_cause = sorted_causes[i + 1] if i + 1 < len(sorted_causes) else None
-
         ret.append(cause)
-
-        # Nexthop's SW cold "reboot" and "Kernel Panic" are always followed by a power cycle
-        # within 3m (10s for the buffer).
-        if (
-            cause.type == RebootCause.Type.SOFTWARE
-            and (cause.cause == "reboot" or "Kernel Panic" in cause.cause)
-            and next_cause
-            and next_cause.type == RebootCause.Type.HARDWARE
-            and (delta := time_diff(cause, next_cause))
-            and delta <= datetime.timedelta(minutes=3, seconds=10)
-        ):
-            i = i + 2  # Skip the next cause.
-        else:
-            i = i + 1
+        i += 2 if next_cause and triggered_by(next_cause, cause) else 1
     return ret
 
 
@@ -330,14 +359,26 @@ class RebootCauseManager:
         """Returns a list of reboot causes, one per reboot.
 
         Reboot causes are derived from the knowledge of DPM records (HW)
-        and the reboot cause file (SW).
+        and the reboot cause file (SW). If the DPM records cannot be decoded
+        with the pd-plugin.json fault rules, no HW cause is reported and no DPM
+        is cleared, so a fixed config can still decode them together.
         """
-        hw_reboot_causes, dpm_to_powerups = self.read_hw_reboot_causes()
+        try:
+            hw_reboot_causes, dpm_to_powerups = self.read_hw_reboot_causes()
+            decoded = True
+        except (KeyError, ValueError) as e:
+            logger.log_error(
+                "Keeping all DPM records: failed to decode them with the pd-plugin.json fault rules: "
+                + "".join(traceback.format_exception(e))
+            )
+            hw_reboot_causes, dpm_to_powerups = [], {}
+            decoded = False
         sw_reboot_cause = self._read_sw_reboot_cause()
         ret_causes = merge_sw_and_hw_causes(sw_reboot_cause, hw_reboot_causes)
 
         # Save all records to history.
         DpmLogger().save(ret_causes, dpm_to_powerups)
 
-        self._clear_records_on_all_dpms()
+        if decoded:
+            self._clear_records_on_all_dpms()
         return squash_sw_and_hw_causes(ret_causes)

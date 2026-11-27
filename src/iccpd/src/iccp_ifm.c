@@ -37,6 +37,7 @@
 #include "../include/mlacp_link_handler.h"
 #include "../include/port.h"
 #include "../include/iccp_netlink.h"
+#include "../include/iccp_netlink_utils.h"
 
 #define fwd_neigh_state_valid(state) (state & (NUD_REACHABLE | NUD_STALE | NUD_DELAY | NUD_PROBE | NUD_PERMANENT))
 
@@ -148,10 +149,16 @@ static void do_arp_learn_from_kernel(struct ndmsg *ndm, struct rtattr *tb[], int
     arp_msg = (struct ARPMsg *)&buf;
     arp_msg->op_type = NEIGH_SYNC_LIF;
     sprintf(arp_msg->ifname, "%s", arp_lif->name);
-    if (tb[NDA_DST])
-        memcpy(&arp_msg->ipv4_addr, RTA_DATA(tb[NDA_DST]), RTA_PAYLOAD(tb[NDA_DST]));
-    if (!is_del && tb[NDA_LLADDR])
-        memcpy(arp_msg->mac_addr, RTA_DATA(tb[NDA_LLADDR]), RTA_PAYLOAD(tb[NDA_LLADDR]));
+    if (iccp_netlink_parse_neighbor_attrs(AF_INET, is_del, tb,
+                                           &arp_msg->ipv4_addr,
+                                           sizeof(arp_msg->ipv4_addr),
+                                           arp_msg->mac_addr) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+                       "Invalid ARP netlink attributes for ifindex %d",
+                       ndm->ndm_ifindex);
+        return;
+    }
 
     arp_msg->ipv4_addr = arp_msg->ipv4_addr;
 
@@ -409,10 +416,16 @@ static void do_ndisc_learn_from_kernel(struct ndmsg *ndm, struct rtattr *tb[], i
     ndisc_msg = (struct NDISCMsg *)&buf;
     ndisc_msg->op_type = NEIGH_SYNC_LIF;
     sprintf(ndisc_msg->ifname, "%s", ndisc_lif->name);
-    if (tb[NDA_DST])
-        memcpy(&ndisc_msg->ipv6_addr, RTA_DATA(tb[NDA_DST]), RTA_PAYLOAD(tb[NDA_DST]));
-    if (!is_del && tb[NDA_LLADDR])
-        memcpy(ndisc_msg->mac_addr, RTA_DATA(tb[NDA_LLADDR]), RTA_PAYLOAD(tb[NDA_LLADDR]));
+    if (iccp_netlink_parse_neighbor_attrs(AF_INET6, is_del, tb,
+                                           ndisc_msg->ipv6_addr,
+                                           sizeof(ndisc_msg->ipv6_addr),
+                                           ndisc_msg->mac_addr) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__,
+                       "Invalid NDISC netlink attributes for ifindex %d",
+                       ndm->ndm_ifindex);
+        return;
+    }
 
     ICCPD_LOG_NOTICE(__FUNCTION__, "ndisc type %s, state (%04X)(%d), ifindex [%d] (%s), ip %s, mac [%02X:%02X:%02X:%02X:%02X:%02X]",
                     msgtype == RTM_NEWNEIGH ? "New" : "Del", ndm->ndm_state, fwd_neigh_state_valid(ndm->ndm_state),
@@ -662,22 +675,12 @@ int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
     return parse_rtattr_flags(tb, max, rta, len, 0);
 }
 
-void ifm_parse_rtattr(struct rtattr **tb, int max, struct rtattr *rta, int len)
-{
-    while (RTA_OK(rta, len))
-    {
-        if (rta->rta_type <= max)
-            tb[rta->rta_type] = rta;
-        rta = RTA_NEXT(rta, len);
-    }
-}
-
 int do_one_neigh_request(struct nlmsghdr *n)
 {
-    struct ndmsg *ndm = NLMSG_DATA(n);
+    struct ndmsg *ndm;
     int len = n->nlmsg_len;
     struct rtattr *tb[NDA_MAX + 1] = {{0}};
-    int is_del = 0;
+    int is_del;
     int msgtype = n->nlmsg_type;
     struct CSM* csm = NULL;
 
@@ -690,6 +693,15 @@ int do_one_neigh_request(struct nlmsghdr *n)
     if (n->nlmsg_type != RTM_NEWNEIGH && n->nlmsg_type  != RTM_DELNEIGH )
         return(0);
 
+    if (n->nlmsg_len < NLMSG_LENGTH(sizeof(*ndm)))
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Truncated neighbor netlink message");
+        return MCLAG_ERROR;
+    }
+
+    ndm = NLMSG_DATA(n);
+    is_del = n->nlmsg_type == RTM_DELNEIGH;
+
     /*Check if mclag configured*/
     csm = system_get_first_csm();
     if (!csm)
@@ -699,7 +711,11 @@ int do_one_neigh_request(struct nlmsghdr *n)
     if (len < 0)
         return MCLAG_ERROR;
 
-    ifm_parse_rtattr(tb, NDA_MAX, NDA_RTA(ndm), len);
+    if (iccp_netlink_parse_rtattrs(tb, NDA_MAX, NDA_RTA(ndm), len) != 0)
+    {
+        ICCPD_LOG_WARN(__FUNCTION__, "Malformed neighbor netlink attributes");
+        return MCLAG_ERROR;
+    }
 
     if (ndm->ndm_state == NUD_INCOMPLETE
         || ndm->ndm_state == NUD_FAILED

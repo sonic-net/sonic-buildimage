@@ -43,7 +43,9 @@ stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 {% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/syncd-asan.log{{ asan_extra_options }}"
+environment=ASAN_OPTIONS="log_path=/var/log/asan/syncd-asan.log{{ asan_extra_options }}",GLIBC_TUNABLES="glibc.cpu.x86_memset_non_temporal_threshold=0xfffffffff"
+{% else %}
+environment=GLIBC_TUNABLES="glibc.cpu.x86_memset_non_temporal_threshold=0xfffffffff"
 {% endif %}
 
 [program:phcsync]

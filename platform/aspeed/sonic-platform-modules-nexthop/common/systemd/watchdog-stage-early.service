@@ -1,0 +1,12 @@
+[Unit]
+Description=watchdog stage marker: systemd early (pre-multi-user.target)
+After=basic.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/watchdog-stage-marker.sh 0x22
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

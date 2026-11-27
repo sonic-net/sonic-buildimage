@@ -7,12 +7,14 @@ from bgpmon.bgpmon import BgpStateGet
 
 
 @pytest.fixture
-@patch('swsscommon.swsscommon.RedisPipeline')
-@patch('swsscommon.swsscommon.SonicV2Connector')
+@patch('bgpmon.bgpmon.swsscommon.RedisPipeline')
+@patch('bgpmon.bgpmon.swsscommon.SonicV2Connector')
 def bgp_mon(mock_conn, mock_pipe):
     mock_db = mock_conn.return_value
     mock_db.STATE_DB = 'STATE_DB'
     m = BgpStateGet()
+    mock_conn.assert_called_once_with(use_unix_socket_path=True)
+    mock_db.connect.assert_called_once_with('STATE_DB', False)
     return m
 
 

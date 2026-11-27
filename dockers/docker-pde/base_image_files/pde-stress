@@ -11,15 +11,17 @@ if [ $(docker ps | grep -c pde) -eq 0 ]; then
     pde.sh start
 fi
 
-# Allow 5 seconds for PDE to be coming up
-for t in $(seq 1 5)
+# Wait for PDE to finish initializing: docker_init.sh installs the platform
+# API and then execs supervisord, so PID 1 is supervisord once it is done
+for t in $(seq 1 60)
 do
-    if [ $(docker ps | grep -c pde) -gt 0 ]; then
+    if [ "$(docker exec pde cat /proc/1/comm 2>/dev/null)" = "supervisord" ]; then
         break
     fi
+    sleep 1
 done
-if [ $(docker ps | grep -c pde) -eq 0 ]; then
-    echo "docker-pde is not alive, existing ..."
+if [ "$(docker exec pde cat /proc/1/comm 2>/dev/null)" != "supervisord" ]; then
+    echo "docker-pde is not ready, exiting ..."
     exit 1
 fi
 

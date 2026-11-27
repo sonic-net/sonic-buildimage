@@ -1,0 +1,34 @@
+#! /bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+SCRIPT_NAME=$(basename $0)
+case "$SCRIPT_NAME" in
+    warm-*)
+	readonly REBOOT_MODE=3
+	;;
+    fast-*)
+	readonly REBOOT_MODE=2
+	;;
+    express-*)
+	readonly REBOOT_MODE=3
+	;;
+esac
+
+#OBFL log reboot cause
+obfl_log="/usr/share/sonic/device/cisco-8000/platform_reboot_log"
+python3 $obfl_log
+
+rmmod leaba-q200
+# write reboot mode indicator to gpio scratch which would be used
+# by cisco-fpga-gpio module to identify the type of reboot
+readonly REBOOT_MODE_MASK=3
+for file in /sys/bus/platform/devices/gpio*/info/scratch
+do
+    echo "$REBOOT_MODE mask $REBOOT_MODE_MASK" > $file
+done
+for file in /sys/bus/platform/devices/*/reboot_notifier/restart 
+do 
+      echo "r=0x3c; m=0xfff; v=0x0" > $file 
+done

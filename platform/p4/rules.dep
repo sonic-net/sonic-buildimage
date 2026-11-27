@@ -1,0 +1,4 @@
+include $(PLATFORM_PATH)/docker-sonic-p4.dep
+
+# rules.mk adds $(LIBSAITHRIFT_DEV_P4) to $(SYNCD)_DEPENDS when ENABLE_SYNCD_RPC=y
+$(SYNCD)_DEP_FLAGS += $(ENABLE_SYNCD_RPC)

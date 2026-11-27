@@ -47,6 +47,10 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2026-10-30 {
+		description "Count priority-tagged VLAN members in the one-untagged-VLAN-per-port check.";
+	}
+
 	revision 2025-04-22 {
 		description "Add SAG support";
 	}
@@ -326,12 +330,15 @@ module sonic-vlan {
 					must "not(/intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()])" {
 						error-message "Port is a router interface.";
 					}
-					must "count(../../vlan:VLAN_MEMBER_LIST[vlan:port=current() and vlan:tagging_mode='untagged']) <= 1" {
-						error-message "Port can be untagged in at most one VLAN.";
+					/* Untagged and priority-tagged members both set the port VLAN ID, and a port has only one. */
+					must "count(../../vlan:VLAN_MEMBER_LIST[vlan:port=current() and
+						(vlan:tagging_mode='untagged' or vlan:tagging_mode='priority_tagged')]) <= 1" {
+						error-message "Port can be untagged or priority-tagged in at most one VLAN.";
+						error-app-tag vlan-member-multiple-pvid;
 					}
 				}
 				leaf tagging_mode {
-					description "Whether frames on this port are IEEE 802.1Q tagged or untagged";
+					description "Whether frames on this port are IEEE 802.1Q tagged, untagged, or priority-tagged";
 					mandatory true;
 					type stypes:vlan_tagging_mode;
 				}

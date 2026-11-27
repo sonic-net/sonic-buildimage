@@ -134,7 +134,25 @@
     },
     "VLAN_ADD_PORT_THAT_IS_UNTAGGED": {
         "desc": "Add port that is already untagged",
-        "eStr": "Port can be untagged in at most one VLAN"
+        "eStr": ["Port can be untagged or priority-tagged in at most one VLAN"]
+    },
+    "VLAN_ADD_PORT_THAT_IS_PRIORITY_TAGGED": {
+        "desc": "Add port that is already priority-tagged, as priority-tagged",
+        "eStr": ["Port can be untagged or priority-tagged in at most one VLAN"]
+    },
+    "VLAN_ADD_PRIORITY_TAGGED_PORT_THAT_IS_UNTAGGED": {
+        "desc": "Add port that is already untagged, as priority-tagged",
+        "eStr": ["Port can be untagged or priority-tagged in at most one VLAN"]
+    },
+    "VLAN_PORT_PRIORITY_TAGGED_AND_TAGGED": {
+        "desc": "Port priority-tagged in one VLAN and tagged in another"
+    },
+    "VLAN_PORT_UNTAGGED_AND_TAGGED": {
+        "desc": "Port untagged in one VLAN and tagged in another"
+    },
+    "VLAN_ADD_PRIORITY_TAGGED_PORTCHANNEL_THAT_IS_UNTAGGED": {
+        "desc": "Add PortChannel that is already untagged, as priority-tagged",
+        "eStr": ["Port can be untagged or priority-tagged in at most one VLAN"]
     },
     "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
         "desc": "Add to Vlan port that is router interface",

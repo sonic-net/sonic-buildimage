@@ -1,0 +1,17 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+[Unit]
+Description=Cisco platform shutdown service
+Before=shutdown.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+Environment="LOG=/var/log/platform-shutdown.log"
+RemainAfterExit=yes
+ExecStart=/opt/cisco/bin/npu_shutdown.sh
+
+[Install]
+WantedBy=shutdown.target

@@ -19,6 +19,8 @@
         "after": {{ after.split()|json if after is defined else [] }},
         "before": {{ before.split()|json if before is defined else [] }},
         "dependent-of": {{ dependent_of.split()|json if dependent_of is defined else [] }},
+        "post-start-action": "{{ post_start_action|default('') }}",
+        "pre-shutdown-action": "{{ pre_shutdown_action|default('') }}",
         "asic-service": {{ asic_service }},
         "host-service": {{ host_service }},
         "warm-shutdown": {

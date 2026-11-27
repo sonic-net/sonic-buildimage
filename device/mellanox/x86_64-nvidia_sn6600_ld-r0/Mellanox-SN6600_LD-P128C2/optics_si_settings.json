@@ -1,6 +1,6 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
-        "1-64": {
+        "1-65": {
             "200G_SPEED": {
                 "Default": {
                     "OutputEqPreCursorTargetRx": {
@@ -58,14 +58,14 @@
                         "OutputEqPostCursorTargetRx8": 0
                     },
                     "OutputAmplitudeTargetRx": {
-                        "OutputAmplitudeTargetRx1": 0,
-                        "OutputAmplitudeTargetRx2": 0,
-                        "OutputAmplitudeTargetRx3": 0,
-                        "OutputAmplitudeTargetRx4": 0,
-                        "OutputAmplitudeTargetRx5": 0,
-                        "OutputAmplitudeTargetRx6": 0,
-                        "OutputAmplitudeTargetRx7": 0,
-                        "OutputAmplitudeTargetRx8": 0
+                        "OutputAmplitudeTargetRx1": 1,
+                        "OutputAmplitudeTargetRx2": 1,
+                        "OutputAmplitudeTargetRx3": 1,
+                        "OutputAmplitudeTargetRx4": 1,
+                        "OutputAmplitudeTargetRx5": 1,
+                        "OutputAmplitudeTargetRx6": 1,
+                        "OutputAmplitudeTargetRx7": 1,
+                        "OutputAmplitudeTargetRx8": 1
                     }
                 }
             },

@@ -1,0 +1,8 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{%- set default_topo = 't0' %}
+{%- set default_cable = '5m' %}
+{%- set file_type = 'buffers' %}
+{%- include 'cfg_profile.j2' %}

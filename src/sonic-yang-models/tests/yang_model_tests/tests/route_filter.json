@@ -84,7 +84,7 @@
     },
     "ROUTE_PREFIX_DUPLICATE_SEQ_NO": {
         "desc": "Duplicate Sequence Number",
-        "eStr": "sequence_number required to be unique for each prefix-list"
+        "eStrKey": "Unique"
     },
     "ROUTE_PREFIX_REPEAT_SEQ_NO_DIFFLIST": {
         "desc": "Duplicate Sequence Number, but in different lists is ok"
@@ -109,7 +109,32 @@
     "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
         "desc": "Configure route map table with more than one match tag in list.",
         "eStr": "Too many match_tag elements"
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN": {
+        "desc": "Route map match_interface on an existing VLAN is accepted."
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_MISSING": {
+        "desc": "Route map match_interface naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN": {
+        "desc": "Route map match_neighbor on an existing VLAN is accepted."
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN_MISSING": {
+        "desc": "Route map match_neighbor naming a VLAN that does not exist is refused.",
+        "eStrKey": "LeafRef"
+    },
+    "ROUTE_MAP_MATCH_INTERFACE_VLAN_4095": {
+        "desc": "Route map match_interface on Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
+    },
+    "ROUTE_MAP_MATCH_NEIGHBOR_VLAN_4095": {
+        "desc": "Route map match_neighbor on Vlan4095 is refused.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
-
 }
 

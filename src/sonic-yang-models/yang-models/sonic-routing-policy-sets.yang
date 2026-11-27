@@ -106,6 +106,7 @@ module sonic-routing-policy-sets {
 
             list PREFIX_LIST {
                 key "name sequence_number ip_prefix masklength_range";
+                unique "name sequence_number";
                 //ext:custom-validation ValidateIpPrefixListCfg;
 
                 uses prefix-common-fields;
@@ -119,9 +120,6 @@ module sonic-routing-policy-sets {
                          be unique for each prefix in a prefix-list. Target devices should apply the prefixes in
                          ascending order determined by sequence no (low to high), rather than relying only on order
                          in the list.";
-                    must "count(../../PREFIX_LIST[name=current()/../name and sequence_number=current()]) <= 1" {
-                        error-message "sequence_number required to be unique for each prefix-list";
-                    }
                 }
             }
 

@@ -75,7 +75,7 @@ fakeit = "1.1"
 pretty_assertions = "1"
 
 # Build dependencies
-vergen = { version = "8.2", features = [ "build", "git", "gitoxide", "cargo", "rustc", "si" ]}
+vergen = { version = "10.0", features = [ "build", "git", "gitoxide", "cargo", "rustc", "si" ]}
 
 [profile.test]
 opt-level = 0

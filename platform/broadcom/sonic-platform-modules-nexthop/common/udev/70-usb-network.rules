@@ -4,3 +4,16 @@
 # BMC firmware. Renames at the udev add event on every boot; hardware-gated: only
 # fires where the BMC gadget enumerates.
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="02:00:00:00:00:02", NAME="bmc0"
+
+# The gadget is torn down and re-enumerated every time the BMC reboots, and the
+# image ships no ifupdown hotplug rule, so "allow-hotplug bmc0" alone never
+# re-applies the static IP: bmc0 stays DOWN until the next host reboot and
+# daemon data mirroring to the BMC stalls. Pull in
+# ifup@bmc0.service instead. This must match "move" as well as "add": the
+# rename above makes the kernel emit a move event, udev re-runs the rules for
+# it, and an add-only ENV assignment is dropped before the bmc0 device unit
+# that ifup@bmc0.service binds to exists. The literal "bmc0" (not $name) is
+# required because NAME= only takes effect at the end of the add event. Net
+# devices carry the "systemd" tag from 99-systemd.rules, so SYSTEMD_WANTS is
+# honored.
+SUBSYSTEM=="net", ACTION=="add|move", ATTR{address}=="02:00:00:00:00:02", ENV{SYSTEMD_WANTS}+="ifup@bmc0.service"

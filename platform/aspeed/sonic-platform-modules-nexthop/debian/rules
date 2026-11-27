@@ -87,6 +87,10 @@ override_dh_auto_install:
 				cp $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/*.service \
 					debian/$${pkg_name}/lib/systemd/system/; \
 			fi; \
+			if [ -n "$$(ls -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/*.service.d 2>/dev/null)" ]; then \
+				cp -r $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/*.service.d \
+					debian/$${pkg_name}/lib/systemd/system/; \
+			fi; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR) ]; then \
 			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* 2>/dev/null)" ]; then \

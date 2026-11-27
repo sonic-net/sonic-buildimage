@@ -1,0 +1,67 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["local>sonic-net/sonic-pipelines//renovate/default"],
+  "cloneSubmodules": true,
+  "cloneSubmodulesFilter": ["src/sonic-swss-common"],
+  "dockerfile": {
+    "description": "Every Dockerfile here is a Jinja template whose base image is a SONiC container or a Debian image the version freeze owns. The one plain Dockerfile, docker-basic_router, starts from docker-base, a local image",
+    "enabled": false
+  },
+  "customManagers": [
+    {
+      "description": "Docker in the image. The build appends ~$IMAGE_DISTRO, so the apt index's ~trixie suffix is stripped",
+      "customType": "regex",
+      "managerFilePatterns": ["/^build_debian\\.sh$/"],
+      "matchStrings": ["DOCKER_VERSION=(?<currentValue>\\S+?)~\\$IMAGE_DISTRO"],
+      "depNameTemplate": "docker-ce",
+      "datasourceTemplate": "deb",
+      "registryUrlTemplate": "https://download.docker.com/linux/debian?suite=trixie&components=stable&binaryArch=amd64",
+      "extractVersionTemplate": "^(?<version>.+)~trixie$"
+    },
+    {
+      "description": "containerd in the image, as for Docker",
+      "customType": "regex",
+      "managerFilePatterns": ["/^build_debian\\.sh$/"],
+      "matchStrings": ["CONTAINERD_IO_VERSION=(?<currentValue>\\S+?)~\\$IMAGE_DISTRO"],
+      "depNameTemplate": "containerd.io",
+      "datasourceTemplate": "deb",
+      "registryUrlTemplate": "https://download.docker.com/linux/debian?suite=trixie&components=stable&binaryArch=amd64",
+      "extractVersionTemplate": "^(?<version>.+)~trixie$"
+    },
+    {
+      "description": "Rust toolchain in the trixie build container, and in the watchdog containers' builder stage, which install their own. Both move in one pull request",
+      "customType": "regex",
+      "managerFilePatterns": ["/^sonic-slave-trixie/Dockerfile\\.j2$/", "/^dockers/docker-[a-z]+-watchdog/Dockerfile\\.j2$/"],
+      "matchStrings": ["--default-toolchain (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "rust-lang/rust",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "OpenTelemetry Collector (contrib) in docker-sonic-otel, one dependency per architecture. Renovate takes the new release's sha256 for each package and updates OTEL_SHA256 with OTEL_TAG, so the new hash is reviewed in the PR",
+      "customType": "regex",
+      "managerFilePatterns": ["/^dockers/docker-sonic-otel/Dockerfile\\.j2$/"],
+      "matchStrings": ["ARG OTEL_TAG=(?<currentValue>v\\d+\\.\\d+\\.\\d+)\\nARG OTEL_SHA256=(?<currentDigest>[0-9a-f]{64})"],
+      "depNameTemplate": "open-telemetry/opentelemetry-collector-releases",
+      "datasourceTemplate": "github-release-attachments"
+    },
+    {
+      "description": "FIPS Go for trixie. SONiC builds and publishes the package, so the preset lists it on the Dependency Dashboard only",
+      "customType": "regex",
+      "managerFilePatterns": ["/^rules/sonic-fips\\.mk$/"],
+      "matchStrings": ["ifeq \\(\\$\\(BLDENV\\), trixie\\)[\\s\\S]*?FIPS_GOLANG_VERSION = (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Renovate merges the updates the preset labels automerge: security updates below a major version, except patched modules. It merges on a later run, once every check on the head commit has passed, not only the required ones, and the renovate-approve app has approved the pull request. Reviewers are still assigned, so one that fails reaches them.",
+      "matchJsonata": ["isVulnerabilityAlert = true and $not('patched-module' in addLabels)"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": false,
+      "assignAutomerge": true
+    }
+  ]
+}

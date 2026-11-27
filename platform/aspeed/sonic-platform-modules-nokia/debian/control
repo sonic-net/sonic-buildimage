@@ -7,6 +7,6 @@ Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nokia-h6-128
 Architecture: arm64
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends}, jq
 Description: SONiC platform support for Nokia H6-128 AST2700 BMC
  Support package for Nokia H6-128 BMC AST2720 platform

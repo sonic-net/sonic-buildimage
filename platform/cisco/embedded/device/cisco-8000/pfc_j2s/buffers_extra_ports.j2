@@ -1,0 +1,11 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{%- macro generate_bp_port_list(PORT, PORT_BP) %}
+    {%- for port in PORT %}
+        {%- if port.startswith('Ethernet-BP') %}
+            {%- if PORT_BP.append(port) %}{%- endif %}
+        {%- endif %}
+    {%- endfor %}
+{%- endmacro %}

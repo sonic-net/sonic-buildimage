@@ -14,10 +14,12 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
+ConditionPathExists=!/run/sonic/shutdown-in-progress
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
 [Service]
+ExecCondition=+/usr/bin/test ! -e /run/sonic/shutdown-in-progress
 User=root
 Environment=sonic_asic_platform={{ sonic_asic_platform }}
 ExecStartPre=/usr/local/bin/swss.sh start{% if multi_instance == 'true' %} %i{% endif %}

@@ -1,0 +1,9 @@
+{
+   "python-shell-server": {
+      "enable": false
+   },
+   "cli-server": {
+      "enable": true,
+      "address": "/var/cache/cisco/sdk-cli.sock"
+   }
+}

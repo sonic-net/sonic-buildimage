@@ -20,6 +20,11 @@ psutypedecode = {
     0x02: 'DC',
 }
 
+ledcolorschemedecode = {
+    0x00: 'blue_scheme',
+    0x01: 'green_scheme',
+}
+
 class Unit:
     Temperature = "C"
     Voltage = "V"
@@ -424,47 +429,96 @@ devices = {
             "name": "FRONT_SYS_LED",
             "led_type": "SYS_LED",
             "led": {"loc": "/dev/cpld1", "offset": 0x50, "len": 1, "way": "devfile"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
                 "off": 0x00, "green": 0x02, "amber": 0x06, "red": 0x06, "mask": 0x07,
                 "flash": 0x01, "amber_flash": 0x05,
             },
             "led_map": {
-                0x00: "off", 0x02: "blue", 0x06: "amber", 0x01: "blue/amber alternate flashing",
-                0x05: "amber flashing"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber", 0x01: "blue/amber alternate flashing",
+                    0x05: "amber flashing"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x02: "green", 0x06: "amber", 0x01: "green/amber alternate flashing",
+                    0x05: "amber flashing"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber", 0x01: "blue/amber alternate flashing",
+                    0x05: "amber flashing"
+                },
             }
         },
         {
             "name": "FRONT_PSU_LED",
             "led_type": "PSU_LED",
             "led": {"loc": "/dev/cpld1", "offset": 0x51, "len": 1, "way": "devfile"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
                 "off": 0x00, "green": 0x02, "amber": 0x06, "red": 0x06, "mask": 0x07
             },
             "led_map": {
-                0x00: "off", 0x02: "blue", 0x06: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x02: "green", 0x06: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
             }
         },
         {
             "name": "FRONT_SMB_LED",
             "led_type": "SMB_LED",
-            
             "led": {"loc": "/dev/cpld1", "offset": 0x52, "len": 1, "way": "devfile"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
                 "off": 0x00, "green": 0x02, "amber": 0x06, "red": 0x06, "mask": 0x07
             },
             "led_map": {
-                0x00: "off", 0x02: "blue", 0x06: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x02: "green", 0x06: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
             }
         },
         {
             "name": "FRONT_FAN_LED",
             "led_type": "FAN_LED",
             "led": {"loc": "/dev/cpld1", "offset": 0x53, "len": 1, "way": "devfile"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
                 "off": 0x00, "green": 0x02, "amber": 0x06, "red": 0x06, "mask": 0x07
             },
             "led_map": {
-                0x00: "off", 0x02: "blue", 0x06: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x02: "green", 0x06: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x02: "blue", 0x06: "amber"
+                },
             }
         },
     ],
@@ -478,11 +532,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 44, "addr": 0x0d, "offset": 0x60, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -525,11 +602,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 44, "addr": 0x0d, "offset": 0x61, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -572,11 +672,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 44, "addr": 0x0d, "offset": 0x62, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -619,11 +742,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 44, "addr": 0x0d, "offset": 0x63, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -666,11 +812,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 52, "addr": 0x0d, "offset": 0x60, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -713,11 +882,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 52, "addr": 0x0d, "offset": 0x61, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -760,11 +952,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 52, "addr": 0x0d, "offset": 0x62, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {
@@ -807,11 +1022,34 @@ devices = {
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"bus": 52, "addr": 0x0d, "offset": 0x63, "way": "i2c"},
+            'led_color_scheme': {"loc": "/dev/cpld1", "offset": 0x55, "len": 1, "way": "devfile", 'ledcolorschemedecode':ledcolorschemedecode},
             "led_attrs": {
-                "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    "off": 0x00, "green": 0x03, "amber": 0x01, "red": 0x01, "mask": 0x07
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    "off": 0x00, "green": 0x06, "amber": 0x01, "red": 0x01, "mask": 0x07
+                }
             },
             "led_map": {
-                0x00: "off", 0x06: "blue", 0x01: "amber"
+                # The blue light is on when the system is operating normally.
+                'blue_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
+                # The green light is on when the system is operating normally.
+                'green_scheme': {
+                    0x00: "off", 0x03: "green", 0x01: "amber"
+                },
+                # The blue light is on when the system is operating normally.
+                'default_scheme': {
+                    0x00: "off", 0x06: "blue", 0x01: "amber"
+                },
             },
             "PowerMax": 80.64,
             "Rotor": {

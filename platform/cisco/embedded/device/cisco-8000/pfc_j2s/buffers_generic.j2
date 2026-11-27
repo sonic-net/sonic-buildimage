@@ -1,0 +1,75 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{# 108MB sms memory - all sizes in MB #}
+{%- set pool_headroom_size = '25165824' %}
+{%- set ingress_pool_size = '67108864' %}
+{%- set egress_pool_size = '50331648' %}
+{%- set egress_lossy_profile_size = '0' %}
+{%- set egress_lossy_profile_dynamic_th = '0' %}
+{%- set ingress_lossy_profile_size = '0' %}
+{%- set passthrough_dynamic_th = '7' %}
+
+{% if globals.sms_64mb %}
+{%- set pool_headroom_size = '12582912' %}
+{%- set ingress_pool_size = '41943040' %}
+{%- set egress_pool_size = '31457280' %}
+{% endif %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "type": "ingress",
+            "size": "{{ ingress_pool_size }}",
+            "mode": "dynamic",
+            "xoff": "{{ pool_headroom_size }}"
+        },
+        "egress_lossy_pool": {
+            "type": "egress",
+            "size": "{{ egress_pool_size }}",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size": "{{ egress_lossy_profile_size }}",
+            "dynamic_th": "{{ egress_lossy_profile_dynamic_th }}"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossy_pool",
+            "size": "{{ egress_lossy_profile_size }}",
+            "dynamic_th": "{{ passthrough_dynamic_th }}"
+        },
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size": "{{ ingress_lossy_profile_size }}",
+            "dynamic_th": "{{ passthrough_dynamic_th }}"
+        }
+    },
+{%- endmacro %}
+
+{% import 'buffers_extra_queues.j2' as defs1 with context %}
+{%- macro generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) %}
+{{ defs1.generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) }}
+{%- endmacro %}
+
+{%- macro generate_queue_buffers(port_names) %}
+{{ defs1.generate_queue_buffers(port_names) }}
+{%- endmacro %}
+
+{% import 'buffers_extra_pgs.j2' as defs2 with context %}
+{%- macro generate_pg_buffers_with_extra_lossy_pgs(port_names, port_names_require_no_extra_pgs) %}
+{{ defs2.generate_pg_buffers_with_extra_lossy_pgs(port_names, port_names_require_no_extra_pgs) }}
+{%- endmacro %}
+
+{%- macro generate_qos_bypass_port_list(PORT_QOS_BYPASS) %}
+    {% for port in PORT %}
+       {% if 'lanes' in PORT[port] %}
+          {% if PORT[port]['lanes'] | int >= 0xfff0 %}
+             {% set _ = PORT_QOS_BYPASS.append(port) %}
+          {% endif %}
+       {% endif %}
+    {% endfor %}
+{%- endmacro %}

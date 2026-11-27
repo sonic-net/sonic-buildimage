@@ -9,13 +9,19 @@
 #
 #############################################################################
 
+import logging
 import sys
 import time
 
 from sonic_platform.dpm_base import timestamp_as_string
 from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause
 from sonic_platform.thermal import NexthopFpgaAsicThermal
-from sonic_platform.watchdog import Watchdog
+from sonic_platform.watchdog import Watchdog, WatchdogSimple
+from sonic_platform_base.watchdog_base import WatchdogBase
+from sonic_py_common import syslogger
+
+_SYSLOG_IDENTIFIER = "sonic_platform.chassis"
+_logger = syslogger.SysLogger(_SYSLOG_IDENTIFIER, log_level=logging.INFO)
 
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
@@ -40,7 +46,7 @@ class Chassis(PddfChassis):
 
         # {'port': 'presence'}
         self._xcvr_presence = {}
-        self._watchdog: Watchdog | None = None
+        self._watchdog: WatchdogBase | None = None
         self._pddf_data = pddf_data
 
         # Calculate thermal position offset for FPGA sensors
@@ -231,7 +237,7 @@ class Chassis(PddfChassis):
         self._attach_reboot_cause_comment(majors_and_minors[1:])
         return majors_and_minors[0]
 
-    def get_watchdog(self) -> Watchdog | None:
+    def get_watchdog(self) -> WatchdogBase | None:
         """
         Retrieves hardware watchdog device on this chassis
         Returns:
@@ -250,12 +256,29 @@ class Chassis(PddfChassis):
             event_driven_power_cycle_control_reg_offset = int(
                 watchdog_dev_attr["event_driven_power_cycle_control_reg_offset"], 16
             )
-            watchdog_counter_reg_offset = int(watchdog_dev_attr["watchdog_counter_reg_offset"], 16)
-            self._watchdog = Watchdog(
-                fpga_pci_addr=fpga_pci_addr,
-                event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
-                watchdog_counter_reg_offset=watchdog_counter_reg_offset,
-            )
+            event_driven_power_cycle_control_bit = watchdog_dev_attr[
+                "event_driven_power_cycle_control_bit"
+            ]
+            watchdog_counter_powercycle_reg = int(watchdog_dev_attr["watchdog_counter_reg_offset"], 16)
+
+            watchdog_msi = watchdog_dev_attr.get("use_watchdog_msi") or {}
+            if watchdog_msi:
+                _logger.log_info("Using 2-counter Watchdog (MSI + power cycle registers)")
+                self._watchdog = Watchdog(
+                    fpga_pci_addr=fpga_pci_addr,
+                    event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
+                    event_driven_power_cycle_control_bit=event_driven_power_cycle_control_bit,
+                    watchdog_counter_powercycle_reg=watchdog_counter_powercycle_reg,
+                    watchdog_counter_msi_reg=int(watchdog_msi["watchdog_counter_msi_reg"], 16),
+                )
+            else:
+                _logger.log_info("Using 1-counter WatchdogSimple (power cycle register only)")
+                self._watchdog = WatchdogSimple(
+                    fpga_pci_addr=fpga_pci_addr,
+                    event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
+                    event_driven_power_cycle_control_bit=event_driven_power_cycle_control_bit,
+                    watchdog_counter_powercycle_reg=watchdog_counter_powercycle_reg,
+                )
 
         return self._watchdog
 

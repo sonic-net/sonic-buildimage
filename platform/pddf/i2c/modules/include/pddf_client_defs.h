@@ -132,10 +132,16 @@ typedef struct PDEVICE
     struct hlist_node node;
     char name[GEN_NAME_SIZE];
     void *data;
-
+    /* frees data->dev.platform_data when the client goes away; NULL if
+     * the client carries no platform data of ours */
+    void (*free_pdata)(void *pdata);
+    /* module that owns free_pdata and the client; held while the client
+     * exists so neither can go away underneath it */
+    struct module *owner;
 }PDEVICE;
 
 void add_device_table(char *name, void *ptr);
+void add_device_table_owned(char *name, void *ptr, void (*free_pdata)(void *pdata), struct module *owner);
 
 
 #endif

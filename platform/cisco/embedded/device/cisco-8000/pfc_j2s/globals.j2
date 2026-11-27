@@ -1,0 +1,33 @@
+{# Copyright 2015-2026 Cisco Systems, Inc. #}
+{# SPDX-License-Identifier: BSD-3-Clause #}
+{# See platform/cisco/COPYRIGHT for the full license text. #}
+
+{# Global variable/macro definitions. Accessed through cfg_profile.j2 with 'globals.my_var' #}
+
+{%- set MB = 1024 * 1024 -%}
+
+{%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
+
+{% set sms_64mb = ('platform' in DEVICE_METADATA['localhost'] and
+    DEVICE_METADATA['localhost']['platform'] in ['x86_64-8102_64h_o-r0']) %}
+
+{% set is_compute_ai = ('type' in DEVICE_METADATA['localhost'] and
+    DEVICE_METADATA['localhost']['type'] in backend_device_types and
+    'resource_type' in DEVICE_METADATA['localhost'] and
+    DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
+
+{%- set tunnel_qos_remap_enable = ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) %}
+
+{# Determine device topology and default cable length #}
+{%- if DEVICE_METADATA['localhost']['type'] is defined %}
+{%-     set switch_role = DEVICE_METADATA['localhost']['type'] %}
+{%-     if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+{%-         set default_cable = '5m' %}
+{%-     elif 'leafrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+{%-         set default_cable = '300m' %}
+{%-     endif %}
+{%- endif -%}
+
+{%- macro throw(msg) %}
+    {%- include msg %}
+{% endmacro %}

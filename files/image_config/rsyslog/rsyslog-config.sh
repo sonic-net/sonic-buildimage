@@ -18,7 +18,7 @@ else
     udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 fi
 
-bridged_syslog_features="dhcp_server redfish"
+bridged_syslog_features="dhcp_server"
 for feature in $bridged_syslog_features; do
     if [ -n "$(sonic-db-cli CONFIG_DB keys "FEATURE|$feature")" ]; then
         docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
@@ -41,18 +41,8 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
-# Generate config to a temp file so we can compare before restarting.
-# On Debian 13 (Trixie), rsyslog.service has systemd sandboxing directives
-# (PrivateTmp, ProtectSystem, etc.) that add ~4 seconds of overhead per
-# restart due to namespace setup/teardown.  Skipping the restart when the
-# config is unchanged avoids this delay on warm/fast reboot and config_reload
-# where nothing actually changed.
-#
-# When the config IS unchanged we still send SIGHUP so rsyslog re-opens its
-# log files (needed after log rotation or /var/log remounts).
-#
-# See: https://github.com/sonic-net/sonic-buildimage/issues/25382
-
+# Generate temporary config to validate output before overwriting
+# /etc/rsyslog.conf
 TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
 trap 'rm -f "$TMPFILE"' EXIT
 
@@ -75,21 +65,36 @@ sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \
     > "$TMPFILE"
 
-if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
-    # Config changed (or first boot) — install and restart
-    if cp "$TMPFILE" /etc/rsyslog.conf; then
-        systemctl restart rsyslog
-    else
-        echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
-        exit 1
+# Keep the docker0 inputs in /run, empty at boot, so the rsyslogd started
+# before docker0 exists does not try to bind them; the restart below loads them.
+DOCKER0_INPUTS_DIR=/run/sonic-rsyslog
+DOCKER0_INPUTS="$DOCKER0_INPUTS_DIR/docker0-inputs.conf"
+docker0_inputs_failed=false
+if [ -n "$docker0_ip" ] && [ "$docker0_ip" != "$udp_server_ip" ]; then
+    docker0_inputs=$(printf 'input(type="imudp" address="%s" port="514")\ninput(type="imrelp" address="%s" port="2514")' \
+        "$docker0_ip" "$docker0_ip")
+    if [ "$(cat "$DOCKER0_INPUTS" 2>/dev/null)" != "$docker0_inputs" ]; then
+        if ! { mkdir -p "$DOCKER0_INPUTS_DIR" && \
+               printf '%s\n' "$docker0_inputs" > "$DOCKER0_INPUTS"; }; then
+            rm -f "$DOCKER0_INPUTS"
+            echo "Failed to update $DOCKER0_INPUTS; docker0 inputs not configured" >&2
+            docker0_inputs_failed=true
+        fi
     fi
 else
-    if [[ ($NUM_ASIC -gt 1) ]]; then
-        # multi-asic, docker0 IP interface may not be present when rsyslog.service was started.
-        # restart the rsyslog for TCP port socket binding.
-        systemctl restart rsyslog
-    else
-        # Config unchanged — just signal rsyslog to re-open log files
-        systemctl kill -s HUP rsyslog
-    fi
+    rm -f "$DOCKER0_INPUTS"
 fi
+
+if ! cp "$TMPFILE" /etc/rsyslog.conf; then
+    echo "Failed to update /etc/rsyslog.conf; not restarting rsyslog" >&2
+    exit 1
+fi
+
+systemctl restart rsyslog
+rsyslog_status=$?
+
+# Fail the unit only after the restart above, so loopback logging keeps working.
+if $docker0_inputs_failed; then
+    exit 1
+fi
+exit $rsyslog_status

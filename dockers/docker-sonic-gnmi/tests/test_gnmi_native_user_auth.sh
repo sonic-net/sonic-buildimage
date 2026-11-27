@@ -8,17 +8,20 @@ TEST_ROOT="$(mktemp -d)"
 TEST_SCRIPT="${TEST_ROOT}/gnmi-native.sh"
 STUB_BIN="${TEST_ROOT}/bin"
 TEMPLATE_FILE="${TEST_ROOT}/telemetry_vars.j2"
+BLACKLIST_FILE="${TEST_ROOT}/paths_blacklist.txt"
 trap 'rm -rf "${TEST_ROOT}"' EXIT
 
 mkdir -p "${STUB_BIN}"
 touch "${TEMPLATE_FILE}"
 
-# Run the production launcher with only its fixed template and telemetry paths
-# redirected to test fixtures. If either production line changes, these checks
-# fail instead of silently testing a different implementation.
+# Run the production launcher with only its fixed template, paths blacklist and
+# telemetry paths redirected to test fixtures. If any of those production lines
+# change, these checks fail instead of silently testing a different
+# implementation.
 # shellcheck disable=SC2016
 sed \
     -e "s|^TELEMETRY_VARS_FILE=.*$|TELEMETRY_VARS_FILE=${TEMPLATE_FILE}|" \
+    -e "s|^PATHS_BLACKLIST_FILE=.*$|PATHS_BLACKLIST_FILE=${BLACKLIST_FILE}|" \
     -e 's|^exec /usr/sbin/telemetry ${TELEMETRY_ARGS}$|printf "telemetry args:%s\\n" "${TELEMETRY_ARGS}"|' \
     "${SCRIPT}" > "${TEST_SCRIPT}"
 chmod +x "${TEST_SCRIPT}"
@@ -85,8 +88,13 @@ run_launcher() {
             }
         }')"
     fi
+    run_launcher_config "${GNMI_TEST_CONFIG}" | tail -n 1
+}
+
+run_launcher_config() {
+    GNMI_TEST_CONFIG="$1"
     export GNMI_TEST_CONFIG
-    PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" | tail -n 1
+    PATH="${STUB_BIN}:${PATH}" "${TEST_SCRIPT}" 2>&1
 }
 
 output="$(run_launcher)"
@@ -116,5 +124,106 @@ assert_contains_once "explicit password is forwarded" \
     "${output}" "--client_auth password"
 assert_not_contains "explicit password does not configure certificate lookup" \
     "${output}" "--config_table_name GNMI_CLIENT_CERT"
+
+config="$(jq -cn '{
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "mgmt"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "certificate-free fallback remains plaintext loopback" \
+    "${args_output}" "--noTLS --bind_address 127.0.0.1"
+assert_not_contains "certificate-free fallback does not bind to management VRF" \
+    "${args_output}" "--gnmi_vrf"
+assert_contains_once "certificate-free management VRF emits warning" \
+    "${output}" "certificate-free fallback is restricted to localhost"
+
+config="$(jq -cn '{
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "default"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "certificate-free default VRF remains supported" \
+    "${args_output}" "--gnmi_vrf default"
+assert_not_contains "certificate-free default VRF emits no warning" \
+    "${output}" "certificate-free fallback is restricted to localhost"
+
+config="$(jq -cn '{
+    certs: {
+        server_crt: "/server.crt",
+        server_key: "/server.key",
+        ca_crt: "/ca.crt"
+    },
+    gnmi: {
+        port: "50052",
+        client_auth: "false",
+        user_auth: "password",
+        vrf: "mgmt"
+    }
+}')"
+output="$(run_launcher_config "${config}")"
+args_output="$(tail -n 1 <<< "${output}")"
+assert_contains_once "TLS listener preserves management VRF" \
+    "${args_output}" "--gnmi_vrf mgmt"
+assert_not_contains "TLS listener does not use plaintext fallback" \
+    "${args_output}" "--noTLS"
+
+output="$(run_launcher)"
+assert_not_contains "missing save_on_set is not passed" \
+    "${output}" "--with-save-on-set"
+
+for save_on_set in true false; do
+    config="$(jq -cn --arg save_on_set "${save_on_set}" '{
+        certs: {
+            server_crt: "/server.crt",
+            server_key: "/server.key",
+            ca_crt: "/ca.crt"
+        },
+        gnmi: {port: "50052", client_auth: "false", save_on_set: $save_on_set}
+    }')"
+    output="$(run_launcher_config "${config}" | tail -n 1)"
+    assert_contains_once "save_on_set ${save_on_set} is forwarded" \
+        "${output}" "--with-save-on-set=${save_on_set}"
+done
+
+for gnmi in '{user_auth: "password"}' '{save_on_set: "true"}' \
+    '{port: "", user_auth: "password"}' '{port: null, user_auth: "password"}'; do
+    config="$(jq -cn "{gnmi: ${gnmi}}")"
+    output="$(run_launcher_config "${config}" | tail -n 1)"
+    assert_contains_once "missing or empty port in ${gnmi} uses the default" \
+        "${output}" "--port 8080"
+done
+
+for port in abc -1 '8080 --insecure'; do
+    config="$(jq -cn --arg port "${port}" '{gnmi: {port: $port, user_auth: "password"}}')"
+    status=0
+    output="$(run_launcher_config "${config}")" || status=$?
+    if [[ "${status}" == 0 ]]; then
+        printf "FAIL: invalid port '%s' was accepted\n%s\n" "${port}" "${output}" >&2
+        exit 1
+    fi
+    assert_contains_once "invalid port '${port}' is rejected" \
+        "${output}" "Incorrect port value"
+    assert_not_contains "invalid port '${port}' does not start the server" \
+        "${output}" "telemetry args:"
+done
+
+output="$(run_launcher)"
+assert_not_contains "missing paths blacklist file is not passed" \
+    "${output}" "--paths_blacklist"
+
+touch "${BLACKLIST_FILE}"
+output="$(run_launcher)"
+assert_contains_once "installed paths blacklist file is passed" \
+    "${output}" "--paths_blacklist ${BLACKLIST_FILE}"
 
 echo "gnmi-native user_auth launcher tests passed"

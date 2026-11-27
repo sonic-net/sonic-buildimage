@@ -1,0 +1,12 @@
+[Unit]
+Description=NextHop BMC eth0 MAC Address Fixup Service
+After=sonic-uboot-env-init.service
+Before=networking.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/eth0-mac-fixup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

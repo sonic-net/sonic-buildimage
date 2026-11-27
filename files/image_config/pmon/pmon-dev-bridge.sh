@@ -10,6 +10,11 @@ set -u
 
 # pmon is a single global container (one instance even on multi-asic platforms).
 PMON=pmon
+TAG=pmon-hotplug
+
+log() {
+    logger -t pmon-dev-bridge -p "user.$1" -- "$2" 2>/dev/null || true
+}
 
 pmon_running() {
     docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$PMON"
@@ -18,7 +23,13 @@ pmon_running() {
 # Feed a script of shell commands to the pmon container in a single exec.
 apply_in_pmon() {
     [ -n "$1" ] || return 0
-    printf '%s' "$1" | docker exec -i "$PMON" sh 2>/dev/null || true
+    local err rc
+    err="$(printf '%s' "$1" | docker exec -i "$PMON" sh 2>&1 >/dev/null)"
+    rc=$?
+    if [ "$rc" -ne 0 ] || [ -n "$err" ]; then
+        log warning "mirroring nodes into $PMON failed (rc=$rc): ${err:-no output}"
+    fi
+    return 0
 }
 
 # Emit an idempotent mknod for one character node (major/minor read on the host).
@@ -36,9 +47,9 @@ mknod_cmd() {
 
 # Emit idempotent mknods for every pmon-hotplug node from a single udevadm export
 # (DEVNAME/MAJOR/MINOR come straight from the udev db -- no per-node udevadm or stat).
-tagged_mknod_script() {
+udev_records_mknod_script() {
     local dn="" maj="" min="" line
-    { udevadm info -e --tag-match=pmon-hotplug 2>/dev/null; echo; } | while IFS= read -r line; do
+    printf '%s\n\n' "$1" | while IFS= read -r line; do
         case "$line" in
             "E: DEVNAME="*) dn="${line#E: DEVNAME=}" ;;
             "E: MAJOR="*)   maj="${line#E: MAJOR=}" ;;
@@ -51,6 +62,26 @@ tagged_mknod_script() {
                 ;;
         esac
     done
+}
+
+# Normally, --tag-match retrieves tagged devices through the udev tag index.
+# If an ambiguous entry (e.g. conflicting GPIO sysfs and character-device names)
+# causes the entire export to fail, fall back to scanning udev records by
+# TAGS and DEVNAME, avoiding the problematic tag-index lookup.
+tagged_mknod_script() {
+    local out rc
+    out="$(udevadm info -e --tag-match="$TAG" 2>&1)"
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+        log warning "udevadm tag export of $TAG failed (rc=$rc); retrying with a TAGS property match"
+        out="$(udevadm info -e --property-match="TAGS=*:$TAG:*" --property-match='DEVNAME=?*' 2>&1)"
+        rc=$?
+        if [ "$rc" -ne 0 ]; then
+            log err "udevadm property export of $TAG failed (rc=$rc); no nodes mirrored"
+            return
+        fi
+    fi
+    udev_records_mknod_script "$out"
 }
 
 case "${1:-}" in

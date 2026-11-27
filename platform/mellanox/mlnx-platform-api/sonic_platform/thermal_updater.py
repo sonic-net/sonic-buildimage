@@ -295,17 +295,8 @@ class ThermalUpdater:
         if not DeviceDataManager.is_spc1():
             return
 
-        conditions = [lambda: os.path.islink('/run/hw-management/thermal/asic')]
-        sfp_count = DeviceDataManager.get_sfp_count()
-        for sfp_index in range(sfp_count):
-            index = sfp_index + 1
-            conditions.append(lambda idx=index: os.path.islink(f'/run/hw-management/thermal/module{idx}_temp_input'))
-            conditions.append(lambda idx=index: os.path.islink(f'/run/hw-management/thermal/module{idx}_temp_fault'))
-            conditions.append(lambda idx=index: os.path.islink(f'/run/hw-management/thermal/module{idx}_temp_crit'))
-            conditions.append(lambda idx=index: os.path.islink(f'/run/hw-management/thermal/module{idx}_temp_emergency'))
-
         logger.log_notice(f'Waiting for ASIC and modules thermal files to be created')
-        if not utils.wait_until_conditions(conditions, 300, 1):
+        if not utils.ensure_sysfs_mlxsw_ready():
             logger.log_error('Failed to wait for thermal files to be created')
             return
         logger.log_notice(f'All ASIC and modules thermal files are created')

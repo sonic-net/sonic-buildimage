@@ -1,0 +1,14 @@
+Source: sonic-containercfgd-rs
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: debhelper-compat (= 13), libswsscommon-dev
+Standards-Version: 1.0.0
+
+Package: sonic-containercfgd-rs
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: SONiC container configuration utility
+ Rust implementation of SONiC containercfgd that updates the configuration of
+ common processes/state within a container based on external configuration
+ changes.

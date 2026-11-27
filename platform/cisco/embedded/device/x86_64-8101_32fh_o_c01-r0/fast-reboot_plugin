@@ -1,0 +1,94 @@
+#! /bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+#
+# Tornado (Cisco-8101-32FH-O-C01) reboot plugin.
+#
+# NOTE: Tornado uses the "cisco-tnd-fpga-reboot" driver (device "reboot-tnd"),
+# whose register window is only 4 registers (16 bytes) wide.  It does NOT use
+# the Matilda/xil MSD scratchram layout, so the legacy "r=0x3c" override used by
+# the MSD-based platforms is invalid here and fails with -EIO, leaving the FPGA
+# armed for a destructive cold power-cycle.  We therefore steer the
+# reboot_notifier/restart override to the correct register per device.
+
+SCRIPT_NAME=$(basename $0)
+case "$SCRIPT_NAME" in
+    warm-*)
+	readonly REBOOT_MODE=3
+	;;
+    fast-*)
+	readonly REBOOT_MODE=2
+        # Fast reboot skips the platform pre-check; preserve optics state here.
+        source /usr/share/sonic/device/cisco-8000/platform_reboot_pre_check_helper
+        save_shared_memory_file_for_optics_lib "fast-reboot"
+	;;
+    express-*)
+	readonly REBOOT_MODE=3
+	;;
+esac
+
+#OBFL log reboot cause
+obfl_log="/usr/share/sonic/device/cisco-8000/platform_reboot_log"
+python3 $obfl_log
+
+# Tornado is a Q200-based system; unload the NPU driver before the warm boot.
+rmmod leaba-q200
+
+# Write reboot mode indicator to gpio scratch which is used by the
+# cisco-fpga-gpio module to identify the type of reboot.
+readonly REBOOT_MODE_MASK=3
+for file in /sys/bus/platform/devices/gpio*/info/scratch
+do
+    echo "$REBOOT_MODE mask $REBOOT_MODE_MASK" > $file
+done
+
+# The SONiC kernel calls reboot notifiers during kexec with cmd "kexec reboot".
+# Tornado's cisco_tnd_fpga_reboot notifier ignores the cmd string and writes the
+# FPGA restart register for SYS_RESTART, which converts kexec into a platform
+# reset.  Unregister it for this handoff; the watchdog remains the fallback if
+# kexec does not complete.
+#
+# TODO: the cleaner long-term fix is in the driver -- have _reboot_notifier() in
+# cisco-tnd-fpga-reboot.c inspect the cmd argument and skip the register write
+# for "kexec reboot", so this rmmod is no longer needed.
+if lsmod | grep -q '^cisco_tnd_fpga_reboot '; then
+    logger "Tornado reboot plugin: unloading cisco_tnd_fpga_reboot before kexec"
+    /usr/sbin/rmmod cisco_tnd_fpga_reboot || logger "Tornado reboot plugin: failed to unload cisco_tnd_fpga_reboot"
+fi
+
+# Disarm the destructive power-cycle so that the upcoming kexec is a
+# non-destructive (warm/express) restart that preserves the data-plane.
+#
+# There are two distinct reboot-register designs in play here, and they must
+# be handled differently:
+#
+#   * MSD (cisco-fpga-msd, "msd"):  the driver default restart writes
+#     reg 0x3c value 0x400, i.e. the xil CFG7 cold_reset bit (bit 10).  For a
+#     warm/express reboot we must CLEAR that bit, hence the "r=0x3c; v=0x0"
+#     override below.  This matches the Matilda / MSD-based platforms.
+#
+#   * Tornado IO-FPGA (cisco-tnd-fpga-reboot, "reboot-tnd"):  this block is a
+#     SINGLE 32-bit register (max_register == 3).  Its driver default restart
+#     (reg 0x0, value 0xfd273f3f) is already the correct reset trigger, and the
+#     cold-vs-warm SELECTION is taken from the GPIO scratch reboot-type bits
+#     written above (REBOOT_TYPE_MASK in gpio.h: COLD=1, FAST=2, WARM=3).
+#     Writing the MSD-style "r=0x3c" override to reboot-tnd is invalid (offset
+#     0x3c is out of range) and fails with -EIO, which is what caused the
+#     express-reboot to fall back to a cold power-cycle.  We therefore leave
+#     reboot-tnd at its driver default and do NOT override it.
+readonly MSD_REBOOT_REG="r=0x3c; m=0xfff; v=0x0"
+for file in /sys/bus/platform/devices/*/reboot_notifier/restart
+do
+    devname=$(basename "$(dirname "$(dirname "$file")")")
+    case "$devname" in
+        reboot-tnd*)
+            # Leave the tnd reboot register at its driver default; the reboot
+            # type is conveyed via the GPIO scratch bits set above.
+            ;;
+        *)
+            # MSD-style block: clear the cold_reset bit for a warm restart.
+            echo "$MSD_REBOOT_REG" > "$file"
+            ;;
+    esac
+done

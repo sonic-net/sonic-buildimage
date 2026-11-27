@@ -1,0 +1,36 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+OPTICS_LIB_SHM_FILE_NAME="optics_lib_shm"
+DEV_SHM_DIR="/dev/shm"
+OPTICS_LIB_SHM_FILE_PATH="${DEV_SHM_DIR}/${OPTICS_LIB_SHM_FILE_NAME}"
+OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST="/host/reboot-cause"
+OPTICS_LIB_SHM_FILE_SAVE_PATH_ON_HOST="${OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST}/${OPTICS_LIB_SHM_FILE_NAME}"
+
+# Function to save shared memory file for optics lib for any reboot that expect
+# link to stay up during warm-reboot, fast-reboot or express-reboot, to avoid
+# unnecessary HW re-init of module/optics.
+# For the platforms that don't support the particular reboot types, there's no harm to save
+# optics_lib_shm, it's just doing best-effort.
+
+save_shared_memory_file_for_optics_lib() {
+    local reboot_type=$1
+
+    run_save_command() {
+        if [ ! -d "${OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST}" ]; then
+            mkdir -p "${OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST}"
+        fi
+        cp "${OPTICS_LIB_SHM_FILE_PATH}" "${OPTICS_LIB_SHM_FILE_SAVE_PATH_ON_HOST}"
+        return $?
+    }
+
+    if [ "$reboot_type" == "warm-reboot" ] || [ "$reboot_type" == "fast-reboot" ] || [ "$reboot_type" == "express-reboot" ]; then
+        if run_save_command; then
+            echo "Saved ${OPTICS_LIB_SHM_FILE_NAME} to ${OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST} for ${reboot_type}"
+        else
+            echo "Error: Failed to save ${OPTICS_LIB_SHM_FILE_NAME} to ${OPTICS_LIB_SHM_FILE_SAVE_DIR_ON_HOST} for ${reboot_type}"
+        fi
+    fi
+}

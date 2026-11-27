@@ -5,8 +5,11 @@ import ctypes
 import mmap
 import os
 import json
+import re
+import time
 
-from typing import Union
+from dataclasses import dataclass
+from typing import NoReturn, Union
 from  nexthop.pddf_config_parser import load_pddf_device_config
 
 
@@ -212,3 +215,56 @@ def dump_resource0(pci_address: str, root="") -> list[tuple[int, int, int]]:
         )
     except OSError as e:
         raise OSError(f"Error reading {file_path}: {e}")
+
+
+_BDF_PATTERN = re.compile(r"[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]")
+DEFAULT_POWER_CYCLE_TIMEOUT_MS = 1000
+
+
+def checked_bdf(bdf) -> str:
+    """Raises ValueError for a BDF that rendering left missing or as a template variable."""
+    if not isinstance(bdf, str) or not _BDF_PATTERN.fullmatch(bdf):
+        raise ValueError(f"Invalid or missing BDF: {bdf!r}")
+    return bdf
+
+
+@dataclass(frozen=True)
+class PowerCycleRegister:
+    fpga_bdf: Union[str, None]
+    reg_offset: int
+    enable_word: int
+    timeout_ms: int = DEFAULT_POWER_CYCLE_TIMEOUT_MS
+
+    @classmethod
+    def from_pddf(cls, entry: dict) -> "PowerCycleRegister":
+        return cls(
+            fpga_bdf=entry.get("fpga_bdf"),
+            reg_offset=int(entry["reg_offset"], 16),
+            enable_word=int(entry["enable_word"], 16),
+            timeout_ms=int(entry.get("timeout_ms", DEFAULT_POWER_CYCLE_TIMEOUT_MS)),
+        )
+
+    def trigger(self) -> NoReturn:
+        write_32(checked_bdf(self.fpga_bdf), self.reg_offset, self.enable_word)
+        time.sleep(self.timeout_ms / 1000)
+        raise TimeoutError(f"no power cycle within {self.timeout_ms} ms")
+
+
+@dataclass(frozen=True)
+class FpgaRegisterMatch:
+    fpga_bdf: Union[str, None]
+    reg_offset: int
+    mask: int
+    compare_val: int
+
+    @classmethod
+    def from_pddf(cls, entry: dict) -> "FpgaRegisterMatch":
+        return cls(
+            fpga_bdf=entry.get("fpga_bdf"),
+            reg_offset=int(entry["reg_offset"], 16),
+            mask=int(entry["mask"], 16),
+            compare_val=int(entry["compare_val"], 16),
+        )
+
+    def check(self) -> bool:
+        return read_32(checked_bdf(self.fpga_bdf), self.reg_offset) & self.mask == self.compare_val

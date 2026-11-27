@@ -13,7 +13,7 @@ class BfdFrrMon:
         self.local_v4_peers = set()
         self.local_v6_peers = set()
         self.status_table = "DPU_BFD_PROBE_STATE"
-        self.db_connector = swsscommon.DBConnector("STATE_DB", 0)
+        self.db_connector = swsscommon.DBConnector("STATE_DB", 0, False)
         self.table = swsscommon.Table(self.db_connector, self.status_table)
 
         self.bfdd_running = False

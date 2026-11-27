@@ -114,5 +114,15 @@
     "DHCP_SERVER_IPV4_RANGE_THREE_IP": {
         "desc": "Three ips in DHCP_SERVER_IPV4_RANGE",
         "eStrKey": "Must"
+    },
+    "DHCP_SERVER_IPV4_VLAN_MISSING": {
+        "desc": "Configure DHCP_SERVER_IPV4 on a VLAN that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_VLAN_4095": {
+        "desc": "Configure DHCP_SERVER_IPV4 on Vlan4095.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
 }

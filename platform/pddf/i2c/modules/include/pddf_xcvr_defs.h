@@ -77,6 +77,10 @@ typedef enum xcvr_port_type_e {
 struct xcvr_data {
     struct device       *xdev;
     struct mutex        update_lock;
+    /* this client's sysfs attributes: ports differ (QSFP vs SFP), so the
+     * list and group must be per client, not shared across probes */
+    struct attribute    *attributes[MAX_XCVR_ATTRS];
+    struct attribute_group attribute_group;
     char                valid;           /* !=0 if registers are valid */
     unsigned long       last_updated;    /* In jiffies */
     int                 index;           /* port index */

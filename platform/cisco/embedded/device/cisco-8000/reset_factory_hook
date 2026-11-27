@@ -1,0 +1,100 @@
+#!/bin/bash
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+FACTORY_TYPE=""
+RESET_FACTORY_FLAG_PATH="/usr/share/sonic/device/$PLATFORM/reset_factory_flag"
+
+if [ -e "$RESET_FACTORY_FLAG_PATH" ]; then
+  FACTORY_TYPE=$(head -n 1 "$RESET_FACTORY_FLAG_PATH")
+  FILES_TO_DELETE=$(sed -n '/^FILES_TO_DELETE:/,$p' "$RESET_FACTORY_FLAG_PATH" | tail -n +2)
+  
+fi
+
+# Remove the files listed in reset_factory_flag file
+if [ -n "$FILES_TO_DELETE" ]; then
+  echo "$FILES_TO_DELETE" | while IFS= read -r file; do
+    if [ -e "$file" ]; then
+      rm -rf $file
+      if [ $? -ne 0 ]; then
+        echo "Error: Failed to delete $file."
+      else
+        echo "$file deleted successfully."
+      fi
+    else
+      echo "File or directory $file does not exist."
+    fi
+  done
+fi
+
+PLATFORM_DATA_MIGRATION_YAML="/usr/share/sonic/device/$PLATFORM/platform_data_migration.yaml"
+
+# Remove the files specified in platform_data_migration.yaml
+if [ "$FACTORY_TYPE" != "only-config" ] && [ -e "$PLATFORM_DATA_MIGRATION_YAML" ]; then
+    echo "Deleting files listed in $PLATFORM_DATA_MIGRATION_YAML"
+    grep -E "source_file|destination_file|postmigration_script|premigration_script" "$PLATFORM_DATA_MIGRATION_YAML" | \
+    while IFS= read -r line; do
+        file=$(echo "$line" | awk -F": " '{print $2}' | tr -d "'")
+        formatted_file=$(echo "$file" | sed 's/:/\//g' | xargs)
+        if [[ "$formatted_file" != "/etc/passwd" && "$formatted_file" != "/etc/shadow" && "$formatted_file" != "/etc/group" && "$formatted_file" != *"platform_data_migration.yaml"* ]]; then
+            rm -f "$formatted_file"
+        fi
+    done
+
+    # Remove platform_data_migration.yaml
+    echo "Remove $PLATFORM_DATA_MIGRATION_YAML"
+    rm -f $PLATFORM_DATA_MIGRATION_YAML
+fi
+
+
+# Remove older images
+if [ "$FACTORY_TYPE" != "only-config" ]; then
+    current_version=$(sonic-installer list | grep "Current:" | awk -F": " '{print $2}')
+    available_images=$(sonic-installer list | grep -E "^SONiC-OS-" | grep -v "$current_version")
+
+    # Loop through the available images and delete each one
+    if [ -n "$available_images" ]; then
+        echo "Deleting the following images:"
+        echo "$available_images"
+        while IFS= read -r image; do
+            image_name=$(echo "$image" | awk '{print $1}')
+            sonic-installer remove "$image_name" -y
+        done <<< "$available_images"
+    else
+        echo "No images to delete. Only the current version exists."
+    fi
+fi
+
+# Remove /host/old_config
+HOST_OLD_CONFIG="/host/old_config"
+if [ -e $HOST_OLD_CONFIG ]; then
+     echo "Remove $HOST_OLD_CONFIG"
+     rm -f -r $HOST_OLD_CONFIG
+fi
+
+# Check if Zero Touch Provisioning is available
+if [ -e /usr/bin/ztp ]; then
+    if [ -z "$FACTORY_TYPE" ] || [ "$FACTORY_TYPE" = "only-config" ]; then
+        echo "Remove startup config for ZTP"
+        rm -f /etc/sonic/*config_db*.json*
+        rm -f /tmp/temp_config_db*
+        rm -rf /etc/sonic/old_config
+        rm -f /host/ztp/ztp_cfg.json
+    else
+        echo "ztp: $FACTORY_TYPE: skipping config file removal"
+    fi
+fi
+
+# Remove /etc/resolvconf/resolv.conf.d/base
+if [ -e "/etc/resolvconf/resolv.conf.d/base" ]; then
+    echo "Resetting /etc/resolvconf/resolv.conf.d/base"
+    truncate -s 0 /etc/resolvconf/resolv.conf.d/base
+fi
+
+#Remove TACACS+ conf file
+if [ "$FACTORY_TYPE" != "keep-all-config" ] && [ -e "/etc/cipher_pass" ]; then
+    echo "Remove TACACS+ conf file"
+    rm -f /etc/cipher_pass
+fi

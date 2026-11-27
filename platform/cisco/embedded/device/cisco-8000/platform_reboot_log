@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+import syslog
+from sonic_platform.obfl import OBFLService
+from sonic_platform import reboot_constants as reboot
+
+def main():
+
+    #Log reboot cause into OBFL
+    try:
+        obfl = OBFLService()
+        with open(reboot.REBOOT_CAUSE_FILE, 'r') as f:
+            for line in f:
+                obfl.obfl_cache_reboot_cause(line)
+    except FileNotFoundError:
+        syslog.syslog(syslog.LOG_ERR, "Failed to OBFL cache reboot cause")
+
+if __name__ == '__main__':
+    main()

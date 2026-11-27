@@ -1,19 +1,6 @@
 !
 ! template: bgpd/templates/general/instance.conf.j2
 !
-  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
-  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
-{# set the bgp neighbor timers if they have not default values #}
-{% if     (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
-      or  (bgp_session['holdtime'] is defined  and bgp_session['holdtime']  | int != 180) %}
-  neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] | default("60") }} {{ bgp_session['holdtime'] | default("180") }}
-{% endif %}
-  neighbor {{ neighbor_addr }} timers connect 10
-!
-{% if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}
-  neighbor {{ neighbor_addr }} shutdown
-{% endif %}
-!
 {# In BGP confederation, confed-external neighbors (ASN not equal to the local  #}
 {# member ASN and not in the confederation peers list, e.g. T3) are 'external'  #}
 {# to FRR and cannot share a peer-group with confed-internal neighbors. Send    #}
@@ -29,6 +16,21 @@
 {% else %}
   neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
 {% endif %}
+{% endif %}
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+{# set the bgp neighbor timers if they have not default values #}
+{% if     (bgp_session['keepalive'] is defined and bgp_session['keepalive'] | int != 60)
+      or  (bgp_session['holdtime'] is defined  and bgp_session['holdtime']  | int != 180) %}
+  neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] | default("60") }} {{ bgp_session['holdtime'] | default("180") }}
+{% endif %}
+  neighbor {{ neighbor_addr }} timers connect 10
+!
+{% if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}
+  neighbor {{ neighbor_addr }} shutdown
+{% endif %}
+!
+{% if is_interface_neighbor | default(neighbor_addr | is_interface) %}
 {% if bgp_session.get('address_family', 'both') in ['both', 'v4'] %}
   address-family ipv4
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}

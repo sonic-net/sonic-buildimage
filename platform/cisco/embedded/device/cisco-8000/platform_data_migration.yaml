@@ -1,0 +1,61 @@
+# Copyright 2015-2026 Cisco Systems, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+# See platform/cisco/COPYRIGHT for the full license text.
+
+#
+#   MigrationSchema.yaml
+#
+#    Script to migrate platform/linux data/cfg information from running image to upgrade image.
+#    Schema to list the files to be migrated during upgrade.
+#
+#     migration_cfg:
+#         premigration_script  : 'dir:script_file' or None
+#         source_file          : 'dir:data_file'
+#         destination_file     : 'dir:data_file'
+#         postmigration_script : 'dir:script_file' or None
+#
+#
+#        - premigration_script : Script to prepare the source data
+#             dir  -> absolute path to the directory of the script
+#             script_file -> script
+#
+#        - source_file : Data file to be migrated
+#             dir  -> absolute path to the directory of the data file
+#                     Specify "hwsku" if the source file is part of hwsku path
+#                     Specify "platform" if the source file is part of platform path
+#                     (/usr/share/sonic/device/<platform>)
+#             data_file -> source file
+#
+#        - destination_file : Migrated data file
+#             dir  -> absolute path to the directory of the data file
+#                     Specify "hwsku" to stage the file in hwsku path
+#                     Specify "platform" to stage the file in platform path
+#                     (/usr/share/sonic/device/<platform>)
+#             data_file -> destination file
+#
+#        - postmigration_script : Script to process the migrated data
+#             dir  -> absolute path to the directory of the script
+#             script_file -> script
+#
+#     Note: When premigration or post migration is not neeeded,
+#           specify null or ignore the entry as shown below
+#
+# Example File
+# ============
+#  version: 1.0
+#
+#  migration_cfg:
+#      -
+#        premigration_script  : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:pre_mig_script'
+#        postmigration_script : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:post_mig_script'
+#        source_file          : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#        destination_file     : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#      -
+#        premigration_script  : null
+#        postmigration_script : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:post_mig_script'
+#        source_file          : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#        destination_file     : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#      -
+#        source_file          : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#        destination_file     : '/usr/share/sonic/device/x86_64-8101_32fh_o-r0:sample_file'
+#

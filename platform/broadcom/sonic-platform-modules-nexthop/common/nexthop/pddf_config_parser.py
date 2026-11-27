@@ -9,7 +9,6 @@ import json
 import os
 import re
 
-from dataclasses import dataclass
 from enum import Enum
 from sonic_py_common import device_info
 
@@ -21,12 +20,6 @@ class FpgaDeviceName(str, Enum):
     CPU_CARD = "CPUCARD_FPGA"
     SWITCHCARD = "SWITCHCARD_FPGA"
     SWITCHCARD_0 = "SWITCHCARD_FPGA0"
-
-
-@dataclass
-class FpgaDevAttrs:
-    pwr_cycle_reg_offset: int
-    pwr_cycle_enable_word: int
 
 
 def load_pddf_device_config():
@@ -61,33 +54,6 @@ def load_platform_json() -> dict:
     with open(platform_json_file, 'r') as f:
         config = json.load(f)
     return config
-
-
-def extract_fpga_attrs(config, fpga_types):
-    """Extract fpga attrs information from PDDF config. Raise exception on error."""
-    fpga_attrs = {}
-    for device_name, device_config in config.items():
-        if not isinstance(device_config, dict) or "dev_info" not in device_config:
-            continue
-
-        dev_info = device_config["dev_info"]
-        if "device_type" not in dev_info or dev_info["device_type"] != "MULTIFPGAPCIE":
-            continue
-
-        device_name = dev_info["device_name"]
-        if device_name not in fpga_types:
-            continue
-
-        # Exceptions thrown here since FPGAs should have these attributes
-        # past this point.
-        dev_attrs = device_config["dev_attr"]
-
-        fpga_attrs[device_name] = FpgaDevAttrs(
-            pwr_cycle_reg_offset=int(dev_attrs["pwr_cycle_reg_offset"], 16),
-            pwr_cycle_enable_word=int(dev_attrs["pwr_cycle_enable_word"], 16),
-        )
-
-    return fpga_attrs
 
 
 def extract_xcvr_list(config):
@@ -142,3 +108,15 @@ def extract_xcvr_list(config):
             )
 
     return xcvr_list
+
+
+FPGA_REBOOT_CONF_KEY = "FPGA_REBOOT_CONF"
+SWITCH_HOST_KEY = "switch_host_pwrcyc"
+BMC_IS_PLATFORM_MANAGER_KEY = "bmc_is_platform_manager"
+
+
+def reboot_conf(config: dict) -> dict:
+    conf = config.get(FPGA_REBOOT_CONF_KEY)
+    if not conf:
+        raise ValueError(f"No {FPGA_REBOOT_CONF_KEY} in PDDF configuration")
+    return conf

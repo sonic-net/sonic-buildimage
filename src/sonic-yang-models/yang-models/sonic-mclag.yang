@@ -15,10 +15,9 @@ module sonic-mclag {
         prefix lag;
     }
 
-    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
-    //import sonic-vlan {
-    //    prefix vlan;
-    //}
+    import sonic-vlan {
+        prefix vlan;
+    }
 
     organization
         "SONiC";
@@ -28,6 +27,13 @@ module sonic-mclag {
 
     description
         "SONIC MCLAG";
+
+    revision 2026-11-19 {
+        description
+            "MCLAG_UNIQUE_IP if_name names its VLAN by leafref to VLAN, so a row cannot name a
+             VLAN that does not exist and the VLAN's removal finds the row that uses it.
+             Vlan4095, which the VLAN name pattern admits, stays refused.";
+    }
 
     revision 2019-10-01 {
         description
@@ -134,7 +140,7 @@ module sonic-mclag {
                     error-app-tag mclag-invalid;
                 }
 
-                // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                // The VLAN_INTERFACE address check below is not enabled.
                 //must
                 //    "count(/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_IPPREFIX_LIST[vlan:name=current()/if_name]) = 0" {
                 //        error-message "remove configured ip/v6 address and reconfigure after separate ip configuration";
@@ -142,13 +148,12 @@ module sonic-mclag {
                 //    }
 
                 leaf if_name {
-                    description  "Vlan interface name on which MCLAG unique ip config is done";
-                    // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-                    //type leafref {
-                    //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                    //}
-                    type string {
-                        pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    must "current() != 'Vlan4095'" {
+                        error-message "Vlan4095 is reserved; a VLAN ID runs up to 4094.";
+                    }
+                    description  "The VLAN on which MCLAG unique ip config is done; it must exist in VLAN.";
+                    type leafref {
+                        path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                     }
                 }
                 leaf unique_ip {

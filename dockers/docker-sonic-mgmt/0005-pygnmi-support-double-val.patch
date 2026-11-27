@@ -1,0 +1,23 @@
+Subject: [PATCH] pygnmi: support double_val in subscription updates
+
+Backport https://github.com/akarneliuk/pygnmi/pull/165, missing from the
+PyPI 0.8.15 artifacts. Preserve double-valued telemetry, including zero.
+
+Related: https://github.com/akarneliuk/pygnmi/issues/179
+Revalidate/remove when upgrading the pinned dependency to a corrected release.
+---
+ pygnmi/client.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/pygnmi/client.py b/pygnmi/client.py
+--- a/pygnmi/client.py
++++ b/pygnmi/client.py
+@@ -1329,6 +1329,9 @@ def telemetryParser(in_message=None, debug: bool = False):
+                     elif update_msg.val.HasField("float_val"):
+                         update_container.update({"val": update_msg.val.float_val})
+
++                    elif update_msg.val.HasField("double_val"):
++                        update_container.update({"val": update_msg.val.double_val})
++
+                     elif update_msg.val.HasField("decimal_val"):
+                         update_container.update({"val": update_msg.val.decimal_val})

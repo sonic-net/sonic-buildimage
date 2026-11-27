@@ -1,0 +1,67 @@
+{
+    "chassis": 
+        {
+            "faults" : [
+                {
+                    "type" : "TEMPERATURE_EXCEEDED",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "TEMPERATURE_EXCEEDED",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "VOLTAGE_EXCEEDED",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "VOLTAGE_EXCEEDED",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "CURRENT_EXCEEDED",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "CURRENT_EXCEEDED",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "FAN_FAULT",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "FAN_FAULT",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "ETH_SWITCH_PORT_LINK_DOWN",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "ETH_SWITCH_PORT_LINK_DOWN",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "ETH_SWITCH_PORT_ERRORS_EXCEEDED",
+                    "severity" : "MAJOR",
+                    "action" : ["obfl"]
+                },
+                {
+                    "type" : "ETH_SWITCH_PORT_ERRORS_EXCEEDED",
+                    "severity" : "CRITICAL",
+                    "action" : ["obfl"]
+                }
+            ]
+        }
+}

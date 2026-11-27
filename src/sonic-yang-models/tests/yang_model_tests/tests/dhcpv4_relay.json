@@ -45,5 +45,28 @@
     "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SOURCE_INTERFACE_OPTION": {
         "desc": "Add dhcpv4 relay with server_vrf and missing source-interface option.",
         "eStrKey": "Must"
+    },
+    "DHCPv4_RELAY_VLAN_MISSING": {
+        "desc": "Add dhcpv4 relay on a VLAN that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_VALID": {
+        "desc": "Add dhcpv4 relay with an existing VLAN as source_interface."
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_MISSING": {
+        "desc": "Add dhcpv4 relay with a source_interface VLAN that does not exist.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCPv4_RELAY_VLAN_4095": {
+        "desc": "Add dhcpv4 relay on Vlan4095.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
+    },
+    "DHCPv4_RELAY_SOURCE_INTERFACE_VLAN_4095": {
+        "desc": "Add dhcpv4 relay with Vlan4095 as source_interface.",
+        "eStr": [
+            "Vlan4095 is reserved"
+        ]
     }
 }

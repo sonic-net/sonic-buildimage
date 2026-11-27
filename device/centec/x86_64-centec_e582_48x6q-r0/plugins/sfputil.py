@@ -4,11 +4,13 @@
 #
 
 try:
+    import errno
     import time
     import os
     import logging
     import struct
     import syslog
+    import tempfile
     from socket import *
     from select import *
     from sonic_sfp.sfputilbase import SfpUtilBase
@@ -110,21 +112,41 @@ class SfpUtil(SfpUtilBase):
             self.eeprom_mapping[x] = "/var/cache/sonic/sfp/sfp{}_eeprom".format(x)
 
         try:
-            if not os.path.exists("/var/cache/sonic/sfp"):
-                os.makedirs("/var/cache/sonic/sfp", 0o777)
+            cache_dir = "/var/cache/sonic/sfp"
+            try:
+                os.makedirs(cache_dir, mode=0o755)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+            cache_fd = os.open(cache_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                # Execute bits allow directory traversal; write access remains owner-only.
+                # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
+                os.fchmod(cache_fd, 0o755)
+            finally:
+                os.close(cache_fd)
             for x in range(1, self.port_end + 1):
                 if not self.get_presence(x):
-                    if os.path.exists(self.eeprom_mapping[x]):
+                    if os.path.lexists(self.eeprom_mapping[x]):
                         os.remove(self.eeprom_mapping[x])
                     continue
                 data = self.get_eeprom_data(x)
                 if data:
-                    with open(self.eeprom_mapping[x], 'w') as sfp_eeprom:
-                        sfp_eeprom.write(data)
+                    sfp_eeprom = tempfile.NamedTemporaryFile(
+                        mode='w', dir=cache_dir, delete=False)
+                    try:
+                        with sfp_eeprom:
+                            sfp_eeprom.write(data)
+                            os.fchmod(sfp_eeprom.fileno(), 0o644)
+                        # Replace the cache entry without following old links.
+                        os.rename(sfp_eeprom.name, self.eeprom_mapping[x])
+                    finally:
+                        if os.path.lexists(sfp_eeprom.name):
+                            os.unlink(sfp_eeprom.name)
                 else:
                     DBG_PRINT("get sfp{} eeprom data failed.".format(x))
                     break
-        except IOError as e:
+        except (IOError, OSError) as e:
             DBG_PRINT(str(e))
 
         SfpUtilBase.__init__(self)

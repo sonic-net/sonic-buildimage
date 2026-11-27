@@ -543,25 +543,6 @@ write_platform_specific_cmdline() {
         cmdline_add logs_inram=on
         cmdline_add i2c-i801.disable_features=0x10
     fi
-    if [ "$sid" = "Alhambra" ]; then
-        aboot_machine=arista_7170_64c
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "Mineral" ]; then
-        aboot_machine=arista_7170_32c
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "MineralD" ]; then
-        aboot_machine=arista_7170_32cd
-        flash_size=28000
-        cmdline_add hugepages=128
-    fi
-    if [ "$sid" = "Woodleaf" ]; then
-        aboot_machine=arista_7170b_64c
-        cmdline_add hugepages=128
-    fi
     if [ "$sid" = "Lodoga" ]; then
         aboot_machine=arista_7050cx3_32s
         cmdline_add logs_inram=on
@@ -993,6 +974,26 @@ run_quirks() {
             devmem 0xa5184010 32 0x4
             sleep 1
             devmem 0xa5184010 32 0x8
+        fi
+        if in_array "$aboot_machine" "arista_7800r3a_36d2_lc" "arista_7800r3ak_36d2_lc" \
+                                     "arista_7800r3a_36dm2_lc" "arista_7800r3ak_36dm2_lc"; then
+            info "Arming watchdog for 90s"
+            setpci -s 08:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 08:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
+        fi
+        if in_array "$aboot_machine" "arista_7800r3_48cq2_lc" "arista_7800r3_48cqm2_lc"; then
+            info "Arming watchdog for 90s"
+            setpci -s 07:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 07:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
+        fi
+        if in_array "$aboot_machine" "arista_7280dr3a_36" "arista_7280dr3ak_36" \
+                                     "arista_7280dr3ak_36s" "arista_7280dr3am_36"; then
+            info "Arming watchdog for 90s"
+            setpci -s 01:00.0 COMMAND=0002
+            addr=$(( 0x$(setpci -s 01:00.0 BASE_ADDRESS_0) + 0x120 ))
+            devmem "$addr" 32 0xc0002328
         fi
     fi
 }

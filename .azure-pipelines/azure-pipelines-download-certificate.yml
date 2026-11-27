@@ -17,17 +17,47 @@ steps:
     secretsFilter: ${{ parameters.certificateName }}
 
 - script: |
-    set -e
-    TMP_FILE=$(mktemp)
-    echo "$CERTIFICATE" | base64 -d > $TMP_FILE
-    sudo mkdir -p /etc/certificates
-    mkdir -p $(Build.StagingDirectory)/target
-    # Save the public key
-    openssl pkcs12 -in $TMP_FILE -clcerts --nokeys -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN CERTIFICATE\)/\1/" > $(SIGNING_CERT)
-    # Save the private key
-    openssl pkcs12 -in $TMP_FILE -nocerts -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN PRIVATE KEY\)/\1/" | sudo tee $(SIGNING_KEY) 1>/dev/null
-    ls -lt $(SIGNING_CERT) $(SIGNING_KEY)
-    rm $TMP_FILE
+    set +x
+    set -euo pipefail
+    umask 077
+    certificate=${CERTIFICATE:?Certificate material is required}
+    export -n certificate
+    unset CERTIFICATE
+    : "${PUBLIC_CERTIFICATE_PATH:?Public certificate destination is required}"
+
+    signing_dir=$(mktemp -d "${AGENT_TEMPDIRECTORY:?}/sonic-signing.XXXXXXXX")
+    ready=false
+    cleanup_signing_material() {
+      local status=$?
+      trap - EXIT
+      if (( status != 0 )) || [[ "$ready" != true ]]; then
+        if ! rm -rf -- "$signing_dir"; then
+          echo "Failed to remove temporary signing material" >&2
+          (( status != 0 )) || status=1
+        fi
+      fi
+      exit "$status"
+    }
+    trap cleanup_signing_material EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    printf '##vso[task.setvariable variable=SONIC_SIGNING_DIR]%s\n' "$signing_dir"
+
+    printf '%s' "$certificate" | base64 -d > "$signing_dir/certificate.pfx"
+    unset certificate
+    openssl pkcs12 -in "$signing_dir/certificate.pfx" -clcerts -nokeys -passin pass: |
+      openssl x509 -out "$signing_dir/public.pem"
+    openssl pkcs12 -in "$signing_dir/certificate.pfx" -nocerts -nodes -passin pass: |
+      openssl pkey -out "$signing_dir/private.pem"
+    mkdir -p "$(dirname -- "$PUBLIC_CERTIFICATE_PATH")"
+    install -m 0644 -T -- "$signing_dir/public.pem" "$PUBLIC_CERTIFICATE_PATH"
+    rm -- "$signing_dir/certificate.pfx"
+
+    printf '##vso[task.setvariable variable=SIGNING_KEY]%s\n' "$signing_dir/private.pem"
+    printf '##vso[task.setvariable variable=SIGNING_CERT]%s\n' "$PUBLIC_CERTIFICATE_PATH"
+    ready=true
   env:
     CERTIFICATE: $(${{ parameters.certificateName }})
+    PUBLIC_CERTIFICATE_PATH: $(SIGNING_CERT)
   displayName: "Save certificate"

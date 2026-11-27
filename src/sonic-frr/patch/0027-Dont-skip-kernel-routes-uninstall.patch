@@ -1,5 +1,6 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From c14f41f5c5c28bed8dcb0863920314964c459184 Mon Sep 17 00:00:00 2001
 From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 18 Sep 2026 22:42:05 +0000
 Subject: [PATCH] zebra: Don't skip kernel routes uninstall
 
 Remove the RIB_KERNEL_ROUTE guard on the delete path in rib_process()
@@ -14,10 +15,10 @@ Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index 2b09fa9a9..a56dc893f 100644
+index 639b9c3bc3..7df30a0838 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
-@@ -1498,7 +1498,7 @@ static void rib_process(struct route_node *rn)
+@@ -1563,7 +1563,7 @@ static void rib_process(struct route_node *rn)
  		rib_process_update_fib(zvrf, rn, old_fib, new_fib);
  	else if (new_fib)
  		rib_process_add_fib(zvrf, rn, new_fib);
@@ -26,3 +27,6 @@ index 2b09fa9a9..a56dc893f 100644
  		rib_process_del_fib(zvrf, rn, old_fib);
  
  	/* Remove all RE entries queued for removal */
+-- 
+2.34.1
+

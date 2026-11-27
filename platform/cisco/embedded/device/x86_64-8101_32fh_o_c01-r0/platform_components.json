@@ -1,0 +1,36 @@
+{
+	"chassis": {
+		"8101-32FH-O-C01": {
+			"component": {
+				"BIOS": {
+					"firmware": "/opt/cisco/fpd/bios/8101-32Fh-O-C01_upgrade_bios.img"
+				},
+				"Aikido": {
+					"firmware": "/opt/cisco/fpd/sf_fixed_1ru_tornado_x86_aikido_upgrade.img"
+				},
+				"TAM": {
+					"firmware": "/opt/cisco/fpd/sf_fixed_1ru_tornado_x86_tam_fw_upgrade.img"
+				},
+				"SSD": {
+					"firmware": "/opt/cisco/fpd/ssd/ssdfw_ssstc_erx.img"
+				},
+				"uIOFPGA": {
+					"firmware": "/opt/cisco/fpd/iofpga/tornado_mb_fpga_release_upgrade.img"
+				},
+				"CPLD_CPU": {
+					"firmware": "/opt/cisco/fpd/cpld/bundle_lattice_machx03_i2cem_cpu_cpld_upgrade.img"
+				},
+				"CPLD_SYS": {
+					"firmware": "/opt/cisco/fpd/cpld/bundle_lattice_machx03_i2cem_sys_cpld_upgrade.img"
+				},
+				"CPLD_LED": {
+					"firmware": "/opt/cisco/fpd/cpld/bundle_lattice_machx03_i2cem_led_cpld_upgrade.img"
+				},
+				"CPLD_FAN": {
+					"firmware": "/opt/cisco/fpd/cpld/bundle_lattice_machx03_i2cem_fan_cpld_upgrade.img"
+				}
+			}
+		}
+	}
+}
+

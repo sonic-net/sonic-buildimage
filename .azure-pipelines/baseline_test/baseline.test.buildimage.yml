@@ -133,3 +133,59 @@ stages:
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
         INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
+
+  - stage: NotifyFailure
+    displayName: Notify baseline pipeline failure
+    dependsOn:
+    - BuildVS
+    - Test_round_1
+    - Test_round_2
+    - Test_round_3
+    - Test_round_4
+    condition: failed()
+    pool: sonic-ubuntu-1c
+    variables:
+    - group: sonicbld
+    jobs:
+    - job: Notify
+      displayName: Send failure notification
+      timeoutInMinutes: 5
+      steps:
+      - checkout: none
+      - bash: |
+          set +x
+          set -euo pipefail
+
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends jq
+          fi
+
+          cert=$(printf '%s' "$CERT" | base64 -d |
+            openssl pkcs12 -nokeys -nodes -passin pass: |
+            openssl x509 -noout -fingerprint -sha1 |
+            sed 's/^.*=//' | tr -d ':' | tr 'A-Z' 'a-z')
+          if [[ ! "$cert" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "##vso[task.logissue type=error]Invalid notification certificate thumbprint"
+            exit 1
+          fi
+
+          payload=$(jq -cn \
+            --arg name "baseline_pipeline_failure" \
+            --arg pipeline "$BUILD_DEFINITIONNAME" \
+            --arg url "${SYSTEM_COLLECTIONURI}${SYSTEM_TEAMPROJECTID}/_build/results?buildId=${BUILD_BUILDID}" \
+            '{name: $name, pipeline: $pipeline, url: $url}')
+          response=$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 10 --max-time 60 \
+            -H 'Content-Type: application/json' \
+            -H "thumbprint: $cert" \
+            -X POST https://notice-center.azurewebsites.net/noti_center/notice \
+            -d "$payload")
+          if ! printf '%s' "$response" | jq -e '.success == true' >/dev/null; then
+            echo "##vso[task.logissue type=error]Notice-center did not confirm the failure notification"
+            printf 'Notice-center response: %s\n' "$response" >&2
+            exit 1
+          fi
+        displayName: Notify notice-center
+        env:
+          CERT: $(cert-noti)
