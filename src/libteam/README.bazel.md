@@ -1,11 +1,11 @@
 # Consume libteam from its shared owner
 
-The image root uses `@libteam` version `1.31.0.sonic.1`. That registry module
-owns the pinned upstream 1.31 source, the existing 16 SONiC patches, native
-libraries and programs, runtime/debug TARs, development TAR, package metadata
-and native consumer test. `src/libteam/BUILD.bazel` only forwards compatibility
-labels used by existing image recipes. SWSS uses the owner's public providers
-directly.
+The image root uses `@libteam` version `1.31.0.sonic.3`. The registry module
+applies all 17 active Make patches to upstream 1.31, including the LACP
+port-removal fix. It owns the native libraries and programs, runtime/debug TARs,
+development TAR, package metadata and native tests. `src/libteam/BUILD.bazel`
+forwards the compatibility labels used by image recipes. SWSS uses the owner's
+public providers directly.
 
 The existing Make recipe, Debian control files and source patches are unchanged.
 These Bazel targets produce TARs and metadata, not DEBs. All three runtime
@@ -18,8 +18,8 @@ registered SWSS and libteam versions.
 
 ## Validation
 
-The native workflow retains its AMD64/ARM64 matrix, 11 selected output targets,
-uncached owner consumer test and installed-SDK/debug checks on both architectures.
+CI validates 11 outputs on AMD64 and ARM64, runs the owner's consumer and
+LACP port-removal tests, and checks the installed SDK and debug files.
 The installed check verifies all five ELF/debug pairs, SONAME and SDK links, public headers,
 pkg-config flags and zero development-TAR timestamps. The shared owner's
 incremental probe performs baseline, no-op, config-edit and restoration builds

@@ -80,9 +80,9 @@ class LibteamMetadataTest(unittest.TestCase):
                 "native_files": [{"path": path, **item}]})
 
     def test_both_library_records_follow_the_version_in_the_image_manifest(self):
-        self.metadata["source_modules"]["libteam"]["version"] = "1.31.0.sonic.2"
+        self.metadata["source_modules"]["libteam"]["version"] = "1.31.0.sonic.3"
         for record in self.metadata["source_packages"]:
-            record["source_revision"] = "1.31.0.sonic.2"
+            record["source_revision"] = "1.31.0.sonic.3"
         verify_libteam_metadata(self.metadata, self.native)
 
     def test_two_library_records_match_selected_owner_and_installed_native_bytes(self):

@@ -123,7 +123,7 @@ jobs:
               --bazelrc="$PWD/tools/bazel/common.bazelrc" \
               "$command" "${options[@]}" "$@"
           }
-          # VS verifies the packaged SWSS consumers; its AMD64 source job runs consumer_test.
+          # VS verifies the packaged SWSS consumers and runs the libteam owner tests on AMD64.
           if [[ "$USE_VS_LIBTEAM" != true ]]; then
             targets=(
               @sonic_swss//teamsyncd:teamsyncd
@@ -147,9 +147,9 @@ jobs:
               sha256sum "$output" >> artifacts/SHA256SUMS
             done < artifacts/outputs.txt
             # Selecting the compatibility alias builds the executable but does not
-            # run its test; select the source owner's test rule directly.
+            # run its tests; select the source owner's native test rules directly.
             run_bazel test --nocache_test_results --build_event_json_file="$PWD/artifacts/test-events.json" \
-              @libteam//:consumer_test \
+              @libteam//:consumer_test @libteam//:lacp_port_removal_test \
               2>&1 | tee artifacts/test.log
             output() { run_bazel cquery "//src/libteam:$1" --output=files; }
             python3 -B src/libteam/verify_runtime.py \
@@ -194,9 +194,6 @@ jobs:
             *) owner_probe="$execution_root/$probe_file" ;;
           esac
           test -f "$owner_probe"
-          # Check the published source tree after Bazel applies the image-owned patch.
-          owner_root="$(dirname "$(dirname "$owner_probe")")"
-          (cd "$owner_root" && patch --force --fuzz=0 --dry-run --reverse -p1 < "$GITHUB_WORKSPACE/src/libteam/patch/0021-teamd-lacp-guard-missing-port-on-removal.patch")
           python3 -B "$owner_probe" \
             --bazel "$probe_bazel" \
             --bazel-arg="--host_platform=@sonic_build_infra//platforms:${CI_CPU}_trixie" \

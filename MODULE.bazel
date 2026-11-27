@@ -366,15 +366,8 @@ use_repo(pip, "database_pip")
 bazel_dep(name = "socat", version = "1.8.0.2.sonic.8")
 bazel_dep(name = "iproute2", version = "6.15.0.sonic.9")
 bazel_dep(name = "libnl3", version = "3.7.0.sonic.10")
-bazel_dep(name = "libteam", version = "1.31.0.sonic.2")
+bazel_dep(name = "libteam", version = "1.31.0.sonic.3")
 bazel_dep(name = "libyang", version = "3.12.2.sonic.10")
-
-# Keep the image's LACP port-removal fix on top of the published libteam source.
-single_version_override(
-    module_name = "libteam",
-    patches = ["//src/libteam:patch/0021-teamd-lacp-guard-missing-port-on-removal.patch"],
-    patch_strip = 1,
-)
 
 single_version_override(
     module_name = "sonic-rust-deps",

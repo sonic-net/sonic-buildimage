@@ -16,7 +16,7 @@ def make_series():
     return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
 
 
-# Published recipe from sonic-net/sonic-bazel-registry at f398c8abd2ed.
+# Ordered patches from the selected sonic-net/sonic-bazel-registry recipe.
 # Update only together with the declared owner version and parity review.
 RECIPE = ROOT / "tools/bazel/tests/fixtures/libteam-owner-source.json"
 
@@ -29,7 +29,7 @@ class LibteamPatchSeriesTest(unittest.TestCase):
     def test_bazel_applies_make_series_in_order(self):
         published = bazel_patches()
         series = make_series()
-        self.assertEqual(published, series[:len(published)])
+        self.assertEqual(published, series)
         tree = ast.parse((ROOT / "MODULE.bazel").read_text())
         selected = []
         overrides = []
@@ -41,12 +41,9 @@ class LibteamPatchSeriesTest(unittest.TestCase):
             if name == "bazel_dep" and ast.literal_eval(keywords["name"]) == "libteam":
                 selected.append(ast.literal_eval(keywords["version"]))
             if name.endswith("_override") and ast.literal_eval(keywords["module_name"]) == "libteam":
-                overrides.append((name, {key: ast.literal_eval(value) for key, value in keywords.items()}))
+                overrides.append(name)
         self.assertEqual(selected, [json.loads(RECIPE.read_text())["version"]])
-        image_patches = ["//src/libteam:patch/" + patch for patch in series[len(published):]]
-        self.assertEqual(overrides, [("single_version_override", {
-            "module_name": "libteam", "patches": image_patches, "patch_strip": 1,
-        })] if image_patches else [])
+        self.assertEqual(overrides, [])
 
     def test_every_series_patch_exists(self):
         expected = json.loads(RECIPE.with_name("libteam-owner-patch-bodies.json").read_text())

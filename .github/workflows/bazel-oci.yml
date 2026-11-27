@@ -575,7 +575,8 @@ jobs:
             //tools/bazel/tests:oci_inventory_test //tools/bazel/tests:oci_native_packages_test
             //tools/bazel/tests:oci_package_contract_test //tools/bazel/tests:oci_package_payloads_test
             //tools/bazel/tests:oci_package_receipts_test //tools/bazel/tests:oci_package_state_layer_test
-            @libteam//:consumer_test @sonic_swss//crates/countersyncd:common_rust_test
+            @libteam//:consumer_test @libteam//:lacp_port_removal_test
+            @sonic_swss//crates/countersyncd:common_rust_test
             @sonic_swss//bazel:protobuf_runtime_test "${scapy_tests[@]}"
             "${hsflowd_tests[@]}"
           )

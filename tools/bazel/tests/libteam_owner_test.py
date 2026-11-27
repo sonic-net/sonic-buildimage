@@ -13,7 +13,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github/workflows/bazel-libteam.yml"
-IMAGE_PATCH = Path("src/libteam/patch/0021-teamd-lacp-guard-missing-port-on-removal.patch")
 
 
 class LibteamOwnerTest(unittest.TestCase):
@@ -46,6 +45,7 @@ with open(os.environ["CALLS"], "a") as output:
             command = recorded[0]
             self.assertIn("test", command)
             self.assertIn("@libteam//:consumer_test", command)
+            self.assertIn("@libteam//:lacp_port_removal_test", command)
             self.assertNotIn("//src/libteam:consumer_test", command)
             self.assertIn("--nocache_test_results", command)
             self.assertIn("--build_event_json_file=" + str(work / "artifacts/test-events.json"), command)
@@ -56,11 +56,9 @@ with open(os.environ["CALLS"], "a") as output:
 
     def test_compatibility_labels_only_forward_owner_providers(self):
         aliases = {}
-        exported = []
-        namespace = {"package": lambda **kwargs: None, "exports_files": exported.extend,
+        namespace = {"package": lambda **kwargs: None,
                      "alias": lambda name, actual: aliases.setdefault(name, actual)}
         exec((ROOT / "src/libteam/BUILD.bazel").read_text(), namespace)
-        self.assertEqual(exported, [str(IMAGE_PATCH.relative_to("src/libteam"))])
         self.assertEqual(len(aliases), 19)
         self.assertTrue(all(actual == "@libteam//:" + name for name, actual in aliases.items()))
         required = {"libteam", "libteamdctl", "consumer_test", "runtime_packages.json", "libteam_dev"}
@@ -91,16 +89,6 @@ with open(os.environ["CALLS"], "a") as output:
             output_base = Path(temporary) / "Bazel output base"
             execution = output_base / "execroot/_main"
             probe = execution / "external/libteam+/bazel/verify_rebuild.py"
-            # Model the patched external source and exercise the workflow's real
-            # reverse dry-run without requiring a Bazel download in this test.
-            source = probe.parents[1] / "source.c"
-            source.parent.mkdir(parents=True)
-            source.write_text("patched\n")
-            image_patch = work / IMAGE_PATCH
-            image_patch.parent.mkdir(parents=True)
-            image_patch.write_text("--- a/source.c\n+++ b/source.c\n@@ -1 +1 @@\n-original\n+patched\n")
-
-
             commands = Path(temporary) / "bin"
             commands.mkdir()
             calls = Path(temporary) / "commands.jsonl"
@@ -125,7 +113,7 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
                 recorder.chmod(0o755)
             environment = dict(os.environ, PATH=str(commands) + ":/usr/bin:/bin",
                                CALLS=str(calls), OUTPUT_BASE=str(output_base), EXPECTED_PROBE=str(probe),
-                               CI_CPU=cpu, CI_DISTRIBUTION="trixie", RUNNER_TEMP=temporary, GITHUB_WORKSPACE=str(work))
+                               CI_CPU=cpu, CI_DISTRIBUTION="trixie", RUNNER_TEMP=temporary)
             for result in ("external/libteam+/bazel/verify_rebuild.py", str(probe)):
                 with self.subTest(path=result):
                     calls.unlink(missing_ok=True)
@@ -149,13 +137,6 @@ if pathlib.Path(sys.argv[0]).name == "bazel":
                         self.assertTrue(all(flag in call for call in recorded[:2]))
                         self.assertIn("--bazel-arg=" + flag, recorded[2])
                     self.assertTrue(all("--nohome_rc" in call for call in recorded[:2]))
-            source.write_text("original\n")
-            calls.unlink()
-            failed = subprocess.run(["bash", "-eu", "-c", block], cwd=work,
-                                    env={**environment, "PROBE_RESULT": str(probe)}, capture_output=True, text=True)
-            self.assertNotEqual(failed.returncode, 0)
-            self.assertNotIn('"python3"', calls.read_text())
-            source.write_text("patched\n")
             # The lookup must fail before cquery or Python when the pinned
             # Bzlmod layout is absent, rather than falling back to another base.
             for invalid in ("", "relative/base", str(Path(temporary) / "missing"),
