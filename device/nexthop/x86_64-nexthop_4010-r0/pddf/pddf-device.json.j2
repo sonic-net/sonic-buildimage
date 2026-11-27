@@ -78,7 +78,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F SWITCHCARD_FPGA {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} SWITCHCARD_FPGA {}" }
       ]
   },
   "COMPONENT2": {
@@ -94,7 +94,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F CPUCARD_FPGA {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} CPUCARD_FPGA {}" }
       ]
   },
   "COMPONENT3": {
@@ -110,7 +110,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F BIOS {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} BIOS {}" }
       ]
   },
   "COMPONENT4": {
@@ -126,7 +126,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F ONIE {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} ONIE {}" }
       ]
   },
   "COMPONENT5": {
@@ -142,7 +142,7 @@
           { "attr_name": "model", "get_cmd": "tpm2_getcap properties-fixed | grep -A 2 'TPM2_PT_VENDOR_STRING_[12]' | awk '/value:/ { ORS=\"\"; gsub(\"\\\"\", \"\", $2); print $2 }'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "tpm2_getcap properties-fixed | grep -A 2 TPM2_PT_REVISION | awk '/value:/ { print $2 }'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F TPM {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} TPM {}" }
       ]
   },
   "COMPONENT6": {
@@ -158,7 +158,7 @@
           { "attr_name": "model", "get_cmd": "cat /sys/class/nvme/nvme0/model" },
           { "attr_name": "serial", "get_cmd": "cat /sys/class/nvme/nvme0/serial" },
           { "attr_name": "revision", "get_cmd": "echo N/A" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F NVMe {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} NVMe {}" }
       ]
   },
   "COMPONENT7": {
@@ -174,7 +174,7 @@
           { "attr_name": "model", "get_cmd": "cat /sys/bus/i2c/devices/87-0058/psu_model_name" },
           { "attr_name": "serial", "get_cmd": "cat /sys/bus/i2c/devices/87-0058/psu_serial_num" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F PSU1 {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU1 {}" }
       ]
   },
   "COMPONENT8": {
@@ -190,7 +190,7 @@
           { "attr_name": "model", "get_cmd": "cat /sys/bus/i2c/devices/88-0058/psu_model_name" },
           { "attr_name": "serial", "get_cmd": "cat /sys/bus/i2c/devices/88-0058/psu_serial_num" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F PSU2 {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU2 {}" }
       ]
   },
   "SYSTEM": {
@@ -1455,7 +1455,7 @@
       "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_bdf}} --bits=0:7 0x0",
       "reg_width": 32
     },
-{%- if platform == 'x86_64-nexthop_4010-r1' %}
+{%- if platform != 'x86_64-nexthop_4010-r0' %}
     "spi_controllers": ["SWITCHCARD_SPI_CONTROLLER"],
 {%- endif %}
     "use_msi": {% if SWITCHCARD_FPGA_MEETS_MIN_VERSION_0x8e %}{
@@ -2795,7 +2795,7 @@
   "TEMP6": {
     "dev_info": {
       "device_type": "TEMP_SENSOR",
-      "device_name": "MGMTTEMP1-CH1",
+      "device_name": "MGMTTEMP1-CH2",
       "device_parent": "MULTIFPGAPCIE1",
       "virt_parent": "MGMTTEMP1"
     },
@@ -2806,15 +2806,15 @@
       "attr_list": [
         {
           "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
+          "drv_attr_name": "temp2_input"
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
+          "drv_attr_name": "temp2_max"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
+          "drv_attr_name": "temp2_crit"
         }
       ]
     }
@@ -13418,6 +13418,8 @@
       "chip_select": 0
     }
   },
+{%- endif %}
+{%- if platform != 'x86_64-nexthop_4010-r0' %}
   "SWITCHCARD_SPI_CONTROLLER": {
     "dev_info": {
       "device_type": "SPI_CONTROLLER",

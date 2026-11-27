@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "NH-4010": {
+        "NH-4010-F": {
             "component": {
                 "SWITCHCARD_FPGA": {},
                 "CPUCARD_FPGA": {},

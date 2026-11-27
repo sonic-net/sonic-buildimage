@@ -41,9 +41,13 @@
 {% macro generate_queue_buffers(port_names_active) %}
     "BUFFER_QUEUE": {
 {% for port in port_names_active.split(',') %}
-        "{{ port }}|0-7": {
+        "{{ port }}|0-6": {
             "profile" : "egress_lossy_profile"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
     }
 {% endmacro %}
+
+{%- macro generate_cable_length_config(port_names_all) %}
+{# CABLE_LENGTH is disabled #}
+{%- endmacro %}

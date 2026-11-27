@@ -1,0 +1,92 @@
+---
+bcm_device:
+    0:
+        global:
+            ifa_enable: 1
+            bcm_tunnel_term_compatible_mode: 1
+            l3_alpm_template: 1
+            l3_alpm2_bnk_threshold: 100
+            l3_enable: 1
+            l2_hitbit_enable: 0
+            pktio_mode: 1
+            sai_pfc_defaults_disable: 1
+            sai_pfc_dlr_init_capability: 2
+            sai_mmu_custom_config: 1
+            sai_stats_support_mask: 0
+            default_cpu_tx_queue: 7
+            global_flexctr_ing_action_num_reserved: 21
+            global_flexctr_ing_pool_num_reserved: 9
+            global_flexctr_ing_op_profile_num_reserved: 21
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 9
+            global_flexctr_egr_pool_num_reserved: 4
+            global_flexctr_egr_op_profile_num_reserved: 11
+            global_flexctr_egr_group_num_reserved: 1
+            stat_custom_receive0_management_mode: 1
+            sai_field_group_auto_prioritize: 1
+            l3_ecmp_member_secondary_mem_size: 4096
+            sai_common_hash_crc: 1
+            sai_port_phy_time_sync_en: 1
+            sai_ip_counter_cstats: 1
+            l3_alpm_hit_skip: 1
+            ipv6_lpm_128b_enable: 1
+            shared_block_mask_section: uc_bc
+            skip_protocol_default_entries: 1
+            l3_intf_vlan_split_egress : 1
+            sai_feat_tail_timestamp : 1
+{%- include 'tunnel_config.yaml.j2' %}
+            sai_tunnel_ipinip_multi_vrf_support: 1
+...
+### Baseline
+# Skipping buffer reservation. This means that don't use SDK default settings.
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            MIRROR_ON_DROP_RESERVATION: 0
+            SKIP_BUFFER_RESERVATION: 1
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_4
+
+...
+# Ingress priority to PG mappings
+---
+device:
+    0:
+        # priority to PG mapping for UC traffic, 8 profiles (IDs), 16 priorties
+        TM_ING_UC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_UC_ING_PRI_MAP_ID: [0,7]
+                ING_PRI: [0,15]
+            :
+                TM_PRI_GRP_ID: 0
+
+        # priority to PG mapping for MC traffic, 8 profiles( IDs) 16 priorities
+        TM_ING_NONUC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_NONUC_ING_PRI_MAP_ID: [0,7]
+                ING_PRI: [0,15]
+            :
+                TM_PRI_GRP_ID: 0
+
+        TM_PRI_GRP_POOL_MAP:
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: [0,7]
+                TM_PRI_GRP_ID: [[0,7]]
+            :
+                TM_ING_SERVICE_POOL_ID: 0
+                TM_HEADROOM_POOL_ID: 0
+
+        # PFC generation: Priority group(s)
+        TM_PFC_PRI_TO_PRI_GRP_MAP:
+            ?
+                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: [0,7]
+                PFC_PRI: [0,7]
+            :
+                TM_PRI_GRP_ID: 0
+
+...
