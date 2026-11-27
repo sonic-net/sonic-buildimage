@@ -1,4 +1,7 @@
 include $(PLATFORM_PATH)/sai.mk
+ifeq ($(INCLUDE_GBSYNCD), y)
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-mrvl.mk
+endif
 include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.mk
 include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mrvl-prestera.mk
