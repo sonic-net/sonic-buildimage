@@ -98,7 +98,8 @@ COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
-RUN ln /usr/bin/vim.tiny /usr/bin/vim
+RUN ln -sf vim.tiny /usr/bin/vim && \
+    rm -f /usr/bin/redis-check-aof /usr/bin/redis-benchmark
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
 
