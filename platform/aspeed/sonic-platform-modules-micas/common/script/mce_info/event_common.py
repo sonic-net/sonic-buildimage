@@ -1,0 +1,67 @@
+#!/usr/bin/env python_nos
+# -*- coding: UTF-8 -*-
+
+
+from enum import IntEnum
+
+
+class SignalType(IntEnum):
+    SIGNAL_TYPE_CPU = 0
+    SIGNAL_TYPE_GPU = 1
+    SIGNAL_TYPE_IO  = 2
+
+
+class SignalCpuEventType(IntEnum):
+    CPU_EVENT_TYPE_OVER_TEMP      = 0
+    CPU_EVENT_TYPE_NMI            = 1
+    CPU_EVENT_TYPE_CPU0_ERR0      = 2
+    CPU_EVENT_TYPE_CPU0_ERR1      = 3
+    CPU_EVENT_TYPE_CPU0_ERR2      = 4
+    CPU_EVENT_TYPE_CPU1_ERR0      = 5
+    CPU_EVENT_TYPE_CPU1_ERR1      = 6
+    CPU_EVENT_TYPE_CPU1_ERR2      = 7
+    CPU_EVENT_TYPE_CATERR_MCERR   = 8
+    CPU_EVENT_TYPE_CATERR_IERR    = 9
+    CPU_EVENT_TYPE_CPU_RMCA       = 10
+    CPU_EVENT_TYPE_PG_FAULT       = 11
+    CPU_EVENT_TYPE_PWROFF_TIMEOUT = 12
+    CPU_EVENT_TYPE_HOT            = 13
+    CPU_EVENT_TYPE_SYS_CHECK_ERR  = 14
+    CPU_EVENT_TYPE_MEMTRIP        = 15
+
+
+class SignalGpuEventType(IntEnum):
+    GPU_EVENT_TYPE_PWR_FAULT      = 0
+    GPU_EVENT_TYPE_OAM_THERMTRIP  = 1
+    GPU_EVENT_TYPE_UBB_RETIME_ERR = 2
+    GPU_EVENT_TYPE_BBU_PHY_ERR    = 3
+    GPU_EVENT_TYPE_MISC_ERR       = 4
+
+
+class SignalIoEventType(IntEnum):
+    IO_EVENT_TYPE_PMBUS_ALERT            = 0
+    IO_EVENT_TYPE_PWR_BUTTON_LONG_PRESS  = 1
+    IO_EVENT_TYPE_PWR_BUTTON_SHORT_PRESS = 2
+    IO_EVENT_TYPE_PRODUCT_PWR_OK         = 3
+    IO_EVENT_TYPE_UID_BUTTON_LONG_PRESS  = 4
+    IO_EVENT_TYPE_UID_BUTTON_SHOTR_PRESS = 5
+    IO_EVENT_TYPE_OTHER_PWR_FAULT        = 6
+    IO_EVENT_TYPE_SWITCH_SYS_PE0_ERR     = 7
+    IO_EVENT_TYPE_SWITCH_SYS_PE1_ERR     = 8
+    IO_EVENT_TYPE_IIC_ALERT              = 9
+
+
+class EventLevel(IntEnum):
+    EVENT_LEVEL_OK       = 0
+    EVENT_LEVEL_NOTICE   = 1
+    EVENT_LEVEL_WARNING  = 2
+    EVENT_LEVEL_CRITICAL = 3
+
+
+class AssertType(IntEnum):
+    ASSERT_TYPE_ALARM_CLR   = 0
+    ASSERT_TYPE_ALARM_OCCUR = 1
+
+# event trig way enum
+EVENT_TRIG_BY_GPIO = 0x01
+EVENT_TRIG_BY_POLL = 0x02
