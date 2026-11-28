@@ -51,7 +51,7 @@ ifeq ($(NOTRIXIE), 0)
 	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work $@
 endif
 
-	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
+	$(MAKE_WITH_RETRY) BLDENV=bookworm -f Makefile.work docker-cleanup
 
 bullseye:
 	@echo "+++ Making $@ +++"
