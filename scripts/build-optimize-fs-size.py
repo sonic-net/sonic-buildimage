@@ -53,8 +53,11 @@ class File:
 
     @cached_property
     def checksum(self):
+        digest = hashlib.sha256()
         with open(self.path, 'rb') as f:
-            return hashlib.md5(f.read()).hexdigest()
+            for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                digest.update(chunk)
+        return digest.hexdigest()
 
 class FileManager:
     def __init__(self, path):
