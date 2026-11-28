@@ -51,6 +51,7 @@ def run(base_dir):
         sku_content = f.read()
 
     try:
+        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
         env = Environment(loader=FileSystemLoader(base_dir))
         chip_content = env.get_template(CHIP_CONFIG_TEMPLATE).render()
 
