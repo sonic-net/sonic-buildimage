@@ -2,8 +2,10 @@
 Description=Update interfaces configuration
 Requires=config-setup.service
 After=config-setup.service
+{%- if enable_sonic_target == "y" %}
 BindsTo=sonic.target
 After=sonic.target
+{%- endif %}
 
 [Service]
 Type=oneshot
@@ -11,4 +13,8 @@ RemainAfterExit=yes
 ExecStart=/usr/bin/interfaces-config.sh
 
 [Install]
+{%- if enable_sonic_target == "y" %}
 WantedBy=sonic.target
+{%- else %}
+WantedBy=multi-user.target
+{%- endif %}
