@@ -1907,5 +1907,9 @@ sai_ecmp_group_members_increment=8
 #Disable hardware PFC watchdog
 sai_pfc_dlr_init_capability=0
 
+#Leave PFC receive off on every port until a port gets a PFC priority mask;
+#the SAI init default honours pause frames on all 8 priorities otherwise
+sai_pfc_defaults_disable=1
+
 #reduce the chance of stuck-clear interrupt
 appl_param_clear_fail_threshold=5
