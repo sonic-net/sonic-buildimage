@@ -95,6 +95,8 @@ class Sfp(SfpOptoeBase):
             self._sfp_api = SfpV2(index)
         elif vers == 3:
             self._sfp_api = SfpV3CPO(index)
+        elif vers == 4:
+            self._sfp_api = SfpV4UART(index)
         else:
             self._sfplog(LOG_ERROR_LEVEL, "Get SfpVer Error!")
 
@@ -179,7 +181,7 @@ class Sfp(SfpOptoeBase):
 
         if self.sfp_type == 'SFP':
             self._sfplog(LOG_ERROR_LEVEL, 'SFP does not support reset')
-            return False
+            pass
 
         self._sfplog(LOG_DEBUG_LEVEL, 'resetting...')
         ret = self._sfp_api.set_reset(True)
@@ -254,13 +256,16 @@ class Sfp(SfpOptoeBase):
     def tx_disable_channel(self, channel, disable):
         if self.get_presence() is False:
             return False
+        
+        # If `channel` is 0, return `True` immediately, but perform no action.
+        if channel == 0:
+            return True
 
         if self.sfp_type is None:
             self.refresh_xcvr_api()
 
         if self.sfp_type == 'SFP':
-            self._sfplog(LOG_WARNING_LEVEL, 'SFP does not support tx disable channel')
-            return False
+            return self._sfp_api.set_tx_disable(disable)
 
         return SfpOptoeBase.tx_disable_channel(self, channel, disable)
 
@@ -310,6 +315,20 @@ class Sfp(SfpOptoeBase):
 
             except BaseException:
                 print(traceback.format_exc())
+    
+    def get_error_description(self):
+        return 'Not supported'
+    
+    def get_name(self):
+        return self._sfp_api.get_name()
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
 
 
 class SfpCust():
@@ -944,3 +963,159 @@ class SfpV3CPO(SfpCust):
         except Exception as e:
             self._sfplog(LOG_ERROR_LEVEL, "file unlock err, msg:%s" % (str(e)))
             return False
+
+class SfpV4UART(SfpCust):
+    def _init_config(self, index):
+        super()._init_config(index)
+        sfp_config = baseutil.get_config().get("sfps", None)
+        # init eeprom path
+        eeprom_path_config = sfp_config.get("eeprom_path", None)
+        eeprom_path_key = sfp_config.get("eeprom_path_key")[self._port_id - 1]
+        self.eeprom_path = None if eeprom_path_config is None else eeprom_path_config % (
+            eeprom_path_key, eeprom_path_key)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init eeprom path: %s" % self.eeprom_path)
+
+        # init presence path
+        self.presence_path = sfp_config.get("presence_path", None)
+        self.presence_val_is_present = sfp_config.get("presence_val_is_present", 0)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init port %d presence path: %s" % (self._port_id, self.presence_path))
+
+        # init tx_disable path
+        tx_dis_config = sfp_config.get("tx_dis_path", None)
+        tx_dis_key = sfp_config.get("tx_dis_key")[self._port_id - 1]
+        self.tx_dis_path = None if tx_dis_config is None else tx_dis_config % (tx_dis_key)
+        self.txdisable_val_is_on = sfp_config.get("txdisable_val_is_on", 0)
+        self.txdisable_val_is_off = sfp_config.get("txdisable_val_is_off", 0) 
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init cpld tx_disable path")
+
+    def get_presence(self):
+        if self.presence_path is None:
+            self._sfplog(LOG_ERROR_LEVEL, "presence_path is None!")
+            return False
+        try:
+            with open(self.presence_path, "rb") as data:
+                sysfs_data = data.read(1)
+                if sysfs_data != "":
+                    result = int(sysfs_data, 16)
+            
+            port_bit_map = {
+            2: 0,
+            3: 1
+            }
+            portid = self._port_id 
+            if portid not in port_bit_map:
+                    return False
+            bit_idx = port_bit_map[portid]
+            mask = 1 << bit_idx
+            
+            return ((result & mask) == 0)
+        except BaseException:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+            return False
+        
+    def set_reset(self, reset):
+        return True
+
+    def set_tx_disable(self, tx_disable):
+        if self.tx_dis_path is None:
+            self._sfplog(LOG_ERROR_LEVEL, "tx_dis_path is None!")
+            return False
+
+        try:
+            if tx_disable:
+                write_val = self.txdisable_val_is_on
+            else:
+                write_val = self.txdisable_val_is_off
+
+            with open(self.tx_dis_path, "wb") as f:
+                f.write(f"{write_val:x}".encode())
+            return True
+
+        except SystemExit:
+            self._sfplog(LOG_WARNING_LEVEL, "SystemExit")
+            return False
+        except BaseException:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+            return False
+        return True
+    
+    def get_tx_disable(self):
+        if self.tx_dis_path is None:
+            self._sfplog(LOG_ERROR_LEVEL, "tx_dis_path is None!")
+            return False
+        try:
+            tx_disable_list = []
+            with open(self.tx_dis_path, "rb") as data:
+                sysfs_data = data.read(2)
+                if sysfs_data != "":
+                    result = int(sysfs_data, 16)
+            if self.txdisable_val_is_on == result:
+                tx_disable_list.append(True)
+            else:
+                tx_disable_list.append(False)
+        except SystemExit:
+            self._sfplog(LOG_WARNING_LEVEL, "SystemExit")
+            return None
+        except BaseException:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+            return None
+        
+        return tx_disable_list
+    
+    def get_tx_disable_channel(self):
+        tx_disable_list = []
+        tx_disable_list = self.get_tx_disable()
+        if tx_disable_list is None:
+            return 0
+
+        tx_disabled = 0
+        for i in range(len(tx_disable_list)):
+            if tx_disable_list[i]:
+                tx_disabled |= 1 << i
+
+        return tx_disabled
+        
+    def read_eeprom(self, offset, num_bytes):
+        try:
+            for i in range(self.eeprom_retry_times):
+                ret, info = platform_sfp_read(self._port_id, offset, num_bytes)
+                if (ret is False
+                        or info is None):
+                    time.sleep(self.eeprom_retry_break_sec)
+                    continue
+                eeprom_raw = []
+                for i in range(0, num_bytes):
+                    eeprom_raw.append(0)
+                for n in range(0, len(info)):
+                    eeprom_raw[n] = info[n]
+                # temporary solution for a sonic202111 bug
+                if len(eeprom_raw) < num_bytes:
+                    eeprom_raw = eeprom_raw[::-1].zfill(num_bytes)[::-1]
+                return bytearray(eeprom_raw)
+        except BaseException:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+        return None
+    
+    def get_name(self):
+        return "Ethernet{}".format(self._port_id - 1)
+    
+    def get_transceiver_info(self, class_optoeBase, class_sfp):
+        # temporary solution for a sonic202111 bug
+        transceiver_info = class_optoeBase.get_transceiver_info(class_sfp)
+        try:
+            if transceiver_info == None:
+                return None
+            if transceiver_info['cable_type'] == None:
+                transceiver_info['cable_type'] = 'N/A'
+            # if transceiver_info["vendor_rev"] is not None:
+            #     transceiver_info["hardware_rev"] = transceiver_info["vendor_rev"]
+            if transceiver_info.get("dom_capability") == None:
+                transceiver_info["dom_capability"] = ""
+            app_ad = transceiver_info.get("application_advertisement")
+            if isinstance(app_ad, str) and app_ad.strip().upper() == "N/A":
+                transceiver_info["application_advertisement"] = ""
+        except BaseException:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+            return None
+        return transceiver_info
+    

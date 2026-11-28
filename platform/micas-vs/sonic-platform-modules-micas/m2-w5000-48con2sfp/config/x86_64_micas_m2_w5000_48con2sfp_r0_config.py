@@ -7,7 +7,7 @@ STARTMODULE = {
     "hal_ledctrl": 0,
     "avscontrol": 0,
     "dev_monitor": 1,
-    "reboot_cause": 0,
+    "reboot_cause": 1,
     "pmon_syslog": 0,
     "sff_temp_polling": 0,
     "generate_airflow": 0,
@@ -275,7 +275,7 @@ DRIVERLISTS = [
         {"name":"platform_common dfd_my_type=0x4141", "delay": 0},
         {"name":"fpga_i2c_ocores", "delay":0},
         {"name":"fpga_pcie_uart", "delay":0},
-        {"name":"fpga_uart_ocores", "delay":0},
+        {"name":"fpga_uart_ocores", "delay":0, "removable":0},
         {"name": "wb_i2c_mux_pca9641", "delay": 0},
         {"name":"wb_i2c_mux_pca954x", "delay": 0},
         {"name":"wb_i2c_mux_pca954x_device", "delay": 0},
@@ -320,6 +320,10 @@ DEVICE = [
         {"name": "ina3221", "bus": 10, "loc": 0x41},
 ]
 
+OPTOE = [
+    {"name": "optoe2", "startbus": 17, "endbus": 18},
+]
+
 INIT_PARAM = [
     {"loc": "5-0030/sfp_txdis0", "value": "0xde"},
     {"loc": "5-0030/sfp_txdis1", "value": "0xde"},
@@ -335,26 +339,34 @@ REBOOT_CAUSE_PARA = {
     "reboot_cause_list": [
         {
             "name": "cold_reboot",
-            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "okval":0x01},
+            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "mask":0xf, "okval":0x01},
             "record": [
                 {"record_type": "file", "mode": "cover", "log": "Power Loss, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
                 {"record_type": "file", "mode": "add", "log": "Power Loss, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
             ]
         },
         {
-            "name": "wdt_reboot",
-            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "okval":0x06},
+            "name": "BIOS reset",
+            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "mask":0xf, "okval": 0x07},
             "record": [
-                {"record_type": "file", "mode": "cover", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
-                {"record_type": "file", "mode": "add", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
+                {"record_type": "file", "mode": "cover", "log": "BIOS reset, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "BIOS reset, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
             ],
         },
         {
             "name": "cpu_reboot",
-            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "okval":[0x03, 0x04, 0x05]},
+            "monitor_point": {"gettype":"devfile", "path":"/dev/cpld1", "offset":0x38, "read_len":1, "mask":0xf, "okval":[0x04, 0x05]},
             "record": [
                 {"record_type":"file", "mode":"cover", "log":"CPU reboot, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
                 {"record_type": "file", "mode": "add", "log": "CPU reboot, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
+            ],
+        },
+        {
+            "name": "wdt_reboot",
+            "monitor_point": {"gettype":"sysfs", "loc":"/sys/class/watchdog/watchdog0/bootstatus", "okval":0x32},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Watchdog, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
             ],
         },
         {

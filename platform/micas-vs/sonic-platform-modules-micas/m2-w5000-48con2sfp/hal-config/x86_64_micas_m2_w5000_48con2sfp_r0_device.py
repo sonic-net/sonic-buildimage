@@ -13,7 +13,6 @@ class threshold:
     FAN_SPEED_MAX = 20000
     FAN_SPEED_MIN = 2000
 
-
 class Description:
     CPLD = "Used for managing IO modules, SFP+ modules and system LEDs"
     BIOS = "Performs initialization of hardware components during booting"
@@ -26,6 +25,16 @@ devices = {
             "name": "ONIE_E2",
             "e2loc": {"loc": "/sys/bus/i2c/devices/3-0050/eeprom", "way": "sysfs"},
             "airflow": "intake"
+        },
+    ],
+    "psus": [
+        {
+            "name": "PSU1",
+            "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
+        },
+        {
+            "name": "PSU2",
+            "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
         },
     ],
     "temps": [
@@ -94,6 +103,7 @@ devices = {
             "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FAN_SPEED_MAX,
+            "PowerMax": 6.6,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -117,6 +127,7 @@ devices = {
             "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FAN_SPEED_MAX,
+            "PowerMax": 6.6,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -140,6 +151,7 @@ devices = {
             "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FAN_SPEED_MAX,
+            "PowerMax": 6.6,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -163,6 +175,7 @@ devices = {
             "present": {"way": "config", "value": 1, "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FAN_SPEED_MAX,
+            "PowerMax": 6.6,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -521,5 +534,23 @@ devices = {
         }
     ],
     "sfps": {
+        "ver": '4.0',
+        "port_index_start": 0,
+        "port_num": 3,
+        "log_level": 2,
+        "eeprom_retry_times": 5,
+        "eeprom_retry_break_sec": 0.2,
+        "presence_path": "/sys/bus/i2c/devices/i2c-5/5-0030/sfp_presence",
+        "presence_val_is_present": 0,
+        "eeprom_path": "/sys/bus/i2c/devices/i2c-%d/%d-0050/eeprom",
+        "eeprom_path_key": [17] + [17,18],
+        "optoe_driver_path": "/sys/bus/i2c/devices/i2c-%d/%d-0050/dev_class",
+        "optoe_driver_key": [17] + [17,18],
+        "tx_dis_path": "/sys/bus/i2c/devices/i2c-5/5-0030/sfp_txdis%d",
+        "tx_dis_key": [0] + [0,1],
+        "txdisable_val_is_on": 223,
+        "txdisable_val_is_off": 222,
+        "rx_los_path": "/sys/bus/i2c/devices/i2c-5/5-0030/sfp_rxlos",
+        "tx_fault_path": "/sys/bus/i2c/devices/i2c-5/5-0030/sfp_fault",
     }
 }

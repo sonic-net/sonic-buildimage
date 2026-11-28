@@ -55,10 +55,13 @@ class RebootCause():
     def monitor_point_check(self, item):
         try:
             gettype = item.get('gettype', None)
+            mask = item.get('mask', None)
             okval = item.get('okval', None)
             compare_mode = item.get('compare_mode', "equal")
             ret, value = get_value(item)
             if ret is True:
+                if mask:
+                    value &= mask
                 if compare_mode == "equal":
                     if isinstance(okval, list):
                         if value in okval:

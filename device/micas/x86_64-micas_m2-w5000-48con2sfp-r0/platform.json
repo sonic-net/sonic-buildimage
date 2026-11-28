@@ -1,6 +1,7 @@
 {
     "chassis": {
         "name": "M2-W5000-48CON2SFP",
+        "thermal_manager": false,
         "components": [
             {
                 "name": "CPU_CPLD"
@@ -18,30 +19,188 @@
                 "name": "BIOS"
             }
         ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["amber", "red", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "PSU1_FAN1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 1,
+                            "maximum": 100,
+                            "delay": 0
+                        },
+                        "status_led": {
+                            "available": true,
+                            "controllable": true,
+                            "colors": ["off", "red", "amber", "green"]
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["amber", "red", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "PSU2_FAN1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 1,
+                            "maximum": 100,
+                            "delay": 0
+                        },
+                        "status_led": {
+                            "available": true,
+                            "controllable": true,
+                            "colors": ["off", "red", "amber", "green"]
+                        }
+                    }
+                ]
+            }
+        ],
         "fans": [
             {
-                "name": "Fan1",
+                "name": "Fantray1_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
                 "status_led": {
-                    "controllable": false
+                    "controllable": false,
+                    "colors": ["off", "red", "amber", "green"]
                 }
             },
             {
-                "name": "Fan2",
+                "name": "Fantray2_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
                 "status_led": {
-                    "controllable": false
+                    "controllable": false,
+                    "colors": ["off", "red", "amber", "green"]
                 }
             },
             {
-                "name": "Fan3",
+                "name": "Fantray3_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
                 "status_led": {
-                    "controllable": false
+                    "controllable": false,
+                    "colors": ["off", "red", "amber", "green"]
                 }
             },
             {
-                "name": "Fan4",
+                "name": "Fantray4_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 40,
+                    "maximum": 100
+                },
                 "status_led": {
-                    "controllable": false
+                    "controllable": false,
+                    "colors": ["off", "red", "amber", "green"]
                 }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "Fantray1",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray1_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray2",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray2_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray3",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray3_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray4",
+                "num_fans" : 1,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray4_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 40,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
             }
         ],
         "thermals": [
@@ -69,13 +228,13 @@
         ],
         "sfps": [
             {
-                "name": "COPPER0"
+                "name": "Ethernet0"
             },
             {
-                "name": "SFP1"
+                "name": "Ethernet1"
             },
             {
-                "name": "SFP2"
+                "name": "Ethernet2"
             }
        	]
     },
