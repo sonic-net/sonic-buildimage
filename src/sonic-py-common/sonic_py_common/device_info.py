@@ -597,11 +597,16 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
 
     port_config_candidates = []
 
-    # Check for 'hwsku.json' file presence first
     hwsku_json_file = os.path.join(hwsku_path, HWSKU_JSON_FILE)
+    if asic:
+        port_config_file = os.path.join(hwsku_path, asic, PORT_CONFIG_FILE)
+    else:
+        port_config_file = os.path.join(hwsku_path, PORT_CONFIG_FILE)
 
-    # if 'hwsku.json' file is available, Check for 'platform.json' file presence,
-    # if 'platform.json' is available, APPEND it. Otherwise, SKIP it.
+    if not os.path.isfile(port_config_file):
+        port_config_file = os.path.join(platform_path, PORT_CONFIG_FILE)
+        if not os.path.isfile(hwsku_json_file):
+            hwsku_json_file = os.path.join(platform_path, HWSKU_JSON_FILE)
 
     """
     This length check for interfaces in platform.json is performed to make sure
@@ -610,7 +615,8 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
           remove this check
     """
 
-    if os.path.isfile(hwsku_json_file):
+    # Prefer JSON selections to INI profiles; use the minimum fallback when neither exists.
+    if os.path.isfile(hwsku_json_file) or not os.path.isfile(port_config_file):
         if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
             json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
             platform_data = json.loads(open(json_file).read())
@@ -618,11 +624,7 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
             if interfaces is not None and len(interfaces) > 0:
                 port_config_candidates.append(os.path.join(platform_path, PLATFORM_JSON_FILE))
 
-    # Check for 'port_config.ini' file presence in a few locations
-    if asic:
-        port_config_candidates.append(os.path.join(hwsku_path, asic, PORT_CONFIG_FILE))
-    else:
-        port_config_candidates.append(os.path.join(hwsku_path, PORT_CONFIG_FILE))
+    port_config_candidates.append(port_config_file)
 
     for candidate in port_config_candidates:
         if os.path.isfile(candidate):
