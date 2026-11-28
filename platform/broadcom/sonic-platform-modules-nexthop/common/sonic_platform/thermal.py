@@ -343,6 +343,7 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._temp_read_time = 0
         self._invalid_setpoint_logged = False
         self._state_db = None
+        self._db_lock = threading.Lock()
         ThermalBase.__init__(self)
         MinMaxTempMixin.__init__(self)
         PidThermalMixin.__init__(self, pddf_data.data["PLATFORM"],
@@ -412,9 +413,7 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
             )
             return None
 
-        db = self._get_state_db()
-        key = f"TRANSCEIVER_DOM_TEMPERATURE|{intf_name}"
-        data = db.get_all(db.STATE_DB, key) or {}
+        data = self._get_all(f"TRANSCEIVER_DOM_TEMPERATURE|{intf_name}") or {}
 
         temp_str = data.get("temperature")
         try:
@@ -456,6 +455,12 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
             self._state_db.connect(self._state_db.STATE_DB)
         return self._state_db
 
+    def _get_all(self, key):
+        """STATE_DB get_all on this thermal's connector, holding _db_lock for the connect and the read."""
+        with self._db_lock:
+            db = self._get_state_db()
+            return db.get_all(db.STATE_DB, key)
+
     def maybe_update_threshold_info(self):
         time_elapsed = time.monotonic() - self._threshold_info_time
         if time_elapsed < self.THRESHOLDS_CACHE_INTERVAL_SEC:
@@ -464,7 +469,6 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         if not self.get_presence():
             return
 
-        self._state_db = self._get_state_db()
         port_mapper = PortIndexMapper()
         intf_name = port_mapper.get_interface_name(self._sfp.get_position_in_parent())
         if not intf_name:
@@ -473,7 +477,7 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
             return
 
         threshold_key = f"TRANSCEIVER_DOM_THRESHOLD|{intf_name}"
-        threshold_data = self._state_db.get_all(self._state_db.STATE_DB, threshold_key)
+        threshold_data = self._get_all(threshold_key)
 
         if threshold_data:
             # Convert string values to float, handle "N/A" and invalid values
