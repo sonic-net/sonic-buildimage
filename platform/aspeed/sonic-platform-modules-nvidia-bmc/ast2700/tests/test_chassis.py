@@ -38,7 +38,13 @@ PATCH_PLATFORM_JSON = "sonic_platform.chassis.device_info.get_platform_json_data
 
 @pytest.fixture
 def chassis():
-    """Build a `Chassis` instance with all collaborators mocked out."""
+    """Build a `Chassis` instance with all collaborators mocked out.
+
+    ``ComponentCPLD`` is deliberately left unmocked: its ``__init__`` does
+    no I/O when given an injected ``eeprom`` (which the chassis always
+    passes), so constructing the real object lets tests verify it actually
+    received the chassis's shared ``EepromBMC`` instance.
+    """
     with patch(PATCH_EEPROM_BMC) as eeprom_cls, \
          patch(PATCH_THERMAL_BMC) as thermal_cls, \
          patch(PATCH_SWITCH_HOST) as module_cls, \
@@ -91,9 +97,12 @@ class TestChassis:
         component_cls = chassis_module.ComponentBMC
         assert len(chassis._thermal_list) == 1
         assert len(chassis._module_list) == 1
-        assert len(chassis._component_list) == 1
+        assert len(chassis._component_list) == 5
         assert chassis._component_list[0] is component_cls.return_value
         component_cls.assert_called_once_with()
+        cplds = chassis._component_list[1:]
+        assert all(isinstance(c, chassis_module.ComponentCPLD) for c in cplds)
+        assert [c.get_name() for c in cplds] == ["CPLD1", "CPLD2", "CPLD3", "CPLD4"]
         assert chassis._liquid_cooling is None
 
     def test_component_list_accessible_via_base_api(self, chassis):
@@ -105,6 +114,12 @@ class TestChassis:
     def test_get_watchdog_returns_watchdog(self, chassis):
         assert isinstance(chassis.get_watchdog(), Watchdog)
         assert chassis.get_watchdog() is chassis._watchdog
+
+    def test_cpld_components_share_chassis_eeprom(self, chassis):
+        """Each ComponentCPLD must reuse the chassis's EepromBMC rather than
+        construct its own, which would spawn extra ipmi-fru subprocess
+        calls for the same FRU data."""
+        assert all(c._eeprom is chassis._eeprom for c in chassis._component_list[1:])
 
     def test_get_name_returns_fixed_platform_identity(self, chassis):
         from sonic_platform.chassis import Chassis
