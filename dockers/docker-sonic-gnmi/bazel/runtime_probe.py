@@ -98,12 +98,14 @@ def supervisor_startup(work, environment, config_client, state_client, dialout):
                             and (startup.get("statename") == "RUNNING" or
                                  (startup.get("statename") == "EXITED" and startup.get("exitstatus") == 0))
                             and start.get("statename") == "EXITED" and start.get("exitstatus") == 0):
-                        break
+                        # Supervisor can report RUNNING before telemetry binds its gNMI port.
+                        with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                            break
                 except (OSError, ConnectionError):
                     pass
                 time.sleep(0.2)
             else:
-                raise AssertionError("installed supervisor chain did not start:\n" + last + "\n" + log_path.read_text())
+                raise AssertionError(f"supervisor and gNMI port {port} did not become ready:\n" + last + "\n" + log_path.read_text())
             pid = int(command("/usr/local/bin/supervisorctl", "pid", "gnmi-native", env=env).strip())
             require(pid > 0 and os.path.samefile("/proc/" + str(pid) + "/exe", "/usr/sbin/telemetry"),
                     "supervisor did not execute installed telemetry")
