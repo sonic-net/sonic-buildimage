@@ -9,9 +9,9 @@ at-spi2-common==2.52.0-1build1
 at-spi2-core==2.52.0-1build1
 azure-cli==2.93.0-1~jammy
 bats==1.10.0-1
-binutils==2.42-4ubuntu2.10
-binutils-common==2.42-4ubuntu2.10
-binutils-x86-64-linux-gnu==2.42-4ubuntu2.10
+binutils==2.42-4ubuntu2.11
+binutils-common==2.42-4ubuntu2.11
+binutils-x86-64-linux-gnu==2.42-4ubuntu2.11
 build-essential==12.10ubuntu1
 bzip2==1.0.8-5.1ubuntu0.1
 ca-certificates==20260816ubuntu0.24.04.2
@@ -39,7 +39,7 @@ distro-info-data==2026.10.12-0ubuntu0.24.04.1
 dmsetup==2:1.02.185-3ubuntu3.2
 docker-buildx-plugin==0.39.1-1~ubuntu.24.04~noble
 docker-ce-cli==5:29.10.1-1~ubuntu.24.04~noble
-docker-compose-plugin==5.8.0-1~ubuntu.24.04~noble
+docker-compose-plugin==5.8.1-1~ubuntu.24.04~noble
 dpkg-dev==1.22.6ubuntu6.6
 fakeroot==1.33-1
 fontconfig==2.15.0-1.1ubuntu2
@@ -97,8 +97,8 @@ libappstream5==1.0.2-1build6
 libarchive13t64==3.7.2-2ubuntu0.9
 libargon2-1==0~20190702+dfsg-4build1
 libasan8==14.2.0-4ubuntu2~24.04.1
-libasound2-data==1.2.11-1ubuntu0.3
-libasound2t64==1.2.11-1ubuntu0.3
+libasound2-data==1.2.11-1ubuntu0.5
+libasound2t64==1.2.11-1ubuntu0.5
 libatk-bridge2.0-0t64==2.52.0-1build1
 libatk-wrapper-java==0.40.0-3build2
 libatk-wrapper-java-jni==0.40.0-3build2
@@ -109,7 +109,7 @@ libatspi2.0-0t64==2.52.0-1build1
 libavahi-client3==0.8-13ubuntu6.2
 libavahi-common-data==0.8-13ubuntu6.2
 libavahi-common3==0.8-13ubuntu6.2
-libbinutils==2.42-4ubuntu2.10
+libbinutils==2.42-4ubuntu2.11
 libbpf1==1:1.3.0-2build2
 libbrotli1==1.1.0-2ubuntu0.1
 libbsd0==0.12.1-1build1.1
@@ -126,8 +126,8 @@ libcc1-0==14.2.0-4ubuntu2~24.04.1
 libcolord2==1.4.7-1build2
 libcrypt-dev==1:4.4.36-4build1
 libcryptsetup12==2:2.7.0-1ubuntu4.2
-libctf-nobfd0==2.42-4ubuntu2.10
-libctf0==2.42-4ubuntu2.10
+libctf-nobfd0==2.42-4ubuntu2.11
+libctf0==2.42-4ubuntu2.11
 libcups2t64==2.4.7-1.2ubuntu7.14
 libcurl3t64-gnutls==8.5.0-2ubuntu10.16
 libcurl4t64==8.5.0-2ubuntu10.16
@@ -179,7 +179,7 @@ libglx-mesa0==25.2.8-0ubuntu0.24.04.5
 libglx0==1.7.0-1build1
 libgomp1==14.2.0-4ubuntu2~24.04.1
 libgpm2==1.20.7-11
-libgprofng0==2.42-4ubuntu2.10
+libgprofng0==2.42-4ubuntu2.11
 libgraphite2-3==1.3.14-2ubuntu0.24.04.1
 libgssapi-krb5-2==1.20.1-6ubuntu2.12
 libgstreamer1.0-0==1.24.2-1ubuntu0.2
@@ -268,7 +268,7 @@ libsasl2-modules==2.1.28+dfsg1-5ubuntu3.1
 libsasl2-modules-db==2.1.28+dfsg1-5ubuntu3.1
 libsensors-config==1:3.6.0-9build1
 libsensors5==1:3.6.0-9build1
-libsframe1==2.42-4ubuntu2.10
+libsframe1==2.42-4ubuntu2.11
 libsharpyuv0==1.3.2-0.4build3
 libsm6==2:1.2.3-1build3
 libsnmp-base==5.9.4+dfsg-1.1ubuntu3.3
@@ -283,7 +283,7 @@ libsystemd-shared==255.4-1ubuntu8.19
 libsystemd0==255.4-1ubuntu8.19
 libthai-data==0.1.29-2build1
 libthai0==0.1.29-2build1
-libtiff6==4.5.1+git230720-4ubuntu2.5
+libtiff6==4.5.1+git230720-4ubuntu2.6
 libtsan2==14.2.0-4ubuntu2~24.04.1
 libubsan1==14.2.0-4ubuntu2~24.04.1
 libudev1==255.4-1ubuntu8.19
@@ -317,7 +317,7 @@ libxdmcp6==1:1.1.3-0ubuntu6
 libxext6==2:1.3.4-1build2
 libxfixes3==1:6.0.0-2build1
 libxft2==2.3.6-1build1
-libxi6==2:1.8.1-1build1
+libxi6==2:1.8.1-1ubuntu0.1
 libxinerama1==2:1.1.4-3build1
 libxkbcommon0==1.6.0-1build1
 libxkbfile1==1:1.1.0-1build4
@@ -383,7 +383,7 @@ python3-distro==1.9.0-1
 python3-distro-info==1.7ubuntu0.1
 python3-gi==3.48.2-1
 python3-httplib2==0.20.4-3ubuntu0.1
-python3-jwt==2.7.0-1ubuntu0.5
+python3-jwt==2.7.0-1ubuntu0.6
 python3-launchpadlib==1.11.0-6
 python3-lazr.restfulclient==0.14.6-1
 python3-lazr.uri==1.0.6-3
