@@ -2478,7 +2478,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT48-EEPROM", "device_parent":"MUX10", "virt_parent":"PORT48"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x56", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x56", "dev_addr":"0x50", "dev_type":"optoe2"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
