@@ -152,6 +152,27 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(utils.to_dict(output.strip()), utils.to_dict('{\n    "k11": "v11"\n}'))
 
+    def test_print_data_json_bool_is_lowercase(self):
+        # A JSON literal bool must print as the lowercase string YANG accepts, not Python's "True".
+        argument = ['-a', '{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":true}}}', '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()),
+                         utils.to_dict('{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":"true"}}}'))
+
+    def test_print_data_bool_strings_unchanged(self):
+        # Strings are never rewritten, whatever their case. FEATURE scope fields hold "True"/"False" today.
+        data = '{"FEATURE":{"bgp":{"state":"enabled","has_global_scope":"False","has_per_asic_scope":"True","delayed":"false"}}}'
+        argument = ['-a', data, '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()), utils.to_dict(data))
+
+    def test_var_json_key_bool_is_lowercase(self):
+        argument = ['-a', '{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":false}}}',
+                    '--var-json', 'MGMT_VRF_CONFIG', '-K', 'vrf_global']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()),
+                         utils.to_dict('{"vrf_global":{"mgmtVrfEnabled":"false"}}'))
+
     def test_var_json_data(self, **kwargs):
         graph_file = kwargs.get('graph_file', self.sample_graph_simple)
         tag_mode = kwargs.get('tag_mode', 'untagged')
