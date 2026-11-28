@@ -17,13 +17,13 @@
 - name: "nvme_bus"
   lookup_command: "setpci -s 00:02.4 0x19.b"
 
-- name: "amd_soc_group_1_bus"
+- name: "amd_soc_group_0_bus"
   lookup_command: "setpci -s 00:08.1 0x19.b"
 
-- name: "amd_soc_group_2_bus"
+- name: "amd_soc_group_1_bus"
   lookup_command: "setpci -s 00:08.2 0x19.b"
 
-- name: "amd_soc_group_3_bus"
+- name: "amd_soc_group_2_bus"
   lookup_command: "setpci -s 00:08.3 0x19.b"
 
 # Commands to retrieve the PCIe address for each device.

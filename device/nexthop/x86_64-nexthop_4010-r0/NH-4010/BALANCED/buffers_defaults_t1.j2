@@ -1,8 +1,9 @@
 {%- set default_cable = '5m' %}
 
 {%- include 'buffer_ports.j2' %}
+
 {%- macro generate_buffer_pool_and_profiles() %}
- "BUFFER_POOL": {
+    "BUFFER_POOL": {
         "ingress_lossless_pool": {
             "size": "165558216",
             "type": "ingress",

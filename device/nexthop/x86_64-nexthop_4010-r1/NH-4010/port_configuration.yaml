@@ -694,7 +694,7 @@ device:
                 TX_LANE_MAP_AUTO: 0
                 RX_POLARITY_FLIP_AUTO: 0
                 TX_POLARITY_FLIP_AUTO: 0
-                RX_LANE_MAP: 0x57012643
+                RX_LANE_MAP: 0x7512643
                 TX_LANE_MAP: 0x47036512
                 RX_POLARITY_FLIP: 0x5c
                 TX_POLARITY_FLIP: 0x30
@@ -706,9 +706,9 @@ device:
                 TX_LANE_MAP_AUTO: 0
                 RX_POLARITY_FLIP_AUTO: 0
                 TX_POLARITY_FLIP_AUTO: 0
-                RX_LANE_MAP: 0x74302165
+                RX_LANE_MAP: 0x71356420
                 TX_LANE_MAP: 0x32761045
-                RX_POLARITY_FLIP: 0xe
+                RX_POLARITY_FLIP: 0x4a
                 TX_POLARITY_FLIP: 0xdb
             ?
                 PC_PM_ID: 59
@@ -770,6 +770,18 @@ device:
                 TX_LANE_MAP: 0x32107654
                 RX_POLARITY_FLIP: 0x0
                 TX_POLARITY_FLIP: 0x33
+            ?
+                PC_PM_ID: 65
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x3210
+                TX_LANE_MAP: 0x3210
+                RX_POLARITY_FLIP: 0x0
+                TX_POLARITY_FLIP: 0x0
 ...
 ---
 device:
@@ -14916,88 +14928,4 @@ device:
             CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
-...
----
-bcm_device:
-    0:
-        global:
-            bcm_tunnel_term_compatible_mode: 1
-            vlan_flooding_l2mc_num_reserved: 2048
-            l3_alpm_template: 2
-            l3_alpm2_bnk_threshold: 100
-            uft_mode: 1
-            l3_enable: 1
-            l2_hitbit_enable: 0
-            pktio_mode: 1
-            sai_pfc_defaults_disable: 1
-            pfc_deadlock_seq_control: 1
-            sai_pfc_dlr_init_capability: 2
-            sai_mmu_custom_config: 1
-            ftem_mem_entries: 65536
-            sai_stats_support_mask: 0
-            default_cpu_tx_queue: 7
-            global_flexctr_ing_action_num_reserved: 20
-            global_flexctr_ing_pool_num_reserved: 8
-            global_flexctr_ing_op_profile_num_reserved: 20
-            global_flexctr_ing_group_num_reserved: 2
-            global_flexctr_egr_action_num_reserved: 8
-            global_flexctr_egr_pool_num_reserved: 5
-            global_flexctr_egr_op_profile_num_reserved: 10
-            global_flexctr_egr_group_num_reserved: 1
-            stat_custom_receive0_management_mode: 1
-            sai_field_group_auto_prioritize: 1
-...
-### Baseline
-# Skipping buffer reservation. This means that don't use SDK default settings.
----
-device:
-    0:
-        TM_THD_CONFIG:
-            MIRROR_ON_DROP_RESERVATION: 0
-            SKIP_BUFFER_RESERVATION: 1
-            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
-
-        TM_SCHEDULER_CONFIG:
-            NUM_MC_Q: NUM_MC_Q_4
-            DYNAMIC_VOQ: 0
-
-...
-# Ingress priority to PG mappings
----
-device:
-    0:
-        # priority to PG mapping for UC traffic, 8 profiles (IDs), 16 priorties
-        TM_ING_UC_ING_PRI_MAP:
-            ?
-                # Profile 0
-                TM_ING_UC_ING_PRI_MAP_ID: [0,7]
-                ING_PRI: [0,15]
-            :
-                TM_PRI_GRP_ID: 0
-
-        # priority to PG mapping for MC traffic, 8 profiles( IDs) 16 priorities
-        TM_ING_NONUC_ING_PRI_MAP:
-            ?
-                # Profile 0
-                TM_ING_NONUC_ING_PRI_MAP_ID: [0,7]
-                ING_PRI: [0,15]
-            :
-                TM_PRI_GRP_ID: 0
-
-        TM_PRI_GRP_POOL_MAP:
-            ?
-                TM_PRI_GRP_POOL_MAP_ID: [0,7]
-                TM_PRI_GRP_ID: [[0,7]]
-            :
-                TM_ING_SERVICE_POOL_ID: 0
-                TM_HEADROOM_POOL_ID: 0
-
-        # PFC generation: Priority group(s)
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: [0,7]
-                PFC_PRI: [0,7]
-            :
-                TM_PRI_GRP_ID: 0
-
 ...

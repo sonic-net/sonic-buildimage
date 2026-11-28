@@ -1,1 +1,16 @@
-../x86_64-nexthop_4010-r0/platform_components.json
+{
+    "chassis": {
+        "NH-4020-F": {
+            "component": {
+                "SWITCHCARD_FPGA": {},
+                "CPUCARD_FPGA": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {},
+                "PSU1": {},
+                "PSU2": {}
+            }
+        }
+    }
+}

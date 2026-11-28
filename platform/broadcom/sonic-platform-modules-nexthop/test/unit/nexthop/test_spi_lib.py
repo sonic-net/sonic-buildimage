@@ -1,8 +1,12 @@
+import json
 import os
 import pytest
 import subprocess
 
+import jinja2
+
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
@@ -46,6 +50,40 @@ def test_component_to_spi_device(spi_lib_module, component_name, expected_device
     """Test conversion from component name to SPI device name"""
     result = spi_lib_module.component_to_spi_device(component_name)
     assert result == expected_device
+
+
+# nexthop/ -> unit/ -> test/ -> sonic-platform-modules-nexthop/ -> broadcom/ -> platform/ -> sonic-buildimage/
+_NH_4010_PDDF_TEMPLATE = (
+    Path(__file__).resolve().parents[6]
+    / "device/nexthop/x86_64-nexthop_4010-r0/pddf/pddf-device.json.j2"
+)
+
+
+@pytest.mark.parametrize(
+    "platform, has_asic_boot_flash",
+    [
+        ("x86_64-nexthop_4010-r0", False),
+        ("x86_64-nexthop_4010-r1", True),
+        ("x86_64-nexthop_4020-r0", True),
+    ],
+)
+def test_nh_4010_template_asic_boot_flash(spi_lib_module, platform, has_asic_boot_flash):
+    """ASIC_BOOT_FLASH is on every platform sharing the NH-4010-r0 template except NH-4010-r0 itself."""
+    template = jinja2.Environment().from_string(_NH_4010_PDDF_TEMPLATE.read_text())
+    pddf = json.loads(template.render({"platform": platform}))
+    switchcard_fpga_spi_controllers = pddf["MULTIFPGAPCIE1"].get("spi_controllers", [])
+
+    result = spi_lib_module.get_spi_device_info("ASIC_BOOT_FLASH", pddf)
+
+    if not has_asic_boot_flash:
+        assert result is None
+        assert "SWITCHCARD_SPI_CONTROLLER" not in pddf
+        assert "SWITCHCARD_SPI_CONTROLLER" not in switchcard_fpga_spi_controllers
+        return
+    assert result is not None
+    assert result.controller_name == "SWITCHCARD_SPI_CONTROLLER"
+    assert result.device_cs == 0
+    assert "SWITCHCARD_SPI_CONTROLLER" in switchcard_fpga_spi_controllers
 
 
 def test_get_spi_device_info_basic(spi_lib_module):
