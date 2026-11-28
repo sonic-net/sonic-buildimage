@@ -119,7 +119,7 @@ def main():
     assert "--table" in command("sonic-cfg-help", "--help")
     assert "6.15.0" in command("ip", "-Version")
     assert json.loads(command("ip", "-j", "link", "show", "dev", "lo"))[0]["ifname"] == "lo"
-    assert "1.8.0.2" in command("socat", "-V")
+    assert "socat version 1.8.0.3 " in command("socat", "-V")
     assert "3.5.7" in command("openssl", "version")
     assert "active" in command("openssl", "list", "-providers", "-provider", "legacy")
     libdir = Path("/usr/lib") / triplet
