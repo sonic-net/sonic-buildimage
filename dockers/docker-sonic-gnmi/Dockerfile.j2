@@ -23,6 +23,7 @@ RUN apt-get update
 {%- endif %}
 
 COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
+COPY ["gnmi-config-listener.py", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]

@@ -8,12 +8,42 @@ INVALID_TLS_CONFIGURATION=5
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 PATHS_BLACKLIST_FILE=/etc/telemetry/paths_blacklist.txt
 ESCAPE_QUOTE="'\''"
+PREPARED_CONFIG_FILE=/run/gnmi-config.json
+CONFIG_FILE=
+CHECK_ONLY=false
+
+if [[ "${1-}" == "--check-config" ]]; then
+    if [[ $# != 2 ]]; then
+        echo "Usage: $0 --check-config CONFIG_JSON" >&2
+        exit $INCORRECT_TELEMETRY_VALUE
+    fi
+    CONFIG_FILE=$2
+    CHECK_ONLY=true
+elif [[ -f "$PREPARED_CONFIG_FILE" ]]; then
+    # An unlocked file is an abandoned handoff, never a cold-start override.
+    flock -s -n -E 75 "$PREPARED_CONFIG_FILE" true
+    LOCK_STATUS=$?
+    if [[ "$LOCK_STATUS" == 75 ]]; then
+        CONFIG_FILE=$PREPARED_CONFIG_FILE
+    elif [[ "$LOCK_STATUS" != 0 ]]; then
+        exit "$LOCK_STATUS"
+    fi
+fi
 
 extract_field() {
     if [ -z "$1" ]; then
         return
     fi
     jq -r "$2" <<< "$1"
+}
+
+config_field() {
+    if [[ -n "$CONFIG_FILE" ]]; then
+        jq -r --arg table "$1" --arg key "$2" --arg field "$3" \
+            '.[$table][$key][$field] // empty' <<< "$CONFIG_JSON"
+    else
+        sonic-db-cli CONFIG_DB hget "$1|$2" "$3"
+    fi
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -23,14 +53,23 @@ fi
 
 # Try to read telemetry and certs config from ConfigDB.
 # Use default value if no valid config exists
-TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
+if [[ -n "$CONFIG_FILE" ]]; then
+    command -v flock > /dev/null || exit 127
+    CONFIG_JSON=$(cat -- "$CONFIG_FILE") || exit $?
+    if [[ "$CHECK_ONLY" != true ]]; then
+        printf '%s\n' "$$" > "${PREPARED_CONFIG_FILE}.read" || exit $?
+    fi
+    TELEMETRY_VARS=$(sonic-cfggen -j /dev/stdin -t "$TELEMETRY_VARS_FILE" <<< "$CONFIG_JSON") || exit $?
+else
+    TELEMETRY_VARS=$(sonic-cfggen -d -t $TELEMETRY_VARS_FILE)
+fi
 TELEMETRY_VARS=${TELEMETRY_VARS//[\']/\"}
 X509=$(jq -r '.x509 // empty' <<< "$TELEMETRY_VARS")
 GNMI=$(jq -r '.gnmi // empty' <<< "$TELEMETRY_VARS")
 CERTS=$(jq -r '.certs // empty' <<< "$TELEMETRY_VARS")
 
-DEVICE_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "type")
-SWITCH_TYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type")
+DEVICE_TYPE=$(config_field DEVICE_METADATA localhost type)
+SWITCH_TYPE=$(config_field DEVICE_METADATA localhost switch_type)
 IS_SMART_SWITCH_DPU=false
 if [[ "$DEVICE_TYPE" == "SmartSwitchDPU" || "$SWITCH_TYPE" == "dpu" ]]; then
     IS_SMART_SWITCH_DPU=true
@@ -104,7 +143,7 @@ case "${GNMI_LISTENER_MODE-config}" in
         ;;
     uds-only)
         PORT=0
-        if ! mkdir -p /var/run/gnmi || ! chmod 0750 /var/run/gnmi; then
+        if [[ "$CHECK_ONLY" != true ]] && { ! mkdir -p /var/run/gnmi || ! chmod 0750 /var/run/gnmi; }; then
             echo "Failed to prepare gNMI socket directory /var/run/gnmi" >&2
             exit $SOCKET_DIRECTORY_ERROR
         fi
@@ -137,7 +176,7 @@ if [ -n "$SAVE_ON_SET" ]; then
 fi
 
 # Enable ZMQ for SmartSwitch
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
+LOCALHOST_SUBTYPE=$(config_field DEVICE_METADATA localhost subtype)
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100 -max_recv_msg_size=$((32*1024*1024)) -max_send_msg_size=$((32*1024*1024))"
 fi
@@ -152,7 +191,7 @@ if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
-MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+MGMT_VRF_ENABLED=$(config_field MGMT_VRF_CONFIG vrf_global mgmtVrfEnabled)
 if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     TELEMETRY_ARGS+=" --vrf mgmt"
 fi
@@ -211,6 +250,10 @@ fi
 # Reject requests for paths listed in the blacklist, when one is installed
 if [ -f "$PATHS_BLACKLIST_FILE" ]; then
     TELEMETRY_ARGS+=" --paths_blacklist $PATHS_BLACKLIST_FILE"
+fi
+
+if [[ "$CHECK_ONLY" == true ]]; then
+    exit 0
 fi
 
 echo "gnmi args: $TELEMETRY_ARGS"
