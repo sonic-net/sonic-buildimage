@@ -93,6 +93,7 @@ module sonic-dhcp-server-ipv4 {
                     mandatory true;
                     type enumeration {
                         enum PORT;
+                        enum MATCH;
                     }
                 }
 

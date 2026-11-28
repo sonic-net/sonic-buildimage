@@ -14,7 +14,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -98,7 +98,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -157,7 +157,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -294,7 +294,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -330,7 +330,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -378,7 +378,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -426,7 +426,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -488,7 +488,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -533,7 +533,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -592,7 +592,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -640,7 +640,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -688,7 +688,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -736,7 +736,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -789,7 +789,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -842,7 +842,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -876,7 +876,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -929,7 +929,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -982,7 +982,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -1045,7 +1045,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
@@ -1098,7 +1098,7 @@
                 "DHCP_SERVER_IPV4_LIST": [
                     {
                         "name": "Vlan1000",
-                        "mode": "PORT",
+                        "mode": "MATCH",
                         "gateway": "192.0.2.1",
                         "netmask": "255.255.255.0",
                         "lease_time": 900,
