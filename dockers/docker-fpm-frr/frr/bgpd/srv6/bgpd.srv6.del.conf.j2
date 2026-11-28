@@ -1,0 +1,6 @@
+{# Remove the BGP SRv6 locator and restore the default encapsulation behavior. #}
+router bgp {{ bgp_asn }}
+ segment-routing srv6
+  no locator {{ locator_name }}
+  no encap-behavior H_Encaps_Red
+exit

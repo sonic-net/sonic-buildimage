@@ -1,0 +1,6 @@
+{# BGP SRv6 locator configuration derived from DEVICE_METADATA. #}
+router bgp {{ bgp_asn }}
+ segment-routing srv6
+  locator {{ locator_name }}
+  encap-behavior H_Encaps_Red
+exit

@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 import time
+import pytest
 
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
@@ -62,6 +63,45 @@ def test_locator_add():
 
     assert loc_mgr.directory.path_exist(loc_mgr.db_name, loc_mgr.table_name, "loc1")
 
+
+def test_locator_add_with_format():
+    loc_mgr, _ = constructor()
+    sid_format = "usid-f3216"
+    prefix_len = 48
+
+    op_test(loc_mgr, 'SET', ("MAIN", {
+        'prefix': 'fcbb:bbbb:1::',
+        'format': sid_format,
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'locators',
+        'locator MAIN',
+        'prefix fcbb:bbbb:1::/{}'.format(prefix_len),
+        'format {}'.format(sid_format),
+    ])
+
+    locator = loc_mgr.directory.get(loc_mgr.db_name, loc_mgr.table_name, "MAIN")
+    assert locator.format == sid_format
+    assert locator.prefix == 'fcbb:bbbb:1::/{}'.format(prefix_len)
+
+
+@pytest.mark.parametrize("sid_format", [
+    "unknown-format",
+    "usid-f4816",
+    "",
+])
+def test_locator_add_rejects_unsupported_format(sid_format):
+    loc_mgr, _ = constructor()
+
+    op_test(loc_mgr, 'SET', ("MAIN", {
+        'prefix': 'fcbb:bbbb:1::',
+        'format': sid_format,
+    }), expected_ret=False, expected_cmds=[])
+
+    assert not loc_mgr.directory.path_exist(loc_mgr.db_name, loc_mgr.table_name, "MAIN")
+
+
 def test_locator_del():
     loc_mgr, _ = constructor()
     loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
@@ -90,6 +130,25 @@ def test_uN_add():
 
     print(loc_mgr.directory.data)
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
+
+
+def test_uN_add_with_formatted_locator():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("MAIN", {
+        'prefix': 'fcbb:bbbb:1::',
+        'format': 'usid-f3216',
+    })
+
+    op_test(sid_mgr, 'SET', ("MAIN|FCBB:BBBB:1::/48", {
+        'action': 'uN'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1::/48 locator MAIN behavior uN'
+    ])
+
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "MAIN|fcbb:bbbb:1::\\48")
 
 def test_uA_add_del():
     loc_mgr, sid_mgr = constructor()
