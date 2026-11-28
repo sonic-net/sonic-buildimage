@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+DEVICE_DIR := usr/share/sonic/device/arm64-nxp_lx2160ardb-r0
+
+%:
+	dh $@ --buildsystem=none
+
+override_dh_auto_build:
+	# SONiC platform API wheel, installed by pmon and the host from the device dir
+	python3 setup.py bdist_wheel -d $(CURDIR)
+
+override_dh_auto_install:
+	dh_installdirs $(DEVICE_DIR)
+	dh_install sonic_platform-1.0-py3-none-any.whl $(DEVICE_DIR)
+
+override_dh_auto_test:
+
+override_dh_clean:
+	dh_clean
+	rm -rf *.whl build dist *.egg-info

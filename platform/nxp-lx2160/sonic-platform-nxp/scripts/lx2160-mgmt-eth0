@@ -1,0 +1,43 @@
+#!/bin/sh
+# Apply the LX2160ARDB DPAA2 interface names (idempotent):
+#   dpni.0 -> dpmac17, dpni.2 -> dpmac18, dpni.3 -> dpmac3, dpni.4 -> dpmac4
+#   dpni.1 -> eth0 (SONiC management port)
+# The udev rule does the same at hotplug time, but the kernel probes the DPNIs
+# in reverse order (dpni.4 -> eth0 ... dpni.0 -> eth4), so dpni.1's rename to
+# eth0 races with dpni.4 still holding eth0 and fails; and on the first boot
+# the rule is not installed yet when the interfaces appear. Front-panel ports
+# are renamed first, which frees eth0.
+set -eu
+
+ifname_of() {
+	for n in /sys/class/net/*; do
+		if [ "$(basename "$(readlink -f "$n/device" 2>/dev/null)")" = "$1" ]; then
+			basename "$n"
+			return
+		fi
+	done
+}
+
+rename() {
+	cur=$(ifname_of "$1")
+	if [ -z "$cur" ]; then
+		echo "lx2160-ifnames: no interface for $1" >&2
+		return 1
+	fi
+	[ "$cur" = "$2" ] && return 0
+	if [ -e "/sys/class/net/$2" ]; then
+		echo "lx2160-ifnames: $2 is taken, leaving $1 as $cur" >&2
+		return 1
+	fi
+	ip link set dev "$cur" down
+	ip link set dev "$cur" name "$2"
+	echo "lx2160-ifnames: renamed $cur ($1) to $2"
+}
+
+rc=0
+rename dpni.0 dpmac17 || rc=1
+rename dpni.2 dpmac18 || rc=1
+rename dpni.3 dpmac3 || rc=1
+rename dpni.4 dpmac4 || rc=1
+rename dpni.1 eth0 || rc=1
+exit $rc

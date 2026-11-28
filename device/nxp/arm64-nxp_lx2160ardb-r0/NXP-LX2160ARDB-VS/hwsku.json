@@ -1,0 +1,20 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "RJ45"
+        },
+        "Ethernet4": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "RJ45"
+        },
+        "Ethernet8": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "RJ45"
+        },
+        "Ethernet12": {
+            "default_brkout_mode": "1x1G",
+            "port_type": "RJ45"
+        }
+    }
+}

@@ -1,0 +1,116 @@
+{
+    "chassis": {
+        "name": "LX2160ARDB",
+        "components": [],
+        "fans": [],
+        "fan_drawers": [],
+        "psus": [],
+        "thermals": [
+            {
+                "name": "SoC cluster 2/3",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC cluster 4",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC cluster 6/7",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC CCN",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC DCE",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC WRIOP",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SoC DDR ctrl 5",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Board 0x4c local",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Board 0x4c remote",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Board 0x4d local",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Board 0x4d remote",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            }
+        ],
+        "sfps": []
+    },
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1",
+            "lanes": "1",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp1"
+                ]
+            }
+        },
+        "Ethernet4": {
+            "index": "2",
+            "lanes": "5",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp2"
+                ]
+            }
+        },
+        "Ethernet8": {
+            "index": "3",
+            "lanes": "9",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp3"
+                ]
+            }
+        },
+        "Ethernet12": {
+            "index": "4",
+            "lanes": "13",
+            "breakout_modes": {
+                "1x1G": [
+                    "etp4"
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,66 @@
+/dts-v1/;
+/*
+ * U-Boot FIT image for SONiC on the NXP LX2160ARDB (LX2160A rev2).
+ * __KERNEL_PATH__/__INITRD_PATH__ are filled in by build_debian.sh. The DTB
+ * path names the kernel version explicitly (no placeholder resolves to
+ * freescale/); update it together with the SONiC kernel version.
+ * LX2160A DRAM starts at 0x80000000. U-Boot stages DPAA2 data there before
+ * booting (MC firmware 0x80a00000, DPL 0x80d00000, DPC 0x80e00000) and applies
+ * the DPL after loading the images, so the kernel (~40 MB) must load above
+ * 0x80f00000 or it overwrites the DPL ("Bad DPL image"). DTB and initrd sit
+ * above the kernel.
+ */
+/ {
+    description = "U-Boot fitImage for SONiC on NXP LX2160ARDB";
+    #address-cells = <1>;
+
+    images {
+        kernel_lx2160 {
+            description = "SONiC Linux kernel";
+            data = /incbin/("__KERNEL_PATH__");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x82000000>;
+            entry = <0x82000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_lx2160ardb {
+            description = "LX2160ARDB device tree";
+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/freescale/fsl-lx2160a-rdb.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x8fc00000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_lx2160 {
+            description = "SONiC initramfs";
+            data = /incbin/("__INITRD_PATH__");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x90000000>;
+            entry = <0x90000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+    };
+
+    configurations {
+        default = "conf_lx2160ardb";
+        conf_lx2160ardb {
+            description = "NXP LX2160ARDB";
+            kernel = "kernel_lx2160";
+            fdt = "fdt_lx2160ardb";
+            ramdisk = "ramdisk_lx2160";
+        };
+    };
+};

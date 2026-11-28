@@ -1,0 +1,6 @@
+sonic-platform-nxp-lx2160ardb (1.0) UNRELEASED; urgency=low
+
+  * Initial release: udev naming of the LX2160ARDB DPAA2 interfaces,
+    plus a boot service that applies the names reliably (eth0 race, first boot).
+
+ -- wrouwet <37880342+wrouwet@users.noreply.github.com>  Sat, 21 Nov 2026 23:30:00 -0600
