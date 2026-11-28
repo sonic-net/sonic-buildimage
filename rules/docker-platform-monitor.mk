@@ -67,6 +67,11 @@ ifeq ($(CONFIGURED_PLATFORM),aspeed)
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --device=/dev/mem:/dev/mem:rw
 endif
 
+# Share the NVIDIA CPO CDB locks between the host and pmon
+ifeq ($(CONFIGURED_PLATFORM),mellanox)
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/lock/nvidia-cpo:/var/lock/nvidia-cpo:rw
+endif
+
 # Mount Arista python library on Aboot images to be used by plugins
 $(DOCKER_PLATFORM_MONITOR)_aboot_RUN_OPT += -v /usr/lib/libsfp-eeprom.so:/usr/lib/libsfp-eeprom.so:ro
 $(DOCKER_PLATFORM_MONITOR)_aboot_RUN_OPT += -v /usr/lib/python3/dist-packages/arista:/usr/lib/python3/dist-packages/arista:ro
