@@ -1,10 +1,5 @@
 {
     "SAMPLE_CONFIG_DB_JSON": {
-        "FDB_SYNC": {
-            "global": {
-                "mac_sync_mode": "fpm"
-            }
-        },
         "VRF": {
                 "Vrf_blue": {
                     "vni" : "100"
@@ -146,23 +141,23 @@
                 "mtu": "9100",
                 "tpid": "0x8100",
                 "fast_rate": "false",
-                "fallback" : "true",
+                "fallback" : "single",
                 "mode":"routed",
                 "system_mac": "aa:bb:cc:dd:ee:ff",
                 "lag_type": "LACP"
             }
         },
         "PORTCHANNEL_INTERFACE": {
-                "PortChannel0003": {
-                    "nat_zone": "1",
-                    "loopback_action": "drop",
-                    "ipv6_use_link_local_only": "enable",
-                    "mac_addr": "02:26:9b:73:c1:1a"
-                },
-                "PortChannel0004": {"vrf_name": "Vrf_blue"},
-                "PortChannel42|10.1.0.1/31": {},
-                "PortChannel42|2603:10e2:400:1::2/126": {}
+        "PortChannel0003": {
+            "nat_zone": "1",
+            "loopback_action": "drop",
+            "ipv6_use_link_local_only": "enable",
+            "mac_addr": "02:26:9b:73:c1:1a"
         },
+        "PortChannel0004": {"vrf_name": "Vrf_blue"},
+        "PortChannel42|10.1.0.1/31": {},
+        "PortChannel42|2603:10e2:400:1::2/126": {}
+    },
         "PORTCHANNEL_MEMBER": {
             "PortChannel0003|Ethernet1": {},
             "PortChannel0004|Ethernet2": {},
@@ -1713,7 +1708,6 @@
                 "collector_vrf": "mgmt"
             }
         },
-
         "SFLOW_SESSION": {
             "Ethernet0": {
                 "admin_state": "down",
@@ -1724,7 +1718,6 @@
                 "sample_rate": "32768"
             }
         },
-
         "SFLOW" : {
             "global": {
                 "admin_state": "up",
@@ -2128,7 +2121,6 @@
                 "trap_group": "queue1_group1"
             }
         },
-
         "AUTO_TECHSUPPORT": {
             "GLOBAL": {
                 "state" : "enabled",
@@ -2390,7 +2382,6 @@
                 "weight": "10"
             }
 	},
-
         "WRED_PROFILE": {
             "Wred1": {
                 "ecn": "ecn_all",
@@ -2408,13 +2399,11 @@
                 "wred_red_enable": "true"
             }
         },
-
         "DEBUG_DROP_MONITOR": {
             "CONFIG": {
                 "status": "disabled"
             }
         },
-
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",
@@ -2431,7 +2420,6 @@
                 "scheduler": "scheduler.1"
             }
         },
-
         "DSCP_TO_FC_MAP": {
             "Dscp_to_fc_map1": {
                "1": "1",
@@ -2442,7 +2430,6 @@
                "4": "4"
              }
         },
-
         "EXP_TO_FC_MAP": {
             "Exp_to_fc_map1": {
                "1": "1",
@@ -2453,7 +2440,6 @@
                "4": "4"
              }
         },
-
         "DSCP_TO_TC_MAP": {
            "Dscp_to_tc_map1": {
               "1": "1",
@@ -2464,7 +2450,6 @@
               "4": "4"
             }
         },
-
         "MPLS_TC_TO_TC_MAP": {
            "Mpls_tc_to_tc_map1": {
               "1": "1",
@@ -2475,7 +2460,6 @@
               "4": "4"
             }
         },
-
         "DOT1P_TO_TC_MAP": {
            "Dot1p_to_tc_map1": {
               "1": "1",
@@ -2486,7 +2470,6 @@
               "4": "4"
             }
         },
-
         "TC_TO_PRIORITY_GROUP_MAP": {
            "tc_to_pg_map1": {
               "1": "1",
@@ -2497,7 +2480,6 @@
               "4": "4"
             }
         },
-
         "TC_TO_QUEUE_MAP": {
            "tc_to_q_map1": {
               "1": "1",
@@ -2508,7 +2490,6 @@
               "4": "4"
             }
         },
-
         "TC_TO_DSCP_MAP": {
            "tc_to_dscp_map1": {
               "1": "1",
@@ -2519,7 +2500,6 @@
               "4": "4"
             }
         },
-
         "MAP_PFC_PRIORITY_TO_QUEUE": {
            "pfc_prio_to_q_map1": {
               "1": "1",
@@ -2530,7 +2510,6 @@
               "4": "4"
             }
         },
-
         "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
            "pfc_prio_to_pg_map1": {
               "1": "1",
@@ -2625,7 +2604,6 @@
               "pfcwd_sw_enable" : "3,4"
             }
         },
-
         "STP": {
             "GLOBAL": {
                 "mode": "pvst",
@@ -2664,8 +2642,6 @@
                 "uplink_fast": "false"
             }
         },
-
-
         "MCLAG_DOMAIN": {
             "123": {
                 "source_ip": "12.1.1.1",
@@ -2685,8 +2661,6 @@
                 "unique_ip": "enable"
             }
         },
-
-
         "MIRROR_SESSION": {
             "erspan": {
                 "dscp": "10",
@@ -2705,13 +2679,11 @@
                 "src_port": "Ethernet3,Ethernet4"
             }
         },
-
         "PEER_SWITCH": {
             "vlab-05": {
                 "address_ipv4":  "10.1.0.33"
             }
         },
-
         "MUX_CABLE": {
             "Ethernet4": {
                 "cable_type": "active-active",
@@ -2728,7 +2700,6 @@
                 "state": "auto"
             }
         },
-
         "MUX_LINKMGR": {
             "LINK_PROBER": {
                 "interval_v4": "100",
@@ -2750,7 +2721,6 @@
                 "kill_radv": "False"
             }
         },
-
         "NEIGH": {
             "Vlan100|100.1.1.3": {
                 "family": "IPv4"
@@ -2760,7 +2730,6 @@
                 "family": "IPv4"
             }
         },
-
         "POLICER": {
             "everflow_static_policer": {
                 "meter_type": "bytes",
@@ -2771,8 +2740,6 @@
                 "red_packet_action": "drop"
             }
         },
-
-
         "NVGRE_TUNNEL": {
             "tunnel_1": {
                 "src_ip": "10.0.0.1"
@@ -2784,7 +2751,6 @@
                 "vsid": "5000"
             }
         },
-
         "BGP_VOQ_CHASSIS_NEIGHBOR": {
             "10.0.0.1": {
                 "asn": "64850",
@@ -2807,7 +2773,6 @@
                 "admin_status": "up"
             }
         },
-
         "VOQ_INBAND_INTERFACE": {
             "Ethernet-IB0": {
                "inband_type": "port"
@@ -2815,7 +2780,6 @@
             "Ethernet-IB0|3.3.3.1/32": {},
             "Ethernet-IB0|3333::3:5/128": {}
         },
-
         "PASSW_HARDENING": {
             "POLICIES": {
                 "state": "enabled",
@@ -2830,7 +2794,6 @@
                 "upper_class": "true"
             }
         },
-
         "SSH_SERVER": {
             "POLICIES":{
                 "authentication_retries": "6",
@@ -2845,14 +2808,12 @@
                 "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
             }
         },
-
         "SERIAL_CONSOLE": {
             "POLICIES":{
                 "inactivity_timeout": "15",
                 "sysrq_capabilities": "disabled"
             }
         },
-
         "MAC_MOVE_GUARD": {
             "GLOBAL": {
                 "enabled": "true",
@@ -2862,7 +2823,6 @@
                 "action": "DISABLE_PORT"
             }
         },
-
         "MACSEC_PROFILE": {
             "test": {
                 "priority": "64",
@@ -2878,7 +2838,6 @@
                 "rekey_period": "3600"
             }
         },
-
         "BGP_INTERNAL_NEIGHBOR": {
             "10.1.0.0": {
                 "asn": "64850",
@@ -2901,7 +2860,6 @@
                 "admin_status": "up"
             }
         },
-
         "KDUMP": {
             "config": {
                 "enabled": "true",
@@ -2963,7 +2921,6 @@
                 ]
             }
         },
-
         "SNMP": {
             "CONTACT": {
                 "Contact": "testuser@contoso.com"
@@ -3013,11 +2970,6 @@
                 "max_events": "1024"
             }
         },
-        "SAI_PROFILE": {
-            "SAI_NUM_ECMP_MEMBERS": {
-                "value": "32"
-            }
-        },
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {
                 "status": "enabled"
@@ -3036,14 +2988,12 @@
                 "small_packet_percentage": "100"
             }
         },
-
         "DEFAULT_LOSSLESS_BUFFER_PARAMETER": {
             "AZURE": {
                 "default_dynamic_th": "0",
                 "over_subscribe_ratio": "0"
             }
         },
-
         "CONSOLE_PORT": {
             "1": {
                 "baud_rate": "115200",
@@ -3063,7 +3013,7 @@
                 "enabled": "yes"
             }
         },
-	"STATIC_ROUTE": {
+    	"STATIC_ROUTE": {
             "default|20.20.20.0/24": {
                 "blackhole": "false",
                 "distance": "1",
@@ -3239,12 +3189,12 @@
                 "dpu_bfd_probe_multiplier": "3"
             }
         },
-	"XCVRD_LOG": {
-	    "Y_CABLE": {
-		"log_verbosity": "notice"
-	    }
-	},
-	"GRPCCLIENT": {
+    	"XCVRD_LOG": {
+    	    "Y_CABLE": {
+    		"log_verbosity": "notice"
+    	    }
+    	},
+    	"GRPCCLIENT": {
             "config": {
                 "type": "secure",
                 "auth_level": "server",
@@ -3256,7 +3206,7 @@
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
             }
-	},
+    	},
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
@@ -3385,6 +3335,16 @@
                 "type": "TYPE_0_OPERATOR_CONFIGURED",
                 "esi": "00:01:02:03:04:05:06:07:08:FF",
                 "df_pref": "12012"
+            }
+        },
+        "FDB_SYNC": {
+            "global": {
+                "mac_sync_mode": "fpm"
+            }
+        },
+        "SAI_PROFILE": {
+            "SAI_NUM_ECMP_MEMBERS": {
+                "value": "32"
             }
         },
         "EVPN_MH_GLOBAL": {

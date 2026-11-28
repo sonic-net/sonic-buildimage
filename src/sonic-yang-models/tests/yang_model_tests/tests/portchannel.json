@@ -26,8 +26,7 @@
     },
     "PORT_CHANNEL_INVALID_FALLBACK": {
         "desc": "INCORRECT PORTCHANNEL FALLBACK IN PORT_CHANNEL TABLE.",
-        "eStrKey" : "Pattern",
-        "eStr": ["false|true|False|True"]
+        "eStrKey" : "InvalidValue"
     },
     "PORT_CHANNEL_INVALID_FAST_RATE": {
         "desc": "INCORRECT PORTCHANNEL FAST_RATE IN PORT_CHANNEL TABLE.",
