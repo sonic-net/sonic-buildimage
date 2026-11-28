@@ -1,0 +1,52 @@
+Index: p4lang-bmv2-1.15.0/targets/simple_switch/tests/CLI_tests/run_one_test.py.in
+===================================================================
+--- p4lang-bmv2-1.15.0.orig/targets/simple_switch/tests/CLI_tests/run_one_test.py.in
++++ p4lang-bmv2-1.15.0/targets/simple_switch/tests/CLI_tests/run_one_test.py.in
+@@ -24,6 +24,10 @@
+ # Class written by Mihai Budiu, for Barefoot Networks, Inc.
+ 
+ 
++# TODO(antonin): fragile if the name changes in the bmv2 code
++RPC_PATH_TEMPLATE = "/tmp/bmv2-{}-notifications.ipc"
++
++
+ class ConcurrentInteger(object):
+     # Generates exclusive integers in a range 0-max
+     # in a way which is safe across multiple processes.
+@@ -45,10 +49,14 @@
+         # try 10 times
+         for i in range(0, 10):
+             index = random.randint(0, self.max)
++            # A leftover notification socket means the id is either in use by
++            # a concurrent instance or was orphaned by a crashed one; binding
++            # to it would fail with "Address already in use".
++            if os.path.exists(RPC_PATH_TEMPLATE.format(index)):
++                continue
+             file = self.lockName(index)
+             try:
+                 os.makedirs(file)
+-                os.rmdir(file)
+                 return index
+             except:
+                 time.sleep(1)
+@@ -74,8 +82,7 @@
+         sys.exit(2)
+     thrift_port = str(9090 + rand)
+     device_id = str(rand)
+-    # TODO(antonin): fragile if the name changes in the bmv2 code
+-    rpc_path = "/tmp/bmv2-{}-notifications.ipc".format(device_id)
++    rpc_path = RPC_PATH_TEMPLATE.format(device_id)
+ 
+     # makes sure that the switch will start right away
+     simple_switch_p = subprocess.Popen(
+@@ -101,6 +108,10 @@
+             os.remove(rpc_path)
+         except:
+             pass
++        try:
++            concurrent.release(rand)
++        except:
++            pass
+ 
+     cmd = ["@abs_top_srcdir@/tools/runtime_CLI.py",
+            "--thrift-port", thrift_port]
