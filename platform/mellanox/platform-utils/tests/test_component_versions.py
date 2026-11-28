@@ -374,7 +374,8 @@ class TestOeFw:
             get_component_rules.cache_clear()
 
     @mock.patch('mellanox_component_versions.main.get_device_data_manager',
-                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1),
+                                       is_simx_platform=mock.Mock(return_value=False)))
     @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
     @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
     @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=["95.10.0762"])
@@ -388,7 +389,8 @@ class TestOeFw:
         mock_run.assert_not_called()
 
     @mock.patch('mellanox_component_versions.main.get_device_data_manager',
-                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1)))
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1),
+                                       is_simx_platform=mock.Mock(return_value=False)))
     @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
     @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
     @mock.patch('mellanox_fw_manager.vmod.get_running_versions', return_value=[])
@@ -398,3 +400,17 @@ class TestOeFw:
             assert get_current_version("OE_FW") == (True, "N/A")
         finally:
             get_component_rules.cache_clear()
+
+    @mock.patch('mellanox_component_versions.main.get_device_data_manager',
+                return_value=mock.Mock(get_asic_count=mock.Mock(return_value=1),
+                                       is_simx_platform=mock.Mock(return_value=True)))
+    @mock.patch('mellanox_component_versions.main.get_asic_type', return_value="mellanox")
+    @mock.patch('mellanox_fw_manager.vmod.is_cpo_platform', return_value=True)
+    @mock.patch('mellanox_fw_manager.vmod.get_running_versions')
+    def test_actual_is_na_on_simx(self, mock_running, _cpo, _asic, _count):
+        get_component_rules.cache_clear()
+        try:
+            assert get_current_version("OE_FW") == (True, "N/A")
+        finally:
+            get_component_rules.cache_clear()
+        mock_running.assert_not_called()
