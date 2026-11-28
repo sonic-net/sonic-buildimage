@@ -10,13 +10,16 @@ from tools.bazel.ci.swss_native_closure import FIB
 
 class FibOwnershipTest(unittest.TestCase):
     def test_swss_next_hop_types_are_not_a_libfib_dependency(self):
-        for value in ("NextHopGroupKey", "FdbDest::NEXTHOPGROUP", '"nexthopgroupkey.h"'):
+        for value in ("NextHopGroupKey", "FdbDest::NEXTHOPGROUP", '"nexthopgroupkey.h"',
+                      "/* Grants access to NhgOrch/NextHopGroup/RouteOrch protected/private state"):
             with self.subTest(value=value):
                 self.assertIsNone(FIB.search(value))
 
     def test_library_owner_header_and_c_abi_require_review(self):
         for value in ("libnexthopgroup.so.0", "-lnexthopgroup", "//src/libraries/sonic-fib:nexthopgroup",
-                      "nexthopgroup/c_nexthopgroupfull.h", "fib_frr_set_log_level(3)",
+                      '#include "nexthopgroup/c_nexthopgroupfull.h"',
+                      "#include <nexthopgroup/c-api/nexthopgroup_capi.h>",
+                      "-I/usr/include/nexthopgroup/", '#include "nexthopgroup_capi.h"', "fib_frr_set_log_level(3)",
                       "nexthopgroupfull_json_from_c_nhg_multi(group)", "C_NextHopGroupFull"):
             with self.subTest(value=value):
                 self.assertIsNotNone(FIB.search(value))

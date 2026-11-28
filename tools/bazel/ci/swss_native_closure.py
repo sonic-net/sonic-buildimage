@@ -18,9 +18,10 @@ from tools.bazel.oci import package_contract
 from tools.bazel.oci.runtime_smoke import gdb_lookup
 
 # SWSS also owns NextHopGroupKey/classes unrelated to libFIB. Match the
-# separate owner's library, installed headers and exported C ABI specifically.
+# separate owner's library, case-sensitive include directory and exported C ABI.
 FIB = re.compile(
-    r"libfib|libnexthopgroup|sonic[-_]fib|(?:^|\s)-l(?:fib|nexthopgroup)(?:\s|$)|nexthopgroup(?:/|_capi\.h)|"
+    r"libfib|libnexthopgroup|sonic[-_]fib|(?:^|\s)-l(?:fib|nexthopgroup)(?:\s|$)|"
+    r"(?-i:\bnexthopgroup/)|\bnexthopgroup_capi\.h\b|"
     r"\bfib_frr_|\bnexthopgroup_version\b|\bnexthopgroupfull_json_|\bC_NextHopGroupFull\b",
     re.IGNORECASE,
 )
