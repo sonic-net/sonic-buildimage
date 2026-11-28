@@ -6,5 +6,11 @@
     "PORTCHANNEL": {
         "PortChannel10": {},
         "PortChannel20": {}
+    },
+    "BRIDGE_PORT_PROTECTION": {
+        "PortChannel10": {
+            "protection_mode": "SOFTWARE",
+            "admin_mode": "PRIMARY"
+        }
     }
 }
