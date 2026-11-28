@@ -96,6 +96,13 @@ module sonic-vlan-sub-interface {
                     }   
                 }
 
+                leaf proxy_arp {
+                    description "Enable or disable proxy ARP on the VLAN sub-interface";
+                    type string {
+                        pattern "enabled|disabled";
+                    }
+                }
+
                 leaf ipv6_use_link_local_only {
                     description "Enable/Disable IPv6 link local address on vlan sub-interface";
                     type stypes:mode-status;
