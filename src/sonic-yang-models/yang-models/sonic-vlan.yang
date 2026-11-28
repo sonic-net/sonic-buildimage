@@ -47,6 +47,10 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2026-11-27 {
+		description "Require a matching VLAN IP address for DHCP server configuration";
+	}
+
 	revision 2026-10-30 {
 		description "Count priority-tagged VLAN members in the one-untagged-VLAN-per-port check.";
 	}
@@ -269,12 +273,20 @@ module sonic-vlan {
 					description "Configure the dhcp v4 servers";
 					type inet:ip-address;
 					ordered-by user;
+					must "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_IPPREFIX_LIST
+						[vlan:name=current()/../name and not(contains(vlan:ip-prefix, ':'))]" {
+						error-message "DHCPv4 servers require an IPv4 prefix on the same VLAN";
+					}
 				}
 
 				leaf-list dhcpv6_servers {
 					description "Configure the dhcp v6 servers";
 					type inet:ipv6-address;
 					ordered-by user;
+					must "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_IPPREFIX_LIST
+						[vlan:name=current()/../name and contains(vlan:ip-prefix, ':')]" {
+						error-message "DHCPv6 servers require an IPv6 prefix on the same VLAN";
+					}
 				}
 
 				leaf mtu {

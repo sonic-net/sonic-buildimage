@@ -211,7 +211,6 @@
         <VlanInterface>
           <Name>ab4</Name>
           <AttachTo>fortyGigE0/8</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>1001</VlanID>
           <Tag>1001</Tag>
           <Subnets>192.168.0.32/27</Subnets>
@@ -219,7 +218,6 @@
         <VlanInterface>
           <Name>kk1</Name>
           <AttachTo>fortyGigE0/12</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>2020</VlanID>
           <Tag>2020</Tag>
           <Type>Tagged</Type>
@@ -228,7 +226,6 @@
         <VlanInterface>
           <Name>ab2</Name>
           <AttachTo>fortyGigE0/12</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>2000</VlanID>
           <Tag>2000</Tag>
           <Type>Tagged</Type>
@@ -237,7 +234,6 @@
         <VlanInterface>
           <Name>ab3</Name>
           <AttachTo>fortyGigE0/12</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>2001</VlanID>
           <Tag>2001</Tag>
           <Subnets>192.168.0.240/27</Subnets>

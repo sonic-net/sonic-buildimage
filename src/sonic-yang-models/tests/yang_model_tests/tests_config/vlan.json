@@ -25,6 +25,26 @@
                         "mac": "00:aa:bb:cc:dd:ee"
                     }
                 ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100"
+                    },
+                    {
+                        "name": "Vlan200"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "192.0.2.1/24"
+                    },
+                    {
+                        "name": "Vlan200",
+                        "ip-prefix": "198.51.100.1/24"
+                    }
+                ]
             }
         }
     },
@@ -35,9 +55,6 @@
                     {
                         "admin_status": "up",
                         "description": "server_vlan",
-                        "dhcp_servers": [
-                            "10.186.72.56"
-                        ],
                         "mtu": "9100",
                         "name": "Vlan8090"
                     }
@@ -52,9 +69,6 @@
                     {
                         "admin_status": "up",
                         "description": "server_vlan",
-                        "dhcp_servers": [
-                            "10.186.72.56"
-                        ],
                         "mtu": "9100",
                         "name": "Vlan123456789012"
                     }
@@ -76,6 +90,19 @@
                         "name": "Vlan100"
                     }
                 ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "192.0.2.1/24"
+                    }
+                ]
             }
         }
     },
@@ -91,6 +118,19 @@
                         ],
                         "mtu": "9216",
                         "name": "Vlan500"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan500"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan500",
+                        "ip-prefix": "2001:db8::1/64"
                     }
                 ]
             }
@@ -314,19 +354,18 @@
         }
     },
     "ALL_VLAN_TEST": {
-	"sonic-vlan:sonic-vlan": {
-	    "sonic-vlan:VLAN": {
-		"VLAN_LIST": [{
-		    "name": "Vlan1-4094",
-		    "description": "server_vlan",
-		    "dhcp_servers": [
-			"10.186.72.56"
-		    ],
-		    "mtu": "9100",
-		    "admin_status": "up"
-		}]
-	    }
-	}
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan1-4094",
+                        "description": "server_vlan",
+                        "mtu": "9100",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
     },
     "VLAN_INTERFACE_WRONG_NAT_ZONE_RANGE": {
         "sonic-port:sonic-port": {
@@ -1582,6 +1621,167 @@
                     {
                         "name": "Vlan100",
                         "vnet_name": "Vnet1"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV4_WITH_NO_IP": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcp_servers": [
+                            "192.0.2.200"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV4_WITH_WRONG_IP_FAMILY": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcp_servers": [
+                            "192.0.2.200"
+                        ]
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "2001:db8::1/64"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV4_WITH_IP_ON_OTHER_VLAN": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcp_servers": [
+                            "192.0.2.200"
+                        ]
+                    },
+                    {
+                        "name": "Vlan200"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan200"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan200",
+                        "ip-prefix": "192.0.2.1/24"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV6_WITH_NO_IP": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcpv6_servers": [
+                            "2001:db8::200"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV6_WITH_WRONG_IP_FAMILY": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcpv6_servers": [
+                            "2001:db8::200"
+                        ]
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "192.0.2.1/24"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_DHCPV6_WITH_IP_ON_OTHER_VLAN": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vlanid": 100,
+                        "dhcpv6_servers": [
+                            "2001:db8::200"
+                        ]
+                    },
+                    {
+                        "name": "Vlan200"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan200"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan200",
+                        "ip-prefix": "2001:db8::1/64"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_EMPTY_DHCP_SERVER_LISTS_WITHOUT_IP": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "dhcp_servers": [],
+                        "dhcpv6_servers": []
                     }
                 ]
             }

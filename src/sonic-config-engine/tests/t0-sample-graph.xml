@@ -256,7 +256,6 @@
           <FhrpProtoType i:nil="true"/>
           <Type i:nil="true"/>
           <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
-          <Dhcpv6Relays>fc02:2000::1;fc02:2000::2</Dhcpv6Relays>
           <VlanID>1000</VlanID>
           <Tag>1000</Tag>
           <Subnets>192.168.0.0/27</Subnets>
@@ -271,7 +270,6 @@
           <FhrpProtoType i:nil="true"/>
           <Type i:nil="true"/>
           <DhcpRelays>192.0.0.3;192.0.0.4</DhcpRelays>
-          <Dhcpv6Relays>fc02:2000::3;fc02:2000::4</Dhcpv6Relays>
           <VlanID>2000</VlanID>
           <Tag>2000</Tag>
           <Subnets>192.168.200.0/27</Subnets>
@@ -285,7 +283,6 @@
           <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
           <FhrpProtoType i:nil="true"/>
           <Type>UserDefinedL2Vlan</Type>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>99</VlanID>
           <Tag>99</Tag>
           <Subnets/>
@@ -299,7 +296,6 @@
           <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
           <FhrpProtoType i:nil="true"/>
           <Type>UserDefinedL2Vlan</Type>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
           <VlanID>98</VlanID>
           <Tag>98</Tag>
           <Subnets/>

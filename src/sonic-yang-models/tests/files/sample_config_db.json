@@ -179,6 +179,7 @@
                 "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
+            "Vlan12": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
                 "scope": "global",
                 "family": "IPv6"
@@ -202,6 +203,10 @@
             "Vlan777|fe80::1/10": {
                 "scope": "local",
                 "family": "IPv6"
+            },
+            "Vlan12|192.0.2.1/24": {
+                "scope": "global",
+                "family": "IPv4"
             }
         },
         "ACL_RULE": {

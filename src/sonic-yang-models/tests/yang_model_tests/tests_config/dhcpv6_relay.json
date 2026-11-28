@@ -11,6 +11,15 @@
                     }
                 ]
             }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan500"
+                    }
+                ]
+            }
         }
     },
     "DHCPV6_SERVER_VALID_FORMAT": {
@@ -93,6 +102,18 @@
                         "name": "Vlan500",
                         "rfc6939_support": "False",
                         "interface_id": "False"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPV6_RELAY_VLAN_MISSING": {
+        "sonic-dhcpv6-relay:sonic-dhcpv6-relay": {
+            "sonic-dhcpv6-relay:DHCP_RELAY": {
+                "DHCP_RELAY_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "rfc6939_support": "true"
                     }
                 ]
             }

@@ -2,6 +2,14 @@
     "VLAN_INTERFACE": {
         "Vlan1000|fc02:2000::2/24": {}
     },
+    "DHCP_RELAY": {
+        "Vlan1000": {
+            "dhcpv6_servers": [
+                "fc02:2000::1",
+                "fc02:2000::2"
+            ]
+        }
+    },
     "FEATURE": {
         "dhcp_server": {
             "state": "disabled"

@@ -630,7 +630,9 @@ assert config == original, 'Rendering mutated the ConfigDB input'
         sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
                                      'docker-dhcp-relay.supervisord.conf.j2')
-        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        dhcpv6_relay_data = {"DHCP_RELAY": {"Vlan1000": {"dhcpv6_servers": ["fc02:2000::1", "fc02:2000::2"]}}}
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config,
+                    '-a', json.dumps(dhcpv6_relay_data), '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
         with open(self.output_file, 'r') as output:
             rendered = output.read()
@@ -663,7 +665,8 @@ assert config == original, 'Rendering mutated the ConfigDB input'
             "DHCPV4_RELAY": {
                 "Vlan1000": {"dhcpv4_servers": ["192.0.0.1", "192.0.0.2"]},
                 "Vlan2000": {"dhcpv4_servers": ["192.0.0.3", "192.0.0.4"]}
-            }
+            },
+            "DHCP_RELAY": dhcpv6_relay_data["DHCP_RELAY"]
         }
         argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config,
                     '-a', json.dumps(sonic_dhcpv4_relay_data), '-t', template_path]

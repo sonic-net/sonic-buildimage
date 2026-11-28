@@ -10,11 +10,19 @@ module sonic-dhcpv6-relay {
 		prefix inet;
 	}
 
+	import sonic-vlan {
+		prefix vlan;
+	}
+
 	organization "SONiC";
 
 	contact "SONiC";
 
 	description "DHCPv6 Relay yang Module for SONiC OS";
+
+	revision 2026-11-27 {
+		description "Require DHCPv6 relay entries to name an existing VLAN";
+	}
 
 	revision 2021-10-30 {
 		description "First Revision";
@@ -32,7 +40,9 @@ module sonic-dhcpv6-relay {
 
 				leaf name {
 					description "VLAN interface name for DHCPv6 relay";
-					type string;
+					type leafref {
+						path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+					}
 				}
 
 				leaf-list dhcpv6_servers {
