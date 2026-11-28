@@ -398,7 +398,7 @@
 {% endif %}
 {% if asic_type in pfc_to_pg_map_supported_asics  %}
     "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
-{% if port_names_list_extra_queues|length > 0 %}
+{% if LOSSLESS_TC and port_names_list_extra_queues|length > 0 %}
         "AZURE_DUALTOR": {
             "2": "2",
             "3": "3",
@@ -458,7 +458,7 @@
             "tc_to_queue_map" : "AZURE",
 {% endif %}
 {% if asic_type in pfc_to_pg_map_supported_asics %}
-{% if port in port_names_list_extra_queues %}
+{% if LOSSLESS_TC and port in port_names_list_extra_queues %}
             "pfc_to_pg_map"   : "AZURE_DUALTOR",
 {% else %}
             "pfc_to_pg_map"   : "AZURE",
@@ -466,7 +466,8 @@
 {% endif %}
 {% if port not in PORT_DPC %}
 {% if port not in PORT_SERVICE %}
-{% if port in port_names_list_extra_queues %}
+{# An empty lossless list disables PFC, including on tunnel-remap ports. #}
+{% if LOSSLESS_TC and port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
             "pfc_enable"      : "{{ LOSSLESS_TC|join(',') }}",
@@ -638,7 +639,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|2": {
-{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
+{% if LOSSLESS_TC and port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}
@@ -659,7 +660,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|6": {
-{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
+{% if LOSSLESS_TC and port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}

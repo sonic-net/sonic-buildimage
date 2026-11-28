@@ -1,0 +1,23 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "type": "LeafRouter"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {"index": "0", "speed": "400000"},
+        "Ethernet4": {"index": "1", "speed": "100000"}
+    },
+    "DEVICE_NEIGHBOR": {
+        "Ethernet0": {"name": "tor"},
+        "Ethernet4": {"name": "leaf"}
+    },
+    "DEVICE_NEIGHBOR_METADATA": {
+        "tor": {"type": "ToRRouter"},
+        "leaf": {"type": "LeafRouter"}
+    },
+    "SYSTEM_DEFAULTS": {
+        "tunnel_qos_remap": {"status": "enabled"}
+    },
+    "asic_type": "mellanox"
+}
