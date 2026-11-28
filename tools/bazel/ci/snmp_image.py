@@ -136,7 +136,10 @@ def validate_images(directory):
         for source, destination in {
             "docker-snmp-init.sh": "usr/bin/docker-snmp-init.sh", "start.sh": "usr/bin/start.sh",
             "snmp_yml_to_configdb.py": "usr/bin/snmp_yml_to_configdb.py", "critical_processes": "etc/supervisor/critical_processes",
-            **{path.name: "usr/share/sonic/templates/" + path.name for path in (ROOT / "dockers/docker-snmp").glob("*.j2")},
+            "wait_for_snmp_config.sh": "usr/bin/wait_for_snmp_config.sh",
+            **{name: "usr/share/sonic/templates/" + name for name in (
+                "snmpd.conf.j2", "supervisord.conf.j2", "supervisord.conf.common.j2", "sysDescription.j2",
+            )},
         }.items():
             check.require(files[destination]["sha256"] == check.sha(ROOT / "dockers/docker-snmp" / source), "startup input changed: " + source)
         verify_state_directory(files)
