@@ -3,7 +3,7 @@
 	url = https://github.com/sonic-net/sonic-swss-common
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
-	url = https://github.com/securely1g/sonic-linux-kernel
+	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
 	url = https://github.com/sonic-net/sonic-sairedis
@@ -89,7 +89,7 @@
 	url = https://github.com/sonic-net/sonic-linkmgrd.git
 [submodule "src/sonic-p4rt/sonic-pins"]
 	path = src/sonic-p4rt/sonic-pins
-	url = https://github.com/securely1g/sonic-pins.git
+	url = https://github.com/sonic-net/sonic-pins.git
 [submodule "src/ptf-py3"]
 	path = src/ptf-py3
 	url = https://github.com/p4lang/ptf.git
@@ -143,7 +143,7 @@
 	url = https://github.com/Supervisor/supervisor
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
-	url = https://github.com/securely1g/sonic-alpine.git
+	url = https://github.com/sonic-net/sonic-alpine/
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish
