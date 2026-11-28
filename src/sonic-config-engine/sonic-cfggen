@@ -45,6 +45,7 @@ from sonic_py_common.bgp import validate_asn
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector, isInterfaceNameValid
 from asic_sensors_config import get_asic_sensors_config
+from gearbox_sensors_config import get_gearbox_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
 
@@ -660,14 +661,9 @@ def main():
 
         deep_update(data, hardware_data)
 
-        asic_sensors = {}
-        if is_multi_asic():
-            if asic_name is not None:
-                asic_sensors = get_asic_sensors_config()
-        else:
-            asic_sensors = get_asic_sensors_config()
-        if asic_sensors:
-            deep_update(data, asic_sensors) 
+        if not is_multi_asic() or asic_name is not None:
+            deep_update(data, get_asic_sensors_config())
+            deep_update(data, get_gearbox_sensors_config())
 
     paths = ['/', '/usr/share/sonic/templates']
     if args.template_dir:
