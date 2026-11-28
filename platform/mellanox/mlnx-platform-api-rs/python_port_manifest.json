@@ -1,0 +1,31 @@
+{
+  "upstream_commit": "6bbb706304e74f2599ce760b31358aa871767808",
+  "sources": {
+    "bmc.py": "29efe751c52f9664b7673b75a73a5386d5b42b3250690bb102f3bb2f0429d82a",
+    "chassis.py": "d295c3a655cec2c04e60138eedf114f5ed71373e6e46dfd59d8239f1740b8896",
+    "component.py": "d0ced8ab82eb0a6bdc303985992af83e6cda504a11cbd05f88a156565ae33aa9",
+    "db_table_helper.py": "5a7b5a17d466a4fc9a92b113ecd10fa2ae63700ab866abf4cddbd5e917e0da04",
+    "device_data.py": "ddad9cee46299d5f70b8b07067cd3f71440658a1d1f5369776183c8fdc048704",
+    "dpuctlplat.py": "048e9c36ed7c68a06ab60dad48773bff3983813f4a754686bb10b234c6038ae7",
+    "eeprom.py": "f7f8d9bafb7e4f6c23de554f6284178fcbe30918353ec8ee6d494a50a7abe009",
+    "fan.py": "9a8244b8ba4e5b648c65b48a801205c4a7248c4e442af804a39cf60db45a16fd",
+    "fan_drawer.py": "adc90fec3158b4c58d570970078376d0afe99923ed8cbe10caa437aabc67b950",
+    "inotify_helper.py": "4b71b5cc99f9aa48bee30efc8a5c3c7770ae418ae136ffc687a19eb92e5a7856",
+    "led.py": "124645b7a715b8baea394f3fe126f3f618dc5cdf10ef00aa501cef25e34ec788",
+    "liquid_cooling.py": "52edd8a9cadd7e6522afe2dd3c2c2c98ebec3ff513c1da21de1ed058a3f3041d",
+    "module.py": "62effff7f08b9ea3d91eed9b88808f1e093cd295e39a32f73c0d30af7bcd43ec",
+    "module_host_mgmt_initializer.py": "1d8028680228c7090fac5c8bf279ac5cb68430bdcf6c83f6737786cb6ff8257f",
+    "pcie.py": "eaa19f8f4336b715e0ed274c56bb2753c2e3d34cbe5523c1319a939c40345da2",
+    "pdb.py": "21724808c5d232eda0d56b0d8f9e635fa82af391d7d18f60a5e71c2dea5fa7f9",
+    "psu.py": "ed9ae201820c04d99935385665dabf23b3ce719e0c44b42f6356348f162d39cd",
+    "sed_mgmt.py": "d838c971b415eb0e1aba360099068ad523a90e8f04d27c6b961c5b5255efad3a",
+    "sfp.py": "5ffbd477ad74e4eebe9e67c9e298a35dc47355a8a7d8e9abcae102ca6bf51a78",
+    "thermal.py": "c672c2ad9606fd3fa939692c0ff5d39feed8f9891bf2280618132920f8c3d711",
+    "thermal_manager.py": "0318a5397545889b8cc3840d9c242364144aded56e46cc37202435650d4b4f2f",
+    "thermal_updater.py": "86cc2d477e037fa2b6ac65e03903e34dbec6f5c010afce16f6b69928f0f33b96",
+    "utils.py": "0379fe15f79d0779387dd78c4013bf975db499ffd8537bcaf5945e3780a0dc70",
+    "vpd_parser.py": "7005d0e81192fcbf69fc7dc6ee35f1a33c782d4cf984bf280f4c893ca6f45724",
+    "wait_sfp_ready_task.py": "4d4febc44a5a8d0d51483ed3c85995a1d4b4a6d0aa811de1b0fbb126a700caf8",
+    "watchdog.py": "c35d41e4688bd6fcc4e620cf630158ee2b2242ed8957e0fb108d79b4961569cf"
+  }
+}

@@ -1,0 +1,13 @@
+dmidecode -t0
+dmidecode -t0
+dmidecode -t0
+onie-fw-update show-pending
+onie-fw-update add /tmp/99-bios.rom
+onie-fw-update update
+cpldupdate --gpio /tmp/c/fw/cpld.bin --uncustomized --print-progress
+cpldupdate --gpio /tmp/c/fw/missing.vme --uncustomized --print-progress
+cpldupdate --gpio /tmp/mpfa-royoj5dg/burn.vme --uncustomized --print-progress
+cpldupdate --gpio /tmp/mpfa-j70kvon7/burn.vme --uncustomized --print-progress
+cpldupdate --gpio /tmp/mpfa-j70kvon7/refresh.vme --uncustomized --print-progress
+cpldupdate --gpio /tmp/mpfa-2ssm66c3/burn.vme --uncustomized --print-progress
+cpldupdate --gpio /tmp/c/fw/cpld.vme --uncustomized --print-progress

@@ -1,0 +1,7 @@
+STEP 0 => 'ok'
+STEP 1 => 'ok'
+STEP 2 => None
+STEP 3 => 'ok'
+STEP 4 => 'ok'
+STEP 5 => raise IsADirectoryError: [Errno 21] Is a directory: '/var/run/hw-management/system/aux_pwr_cycle'
+STEP 6 => [('ComponentONIE', 'ONIE'), ('ComponentSSD', 'SSD'), ('ComponentBIOS', 'BIOS'), ('ComponentCPLD', 'CPLD1'), ('ComponentCPLD', 'CPLD2'), ('ComponentCPLD', 'CPLD3'), ('ComponentCPLD', 'CPLD4')]
