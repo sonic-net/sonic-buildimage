@@ -16,7 +16,6 @@
  * A pddf kernel module for system status registers
  */
 
-#define __STDC_WANT_LIB_EXT1__ 1
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
@@ -32,8 +31,6 @@
 #include <linux/kobject.h>
 #include "../../../../pddf/i2c/modules/include/pddf_client_defs.h"
 #include "../../../../pddf/i2c/modules/include/pddf_sysstatus_defs.h"
-
-#define _memset(s, c, n) memset(s, c, n)
 
 SYSSTATUS_DATA sysstatus_data = {0};
 
@@ -122,7 +119,29 @@ static const struct attribute_group pddf_sysstatus_data_group = {
 static struct kobject *sysstatus_addr_kobj;
 static struct kobject *sysstatus_data_kobj;
 
+/* reg shift */
+static u8 _shift(u8 mask)
+{
+    int i=0, mask_one=1;
 
+    for(i=0; i<8; ++i) {
+        if ((mask & mask_one) == 1)
+            return i;
+        else
+            mask >>= 1;
+    }
+
+    return -1;
+}
+
+/* reg mask and shift */
+static u8 _mask_shift(u8 val, u8 mask)
+{
+    int shift=0;
+
+    shift = _shift(mask);
+    return (val & mask) >> shift;
+}
 
 ssize_t show_sysstatus_data(struct device *dev, struct device_attribute *da, char *buf)
 {
@@ -154,7 +173,7 @@ ssize_t show_sysstatus_data(struct device *dev, struct device_attribute *da, cha
         status = board_i2c_cpld_read( sysstatus_addr_attrs->devaddr, sysstatus_addr_attrs->offset);
     }
 
-    return sprintf(buf, "0x%x\n", (status&sysstatus_addr_attrs->mask));
+    return sprintf(buf, "0x%x\n", _mask_shift(status, sysstatus_addr_attrs->mask));
 
 }
 
@@ -203,17 +222,24 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
 {
     PDDF_ATTR *ptr = (PDDF_ATTR *)da;
     SYSSTATUS_DATA *pdata = (SYSSTATUS_DATA *)(ptr->addr);
+    int i=0;
+    for(i = 0;i<pdata->len; i++) {
+        if(!strncmp(pdata->sysstatus_addr_attr.aname, pdata->sysstatus_addr_attrs[i].aname, ATTR_NAME_LEN)) {
+            // Attribute already exists
+            return count;
+        }
+    }
+
+    if(pdata->len >= MAX_ATTRS) {
+        printk(KERN_DEBUG "Maximum number of attributes reached. Cannot add more attributes\n");
+        return -EINVAL;
+    }
 
     pdata->sysstatus_addr_attrs[pdata->len] = pdata->sysstatus_addr_attr;
     pdata->len++;
     pddf_dbg(SYSSTATUS, KERN_ERR "%s: Populating the data for %s\n", __FUNCTION__, pdata->sysstatus_addr_attr.aname);
 
-#ifdef __STDC_LIB_EXT1__
-    memset_s(&pdata->sysstatus_addr_attr, sizeof(pdata->sysstatus_addr_attr, 0, sizeof(pdata->sysstatus_addr_attr));
-#else
-    _memset(&pdata->sysstatus_addr_attr, 0, sizeof(pdata->sysstatus_addr_attr));
-#endif
-
+    memset(&pdata->sysstatus_addr_attr, 0, sizeof(pdata->sysstatus_addr_attr));
     return count;
 }
 
@@ -244,6 +270,7 @@ int __init sysstatus_data_init(void)
     ret = sysfs_create_group(sysstatus_addr_kobj, &pddf_sysstatus_addr_group);
     if (ret)
     {
+        kobject_put(sysstatus_data_kobj);
         kobject_put(sysstatus_addr_kobj);
         return ret;
     }
@@ -275,6 +302,6 @@ void __exit sysstatus_data_exit(void)
 module_init(sysstatus_data_init);
 module_exit(sysstatus_data_exit);
 
-MODULE_AUTHOR("Broadcom");
+MODULE_AUTHOR("Jason Tsai<jason.cy.tsai@ufispace.com>");
 MODULE_DESCRIPTION("SYSSTATUS platform data");
 MODULE_LICENSE("GPL");
