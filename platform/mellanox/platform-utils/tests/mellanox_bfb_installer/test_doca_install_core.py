@@ -39,7 +39,7 @@ def auto_recovery_cli():
     write = mock.MagicMock(return_value=b"1")
 
     def run_db_cli(command, **kwargs):
-        handler = read if command[2] == "HGET" else write
+        handler = read if command[command.index("CONFIG_DB") + 1] == "HGET" else write
         return handler(command, **kwargs)
 
     with mock.patch.object(
@@ -757,6 +757,8 @@ def _installation_success_ids(log_info):
 def _auto_recovery_write_command(state):
     return [
         "sonic-db-cli",
+        "-s",
+        "--authenticate",
         "CONFIG_DB",
         "HSET",
         "DEVICE_METADATA|localhost",
@@ -789,6 +791,7 @@ def test_enabled_auto_recovery_is_disabled_and_restored(tmp_path, auto_recovery_
     auto_recovery_cli["read"].assert_called_once_with(
         [
             "sonic-db-cli",
+            "-s",
             "CONFIG_DB",
             "HGET",
             "DEVICE_METADATA|localhost",
