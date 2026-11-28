@@ -33,7 +33,7 @@ CHASSIS_FABRIC_ASIC_INFO_TABLE='CHASSIS_FABRIC_ASIC_TABLE'
 # to prevent duplicate connections from being opened
 config_db_handle = {}
 
-def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE, use_tcp=True, authenticate=False):
     """
     The function connects to the config DB for a given namespace and
     returns the handle
@@ -42,15 +42,23 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
     In case of multi ASIC, the default namespace is the database
     instance running the on the host
 
+    Pass use_tcp=False to connect through the configured Unix socket.
+    Writer authentication requires use_tcp=False.
+
     Returns:
       handle to the config_db for a namespace
     """
-    config_db = swsscommon.ConfigDBConnector(namespace=namespace)
+    options = {}
+    if not use_tcp:
+        options["use_unix_socket_path"] = True
+    if authenticate:
+        options["authenticate"] = True
+    config_db = swsscommon.ConfigDBConnector(namespace=namespace, **options)
     config_db.connect()
     return config_db
 
 
-def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
+def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE, use_tcp=True, authenticate=False):
     """
     The function connects to the DBs for a given namespace and
     returns the handle
@@ -64,10 +72,18 @@ def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     database instance running the on the host
     In case of single ASIC, the namespace has to be DEFAULT_NAMESPACE
 
+    All selected databases must support the requested transport. Pass
+    use_tcp=False for Unix sockets and for writer authentication.
+
     Returns:
         handle to all the dbs for a namespaces
     """
-    db = swsscommon.SonicV2Connector(namespace=namespace)
+    options = {}
+    if not use_tcp:
+        options['use_unix_socket_path'] = True
+    if authenticate:
+        options['authenticate'] = True
+    db = swsscommon.SonicV2Connector(namespace=namespace, **options)
     db_list = list(db.get_db_list())
     if not is_supervisor():
         try:
@@ -281,17 +297,17 @@ def get_port_entry(port, namespace):
     return all_ports
 
 
-def get_port_table(namespace=None):
+def get_port_table(namespace=None, use_tcp=True):
     """
     Retrieves the ports from all the asic present on the devices
 
     Returns:
         a dict of all the ports
     """
-    return get_table(PORT_CFG_DB_TABLE, namespace)
+    return get_table(PORT_CFG_DB_TABLE, namespace, use_tcp=use_tcp)
 
 
-def get_table(table, namespace=None):
+def get_table(table, namespace=None, use_tcp=True):
     """
     Retrieves a merged table containing all entries across specified namespaces
 
@@ -302,7 +318,7 @@ def get_table(table, namespace=None):
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        ns_table = get_table_for_asic(table, ns)
+        ns_table = get_table_for_asic(table, ns, use_tcp=use_tcp)
         merged_table.update(ns_table)
 
     return merged_table
@@ -323,9 +339,9 @@ def get_port_table_for_asic(namespace):
     return get_table_for_asic(PORT_CFG_DB_TABLE, namespace)
 
 
-def get_table_for_asic(table, namespace):
+def get_table_for_asic(table, namespace, use_tcp=True):
 
-    config_db = connect_config_db_for_ns(namespace)
+    config_db = connect_config_db_for_ns(namespace, use_tcp=use_tcp)
     return config_db.get_table(table)
 
 

@@ -49,6 +49,15 @@ class TestDaemonBase:
             "STATE_DB", daemon_base.REDIS_TIMEOUT_MSECS, False, "asic0")
         inner.SonicDBConfig.getDbPort.assert_not_called()
 
+    def test_db_connect_authenticated_unix(self):
+        outer, inner = self._make_swss_mock()
+        with mock.patch.dict("sys.modules",
+                             {"swsscommon": outer,
+                              "swsscommon.swsscommon": inner}):
+            connector = daemon_base.db_connect("STATE_DB", "asic0", use_tcp=False, authenticate=True)
+        inner.DBConnector.assert_called_once_with("STATE_DB", daemon_base.REDIS_TIMEOUT_MSECS, False, "asic0", True)
+        assert connector is inner.DBConnector.return_value
+
     def test_db_connect_remote(self):
         """db_connect_remote uses DBConnector(db_id, host, port, timeout)."""
         outer, inner = self._make_swss_mock()

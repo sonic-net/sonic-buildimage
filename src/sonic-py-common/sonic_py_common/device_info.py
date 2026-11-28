@@ -72,11 +72,11 @@ sonic_ver_info = {}
 hw_info_dict = {}
 hwsku_info = None
 
-def get_localhost_info(field, config_db=None):
+def get_localhost_info(field, config_db=None, use_tcp=True):
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
         if not config_db:
-            config_db = ConfigDBConnector()
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')
@@ -89,8 +89,8 @@ def get_localhost_info(field, config_db=None):
     return None
 
 
-def get_hostname():
-    return get_localhost_info('hostname')
+def get_hostname(use_tcp=True):
+    return get_localhost_info('hostname', use_tcp=use_tcp)
 
 
 def get_machine_info():
@@ -696,7 +696,7 @@ def get_sonic_version_file():
 
 
 # Get hardware information
-def get_platform_info(config_db=None):
+def get_platform_info(config_db=None, use_tcp=True):
     """
     This function is used to get the HW info helper function
     """
@@ -709,32 +709,36 @@ def get_platform_info(config_db=None):
 
     version_info = get_sonic_version_info()
 
-    hw_info_dict['platform'] = get_platform()
-    hw_info_dict['hwsku'] = get_hwsku()
+    hw_info = {'platform': get_platform(config_db=None), 'hwsku': hwsku_info if config_db is None else None}
     if version_info:
-        hw_info_dict['asic_type'] = version_info.get('asic_type')
+        hw_info['asic_type'] = version_info.get('asic_type')
     try:
-        hw_info_dict['asic_count'] = len(get_asic_presence_list())
+        hw_info['asic_count'] = len(get_asic_presence_list())
     except:
-        hw_info_dict['asic_count'] = 'N/A'
+        hw_info['asic_count'] = 'N/A'
 
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
-        if not config_db:
-            config_db = ConfigDBConnector()
+        if config_db is None:
+            config_db = ConfigDBConnector(use_unix_socket_path=not use_tcp)
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
+        if not hw_info['platform']:
+            hw_info['platform'] = metadata.get('platform')
+        hw_info['hwsku'] = metadata.get('hwsku')
         switch_type = metadata.get('switch_type')
         if switch_type:
-            hw_info_dict['switch_type'] = switch_type
+            hw_info['switch_type'] = switch_type
+        if hw_info['platform'] and hw_info['hwsku']:
+            hw_info_dict = hw_info
     except Exception:
         pass
 
-    return hw_info_dict
+    return hw_info
 
 
-def get_chassis_info():
+def get_chassis_info(use_tcp=True):
     """
     This function is used to get the Chassis serial / model / rev number
     """
@@ -743,7 +747,7 @@ def get_chassis_info():
 
     try:
         # Init statedb connection
-        db = SonicV2Connector()
+        db = SonicV2Connector(use_unix_socket_path=not use_tcp)
         db.connect(db.STATE_DB)
         table = CHASSIS_INFO_TABLE.format(1)
 
@@ -791,15 +795,21 @@ def is_chassis_config_absent():
     return False
 
 
-def is_voq_chassis():
-    switch_type = get_localhost_info('switch_type')
+def _get_chassis_metadata_field(field, localhost_metadata):
+    if localhost_metadata is None:
+        return get_localhost_info(field)
+    return localhost_metadata.get(field)
+
+
+def is_voq_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
     single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
-def is_packet_chassis():
-    switch_type = get_localhost_info('switch_type')
+def is_packet_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
@@ -819,9 +829,9 @@ def is_disaggregated_chassis():
         return False
 
 
-def is_virtual_chassis():
-    switch_type = get_localhost_info('switch_type')
-    asic_type = get_platform_info().get('asic_type')
+def is_virtual_chassis(localhost_metadata=None):
+    switch_type = _get_chassis_metadata_field('switch_type', localhost_metadata)
+    asic_type = (get_sonic_version_info() or {}).get('asic_type')
     # A single-asic "pizza box" VOQ vlab has switch_type=voq but no chassis_db
     # config (chassisdb.conf absent), so it is not a virtual chassis.
     single_asic = is_chassis_config_absent()
@@ -831,10 +841,11 @@ def is_virtual_chassis():
         return False
 
 
-def is_chassis():
-    if get_localhost_info('type') == 'SpineRouter':
+def is_chassis(localhost_metadata=None):
+    if _get_chassis_metadata_field('type', localhost_metadata) == 'SpineRouter':
         return True
-    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
+    return ((is_voq_chassis(localhost_metadata) and not is_disaggregated_chassis())
+            or is_packet_chassis(localhost_metadata) or is_virtual_chassis(localhost_metadata))
 
 
 def is_smartswitch():
@@ -1006,13 +1017,21 @@ def get_smartswitch_midplane_ip():
     return None
 
 
-def get_device_runtime_metadata():
-    chassis_metadata = {}
-    if is_chassis():
-        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
-                                                'chassis_type': 'voq' if is_voq_chassis() else 'packet'}}
+def get_device_runtime_metadata(hwsku=None, localhost_metadata=None):
+    chassis_options = {}
+    if localhost_metadata is not None:
+        chassis_options['localhost_metadata'] = localhost_metadata
+        hwsku = hwsku or localhost_metadata.get('hwsku')
 
-    port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
+    chassis_metadata = {}
+    if is_chassis(**chassis_options):
+        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
+                                                'chassis_type': 'voq' if is_voq_chassis(**chassis_options) else 'packet'}}
+
+    has_ports = False
+    if hwsku or localhost_metadata is None:
+        has_ports = bool(get_path_to_port_config_file(hwsku=hwsku, asic="0" if is_multi_npu() else None))
+    port_metadata = {'ETHERNET_PORTS_PRESENT': has_ports}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)
@@ -1239,8 +1258,8 @@ def get_system_routing_stack():
 
 
 # Check if System warm reboot or Container warm restart is enabled.
-def is_warm_restart_enabled(container_name):
-    state_db = SonicV2Connector(host='127.0.0.1')
+def is_warm_restart_enabled(container_name, use_tcp=True):
+    state_db = SonicV2Connector(use_unix_socket_path=not use_tcp, host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
 
     TABLE_NAME_SEPARATOR = '|'
