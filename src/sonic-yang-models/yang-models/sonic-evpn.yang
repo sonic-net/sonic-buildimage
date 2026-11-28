@@ -113,6 +113,7 @@ module sonic-evpn {
 
             list EVPN_MH_GLOBAL_LIST {
                 key "name";
+                max-elements 1;
 
                 leaf name {
                     description "EVPN_MH_GLOBAL singleton entry name. Only default is valid.";
