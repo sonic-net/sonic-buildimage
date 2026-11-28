@@ -275,14 +275,32 @@ static long i2c_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg
     return 0;
 }
 
+static int i2c_dev_minor_to_dev(unsigned int minor, struct i2c_dev_info **i2c_dev)
+{
+    int i;
+
+    for (i = 0; i < MAX_I2C_DEV_NUM; i++) {
+        if (i2c_dev_arry[i] == NULL) {
+            continue;
+        }
+        if (i2c_dev_arry[i]->misc.minor == (int)minor) {
+            *i2c_dev = i2c_dev_arry[i];
+            return 0;
+        }
+    }
+
+    return -ENODEV;
+}
+
 static int i2c_dev_open(struct inode *inode, struct file *file)
 {
     unsigned int minor = iminor(inode);
     struct i2c_dev_info *i2c_dev;
+    int ret;
 
-    i2c_dev = i2c_dev_arry[minor];
-    if (i2c_dev == NULL) {
-        return -ENODEV;
+    ret = i2c_dev_minor_to_dev(minor, &i2c_dev);
+    if (ret != 0) {
+        return ret;
     }
 
     file->private_data = i2c_dev;
@@ -661,7 +679,7 @@ static struct i2c_dev_info * dev_match(const char *path)
         i2c_dev = i2c_dev_arry[ i ];
         snprintf(dev_name, MAX_NAME_SIZE,"/dev/%s", i2c_dev->name);
         if (!strcmp(path, dev_name)) {
-            I2C_DEV_DEBUG_DMESG("get dev_name = %s, minor = %d\n", dev_name, i);
+            I2C_DEV_DEBUG_DMESG("get dev_name = %s, minor = %d\n", dev_name, i2c_dev->misc.minor);
             return i2c_dev;
         }
     }
@@ -749,7 +767,7 @@ static int i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *
 static int i2c_dev_probe(struct i2c_client *client)
 #endif
 {
-    int ret = 0;
+    int ret = 0, free_idx;
     struct i2c_dev_info *i2c_dev;
     struct miscdevice *misc;
     i2c_dev_device_t *i2c_dev_device;
@@ -812,12 +830,17 @@ static int i2c_dev_probe(struct i2c_client *client)
         return -ENXIO;
     }
 
-    if (misc->minor >= MAX_I2C_DEV_NUM) {
-        dev_err(&client->dev, "minor number beyond the limit! is %d.\n", misc->minor);
+    for (free_idx = 0; free_idx < MAX_I2C_DEV_NUM; free_idx++) {
+        if (i2c_dev_arry[free_idx] == NULL) {
+            break;
+        }
+    }
+    if (free_idx >= MAX_I2C_DEV_NUM) {
+        dev_err(&client->dev, "i2c device num exceeds the limit %d!\n", MAX_I2C_DEV_NUM);
         misc_deregister(misc);
         return -ENXIO;
     }
-    i2c_dev_arry[misc->minor] = i2c_dev;
+    i2c_dev_arry[free_idx] = i2c_dev;
 
     dev_info(&client->dev, "register %u addr_bus_width %u data_bus_width 0x%x i2c_len device %s with %u per_rd_len %u per_wr_len success.\n",
         i2c_dev->addr_bus_width, i2c_dev->data_bus_width, i2c_dev->i2c_len, i2c_dev->name, i2c_dev->per_rd_len, i2c_dev->per_wr_len);

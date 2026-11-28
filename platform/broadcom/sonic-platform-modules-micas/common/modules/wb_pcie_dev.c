@@ -188,22 +188,35 @@ static inline u32 pci_dev_getreg(wb_pci_dev_t *wb_pci_dev, int reg)
     return wb_pci_dev->getreg(wb_pci_dev, reg);
 }
 
+static int pci_dev_minor_to_dev(unsigned int minor, wb_pci_dev_t **wb_pci_dev)
+{
+    int i;
+
+    for (i = 0; i < MAX_PCIE_NUM; i++) {
+        if (pcie_dev_arry[i] == NULL) {
+            continue;
+        }
+        if (pcie_dev_arry[i]->misc.minor == (int)minor) {
+            *wb_pci_dev = pcie_dev_arry[i];
+            return 0;
+        }
+    }
+
+    return -ENODEV;
+}
+
 static int pci_dev_open(struct inode *inode, struct file *file)
 {
     unsigned int minor = iminor(inode);
     wb_pci_dev_t *wb_pci_dev;
+    int ret;
 
     PCIE_DEV_DEBUG_VERBOSE("inode: %p, file: %p, minor: %u", inode, file, minor);
 
-    if (minor >= MAX_PCIE_NUM) {
-        PCIE_DEV_DEBUG_ERROR("minor out of range, minor = %d.\n", minor);
-        return -ENODEV;
-    }
-
-    wb_pci_dev = pcie_dev_arry[minor];
-    if (wb_pci_dev == NULL) {
+    ret = pci_dev_minor_to_dev(minor, &wb_pci_dev);
+    if (ret != 0) {
         PCIE_DEV_DEBUG_ERROR("wb_pci_dev is NULL, open failed, minor = %d\n", minor);
-        return -ENODEV;
+        return ret;
     }
 
     file->private_data = wb_pci_dev;
@@ -541,7 +554,7 @@ static wb_pci_dev_t *dev_match(const char *path)
         wb_pci_dev = pcie_dev_arry[i];
         snprintf(dev_name, MAX_NAME_SIZE,"/dev/%s", wb_pci_dev->name);
         if (!strcmp(path, dev_name)) {
-            PCIE_DEV_DEBUG_VERBOSE("get dev_name = %s, minor = %d\n", dev_name, i);
+            PCIE_DEV_DEBUG_VERBOSE("get dev_name = %s, minor = %d\n", dev_name, wb_pci_dev->misc.minor);
             return wb_pci_dev;
         }
     }
@@ -643,7 +656,7 @@ static int pci_setup_bars(wb_pci_dev_t *wb_pci_dev, struct pci_dev *dev)
 
 static int pci_dev_probe(struct platform_device *pdev)
 {
-    int ret, devfn;
+    int ret, devfn, free_idx;
     uint32_t pci_id;
     wb_pci_dev_t *wb_pci_dev;
     struct pci_dev *pci_dev, *pci_bridge_dev;
@@ -846,14 +859,19 @@ static int pci_dev_probe(struct platform_device *pdev)
         ret = -ENXIO;
         goto io_unmap;
     }
-    if (misc->minor >= MAX_PCIE_NUM) {
-        dev_err(&pdev->dev, "Error: device minor[%d] more than max pcie num[%d].\n",
-            misc->minor, MAX_PCIE_NUM);
+
+    for (free_idx = 0; free_idx < MAX_PCIE_NUM; free_idx++) {
+        if (pcie_dev_arry[free_idx] == NULL) {
+            break;
+        }
+    }
+    if (free_idx >= MAX_PCIE_NUM) {
+        dev_err(&pdev->dev, "Error: pcie device num exceeds max pcie num[%d].\n", MAX_PCIE_NUM);
         misc_deregister(misc);
-        ret = -EINVAL;
+        ret = -ENOSPC;
         goto io_unmap;
     }
-    pcie_dev_arry[misc->minor] = wb_pci_dev;
+    pcie_dev_arry[free_idx] = wb_pci_dev;
     dev_info(&pdev->dev, "%04x:%02x:%02x.%d[bar%d: %s]: register %s device with minor:%d success.\n",
         wb_pci_dev->domain, wb_pci_dev->bus, wb_pci_dev->slot, wb_pci_dev->fn, wb_pci_dev->bar,
         wb_pci_dev->bar_flag == IORESOURCE_MEM ? "IORESOURCE_MEM" : "IORESOURCE_IO",

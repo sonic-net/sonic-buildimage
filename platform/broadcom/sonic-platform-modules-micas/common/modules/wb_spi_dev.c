@@ -184,20 +184,33 @@ static long spi_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg
     return 0;
 }
 
+static int spi_dev_minor_to_dev(unsigned int minor, struct spi_dev_info **spi_dev)
+{
+    int i;
+
+    for (i = 0; i < MAX_SPI_DEV_NUM; i++) {
+        if (spi_dev_arry[i] == NULL) {
+            continue;
+        }
+        if (spi_dev_arry[i]->misc.minor == (int)minor) {
+            *spi_dev = spi_dev_arry[i];
+            return 0;
+        }
+    }
+
+    return -ENODEV;
+}
+
 static int spi_dev_open(struct inode *inode, struct file *file)
 {
     unsigned int minor = iminor(inode);
     struct spi_dev_info *spi_dev;
+    int ret;
 
-    if (minor >= MAX_SPI_DEV_NUM) {
-        SPI_DEV_ERROR("minor out of range, minor = %d.\n", minor);
-        return -ENODEV;
-    }
-
-    spi_dev = spi_dev_arry[minor];
-    if (spi_dev == NULL) {
+    ret = spi_dev_minor_to_dev(minor, &spi_dev);
+    if (ret != 0) {
         SPI_DEV_ERROR("spi_dev is NULL, open failed, minor = %d\n", minor);
-        return -ENODEV;
+        return ret;
     }
 
     file->private_data = spi_dev;
@@ -536,7 +549,7 @@ static struct spi_dev_info * dev_match(const char *path)
         spi_dev = spi_dev_arry[ i ];
         snprintf(dev_name, MAX_NAME_SIZE,"/dev/%s", spi_dev->name);
         if (!strcmp(path, dev_name)) {
-            SPI_DEV_DEBUG("get dev_name = %s, minor = %d\n", dev_name, i);
+            SPI_DEV_DEBUG("get dev_name = %s, minor = %d\n", dev_name, spi_dev->misc.minor);
             return spi_dev;
         }
     }
@@ -620,7 +633,7 @@ EXPORT_SYMBOL(spi_device_func_write);
 
 static int spi_dev_probe(struct spi_device *spi)
 {
-    int ret;
+    int ret, free_idx;
     struct spi_dev_info *spi_dev;
     struct miscdevice *misc;
     spi_dev_device_t *spi_dev_device;
@@ -678,12 +691,17 @@ static int spi_dev_probe(struct spi_device *spi)
         return -ENXIO;
     }
 
-    if (misc->minor >= MAX_SPI_DEV_NUM) {
-        dev_err(&spi->dev, "minor number beyond the limit! is %d.\n", misc->minor);
+    for (free_idx = 0; free_idx < MAX_SPI_DEV_NUM; free_idx++) {
+        if (spi_dev_arry[free_idx] == NULL) {
+            break;
+        }
+    }
+    if (free_idx >= MAX_SPI_DEV_NUM) {
+        dev_err(&spi->dev, "spi device num exceeds the limit %d!\n", MAX_SPI_DEV_NUM);
         misc_deregister(misc);
         return -ENXIO;
     }
-    spi_dev_arry[misc->minor] = spi_dev;
+    spi_dev_arry[free_idx] = spi_dev;
 
     dev_info(&spi->dev, "register %u data_bus_width %u addr_bus_witdh 0x%x spi_len device %s with %u per_rd_len %u per_wr_len success.\n",
         spi_dev->data_bus_width, spi_dev->addr_bus_width, spi_dev->spi_len, spi_dev->name, spi_dev->per_rd_len, spi_dev->per_wr_len);
