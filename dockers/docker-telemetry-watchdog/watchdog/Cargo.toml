@@ -11,7 +11,7 @@ daemonize = "0.5"
 chrono = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-redis = "0.23.3"
+redis = "1.0.0"
 
 [[bin]]
 name = "telemetry_watchdog"
