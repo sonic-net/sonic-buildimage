@@ -42,6 +42,7 @@ jobs:
       DOCKER_DATA_ROOT_FOR_MULTIARCH: /data/march/docker
       dbg_image: no
       asan_image: no
+      secure_boot_enabled: no
       swi_image: no
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
@@ -57,6 +58,7 @@ jobs:
           variables:
             dbg_image: yes
             asan_image: yes
+            secure_boot_enabled: yes
 
         - name: alpinevs
           variables:
@@ -138,6 +140,10 @@ jobs:
             BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SBOM=y"
           fi
           BUILD_OPTIONS="$BUILD_OPTIONS ENABLE_SOURCE_ARCHIVE=y"
+          if [ $(secure_boot_enabled) == yes ]; then
+            openssl req -new -x509 -newkey rsa:4096 -subj "/CN=SONiC db certificate/dnQualifier=$(GROUP_NAME)/" -keyout db.key -out db.crt -days 1 -noenc -sha512
+            BUILD_OPTIONS="$BUILD_OPTIONS SECURE_UPGRADE_MODE=dev SECURE_UPGRADE_DEV_SIGNING_KEY=$(pwd)/db.key SECURE_UPGRADE_SIGNING_CERT=$(pwd)/db.crt"
+          fi
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then

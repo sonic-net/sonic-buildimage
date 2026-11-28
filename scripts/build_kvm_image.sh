@@ -158,4 +158,18 @@ set -x
 
 kill $kvm_pid
 
+if [[ "$BOOT_FIRMWARE" == "UEFI" ]]; then
+    # Only handling the simpler developer signing mode here. If using
+    # production signing mode for secure boot, then the secure-boot-enabled
+    # UEFI variable file will not be created.
+    if [[ ${sonic_su_mode} = "dev" ]]; then
+        tmpdir=$(mktemp -d)
+        for i in PK KEK; do
+            openssl req -new -x509 -newkey rsa:4096 -subj "/CN=SONiC ${i} certificate/" -keyout "${tmpdir}/${i}.key" -out "${tmpdir}/${i}.crt" -days 3 -noenc -sha512 
+        done
+        sb_efi_vars=${efi_vars%vars.fd}sb-vars.fd
+        virt-fw-vars --input "${efi_vars}" --set-pk 8c7f3d10-9b67-4e17-8d8a-73e6f9725b1d "${tmpdir}/PK.crt" --add-kek 8c7f3d10-9b67-4e17-8d8a-73e6f9725b1d "${tmpdir}/KEK.crt" --add-db d719b2cb-3d3a-4596-a3bc-dad00e67656f "${sonic_su_signing_cert}" --secure-boot --output "${sb_efi_vars}"
+    fi
+fi
+
 exit 0

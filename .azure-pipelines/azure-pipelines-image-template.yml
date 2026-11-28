@@ -67,6 +67,11 @@ jobs:
         displayName: 'setfacl'
       - script: |
           set -ex
+          sudo apt-get update
+          sudo apt-get install -y python3-virt-firmware
+        displayName: 'UEFI QEMU tools'
+      - script: |
+          set -ex
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
           git checkout -b $BRANCH_NAME
