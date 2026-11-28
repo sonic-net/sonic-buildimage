@@ -3,6 +3,33 @@
 #
 # see: dh_installdeb(1)
 depmod -a
+
+set -e
+
+DEV="0000:01:00.0"
+KEEP="0000:03:00.0"
+
+# Only act if this really is the dual-I210 layout.
+if [ -e "/sys/bus/pci/devices/${DEV}" ] && [ -e "/sys/bus/pci/devices/${KEEP}" ]; then
+
+    # Stop igb reclaiming the unwanted NIC, then detach it.
+    echo none > "/sys/bus/pci/devices/${DEV}/driver_override" 2>/dev/null || true
+    if [ -e "/sys/bus/pci/drivers/igb/${DEV}" ]; then
+        echo "${DEV}" > /sys/bus/pci/drivers/igb/unbind 2>/dev/null || true
+    fi
+
+    # The keeper may now be named eth1; move it to eth0.
+    KEEP_IF=$(basename "$(readlink -f /sys/bus/pci/devices/${KEEP}/net/* 2>/dev/null)" 2>/dev/null || true)
+    if [ -n "${KEEP_IF}" ] && [ "${KEEP_IF}" != "eth0" ]; then
+        ip link set "${KEEP_IF}" down
+        ip link set "${KEEP_IF}" name eth0
+        ip link set eth0 up
+    fi
+fi
+
+# Regenerate the initramfs so the modprobe rule applies from the next boot.
+update-initramfs -u
+
 systemctl enable pddf-platform-init.service
 systemctl start pddf-platform-init.service
 systemctl enable sysled.service
