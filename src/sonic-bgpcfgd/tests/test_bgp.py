@@ -66,6 +66,8 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
         field = "vnet_name" if vrf.startswith("Vnet") else "vrf_name"
         intf_meta_v4[field] = vrf
         intf_meta_v6[field] = vrf
+        if vrf.startswith("Vnet"):
+            m.directory.put("CONFIG_DB", "VNET", vrf, {"vxlan_tunnel": "vtep", "vni": "10010"})
     m.directory.put("LOCAL", "local_addresses", "Ethernet4|30.30.30.30", {"interface": "Ethernet4", "prefixlen": "24"})
     m.directory.put("LOCAL", "local_addresses", "Ethernet8|fc00:20::20", {"interface": "Ethernet8", "prefixlen": "96"})
     m.directory.put("LOCAL", "interfaces", "Ethernet4", intf_meta_v4)
@@ -774,6 +776,72 @@ def test_add_peer_ipv6():
         res = m.set_handler("fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
+EVPN_PEER = {'asn': '65200', 'name': 'TOR', 'keepalive': '3', 'holdtime': '9', 'address_family': 'evpn'}
+VNET_PEER = {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'}
+EVPN_VNET = {'vxlan_tunnel': 'vtep', 'vni': '10000', 'evpn_enabled': 'true'}
+
+def pushed_cmds(m):
+    return "\n".join(c.args[0] for c in m.cfg_mgr.push.call_args_list)
+
+def test_add_evpn_peer_global_session_only():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.directory.put("CONFIG_DB", "VNET", "Vnet1", dict(EVPN_VNET))
+        assert m.set_handler("10.100.0.1", dict(EVPN_PEER))
+        pushed = pushed_cmds(m)
+        assert "neighbor 10.100.0.1 update-source Loopback0" in pushed
+        assert "neighbor 10.100.0.1 timers 3 9" in pushed
+        assert "advertise-all-vni" in pushed
+        assert "vrf Vnet1" not in pushed
+
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_evpn_peer_waits_for_lo0(mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant, bgp_router_id="8.8.8.8", with_lo0_ipv4=False)
+        assert not m.set_handler("10.100.0.1", dict(EVPN_PEER))
+        mocked_log_info.assert_called_with("EVPN peer '(default|10.100.0.1)' will wait for the Loopback0 ipv4 address")
+
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_vnet_peer_waits_for_its_vnet(mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.directory.put("LOCAL", "interfaces", "Ethernet4", {"admin_status": "up", "vnet_name": "Vnet1"})
+        m.directory.put("CONFIG_DB", "VNET", "Vnet2", dict(EVPN_VNET))
+        assert not m.set_handler("Vnet1|30.30.30.1", dict(VNET_PEER))
+        mocked_log_info.assert_called_with("Peer '(Vnet1|30.30.30.1)' will wait for VNET 'Vnet1'")
+
+def test_add_vnet_peer_renders_only_its_evpn_vnet():
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vnet1")
+        m.directory.put("CONFIG_DB", "VNET", "Vnet1", dict(EVPN_VNET))
+        m.directory.put("CONFIG_DB", "VNET", "Vnet2", {'vxlan_tunnel': 'vtep', 'vni': '10001', 'evpn_enabled': 'true'})
+        assert m.set_handler("Vnet1|30.30.30.1", dict(VNET_PEER))
+        pushed = pushed_cmds(m)
+        assert "router bgp 65100 vrf Vnet1\n bgp router-id 11.11.11.11" in pushed
+        assert " vni 10000" in pushed
+        assert "route-target import 65000:10000" in pushed
+        assert "Vnet2" not in pushed
+
+def test_add_vnet_peer_without_evpn_has_no_evpn_config():
+    for constant in load_constant_files():
+        m = constructor(constant, vrf="Vnet1")
+        assert m.set_handler("Vnet1|30.30.30.1", dict(VNET_PEER))
+        pushed = pushed_cmds(m)
+        assert "l2vpn evpn" not in pushed
+        assert "vni " not in pushed
+
+def test_add_vnet_peer_retried_when_vnet_added(peer_name_state_table):
+    for constant in load_constant_files():
+        m = constructor(constant)
+        m.directory.put("LOCAL", "interfaces", "Ethernet4", {"admin_status": "up", "vnet_name": "Vnet1"})
+        make_peer_dependencies_ready(m)
+        m.handler("Vnet1|30.30.30.1", "SET", dict(VNET_PEER))
+        assert m.set_queue, "VNET peer must wait for its VNET"
+
+        m.directory.put("CONFIG_DB", "VNET", "Vnet1", dict(EVPN_VNET))
+        assert not m.set_queue, "VNET peer must be added once its VNET is present"
+        assert "router bgp 65100 vrf Vnet1" in pushed_cmds(m)
+
 def test_add_peer_in_vnet():
     for constant in load_constant_files():
         m = constructor(constant, vrf="Vnet-10")
@@ -822,6 +890,7 @@ def test_overlapping_ip_different_vnets():
         # Add a second interface with the SAME IP but in Vnet-20
         m.directory.put("LOCAL", "local_addresses", "Ethernet12|30.30.30.30", {"interface": "Ethernet12", "prefixlen": "24"})
         m.directory.put("LOCAL", "interfaces", "Ethernet12", {"admin_status": "up", "vnet_name": "Vnet-20"})
+        m.directory.put("CONFIG_DB", "VNET", "Vnet-20", {"vxlan_tunnel": "vtep", "vni": "10020"})
         # Peer in Vnet-20 should match Ethernet12, not Ethernet4
         res = m.set_handler("Vnet-20|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True: peer in Vnet-20 should match Ethernet12 (same VNET)"
@@ -831,6 +900,7 @@ def test_add_peer_vnet_mismatch(mocked_log_debug):
     """Test that a peer in Vnet-20 cannot pass dependency check using an address only present in Vnet-10"""
     for constant in load_constant_files():
         m = constructor(constant, vrf="Vnet-10")
+        m.directory.put("CONFIG_DB", "VNET", "Vnet-20", {"vxlan_tunnel": "vtep", "vni": "10020"})
         # Peer is in Vnet-20 but the local address 30.30.30.30 only exists on Ethernet4 in Vnet-10
         res = m.set_handler("Vnet-20|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False: VNET mismatch should block peer addition"

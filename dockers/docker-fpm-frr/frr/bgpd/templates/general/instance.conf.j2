@@ -47,6 +47,8 @@
     neighbor {{ neighbor_addr }} activate
   exit-address-family
 {% endif %}
+{% elif bgp_session.get('address_family') == 'evpn' %}
+  neighbor {{ neighbor_addr }} update-source Loopback0
 {% elif neighbor_addr | ipv4 %}
   address-family ipv4
 {% if is_confed_external %}
@@ -85,7 +87,7 @@
   exit-address-family
 {% endif %}
 !
-{% if bgp_session["asn"] == bgp_asn and CONFIG_DB__DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
+{% if bgp_session.get('address_family') == 'evpn' or (bgp_session["asn"] == bgp_asn and CONFIG_DB__DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter") %}
   address-family l2vpn evpn
     neighbor {{ neighbor_addr }} activate
     advertise-all-vni

@@ -151,5 +151,8 @@ route-map TO_BGP_PEER_V4 permit 60
 !
 {% endif %}
 {% endif %}
+{% if vnet_data %}
+{% include 'bgpd/templates/general/vnet_evpn.conf.j2' %}
+{% endif %}
 ! end of template: bgpd/templates/general/policies.conf.j2
 !
