@@ -297,9 +297,6 @@ def parse_package_lock_json(text: str, scope: str, lockfile: str = "") -> list:
 # ----------------------------------------------------------------------------
 
 
-_PNPM_PKG_RE = re.compile(r"^\s+/([^@:\s]+(?:/[^@:\s]+)*)@([^:\s]+):\s*$")
-
-
 def parse_pnpm_lock_yaml(text: str, scope: str, lockfile: str = "") -> list:
     """Best-effort pnpm-lock.yaml parser without yaml dependency. pnpm
     lockfiles encode package identity as a key like '/foo@1.2.3:' under
@@ -315,11 +312,25 @@ def parse_pnpm_lock_yaml(text: str, scope: str, lockfile: str = "") -> list:
             continue
         if line and not line.startswith(" "):
             break
-        m = _PNPM_PKG_RE.match(line)
-        if not m:
+        key = line.strip()
+        if not (key.startswith("/") and key.endswith(":")):
             continue
-        name = m.group(1)
-        version = m.group(2)
+        package_key = key[1:-1]
+        # Skip a leading scope marker, keeping peer context in the version.
+        version_separator = package_key.find("@", 1)
+        if version_separator < 0:
+            continue
+        name = package_key[:version_separator]
+        version = package_key[version_separator + 1:]
+        if (
+            not name
+            or not version
+            or ":" in name
+            or ":" in version
+            or any(char.isspace() for char in name)
+            or any(char.isspace() for char in version)
+        ):
+            continue
         if (name, version) in seen:
             continue
         seen.add((name, version))
