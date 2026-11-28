@@ -1,0 +1,4 @@
+"""Common SONiC Rust facilities compiled from the in-tree source owner."""
+load("@rules_rs//rs:rust_library.bzl", "rust_library")
+package(default_visibility = ["//visibility:public"])
+rust_library(name = "sonic_rs_common", srcs = glob(["src/*.rs"]), crate_root = "src/lib.rs", crate_name = "sonic_rs_common", edition = "2021", version = "0.1.0", deps = ['@sonic_swss_common//crates/swss-common:swss_common'] + ["@sonic_rust_deps//:" + name for name in ["thiserror", "tracing", "syslog"]])

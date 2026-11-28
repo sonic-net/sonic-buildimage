@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "packages": {
+    "libteam-utils": {
+      "required_paths": [
+        "usr/bin/teamd",
+        "usr/bin/teamnl",
+        "usr/bin/teamdctl"
+      ]
+    }
+  }
+}

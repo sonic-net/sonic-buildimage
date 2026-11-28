@@ -40,19 +40,18 @@ create_disk()
 }
 
 prepare_installer_disk()
-{
-    fallocate -l 6144M $INSTALLER_DISK
-
-    mkfs.ext2 $INSTALLER_DISK
-
+(
+    local tmpdir
     tmpdir=$(mktemp -d)
+    trap 'rm -rf -- "$tmpdir"' EXIT
+    # Match the ext2 root directory instead of mktemp's private mode.
+    chmod 0755 "$tmpdir"
+    cp --reflink=auto -- "$INSTALLER" "$tmpdir/onie-installer.bin"
 
-    mount -o loop $INSTALLER_DISK $tmpdir
-
-    cp $INSTALLER $tmpdir/onie-installer.bin
-
-    umount $tmpdir
-}
+    fallocate -l 6144M "$INSTALLER_DISK"
+    # Populate directly so this step does not require a host loop device.
+    mkfs.ext2 -d "$tmpdir" "$INSTALLER_DISK"
+)
 
 wait_kvm_ready()
 {
@@ -126,6 +125,9 @@ echo "to kill kvm:  sudo kill $kvm_pid"
 
 kill $kvm_pid
 
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch boot-checks "${SONIC_IMAGE_TIMING_CONTEXT:-}" 2>/dev/null || true
+fi
 echo "Booting up SONiC"
 
 /usr/bin/kvm -m $MEM \
@@ -158,4 +160,7 @@ set -x
 
 kill $kvm_pid
 
+if [ -n "${SONIC_IMAGE_TIMING_FILE:-}" ]; then
+    python3 ./scripts/image_timing.py switch assembly "${SONIC_IMAGE_TIMING_CONTEXT:-}" 2>/dev/null || true
+fi
 exit 0

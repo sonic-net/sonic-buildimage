@@ -8,8 +8,18 @@ import argparse
 
 PY3x = sys.version_info >= (3, 0)
 PYvX_DIR = "py3" if PY3x else "py2"
-PYTHON_INTERPRETTER = "python3" if PY3x else "python2"
-YANG_MODELS_DIR = "/usr/local/yang-models"
+PYTHON_INTERPRETTER = os.environ.get("SONIC_TEST_PYTHON", "python3" if PY3x else "python2")
+YANG_MODELS_DIR = os.environ.get("SONIC_TEST_YANG_MODELS", "/usr/local/yang-models")
+
+
+def cfggen_command(script):
+    """Use declared YANG fixtures under Bazel and the installed models under Make."""
+    models = os.environ.get("SONIC_TEST_YANG_MODELS")
+    if models:
+        return [PYTHON_INTERPRETTER,
+                os.path.join(os.path.dirname(__file__), "cfggen_command.py"),
+                models, script]
+    return [PYTHON_INTERPRETTER, script]
 
 
 def get_sample_output_file(test_dir, relative_path):
@@ -62,7 +72,7 @@ class YangWrapper(object):
             self.yang_parser = sonic_yang.SonicYang(path)
             self.yang_parser.loadYangModel()
             self.test_dir = os.path.dirname(os.path.realpath(__file__))
-            self.script_file = [PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+            self.script_file = cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
 
     def validate(self, argument):
         """

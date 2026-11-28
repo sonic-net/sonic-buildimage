@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "packages": {
+    "sonic-p4rt": {
+      "required_paths": [
+        "usr/local/bin/p4rt",
+        "usr/local/bin/p4rt_program_table",
+        "usr/local/bin/p4rt_read",
+        "usr/local/bin/p4rt_set_forwarding_pipeline",
+        "usr/local/bin/p4rt_write"
+      ]
+    }
+  }
+}

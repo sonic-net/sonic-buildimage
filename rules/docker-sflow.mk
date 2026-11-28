@@ -39,3 +39,28 @@ $(DOCKER_SFLOW)_BASE_IMAGE_FILES += sflowtool:/usr/bin/sflowtool
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SFLOW)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_SFLOW_DBG)
+
+
+# Native source OCI images reuse the SWSS parent and hsflowd, sflowtool and psample owner TARs.
+# Preserve every legacy prerequisite and all excluded profiles above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_SFLOW) $(DOCKER_SFLOW_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_SFLOW)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_SFLOW_DBG)
+$(DOCKER_SFLOW_DBG)_PATH = $($(DOCKER_SFLOW)_PATH)
+$(DOCKER_SFLOW)_BAZEL_TARGET = //dockers/docker-sflow:$(DOCKER_SFLOW)
+$(DOCKER_SFLOW_DBG)_BAZEL_TARGET = //dockers/docker-sflow:$(DOCKER_SFLOW_DBG)
+SONIC_BAZEL_MANIFESTS += docker-sflow docker-sflow-$(DBG_IMAGE_MARK)
+docker-sflow_MANIFEST_IMAGE = $(DOCKER_SFLOW)
+docker-sflow-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_SFLOW)
+docker-sflow-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_SFLOW)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sflow/manifest.json
+$(DOCKER_SFLOW_DBG)_BAZEL_DEPENDS = $($(DOCKER_SFLOW)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-sflow-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

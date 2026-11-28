@@ -1,0 +1,8 @@
+# Preserve inherited config-engine/base wheels and the existing SNMP psutil pin.
+jinja2==3.1.6
+markupsafe==3.0.3
+six==1.17.0
+psutil==7.2.2
+# New DHCP dependencies retain the compatible 1.x/2.x runtime lines.
+freezegun==1.5.5
+python-dateutil==2.9.0.post0

@@ -12,7 +12,7 @@ while [ $cnt -le $total_time ]; do
     cnt=$((cnt+1))
 done
 
-echo 'Timed out waiting for internal docker daemon to start' > /dev/stderr
+echo 'Timed out waiting for internal docker daemon to start' >&2
 echo '==== START OF /var/log/docker.log ===='
 cat /var/log/docker.log
 echo '==== END OF /var/log/docker.log ===='

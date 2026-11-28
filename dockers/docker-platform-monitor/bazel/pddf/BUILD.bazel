@@ -1,0 +1,48 @@
+"""Install the platform API and its Python dependency when Make enables PDDF."""
+
+load("@sonic_build_infra//python:runtime_lock.bzl", "checked_python_runtime", "python_runtime_plan")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("//tools/bazel/image/vs/python:update.bzl", "runtime_lock_update")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["requirements_lock.txt"])
+
+wheel_layer(
+    name = "platform_api",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = ["//platform/pddf/platform-api-pddf-base:sonic_platform_pddf_common_wheel"],
+)
+
+wheel_layer(
+    name = "dependencies",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = ["@pmon_pddf_pip//jsonschema:whl"],
+)
+
+python_runtime_plan(
+    name = "plan",
+    packages = [":platform_api"],
+    python_platform = "x86_64-unknown-linux-gnu",
+    python_version = "3.13",
+    roots = ["sonic-platform-pddf-common"],
+    site_packages = ["/usr/local/lib/python3.13/dist-packages"],
+    source_distributions = ["sonic-platform-pddf-common"],
+    uv_version = "0.11.0",
+)
+
+checked_python_runtime(
+    name = "runtime",
+    inputs = "runtime.inputs.json",
+    lock = "requirements_lock.txt",
+    plan = ":plan",
+    requirements = "requirements.in",
+    sources = [":platform_api"],
+    third_party = [":dependencies"],
+    update_command = 'bazel run //dockers/docker-platform-monitor/bazel/pddf:update -- --uv "$(command -v uv)"',
+)
+
+runtime_lock_update(
+    name = "update",
+    plan = ":plan",
+)

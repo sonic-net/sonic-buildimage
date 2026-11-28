@@ -135,6 +135,30 @@ sources.list.*
 # Generated mirror configs
 apt-retries-count
 
+# Generated Bazel state.
+/bazel-*
+**/MODULE.bazel.lock
+**/Cargo.Bazel.lock
+/.bazelrc.user
+/artifacts/swss/
+/artifacts/sflow/
+/artifacts/gnmi/
+/artifacts/orchagent/
+/artifacts/orchagent-owner/
+/artifacts/orchagent-download/
+
+# Evidence produced by the shared OCI jobs before source-image validation.
+/artifacts/gbsyncd/
+/artifacts/archive/
+/artifacts/swss-layer/
+/artifacts/config-engine/
+
+/artifacts/dash-ha/
+/artifacts/otel/
+
+# Verified P4RT owner TAR handoff.
+/.bazel-inputs/p4rt-owner/
+
 # dpkg cache-validation script outputs
 poc-results/
 cache-validation-out/

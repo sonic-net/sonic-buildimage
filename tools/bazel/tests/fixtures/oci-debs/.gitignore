@@ -1,0 +1,2 @@
+# These retained sample packages are source inputs, not generated build outputs.
+!*.deb

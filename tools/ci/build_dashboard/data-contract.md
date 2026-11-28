@@ -1,0 +1,308 @@
+# Build dashboard data
+
+`collect.py` reads public GitHub Actions metadata and bounded timing markers
+from selected public job logs. The dashboard retains the resulting timing
+records. It excludes raw logs, artifacts, machine names, workflow inputs,
+environment variables and credentials.
+
+## Published files
+
+New snapshots use schema version 2. The entry point, `data.json`, contains
+`repository`, `generated_at`, `comparisons`, `pull_requests`, and an ordered
+`run_shards` list. Each list entry contains a `path` of the form
+`history/<sha256>.json` and a `count` of complete run attempts. The SHA-256
+covers the exact file bytes, including the trailing newline. Each file holds a
+JSON array. Concatenating those arrays in index order yields the original
+newest-first `runs` list. An empty run history has an empty `run_shards` list.
+
+The collector packs attempts from the oldest end so new attempts can reuse
+older files. It targets 8 MiB per shard and enforces a 95 MiB limit per file.
+It writes the index after every referenced file is in place. Both the collector
+and dashboard can also read the original version 1 single-file snapshots.
+
+## Snapshot fields after loading
+
+- `schema_version`: `1`.
+- `repository`: validated `owner/repository`.
+- `generated_at`: UTC collection timestamp.
+- `pull_requests`: current metadata, including closed and unmeasured PRs:
+  `number`, `title`, `state`, `draft`, `url`, `head_sha`, `base_sha`,
+  `head_branch`, `updated_at`, `merged_at`, `base_branch`, `base_target_sha`,
+  `base_target_observed_at`. `base_sha` is GitHub's PR metadata and may be
+  historical even for an open PR. `base_target_sha` is independently read from
+  the selected branch ref, or `null` when that ref no longer exists. Other ref
+  lookup failures abort collection. These fields never establish the base/head
+  that an old workflow tested.
+- `runs`: one entry per `(run_id, attempt)`, retained after Actions history expires:
+  `run_id`, `attempt`, `workflow_name`, `workflow_path`, `source_sha`, `branch`,
+  `event`, `status`, `conclusion`, `pr_numbers`, `pr_association`, `pr_association_note`, `started_at`, `started_at_source`,
+  `completed_at`, `updated_at`, `url`, `jobs`, `event_bases`.
+  `source_sha` is GitHub's run `head_sha`; it is not replaced by the current PR
+  head. For all build sources, optional `source_commit_title` contains the first
+  line of GitHub's `head_commit.message` when `head_commit.id` matches the
+  run's full `source_sha`. The collector normalizes whitespace and bounds the
+  title to 256 characters. A normal refresh also fills in earlier runs
+  at the same SHA using the workflow metadata it already reads. A revision
+  without a verified title shows its SHA with “Commit message unavailable” on the chart.
+  Optional `source_committed_at` is the UTC Git committer timestamp for that
+  exact `source_sha`. Attempts for the same SHA share this value. The collector
+  reads the matching workflow `head_commit.timestamp` first. Each refresh can
+  look up up to 20 remaining SHAs directly in GitHub. If the commit is
+  unavailable, its date stays unknown.
+  `pr_association` is `github` (run's explicit PR links), `commit` (exact
+  current same-repository PR head, or a unique exact fork repository/branch/head
+  match for a `pull_request` event), `branch` (unique same-repository feature
+  branch, additionally verified through GitHub's commit-to-PR endpoint), or
+  `none`. Multiple/ambiguous inferred matches are left unassociated.
+  `event_bases` contains only `{number, ref, sha}` from the workflow run's
+  recorded PR metadata. It is never filled from current PR base targets. These
+  event records do not independently verify job checkout bases; absent older
+  records remain unknown. A normal refresh adds event metadata to the latest
+  retained attempt without refetching completed jobs. Successful image timings
+  do not establish that an image artifact was published.
+  `pr_association_note` is normally `null`; it discloses HTTP 404/422 when an old
+  commit cannot be resolved for optional PR inference. The run stays visible.
+  Other optional commit-lookup failures are disclosed as temporarily unavailable
+  and retried next refresh without refetching cached jobs. Main repository, PR,
+  workflow, run-attempt, and job API failures still abort collection.
+  `started_at_source` is `run_started_at` when GitHub supplied a valid attempt
+  start, `created_at` when the recorded time only falls back to run creation,
+  or `null` when unavailable. Older history may omit it. A cached latest attempt
+  gains verified start provenance only from matching fresh run ID, attempt,
+  source SHA and workflow metadata with a valid `run_started_at`; retained jobs
+  are not refetched for that upgrade. Legacy historical retry times stay
+  unverified. The run view labels fallback and legacy times accordingly.
+- Each job: `job_id`, `name`, `kind`, `architecture`, `status`, `conclusion`,
+  `started_at`, `completed_at`, `duration_seconds`, `image_build_seconds`,
+  `image_build_elapsed_seconds`, `image_build_step_numbers`, `phases`, `steps`, `url`.
+  `kind`: `make-vs`, `bazel-vs`, `container`, `source`, `checks`, `other`.
+  `architecture`: `amd64`, `arm64`, or `null`; the classifier only uses explicit
+  job-name annotations, never the physical runner's identity.
+  `phases`: keys `setup`, `build`, `validation`, `upload`, `other`, with summed
+  completed-step seconds or `null` where there is no measured step. These are
+  not guaranteed to partition job wall time (runner overhead is separate).
+  `image_build_seconds` is populated only for successful, explicitly recognized
+  image-build steps; `image_build_elapsed_seconds` also records a failed image
+  build's elapsed time. Run details keeps a completed build's timing
+  when later validation fails. The performance chart requires a successful job.
+  Exact recognized step names identify the measurement scope. In particular,
+  `Build the VS installer (.bin)` excludes VM generation and boot checks;
+  historical `Build the VS image` measurements include them. Consumers must
+  keep those trend series separate even when job kind and architecture match.
+
+  `image_build_step_numbers` identifies the exact recognized steps contributing
+  to those image durations. It is empty when no image step is recognized and
+  `null` when step numbers are missing or duplicated. Older schema-1 history
+  without this field remains readable; the next collection recomputes it from
+  retained steps. A display without verified step identities uses an explicitly
+  labeled job execution time instead of inventing an image step timestamp.
+- A Make VS installer job with a profiling summary step may include
+  `image_recipe_timings`. Version 2 stores a `recipes` list. Each `owner`
+  is the Make output basename or package build group. New owners appear as
+  the build registers them. Repeated invocations for an owner contribute to
+  that owner's row. The VS installer records a multi-image Bazel command once
+  under `vs-container-images`. Each participating image records its own exports
+  and expects zero individual Bazel commands and profiles for that invocation.
+  - `bazel_seconds`, `bazel_phases` and `bazel_expected` report the measured
+    duration, recorded timing count and expected timing count for its commands.
+    The kernel measures its launcher once per invocation.
+  - `lock_seconds`, `compile_seconds`, `foreign_seconds` and `fetch_seconds`
+    cover spans in `profiles` of `profiles_expected` Bazel traces. A nested
+    build includes a whole foreign build or the kernel package action. Within
+    each category concurrent spans count once per trace. A cache fetch
+    includes input staging and output materialization from disk or remote storage.
+  - `export_seconds`, `exports` and `exports_expected` cover archive or package
+    exports. `failed` records whether a command returned a nonzero exit status.
+  Durations are null when their source count is zero. Counts below the
+  expectation show partial coverage. A valid empty list records zero observed
+  recipes. An unavailable result has a fixed `reason` and an empty list.
+  The collector reads one bounded record per recipe and verifies the final
+  count from the same job's summary step before persisting the result.
+  - A V2 summary with `vs-container-images` can also contain a
+    `container_breakdown`. Its `rows` identify participating archive owners
+    from the same recipe list. Each row contains an action count (`actions`),
+    union time across the owner's observed actions (`action_seconds`), and
+    observed `fetch_seconds`, `archive_seconds` and `compress_seconds`.
+    New rows also include `compile_seconds`, the wall time of compiler subprocesses
+    inside actions attributed to that image. Overlapping compiler processes count
+    once. For example, if two compiles each run for five seconds and overlap for
+    three, the image records seven seconds. This time is included in
+    `action_seconds`. A measured zero means no compiler subprocess was attributed
+    to this image in the observed profile. Older rows omit the field and display
+    an unavailable compile time.
+    When the first image-owned action and the last successful archive export can be
+    timed together, `total_seconds` gives the elapsed time between them. For
+    example, an image whose first action starts at 10:00 and whose last export
+    finishes at 10:12 takes 12 minutes, including gaps between its actions and
+    exports. A row may omit either timing independently when evidence is missing.
+    An owner can include both runtime and debug archive targets. Shared inputs
+    are counted with their identifiable producer or remain unattributed.
+    The `other_action_seconds` field counts intervals with only shared or
+    unattributed actions active. `no_action_seconds` counts launcher time
+    outside observed action spans. `parallel_seconds` counts intervals with
+    two or more image owners active. Per-owner active time can overlap.
+    Exports remain in the original V2 recipe rows.
+  - Independent `SONIC_VS_CONTAINER_TIMINGS_V1` log records have the same
+    step boundary and per-line size limit as the V2 receipts. A count trailer
+    and unique owner names are required. Missing or invalid detail preserves
+    the measured V2 data and records a fixed unavailable reason. Historical
+    receipts with no detail field stay valid. The collector checks retained
+    batch logs once for the optional markers, retrying transient log failures.
+  Version 1 history keeps `images` for FRR, mux, TeamD and Syncd VS, with
+  three command timings, three profiles and two exports expected per pair.
+  Jobs predating the profiling step omit this field.
+  Version 2 rows may additionally contain `build`: `null` for non-image-launcher
+  scopes, or a strictly allowlisted numeric object. `expected`, `timings` and
+  `profiles` count explicit build commands, their receipts and their profiles.
+  `seconds` is the summed build receipt time. `lock_seconds`, `compile_seconds`,
+  `foreign_seconds`, `fetch_seconds`, `repository_seconds`,
+  `repository_read_seconds`, `packaging_seconds`, `cache_write_seconds`,
+  `package_selection_seconds`, `validation_seconds`,
+  `arm64_repository_seconds` and `armhf_repository_seconds` cover only those
+  build profiles, with per-category interval unions inside each invocation.
+  Repository input reads must be enclosed by a repository call on the same thread.
+  Packaging covers matching OCI image, tar/manifest and gzip critical-path spans,
+  not duplicate action-processing records. ARM fields describe observed package
+  repositories, not whether the work was necessary. Counts cannot exceed their
+  parent recipe coverage. Missing source counts require null metrics. Non-lock
+  build time is derived only with complete matching receipts and profiles and
+  cannot be negative. Older rows without this field remain valid and display
+  missing diagnostic evidence, not zero-duration work. No repository labels,
+  action names, commands, environment or log text are retained in this object.
+  Version 2 rows may also contain `details` for bounded named evidence:
+  - `scope` is `build`, `kernel-build`, or `unavailable`. `expected` and `profiles`
+    describe the build-profile coverage; kernel spans do not cover the whole launcher.
+  - `repositories` retains up to eight longest individual repository spans:
+    `name`, `seconds`, `read_count`, `read_seconds`. Names must be canonical
+    `//:` repository identifiers containing only ASCII letters/digits and
+    `_ . + ~ -`, with at most 188 identifier characters. Read coverage is the
+    interval union of enclosed same-thread `read` spans, not parsing CPU time.
+  - `critical_path` retains up to eight longest recognized actions: `kind`,
+    `target`, `seconds`. Kinds are allowlisted packaging, APT selection,
+    validation, Go build, package-control, unpack, kernel or genrule categories.
+    Targets are null or validated Bazel labels/workspace-relative output paths,
+    at most 240 characters. Absolute paths, traversal, arguments and raw
+    free-form action descriptions are not accepted.
+  - `phases` retains the first eight recorded receipts in request-clock order
+    where available: `phase`, `seconds`, `lock_seconds`, `start_epoch_seconds`,
+    `exit_code`. Phase names use the owner identifier alphabet/length.
+    Missing clocks and lock profiles are null, not zero. `phase_count` records
+    all observed command/export receipts, including any beyond the retained eight.
+    Repeated invocations contribute individual spans, not summed same-name spans.
+  Each list is sent in a separate `evidence` marker with `owner`, `group`, and
+  `values`, following its recipe marker's metadata and three empty list placeholders.
+  The final count trailer adds `evidence_count`. All three groups, even empty,
+  must arrive once for every detailed recipe; missing, duplicate, oversized or
+  unbound groups invalidate the receipt. Each marker remains at most 4096 bytes.
+  Old count-only trailers and rows without named evidence remain valid.
+- Each step: `number`, `name`, `status`, `conclusion`, `started_at`,
+  `completed_at`, `duration_seconds`, `phase`.
+  An optional `breakdown` provides nested Make build timings without changing
+  the existing step duration or successful-image measurement:
+  - `version`: `1`; `source`: `github-job-log`.
+  - Optional `parser_revision`: the parser revision used for this result
+    (absent means `1`). Unsupported/incomplete results from revision 1 are eligible for
+    one bounded retry with the current parser. Revision 3 also refreshes
+    retained successful host VS installer steps with a recorded container
+    batch, within the same per-collection log budget. A permanent refresh
+    failure preserves the original measurements and parser revision, recording
+    the newer `refresh_attempt_revision` to avoid repeat fetches. A temporary
+    failure leaves the step eligible for retry.
+  - `status`: `available` or `unavailable`; `reason`: a fixed reason or `null`.
+  - `duration_seconds`: observed log interval, or `null` when unavailable.
+  - `sections`: sequential outer Make invocations. Each contains a known `id`,
+    fixed `label`, `offset_seconds` relative to the observed build-step start,
+    `duration_seconds`, and `tasks`.
+  - Each task contains a known `id`, fixed `label`, `offset_seconds` relative to
+    its containing section, `duration_seconds`, and `outcome` (`finished` or
+    `cached`). Tasks can overlap and are not an additive partition of the
+    section. The native installer also emits paired `[ vs timing ]` start/end
+    markers for kernel/P4RT preparation, P4RT substeps, intermediate root
+    filesystem preparation, compression and cache save (when writes are enabled),
+    version collection, builder exit and host cleanup. Intermediate root filesystem
+    timings must occur within the corresponding ONIE squashfs target's markers. A completed pair produces a task from the
+    same fixed vocabulary. An unmatched optional marker contributes no duration.
+  - The native installer preparation stage recognizes the Bookworm submake by
+    its command and matching directory entry and exit. Before the shared
+    container batch, matched Trixie Debian package and Python wheel target
+    markers distinguish build/cache lookup from installation. The parser uses
+    target names to match pairs and publishes only the task category and ordinal.
+    New `trixie-cache-eval` start/end markers bracket Make's evaluation of
+    `Makefile.cache`. The `container-manifest` markers pair by container so
+    concurrent renders can finish in any order. The dashboard combines the
+    measured intervals per package category and for manifest generation,
+    counting overlapping wall time once within each stage.
+  - A final-image task may additionally contain `phase_breakdown`:
+    - `version`: `1`; `source`: `build-phase-markers`.
+    - `status`: `available` or `unavailable`; `reason`: `null`, `not-recorded`,
+      `invalid-timing`, or `incomplete-timing`.
+    - `duration_seconds`: the measured producer interval, or `null` when
+      unavailable.
+    - `segments`: at most 64 sequential, contiguous intervals, each with
+      `phase` (`assembly`, `boot-checks`, or `compression`), `context` (`recipe`,
+      `filesystem`, `installer`, `docker-load`, `docker-store`, `payload`, `bios`, `uefi`, `4-asic`, or `6-asic`),
+      `offset_seconds` relative to the producer interval, and `duration_seconds`.
+      Labels are derived from these fixed identifiers. Segments partition the
+      producer interval; category totals aggregate repeated segments without
+      changing their timeline order.
+    The producer interval uses a monotonic clock. The containing task uses
+    GitHub log timestamps, so their durations can differ slightly; validation
+    permits an absolute difference of at most two seconds from the containing
+    interval and the receipt's elapsed log interval. It never rescales
+    measurements to force equality. A shorter producer interval does
+    not assign the remaining time to a phase. Missing historical measurements
+    and cache reuse do not supply zero-duration phase measurements.
+    Phase receipts are accepted only inside the matching active final-image
+    recipe, before its successful finish marker. Invalid or incomplete receipts
+    make that inner detail unavailable while preserving valid outer timings.
+    The `.bin` installer and `.img.gz` VM target identities are distinct when
+    associating receipts. Both support outer recipe and root-filesystem task
+    timing. Instrumented `.bin` builds emit their own ONIE phase receipt.
+    Previously retained tasks without this optional field remain supported.
+  Timing values must be finite and nonnegative; child intervals must fit their
+  parent. Identifiers and labels come from the parser's allowlist, never
+  arbitrary log text. Unavailable detail is not a zero-duration build. The
+  optional field is compatible with older schema-1 snapshots.
+- `comparisons`: empty in this phase. API timing alone does not prove matched
+  cache state, toolchain/configuration, hardware, or a historical tested base.
+  Therefore no improvement or regression percentage is asserted.
+
+Durations for skipped, incomplete, missing, malformed, placeholder, or reversed
+start/end times are `null`, never a fabricated zero. Valid measured zero-second
+steps are preserved. Concluded failed/cancelled jobs may have elapsed time;
+consumers must use the outcome before plotting successful performance.
+
+Retry attempt start is separate from image execution. GitHub can assign a new
+job ID to a prior successful execution when retrying failed jobs. The display
+names an earlier origin only when one retained, completed prior attempt of the
+same run, source SHA and workflow has matching job name, kind, architecture,
+outcome, execution timestamps and every step's number, name, outcome and
+timestamps. The original job must fit that prior attempt, and the carried job
+must have completed before the retry started. Missing or ambiguous evidence
+leaves the origin unverified.
+Every retry used as the current or original attempt requires observed
+`run_started_at` provenance; a `created_at` fallback cannot establish a new
+execution. A job in attempt 1 can establish its own origin from its job and step
+evidence because there is no earlier attempt in that run. Duplicate run or job
+identities remain in raw history and are unverified. Colliding metric keys are
+deduplicated only when the execution signatures match.
+
+Run details labels image step time, job execution time and retry
+attempt start separately. Verified carried records link to the original job.
+Performance counts and trends count each verified origin once. The trend places
+each measurement at `source_committed_at` and uses that date to select the newest
+measurements. A missing commit time leaves the run in history and the timing
+off the chart. Run details retain the image step's execution window or, when
+step identities are absent, the labeled job execution window.
+A successful job that completed before its retry began is never counted as a new
+execution when its origin is unverified; it remains visible in raw run history
+with that limitation. These timestamps do not establish artifact publication.
+
+Only `bazel-swss-oci.yml`, `bazel-oci.yml`, `bazel-vs-unprivileged.yml`, and
+`bazel.yml` are collected. All
+pages and run attempts are covered. Completed attempts are reused from history;
+new, nonterminal, and changed latest attempts fetch current jobs. `--backfill`
+forces a fresh read of every available attempt, including completed history. API failures
+fail collection before replacing the output. Historical entries absent from
+GitHub's response remain in history. Every URL is constructed on `github.com`
+from the validated repository and integer identifiers.

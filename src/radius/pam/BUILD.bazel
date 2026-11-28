@@ -1,0 +1,46 @@
+load("@rules_cc//cc:cc_binary.bzl","cc_binary")
+load("@sonic_build_infra//cc:runtime_test.bzl","native_runtime_binary")
+load("@rules_python//python:defs.bzl","py_test")
+load("@bazel_skylib//rules:expand_template.bzl","expand_template")
+load("@rules_cc//cc:cc_library.bzl","cc_library")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl","sonic_deploy_tar")
+load("@sonic_build_infra//oci:runtime_packages.bzl","runtime_packages")
+load("@sonic_build_infra//oci:source_controls.bzl","source_package_controls")
+package(default_visibility=["//visibility:public"])
+exports_files(glob(["**"]))
+expand_template(name="freeradius_config",template="freeradius_config.h.tpl",out="generated/freeradius/autoconf.h",substitutions={})
+expand_template(name="radpaths",template="radpaths.h.tpl",out="generated/freeradius/radpaths.h",substitutions={})
+cc_library(name="freeradius_config_headers",hdrs=[":freeradius_config",":radpaths"],includes=["generated/freeradius"],target_compatible_with=["@platforms//cpu:x86_64"])
+expand_template(name="pam_config",template="pam_config.h.tpl",out="generated/pam/config.h",substitutions={})
+cc_library(name="pam_config_headers",hdrs=[":pam_config"],includes=["generated/pam"],target_compatible_with=["@platforms//cpu:x86_64"])
+alias(name="libradius",actual="@freeradius_pam_src//:libradius")
+alias(name="libeap",actual="@freeradius_pam_src//:libeap")
+alias(name="pam_radius_auth",actual="@pam_radius_src//:pam_radius_auth.so")
+sonic_deploy_tar(
+    name="libpam-radius-auth.runtime",
+    compress_debug_sections=True,
+    binaries={
+        "./lib/x86_64-linux-gnu/libradius-1.1.8.so type=file uid=0 gid=0 mode=0644 time=0":":libradius",
+        "./lib/x86_64-linux-gnu/libeap-1.1.8.so type=file uid=0 gid=0 mode=0644 time=0":":libeap",
+        "./lib/x86_64-linux-gnu/security/pam_radius_auth.so type=file uid=0 gid=0 mode=0644 time=0":":pam_radius_auth",
+    },
+    srcs=["@pam_radius_src//:pam_radius_auth.conf","@pam_radius_src//:pam_radius","debian/copyright","debian/README.Debian","debian/index.html","debian/pam_example","debian/lintian-overrides","@pam_radius_src//:README.rst"],
+    mtree=[
+        "./etc/pam_radius_auth.d type=dir uid=0 gid=0 mode=0755 time=0",
+        "./etc/pam_radius_auth.d/statistics type=dir uid=0 gid=0 mode=0755 time=0",
+        "./etc/pam_radius_auth.conf type=file uid=0 gid=0 mode=0600 time=0 content=$(location @pam_radius_src//:pam_radius_auth.conf)",
+        "./etc/logrotate.d/pam_radius type=file uid=0 gid=0 mode=0644 time=0 content=$(location @pam_radius_src//:pam_radius)",
+        "./usr/share/doc/libpam-radius-auth/copyright type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/copyright)",
+        "./usr/share/doc/libpam-radius-auth/README.rst type=file uid=0 gid=0 mode=0644 time=0 content=$(location @pam_radius_src//:README.rst)",
+        "./usr/share/doc/libpam-radius-auth/README.Debian type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/README.Debian)",
+        "./usr/share/doc/libpam-radius-auth/index.html type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/index.html)",
+        "./usr/share/doc/libpam-radius-auth/examples/pam_example type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/pam_example)",
+        "./usr/share/doc/libpam-radius-auth/examples/pam_radius_auth.conf type=file uid=0 gid=0 mode=0644 time=0 content=$(location @pam_radius_src//:pam_radius_auth.conf)",
+        "./usr/share/lintian/overrides/libpam-radius-auth type=file uid=0 gid=0 mode=0644 time=0 content=$(location debian/lintian-overrides)",
+    ],
+)
+runtime_packages(name="runtime_metadata",module_name="libpam-radius-auth",control="debian/control",changelog="debian/changelog",packages={"libpam-radius-auth":":libpam-radius-auth.runtime"},shlibdeps=False,required_paths={"libpam-radius-auth":["lib/x86_64-linux-gnu/libradius-1.1.8.so","lib/x86_64-linux-gnu/libeap-1.1.8.so","lib/x86_64-linux-gnu/security/pam_radius_auth.so","etc/pam_radius_auth.conf","etc/pam_radius_auth.d/statistics"]},control_file_helpers=[["dh_makeshlibs"],["dh_installdeb"]])
+source_package_controls(name="libpam-radius-auth.control",metadata=":runtime_metadata",package="libpam-radius-auth")
+py_test(name="installation_test",srcs=["installation_test.py"],args=["$(rootpath :libpam-radius-auth.runtime)","$(rootpath :libpam-radius-auth.control)","$(rootpath :runtime_metadata)","$(rootpath @pam_radius_src//:pam_radius_auth.conf)","$(rootpath @pam_radius_src//:pam_radius)","$(rootpath :dlopen_probe)"],data=[":dlopen_probe",":libpam-radius-auth.runtime",":libpam-radius-auth.control",":runtime_metadata","@pam_radius_src//:pam_radius_auth.conf","@pam_radius_src//:pam_radius"],deps=["@sonic_build_infra//deb:elf_metadata"])
+cc_binary(name="dlopen_probe_native",testonly=True,srcs=["dlopen_probe.c"],linkopts=["-ldl"])
+native_runtime_binary(name="dlopen_probe",testonly=True,binary=":dlopen_probe_native",runtime_payloads=["@radius_pam_build_debian//:raw_packages",":libpam-radius-auth.runtime"])

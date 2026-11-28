@@ -1,0 +1,8 @@
+load("@rules_cc//cc:cc_library.bzl","cc_library")
+load("@rules_cc//cc:cc_binary.bzl","cc_binary")
+load("@//src/radius/pam:source_includes.bzl","private_includes")
+package(default_visibility=["//visibility:public"])
+exports_files(glob(["**"]))
+filegroup(name="configure_inputs",srcs=glob(["**"]))
+cc_library(name="headers",hdrs=glob(["src/*.h"]),deps=["@//src/radius/pam:pam_config_headers","@freeradius_pam_src//:headers","@radius_pam_build_debian//libpam0g-dev:libpam0g_headers","@radius_pam_build_debian//libssl-dev:libssl_headers"])
+cc_binary(name="pam_radius_auth.so",linkshared=True,linkstatic=False,srcs=["src/"+name+".c" for name in ["pam_radius_auth","md5","mschapv2","radpeapclient","pam_radius_stats","pam_radius_trace"]],copts=["-g","-O2","-Wall","-Wdate-time","-U_FORTIFY_SOURCE","-D_FORTIFY_SOURCE=3","-fstack-protector-strong","-fstack-clash-protection","-fcf-protection","-Wformat","-Werror=format-security","'-DCONF_FILE=\"/etc/pam_radius_auth.conf\"'","-Wno-error=implicit-function-declaration","-Wno-error=incompatible-pointer-types","-Wno-error=int-conversion"]+private_includes(["src"]),features=["-opt","-strip_debug_symbols","-rules_go_unsupported_feature","sonic_as_needed"],linkopts=["-g","-Wl,-z,relro","-Wl,-z,now"],deps=[":headers","@freeradius_pam_src//:radius","@freeradius_pam_src//:eap","@radius_pam_build_debian//libpam0g-dev:libpam_cc","@radius_pam_build_debian//libssl-dev:libssl_cc"])

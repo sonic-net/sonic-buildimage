@@ -1,0 +1,285 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# One Make release identifies all SONiC runtime and debug images.
+string_flag(
+    name = "image_version",
+    build_setting_default = "",
+    make_variable = "SONIC_IMAGE_VERSION",
+)
+
+exports_files(["apt_subset.jq"])
+
+py_library(
+    name = "shared_runtime_base_lib",
+    srcs = ["shared_runtime_base.py"],
+    deps = [":oci_layout"],
+)
+
+py_binary(
+    name = "shared_runtime_base",
+    srcs = ["shared_runtime_base.py"],
+    deps = [":oci_layout"],
+)
+
+py_library(
+    name = "shared_runtime_layers_lib",
+    srcs = ["shared_runtime_layers.py"],
+)
+
+py_binary(
+    name = "shared_runtime_layers",
+    srcs = ["shared_runtime_layers.py"],
+    main = "shared_runtime_layers.py",
+)
+
+py_library(
+    name = "source_base_validation",
+    srcs = ["source_base_validation.py"],
+    deps = [
+        ":container_validation",
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+# Container owners pass policy and source-package declarations as inputs. These
+# helpers never discover a container directory or select expectations by name.
+py_library(
+    name = "base_inventory_lib",
+    srcs = ["base_inventory.py"],
+    deps = [
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "base_inventory",
+    srcs = ["base_inventory.py"],
+    deps = [":base_inventory_lib"],
+)
+
+py_library(
+    name = "package_contract_lib",
+    srcs = ["package_contract.py"],
+    deps = [
+        ":base_inventory_lib",
+        ":normalize_layer_lib",
+        ":oci_inventory",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+    ],
+)
+
+py_binary(
+    name = "combine_source_tars",
+    srcs = ["combine_source_tars.py"],
+    deps = [":package_contract_lib"],
+)
+
+py_binary(
+    name = "package_contract",
+    srcs = ["package_contract.py"],
+    main = "package_contract.py",
+    deps = [":package_contract_lib"],
+)
+
+py_library(
+    name = "container_validation",
+    srcs = [
+        "image_validation.py",
+        "native_packages.py",
+        "package_payloads.py",
+    ],
+    deps = [
+        ":normalize_layer_lib",
+        ":oci_inventory",
+        ":oci_layout",
+        ":package_contract_lib",
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+    ],
+)
+
+py_library(
+    name = "package_receipts_lib",
+    srcs = ["package_receipts.py"],
+    deps = ["//tools/bazel/ci:artifact_validation"],
+)
+
+py_binary(
+    name = "package_receipts",
+    srcs = ["package_receipts.py"],
+    main = "package_receipts.py",
+    deps = [":package_receipts_lib"],
+)
+
+py_library(
+    name = "package_state_lib",
+    srcs = ["package_state.py"],
+    deps = [
+        ":oci_inventory",
+        ":oci_layout",
+        ":package_contract_lib",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "package_state",
+    srcs = ["package_state.py"],
+    main = "package_state.py",
+    deps = [":package_state_lib"],
+)
+
+# SONiC image helpers share this repository's authoritative OCI layout reader.
+# ELF matching is separate from the lightweight inventory used by APT selection.
+py_library(
+    name = "elf_metadata",
+    srcs = ["elf.py"],
+    deps = ["//tools/bazel/ci:artifact_validation"],
+)
+
+py_library(
+    name = "imported_symbols_lib",
+    srcs = ["imported_symbols.py"],
+    deps = [
+        ":elf_metadata",
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "imported_symbols",
+    srcs = ["imported_symbols.py"],
+    main = "imported_symbols.py",
+    deps = [":imported_symbols_lib"],
+)
+
+py_library(
+    name = "normalize_layer_lib",
+    srcs = ["normalize_layer.py"],
+    deps = [
+        ":oci_layout",
+        "//tools/bazel/ci:artifact_validation",
+    ],
+)
+
+py_binary(
+    name = "normalize_layer_tool",
+    srcs = ["normalize_layer.py"],
+    main = "normalize_layer.py",
+    deps = [":normalize_layer_lib"],
+)
+
+py_library(
+    name = "apt_selection",
+    srcs = ["apt_selection.py"],
+    deps = [
+        "@sonic_build_infra//oci:layer_assembly_lib",
+        ":base_inventory_lib",
+        ":oci_inventory",
+        ":oci_layout",
+        ":package_contract_lib",
+        "//tools/bazel/ci:artifact_validation",
+        "@sonic_build_infra//apt:lib",
+    ],
+)
+
+py_binary(
+    name = "select_apt_payloads",
+    srcs = ["apt_selection.py"],
+    main = "apt_selection.py",
+    deps = [":apt_selection"],
+)
+
+py_library(
+    name = "oci_inventory",
+    srcs = ["oci_inventory.py"],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+    ],
+)
+
+exports_files(["prepare_oci_base.py"])
+
+py_library(
+    name = "manifest_labels_lib",
+    srcs = ["manifest_labels.py"],
+    imports = ["."],
+)
+
+py_binary(
+    name = "manifest_labels",
+    srcs = ["manifest_labels.py"],
+)
+
+# The same validator is used by Make publication and the Bazel consumer.
+py_library(
+    name = "boot_layout",
+    srcs = ["boot_layout.py"],
+    imports = ["."],
+)
+
+py_library(
+    name = "oci_layout",
+    srcs = ["oci_layout.py"],
+    imports = ["."],
+)
+
+py_binary(
+    name = "validate_oci_layout",
+    srcs = ["oci_layout.py"],
+    main = "oci_layout.py",
+)
+
+py_binary(
+    name = "prepare_oci_base",
+    srcs = ["prepare_oci_base.py"],
+    deps = [":oci_layout"],
+)
+
+py_library(
+    name = "source_contract_lib",
+    srcs = ["source_contract.py"],
+    deps = [
+        ":package_contract_lib",
+        "@sonic_build_infra//oci:metadata_lib",
+    ],
+)
+
+py_binary(
+    name = "source_contract",
+    srcs = ["source_contract.py"],
+    deps = [":source_contract_lib"],
+)
+
+py_binary(
+    name = "installed_images_policy",
+    srcs = ["installed_images_policy.py"],
+    deps = [":container_validation"],
+)
+
+py_library(
+    name = "statoverride_lib",
+    srcs = ["statoverride.py"],
+    deps = [":oci_layout"],
+)
+
+py_binary(
+    name = "statoverride",
+    srcs = ["statoverride.py"],
+    main = "statoverride.py",
+    deps = [
+        ":statoverride_lib",
+        "@sonic_build_infra//oci:package_metadata",
+    ],
+)

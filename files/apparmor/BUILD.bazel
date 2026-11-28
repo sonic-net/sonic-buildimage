@@ -1,0 +1,7 @@
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "usr.bin.tcpdump"
+    ],
+)

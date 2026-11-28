@@ -1,0 +1,22 @@
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "arista-convertfs.j2",
+        "arista-hook",
+        "arista-net",
+        "arista-wait-blockdev",
+        "file",
+        "fsck-rootfs",
+        "mke2fs",
+        "modules",
+        "pzstd",
+        "resize-rootfs",
+        "setfacl",
+        "ssd-upgrade",
+        "swi2bin",
+        "union-fsck",
+        "union-mount.j2",
+        "varlog"
+    ],
+)

@@ -1,0 +1,30 @@
+diff --git a/doc/manpages/conf.py b/doc/manpages/conf.py
+--- a/doc/manpages/conf.py
++++ b/doc/manpages/conf.py
+@@ -102,6 +102,11 @@
+ except IOError:
+     # if config.status doesn't exist, just ignore it
+     pass
++
++# Bazel supplies the package version without materializing a source tree.
++if "FRR_DOCUMENTATION_VERSION" in os.environ:
++    replace_vars["PACKAGE_VERSION"] = os.environ["FRR_DOCUMENTATION_VERSION"]
++    replace_vars["PACKAGE_STRING"] = "frr " + replace_vars["PACKAGE_VERSION"]
+ 
+ # manually fill out some of these we can't get from config.status
+ replace_vars["COPYRIGHT_STR"] = "Copyright (c)"
+diff --git a/doc/user/conf.py b/doc/user/conf.py
+--- a/doc/user/conf.py
++++ b/doc/user/conf.py
+@@ -118,6 +118,11 @@
+     # if config.status doesn't exist, just ignore it
+     pass
+ 
++# Bazel supplies the package version without materializing a source tree.
++if "FRR_DOCUMENTATION_VERSION" in os.environ:
++    replace_vars["PACKAGE_VERSION"] = os.environ["FRR_DOCUMENTATION_VERSION"]
++    replace_vars["PACKAGE_STRING"] = "frr " + replace_vars["PACKAGE_VERSION"]
++
+ # manually fill out some of these we can't get from config.status
+ replace_vars["COPYRIGHT_STR"] = "Copyright (c)"
+ replace_vars["COPYRIGHT_STR"] += " {0}".format(replace_vars["COPYRIGHT_YEAR"])

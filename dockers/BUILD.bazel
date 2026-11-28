@@ -1,0 +1,21 @@
+# Template inputs remain owned by the containers whose configuration is tested.
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = [
+        "//dockers/docker-dhcp-relay:config_engine_test_data",
+        "//dockers/docker-fpm-frr:config_engine_test_data",
+        "//dockers/docker-orchagent:ipinip.json.j2",
+        "//dockers/docker-orchagent:ports.json.j2",
+        "//dockers/docker-orchagent:switch.json.j2",
+        "//dockers/docker-router-advertiser:docker-router-advertiser.supervisord.conf.j2",
+        "//dockers/docker-router-advertiser:radvd.conf.j2",
+        "//dockers/docker-router-advertiser:wait_for_link.sh.j2",
+        "//dockers/docker-lldp:config_engine_test_data",
+        "//dockers/docker-snmp:config_engine_test_data",
+    ],
+    visibility = [
+        "//src/sonic-bgpcfgd:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)

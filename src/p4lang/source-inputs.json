@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "base_url": "https://downloadcontent.opensuse.org/repositories/home:/p4lang/Debian_11/",
+  "provenance": {
+    "official_content_run": "https://github.com/securely1g/sonic-buildimage/actions/runs/41366203790",
+    "official_content_report_sha256": "ee6eabc6638b4f92e3eb3abe942175f3be3f861690c59063d6f18800e9cdff57",
+    "redirected_official_run": "https://github.com/securely1g/sonic-buildimage/actions/runs/41365936290",
+    "all_nine_files_identical_across_runs": true,
+    "previous_build_inputs": {
+      "revision": "0f3484ebf43f357697bb18f177711f066ce7aaf5",
+      "manifest_path": "src/p4lang/source-cache.json",
+      "manifest_sha256": "cf730867872d0f470f8a03e8a809ecc6ea2ea9d675efae631292a27ad69b8754",
+      "all_six_tar_inputs_identical": true,
+      "p4c_descriptor_previous_sha256": "2ee97ffd3f82d67e04ee149f12ef8c58377f9db37e76d4aaa54518178c7f0fb7",
+      "p4c_descriptor_changed": true
+    },
+    "p4c_baseline_versions_web": {
+      "revision": "071c575c71f85329d21a94b4d40c1f2d7b696cd9",
+      "path": "files/build/versions-public/default/versions-web",
+      "md5": "98b03592b7a6cf4ed2150463fd757e0e"
+    }
+  },
+  "packages": {
+    "p4lang-pi": {
+      "version": "0.1.3-2",
+      "upstream_version": "0.1.3",
+      "dsc_consistent": true,
+      "files": {
+        "p4lang-pi_0.1.3-2.debian.tar.xz": {
+          "bytes": 2752,
+          "sha256": "ba9af65a28fd1bbad2b928b681d8b5ea10076611c0e2e0dee1ba855f1216723c"
+        },
+        "p4lang-pi_0.1.3-2.dsc": {
+          "bytes": 1214,
+          "sha256": "9d5b60b6e403755896c8585eef20659a62fe2faccf612968beee2537fd72857e"
+        },
+        "p4lang-pi_0.1.3.orig.tar.gz": {
+          "bytes": 2851766,
+          "sha256": "9bb2b97f2caa7548b9cc798c3643b97315f3d8f8372d3689dea5e2a22e18a097"
+        }
+      }
+    },
+    "p4lang-bmv2": {
+      "version": "1.15.0-9",
+      "upstream_version": "1.15.0",
+      "dsc_consistent": true,
+      "files": {
+        "p4lang-bmv2_1.15.0-9.debian.tar.xz": {
+          "bytes": 3100,
+          "sha256": "30941da6dde4cbbefaa9a12dfffa260115b3b63c6d56b3112b3baee953636179"
+        },
+        "p4lang-bmv2_1.15.0-9.dsc": {
+          "bytes": 1615,
+          "sha256": "2e9a8e6042f0c23148c4a1a11099db2cc87901f685a763d52cfadfad26a96fc1"
+        },
+        "p4lang-bmv2_1.15.0.orig.tar.gz": {
+          "bytes": 37010979,
+          "sha256": "083bb907e45597af8e29ef3b0a92d33d282ba23840ddd5cfb8372d2f030ab415"
+        }
+      }
+    },
+    "p4lang-p4c": {
+      "version": "1.2.4.2-3",
+      "upstream_version": "1.2.4.2",
+      "dsc_consistent": false,
+      "files": {
+        "p4lang-p4c_1.2.4.2-3.debian.tar.xz": {
+          "bytes": 2796,
+          "sha256": "2a39bf04c8d084724014b71cdeb3b91dbe7a32bf1bd6cd499e5e132aa3e4cb40"
+        },
+        "p4lang-p4c_1.2.4.2-3.dsc": {
+          "bytes": 1579,
+          "sha256": "207b5414d0cd7d11568b825631f893451815dc99aea911ac8226eb7b6902412d"
+        },
+        "p4lang-p4c_1.2.4.2.orig.tar.gz": {
+          "bytes": 173758549,
+          "sha256": "a41d616add63924a098edaab446809f543ffadfc2e40356f9b73986f324c668a"
+        }
+      }
+    }
+  },
+  "known_inconsistencies": [
+    {
+      "package": "p4lang-p4c",
+      "descriptor": "p4lang-p4c_1.2.4.2-3.dsc",
+      "descriptor_sha256": "207b5414d0cd7d11568b825631f893451815dc99aea911ac8226eb7b6902412d",
+      "archive": "p4lang-p4c_1.2.4.2.orig.tar.gz",
+      "declared": {
+        "md5": "fdcae6fb4befe90f75d531301f73248c",
+        "bytes": 173765465,
+        "sha1": "37680a0b6e09a015216ab0796846277d432f2d69",
+        "sha256": "61251b9cf6dc4025e5bd7ec66c3387850962afad91f21754ec0e583f23c1953a"
+      },
+      "published": {
+        "bytes": 173758549,
+        "sha256": "a41d616add63924a098edaab446809f543ffadfc2e40356f9b73986f324c668a",
+        "sha1": "961a3b69204f3523285c72bc8e13705b79b79082",
+        "md5": "98b03592b7a6cf4ed2150463fd757e0e"
+      },
+      "explanation": "Both official endpoints publish these exact archive bytes, also selected by baseline versions-web and the earlier tested native inputs. The unchanged current DSC declares different orig bytes. Verify the independent published-byte pins; report this exact inconsistency without repairing the DSC or claiming its checksums match."
+    }
+  ]
+}

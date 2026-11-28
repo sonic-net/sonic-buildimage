@@ -1,0 +1,182 @@
+name: Bazel Rust supervisor
+
+on:
+  pull_request:
+    paths:
+      - tools/bazel/ci/resources.py
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - .github/workflows/bazel-supervisor-rust.yml
+      - .bazelrc
+      - .bazelversion
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - tools/bazel/go-lock
+      - tools/bazel/go/**
+      - tools/bazel/tests/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
+      - src/sonic-supervisord-utilities-rs/**
+  push:
+    branches: [master]
+    paths:
+      - tools/bazel/ci/resources.py
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - .github/workflows/bazel-supervisor-rust.yml
+      - .bazelrc
+      - .bazelversion
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - tools/bazel/go-lock
+      - tools/bazel/go/**
+      - tools/bazel/tests/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
+      - src/sonic-supervisord-utilities-rs/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bazel-supervisor-rust-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Rust listener (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: AMD64
+            runner: [self-hosted, linux, bazel-x64]
+            machine: x86_64
+            debian_arch: amd64
+          - arch: ARM64
+            runner: [self-hosted, linux, bazel-arm64]
+            machine: aarch64
+            debian_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    env:
+      BAZEL: tools/bazel/ci/libteam_draft_bazel.sh
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install native verification tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates file gdb git pkg-config python3
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare pinned source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - uses: ./.github/actions/bazel-post-job-cleanup
+        id: bazel_cleanup_register
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.arch }}
+          cache-version: "8.5.1"
+
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --configure-startup
+      - name: Verify native architecture and clean dependency inputs
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+          EXPECTED_DEBIAN_ARCH: ${{ matrix.debian_arch }}
+        run: |
+          test "$(uname -m)" = "$EXPECTED_MACHINE"
+          test "$(dpkg --print-architecture)" = "$EXPECTED_DEBIAN_ARCH"
+          . /etc/os-release
+          test "$ID" = debian
+          test "$VERSION_CODENAME" = trixie
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Check the root Go ZIP lock
+        if: matrix.arch == 'AMD64'
+        run: |
+          tools/bazel/go-lock --check
+          git diff --exit-code
+
+      - name: Audit and test source runtime and debug packages
+        id: rust_packages
+        env:
+          USE_VS_LISTENER: ${{ matrix.arch == 'AMD64' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+          MACHINE: ${{ matrix.machine }}
+          BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+        run: |
+          set -euo pipefail
+          flags=(
+            "--platforms=@sonic_build_infra//platforms:${MACHINE}_trixie"
+            "--host_platform=@sonic_build_infra//platforms:${MACHINE}_trixie")
+          targets=(//src/sonic-supervisord-utilities-rs:unit_tests
+            //src/sonic-supervisord-utilities-rs:integration_tests
+            //src/sonic-supervisord-utilities-rs:listener_tests)
+          if [[ "$USE_VS_LISTENER" != true ]]; then
+            targets+=(//src/sonic-supervisord-utilities-rs:package_test
+              @sonic_swss//crates/countersyncd:common_rust_test)
+          fi
+          audit_flags=()
+          for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          python3 tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
+            --output artifacts/supervisor-rust/action-audit.json "${targets[@]}"
+          "$BAZEL" test "${flags[@]}" --test_output=errors "${targets[@]}"
+          "$BAZEL" cquery "${flags[@]}" --noimplicit_deps \
+            'kind("rust_library rule", deps(//src/sonic-supervisord-utilities-rs:supervisor_library))' \
+            > artifacts/supervisor-rust/rust-libraries.txt
+          cp MODULE.bazel.lock artifacts/supervisor-rust/MODULE.bazel.lock
+          cp -aL bazel-testlogs/src/sonic-supervisord-utilities-rs artifacts/supervisor-rust/tests
+          # Trusted AMD64 runs the shared countersyncd test in the container package suite.
+          if [[ "$USE_VS_LISTENER" != true ]]; then
+            common_repo="$("$BAZEL" mod dump_repo_mapping '' | python3 -c 'import json, sys; print(json.load(sys.stdin)["sonic_swss"])')"
+            cp -aL "bazel-testlogs/external/$common_repo/crates/countersyncd/common_rust_test" artifacts/supervisor-rust/tests/
+          fi
+          git diff --exit-code
+
+      - name: Retain source and installed-package evidence
+        id: bazel_upload_rust_packages
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supervisor-rust-${{ matrix.arch }}
+          path: artifacts/supervisor-rust/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts

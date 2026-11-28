@@ -1,0 +1,26 @@
+--- a/tests/tool_i.tcl
++++ b/tests/tool_i.tcl
+@@ -29,8 +29,8 @@
+ # the beginning of error message
+ set error_head "$error_prompt Check-failed"
+
+-# detection on eof and timeout will be on every expect command
+-expect_after {
++# Match each expect command's selected child, not stdin before the first spawn.
++expect_after -i $any_spawn_id {
+     eof {
+         global error_head
+         error "$error_head unexpected termination"
+--- a/tests/yanglint/interactive/ly.tcl
++++ b/tests/yanglint/interactive/ly.tcl
+@@ -13,8 +13,8 @@
+ set prompt "> "
+ # turn off dialog between expect and yanglint
+ log_user 0
+-# setting some large terminal width
+-stty columns 720
++# Give every spawned PTY a large width even without a controlling terminal.
++set stty_init "sane columns 720"
+
+ # default setup for every unit test
+ variable ly_setup {

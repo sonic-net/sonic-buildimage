@@ -1,0 +1,29 @@
+--- a/package_test.py
++++ b/package_test.py
+@@ -211,6 +211,8 @@
+     assert '.debug_info' not in elf(binary, '-SW') and '.debug_info' in elf(args.binary, '-SW')
+     build_id = re.search(r'Build ID: ([0-9a-f]+)', elf(binary, '-n')).group(1)
+     assert set(build_id) != {'0'} and build_id in elf(args.binary, '-n')
++    if args.debug is None:
++        return {'gnu_build_id': build_id}
+     relative = 'usr/lib/debug/.build-id/' + build_id[:2] + '/' + build_id[2:] + '.debug'
+     # The selected shared debug rule normalizes symbol files to mode0644.
+     # Its four synthesized parents use the fixed default.awk epoch; explicit
+@@ -293,7 +295,7 @@
+     parser = argparse.ArgumentParser(description=__doc__)
+     for name in ('runtime', 'debug', 'sources', 'binary', 'metadata', 'readelf', 'objcopy', 'gdb', 'golden',
+                  'baseline-version', 'baseline-components', 'buildinfo', 'baseline-buildinfo', 'default-config', 'golden-config', 'golden-compose', 'golden-expected'):
+-        parser.add_argument('--' + name, type=lambda value: Path(value).resolve(strict=True), required=True)
++        parser.add_argument('--' + name, type=lambda value: Path(value).resolve(strict=True), required=(name != 'debug'))
+     parser.add_argument('--runtime-file', action='append', required=True)
+     parser.add_argument('--source-file', action='append', required=True)
+     args = parser.parse_args()
+@@ -334,7 +336,7 @@
+             buildinfo = inspect_buildinfo(args, binary, artifact_root, env)
+             symbols = inspect_symbols(args, binary, debug, root, env)
+             service = startup_and_golden(args, binary, root, env)
+-            report = {'status':'passed', 'runtime_sha256':digest(args.runtime), 'debug_sha256':digest(args.debug),
++            report = {'status':'passed', 'runtime_sha256':digest(args.runtime), 'debug_sha256':digest(args.debug) if args.debug else None,
+                       'source_sha256':digest(args.sources), 'installed_sha256':digest(binary), 'symbols':symbols,
+                       'service':service, 'buildinfo':buildinfo, 'source_scope':'Generated entrypoints, manifest and canonical locks only'}
+             (artifact_root/'installed-otel.json').write_text(json.dumps(report,indent=2)+'\n')

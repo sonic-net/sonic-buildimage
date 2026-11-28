@@ -36,3 +36,27 @@ $(DOCKER_P4RT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_P4RT)_RUN_OPT += -v /zmq_swss:/zmq_swss:rw
 $(DOCKER_P4RT)_GIT_COMMIT = $(shell cd "$($(SONIC_P4RT)_SRC_PATH)" && git log -n 1 --format=format:"%H %s" || echo "Unable to fetch git log for p4rt")
 
+# Native source OCI images reuse the config-engine parent and @sonic_pins owner TARs.
+# Preserve every legacy prerequisite and all excluded profiles above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_P4RT) $(DOCKER_P4RT_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_P4RT)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_P4RT_DBG)
+$(DOCKER_P4RT_DBG)_PATH = $($(DOCKER_P4RT)_PATH)
+$(DOCKER_P4RT)_BAZEL_TARGET = //dockers/docker-sonic-p4rt:$(DOCKER_P4RT)
+$(DOCKER_P4RT_DBG)_BAZEL_TARGET = //dockers/docker-sonic-p4rt:$(DOCKER_P4RT_DBG)
+SONIC_BAZEL_MANIFESTS += docker-sonic-p4rt docker-sonic-p4rt-$(DBG_IMAGE_MARK)
+docker-sonic-p4rt_MANIFEST_IMAGE = $(DOCKER_P4RT)
+docker-sonic-p4rt-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_P4RT)
+docker-sonic-p4rt-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+
+$(DOCKER_P4RT)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-p4rt/manifest.json
+$(DOCKER_P4RT_DBG)_BAZEL_DEPENDS = $($(DOCKER_P4RT)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-sonic-p4rt-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

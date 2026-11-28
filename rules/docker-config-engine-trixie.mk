@@ -11,7 +11,8 @@ $(DOCKER_CONFIG_ENGINE_TRIXIE)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(SONIC_EVENTD) \
                                           $(SONIC_SUPERVISORD_UTILITIES_RS) \
                                           $(SONIC_CONTAINERCFGD_RS)
-$(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(REDIS_DUMP_LOAD_PY3) \
+                                                  $(SONIC_PY_COMMON_PY3) \
                                                   $(SONIC_YANG_MGMT_PY3) \
                                                   $(SONIC_YANG_MODELS_PY3)
 $(DOCKER_CONFIG_ENGINE_TRIXIE)_PYTHON_WHEELS += $(SONIC_CONFIG_ENGINE_PY3) \
@@ -35,3 +36,20 @@ $(DOCKER_CONFIG_ENGINE_TRIXIE)_DBG_IMAGE_PACKAGES = $($(DOCKER_BASE_TRIXIE)_DBG_
 
 SONIC_DOCKER_IMAGES += $(DOCKER_CONFIG_ENGINE_TRIXIE)
 SONIC_TRIXIE_DOCKERS += $(DOCKER_CONFIG_ENGINE_TRIXIE)
+
+# Source-backed OCI assembly uses the same shared Make selector and archive
+# bridge as the service images. Keep legacy package metadata above for callers
+# that still combine it into their own Dockerfiles.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_MANIFESTS += docker-config-engine-trixie
+docker-config-engine-trixie_MANIFEST_IMAGE = $(DOCKER_CONFIG_ENGINE_TRIXIE)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_CONFIG_ENGINE_TRIXIE)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_CONFIG_ENGINE_TRIXIE)
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_BAZEL_TARGET = //dockers/docker-config-engine-trixie:docker-config-engine-trixie.gz
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json
+$(DOCKER_CONFIG_ENGINE_TRIXIE)_BAZEL_DEPENDS += $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json
+endif
+endif
+endif

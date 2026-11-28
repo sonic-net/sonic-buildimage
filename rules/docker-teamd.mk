@@ -43,3 +43,27 @@ $(DOCKER_TEAMD)_BASE_IMAGE_FILES += teamdctl:/usr/bin/teamdctl
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_TEAMD)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_TEAMD_DBG)
+
+# Native source OCI images share the exact SWSS parent and libteam owner TARs.
+# Preserve the legacy declarations above for all excluded build profiles.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_TEAMD) $(DOCKER_TEAMD_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_TEAMD)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_TEAMD_DBG)
+$(DOCKER_TEAMD_DBG)_PATH = $($(DOCKER_TEAMD)_PATH)
+$(DOCKER_TEAMD)_BAZEL_TARGET = //dockers/docker-teamd:$(DOCKER_TEAMD)
+$(DOCKER_TEAMD_DBG)_BAZEL_TARGET = //dockers/docker-teamd:$(DOCKER_TEAMD_DBG)
+SONIC_BAZEL_MANIFESTS += docker-teamd docker-teamd-$(DBG_IMAGE_MARK)
+docker-teamd_MANIFEST_IMAGE = $(DOCKER_TEAMD)
+docker-teamd-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_TEAMD)
+docker-teamd-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_TEAMD)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-swss-layer-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-teamd/manifest.json
+$(DOCKER_TEAMD_DBG)_BAZEL_DEPENDS = $($(DOCKER_TEAMD)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-teamd-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

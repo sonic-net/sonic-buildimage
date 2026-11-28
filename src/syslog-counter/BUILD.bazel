@@ -1,0 +1,11 @@
+load("@sonic_build_infra//rust:release.bzl", "cargo_release_binary")
+load("@rules_rs//rs:rust_binary.bzl", "rust_binary")
+load("@rules_rs//rs:rust_library.bzl", "rust_library")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+package(default_visibility = ["//visibility:public"])
+rust_binary(name = "syslog-counter.binary", srcs = glob(["src/*.rs"]), crate_root = "src/main.rs", crate_name = "syslog_counter", edition = "2021", version = "1.0.0", experimental_use_cc_common_link = 0, rustc_flags = ["-Copt-level=3", "-Cdebuginfo=2", "-Cstrip=none"], deps = ['@sonic_swss_common//crates/swss-common:swss_common', "@sonic_rust_deps//:env_logger", "@sonic_rust_deps//:log"])
+sonic_deploy_tar(name = "syslog_counter.runtime", binaries = {"usr/bin/syslog-counter uid=0 gid=0 mode=0755 type=file": ":syslog-counter"}, force_debug_build = True)
+runtime_packages(name = "runtime_packages.json", packages = {"syslog-counter": ":syslog_counter.runtime"}, control = "debian/control", changelog = "debian/changelog", dependencies = ["@sonic_swss_common//:runtime_packages.json"])
+
+cargo_release_binary(name = "syslog-counter", src = ":syslog-counter.binary")

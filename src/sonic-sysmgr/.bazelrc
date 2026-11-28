@@ -1,0 +1,11 @@
+common --check_direct_dependencies=off
+common --registry=https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main
+common --registry=https://bcr.bazel.build/
+common --platforms=@sonic_build_infra//platforms:x86_64_trixie
+
+# Draft review CI supplies a single complete immutable catalog before BCR.
+# No sibling checkout or Make-produced package overrides are selected.
+build:ci-linux-sandbox --spawn_strategy=linux-sandbox
+build:ci-linux-sandbox --strategy=Genrule=linux-sandbox
+build:ci-linux-sandbox --strategy=TestRunner=linux-sandbox
+build:ci-linux-sandbox --noincompatible_legacy_local_fallback

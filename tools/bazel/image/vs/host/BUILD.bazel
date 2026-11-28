@@ -1,0 +1,522 @@
+load(":locale.bzl","host_locale")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tool", "build_tools_runtime")
+load("@tar.bzl//tar:tar.bzl", "tar")
+load(":apt_profile.bzl", "APT_PACKAGES")
+load(":ldcache.bzl", "host_ldcache")
+load(":maintainer_services.bzl", "host_maintainer_services")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load(":accounts.bzl", "host_accounts")
+load(":package_configuration.bzl", "host_package_configuration")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["locale.bzl", "accounts.bzl", "configuration.bzl", "profile.bzl", "ldcache.bzl", "package_configuration.bzl", "maintainer_services.bzl", "python_cleanup.bzl", "debconf_answers.json"])
+
+py_binary(name = "accounts_tool", srcs = ["accounts.py"], main = "accounts.py")
+py_binary(name = "maintainer_services_tool", srcs = ["maintainer_services.py"], main = "maintainer_services.py")
+py_binary(name = "python_cleanup_tool", srcs = ["python_cleanup.py", "tar_filesystem.py"], main = "python_cleanup.py", imports = ["."], deps = ["//tools/bazel/image:assembly_lib"])
+
+wheel_layer(
+    name = "enum34_cleanup_fixture",
+    testonly = True,
+    wheels = ["@config_engine_pip//enum34:whl"],
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    scripts = "/usr/local/bin",
+    headers = "/usr/local/include",
+    data_prefix = "/usr/local",
+    interpreter = "/usr/bin/python3",
+)
+py_test(
+    name = "python_cleanup_test",
+    srcs = ["python_cleanup.py", "python_cleanup_test.py", "tar_filesystem.py"],
+    main = "python_cleanup_test.py",
+    imports = ["."],
+    data = [":enum34_cleanup_fixture"],
+    args = ["$(rootpath :enum34_cleanup_fixture)"],
+    deps = ["//tools/bazel/image:assembly_lib"],
+)
+
+filegroup(name = "apt_controls", srcs = ["@vs_host_debian//" + package + ":control" for package in APT_PACKAGES])
+
+host_maintainer_services(
+    name = "apt_maintainer_services",
+    layers = [":merged_usr_skeleton", "@vs_host_debian//:packages"],
+    controls = [":apt_controls"],
+)
+
+host_ldcache(
+    name = "apt_ldcache",
+    layers = [":merged_usr_skeleton", "@vs_host_debian//:packages"],
+    architecture = "amd64",
+)
+
+host_accounts(
+    name = "apt_accounts",
+    data = {"@vs_host_debian//" + package + ":data": package for package in ["base-passwd", "base-files", "cron", "dbus", "chrony"]},
+    controls = {"@vs_host_debian//" + package + ":control": package for package in ["base-passwd", "base-files", "cron", "dbus", "chrony", "nslcd", "docker-ce"]},
+    installed = APT_PACKAGES,
+    username = "admin",
+    password = "YourPaSsWoRd",
+    lastchg_day = 20773,
+    mkpasswd = "@sonic_build_infra//tools/build_tools:mkpasswd",
+)
+
+host_package_configuration(
+    name = "apt_package_configuration",
+    layers = [":merged_usr_skeleton", "@vs_host_debian//:packages", ":apt_accounts"],
+    controls = {"@vs_host_debian//" + package + ":control": package for package in APT_PACKAGES},
+    architecture = "amd64",
+)
+
+# Debian Trixie merged-/usr layout, applied before package payloads.
+tar(
+    name = "merged_usr_skeleton",
+    mtree = [
+        "./" + path + " type=dir uid=0 gid=0 mode=0755 time=0"
+        for path in ["usr", "usr/bin", "usr/sbin", "usr/lib", "usr/lib64", "run", "var"]
+    ] + [
+        "./" + name + " type=link uid=0 gid=0 mode=0777 time=0 link=usr/" + name
+        for name in ["bin", "sbin", "lib", "lib64"]
+    ] + [
+        "./var/run type=link uid=0 gid=0 mode=0777 time=0 link=/run",
+        "./var/lock type=link uid=0 gid=0 mode=0777 time=0 link=/run/lock",
+        "./run/lock type=dir uid=0 gid=0 mode=1777 time=0",
+    ],
+)
+
+py_binary(
+    name = "package_configuration_tool",
+    srcs = ["package_configuration.py", "alternatives_data.py", "authentication.py", "tar_filesystem.py"],
+    main = "package_configuration.py",
+    imports = ["."],
+    deps = ["//tools/bazel/image:assembly_lib"],
+)
+
+py_binary(
+    name = "ldcache_tool",
+    srcs = ["ldcache_layer.py", "tar_filesystem.py"],
+    main = "ldcache_layer.py",
+    imports = ["."],
+    deps = ["//tools/bazel/image:assembly_lib", "//tools/bazel/image:ldcache"],
+)
+
+py_test(
+    name = "ldcache_test",
+    srcs = ["ldcache_test.py", "tar_filesystem.py"],
+    main = "ldcache_test.py",
+    imports = ["."],
+    data = ["@initramfs_runtime//libc6:data"],
+    args = ["$(rootpath @initramfs_runtime//libc6:data)"],
+    deps = ["//tools/bazel/image:assembly_lib", "//tools/bazel/image:ldcache"],
+)
+
+# The Make installer installs these checked-in files directly. Values are
+# destination path and final mode after its explicit chmod operations.
+_FILES = [
+    (":hostname", "etc/hostname", "0644"),
+    (":hosts", "etc/hosts", "0644"),
+    ("//files/image_config:resolv-config/resolv-symlink.conf", "usr/lib/tmpfiles.d/resolv-symlink.conf", "0644"),
+    ("//files/image_config:sed_mgmt/sed_pw_utils.sh", "usr/local/bin/sed_pw_utils.sh", "0755"),
+    ("//files/image_config:sed_mgmt/sed_pw_change.sh", "usr/local/bin/sed_pw_change.sh", "0755"),
+    ("//files/image_config:sed_mgmt/sed_pw_reset.sh", "usr/local/bin/sed_pw_reset.sh", "0755"),
+    ("//files/image_config:sed_mgmt/sed_pw_tpm_recovery.sh", "usr/local/bin/sed_pw_tpm_recovery.sh", "0755"),
+    ("//files/image_config:sed_mgmt/sed-pw-tpm-recovery.service", "usr/lib/systemd/system/sed-pw-tpm-recovery.service", "0644"),
+    ("//files/image_config:environment/environment", "etc/environment", "0644"),
+    ("//files/image_config:environment/motd", "etc/motd", "0644"),
+    ("//files/image_config:environment/logout_message", "etc/logout_message", "0644"),
+    ("//files/image_config:bash/bash.bashrc", "etc/bash.bashrc", "0644"),
+    ("//files/image_config:bash/bash.bash_logout", "etc/bash.bash_logout", "0644"),
+    ("//files/image_config:readline/inputrc", "etc/inputrc", "0644"),
+    ("//files/image_config:monit/monit.service", "etc/systemd/system/monit.service", "0644"),
+    ("//files/image_config:monit/monitrc", "etc/monit/monitrc", "0600"),
+    ("//files/image_config:monit/conf.d/sonic-host", "etc/monit/conf.d/sonic-host", "0600"),
+    ("//files/image_config:monit/container_checker", "usr/bin/container_checker", "0755"),
+    ("//files/image_config:monit/memory_checker", "usr/bin/memory_checker", "0755"),
+    ("//files/image_config:monit/restart_service", "usr/bin/restart_service", "0755"),
+    ("//files/image_config:monit/arp_update_checker", "usr/bin/arp_update_checker", "0755"),
+    ("//files/image_config:monit/control_plane_drop_check", "usr/bin/control_plane_drop_check", "0755"),
+    ("//files/image_config:monit/mgmt_oper_status.py", "usr/bin/mgmt_oper_status.py", "0755"),
+    ("//files/image_config:smartmontools/smartmontools", "etc/default/smartmontools", "0644"),
+    ("//files/image_config:cron.d/core_cleanup", "etc/cron.d/core_cleanup", "0644"),
+    ("//files/image_config:chrony/chrony-config.sh", "usr/bin/chrony-config.sh", "0755"),
+    ("//files/image_config:chrony/chrony.conf.j2", "usr/share/sonic/templates/chrony.conf.j2", "0644"),
+    ("//files/image_config:chrony/chrony.keys.j2", "usr/share/sonic/templates/chrony.keys.j2", "0644"),
+    ("//files/image_config:chrony/chronyd-starter.sh", "usr/local/sbin/chronyd-starter.sh", "0755"),
+    ("//files/image_config:chrony/check_ntp_status.sh", "usr/local/bin/check_ntp_status.sh", "0755"),
+    ("//files/image_config:chrony/override.conf", "usr/lib/systemd/system/chrony.service.d/override.conf", "0644"),
+    ("//files/image_config:systemd/set-epoch.service", "usr/lib/systemd/system/set-epoch.service", "0644"),
+    ("//files/image_config:systemd/set-epoch.timer", "usr/lib/systemd/system/set-epoch.timer", "0644"),
+    ("//files/image_config:systemd/set-epoch.sh", "usr/local/sbin/set-epoch.sh", "0755"),
+    ("//files/build_templates:dns.j2", "usr/share/sonic/templates/dns.j2", "0644"),
+    ("//files/image_config:cli_sessions/tmout-env.sh.j2", "usr/share/sonic/templates/tmout-env.sh.j2", "0644"),
+    ("//files/image_config:cli_sessions/sysrq-sysctl.conf.j2", "usr/share/sonic/templates/sysrq-sysctl.conf.j2", "0644"),
+    ("//files/image_config:cli_sessions/serial-config.sh", "usr/bin/serial-config.sh", "0755"),
+    ("//files/image_config:cli_sessions/serial-config.service", "usr/lib/systemd/system/serial-config.service", "0644"),
+    ("//files/image_config:warmboot-finalizer/finalize-warmboot.sh", "usr/local/bin/finalize-warmboot.sh", "0755"),
+    ("//files/image_config:warmboot-finalizer/warmboot-finalizer.service", "usr/lib/systemd/system/warmboot-finalizer.service", "0644"),
+    ("//files/image_config:rsyslog/rsyslog-config.service", "usr/lib/systemd/system/rsyslog-config.service", "0644"),
+    ("//files/image_config:rsyslog/rsyslog-config.sh", "usr/bin/rsyslog-config.sh", "0755"),
+    ("//files/image_config:rsyslog/rsyslog.conf.j2", "usr/share/sonic/templates/rsyslog.conf.j2", "0644"),
+    ("//files/image_config:rsyslog/rsyslog-container.conf.j2", "usr/share/sonic/templates/rsyslog-container.conf.j2", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/99-default.conf", "etc/rsyslog.d/99-default.conf", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/systemd_regex.json", "etc/rsyslog.d/systemd_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/syncd_regex.json", "etc/rsyslog.d/syncd_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/swss_regex.json", "etc/rsyslog.d/swss_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/seu_regex.json", "etc/rsyslog.d/seu_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/monit_regex.json", "etc/rsyslog.d/monit_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/kernel_regex.json", "etc/rsyslog.d/kernel_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/dockerd_regex.json", "etc/rsyslog.d/dockerd_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/dhcp_relay_regex.json", "etc/rsyslog.d/dhcp_relay_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/bgpd_regex.json", "etc/rsyslog.d/bgpd_regex.json", "0644"),
+    ("//files/image_config:rsyslog/rsyslog.d/bgp_regex.json", "etc/rsyslog.d/bgp_regex.json", "0644"),
+    ("//files/image_config:containercfgd/containercfgd.conf", "usr/share/sonic/templates/containercfgd.conf", "0644"),
+    ("//files/image_config:syslog/override.conf", "etc/systemd/system/syslog.socket.d/override.conf", "0644"),
+    ("//files/image_config:syslog/host_umount.sh", "usr/bin/host_umount.sh", "0755"),
+    ("//files/image_config:system-health/system-health.service", "usr/lib/systemd/system/system-health.service", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/wtmp", "etc/logrotate.d/wtmp", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/monit", "etc/logrotate.d/monit", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/dpkg", "etc/logrotate.d/dpkg", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/btmp", "etc/logrotate.d/btmp", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/bmc-event", "etc/logrotate.d/bmc-event", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/apt", "etc/logrotate.d/apt", "0644"),
+    ("//files/image_config:logrotate/logrotate.d/alternatives", "etc/logrotate.d/alternatives", "0644"),
+    ("//files/image_config:logrotate/rsyslog.j2", "usr/share/sonic/templates/rsyslog.j2", "0644"),
+    ("//files/image_config:logrotate/on_demand_archived_log_clean_up.j2", "usr/share/sonic/templates/on_demand_archived_log_clean_up.j2", "0644"),
+    ("//files/image_config:logrotate/logrotate-config.service", "usr/lib/systemd/system/logrotate-config.service", "0644"),
+    ("//files/image_config:logrotate/logrotate-config.sh", "usr/bin/logrotate-config.sh", "0755"),
+    ("//files/image_config:logrotate/timerOverride.conf", "etc/systemd/system/logrotate.timer.d/timerOverride.conf", "0644"),
+    ("//files/image_config:systemd/journald.conf", "etc/systemd/journald.conf", "0644"),
+    ("//files/image_config:interfaces/interfaces-config.service", "usr/lib/systemd/system/interfaces-config.service", "0644"),
+    ("//files/image_config:interfaces/interfaces-config.sh", "usr/bin/interfaces-config.sh", "0755"),
+    ("//files/image_config:interfaces/interfaces.j2", "usr/share/sonic/templates/interfaces.j2", "0644"),
+    ("//files/image_config:copp/copp-config.service", "usr/lib/systemd/system/copp-config.service", "0644"),
+    ("//files/image_config:copp/copp-config.sh", "usr/bin/copp-config.sh", "0755"),
+    ("//files/image_config:copp/copp_cfg.j2", "usr/share/sonic/templates/copp_cfg.j2", "0755"),
+    ("//files/image_config:dhcp_dos_logger/dhcp_dos_logger.service", "usr/lib/systemd/system/dhcp_dos_logger.service", "0644"),
+    ("//files/image_config:dhcp_dos_logger/dhcp_dos_logger.py", "usr/bin/dhcp_dos_logger.py", "0755"),
+    ("//files/dhcp:dhclient.conf.j2", "usr/share/sonic/templates/dhclient.conf.j2", "0644"),
+    ("//files/dhcp:ifupdown2_policy.json", "etc/network/ifupdown2/policy.d/ifupdown2_policy.json", "0644"),
+    ("//files/dhcp:90-dhcp6-systcl.conf.j2", "usr/share/sonic/templates/90-dhcp6-systcl.conf.j2", "0644"),
+    ("//files/image_config:resolv-config/resolv-config.service", "usr/lib/systemd/system/resolv-config.service", "0644"),
+    ("//files/image_config:resolv-config/resolv-config.sh", "usr/bin/resolv-config.sh", "0755"),
+    ("//files/image_config:resolv-config/resolv.conf.j2", "usr/share/sonic/templates/resolv.conf.j2", "0644"),
+    ("//files/image_config:resolv-config/update-containers", "etc/resolvconf/update-libc.d/update-containers", "0755"),
+    ("//files/image_config:interfaces/init_interfaces", "etc/network/interfaces", "0644"),
+    ("//files/image_config:systemd/network/99-default.link", "etc/systemd/network/99-default.link", "0644"),
+    ("//files/image_config:udev/rules.d/99-rps.rules", "etc/udev/rules.d/99-rps.rules", "0644"),
+    ("//files/image_config:udev/rules.d/99-pmon-dev-bridge.rules", "etc/udev/rules.d/99-pmon-dev-bridge.rules", "0644"),
+    ("//files/image_config:pmon/pmon-dev-bridge.sh", "usr/local/bin/pmon-dev-bridge.sh", "0755"),
+    ("//files/image_config:corefile_uploader/core_uploader.service", "usr/lib/systemd/system/core_uploader.service", "0644"),
+    ("//files/image_config:corefile_uploader/core_uploader.py", "usr/bin/core_uploader.py", "0755"),
+    ("//files/image_config:corefile_uploader/core_analyzer.rc.json", "etc/sonic/core_analyzer.rc.json", "0600"),
+    ("//files/build_templates:buffers_config.j2", "usr/share/sonic/templates/buffers_config.j2", "0644"),
+    ("//files/build_templates:qos_config.j2", "usr/share/sonic/templates/qos_config.j2", "0644"),
+    ("//files/build_templates:backend_acl.j2", "usr/share/sonic/templates/backend_acl.j2", "0644"),
+    ("//files/image_config:hostname/hostname-config.service", "usr/lib/systemd/system/hostname-config.service", "0644"),
+    ("//files/image_config:hostname/hostname-config.sh", "usr/bin/hostname-config.sh", "0755"),
+    ("//files/image_config:bannerconfig/banner-config.service", "usr/lib/systemd/system/banner-config.service", "0644"),
+    ("//files/image_config:bannerconfig/banner-config.sh", "usr/bin/banner-config.sh", "0755"),
+    ("//files/image_config:topology/topology.service", "usr/lib/systemd/system/topology.service", "0644"),
+    ("//files/image_config:topology/topology.sh", "usr/bin/topology.sh", "0755"),
+    ("//:platform/vs/dash-engine.service", "usr/lib/systemd/system/dash-engine.service", "0644"),
+    ("//files/image_config:otel/otel_config.yml", "etc/sonic/otel_config.yml", "0644"),
+    ("//files/image_config:config-topology/config-topology.service", "usr/lib/systemd/system/config-topology.service", "0644"),
+    ("//files/image_config:config-topology/config-topology.sh", "usr/bin/config-topology.sh", "0755"),
+    ("//files/image_config:config-setup/config-setup", "usr/bin/config-setup", "0755"),
+    ("//files/image_config:config-setup/config-setup.conf", "etc/config-setup/config-setup.conf", "0644"),
+    ("//files/image_config:config-setup/01-pre-security-cipher", "etc/config-setup/config-migration-pre-hooks.d/01-pre-security-cipher", "0755"),
+    ("//files/image_config:config-setup/01-post-security-cipher", "etc/config-setup/config-migration-post-hooks.d/01-post-security-cipher", "0755"),
+    ("//files/image_config:reset-factory/reset-factory", "usr/bin/reset-factory", "0755"),
+    ("//files/build_templates:tacacs-config.timer", "usr/lib/systemd/system/tacacs-config.timer", "0644"),
+    ("//files/build_templates:tacacs-config.service", "usr/lib/systemd/system/tacacs-config.service", "0644"),
+    ("//files/image_config:config-chassisdb/config-chassisdb", "usr/bin/config-chassisdb", "0755"),
+    ("//files/image_config:midplane-network/is-npu-or-dpu.sh", "usr/local/bin/is-npu-or-dpu.sh", "0644"),
+    ("//files/image_config:midplane-network/define-npu-specific-netdevs.sh", "usr/local/bin/define-npu-specific-netdevs.sh", "0644"),
+    ("//files/image_config:midplane-network/bridge-midplane.netdev", "usr/share/sonic/templates/bridge-midplane.netdev", "0644"),
+    ("//files/image_config:midplane-network/bridge-midplane.network", "usr/lib/systemd/network/bridge-midplane.network", "0644"),
+    ("//files/image_config:midplane-network/dummy-midplane.netdev", "usr/share/sonic/templates/dummy-midplane.netdev", "0644"),
+    ("//files/image_config:midplane-network/dummy-midplane.network", "usr/lib/systemd/network/dummy-midplane.network", "0644"),
+    ("//files/image_config:midplane-network/midplane-network-npu.network", "usr/lib/systemd/network/midplane-network-npu.network", "0644"),
+    ("//files/image_config:midplane-network/midplane-network-dpu.network", "usr/lib/systemd/network/midplane-network-dpu.network", "0644"),
+    ("//files/image_config:midplane-network/midplane-network-npu.service", "usr/lib/systemd/system/midplane-network-npu.service", "0644"),
+    ("//files/image_config:midplane-network/midplane-network-dpu.service", "usr/lib/systemd/system/midplane-network-dpu.service", "0644"),
+    ("//files/image_config:midplane-network/systemd-networkd.override.conf", "usr/lib/systemd/system/systemd-networkd.service.d/override.conf", "0644"),
+    ("//files/image_config:backend_acl/backend-acl.service", "usr/lib/systemd/system/backend-acl.service", "0644"),
+    ("//files/image_config:backend_acl/backend_acl.py", "usr/bin/backend_acl.py", "0755"),
+    ("//files/image_config:rps/rps.py", "usr/bin/rps.py", "0755"),
+    ("//files/image_config:snmp/snmp.yml", "etc/sonic/snmp.yml", "0644"),
+    ("//files/image_config:constants/bmc.json", "usr/share/sonic/templates/bmc.json", "0644"),
+    ("//files/image_config:sudoers/sudoers", "etc/sudoers", "0644"),
+    ("//files/image_config:sudoers/sudoers.lecture", "etc/sudoers.lecture", "0644"),
+    ("//files/image_config:pcie-check/pcie-check.service", "usr/lib/systemd/system/pcie-check.service", "0644"),
+    ("//files/image_config:pcie-check/pcie-check.sh", "usr/bin/pcie-check.sh", "0755"),
+    ("//files/image_config:fstrim/fstrim.timer", "usr/lib/systemd/system/fstrim.timer", "0644"),
+    ("//files/image_config:fstrim/fstrim.service", "usr/lib/systemd/system/fstrim.service", "0644"),
+    ("//files/image_config:platform/rc.local", "etc/rc.local", "0755"),
+    ("//files/image_config:platform/linux_kernel_bde.conf", "etc/modprobe.d/linux_kernel_bde.conf", "0644"),
+    ("//files/scripts:swss.sh", "usr/local/bin/swss.sh", "0755"),
+    ("//files/scripts:syncd.sh", "usr/local/bin/syncd.sh", "0755"),
+    ("//files/scripts:syncd_common.sh", "usr/local/bin/syncd_common.sh", "0755"),
+    ("//files/scripts:gbsyncd.sh", "usr/local/bin/gbsyncd.sh", "0755"),
+    ("//files/scripts:gbsyncd-platform.sh", "usr/bin/gbsyncd-platform.sh", "0755"),
+    ("//files/scripts:bgp.sh", "usr/local/bin/bgp.sh", "0755"),
+    ("//files/scripts:teamd.sh", "usr/local/bin/teamd.sh", "0755"),
+    ("//files/scripts:lldp.sh", "usr/local/bin/lldp.sh", "0755"),
+    ("//files/scripts:radv.sh", "usr/local/bin/radv.sh", "0755"),
+    ("//files/scripts:database.sh", "usr/local/bin/database.sh", "0755"),
+    ("//files/scripts:snmp.sh", "usr/local/bin/snmp.sh", "0755"),
+    ("//files/scripts:telemetry.sh", "usr/local/bin/telemetry.sh", "0755"),
+    ("//files/scripts:gnmi.sh", "usr/local/bin/gnmi.sh", "0755"),
+    ("//files/scripts:otel.sh", "usr/local/bin/otel.sh", "0755"),
+    ("//files/scripts:bmp.sh", "usr/local/bin/bmp.sh", "0755"),
+    ("//files/scripts:mgmt-framework.sh", "usr/local/bin/mgmt-framework.sh", "0755"),
+    ("//files/scripts:asic_status.sh", "usr/local/bin/asic_status.sh", "0755"),
+    ("//files/scripts:asic_status.py", "usr/local/bin/asic_status.py", "0755"),
+    ("//files/scripts:startup_tsa_tsb.py", "usr/local/bin/startup_tsa_tsb.py", "0644"),
+    ("//files/scripts:sonic-db-aliases.py", "usr/local/bin/sonic-db-aliases.py", "0755"),
+    ("//files/scripts:sonic-dpu-mgmt-traffic.sh", "usr/local/bin/sonic-dpu-mgmt-traffic.sh", "0755"),
+    ("//files/scripts:dash-ha.sh", "usr/local/bin/dash-ha.sh", "0755"),
+    ("//files/scripts:sonic-netns-exec", "usr/bin/sonic-netns-exec", "0755"),
+    ("//files/scripts:write_standby.py", "usr/local/bin/write_standby.py", "0755"),
+    ("//files/scripts:mark_dhcp_packet.py", "usr/local/bin/mark_dhcp_packet.py", "0755"),
+    ("//files/build_templates:startup_tsa_tsb.service", "usr/lib/systemd/system/startup_tsa_tsb.service", "0644"),
+    ("//files/build_templates:sonic.target", "usr/lib/systemd/system/sonic.target", "0644"),
+    ("//files/docker:docker", "usr/lib/docker/docker.sh", "0755"),
+    ("//files/docker:docker.service.conf", "etc/systemd/system/docker.service.d/docker.service.conf", "0644"),
+    ("//files/apparmor:usr.bin.tcpdump", "etc/apparmor.d/local/usr.bin.tcpdump", "0644"),
+    ("//files/image_config:kdump/vmcore-sysctl.conf", "etc/sysctl.d/vmcore-sysctl.conf", "0755"),
+    ("//files/image_config:logrotate/logrotateOverride.conf", "etc/systemd/system/logrotate.service.d/logrotateOverride.conf", "0644"),
+    ("//files/sshd:host-ssh-keygen.sh", "usr/local/bin/host-ssh-keygen.sh", "0755"),
+    ("//files/sshd:override.conf", "etc/systemd/system/ssh.service.d/override.conf", "0644"),
+    ("//files/image_config:sysctl/90-sonic.conf", "usr/lib/sysctl.d/90-sonic.conf", "0644"),
+    ("//files/image_config:pip/pip.conf", "etc/pip.conf", "0644"),
+    ("//files/scripts:core_cleanup.py", "usr/bin/core_cleanup.py", "0755"),
+    ("//files/image_config:ebtables/ebtables.filter.cfg", "etc/ebtables.filter.cfg", "0644"),
+    ("//files/image_config:resolv-config/resolv.conf.head", "etc/resolvconf/resolv.conf.d/head", "0644"),
+    ("//files/image_config:rasdaemon/rasdaemon.timer", "usr/lib/systemd/system/rasdaemon.timer", "0644"),
+    ("//files/image_config:midplane-network/systemd-networkd-wait-online.override.conf", "usr/lib/systemd/system/systemd-networkd-wait-online.service.d/override.conf", "0644"),
+    ("//files/build_templates:default_manifest", "var/lib/sonic-package-manager/default_manifest", "0644"),
+    ("//files/build_templates:docker_image_ctl.j2", "usr/share/sonic/templates/docker_image_ctl.j2", "0644"),
+    ("//files/apt:apt.conf.d/81norecommends", "etc/apt/apt.conf.d/81norecommends", "0644"),
+    ("//files/apt:apt.conf.d/apt-clean", "etc/apt/apt.conf.d/apt-clean", "0644"),
+    ("//files/apt:apt.conf.d/apt-gzip-indexes", "etc/apt/apt.conf.d/apt-gzip-indexes", "0644"),
+    ("//files/apt:apt.conf.d/apt-no-languages", "etc/apt/apt.conf.d/apt-no-languages", "0644"),
+    ("//files/apt:apt.conf.d/apt-timeout-n-retries", "etc/apt/apt.conf.d/apt-timeout-n-retries", "0644"),
+    ("//files/apt:apt.conf.d/no-check-valid-until", "etc/apt/apt.conf.d/no-check-valid-until", "0644"),
+    ("//files/dhcp:rfc3442-classless-routes", "etc/dhcp/dhclient-exit-hooks.d/rfc3442-classless-routes", "0644"),
+    ("//files/dhcp:sethostname", "etc/dhcp/dhclient-exit-hooks.d/sethostname", "0644"),
+    ("//files/dhcp:sethostname6", "etc/dhcp/dhclient-exit-hooks.d/sethostname6", "0644"),
+    ("//files/dhcp:graphserviceurl", "etc/dhcp/dhclient-exit-hooks.d/graphserviceurl", "0644"),
+    ("//files/dhcp:snmpcommunity", "etc/dhcp/dhclient-exit-hooks.d/snmpcommunity", "0644"),
+    ("//files/dhcp:vrf", "etc/dhcp/dhclient-exit-hooks.d/vrf", "0644"),
+    ("//files/initramfs-tools:file", "etc/initramfs-tools/hooks/file", "0755"),
+    ("//files/initramfs-tools:mke2fs", "etc/initramfs-tools/hooks/mke2fs", "0755"),
+    ("//files/initramfs-tools:pzstd", "etc/initramfs-tools/hooks/pzstd", "0755"),
+    ("//files/initramfs-tools:setfacl", "etc/initramfs-tools/hooks/setfacl", "0755"),
+    ("//files/initramfs-tools:union-fsck", "etc/initramfs-tools/hooks/union-fsck", "0755"),
+    ("//files/initramfs-tools:varlog", "etc/initramfs-tools/scripts/init-bottom/varlog", "0755"),
+    ("//files/initramfs-tools:swi2bin", "etc/initramfs-tools/scripts/init-bottom/swi2bin", "0755"),
+    ("//files/initramfs-tools:arista-hook", "etc/initramfs-tools/scripts/init-premount/arista-hook", "0755"),
+    ("//files/initramfs-tools:arista-net", "etc/initramfs-tools/scripts/init-premount/arista-net", "0755"),
+    ("//files/initramfs-tools:arista-wait-blockdev", "etc/initramfs-tools/scripts/init-premount/arista-wait-blockdev", "0755"),
+    ("//files/initramfs-tools:fsck-rootfs", "etc/initramfs-tools/scripts/init-premount/fsck-rootfs", "0755"),
+    ("//files/initramfs-tools:resize-rootfs", "etc/initramfs-tools/scripts/init-premount/resize-rootfs", "0755"),
+    ("//files/initramfs-tools:ssd-upgrade", "etc/initramfs-tools/scripts/init-premount/ssd-upgrade", "0755"),
+ ]
+
+_DIRECTORIES = sorted({
+    "/".join(destination.split("/")[:i]): True
+    for _, destination, _ in _FILES
+    for i in range(1, len(destination.split("/")))
+}.keys())
+
+tar(
+    name = "static_configuration",
+    srcs = sorted({source: True for source, _, _ in _FILES}.keys()),
+    mtree = [
+        "./" + path + " type=dir uid=0 gid=0 mode=0755 time=0"
+        for path in _DIRECTORIES
+    ] + [
+        "./" + destination + " type=file uid=0 gid=0 mode=" + mode + " time=0 content=$(location " + source + ")"
+        for source, destination, mode in _FILES
+    ],
+)
+
+# The applet list is produced by the exact locked native BusyBox binary. Its
+# source version is derived from that same APT control archive.
+build_tool(
+    name = "busybox",
+    runtime = "@sonic_build_infra//tools/build_tools:image_runtime",
+    tool = "busybox",
+)
+
+py_binary(
+    name = "busybox_manifest_tool",
+    srcs = ["busybox_manifest.py"],
+    main = "busybox_manifest.py",
+)
+
+genrule(
+    name = "busybox_applets",
+    srcs = ["@initramfs_runtime//busybox:control"],
+    outs = ["busybox-applets.json"],
+    tools = [":busybox_manifest_tool", ":busybox"],
+    cmd = "$(execpath :busybox_manifest_tool) --busybox $(execpath :busybox) --control $(location @initramfs_runtime//busybox:control) --out $@",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
+filegroup(
+    name = "configuration_templates",
+    srcs = [
+        "//files/build_templates:config-chassisdb.service.j2",
+        "//files/build_templates:config-setup.service.j2",
+        "//files/build_templates:database.service.j2",
+        "//files/build_templates:dhcp_relay.service.j2",
+        "//files/build_templates:dhcp_server.service.j2",
+        "//files/build_templates:eventd.service.j2",
+        "//files/build_templates:gnmi.service.j2",
+        "//files/build_templates:iccpd.service.j2",
+        "//files/build_templates:mgmt-framework.service.j2",
+        "//files/build_templates:mux.service.j2",
+        "//files/build_templates:nat.service.j2",
+        "//files/build_templates:otel.service.j2",
+        "//files/build_templates:p4rt.service.j2",
+        "//files/build_templates:pde.service.j2",
+        "//files/build_templates:pmon.service.j2",
+        "//files/build_templates:radv.service.j2",
+        "//files/build_templates:redfish.service.j2",
+        "//files/build_templates:restapi.service.j2",
+        "//files/build_templates:sflow.service.j2",
+        "//files/build_templates:snmp.service.j2",
+        "//files/build_templates:stp.service.j2",
+        "//files/build_templates:sysmgr.service.j2",
+        "//files/build_templates:telemetry.service.j2",
+        "//files/build_templates:per_namespace/bgp.service.j2",
+        "//files/build_templates:per_namespace/bmp.service.j2",
+        "//files/build_templates:per_namespace/dash-ha.service.j2",
+        "//files/build_templates:per_namespace/database.service.j2",
+        "//files/build_templates:per_namespace/gbsyncd.service.j2",
+        "//files/build_templates:per_namespace/lldp.service.j2",
+        "//files/build_templates:per_namespace/macsec.service.j2",
+        "//files/build_templates:per_namespace/swss.service.j2",
+        "//files/build_templates:per_namespace/syncd.service.j2",
+        "//files/build_templates:per_namespace/teamd.service.j2",
+        "//files/build_templates:share_image/database.service.j2",
+        "//files/build_templates:init_cfg.json.j2",
+        "//files/build_templates:constants.yml.j2",
+        "//files/build_templates:sonic_version.yml.j2",
+        "//files/build_templates:default_users.json.j2",
+        "//files/build_templates:bmc_config.json.j2",
+        "//files/build_templates:docker_image_ctl.j2",
+        "//files/image_config:rsyslog/rsyslog.d/00-sonic.conf.j2",
+        "//files/dhcp:dhclient.conf.j2",
+        "//files/initramfs-tools:union-mount.j2",
+        "//files/initramfs-tools:arista-convertfs.j2",
+        "@sonic_utilities//:sonic-utilities-data/templates/sonic.service.j2",
+        "@sonic_utilities//:sonic-utilities-data/templates/service_mgmt.sh.j2",
+        "@sonic_utilities//:sonic-utilities-data/templates/dump.sh.j2"
+],
+)
+
+filegroup(
+    name = "host_units",
+    srcs = sorted({
+        source: True
+        for source, destination, _ in _FILES
+        if (destination.endswith(".service") or destination.endswith(".timer") or destination.endswith(".target"))
+    }.keys()),
+)
+
+py_binary(
+    name = "configuration_tool",
+    srcs = ["configuration.py"],
+    main = "configuration.py",
+    deps = [
+        "//tools/bazel/image:assembly_lib",
+        "//tools/bazel/image/vs/metadata:render_lib",
+        "@sonic_build_infra//oci:package_metadata",
+        requirement("jinja2"),
+    ],
+)
+
+py_test(
+    name = "configuration_test",
+    imports = ["."],
+    srcs = ["configuration.py", "configuration_test.py"],
+    main = "configuration_test.py",
+    data = [":configuration_templates", ":host_units", "//files/image_config:chrony/override.conf"],
+    deps = [
+        "@rules_python//python/runfiles",
+        "//tools/bazel/image:assembly_lib",
+        "//tools/bazel/image/vs/metadata:render_lib",
+        "@sonic_build_infra//oci:package_metadata",
+        requirement("jinja2"),
+    ],
+)
+
+write_file(
+    name = "empty_file",
+    out = "empty",
+    content = [],
+)
+
+# Applied after the runtime/configuration layers, at build_debian.sh's final
+# cleanup boundary. Whiteouts affect inherited content, without unpacking it.
+tar(
+    name = "final_cleanup",
+    srcs = [":empty_file"],
+    mtree = [
+        "./host type=dir uid=0 gid=0 mode=0755 time=0",
+        "./var/core type=dir uid=0 gid=0 mode=0755 time=0",
+        "./var/lib/docker type=dir uid=0 gid=0 mode=0755 time=0",
+        "./var/cache/sonic/system-health type=dir uid=0 gid=0 mode=0700 time=0",
+        "./etc/sonic/frr type=dir uid=300 gid=300 mode=0750 time=0",
+        "./etc/sonic/frr/frr.conf type=file uid=300 gid=300 mode=0640 time=0 content=$(location :empty_file)",
+        "./etc/sonic/frr/vtysh.conf type=file uid=300 gid=300 mode=0640 time=0 content=$(location :empty_file)",
+        "./etc/resolv.conf type=file uid=0 gid=0 mode=0644 time=0 content=$(location :empty_file)",
+    ] + [
+        "./" + path + " type=dir uid=0 gid=0 mode=" + mode + " time=0"
+        for path, mode in [("usr/share/doc", "0755"), ("usr/share/locale", "0755"), ("var/lib/apt/lists", "0755"), ("tmp", "1777")]
+    ] + [
+        "./" + path + "/.wh..wh..opq type=file uid=0 gid=0 mode=0644 time=0 content=$(location :empty_file)"
+        for path in ["usr/share/doc", "usr/share/locale", "var/lib/apt/lists", "tmp"]
+    ] + [
+        "./" + path + " type=file uid=0 gid=0 mode=0644 time=0 content=$(location :empty_file)"
+        for path in [
+            "etc/resolvconf/resolv.conf.d/.wh.original",
+            "run/resolvconf/.wh.resolv.conf",
+            "usr/local/bin/.wh.ctrmgr_tools.py",
+            "etc/network/if-post-down.d/.wh.chrony",
+            "etc/network/if-up.d/.wh.chrony",
+            "etc/apt/apt.conf.d/.wh.00image-install-eatmydata",
+            "usr/local/bin/.wh.dpkg",
+        ]
+    ],
+)
+
+py_test(
+    name = "merged_usr_skeleton_test",
+    srcs = ["merged_usr_skeleton_test.py"],
+    main = "merged_usr_skeleton_test.py",
+    args = ["$(rootpath :merged_usr_skeleton)"],
+    data = [":merged_usr_skeleton"],
+)
+
+build_tools_runtime(name="locale_runtime",architecture="amd64",profile="elf",elf_tools={"localedef":"usr/bin/localedef","gzip":"usr/bin/pigz"},packages=["@vs_host_debian//libc-bin/amd64:raw_packages","@image_tools//pigz/amd64:raw_packages"])
+build_tool(name="localedef",tool="localedef",runtime=":locale_runtime")
+py_binary(name="locale_tool",srcs=["locale_layer.py"],main="locale_layer.py")
+host_locale(name="host_locale",data="@vs_host_debian//locales:data",control="@vs_host_debian//locales:control",runtime=":locale_runtime",localedef=":localedef")
+
+# The exact bundle bytes emitted by the existing package configure action.
+filegroup(name="ca_bundle",srcs=[":apt_package_configuration"],output_group="ca_bundle")
+
+# build_debian.sh:54,111-113; shared with native utilities completion.
+write_file(name="hostname",out="generated/hostname",content=["sonic", ""])
+write_file(name="hosts",out="generated/hosts",content=["127.0.0.1       sonic", "127.0.0.1       localhost", ""])
+
+# Read-only oracle for the actual FIPS openssh-server sysusers allocation.
+build_tools_runtime(name="sysusers_runtime",architecture="amd64",profile="elf",elf_tools={"systemd-sysusers":"usr/bin/systemd-sysusers"},packages=["@vs_host_debian//systemd/amd64:raw_packages"])
+build_tool(name="systemd_sysusers",tool="systemd-sysusers",runtime=":sysusers_runtime")

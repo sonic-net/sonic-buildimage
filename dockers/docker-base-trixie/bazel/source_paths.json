@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "packages": {
+    "iproute2": {
+      "required_paths": [
+        "usr/bin/ip",
+        "usr/sbin/bridge",
+        "usr/sbin/tc"
+      ]
+    },
+    "libgssapi-krb5-2": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libgssapi_krb5.so.2"
+      ]
+    },
+    "libk5crypto3": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libk5crypto.so.3"
+      ]
+    },
+    "libkrb5-3": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libkrb5.so.3",
+        "usr/lib/{multiarch}/krb5/plugins/preauth/spake.so"
+      ]
+    },
+    "libkrb5support0": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libkrb5support.so.0"
+      ]
+    },
+    "libssl-dev": {
+      "required_paths": [
+        "usr/include/openssl/ssl.h",
+        "usr/lib/{multiarch}/libssl.a"
+      ]
+    },
+    "libssl3t64": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libssl.so.3",
+        "usr/lib/{multiarch}/libcrypto.so.3"
+      ]
+    },
+    "openssl": {
+      "required_paths": [
+        "usr/bin/openssl",
+        "etc/ssl/openssl.cnf"
+      ]
+    },
+    "socat": {
+      "required_paths": [
+        "usr/bin/socat"
+      ]
+    },
+    "symcrypt-openssl": {
+      "required_paths": [
+        "usr/lib/{multiarch}/libsymcrypt.so.103",
+        "usr/lib/{multiarch}/ossl-modules/symcryptprovider.so"
+      ]
+    }
+  }
+}

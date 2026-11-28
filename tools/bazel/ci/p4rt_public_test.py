@@ -1,0 +1,92 @@
+"""Exercise the public/private boundary for actual P4RT evidence shapes."""
+
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+from tools.bazel.ci import artifact_validation as check
+from tools.bazel.ci import p4rt_image, p4rt_public
+
+
+class PublicEvidenceTest(unittest.TestCase):
+    def test_acceptance_contract_matches_image_targets_and_audit_labels(self):
+        contract = json.loads(Path(__file__).with_name('p4rt_acceptance.json').read_bytes())
+        self.assertEqual(contract['outputs'], p4rt_image.TARGETS)
+        expected_audit = [*p4rt_image.TARGETS.values(), p4rt_image.BASE,
+                          *[p4rt_image.OWNER + name for name in p4rt_image.IMAGES]]
+        self.assertEqual(contract['audit_labels'], expected_audit)
+    def test_resolved_graph_requires_dependencies_but_allows_version_upgrades(self):
+        """Bazel owns version selection; acceptance rejects missing or ambiguous evidence."""
+        script = Path(__file__).with_name('p4rt_acceptance.py')
+        required = json.loads(script.with_suffix('.json').read_bytes())['required_modules']
+        self.assertEqual(set(required), {'sonic-build-infra', 'rules_distroless', 'sonic-swss-common', 'sonic-fips', 'p4c', 'sonic-pins'})
+        nodes = [{'name': name, 'version': '1.0'} for name in required]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'module-graph.json'
+
+            def check_graph(dependencies):
+                path.write_text(json.dumps({'key': '<root>', 'dependencies': dependencies}))
+                return subprocess.run([sys.executable, str(script), '--module-graph', str(path)],
+                                      capture_output=True, text=True)
+
+            for dependencies in (nodes, [dict(node, version='2.0') for node in nodes],
+                                 [*nodes, {'dependencies': nodes}]):
+                accepted = check_graph(dependencies)
+                self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            for node in nodes:
+                for dependencies in ([n for n in nodes if n != node],
+                                     [dict(n, version='') if n == node else n for n in nodes],
+                                     [*nodes, {'dependencies': [dict(node, version='2.0')]}]):
+                    with self.subTest(module=node['name'], dependencies=dependencies):
+                        rejected = check_graph(dependencies)
+                        self.assertNotEqual(rejected.returncode, 0)
+                        self.assertIn(node['name'], rejected.stderr)
+
+    def test_selects_only_hashed_artifact_and_safe_receipt_fields(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / 'p4rt.source.tar'
+            artifact.write_bytes(b'producer-owned archive bytes')
+            (root / 'build-receipt.json').write_text(json.dumps({
+                'status': 'built', 'revision': 'a' * 40, 'owner_revision': 'b' * 40,
+                'commands': [{'argv': ['bazel', '--output_base=/home/builder/.cache/private']}],
+                'artifacts': {artifact.name: {'target': '//dockers/docker-sonic-p4rt:source_runtime',
+                                            'sha256': check.sha(artifact), 'bytes': artifact.stat().st_size}},
+            }))
+            (root / 'prepared-owner-runtime.json').write_text('{"library_path":["/home/builder/.cache/private"]}')
+            public = p4rt_public.prepare(root)
+            self.assertEqual({path.name for path in public.iterdir()},
+                             {'p4rt.source.tar', 'public-receipt.json', 'build-summary.json'})
+            self.assertEqual(check.sha(public / artifact.name), check.sha(artifact))
+            self.assertNotIn('commands', json.loads((public / 'public-receipt.json').read_text()))
+
+    def test_rejects_changed_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'p4rt.source.tar').write_bytes(b'changed bytes')
+            (root / 'build-receipt.json').write_text(json.dumps({
+                'status': 'built', 'artifacts': {'p4rt.source.tar': {'sha256': '0' * 64}},
+            }))
+            with self.assertRaisesRegex(ValueError, 'artifact changed'):
+                p4rt_public.prepare(root)
+
+    def test_rejects_private_paths_in_public_validation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'validation.json').write_text('{"path":"/home/builder/.cache/private"}')
+            with self.assertRaisesRegex(ValueError, 'local-path'):
+                p4rt_public.prepare(root)
+
+    def test_does_not_publish_stale_previous_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'public').mkdir()
+            with self.assertRaises(FileExistsError):
+                p4rt_public.prepare(root)
+
+
+if __name__ == '__main__':
+    unittest.main()

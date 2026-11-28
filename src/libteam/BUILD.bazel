@@ -1,0 +1,28 @@
+# Compatibility labels for existing image and patched SWSS consumers.
+# The shared libteam module owns compilation, TARs, metadata and native tests.
+package(default_visibility = ["//visibility:public"])
+
+[
+    alias(name = name, actual = "@libteam//:" + name)
+    for name in [
+        "libteam",
+        "libteam_shared",
+        "libteamdctl",
+        "libteamdctl_shared",
+        "teamd",
+        "teamnl",
+        "teamdctl",
+        "team_manual_control",
+        "team_monitor",
+        "libteam_runtime",
+        "libteam_runtime.debug_symbols",
+        "libteamdctl_runtime",
+        "libteamdctl_runtime.debug_symbols",
+        "libteam_utils_runtime",
+        "libteam_utils_runtime.debug_symbols",
+        "libteam_dev",
+        "consumer_binary",
+        "consumer_test",
+        "runtime_packages.json",
+    ]
+]

@@ -1,0 +1,81 @@
+"""Native build and installed interfaces for SONiC's systemd generator."""
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_python//python:defs.bzl", "py_test")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "systemd-sonic-generator",
+    srcs = ["systemd-sonic-generator.cpp"],
+    copts = ["-std=c++20", "-g"],
+    local_defines = ["_GNU_SOURCE"],
+    features = ["-strip_debug_symbols"],
+    linkopts = ["-pthread"],
+    deps = ["@frr_deps//libjson-c-dev:libjson-c_cc"],
+)
+
+sonic_deploy_tar(
+    name = "systemd-sonic-generator.runtime",
+    binaries = {
+        "./usr/lib/systemd/system-generators/systemd-sonic-generator type=file uid=0 gid=0 mode=0755 time=0": ":systemd-sonic-generator",
+    },
+)
+
+runtime_packages(
+    name = "systemd-sonic-generator.runtime_metadata",
+    control = "debian/control",
+    changelog = "debian/changelog",
+    apt_packages = {"@frr_deps//libjson-c5:data": "@frr_deps//libjson-c5:control"},
+    packages = {"systemd-sonic-generator": ":systemd-sonic-generator.runtime"},
+    required_paths = {"systemd-sonic-generator": ["usr/lib/systemd/system-generators/systemd-sonic-generator"]},
+)
+
+cc_library(
+    name = "generator_test_library",
+    testonly = True,
+    srcs = ["systemd-sonic-generator.cpp"],
+    hdrs = ["systemd-sonic-generator.h"],
+    copts = ["-std=c++20", "-ggdb"],
+    local_defines = ["_GNU_SOURCE", "_SSG_UNITTEST"],
+    features = ["-strip_debug_symbols"],
+    deps = ["@frr_deps//libjson-c-dev:libjson-c_cc"],
+)
+
+cc_binary(
+    name = "ssg_test_binary",
+    testonly = True,
+    srcs = ["ssg-test.cc"],
+    copts = ["-std=c++20", "-ggdb"],
+    linkopts = ["-pthread"],
+    deps = [
+        ":generator_test_library",
+        "@googletest//:gtest",
+        "@trixie//libboost-filesystem1.83-dev:libboost_filesystem_cc",
+        "@trixie//nlohmann-json3-dev:nlohmann-json3_headers",
+    ],
+)
+
+py_test(
+    name = "ssg_test",
+    srcs = ["run_tests.py"],
+    main = "run_tests.py",
+    python_version = "3.13",
+    args = [
+        "$(rootpath :ssg_test_binary)",
+        "$(rootpath @sonic_swss_common//tools/bazel/runtime:run_with_runtime.py)",
+        "$(rootpath @patchelf//:patchelf)",
+        "$(rootpath @sonic_swss_common//tools/bazel/runtime:test_runtime)",
+        "$(rootpath tests/testfiles/database.service)",
+        "$(rootpath @sonic_build_infra//tools/build_tools:python3)",
+    ],
+    data = [
+        ":ssg_test_binary",
+        "@sonic_swss_common//tools/bazel/runtime:run_with_runtime.py",
+        "@sonic_swss_common//tools/bazel/runtime:test_runtime",
+        "@patchelf//:patchelf",
+        "@sonic_build_infra//tools/build_tools:python3",
+    ] + glob(["tests/testfiles/*"]),
+)

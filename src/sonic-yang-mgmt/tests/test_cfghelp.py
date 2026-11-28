@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 from unittest import TestCase
 
 techsupport_table_output="""\
@@ -134,7 +135,19 @@ class TestCfgHelp(TestCase):
 
     def run_script(self, argument):
         print('\n    Running sonic-cfg-help ' + ' '.join(argument))
-        output = subprocess.check_output([self.script_file] + argument)
+        command = [self.script_file] + argument
+        if os.environ.get('SONIC_TEST_YANG_MODELS'):
+            # Exercise the original CLI against the declared production models,
+            # without installing test inputs into /usr/local on the build host.
+            probe = '''import os, runpy, sys
+script = sys.argv.pop(1)
+cli = runpy.run_path(script)
+cli['SonicCfgDescriber'].__init__.__defaults__ = (os.environ['SONIC_TEST_YANG_MODELS'],)
+cli['main']()
+'''
+            command = [os.environ.get('SONIC_TEST_PYTHON', sys.executable),
+                       '-c', probe, self.script_file] + argument
+        output = subprocess.check_output(command)
 
         output = output.decode()
 

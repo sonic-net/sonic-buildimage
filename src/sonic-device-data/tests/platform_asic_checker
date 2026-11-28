@@ -39,14 +39,19 @@ def main(argv):
         # os.scandir().close() is only available in python 3.6 and later
         if callable(getattr(it, "close", None)):
             it.close()
+    if not check_device_tree(args.device_folder, platforms):
+        sys.exit(-1)
+
+
+def check_device_tree(device_folder, platforms, asic_overrides=None):
     # dnx and legacy-th platforms are special broadcom platforms, add them manually
     platforms.add('broadcom-dnx')
     platforms.add('broadcom-legacy-th')
 
-    device_folder = os.path.normpath(args.device_folder)
+    device_folder = os.path.normpath(device_folder)
     base_level = len(device_folder.split(os.sep))
     all_good = True
-    for dirpath, _, filenames in os.walk(args.device_folder, followlinks=True):
+    for dirpath, _, filenames in os.walk(device_folder, followlinks=True):
         # The platform folder is like device_folder/vendor/platform
         if len(dirpath.split(os.sep)) != base_level + 2:
             continue
@@ -55,6 +60,8 @@ def main(argv):
             continue
 
         platform_asic_file = os.path.join(dirpath, 'platform_asic')
+        if asic_overrides:
+            platform_asic_file = asic_overrides.get(os.path.relpath(dirpath, device_folder), platform_asic_file)
         good = check_file(platform_asic_file, platforms)
         if good:
             print("File " + platform_asic_file + " passed validity check")
@@ -63,8 +70,7 @@ def main(argv):
 
         all_good = all_good and good
 
-    if not all_good:
-        sys.exit(-1)
+    return all_good
 
 
 if __name__ == "__main__":

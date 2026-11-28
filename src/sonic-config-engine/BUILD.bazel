@@ -1,0 +1,237 @@
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "requirements.in",
+    "requirements_lock.txt",
+    "setup.py",
+])
+
+# Match the Python 3 modules installed by setup.py, including vendor additions.
+_MODULES = [
+    "asic_sensors_config.py",
+    "config_samples.py",
+    "minigraph.py",
+    "minigraph_ext.py",
+    "openconfig_acl.py",
+    "portconfig.py",
+    "smartswitch_config.py",
+    "sonic_yang_cfg_generator.py",
+] + glob(
+    ["minigraph_custom.py"],
+    allow_empty = True,
+)
+
+py_library(
+    name = "sonic_config_engine",
+    srcs = _MODULES,
+    data = [":templates"],
+    imports = ["."],
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        "@sonic_yang_mgmt//:sonic_yang_mgmt",
+        "@sonic_swss_common//pyext:swsscommon",
+        requirement("bitarray"),
+        requirement("jinja2"),
+        requirement("lxml"),
+        requirement("natsort"),
+        requirement("netaddr"),
+        requirement("pyangbind"),
+        requirement("pyyaml"),
+        requirement("six"),
+    ],
+)
+
+filegroup(
+    name = "templates",
+    srcs = glob(["data/*"]),
+)
+
+# rules_python requires a .py entry point. Copy the installed script unchanged
+# so the Make and Bazel commands execute the same implementation.
+copy_file(
+    name = "cfggen_entrypoint",
+    src = "sonic-cfggen",
+    out = "sonic_cfggen.py",
+)
+
+py_binary(
+    name = "sonic_cfggen",
+    srcs = [":cfggen_entrypoint"],
+    main = "sonic_cfggen.py",
+    python_version = "3.13",
+    deps = [":sonic_config_engine"],
+)
+
+py_test(
+    name = "sonic_cfggen_cli_test",
+    srcs = ["tests/test_sonic_cfggen_cli.py"],
+    args = ["$(rootpath :sonic_cfggen)"],
+    data = [":sonic_cfggen"],
+    main = "tests/test_sonic_cfggen_cli.py",
+    python_version = "3.13",
+    deps = [":sonic_config_engine"],
+)
+
+# Use the wheel script convention so installers select their own interpreter.
+# Everything after the first line remains the original installed script.
+genrule(
+    name = "wheel_cfggen_script",
+    srcs = ["sonic-cfggen"],
+    outs = ["wheel_scripts/sonic-cfggen"],
+    cmd = "sed '1s|.*|#!python|' $(location sonic-cfggen) > $@ && chmod 755 $@",
+)
+
+# setup.py's absolute data_files destination becomes a path at the wheel root
+# under bdist_wheel. Keep that existing layout, including its purelib install
+# destination, instead of moving the templates to the wheel's data scheme.
+_WHEEL_TEMPLATES = glob(["data/*"])
+
+[
+    copy_file(
+        name = "wheel_template_" + template[len("data/"):],
+        src = template,
+        out = "wheel_data/usr/share/sonic/templates/" + template[len("data/"):],
+    )
+    for template in _WHEEL_TEMPLATES
+]
+
+filegroup(
+    name = "wheel_payload",
+    srcs = _MODULES + [
+        ":wheel_template_" + template[len("data/"):]
+        for template in _WHEEL_TEMPLATES
+    ],
+)
+
+_SOURCE_DISTRIBUTION = "sonic-config-engine"
+
+_SOURCE_REQUIRES = [
+    "bitarray==2.8.1",
+    "lxml>=4.9.1",
+    "netaddr==0.8.0",
+    "Jinja2>=2.10",
+    "pyyaml>=6.0.1",
+    "sonic-py-common",
+    "sonic-yang-mgmt>=1.0",
+    "sonic-yang-models>=1.0",
+]
+
+_SOURCE_SUMMARY = "Utilities for generating SONiC configuration files"
+
+_SOURCE_VERSION = "1.0"
+
+py_wheel(
+    name = "sonic_config_engine_wheel",
+    data_files = {
+        ":wheel_cfggen_script": "scripts/sonic-cfggen",
+    },
+    distribution = _SOURCE_DISTRIBUTION,
+    python_tag = "py3",
+    requires = _SOURCE_REQUIRES,
+    strip_path_prefixes = [
+        "src/sonic-config-engine/wheel_data/",
+        "src/sonic-config-engine/",
+    ],
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
+    deps = [":wheel_payload"],
+)
+
+filegroup(
+    name = "wheel_sources",
+    srcs = _MODULES + glob(["data/*"]) + [
+        "setup.py",
+        "sonic-cfggen",
+    ],
+)
+
+filegroup(
+    name = "test_sources",
+    srcs = glob(
+        [
+            "tests/**",
+            "*.py",
+            "data/**",
+        ],
+        exclude = [
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ) + [
+        "setup.cfg",
+        "sonic-cfggen",
+    ],
+)
+
+# The existing supervisor suite imports these shared Redis fixtures by their
+# source-tree path. Expose only the files that suite needs.
+filegroup(
+    name = "supervisor_test_fixtures",
+    srcs = glob(
+        ["tests/mock_tables/**"],
+        exclude = [
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ),
+)
+
+# Direct source installation preserves setup.py metadata and original wheel API.
+site_packages(
+    name = "sonic-config-engine.runtime",
+    author = "Taoyu Li",
+    author_email = "taoyl@microsoft.com",
+    classifiers = [
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
+    data_prefix = "/usr/local",
+    distribution = _SOURCE_DISTRIBUTION,
+    executable_files = ["sonic_config_engine-1.0.data/scripts/sonic-cfggen"],
+    files = {p: p for p in _MODULES} | {p: "usr/share/sonic/templates/" + p[len("data/"):] for p in _WHEEL_TEMPLATES} | {"sonic-cfggen": "sonic_config_engine-1.0.data/scripts/sonic-cfggen"},
+    headers = "/usr/local/include",
+    homepage = "https://github.com/Azure/sonic-buildimage",
+    interpreter = "/usr/bin/python3",
+    keywords = "SONiC sonic-cfggen config-engine PYTHON python",
+    normalize_scripts = True,
+    regular_file_mode = "0644",
+    requires = _SOURCE_REQUIRES,
+    scripts = "/usr/local/bin",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    summary = _SOURCE_SUMMARY,
+    version = _SOURCE_VERSION,
+    runtime_deps = [
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
+        "@sonic_yang_models//:sonic-yang-models.runtime",
+    ],
+)
+
+filegroup(
+    name = "sonic-config-engine.runtime_metadata",
+    srcs = [":sonic-config-engine.runtime"],
+    output_group = "metadata",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_install_test_sources",
+    testonly = True,
+    srcs = [":wheel_sources"],
+    visibility = ["//tools/bazel/tests:__pkg__"],
+)

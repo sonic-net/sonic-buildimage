@@ -1,0 +1,28 @@
+"""Direct installation of the current Make Python distribution."""
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+package(default_visibility = ["//visibility:public"])
+site_packages(
+    name = 'ctrmgrd.runtime',
+    distribution = 'sonic_ctrmgrd',
+    version = '1.0.0',
+    summary = 'Package contains remote container mgmt modules',
+    license = 'GNU General Public License v3',
+    author = 'sonic-dev',
+    author_email = 'remanava@microsoft.com',
+    homepage = 'https://github.com/Azure/sonic-buildimage',
+    requires = ['netaddr==0.8.0', 'pyyaml', 'docker'],
+    classifiers = ['Development Status :: 2 - Pre-Alpha', 'Intended Audience :: Developers', 'License :: OSI Approved :: GNU General Public License v3 (GPLv3)', 'Natural Language :: English', 'Programming Language :: Python :: 3.6'],
+    python_tag = 'py3',
+    regular_file_mode = '0644',
+    site_packages = '/usr/local/lib/python3.13/dist-packages',
+    scripts = '/usr/local/bin',
+    headers = '/usr/local/include',
+    data_prefix = '/usr/local',
+    interpreter = '/usr/bin/python3',
+    normalize_scripts = True,
+    executable_files = ['sonic_ctrmgrd-1.0.0.data/scripts/' + script for script in ['container', 'ctrmgr_tools.py', 'kube_commands.py', 'ctrmgrd.py', 'docker-wait-any']],
+    description_file = 'README.rst',
+    python_requires = '>=3.6',
+    files = {p: p for p in glob(['tests/*.py'])} | {'//src/sonic-ctrmgrd/ctrmgr:__init__.py': 'ctrmgr/__init__.py', '//src/sonic-ctrmgrd/ctrmgr:container_startup.py': 'ctrmgr/container_startup.py', '//src/sonic-ctrmgrd/ctrmgr:ctrmgr_iptables.py': 'ctrmgr/ctrmgr_iptables.py', '//src/sonic-ctrmgrd/ctrmgr:ctrmgr_tools.py': 'ctrmgr/ctrmgr_tools.py', '//src/sonic-ctrmgrd/ctrmgr:ctrmgrd.py': 'ctrmgr/ctrmgrd.py', '//src/sonic-ctrmgrd/ctrmgr:kube_commands.py': 'ctrmgr/kube_commands.py'} | {'//src/sonic-ctrmgrd/ctrmgr:container': 'sonic_ctrmgrd-1.0.0.data/scripts/container', '//src/sonic-ctrmgrd/ctrmgr:ctrmgr_tools.py': 'sonic_ctrmgrd-1.0.0.data/scripts/ctrmgr_tools.py', '//src/sonic-ctrmgrd/ctrmgr:kube_commands.py': 'sonic_ctrmgrd-1.0.0.data/scripts/kube_commands.py', '//src/sonic-ctrmgrd/ctrmgr:ctrmgrd.py': 'sonic_ctrmgrd-1.0.0.data/scripts/ctrmgrd.py', '//src/sonic-ctrmgrd/ctrmgr:docker-wait-any': 'sonic_ctrmgrd-1.0.0.data/scripts/docker-wait-any'},
+)
+filegroup(name = 'ctrmgrd.runtime_metadata', srcs = [':ctrmgrd.runtime'], output_group = "metadata")

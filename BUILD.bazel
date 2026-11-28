@@ -1,0 +1,48 @@
+# Expose Make-generated inputs to Bazel.
+#
+# Make prepares service manifests under target/ before Bazel assembles the
+# images and source-built bases. This
+# file declares existing inputs; it does not generate them or invoke Make.
+#
+# target/ has no BUILD.bazel of its own, so its files belong to this root Bazel
+# package. Keep this input boundary here for now. Source exports, configuration
+# rules and image assembly belong in their owners' BUILD.bazel files, such as
+# dockers/docker-orchagent/BUILD.bazel and its config/BUILD.bazel.
+#
+# Empty globs allow this package to load before Make has prepared the inputs.
+# The files must exist before building the Bazel targets that consume them.
+exports_files(
+    glob(
+        [
+            "target/bazel-manifests/*/manifest.json",
+            "target/bazel-manifests/*/components.labels",
+            "target/bazel-manifests/*/image.env",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# Compare the Make-published archives with the exact OCI outputs in the
+# full-image check, after Make has completed both image targets.
+exports_files([
+    "target/docker-orchagent.gz",
+    "target/docker-orchagent-dbg.gz",
+    "target/docker-syncd-vs.gz",
+    "target/docker-syncd-vs-dbg.gz",
+])
+
+# Host-independent regression inputs for the gearbox Make selector.
+exports_files([
+    "platform/vs/docker-gbsyncd-vs.mk",
+    "platform/template/docker-gbsyncd-trixie.mk",
+])
+
+# Existing Make installer inputs consumed by the VS assembler.
+exports_files([
+    "onie-image.conf",
+    "installer/install.sh",
+    "installer/sharch_body.sh",
+    "installer/default_platform.conf",
+    "installer/efi_sbatlevel.py",
+    "platform/vs/dash-engine.service",
+])

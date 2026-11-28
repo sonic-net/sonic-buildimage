@@ -46,9 +46,14 @@ find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm
 while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
     rm -rf               \
     /usr/share/man/*     \
-    /usr/share/groff/*   \
     /usr/share/info/*    \
     /usr/share/lintian/* \
     /usr/share/linda/*   \
     /var/cache/man/*     \
     /usr/share/locale/*
+
+# Groff device descriptions and fonts are runtime inputs, used when builders
+# generate package documentation (for example Bash's manual PDF).
+if [[ ! ${IMAGENAME} =~ -slave- ]]; then
+    rm -rf /usr/share/groff/*
+fi

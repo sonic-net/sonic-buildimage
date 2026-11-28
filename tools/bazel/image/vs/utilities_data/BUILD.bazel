@@ -1,0 +1,34 @@
+load("@sonic_utilities//bazel/data:defs.bzl", "completion_toolchain", "utilities_generator")
+load("@vs_runtime_pip//:requirements.bzl", "all_requirements")
+load("@sonic_build_infra//tools/build_tools:defs.bzl", "build_tool", "build_tools_runtime")
+
+package(default_visibility = ["//visibility:public"])
+
+build_tools_runtime(name = "apt_runtime", architecture = "amd64", profile = "elf", elf_tools = {"python3": "usr/bin/python3.13"}, packages = ["//tools/bazel/image/vs/python:apt_python_payloads", "//tools/bazel/image/vs/python:runtime", "@base_debian//python3-setuptools:raw_packages", "@image_tools//bash/amd64:raw_packages", "@image_tools//dash/amd64:raw_packages", "@orchagent_debian//iproute2:raw_packages"])
+build_tool(name = "python", tool = "python3", runtime = ":apt_runtime")
+utilities_generator(
+    name = "generator",
+    generator = "@sonic_utilities//:sonic-utilities-data/generate_completions.py",
+    source_trees = [],
+    apt_runtime = ":apt_runtime",
+    python = ":python",
+    bwrap = "@sonic_build_infra//tools/build_tools:bwrap",
+    cfggen = "//src/sonic-config-engine:cfggen_entrypoint",
+    hosts = "//tools/bazel/image/vs/host:hosts",
+    hostname = "//tools/bazel/image/vs/host:hostname",
+    ca_bundle = "//tools/bazel/image/vs/host:ca_bundle",
+    database_config = "@sonic_swss_common//common:database_config.json",
+    python_deps = all_requirements + ["@sonic_swss_common//pyext:swsscommon", "@libyang_python//:libyang"],
+)
+
+completion_toolchain(
+    name = "environment",
+    generator = ":generator",
+    validation = ["//tools/bazel/image/vs/python:runtime_lock_check"],
+)
+
+toolchain(
+    name = "toolchain",
+    toolchain = ":environment",
+    toolchain_type = "@sonic_utilities//bazel/data:toolchain_type",
+)

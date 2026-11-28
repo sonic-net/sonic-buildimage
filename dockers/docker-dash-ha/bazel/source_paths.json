@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "packages": {
+    "dash-ha": {
+      "required_paths": [
+        "usr/bin/hamgrd",
+        "usr/bin/swbusd",
+        "usr/bin/swbus-cli",
+        "usr/bin/wait_for_loopback.py"
+      ]
+    }
+  }
+}

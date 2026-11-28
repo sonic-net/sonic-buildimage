@@ -21,7 +21,7 @@ class TestCfgGenPlatformJson(TestCase):
 
     def setUp(self):
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.platform_sample_graph = os.path.join(self.test_dir, 'platform-sample-graph.xml')
         self.platform_json = os.path.join(self.test_dir, 'sample_platform.json')
         self.hwsku_json = os.path.join(self.test_dir, 'sample_hwsku.json')

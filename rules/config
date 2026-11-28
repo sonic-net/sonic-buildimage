@@ -175,20 +175,49 @@ ENABLE_FRR_SNMP_AGENT ?= y
 SONIC_DPKG_CACHE_METHOD ?= none
 SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 
-# Allow setting Bazel disk and repository caches in the host machine when building inside the container.
-# That way, Bazel caches are preserved across slave container runs.
-# Bazel will create two directories:
-#   - $(SONIC_BAZEL_CACHE_SOURCE)/disk_cache will hold the disk cache
-#   - $(SONIC_BAZEL_CACHE_SOURCE)/repository_cache will hold the repository cache
-#
-# Ref:
-#   - Disk cache: https://bazel.build/remote/caching#disk-cache
-SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel
+# Prefer verified Debian source archives for Monit and rasdaemon when requested.
+# Keep their existing Git source selection by default.
+PREFER_DEBIAN_REPO ?= n
+export PREFER_DEBIAN_REPO
+
+# Build eligible containers and kernel packages with Bazel. Container owners
+# register SONIC_BAZEL_DOCKER_IMAGES and SONIC_BAZEL_DBG_DOCKER_IMAGES; the
+# kernel rule enables native Trixie VS with its default unsigned configuration.
+# Owners register only configurations with Bazel support; all others use Make.
+# When disabled, containers and kernel packages use their normal Make build.
+BUILD_WITH_BAZEL_WHEN_AVAILABLE ?= n
+
+# The Bazel sonic-vs.bin build produces runtime archives by default.
+# Set to y to build their companion debug archives as well.
+SONIC_ENABLE_DEBUG_LAYER ?= n
+
+# Persist Bazel caches across slave containers for all Bazel builds, regardless
+# of BUILD_WITH_BAZEL_WHEN_AVAILABLE. The system slave.bazelrc uses:
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/repository_cache for dependency downloads
+#   - $(SONIC_BAZEL_CACHE_SOURCE)/disk_cache for completed build results
+# Bazelisk downloads use bazelisk/. Each builder keeps its own output/server state.
+# Set empty to disable this mount and its system RC. The host directory must be
+# writable by the build user. An unavailable default per-user directory falls
+# back to container-local caches. Explicit paths are mounted as supplied.
+SONIC_BAZEL_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/bazel/$(USER)
+
+# Reuse prepared external repositories across native buildimage commands and
+# disposable builders on this host. Make creates the per-user default. Set an
+# existing writable directory to use another location, or empty to skip the mount.
+sonic_bazel_dev_repo_contents = $(HOME)/.cache/sonic/bazel-repo-contents
+SONIC_BAZEL_REPO_CONTENTS_SOURCE ?= $(if $(strip $(SONIC_BAZEL_CACHE_SOURCE)),$(sonic_bazel_dev_repo_contents))
+
+# Independent Bazel builds can share completed actions. Opt in to remote writes
+# separately. The kernel launcher also supports its existing per-kernel override.
+SONIC_BAZEL_REMOTE_CACHE ?=
+SONIC_BAZEL_REMOTE_UPLOAD ?= n
+SONIC_BAZEL_KERNEL_REMOTE_CACHE ?= $(SONIC_BAZEL_REMOTE_CACHE)
+SONIC_BAZEL_KERNEL_REMOTE_UPLOAD ?= $(SONIC_BAZEL_REMOTE_UPLOAD)
 
 # Lowest readiness a component must declare for it to be built with Bazel.
 # A component opts in by setting $(DOCKER_FOO)_BAZEL_READINESS in its recipe.
-# Anything below this bar, or with no declared readiness at all,
-# falls back to the normal Make docker build.
+# This selector applies to readiness declarations, independently of the
+# explicitly configured buildimage profiles above.
 #
 #	bazel_disabled :  never build with Bazel
 #	experimental   :  build dockers declaring `experimental` or `stable`
@@ -440,6 +469,9 @@ SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
+
+# Install VS runtime images from an offline bundle on first Docker startup.
+DOCKER_LOAD_ON_BOOT ?= n
 
 # BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
 BUILD_REDUCE_IMAGE_SIZE = n

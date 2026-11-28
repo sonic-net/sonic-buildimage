@@ -1,0 +1,2 @@
+# Click has no additional Linux Python3.13 runtime dependencies.
+click==8.1.8 --hash=sha256:63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2

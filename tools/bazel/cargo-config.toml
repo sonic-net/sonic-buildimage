@@ -1,0 +1,2 @@
+# Preserve Cargo defaults while the image root configures the dependency-owned
+# SWSS and Common crate repositories through rules_rs's config-only API.

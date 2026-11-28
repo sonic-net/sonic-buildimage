@@ -1,0 +1,7 @@
+common --lockfile_mode=update
+common --incompatible_strict_action_env
+common --platforms=//:linux_amd64
+common --host_platform=//:linux_amd64
+common --package_path=%workspace%:%workspace%/../../..
+common --downloader_config=source_mirrors.cfg
+try-import %workspace%/../../../.bazelrc.user

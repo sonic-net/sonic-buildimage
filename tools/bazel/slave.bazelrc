@@ -5,9 +5,8 @@
 # which means it'll be picked up automatically by anything that builds on that container.
 #  Ref: https://bazel.build/run/bazelrc#bazelrc-file-locations
 #
-# Usually, this wouldn't be necessary, and we could just gate everything on a configuration
-# (e.g. bazel build --config=slave ...).
-# However, startup options cannot be gated by configuration, so we must resort to composing bazelrc files.
+# Share downloaded inputs and completed results, while each builder keeps its
+# own output base, execution directory and Bazel server state.
 
 # Caches for the slave
 #
@@ -22,4 +21,3 @@
 # Please see the documentation of `SONIC_BAZEL_CACHE_SOURCE` in `rules/config` for more information.
 common --repository_cache=/bazel_cache/repository_cache
 common --disk_cache=/bazel_cache/disk_cache
-

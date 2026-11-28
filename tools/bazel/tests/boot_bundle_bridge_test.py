@@ -1,0 +1,303 @@
+"""Test the installer-selected input graph of the Bazel boot bundle."""
+from contextlib import chdir
+import errno
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+
+from tools.bazel.build_helpers import export_image, export_installer_layout
+from tools.bazel.image import build_boot_bundle as bridge
+from tools.bazel.image.build_boot_bundle import BundlePackage, Image, write_archive_package
+from tools.bazel.oci.boot_layout import publish_layout
+from tools.bazel.oci.oci_layout import validate_layout
+from tools.bazel.tests.oci_base_fixture import digest, docker_save, image_fixture, oci_files, write_layout
+from tools.bazel.tests.integration.boot_bundle_cache import action_counts
+
+PLATFORM = "linux/amd64"
+
+
+class BootBundleBridgeTest(unittest.TestCase):
+    def setUp(self):
+        work = tempfile.TemporaryDirectory()
+        self.addCleanup(work.cleanup)
+        self.work = Path(work.name)
+        self.config, self.layers = image_fixture()
+        self.layout = self.work / "native"
+        write_layout(self.layout, oci_files(self.config, self.layers))
+
+    def test_cache_counts_ignore_receipt_metadata_and_accept_native_only_bundles(self):
+        evidence = self.work / "evidence.json"
+        receipt = {
+            "archives": {"actions": {"SonicBootArchive": {"executed": 1}}},
+            "bundle": {"actions": {"SonicBootLayer": {"executed": 1, "hits": 2},
+                                   "SonicBootBundle": {"executed": 1}}},
+            "inputs": {"native_images": 1, "gzip_level": 1, "graph_seconds": 0.01},
+            "total_seconds": 2.0,
+        }
+        evidence.write_text(json.dumps(receipt))
+        self.assertEqual(action_counts(evidence), {
+            "SonicBootArchive": {"executed": 1},
+            "SonicBootLayer": {"executed": 1, "hits": 2},
+            "SonicBootBundle": {"executed": 1},
+        })
+        del receipt["archives"]
+        evidence.write_text(json.dumps(receipt))
+        self.assertEqual(action_counts(evidence), receipt["bundle"]["actions"])
+        receipt["bundle"] = {"seconds": 1.0}
+        evidence.write_text(json.dumps(receipt))
+        with self.assertRaises(KeyError):
+            action_counts(evidence)
+
+    def test_make_symlink_receipt_and_pruned_sidecar_fallback(self):
+        archive = self.work / "cached-export.gz"
+        docker_save(archive, self.config, self.layers)
+        target = self.work / "target"
+        target.mkdir()
+        export = target / "docker-a.gz"
+        export.symlink_to(archive)
+        publish_layout(self.layout, archive, export)
+        selected = Image(export, ["docker-a:latest"], False)
+        stage = self.work / "first"
+        write_archive_package(stage, [selected], PLATFORM)
+        inputs = stage / "inputs" / selected.archive
+        self.assertTrue((inputs / "archive").samefile(archive))
+        self.assertFalse((inputs / "archive").is_symlink())
+        self.assertTrue((inputs / "receipt").samefile(target / ".boot-image-layouts/docker-a.gz.json"))
+        self.assertTrue((inputs / "index").samefile(selected.layout / "index.json"))
+
+        (selected.layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
+        selected = Image(export, ["docker-a:latest"], False)
+        stage = self.work / "second"
+        write_archive_package(stage, [selected], PLATFORM)
+        self.assertIsNone(selected.layout)
+        self.assertTrue((stage / "inputs" / selected.archive / "archive").samefile(archive))
+        self.assertNotIn("receipt =", (stage / "BUILD.bazel").read_text())
+
+    def test_installer_selects_layout_and_fallback_from_same_build(self):
+        archive = self.work / "target/docker-a.gz"
+        fallback = archive.with_name("docker-b.gz")
+        original = self.work / "fallback.tar"
+        docker_save(original, self.config, self.layers)
+        with mock.patch.dict(os.environ, {"SONIC_VS_BOOT_HANDOFF": "build-a"}):
+            export_installer_layout(self.layout, archive)
+            export_image(original, fallback, installer_input=True)
+
+        selected = [Image(archive, ["a:latest"], False), Image(fallback, ["b:latest"], False)]
+        names = {archive.name, fallback.name}
+        stage = self.work / "selected"
+        self.assertTrue(write_archive_package(stage, selected, PLATFORM, "build-a", names))
+        self.assertFalse(archive.exists())
+        self.assertEqual((selected[0].layout / "index.json").read_bytes(), (self.layout / "index.json").read_bytes())
+        self.assertEqual((stage / "BUILD.bazel").read_text().count("boot_archive("), 1)
+        # Adding and removing the staged hardlink changes ctime. The installer
+        # reuses the same fallback when it rebuilds the bundle with extra images.
+        linked = stage / "inputs" / selected[1].archive / "archive"
+        self.assertTrue(linked.samefile(fallback))
+        linked.unlink()
+        self.assertTrue(write_archive_package(self.work / "expanded", selected, PLATFORM, "build-a", names))
+        fallback.write_bytes(b"changed fallback")
+        with self.assertRaisesRegex(ValueError, "fallback archive changed"):
+            write_archive_package(self.work / "tampered", selected, PLATFORM, "build-a", names)
+
+        # A stale archive or previous build's receipt cannot replace the native
+        # image selected for this invocation.
+        archive.write_bytes(b"old archive")
+        with self.assertRaises(FileNotFoundError):
+            write_archive_package(self.work / "stale", [selected[0]], PLATFORM, "build-b", names)
+        (selected[0].layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
+        with self.assertRaisesRegex(ValueError, "Incomplete installer OCI layout"):
+            write_archive_package(self.work / "pruned", [selected[0]], PLATFORM, "build-a", names)
+
+    def test_current_producer_layout_skips_staging_only_its_selected_archive(self):
+        original = self.work / "producer.gz"
+        docker_save(original, self.config, self.layers)
+        archive = self.work / "target/docker-config-engine-trixie.gz"
+        with mock.patch.dict(os.environ, {"SONIC_VS_BOOT_HANDOFF": "current"}):
+            export_image(original, archive, self.layout)
+        extra = self.work / "extra.tar"
+        docker_save(extra, self.config, self.layers)
+        selected = [Image(archive, ["docker-config-engine-trixie:latest"], True),
+                    Image(archive, ["docker-config-engine-trixie:new"], False),
+                    Image(extra, ["extra:latest"], False)]
+        stage = self.work / "current"
+        self.assertTrue(write_archive_package(stage, selected, PLATFORM, "current"))
+        self.assertEqual([im.archive for im in selected[:2]], ["", ""])
+        self.assertEqual(selected[0].layout, selected[1].layout)
+        self.assertTrue((selected[0].layout / "index.json").is_file())
+        fallback, = (stage / "inputs").rglob("archive")
+        self.assertTrue(fallback.samefile(extra))
+        self.assertEqual((stage / "BUILD.bazel").read_text().count("boot_archive("), 1)
+
+        # The same filename can be supplied by another build or have a missing
+        # layer. In either case the original archive must remain authoritative.
+        for name, handoff in (("previous", "old"), ("pruned", "current")):
+            with self.subTest(name=name):
+                if name == "pruned":
+                    (selected[0].layout / "blobs/sha256" / digest(self.layers[0])[7:]).unlink()
+                image = Image(archive, ["docker-config-engine-trixie:latest"], True)
+                stage = self.work / name
+                self.assertTrue(write_archive_package(stage, [image], PLATFORM, handoff))
+                self.assertIsNone(image.layout)
+                staged, = (stage / "inputs").rglob("archive")
+                self.assertTrue(staged.samefile(archive))
+
+    def test_injected_repository_is_private_and_visible_from_the_checkout(self):
+        workspace = self.work / "checkout"
+        workspace.mkdir()
+        archive = self.work / "extra.tar"
+        docker_save(archive, self.config, self.layers)
+        output = self.work / "out"
+        result = self.work / "result"
+        result.write_bytes(b"built")
+        selected = [Image(self.layout, ["native:v1"], False), Image(archive, ["extra:v1"], False)]
+        phase = []
+
+        def verify_graph(repository, package, target, expected, evidence, options):
+            self.assertEqual(repository.parents[1], workspace / "target")
+            self.assertEqual(repository.parent.stat().st_mode & 0o777, 0o700)
+            self.assertFalse(any(p.is_symlink() for p in repository.rglob("*")))
+            phase.append(package)
+            if package == "archives":
+                # Simulate the archive action's metadata. Source files are already
+                # present in the repository even if the original /tmp is hidden.
+                self.assertTrue(any(p.samefile(archive) for p in (repository / "archives/inputs").rglob("archive")))
+                native = validate_layout(self.layout, PLATFORM)
+                result_info = self.work / "archive.json"
+                result_info.write_text(json.dumps({"use_sidecar": False, "config": digest(self.config),
+                    "diff_ids": native.config["rootfs"]["diff_ids"], "layers": native.manifest["layers"],
+                    "original_tags": []}))
+                return {name: result_info for name in expected}
+            self.assertEqual(package, "bundle")
+            self.assertEqual(len(list((repository / "bundle/blobs").iterdir())), len(self.layers))
+            return {name: result for name in expected}
+
+        with chdir(workspace), mock.patch.object(bridge, "build_target", side_effect=verify_graph):
+            bridge.build(selected, PLATFORM, output, None, None)
+        self.assertEqual(phase, ["archives", "bundle"])
+        self.assertEqual(output.read_bytes(), b"built")
+        self.assertEqual(list((workspace / "target").iterdir()), [])
+
+    def test_cross_device_staging_copies_bytes_and_removes_failed_partial(self):
+        source = self.work / "real-source"
+        source.write_bytes(b"content")
+        alias = self.work / "logical-source"
+        alias.symlink_to(source)
+        repo = self.work / "stage"
+        with mock.patch.object(os, "link", side_effect=OSError(errno.EXDEV, "cross-device")):
+            bridge.link_input(repo, "inputs/archive", alias)
+            with mock.patch.object(bridge, "copy_file", side_effect=OSError(errno.ENOSPC, "disk full")):
+                with self.assertRaises(OSError) as failure:
+                    bridge.link_input(repo, "inputs/receipt", alias)
+                self.assertEqual(failure.exception.errno, errno.ENOSPC)
+        staged = repo / "inputs/archive"
+        self.assertFalse(staged.is_symlink())
+        self.assertFalse(staged.samefile(source))
+        self.assertEqual(staged.read_bytes(), source.read_bytes())
+        self.assertEqual(list(staged.parent.iterdir()), [staged])
+
+    def test_fast_profile_only_changes_actions_that_compress_layers(self):
+        info = validate_layout(self.layout, PLATFORM)
+        compressed = [{**desc, "mediaType": desc["mediaType"] + "+gzip",
+                       "digest": digest(b"encoded" + bytes([index]))}
+                      for index, desc in enumerate(info.manifest["layers"])]
+        generated = []
+        for level in (1, 6):
+            package = BundlePackage(self.work / ("bundle-" + str(level)), gzip_level=level)
+            package.select([Image(self.layout, ["raw:v1"], False, layout=self.layout),
+                            Image(self.work / "gzip.tar", ["gzip:v1"], False, archive="gzip", info={
+                                "config": digest(self.config), "layers": compressed,
+                                "diff_ids": info.config["rootfs"]["diff_ids"], "original_tags": []})], PLATFORM)
+            package.finish(PLATFORM, False)
+            generated.append((package.directory / "BUILD.bazel").read_text())
+        self.assertIn("gzip_level = 1,", generated[0])
+        self.assertEqual(generated[0].count("gzip_level = 1,"), len(self.layers))
+        self.assertEqual(generated[0].replace("gzip_level = 1,", "gzip_level = 6,"), generated[1])
+
+    def test_archive_target_survives_new_tags_extra_images_and_new_checkout(self):
+        def graph(directory, names):
+            root = self.work / directory
+            root.mkdir()
+            images = [Image(root / name, [tag], False) for name, tag in names]
+            for image in images:
+                image.source.write_bytes(b"export")
+            stage = root / "graph"
+            write_archive_package(stage, images, PLATFORM)
+            return images[-1].archive, sorted(p.name for p in (stage / "inputs").iterdir())
+
+        first, _ = graph("checkout-a", [("docker-z.gz", "z:old")])
+        second, all_archives = graph("checkout-b", [("optional.tar", "a:latest"), ("docker-z.gz", "z:new")])
+        self.assertEqual(first, second)
+        self.assertIn(first, all_archives)
+        self.assertEqual(len(all_archives), 2)
+
+    def test_independent_files_claiming_same_digest_each_get_a_verification_action(self):
+        separate = self.work / "separate"
+        shutil.copytree(self.layout, separate)
+        # The importer checks metadata eagerly; each per-layer Bazel action must
+        # key on and verify the original bytes, even for equal digest claims.
+        path = separate / "blobs/sha256" / digest(self.layers[0])[7:]
+        path.write_bytes(b"x" * len(self.layers[0]))
+        with self.assertRaisesRegex(ValueError, "digest or size mismatch"):
+            validate_layout(separate, PLATFORM)
+
+        package = BundlePackage(self.work / "bundle")
+        images = [Image(directory, [tag], False, layout=directory)
+                  for directory, tag in ((self.layout, "pkg:a"), (separate, "pkg:b"))]
+        package.select(images, PLATFORM)
+        package.finish(PLATFORM, False)
+        self.assertEqual(len(package.layer_targets), 2 * len(self.layers))
+        sources = {package.directory / src for _, src in package.layer_targets}
+        expected = [d / "blobs/sha256" / digest(layer)[7:]
+                    for d in [self.layout, separate] for layer in self.layers]
+        self.assertTrue(all(any(p.samefile(original) for p in sources) for original in expected))
+        self.assertFalse(any(p.is_symlink() for p in sources))
+        self.assertFalse(any(i["check_label"] for i in package.spec))
+
+    def test_fallback_projection_and_version_inventory(self):
+        native = Image(self.layout, ["docker-a:latest", "docker-a:release"], False, layout=self.layout)
+        info = validate_layout(self.layout, PLATFORM)
+        legacy = Image(self.work / "legacy.gz", ["legacy:release"], False, archive="legacy", info={
+            "config": digest(self.config), "original_tags": ["legacy:embedded"],
+            "diff_ids": info.config["rootfs"]["diff_ids"], "layers": info.manifest["layers"],
+        })
+        package = BundlePackage(self.work / "bundle")
+        package.select([native, legacy], PLATFORM)
+        package.finish(PLATFORM, True)
+        self.assertEqual(len(package.layer_targets), len(self.layers))
+        # The declared archive action validated and sized its layers. Its JSON
+        # remains an input even when a native layer supplies their identical bytes.
+        self.assertEqual(package.members["legacy"], {"legacy_files/configs/" + digest(self.config)[7:]})
+        self.assertIn("//archives:metadata", package.metadata)
+        self.assertEqual(json.loads((package.directory / "images.json").read_bytes())["images"], package.spec)
+        self.assertEqual(package.spec[1]["original_tags"], ["legacy:embedded"])
+
+    def test_installer_chooses_packager_and_forwards_every_selection(self):
+        template = (ROOT / "files/build_templates/sonic_debian_extension.j2").read_text()
+        body = template[template.index("    build_boot_bundle() {"):].split("    build_boot_bundle\n", 1)[0]
+        for bazel, expected in (("y", "build_boot_bundle.py"), ("n", "boot_image_bundle.py")):
+            with self.subTest(bazel=bazel):
+                script = '''set -eu
+python3() { printf '%s\\n' "$@"; }
+CONFIGURED_ARCH=amd64
+FILESYSTEM_DOCKERFS=out.gz
+boot_work=tmp
+BUILD_WITH_BAZEL_WHEN_AVAILABLE=$1
+boot_images=(--image app.gz "app:latest,app:test" --package-image "extra file.tar" "extra:tag")
+''' + body + "\nbuild_boot_bundle"
+                actual = subprocess.check_output(["bash", "-c", script, "fixture", bazel], text=True).splitlines()
+                self.assertEqual(actual, ["tools/bazel/image/" + expected, "--platform", PLATFORM,
+                    "--output", "out.gz", "--inventory", "tmp/inventory.json", "--labels", "tmp/labels.json",
+                    "--image", "app.gz", "app:latest,app:test", "--package-image", "extra file.tar", "extra:tag"])
+
+
+if __name__ == "__main__":
+    unittest.main()

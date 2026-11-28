@@ -1,0 +1,264 @@
+name: Bazel FRR Python
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      vs_artifact_id:
+        description: Immutable ID of the AMD64 VS Python package artifact in the caller's run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    # Trusted PRs and master receive both native test jobs from the VS workflow.
+    if: >-
+      inputs.vs_artifact_id != '' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+    name: FRR Python packages (${{ matrix.architecture == 'amd64' && 'AMD64' || 'ARM64' }})
+    runs-on: [self-hosted, linux, "${{ matrix.architecture == 'amd64' && 'bazel-x64' || 'bazel-arm64' }}"]
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [amd64, arm64]
+    env:
+      NATIVE_ARCHITECTURE: ${{ matrix.architecture }}
+      NATIVE_PLATFORM: ${{ matrix.architecture == 'amd64' && 'x86_64_trixie' || 'aarch64_trixie' }}
+      NATIVE_MACHINE: ${{ matrix.architecture == 'amd64' && 'x86_64' || 'aarch64' }}
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential ca-certificates \
+            git libtool libxml2 pkg-config python3 tar unzip zstd
+
+      - name: Record the called workflow identity for cleanup
+        if: inputs.vs_artifact_id != ''
+        env:
+          JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+        run: printf 'BAZEL_CLEANUP_JOB_WORKFLOW_REF=%s\n' "$JOB_WORKFLOW_REF" >> "$GITHUB_ENV"
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Check out Bazel module submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --bazel-only
+      - name: Align populated submodule checkouts
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --populated-only
+      - name: Verify native architecture
+        run: |
+          test "$(uname -m)" = "$NATIVE_MACHINE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Allocate fresh VS input directories
+        id: vs_inputs
+        if: inputs.vs_artifact_id != ''
+        env:
+          ARTIFACT_ID: ${{ inputs.vs_artifact_id }}
+        run: |
+          [[ "$ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          mkdir -p target
+          scratch=$(mktemp -d target/vs-frr-python-XXXXXXXX)
+          echo "scratch=$scratch" >> "$GITHUB_OUTPUT"
+          echo "VS_PACKAGES=$PWD/$scratch/download" >> "$GITHUB_ENV"
+          echo "VS_BAZEL_PACKAGE=$scratch/inputs" >> "$GITHUB_ENV"
+
+      - name: Download original wheels and runtime TARs from the VS installer
+        if: inputs.vs_artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.vs_artifact_id }}
+          path: ${{ env.VS_PACKAGES }}
+          merge-multiple: true
+
+      - name: Verify VS inputs and expose them to installed-wheel tests
+        if: inputs.vs_artifact_id != ''
+        run: |
+          python3 -m tools.bazel.ci.vs_python_packages stage \
+            --directory "$VS_PACKAGES" --revision "$GITHUB_SHA" --package "$VS_BAZEL_PACKAGE"
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: buildimage-frr-python-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Test upstream sources and inspect the native packages
+        run: |
+          set -euo pipefail
+          options=(--platforms="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
+                   --host_platform="@sonic_build_infra//platforms:$NATIVE_PLATFORM"
+                   --lockfile_mode=update)
+          installed_inputs=()
+          if [[ -n "${VS_PACKAGES:-}" ]]; then
+            flags="$VS_BAZEL_PACKAGE/probe-flags.txt"
+            python3 -m tools.bazel.ci.vs_python_packages flags --group frr --architecture "$NATIVE_ARCHITECTURE" --package "$VS_BAZEL_PACKAGE" > "$flags"
+            mapfile -t installed_inputs < "$flags"
+          else
+            bazel build "${options[@]}" \
+              //src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel \
+              //src/sonic-frr-mgmt-framework:runtime \
+              //src/sonic-bgpcfgd:sonic_bgpcfgd_wheel \
+              //src/sonic-bgpcfgd:runtime
+          fi
+          bazel test "${options[@]}" --nocache_test_results --test_output=errors \
+            //src/sonic-frr-mgmt-framework:upstream_tests \
+            //src/sonic-bgpcfgd:upstream_tests
+          if [[ "$NATIVE_ARCHITECTURE" == amd64 ]]; then
+            bazel test "${options[@]}" "${installed_inputs[@]}" --nocache_test_results --test_output=errors \
+              //src/sonic-frr-mgmt-framework:installed_wheel_test \
+              //src/sonic-bgpcfgd:installed_wheel_test
+          fi
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          from tools.bazel.ci.python_packages import test_output, test_result
+          from tools.bazel.ci.vs_python_packages import FRR_COMPONENTS, frr_outputs, verify_frr_runtime
+
+          directory = Path("artifacts/frr-python")
+          directory.mkdir(parents=True)
+          platform = "@sonic_build_infra//platforms:" + os.environ["NATIVE_PLATFORM"]
+          options = ["--platforms=" + platform, "--host_platform=" + platform,
+                     "--lockfile_mode=update"]
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+          pull = event.get("pull_request", {})
+          revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          # cat-file preserves parent headers even with checkout's shallow history.
+          commit = subprocess.check_output(["git", "cat-file", "-p", "HEAD"], text=True)
+          parents = [line.split()[1] for line in commit.split("\n\n", 1)[0].splitlines()
+                     if line.startswith("parent ")]
+          receipt = {
+              "tested_commit": revision, "tested_parents": parents,
+              "pull_request_head": pull.get("head", {}).get("sha"),
+              "pull_request_base": pull.get("base", {}).get("sha"),
+              "architecture": os.environ["NATIVE_ARCHITECTURE"], "components": {},
+          }
+          bundle = os.environ.get("VS_PACKAGES")
+          receipt["package_source"] = "vs-installer" if bundle else "native-build"
+          for component in FRR_COMPONENTS:
+              package = "//src/" + component
+              source = Path("bazel-testlogs/src") / component / "upstream_tests"
+              counts = test_result(source / "test.xml")
+              inventory = json.loads(test_output(source, "pytest-inventory.json"))
+              if (inventory["collected"] != counts["tests"]
+                      or len(inventory["tests"]) != counts["tests"]
+                      or counts["tests"] <= counts["skipped"]
+                      or not inventory["python"].startswith("3.13.")):
+                  raise ValueError("Incomplete Python 3.13 upstream suite: " + component)
+              outputs = []
+              for filename, target in frr_outputs(component).items():
+                  if bundle:
+                      path = Path(bundle) / filename
+                  else:
+                      paths = subprocess.check_output(
+                          ["bazel", "cquery", *options, "--output=files", target], text=True).splitlines()
+                      if len(paths) != 1:
+                          raise ValueError("Expected one package output: " + repr(paths))
+                      path = Path(paths[0])
+                  if not path.is_file() or not path.stat().st_size:
+                      raise ValueError("Missing package output: " + str(path))
+                  destination = directory / component / (filename if filename.endswith(".whl") else "runtime.tar")
+                  destination.parent.mkdir(exist_ok=True)
+                  shutil.copyfile(path, destination)
+                  outputs.append({"target": target,
+                                  "path": str(destination.relative_to(directory)),
+                                  "sha256": hashlib.sha256(destination.read_bytes()).hexdigest()})
+              wheel, runtime = (directory / output["path"] for output in outputs)
+              verify_frr_runtime(wheel, runtime)
+              receipt["components"][component] = {
+                  "test_target": package + ":upstream_tests", "tests": counts,
+                  "python": inventory["python"].split()[0], "outputs": outputs,
+              }
+              if os.environ["NATIVE_ARCHITECTURE"] == "amd64":
+                  source = Path("bazel-testlogs/src") / component / "installed_wheel_test"
+                  installed_counts = test_result(source / "test.xml")
+                  installed = json.loads(test_output(source, "wheels.json"))
+                  wheel = next(output for output in outputs if output["path"].endswith(".whl"))
+                  if (installed_counts["skipped"] or installed["status"] != "passed"
+                          or installed["architecture"] != "x86_64"
+                          or not installed["python"].startswith("3.13.")
+                          or installed["component"] != component
+                          or installed["wheels"] != [{"filename": Path(wheel["path"]).name,
+                                                      "sha256": wheel["sha256"]}]):
+                      raise ValueError("Installed test does not match retained wheel: " + component)
+                  receipt["components"][component]["installed_wheel"] = installed
+                  receipt["components"][component]["installed_tests"] = installed_counts
+          receipt["status"] = "passed"
+          (directory / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          PY
+
+      - name: Verify wheel and TAR rebuild behavior (AMD64)
+        if: matrix.architecture == 'amd64'
+        run: |
+          python3 tools/bazel/ci/frr_python_rebuild.py \
+            --bazel-arg=--platforms=@sonic_build_infra//platforms:$NATIVE_PLATFORM \
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:$NATIVE_PLATFORM \
+            --output=artifacts/frr-python/rebuild.json
+          git diff --exit-code
+
+      - name: Upload packages and bounded validation receipt
+        id: runner_cleanup_upload_0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frr-python-${{ matrix.architecture }}
+          path: artifacts/frr-python/
+          if-no-files-found: error
+      - name: Remove temporary VS package inputs
+        if: always() && steps.vs_inputs.outcome == 'success'
+        env:
+          SCRATCH: ${{ steps.vs_inputs.outputs.scratch }}
+        run: rm -rf -- "$SCRATCH"
+
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

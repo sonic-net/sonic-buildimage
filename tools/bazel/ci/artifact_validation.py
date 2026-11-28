@@ -1,0 +1,257 @@
+"""Inspect archive payloads and verify their matching split ELF debug symbols."""
+
+import hashlib
+
+from tools.bazel.ci.validation_inputs import cached_inventory, sha256
+from pathlib import Path, PurePosixPath
+import re
+import struct
+import subprocess
+import tarfile
+import tempfile
+import zlib
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def sha(path):
+    return sha256(path)
+
+
+def verify_apt_binding(selection, base_digest, *, metadata=None, selection_sha=None):
+    """Require APT and installed-package records from the same completed OCI base."""
+    records = (selection,) if metadata is None else (selection, metadata)
+    for record in records:
+        require(record.get("base_manifest_digest") == base_digest, "package stage uses a different completed OCI base")
+        require(record.get("dependency_check", {}).get("status") == "satisfied", "unsatisfied stage package dependencies")
+    if metadata is not None:
+        require(selection_sha and metadata.get("apt_selection_sha256") == selection_sha,
+                "package state does not bind the checked APT selection")
+
+
+def verify_make_archives(inputs):
+    for variant in ("runtime", "debug"):
+        archive = inputs[f"make_{variant}_archive"]
+        make_sha = sha(archive)
+        bazel_sha = sha(inputs[f"{variant}_archive"])
+        require(make_sha == bazel_sha,
+                f"{variant} Make archive differs from the Bazel output for {archive.name} "
+                f"(SHA-256 Make={make_sha}, Bazel={bazel_sha})")
+
+
+def path_name(value):
+    path = PurePosixPath(value)
+    require(not path.is_absolute() and ".." not in path.parts, "unsafe archive path: " + value)
+    return str(path)
+
+
+def command(arguments, timeout=300, **kwargs):
+    result = subprocess.run(arguments, capture_output=True, text=True, timeout=timeout, **kwargs)
+    require(result.returncode == 0, "command failed: " + repr(arguments[:8]) + "\n" + result.stdout + result.stderr)
+    return result.stdout
+
+
+def metadata(member):
+    kind = ("file" if member.isfile() else "directory" if member.isdir() else
+            "symlink" if member.issym() else "hardlink" if member.islnk() else "other")
+    result = {"kind": kind, "mode": member.mode, "uid": member.uid, "gid": member.gid}
+    if kind in ("symlink", "hardlink"):
+        # Layer flattening may add a harmless ./ prefix to link targets.
+        # PurePosixPath removes dot components while retaining .. components.
+        result["linkname"] = str(PurePosixPath(member.linkname))
+    return result
+
+
+def elf_header(prefix, name):
+    """Inspect the common ELF header without reading the rest of a file."""
+    if not prefix.startswith(b"\x7fELF"):
+        return {}
+    require(len(prefix) >= 20 and prefix[:6] == b"\x7fELF\x02\x01", "expected little-endian ELF64: " + name)
+    elf_type, elf_machine = struct.unpack_from("<HH", prefix, 16)
+    return {"elf_type": elf_type, "elf_machine": elf_machine}
+
+
+def static_i386_header(stream, size, name):
+    """Check the pinned compatibility program using the ELF32 program headers."""
+    def read(offset, count):
+        require(0 <= offset <= size and 0 <= count <= size - offset,
+                "compatibility ELF metadata exceeds file: " + name)
+        stream.seek(offset)
+        return stream.read(count)
+
+    header = struct.unpack("<HHIIIIIHHHHHH", read(16, 36))
+    kind, machine, version, _, offset, _, _, header_size, entry_size, count, _, _, _ = header
+    require(kind == 2 and machine == 3 and version == 1 and header_size == 52,
+            "compatibility ELF must be an i386 executable: " + name)
+    require(entry_size == 32 and count > 0 and count <= (size - offset) // entry_size,
+            "invalid compatibility ELF program headers: " + name)
+    for index in range(count):
+        program = struct.unpack("<IIIIIIII", read(offset + index * entry_size, entry_size))
+        require(program[0] != 3, "compatibility ELF has PT_INTERP: " + name)
+        if program[0] == 2:
+            require(program[4] % 8 == 0, "invalid compatibility ELF dynamic table: " + name)
+            require(program[1] <= size and program[4] <= size - program[1],
+                    "compatibility ELF dynamic table exceeds file: " + name)
+            for position in range(0, program[4], 8):
+                tag, _ = struct.unpack("<iI", read(program[1] + position, 8))
+                require(tag != 1, "compatibility ELF has DT_NEEDED: " + name)
+                if tag == 0:
+                    break
+    return {"elf_type": kind, "elf_machine": machine}
+
+
+def file_metadata(stream, name, *, static_i386=None):
+    """Hash and inspect payloads; static_i386 pins approved base paths by SHA-256.
+
+    The caller must declare an AMD64 compatibility policy. Unlisted ELF32 files
+    retain the default rejection, and matched bytes must be static EM_386.
+    """
+    prefix = stream.read(64)
+    hasher = hashlib.sha256(prefix)
+    size = len(prefix)
+    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        hasher.update(chunk)
+        size += len(chunk)
+    digest = hasher.hexdigest()
+    if prefix[:6] == b"\x7fELF\x01\x01" and static_i386 and static_i386.get(name) == digest:
+        header = static_i386_header(stream, size, name)
+    else:
+        header = elf_header(prefix, name)
+    return {"sha256": digest, "size": size, **header}
+
+
+def verify_swss_component_labels(labels, packages):
+    """Verify the version labels inherited from the installed SONiC base packages."""
+    for name in ("libswsscommon", "sonic-supervisord-utilities-rs"):
+        require(labels.get("com.azure.sonic.versions." + name) == packages[name]["Version"],
+                "Inherited component label differs: " + name)
+
+
+def verify_inherited_files(parent, installed, replacements, mutable, image):
+    """Verify all parent files, matching permitted replacements to independent owner TAR metadata."""
+    for path, original in parent.items():
+        if original["kind"] == "directory" or path in mutable:
+            continue
+        expected = replacements.get(path, original)
+        actual = installed.get(path, {})
+        require(all(actual.get(key) == value for key, value in expected.items()),
+                image + " changed inherited payload: " + path)
+
+
+def payload(path, require_root=True):
+    return cached_inventory(path, ("package_payload", require_root),
+                            lambda: _payload(path, require_root))
+
+
+def _payload(path, require_root):
+    result = {}
+    with tarfile.open(path) as archive:
+        for member in archive:
+            name = path_name(member.name)
+            item = metadata(member)
+            require(item["kind"] != "other", "unsupported package member: " + name)
+            require(not require_root or (member.uid, member.gid) == (0, 0), "non-root package owner: " + name)
+            if name in result:
+                # Flattened component archives can repeat their shared parent
+                # directories. Files and conflicting install metadata may not.
+                require(item["kind"] == "directory" and result[name] == item,
+                        "duplicate package member: " + name)
+                continue
+            if member.isfile():
+                with archive.extractfile(member) as stream:
+                    contents = file_metadata(stream, name)
+                # Preserve this public inventory schema for existing consumers.
+                contents.pop("elf_type", None)
+                item.update(contents)
+            result[name] = item
+    return result
+
+
+def elf_info(path, *, readelf="readelf", dynamic=False, timeout=300):
+    """Read build ID and debug sections, optionally including runtime dependencies."""
+    notes = command([readelf, "-n", str(path)], timeout=timeout)
+    sections = command([readelf, "-SW", str(path)], timeout=timeout)
+    identifier = re.search(r"Build ID: ([0-9a-f]+)", notes)
+    result = {"build_id": identifier[1] if identifier else None,
+              "has_dwarf": ".debug_info" in sections or ".zdebug_info" in sections,
+              "has_debuglink": ".gnu_debuglink" in sections}
+    if dynamic:
+        entries = command([readelf, "-d", str(path)], timeout=timeout)
+        soname = re.search(r"\(SONAME\).*\[([^]]+)\]", entries)
+        result.update(soname=soname[1] if soname else None,
+                      needed=re.findall(r"\(NEEDED\).*\[([^]]+)\]", entries))
+    return result
+
+
+def verify_debuglink(binary, symbols, name, *, expected_name=None, objcopy="objcopy", timeout=300):
+    """Require the runtime debug link to name and checksum the selected symbols."""
+    with tempfile.TemporaryDirectory(prefix="sonic-debuglink-") as temporary:
+        link = Path(temporary) / "debuglink"
+        # objcopy otherwise rewrites its input even when only dumping a section.
+        command([objcopy, "--dump-section", ".gnu_debuglink=" + str(link), str(binary),
+                 str(Path(temporary) / "elf-copy")], timeout=timeout)
+        raw = link.read_bytes()
+    end = raw.index(0)
+    require(raw[:end].decode() == (expected_name or symbols.name), "debuglink filename differs: " + name)
+    checksum = 0
+    with symbols.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            checksum = zlib.crc32(chunk, checksum)
+    offset = (end + 4) & ~3
+    require(len(raw) >= offset + 4 and struct.unpack_from("<I", raw, offset)[0] == checksum,
+            "debuglink CRC differs: " + name)
+
+
+def elf_debug(extracted, expected, prebuilt, *, readelf="readelf", objcopy="objcopy"):
+    pairs, gaps = [], []
+    for name, item in expected.items():
+        if "elf_machine" not in item or name.startswith("usr/lib/debug/"):
+            continue
+        binary = extracted / name
+        info = elf_info(binary, readelf=readelf)
+        identifier = info["build_id"]
+        require(identifier is not None, "missing runtime ELF build ID: " + name)
+        debug_name = "usr/lib/debug/.build-id/" + identifier[:2] + "/" + identifier[2:] + ".debug"
+        require(not info["has_dwarf"], "unstripped runtime ELF: " + name)
+        if name in prebuilt:
+            require(debug_name not in expected, "prebuilt debug-gap declaration is stale: " + name)
+            gaps.append({"path": name, "build_id": identifier, "reason": "producer supplies no matching debug artifact"})
+            continue
+        require(debug_name in expected, "missing embedded debug file: " + name)
+        symbols = extracted / debug_name
+        symbol_info = elf_info(symbols, readelf=readelf)
+        require(symbol_info["build_id"] == identifier, "debug build ID differs: " + name)
+        require(symbol_info["has_dwarf"], "debug file lacks DWARF: " + name)
+        verify_debuglink(binary, symbols, name, objcopy=objcopy)
+        pairs.append({"path": name, "build_id": identifier, "debug_path": debug_name})
+    require(set(prebuilt) == {item["path"] for item in gaps}, "unmatched prebuilt gap declaration")
+    return pairs, gaps
+
+
+def debug_archives(runtime_archive, symbols_archive, *, expected_machine, prebuilt=(),
+                   readelf="readelf", objcopy="objcopy"):
+    """Validate split-symbol archives; callers retain their package inventory policy."""
+    runtime = payload(runtime_archive)
+    symbols = payload(symbols_archive)
+    require(symbols and all(
+        item["kind"] == "directory" or
+        re.fullmatch(r"usr/lib/debug/\.build-id/[0-9a-f]{2}/[0-9a-f]+\.debug", name)
+        for name, item in symbols.items()), "unexpected debug-symbol payload")
+    combined = dict(runtime)
+    for name, item in symbols.items():
+        require(name not in combined or combined[name] == item,
+                "debug symbols change runtime payload: " + name)
+        combined[name] = item
+    elfs = [name for name, item in combined.items() if "elf_machine" in item]
+    require(elfs and all(combined[name]["elf_machine"] == expected_machine for name in elfs),
+            "expected only ELF machine " + str(expected_machine))
+    with tempfile.TemporaryDirectory(prefix="sonic-ci-symbols-") as temporary:
+        extracted = Path(temporary)
+        for path in (runtime_archive, symbols_archive):
+            with tarfile.open(path) as archive:
+                archive.extractall(extracted, filter="data")
+        pairs, gaps = elf_debug(extracted, combined, set(prebuilt), readelf=readelf, objcopy=objcopy)
+    return {"elf_count": len(elfs), "debug_pairs": pairs, "prebuilt_debug_gaps": gaps}

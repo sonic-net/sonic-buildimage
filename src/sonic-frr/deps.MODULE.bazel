@@ -1,0 +1,118 @@
+# FRR owns its source acquisition and target-system dependency set.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+http_archive(
+    name = "frr_source",
+    urls = ["https://codeload.github.com/FRRouting/frr/tar.gz/f8c0b08dcb0c78f9e42b9b86ae70b049e4e617c1"],
+    sha256 = "d3e09153228a3ee0ba7b7729c6f9bbf07549bb17837eaf673221062d0a6a4cd5",
+    type = "tar.gz",
+    strip_prefix = "frr-f8c0b08dcb0c78f9e42b9b86ae70b049e4e617c1",
+    patch_strip = 1,
+    files = {
+        "tests/zebra/fpm_mac_test.c": "//src/sonic-frr:dplane_fpm_sonic/tests/fpm_mac_test.c",
+        "tests/zebra/fpm_mac_test.py": "//src/sonic-frr:dplane_fpm_sonic/tests/fpm_mac_test.py",
+        "zebra/dplane_fpm_sonic.c": "//src/sonic-frr:dplane_fpm_sonic/dplane_fpm_sonic.c",
+        "zebra/fpm_mac.c": "//src/sonic-frr:dplane_fpm_sonic/fpm_mac.c",
+        "zebra/fpm_mac.h": "//src/sonic-frr:dplane_fpm_sonic/fpm_mac.h",
+    },
+    build_file = "//src/sonic-frr:source.BUILD.bazel",
+    patches = [
+        "//src/sonic-frr:patch/0001-SONiC-ONLY-Reduce-severity-of-Vty-connected-from-message.patch",
+        "//src/sonic-frr:patch/0003-SONiC-ONLY-nexthops-compare-vrf-only-if-ip-type.patch",
+        "//src/sonic-frr:patch/0004-SONiC-ONLY-frr-remove-frr-log-outchannel-to-var-log-frr.log.patch",
+        "//src/sonic-frr:patch/0005-Add-support-of-bgp-l3vni-evpn.patch",
+        "//src/sonic-frr:patch/0006-SONiC-ONLY-Link-local-scope-was-not-set-while-binding-socket-for-bgp-ipv6-link-local-neighbors.patch",
+        "//src/sonic-frr:patch/0008-SONiC-ONLY-Use-vrf_id-for-vrf-not-tabled_id.patch",
+        "//src/sonic-frr:patch/0009-SONiC-ONLY-bgpd-Change-log-level-for-graceful-restart-events.patch",
+        "//src/sonic-frr:patch/0010-SONiC-ONLY-Disable-ipv6-src-address-test-in-pceplib.patch",
+        "//src/sonic-frr:patch/0011-SONiC-ONLY-cross-compile-changes.patch",
+        "//src/sonic-frr:patch/0012-SONiC-ONLY-build-dplane-fpm-sonic-module.patch",
+        "//src/sonic-frr:patch/0013-SONiC-ONLY-zebra-do-not-send-local-routes-to-fpm.patch",
+        "//src/sonic-frr:patch/0014-SONiC-ONLY-Adding-changes-to-write-ip-nht-resolve-via-default-c.patch",
+        "//src/sonic-frr:patch/0015-SONiC-ONLY-When-the-file-is-config-replayed-we-cannot-handle-th.patch",
+        "//src/sonic-frr:patch/0016-SONiC-ONLY-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch",
+        "//src/sonic-frr:patch/0017-SONiC-ONLY-Patch-to-send-tag-value-associated-with-route-via-ne.patch",
+        "//src/sonic-frr:patch/0018-SONiC-ONLY-SRv6-vpn-route-and-sidlist-install.patch",
+        "//src/sonic-frr:patch/0022-SONiC-ONLY-This-error-happens-when-we-try-to-write-to-a-socket.patch",
+        "//src/sonic-frr:patch/0026-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch",
+        "//src/sonic-frr:patch/0027-Dont-skip-kernel-routes-uninstall.patch",
+        "//src/sonic-frr:patch/0028-zebra-EVPN-VXLAN-Multihome-extern-mode-Enable-kernel.patch",
+        "//src/sonic-frr:patch/0030-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch",
+        "//src/sonic-frr:patch/0031-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch",
+        "//src/sonic-frr:patch/0032-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch",
+        "//src/sonic-frr:patch/0033-zebra-netlink-message-handling-for-mac_extern_learn-.patch",
+        "//src/sonic-frr:patch/0034-zebra-mac-sync-update-del-expiry-in-extern_learn-mod.patch",
+        "//src/sonic-frr:patch/0035-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch",
+        "//src/sonic-frr:patch/0036-bgpd-install-evpn-failure-logging.patch",
+        "//src/sonic-frr:patch/0065-SONiC-ONLY-bgpd-reduce-suppress-fib-advertisement-delay-to-50ms.patch",
+        "//src/sonic-frr:patch/0070-SONiC-ONLY-Enable-sharpd-daemon-for-testing.patch",
+        "//src/sonic-frr:patch/0073-Trigger-neighbour-probe-when-the-hold-timer-starts.patch",
+        "//src/sonic-frr:patch/0074-SVI-Deletion-handling-BGP-sync-message-145-159.patch",
+        "//src/sonic-frr:patch/0075-zebra-Remove-restriction-to-reachable-neighbors-in-E.patch",
+        "//src/sonic-frr:patch/0076-include-linux-Update-NTF_E_MH_PEER_SYNC-flag-value-i.patch",
+        "//src/sonic-frr:patch/0077-zebra-Add-FPM-EVPN-MH-message-types-and-structures.patch",
+        "//src/sonic-frr:patch/0078-zebra-Add-vid-and-BR_PORT_DELETE-support-for-EVPN-MH.patch",
+        "//src/sonic-frr:patch/0079-zebra-Add-encapsulation-support-for-v4-over-v6-nexth.patch",
+        "//src/sonic-frr:patch/0083-bgpd-fix-crashes-in-EVPN-MH-path-handling-and-VNI-fl.patch",
+        "//src/sonic-frr:patch/0112-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch",
+        "//src/sonic-frr:patch/0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch",
+        "//src/sonic-frr:patch/0118-build-keep-tcmalloc-in-DT_NEEDED.patch",
+        "//src/sonic-frr:patch/0119-bgpd-fix-aggregate-route-counter.patch",
+        "//src/sonic-frr:patch/0120-zebra-fix-kernel-route-deletion-for-IPv6-with-DAD.patch",
+        "//src/sonic-frr:patch/0121-zebra-release-route-node-after-connected-cleanup.patch",
+        "//src/sonic-frr:patch/0122-bgpd-fix-bgp-flag-conflict.patch",
+        "//src/sonic-frr:patch/0123-bgpd-Fix-flags-used-by-use-underlays-nexthop-weight-command.patch",
+        "//src/sonic-frr:patch/0124-bgpd-Fix-route-map-use-count-for-SRv6-Service-routes.patch",
+        "//src/sonic-frr:patch/0125-bgpd-Flush-temporary-attr-after-SRv6-unicast-route-map.patch",
+        "//src/sonic-frr:patch/0126-SONiC-ONLY-run-the-FRR-unit-tests-during-the-package-build.patch",
+        "//src/sonic-frr:patch/0127-zebra-let-a-dataplane-module-learn-local-MACs.patch",
+        "//src/sonic-frr:patch/0128-SONiC-ONLY-dplane-fpm-sonic-split-out-MAC-decode-and-test.patch",
+        "//src/sonic-frr:patch/0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch",
+        "//src/sonic-frr:patch/0130-lib-fix-use-after-free-in-agentx_events_update.patch",
+        "//src/sonic-frr:patch/0131-SONiC-ONLY-zebra-Copy-the-VxLAN-encap-data-to-a-nexthop-resolved-through-EVPN.patch",
+        "//src/sonic-frr:0001-bazel-xrelfo.patch",
+        "//src/sonic-frr:0002-bazel-documentation.patch",
+    ],
+)
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    dependency_set = "frr_deps",
+    packages = [
+        "libc-ares-dev", "libcap-dev", "libjson-c-dev", "libpam0g-dev",
+        "libpcre2-dev", "libreadline-dev", "libsnmp-dev",
+        "libgoogle-perftools-dev", "libunwind-dev", "libelf-dev", "libcrypt-dev", "libcunit1-dev",
+        # Public runtime data/control inputs for OCI producer metadata.
+        "libcares2", "libcap2", "libcrypt1", "libjson-c5", "libpam0g",
+        "libpcre2-posix3", "libreadline8t64", "libgoogle-perftools4t64",
+        "libunwind8", "libsnmp40t64",
+    ],
+    suites = ["trixie", "trixie-updates", "trixie-security"],
+)
+use_repo(apt, "frr_deps")
+
+
+# Keep package indexes separate: the upstream resolver keys by name/version,
+# so equal-version packages from different Debian suites must retain identity.
+apt_bookworm = use_extension("@sonic_build_infra//toolchains/bookworm:apt.bzl", "apt")
+apt_bookworm.sources_list(
+    architectures = ["amd64", "arm64"],
+    components = ["main"],
+    suites = ["bookworm", "bookworm-updates"],
+    uris = ["https://snapshot.debian.org/archive/debian/20260727T143429Z"],
+)
+apt_bookworm.sources_list(
+    architectures = ["amd64", "arm64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20260726T121236Z"],
+)
+apt_bookworm.install(
+    dependency_set = "frr_bookworm_deps",
+    packages = [
+        "libc-ares-dev", "libcap-dev", "libjson-c-dev", "libpam0g-dev",
+        "libpcre2-dev", "libreadline-dev", "libgoogle-perftools-dev",
+        "libunwind-dev", "libelf-dev", "libcrypt-dev", "libcunit1-dev",
+    ],
+    suites = ["bookworm", "bookworm-updates", "bookworm-security"],
+)
+use_repo(apt_bookworm, "frr_bookworm_deps")

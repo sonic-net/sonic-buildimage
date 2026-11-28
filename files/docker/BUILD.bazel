@@ -1,0 +1,8 @@
+
+# Original Make configuration files consumed by the VS assembler.
+exports_files(
+    [
+        "docker",
+        "docker.service.conf"
+    ],
+)

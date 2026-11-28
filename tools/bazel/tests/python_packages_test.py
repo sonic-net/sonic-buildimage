@@ -1,0 +1,436 @@
+"""Require complete native test evidence for the Python wheels retained by CI."""
+
+from contextlib import chdir, redirect_stdout
+import hashlib
+import io
+import json
+from pathlib import Path
+import sys
+import tarfile
+import tempfile
+import unittest
+from unittest import mock
+import zipfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.bazel.ci import python_packages, vs_python_packages
+
+
+class PythonPackageEvidenceTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.workspace = Path(self.temporary.name)
+        self.directory = self.workspace / "artifacts"
+        self.revision = {"tested_head": "tested-revision", "architecture": "amd64"}
+        self.wheel_receipts = {
+            target: {
+                "status": "passed", "architecture": "x86_64", "python": "3.13.9",
+                "wheels": [{"filename": name, "sha256": hashlib.sha256(name.encode()).hexdigest()}
+                           for name in expected],
+            }
+            for target, _, _, expected in python_packages.WHEEL_CHECKS
+        }
+        # The config-engine installation test also installs its YANG dependency.
+        # Model the producer's actual receipt independently of collector inputs.
+        dependency = "sonic_yang_mgmt-1.0-py3-none-any.whl"
+        self.wheel_receipts["sonic_python_wheels_test"]["wheels"].append({
+            "filename": dependency, "sha256": hashlib.sha256(dependency.encode()).hexdigest(),
+        })
+
+    def fixture(self, *, zipped=False):
+        for target in python_packages.TESTS:
+            package, name = target.removeprefix("//").split(":")
+            source = self.workspace / "bazel-testlogs" / package / name
+            source.mkdir(parents=True, exist_ok=True)
+            (source / "test.log").write_text("Test passed\n")
+            (source / "test.xml").write_text(
+                '<testsuite tests="1" failures="0" errors="0" skipped="0">'
+                '<testcase name="test_example"/></testsuite>\n')
+            contents = {}
+            if name.endswith("_full_test"):
+                contents["pytest-inventory.json"] = json.dumps({
+                    "python": "3.13.9", "collected": 1, "tests": ["test_example"],
+                })
+            if name in self.wheel_receipts:
+                contents["wheels.json"] = json.dumps(self.wheel_receipts[name])
+            if contents:
+                outputs = source / "test.outputs"
+                outputs.mkdir(exist_ok=True)
+                if zipped:
+                    with zipfile.ZipFile(outputs / "outputs.zip", "w") as archive:
+                        for filename, content in contents.items():
+                            archive.writestr(filename, content)
+                else:
+                    for filename, content in contents.items():
+                        (outputs / filename).write_text(content)
+
+    def collect(self, architecture="amd64"):
+        def export(workspace, directory, receipt, targets, **kwargs):
+            paths = {}
+            for name in targets:
+                paths[name] = directory / name
+                paths[name].write_bytes(name.encode())
+            return paths
+
+        with mock.patch.object(python_packages.build, "collect_archives", side_effect=export), \
+             mock.patch.object(python_packages.platform, "machine", return_value=python_packages.MACHINES[architecture]):
+            return python_packages.collect(self.workspace, self.directory, self.revision, architecture)
+
+    def assert_collection_fails(self, message):
+        with self.assertRaisesRegex(ValueError, message):
+            self.collect()
+        receipt = json.loads((self.directory / "receipt.json").read_text())
+        self.assertEqual(receipt["status"], "failed")
+        self.assertRegex(receipt["error"], message)
+
+    def vs_bundle(self, *, pddf_enabled=False):
+        self.revision["tested_head"] = "a" * 40
+        sources = self.workspace / "sources"
+        sources.mkdir()
+        outputs = {}
+        for name, target in vs_python_packages.package_targets(pddf_enabled).items():
+            source = sources / name
+            if name == vs_python_packages.YANG_TREE:
+                source.mkdir()
+                (source / "sonic-port.yang").write_text("module sonic-port {}")
+            else:
+                source.write_bytes(name.encode())
+            outputs[target] = source
+        bundle = self.workspace / "vs"
+        vs_python_packages.publish(bundle, self.revision["tested_head"], outputs, pddf_enabled=pddf_enabled)
+        return bundle
+
+    def test_enabled_pddf_requires_the_original_wheel(self):
+        """The VS PMON selection decides whether the PDDF wheel is a required artifact."""
+        self.assertNotIn(vs_python_packages.PDDF_WHEEL, vs_python_packages.package_targets(False))
+        bundle = self.vs_bundle(pddf_enabled=True)
+        wheel = bundle / vs_python_packages.PDDF_WHEEL
+        self.assertTrue(wheel.is_file())
+        wheel.unlink()
+        with self.assertRaisesRegex(ValueError, "files"):
+            vs_python_packages.verify(bundle, self.revision["tested_head"])
+
+    def test_installer_wheels_are_retained_without_a_collection_build(self):
+        """The six shipped wheels must match the actual installed-test receipts byte for byte."""
+        bundle = self.vs_bundle()
+        self.fixture()
+        with mock.patch.object(python_packages.build, "collect_archives", side_effect=AssertionError), \
+                mock.patch.object(python_packages.platform, "machine", return_value="x86_64"):
+            result = python_packages.collect(self.workspace, self.directory, self.revision, "amd64", vs_packages=bundle)
+        self.assertEqual(result["package_source"], "vs-installer")
+        self.assertEqual(set(result["artifacts"]), set(python_packages.WHEELS))
+        for name in result["artifacts"]:
+            self.assertEqual((self.directory / name).read_bytes(), (bundle / name).read_bytes())
+
+    def test_dhcp_probe_selects_the_installer_wheel(self):
+        """The installed utility test receives the exact wheel used for the relay's Python layer."""
+        bundle = self.vs_bundle()
+        package = Path("target/validation/inputs")
+        with chdir(self.workspace), mock.patch("builtins.print") as output:
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            vs_python_packages.flags("dhcp", package, "amd64")
+        name, = vs_python_packages.DHCP
+        self.assertEqual((self.workspace / package / name).read_bytes(), (bundle / name).read_bytes())
+        output.assert_called_once_with(f"--//tools/bazel/tests:sonic_dhcp_utilities_test_wheel=//{package}:{name}")
+
+    def test_vs_bundle_rejects_stale_or_modified_products(self):
+        """A changed SHA, target, archive or unexpected build file invalidates the handoff."""
+        bundle = self.vs_bundle()
+        revision = self.revision["tested_head"]
+        with self.assertRaisesRegex(ValueError, "revision"):
+            vs_python_packages.verify(bundle, "b" * 40)
+        name = next(iter(vs_python_packages.FRR))
+        path = bundle / name
+        path.write_bytes(b"modified!")
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            vs_python_packages.verify(bundle, revision)
+        path.write_bytes(name.encode())
+        unexpected = bundle / "BUILD.bazel"
+        unexpected.touch()
+        with self.assertRaisesRegex(ValueError, "files"):
+            vs_python_packages.verify(bundle, revision)
+        unexpected.unlink()
+        manifest_path = bundle / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["packages"][name]["target"] = "//another:package"
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "target"):
+            vs_python_packages.verify(bundle, revision)
+
+    def test_arm64_reuse_rejects_a_native_member_in_a_universal_wheel_or_tar(self):
+        """A py3-none-any filename alone cannot authorize an AMD64 binary on ARM64."""
+        wheel = self.workspace / "sample-1-py3-none-any.whl"
+        runtime = self.workspace / "sample.runtime.tar"
+        for tag, payload, error in (("py3-none-any", b"import sys", None),
+                                    ("py3-none-linux_x86_64", b"import sys", "pure py3"),
+                                    ("py3-none-any", b"\x7fELFtest", "Native file")):
+            with self.subTest(tag=tag, payload=payload):
+                with zipfile.ZipFile(wheel, "w") as archive:
+                    archive.writestr("sample-1.dist-info/WHEEL", "Root-Is-Purelib: true\nTag: " + tag + "\n")
+                    archive.writestr("sample/tool", payload)
+                if error:
+                    with self.assertRaisesRegex(ValueError, error):
+                        vs_python_packages.verify_portable(self.workspace, [wheel.name])
+                else:
+                    vs_python_packages.verify_portable(self.workspace, [wheel.name])
+        with tarfile.open(runtime, "w") as archive:
+            file = tarfile.TarInfo("usr/bin/tool")
+            payload = b"\x7fELFtest"
+            file.size = len(payload)
+            archive.addfile(file, io.BytesIO(payload))
+        with self.assertRaisesRegex(ValueError, "Native file"):
+            vs_python_packages.verify_portable(self.workspace, [runtime.name])
+
+    def test_yang_probes_use_the_producers_model_tree_separately_from_the_wheel_and_layer(self):
+        """The owner must compare three independent VS outputs on the validation runner."""
+        bundle = self.vs_bundle()
+        with chdir(self.workspace):
+            package = Path("target/ytest")
+            vs_python_packages.stage(bundle, self.revision["tested_head"], package)
+            self.assertEqual((package / "models/sonic-port.yang").read_text(), "module sonic-port {}")
+            output = io.StringIO()
+            with redirect_stdout(output):
+                vs_python_packages.flags("yang-models", package, "amd64")
+            self.assertEqual(set(output.getvalue().splitlines()), {
+                "--//src/sonic-yang-models:test_layer=//target/ytest:yang_models_pkg.tar",
+                "--//src/sonic-yang-models:test_models=//target/ytest:test_models",
+                "--//src/sonic-yang-models:test_wheel=//target/ytest:sonic_yang_models-1.0-py3-none-any.whl",
+            })
+
+    def test_frr_runtime_tar_contains_the_shipped_code_and_templates(self):
+        """A separately published FRR TAR must install the original wheel modules, metadata and templates."""
+        sources = {"frrcfgd/service.py": b"module", "frr-1.0.dist-info/METADATA": b"metadata",
+                   "frr-1.0.data/data/sonic/frrcfgd/bfdd.conf.j2": b"template"}
+        wheel, runtime = self.workspace / "frr.whl", self.workspace / "runtime.tar"
+        with zipfile.ZipFile(wheel, "w") as output:
+            for name, content in sources.items():
+                output.writestr(name, content)
+        for changed in (False, True):
+            with tarfile.open(runtime, "w") as archive:
+                for name, content in sources.items():
+                    install = ("usr/local/" + name.split(".data/data/")[1] if ".data/data/" in name
+                               else "usr/local/lib/python3.13/dist-packages/" + name)
+                    if changed and name.endswith(".j2"):
+                        content = b"stale"
+                    member = tarfile.TarInfo("./" + install)
+                    member.size = len(content)
+                    archive.addfile(member, io.BytesIO(content))
+            if changed:
+                with self.assertRaisesRegex(ValueError, "bfdd.conf.j2"):
+                    vs_python_packages.verify_frr_runtime(wheel, runtime)
+            else:
+                vs_python_packages.verify_frr_runtime(wheel, runtime)
+
+    def test_retain_native_results_with_direct_outputs(self):
+        """Preserve each required result, collected test inventory and matching wheel hash."""
+        self.fixture()
+        receipt = self.collect()
+        self.assertEqual(receipt["status"], "passed")
+        self.assertEqual(receipt["revision"], self.revision)
+        self.assertEqual(set(receipt["tests"]), set(python_packages.TESTS))
+        self.assertEqual(receipt["python"], "3.13.9")
+        for target, filename, receipt_key, _ in python_packages.WHEEL_CHECKS:
+            output = self.directory / filename
+            self.assertEqual(json.loads(output.read_text()), self.wheel_receipts[target])
+            self.assertEqual(receipt[receipt_key], {
+                "path": filename, "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            })
+        for target, evidence in receipt["tests"].items():
+            if target.endswith("_full_test"):
+                self.assertEqual(json.loads((self.directory / evidence["inventory"]["path"]).read_text())["collected"], 1)
+
+    def test_retain_bazel_zipped_outputs(self):
+        """Read the same required receipts when Bazel archives undeclared outputs."""
+        self.fixture(zipped=True)
+        self.assertEqual(self.collect()["status"], "passed")
+
+    def test_retain_native_arm64_results(self):
+        """Each receipt must describe the requested native machine on arm64 too."""
+        self.revision["architecture"] = "arm64"
+        for receipt in self.wheel_receipts.values():
+            receipt["architecture"] = "aarch64"
+        self.fixture()
+        self.assertEqual(self.collect("arm64")["status"], "passed")
+
+    def test_each_declared_wheel_requires_a_check(self):
+        """Every registration is required even when all remaining receipts pass."""
+        self.fixture()
+        for index, (target, _, _, _) in enumerate(python_packages.WHEEL_CHECKS):
+            with self.subTest(target=target), mock.patch.object(
+                    python_packages, "WHEEL_CHECKS",
+                    python_packages.WHEEL_CHECKS[:index] + python_packages.WHEEL_CHECKS[index + 1:]):
+                self.assert_collection_fails("exactly one installed-wheel check")
+
+    def test_duplicate_wheel_check_fails(self):
+        """A second registration cannot count as independent coverage of a wheel."""
+        self.fixture()
+        for check in python_packages.WHEEL_CHECKS:
+            with self.subTest(target=check[0]), mock.patch.object(
+                    python_packages, "WHEEL_CHECKS", [*python_packages.WHEEL_CHECKS, check]):
+                self.assert_collection_fails("exactly one installed-wheel check")
+
+    def test_duplicate_wheel_within_check_fails(self):
+        """A wheel must occur once even within the same check's expected inputs."""
+        self.fixture()
+        for index, (target, filename, receipt_key, expected) in enumerate(python_packages.WHEEL_CHECKS):
+            checks = list(python_packages.WHEEL_CHECKS)
+            checks[index] = (target, filename, receipt_key, [*expected, expected[0]])
+            with self.subTest(target=target), mock.patch.object(python_packages, "WHEEL_CHECKS", checks):
+                self.assert_collection_fails("exactly one installed-wheel check")
+
+    def test_undeclared_wheel_check_fails(self):
+        """An unknown wheel cannot replace coverage for a declared artifact."""
+        self.fixture()
+        for index, (target, filename, receipt_key, expected) in enumerate(python_packages.WHEEL_CHECKS):
+            checks = list(python_packages.WHEEL_CHECKS)
+            checks[index] = (target, filename, receipt_key, ["undeclared.whl", *expected[1:]])
+            with self.subTest(target=target), mock.patch.object(python_packages, "WHEEL_CHECKS", checks):
+                self.assert_collection_fails("exactly one installed-wheel check")
+
+    def test_wheel_checks_require_test_results(self):
+        """A wheel receipt cannot bypass the required successful log and XML."""
+        self.fixture()
+        for target, _, _, _ in python_packages.WHEEL_CHECKS:
+            tests = [test for test in python_packages.TESTS if test != "//tools/bazel/tests:" + target]
+            with self.subTest(target=target), mock.patch.object(python_packages, "TESTS", tests):
+                self.assert_collection_fails("no required test evidence")
+
+    def test_missing_xml_fails_and_records_failure(self):
+        """An artifact upload cannot turn missing source-suite evidence into success."""
+        self.fixture()
+        (self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.xml").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing required.*test.xml"):
+            self.collect()
+        self.assertEqual(json.loads((self.directory / "receipt.json").read_text())["status"], "failed")
+
+    def test_missing_inventory_fails(self):
+        """A passing test log alone does not establish complete pytest collection."""
+        self.fixture()
+        (self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_config_engine_full_test/test.outputs/pytest-inventory.json").unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.collect()
+        self.assertEqual(json.loads((self.directory / "receipt.json").read_text())["status"], "failed")
+
+    def test_failed_xml_fails(self):
+        """An existing report containing test failures cannot receive a passing receipt."""
+        self.fixture()
+        report = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.xml"
+        report.write_text('<testsuite tests="1" failures="1"><testcase name="failed">'
+                          '<failure message="failed"/></testcase></testsuite>')
+        with self.assertRaisesRegex(ValueError, "unsuccessful test report"):
+            self.collect()
+
+    def test_xml_error_with_wrong_summary_fails(self):
+        """An error element remains fatal even if its suite summary claims success."""
+        self.fixture()
+        report = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.xml"
+        report.write_text('<testsuite tests="1" errors="0"><testcase name="error">'
+                          '<error message="failed"/></testcase></testsuite>')
+        with self.assertRaisesRegex(ValueError, "unsuccessful test report"):
+            self.collect()
+
+    def test_incomplete_xml_fails(self):
+        """Summary counts must describe actual case results retained in the report."""
+        self.fixture()
+        report = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.xml"
+        report.write_text('<testsuite tests="2"><testcase name="only_one"/></testsuite>')
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            self.collect()
+
+    def test_inventory_count_must_match_xml(self):
+        """A valid report for a smaller run cannot represent the collected full suite."""
+        self.fixture()
+        inventory = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.outputs/pytest-inventory.json"
+        inventory.write_text(json.dumps({"python": "3.13.9", "collected": 2,
+                                         "tests": ["test_example", "test_other"]}))
+        with self.assertRaisesRegex(ValueError, "inventory does not match"):
+            self.collect()
+
+    def test_inventory_must_include_each_collected_case(self):
+        """The retained inventory must name every case represented by its count."""
+        self.fixture()
+        inventory = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.outputs/pytest-inventory.json"
+        inventory.write_text(json.dumps({"python": "3.13.9", "collected": 1, "tests": []}))
+        with self.assertRaisesRegex(ValueError, "inventory does not match"):
+            self.collect()
+
+    def test_source_suite_python_must_match(self):
+        """A source result from another interpreter cannot represent native Python 3.13."""
+        self.fixture()
+        inventory = self.workspace / "bazel-testlogs/tools/bazel/tests/sonic_py_common_full_test/test.outputs/pytest-inventory.json"
+        inventory.write_text(json.dumps({"python": "3.12.9", "collected": 1,
+                                         "tests": ["test_example"]}))
+        with self.assertRaisesRegex(ValueError, "different Python version"):
+            self.collect()
+
+    def test_different_wheel_bytes_fail(self):
+        """Retained wheels must be the bytes exercised by the installation test."""
+        for target, receipt in self.wheel_receipts.items():
+            for wheel in receipt["wheels"]:
+                with self.subTest(target=target, wheel=wheel["filename"]), mock.patch.dict(wheel, sha256="0" * 64):
+                    self.fixture()
+                    self.assert_collection_fails("Retained wheels differ")
+
+    def test_other_architecture_receipt_fails(self):
+        """A successful result from another architecture cannot stand in for this run."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(receipt, architecture="aarch64"):
+                self.fixture()
+                self.assert_collection_fails("successful native run")
+
+    def test_failed_wheel_receipt_fails(self):
+        """Matching wheel hashes cannot turn a failed installation test into success."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(receipt, status="failed"):
+                self.fixture()
+                self.assert_collection_fails("successful native run")
+
+    def test_wheel_receipt_requires_python_313(self):
+        """Each wheel check must use the required interpreter version."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(receipt, python="3.12.9"):
+                self.fixture()
+                self.assert_collection_fails("different Python version")
+
+    def test_wheel_receipts_require_same_python_version(self):
+        """Individually valid checks must still describe the same Python runtime."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(receipt, python="3.13.10"):
+                self.fixture()
+                self.assert_collection_fails("different Python versions")
+
+    def test_missing_wheel_in_receipt_fails(self):
+        """Each receipt must identify every wheel registered to its check."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(receipt, wheels=receipt["wheels"][1:]):
+                self.fixture()
+                self.assert_collection_fails("Retained wheels differ")
+
+    def test_missing_dependency_wheel_in_receipt_fails(self):
+        """An owning YANG check cannot replace its hash in config-engine's inputs."""
+        receipt = self.wheel_receipts["sonic_python_wheels_test"]
+        receipt["wheels"] = [wheel for wheel in receipt["wheels"]
+                             if wheel["filename"] != "sonic_yang_mgmt-1.0-py3-none-any.whl"]
+        self.fixture()
+        self.assert_collection_fails("Retained wheels differ")
+
+    def test_unexpected_wheel_in_receipt_fails(self):
+        """A receipt cannot substitute an undeclared wheel for its expected input."""
+        for target, receipt in self.wheel_receipts.items():
+            wheel = receipt["wheels"][0]
+            with self.subTest(target=target), mock.patch.dict(wheel, filename="unexpected.whl"):
+                self.fixture()
+                self.assert_collection_fails("Retained wheels differ")
+
+    def test_duplicate_wheel_in_receipt_fails(self):
+        """A duplicate entry must not disappear when receipt hashes are compared."""
+        for target, receipt in self.wheel_receipts.items():
+            with self.subTest(target=target), mock.patch.dict(
+                    receipt, wheels=[*receipt["wheels"], receipt["wheels"][0]]):
+                self.fixture()
+                self.assert_collection_fails("Retained wheels differ")
+
+
+if __name__ == "__main__":
+    unittest.main()

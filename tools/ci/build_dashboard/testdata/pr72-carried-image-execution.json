@@ -1,0 +1,310 @@
+{
+  "evidence": "Selected public fields from PR72 run 41030906724 attempts 1 and 2, captured while attempt 2 was in progress, plus retained API run_started_at/created_at observations. GitHub assigned a new job ID while retaining the earlier execution and all step records. This fixture is historical evidence, not current CI status.",
+  "source_snapshot_sha256": "b41985df3e8d7e809deacd5b981b9abf62966d91d1896537bdb75391e4a18b9d",
+  "repository": "securely1g/sonic-buildimage",
+  "pr": {
+    "number": 72,
+    "title": "Add an optional containerd image store for Bazel VS builds",
+    "head_sha": "8fb9a93de16bfed545ae148d84943da14d5de2d2"
+  },
+  "run_id": 41030906724,
+  "workflow_path": ".github/workflows/bazel-oci.yml",
+  "source_sha": "8fb9a93de16bfed545ae148d84943da14d5de2d2",
+  "attempt1": {
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-10-30T09:05:42Z",
+    "completed_at": "2026-10-30T13:27:57Z",
+    "job_id": 123981002106,
+    "observed_run_started_at": "2026-10-30T09:05:42Z",
+    "created_at": "2026-10-30T09:05:42Z"
+  },
+  "attempt2": {
+    "attempt": 2,
+    "status": "in_progress",
+    "conclusion": null,
+    "started_at": "2026-10-30T13:36:46Z",
+    "completed_at": null,
+    "job_id": 124092950470,
+    "observed_run_started_at": "2026-10-30T13:36:46Z",
+    "created_at": "2026-10-30T09:05:42Z"
+  },
+  "job": {
+    "name": "Make VS with Bazel SWSS (AMD64)",
+    "kind": "make-vs",
+    "architecture": "amd64",
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-10-30T11:50:35Z",
+    "completed_at": "2026-10-30T13:27:57Z",
+    "duration_seconds": 5842.0,
+    "image_build_seconds": 2329.0,
+    "image_build_elapsed_seconds": 2329.0,
+    "steps": [
+      {
+        "number": 1,
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:50:36Z",
+        "completed_at": "2026-10-30T11:51:00Z",
+        "duration_seconds": 24.0,
+        "phase": "setup"
+      },
+      {
+        "number": 2,
+        "name": "Check source-build runner capacity",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:51:00Z",
+        "completed_at": "2026-10-30T11:51:00Z",
+        "duration_seconds": 0.0,
+        "phase": "setup"
+      },
+      {
+        "number": 3,
+        "name": "Checkout repository",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:51:00Z",
+        "completed_at": "2026-10-30T11:53:42Z",
+        "duration_seconds": 162.0,
+        "phase": "setup"
+      },
+      {
+        "number": 4,
+        "name": "Check VS build prerequisites",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:53:42Z",
+        "completed_at": "2026-10-30T11:53:42Z",
+        "duration_seconds": 0.0,
+        "phase": "setup"
+      },
+      {
+        "number": 5,
+        "name": "Prepare persistent agent caches",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:53:42Z",
+        "completed_at": "2026-10-30T11:53:43Z",
+        "duration_seconds": 1.0,
+        "phase": "setup"
+      },
+      {
+        "number": 6,
+        "name": "Download verified sources from the hosted checks",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:53:43Z",
+        "completed_at": "2026-10-30T11:53:45Z",
+        "duration_seconds": 2.0,
+        "phase": "setup"
+      },
+      {
+        "number": 7,
+        "name": "Prepare the shared Bazel source-download directory",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:53:45Z",
+        "completed_at": "2026-10-30T11:53:45Z",
+        "duration_seconds": 0.0,
+        "phase": "setup"
+      },
+      {
+        "number": 8,
+        "name": "Configure the native VS image",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:53:45Z",
+        "completed_at": "2026-10-30T11:54:28Z",
+        "duration_seconds": 43.0,
+        "phase": "setup"
+      },
+      {
+        "number": 9,
+        "name": "Check nested Docker in both build environments",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:54:28Z",
+        "completed_at": "2026-10-30T11:55:36Z",
+        "duration_seconds": 68.0,
+        "phase": "setup"
+      },
+      {
+        "number": 10,
+        "name": "Build the VS image and both OCI container variants",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T11:55:36Z",
+        "completed_at": "2026-10-30T12:34:25Z",
+        "duration_seconds": 2329.0,
+        "phase": "build"
+      },
+      {
+        "number": 11,
+        "name": "Retain Orchagent archive reuse evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:34:25Z",
+        "completed_at": "2026-10-30T12:34:27Z",
+        "duration_seconds": 2.0,
+        "phase": "other"
+      },
+      {
+        "number": 12,
+        "name": "Validate SWSS source packages from the Make build",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:34:27Z",
+        "completed_at": "2026-10-30T12:44:25Z",
+        "duration_seconds": 598.0,
+        "phase": "validation"
+      },
+      {
+        "number": 13,
+        "name": "Prepare SWSS source artifact list",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:44:25Z",
+        "completed_at": "2026-10-30T12:44:30Z",
+        "duration_seconds": 5.0,
+        "phase": "setup"
+      },
+      {
+        "number": 14,
+        "name": "Upload public source layers and evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:44:30Z",
+        "completed_at": "2026-10-30T12:45:34Z",
+        "duration_seconds": 64.0,
+        "phase": "upload"
+      },
+      {
+        "number": 15,
+        "name": "Validate Syncd source packages from the Make build",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:45:34Z",
+        "completed_at": "2026-10-30T12:54:40Z",
+        "duration_seconds": 546.0,
+        "phase": "validation"
+      },
+      {
+        "number": 16,
+        "name": "Prepare Syncd source artifact list",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:54:40Z",
+        "completed_at": "2026-10-30T12:54:44Z",
+        "duration_seconds": 4.0,
+        "phase": "setup"
+      },
+      {
+        "number": 17,
+        "name": "Upload public contract evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:54:44Z",
+        "completed_at": "2026-10-30T12:54:48Z",
+        "duration_seconds": 4.0,
+        "phase": "upload"
+      },
+      {
+        "number": 18,
+        "name": "Verify source-built P4 runtime and debug TARs in both Syncd images",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T12:54:48Z",
+        "completed_at": "2026-10-30T13:04:02Z",
+        "duration_seconds": 554.0,
+        "phase": "validation"
+      },
+      {
+        "number": 19,
+        "name": "Verify P4RT packaged split debug symbols",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:02Z",
+        "completed_at": "2026-10-30T13:04:45Z",
+        "duration_seconds": 43.0,
+        "phase": "validation"
+      },
+      {
+        "number": 20,
+        "name": "Remove this job's remaining build containers",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:45Z",
+        "completed_at": "2026-10-30T13:04:45Z",
+        "duration_seconds": 0.0,
+        "phase": "other"
+      },
+      {
+        "number": 21,
+        "name": "Prepare public artifact list",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:45Z",
+        "completed_at": "2026-10-30T13:04:45Z",
+        "duration_seconds": 0.0,
+        "phase": "setup"
+      },
+      {
+        "number": 22,
+        "name": "Upload public VS build summary",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:45Z",
+        "completed_at": "2026-10-30T13:04:47Z",
+        "duration_seconds": 2.0,
+        "phase": "upload"
+      },
+      {
+        "number": 23,
+        "name": "Retain installed Syncd and source dependency evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:47Z",
+        "completed_at": "2026-10-30T13:04:47Z",
+        "duration_seconds": 0.0,
+        "phase": "other"
+      },
+      {
+        "number": 24,
+        "name": "Upload VS image and OCI container archives",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:04:47Z",
+        "completed_at": "2026-10-30T13:27:51Z",
+        "duration_seconds": 1384.0,
+        "phase": "upload"
+      },
+      {
+        "number": 48,
+        "name": "Post Checkout repository",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:27:51Z",
+        "completed_at": "2026-10-30T13:27:54Z",
+        "duration_seconds": 3.0,
+        "phase": "other"
+      },
+      {
+        "number": 49,
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-30T13:27:54Z",
+        "completed_at": "2026-10-30T13:27:54Z",
+        "duration_seconds": 0.0,
+        "phase": "other"
+      }
+    ]
+  },
+  "image_build_step_numbers": [
+    10
+  ]
+}

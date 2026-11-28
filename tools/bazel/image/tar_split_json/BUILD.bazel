@@ -1,0 +1,32 @@
+"""Raw metadata frontend for the fixed official tar-split API."""
+
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@rules_python//python:defs.bzl", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+exports_files(["upstream.BUILD.bazel"])
+
+go_binary(
+    name = "tar_split_json",
+    srcs = ["main.go"],
+    pure = "on",
+    deps = [
+        "@tar_split_api_src//:asm",
+        "@tar_split_api_src//:storage",
+    ],
+)
+
+py_test(
+    name = "format_test",
+    srcs = ["format_test.py"],
+    args = [
+        "$(rootpath :tar_split_json)",
+        "$(rootpath @sonic_build_infra//tools/build_tools:tar-split)",
+        "$(rootpath @sonic_build_infra//tools/build_tools:pigz)",
+    ],
+    data = [
+        ":tar_split_json",
+        "@sonic_build_infra//tools/build_tools:tar-split",
+        "@sonic_build_infra//tools/build_tools:pigz",
+    ],
+)

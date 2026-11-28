@@ -1,0 +1,11 @@
+name: Bazel container post-job cleanup
+description: Remove job-local Bazel files after cache saves and artifact uploads.
+inputs:
+  migrated-job:
+    description: Include guarded workspace repair and publication-aware cleanup for migrated self-hosted jobs.
+    default: 'false'
+runs:
+  using: node24
+  main: main.js
+  post: post.js
+  post-if: always()

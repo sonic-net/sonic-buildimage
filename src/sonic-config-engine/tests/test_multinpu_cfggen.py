@@ -30,7 +30,7 @@ class TestMultiNpuCfgGen(TestCase):
         self.yang = utils.YangWrapper()
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
         self.test_data_dir = os.path.join(self.test_dir,  'multi_npu_data')
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.sample_graph = os.path.join(self.test_data_dir, 'sample-minigraph.xml')
         self.sample_graph1 = os.path.join(self.test_data_dir, 'sample-minigraph-noportchannel.xml')
         self.sample_port_config = os.path.join(self.test_data_dir, 'sample_port_config.ini')

@@ -1,0 +1,150 @@
+name: Self-hosted runner manager
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - tools/ci/runner/**
+      - .github/workflows/runner-manager.yml
+  push:
+    branches: [master]
+    paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - tools/ci/runner/**
+      - .github/workflows/runner-manager.yml
+  workflow_dispatch:
+    inputs:
+      inspect_capacity:
+        description: Report self-hosted storage capacity without building
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    if: github.event_name != 'workflow_dispatch' || !inputs.inspect_capacity
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 10
+    steps:
+      - &restore_workspace_access
+        name: Restore workspace access before checkout
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY##*/}"
+          pipeline_workspace="${RUNNER_PIPELINE_WORKSPACE%/}"
+          expected="$pipeline_workspace/$repository"
+          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
+            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
+              "$expected" "$GITHUB_WORKSPACE" >&2
+            exit 1
+          fi
+          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
+            echo 'No existing workspace to repair.'
+            exit 0
+          fi
+          work_root="$(realpath -e -- "$pipeline_workspace/..")"
+          physical_workspace="$work_root/$repository/$repository"
+          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
+            echo 'Refusing permission repair on a redirected workspace.' >&2
+            exit 1
+          fi
+          expected="$physical_workspace"
+          owner="$(id -u):$(id -g)"
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chown --no-dereference -- "$owner" {} +
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chmod u+rwx -- {} +
+          sudo -n find -P "$expected" -xdev -type f -links 1 \
+            -exec chown --no-dereference -- "$owner" {} +
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Test runner lifecycle and installation without registering runners
+        run: python3 -B -m unittest discover -s tools/ci/runner -p '*_test.py' -v
+      - name: Check installer preview and bootstrap syntax
+        run: |
+          bash -n tools/ci/runner/bootstrap.sh
+          python3 -B tools/ci/runner/install_manager.py --operator example --master --dry-run
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '[]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
+  capacity:
+    if: github.event_name == 'workflow_dispatch' && inputs.inspect_capacity
+    runs-on: [self-hosted, linux, x64, sonic-vs-source-master]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect storage without changing retained builds
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import os
+          import shutil
+          import subprocess
+          from pathlib import Path
+
+          def capture(*args, timeout=30):
+              try:
+                  result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+              except subprocess.TimeoutExpired:
+                  print(f"{args[0]}: timed out", flush=True)
+                  return ""
+              except OSError as error:
+                  print(f"{args[0]}: unavailable (errno {error.errno})", flush=True)
+                  return ""
+              if result.returncode:
+                  print(f"{args[0]}: incomplete (exit {result.returncode})", flush=True)
+              # Do not expose command stderr, environment, or Docker image names.
+              return result.stdout.strip()
+
+          print(capture("lsblk", "-b", "-o", "NAME,SIZE,FSTYPE,MOUNTPOINTS"), flush=True)
+          docker_root = capture("docker", "info", "--format", "{{.DockerRootDir}}")
+          paths = ["/", "/data/sonic-runner", "/var/lib/containerd"]
+          if docker_root.startswith("/") and "\n" not in docker_root:
+              paths.append(docker_root)
+          for name in dict.fromkeys(paths):
+              try:
+                  path = Path(name)
+                  usage = shutil.disk_usage(path)
+                  device = path.stat().st_dev
+              except OSError as error:
+                  print(f"{name}: unavailable (errno {error.errno})", flush=True)
+                  continue
+              print(f"{name}: device={device} free_gib={usage.free / 1024**3:.1f} "
+                    f"total_gib={usage.total / 1024**3:.1f} "
+                    f"writable={os.access(path, os.W_OK)}", flush=True)
+              print(capture("findmnt", "-rn", "-o", "SOURCE,FSTYPE,TARGET",
+                            "--target", name), flush=True)
+              options = capture("findmnt", "-rn", "-o", "OPTIONS", "--target", name)
+              if options:
+                  blockers = set(options.split(",")) & {"ro", "nodev", "nosuid", "noexec"}
+                  print("construction_blockers=" + ",".join(sorted(blockers)), flush=True)
+          print(capture("docker", "system", "df", timeout=120), flush=True)
+          for name in ("/data/sonic-runner/attempts",
+                       "/data/sonic-runner/cache/sonic-buildimage"):
+              print(f"Directory sizes: {name}", flush=True)
+              print(capture("du", "-x", "-B1", "--max-depth=1", name, timeout=120), flush=True)
+          PY

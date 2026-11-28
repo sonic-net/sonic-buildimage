@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "packages": {
+    "sysmgr": {
+      "required_paths": [
+        "usr/bin/rebootbackend",
+        "usr/lib/x86_64-linux-gnu/librebootgnoi.so.0.0.0",
+        "usr/lib/x86_64-linux-gnu/librebootgnoi.so.0",
+        "usr/lib/x86_64-linux-gnu/librebootgnoi.so"
+      ]
+    },
+    "libprotobuf32t64": {
+      "required_paths": [
+        "usr/lib/x86_64-linux-gnu/libprotobuf.so.32",
+        "usr/lib/x86_64-linux-gnu/libprotobuf.so.32.0.12"
+      ]
+    }
+  }
+}

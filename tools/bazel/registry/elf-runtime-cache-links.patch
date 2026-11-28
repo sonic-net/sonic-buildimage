@@ -1,0 +1,12 @@
+diff --git a/tools/build_tools/prepare_elf_runtime.py b/tools/build_tools/prepare_elf_runtime.py
+--- a/tools/build_tools/prepare_elf_runtime.py
++++ b/tools/build_tools/prepare_elf_runtime.py
+@@ -58,2 +58,8 @@
+         path.unlink()
++    # Use prepare_rootfs.preserve_empty_directories' cache transport convention.
++    # Keep directory aliases valid after restoring a file-only cached tree.
++    for directory, _, _ in os.walk(root, followlinks=False):
++        leaf = Path(directory)
++        if not any(leaf.iterdir()):
++            (leaf / ".bazel-keep-directory").touch()
+     (root / "toolchain.json").write_text(json.dumps({"format_version": 1, "profile": "elf", "architecture": architecture, "loader": str(loader.relative_to(root)), "library_directories": [str(path.relative_to(root)) for path in libraries], "tools": paths, "omitted_unresolved_symlinks": omitted}, indent=2) + "\n")

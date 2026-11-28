@@ -1,0 +1,7 @@
+# The overlay for the compare_elf http_archive in //:MODULE.bazel:
+# - Add BUILD files so that we can run it with Bazel.
+# - Add a patch to allow tools to be passed via the environment, so that we can pass Bazel-fetched readelf and others.
+exports_files([
+    "compare_elf.BUILD.bazel",
+    "compare_elf_env.patch",
+])

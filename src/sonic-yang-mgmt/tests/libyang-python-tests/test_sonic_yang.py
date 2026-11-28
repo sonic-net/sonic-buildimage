@@ -400,8 +400,9 @@ class Test_SonicYang(object):
     """
     @pytest.fixture(autouse=True, scope='class')
     def sonic_yang_data(self):
-        sonic_yang_dir = "/usr/local/yang-models/"
-        sonic_yang_test_file = "../sonic-yang-models/tests/files/sample_config_db.json"
+        sonic_yang_dir = os.environ.get("SONIC_TEST_YANG_MODELS", "/usr/local/yang-models/")
+        sonic_yang_test_file = os.environ.get(
+            "SONIC_TEST_YANG_CONFIG", "../sonic-yang-models/tests/files/sample_config_db.json")
 
         syc = sy.SonicYang(sonic_yang_dir)
         syc.loadYangModel()

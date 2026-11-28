@@ -12,6 +12,7 @@ on:
 
 jobs:
   check-file:
+    if: ${{ github.event.deleted != true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,27 +21,50 @@ jobs:
           fetch-depth: 2
 
       - name: Check protected files
+        shell: bash
         env:
-          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.base_ref || github.ref_name }}
         run: |
-          echo "Starting file check step"
-          protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            # Use the base of this run's merge commit, even when rerunning old jobs.
-            base_commit=$(git rev-parse HEAD^1)
-          elif [[ "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            base_commit=$(git hash-object -t tree /dev/null)
-          else
-            base_commit="$BEFORE_SHA"
-            git fetch --no-tags --depth=1 origin "$base_commit"
-          fi
-          changed_files=$(git diff --name-only "$base_commit" HEAD)
-
-          for protected_file in "${protected_files[@]}"; do
-            echo "Checking ${protected_file}"
-            if grep -Fxq "$protected_file" <<< "$changed_files"; then
-              echo "Error: You are trying to modify ${protected_file}, which is protected."
+          set -euo pipefail
+          for commit in "$BASE_SHA" "$HEAD_SHA"; do
+            if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Error: Missing or invalid event commit."
               exit 1
             fi
           done
+
+          # Checkout contains the tested PR merge or the pushed commit.
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          if [[ "$BASE_SHA" == 0000000000000000000000000000000000000000 ]]; then
+            # A new branch has no previous tree; protected files count as additions.
+            BASE_SHA=$(git hash-object -w -t tree --stdin < /dev/null)
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            git cat-file -e "${BASE_SHA}^{commit}"
+          fi
+
+          protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
+          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- "${protected_files[@]}")
+          if [[ -n "$changed_files" ]]; then
+            # The fork can import upstream's exact files when syncing master.
+            if [[ "$GITHUB_REPOSITORY" == securely1g/sonic-buildimage && "$TARGET_BRANCH" == master ]]; then
+              git fetch --no-tags --depth=1 https://github.com/sonic-net/sonic-buildimage.git refs/heads/master
+              upstream=$(git rev-parse --verify 'FETCH_HEAD^{commit}')
+              while IFS= read -r path; do
+                expected=$(git ls-tree "$upstream" -- "$path")
+                actual=$(git ls-tree "$HEAD_SHA" -- "$path")
+                if [[ -z "$expected" || "$actual" != "$expected" ]]; then
+                  echo "Error: $path differs from sonic-net/sonic-buildimage master."
+                  exit 1
+                fi
+              done <<< "$changed_files"
+              echo "Protected files match sonic-net/sonic-buildimage at $upstream."
+              exit 0
+            fi
+            echo "Error: You are trying to modify protected files:"
+            printf '%s\n' "$changed_files"
+            exit 1
+          fi
           echo "No changes detected in protected files"

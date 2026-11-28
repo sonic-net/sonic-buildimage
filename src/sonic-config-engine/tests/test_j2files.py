@@ -15,7 +15,7 @@ class TestJ2Files(TestCase):
     def setUp(self):
         self.yang = utils.YangWrapper()
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.simple_minigraph = os.path.join(self.test_dir, 'simple-sample-graph.xml')
         self.port_data = os.path.join(self.test_dir, 'sample-port-data.json')
         self.ztp = os.path.join(self.test_dir, "sample-ztp.json")
@@ -81,6 +81,13 @@ class TestJ2Files(TestCase):
         return output
 
     def create_machine_conf(self, platform, vendor):
+        if os.environ.get("SONIC_TEST_WRITABLE_FIXTURES"):
+            # cfggen supports this platform override; sandbox tests do not
+            # require root or access to the build host's /host/machine.conf.
+            previous = os.environ.get("PLATFORM")
+            self.addCleanup(self.remove_machine_conf, previous, None)
+            os.environ["PLATFORM"] = platform
+            return previous, None
         file_exist = True
         dir_exist = True
         mode = {'arista': 'aboot',
@@ -101,6 +108,12 @@ class TestJ2Files(TestCase):
         return file_exist, dir_exist
 
     def remove_machine_conf(self, file_exist, dir_exist):
+        if os.environ.get("SONIC_TEST_WRITABLE_FIXTURES"):
+            if file_exist is None:
+                os.environ.pop("PLATFORM", None)
+            else:
+                os.environ["PLATFORM"] = file_exist
+            return
         if not file_exist:
             subprocess.call(['sudo', 'rm', '-f', '/host/machine.conf'])
 
@@ -1983,6 +1996,10 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
     def test_swss_switch_render_template_multi_asic(self):
         # verify the ECMP hash seed changes per namespace
+        if "NAMESPACE_ID" in os.environ:
+            self.addCleanup(os.environ.__setitem__, "NAMESPACE_ID", os.environ["NAMESPACE_ID"])
+        else:
+            self.addCleanup(os.environ.pop, "NAMESPACE_ID", None)
         switch_template = os.path.join(
             self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent',
             'switch.json.j2'
@@ -2012,6 +2029,10 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
     def test_swss_switch_render_template_t2(self):
         # verify the ECMP hash seed changes per namespace
+        if "NAMESPACE_ID" in os.environ:
+            self.addCleanup(os.environ.__setitem__, "NAMESPACE_ID", os.environ["NAMESPACE_ID"])
+        else:
+            self.addCleanup(os.environ.pop, "NAMESPACE_ID", None)
         switch_template = os.path.join(
             self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent',
             'switch.json.j2'

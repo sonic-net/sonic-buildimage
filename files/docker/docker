@@ -122,6 +122,15 @@ case "$1" in
 				$DOCKER_OPTS \
 					>> "$DOCKER_LOGFILE" 2>&1
 		log_end_msg $?
+
+		# sonic_installer starts this daemon in the *new* image's chroot
+		# before migrating packages. Its store is private to that image.
+		if [ -x /usr/lib/docker/sonic-load-images ]; then
+			if ! /usr/lib/docker/sonic-load-images --wait-for-daemon; then
+				"$0" stop
+				exit 1
+			fi
+		fi
 		;;
 
 	stop)

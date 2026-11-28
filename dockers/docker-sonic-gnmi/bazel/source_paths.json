@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "packages": {
+    "sonic-gnmi": {
+      "required_paths": [
+        "usr/sbin/telemetry",
+        "usr/sbin/gnmi_get",
+        "usr/sbin/gnmi_set",
+        "usr/sbin/gnoi_sonic_client"
+      ]
+    }
+  }
+}

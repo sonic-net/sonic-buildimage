@@ -1,0 +1,87 @@
+"""Only image-owned additions are installed; parent metadata remains checked."""
+
+load("@config_engine_pip//:requirements.bzl", parent_whl = "whl_requirement")
+load("@pmon_runtime_pip//:requirements.bzl", child_whl = "whl_requirement")
+load("@sonic_build_infra//python:runtime_lock.bzl", "checked_python_runtime")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("//tools/bazel/image/vs/python:update.bzl", "runtime_lock_update")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "requirements.in",
+    "requirements_lock.txt",
+    "runtime.inputs.json",
+])
+
+wheel_layer(
+    name = "third_party",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [child_whl(name) for name in [
+        "blkinfo",
+        "certifi",
+        "charset-normalizer",
+        "enum34",
+        "grpcio-tools",
+        "guacamole",
+        "idna",
+        "libpci",
+        "psutil",
+        "python-dateutil",
+        "requests",
+        "smbus2",
+        "thrift",
+        "urllib3",
+    ]],
+)
+
+wheel_layer(
+    name = "parent_third_party",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    wheels = [parent_whl(name) for name in [
+        "bitarray",
+        "grpcio",
+        "ijson",
+        "jinja2",
+        "jsondiff",
+        "jsonpointer",
+        "lxml",
+        "markupsafe",
+        "natsort",
+        "netaddr",
+        "protobuf",
+        "pyyaml",
+        "six",
+        "tabulate",
+    ]],
+)
+
+checked_python_runtime(
+    name = "runtime",
+    inherited_sources = [
+        "//dockers/docker-platform-monitor/bazel:parent_source_wheels",
+        "@sonic_yang_models//:yang_models_pkg",
+        "//dockers/docker-platform-monitor/bazel:apt_setuptools",
+        "//dockers/docker-platform-monitor/bazel:apt_cffi",
+        "//dockers/docker-platform-monitor/bazel:apt_pycparser",
+        "//dockers/docker-platform-monitor/bazel:apt_redis",
+    ],
+    inherited_third_party = [":parent_third_party"],
+    inputs = "runtime.inputs.json",
+    lock = "requirements_lock.txt",
+    plan = "//dockers/docker-platform-monitor/bazel:python_plan",
+    requirements = "requirements.in",
+    sources = [
+        "//tools/bazel/image/vs/python:platform_common_runtime",
+        "@sonic_platform_daemons//:daemons.runtime",
+    ],
+    third_party = [":third_party"],
+    update_command = 'bazel run //dockers/docker-platform-monitor/bazel/python:update -- --uv "$(command -v uv)"',
+)
+
+runtime_lock_update(
+    name = "update",
+    plan = "//dockers/docker-platform-monitor/bazel:python_plan",
+)

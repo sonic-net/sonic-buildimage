@@ -32,3 +32,26 @@ $(DOCKER_SYSMGR)_GIT_REPOSITORIES += "sonic-swss-common"
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SYSMGR)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_SYSMGR_DBG)
+
+# Native source OCI images reuse the config-engine parent and Sysmgr owner TARs.
+# Preserve every legacy prerequisite and all excluded profiles above.
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_SYSMGR) $(DOCKER_SYSMGR_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_SYSMGR)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_SYSMGR_DBG)
+$(DOCKER_SYSMGR_DBG)_PATH = $($(DOCKER_SYSMGR)_PATH)
+$(DOCKER_SYSMGR)_BAZEL_TARGET = //dockers/docker-sysmgr:$(DOCKER_SYSMGR)
+$(DOCKER_SYSMGR_DBG)_BAZEL_TARGET = //dockers/docker-sysmgr:$(DOCKER_SYSMGR_DBG)
+SONIC_BAZEL_MANIFESTS += docker-sysmgr docker-sysmgr-$(DBG_IMAGE_MARK)
+docker-sysmgr_MANIFEST_IMAGE = $(DOCKER_SYSMGR)
+docker-sysmgr-$(DBG_IMAGE_MARK)_MANIFEST_IMAGE = $(DOCKER_SYSMGR)
+docker-sysmgr-$(DBG_IMAGE_MARK)_MANIFEST_SUFFIX = $(DBG_IMAGE_MARK)
+$(DOCKER_SYSMGR)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-sysmgr/manifest.json
+$(DOCKER_SYSMGR_DBG)_BAZEL_DEPENDS = $($(DOCKER_SYSMGR)_BAZEL_DEPENDS) $(TARGET_PATH)/bazel-manifests/docker-sysmgr-$(DBG_IMAGE_MARK)/manifest.json
+endif
+endif
+endif

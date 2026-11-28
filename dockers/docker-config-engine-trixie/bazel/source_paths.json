@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "packages": {
+    "libswsscommon": {
+      "required_paths": [
+        "run/redis/sonic-db/database_config.json"
+      ]
+    }
+  }
+}

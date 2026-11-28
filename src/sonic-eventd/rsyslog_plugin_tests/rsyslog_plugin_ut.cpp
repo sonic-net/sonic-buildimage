@@ -6,8 +6,11 @@ extern "C"
 }
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <memory>
 #include <regex>
+#include <sstream>
+#include <stdexcept>
 #include <thread>
 #include <swss/events.h>
 #include "gtest/gtest.h"
@@ -21,6 +24,52 @@ using namespace swss;
 using json = nlohmann::json;
 
 const string g_stored_year = "2024";
+
+// Each line is a quoted or single-word message followed by true/false.
+// Quoting also represents the empty-message case without dropping it.
+static vector<pair<string, bool>> readMessages(istream& input, size_t expectedCount) {
+    vector<pair<string, bool>> messages;
+    string line;
+    while (getline(input, line)) {
+        istringstream record(line);
+        string message;
+        bool expected;
+        if (!(record >> quoted(message) >> boolalpha >> expected)) {
+            throw runtime_error("Malformed message fixture row " + to_string(messages.size() + 1));
+        }
+        record >> ws;
+        if (!record.eof()) {
+            throw runtime_error("Unexpected data after message fixture result");
+        }
+        messages.emplace_back(message, expected);
+    }
+    if (input.bad() || messages.size() != expectedCount) {
+        throw runtime_error("Incomplete message fixture: expected " + to_string(expectedCount) +
+                            " rows, read " + to_string(messages.size()));
+    }
+    return messages;
+}
+
+TEST(rsyslog_fixtures, preserves_message_boundaries_and_empty_message) {
+    istringstream input("\"message with spaces\" true\nplain false\n\"\" true\n");
+    const auto messages = readMessages(input, 3);
+    EXPECT_EQ(messages[0], make_pair(string("message with spaces"), true));
+    EXPECT_EQ(messages[1], make_pair(string("plain"), false));
+    EXPECT_EQ(messages[2], make_pair(string(""), true));
+}
+
+TEST(rsyslog_fixtures, rejects_missing_truncated_and_malformed_data) {
+    for (const string text : {"", "plain 1\n", "plain maybe\n",
+                              "\"unclosed message true\n", "plain true extra\n", " true\n"}) {
+        SCOPED_TRACE(text);
+        istringstream input(text);
+        EXPECT_THROW(readMessages(input, 1), runtime_error);
+    }
+    istringstream truncated("plain true\n");
+    EXPECT_THROW(readMessages(truncated, 2), runtime_error);
+    ifstream missing;
+    EXPECT_THROW(readMessages(missing, 1), runtime_error);
+}
 
 vector<EventParam> createEventParams(vector<string> params, vector<string> luaCodes) {
     vector<EventParam> eventParams;
@@ -226,30 +275,32 @@ TEST(rsyslog_plugin, onInit_invalidRegex) {
 
 TEST(rsyslog_plugin, onMessage) {
     unique_ptr<RsyslogPlugin> plugin(new RsyslogPlugin("test_mod_name", "./rsyslog_plugin_tests/test_regex_2.rc.json"));
-    EXPECT_EQ(0, plugin->onInit());
+    ASSERT_EQ(0, plugin->onInit());
     ifstream infile("./rsyslog_plugin_tests/test_syslogs.txt");
-    string logMessage;
-    bool parseResult;
+    ASSERT_TRUE(infile.is_open());
+    const auto messages = readMessages(infile, 4);
     lua_State* luaState = luaL_newstate();
     luaL_openlibs(luaState);
-    while(infile >> logMessage >> parseResult) {
-        EXPECT_EQ(parseResult, plugin->onMessage(logMessage, luaState));
+    for (const auto& message : messages) {
+        EXPECT_EQ(message.second, plugin->onMessage(message.first, luaState)) << message.first;
     }
+    RecordProperty("fixture_rows", static_cast<int>(messages.size()));
     lua_close(luaState);
     infile.close();
 }
 
 TEST(rsyslog_plugin, onMessage_noParams) {
     unique_ptr<RsyslogPlugin> plugin(new RsyslogPlugin("test_mod_name", "./rsyslog_plugin_tests/test_regex_5.rc.json"));
-    EXPECT_EQ(0, plugin->onInit());
+    ASSERT_EQ(0, plugin->onInit());
     ifstream infile("./rsyslog_plugin_tests/test_syslogs_2.txt");
-    string logMessage;
-    bool parseResult;
+    ASSERT_TRUE(infile.is_open());
+    const auto messages = readMessages(infile, 3);
     lua_State* luaState = luaL_newstate();
     luaL_openlibs(luaState);
-    while(infile >> logMessage >> parseResult) {
-        EXPECT_EQ(parseResult, plugin->onMessage(logMessage, luaState));
+    for (const auto& message : messages) {
+        EXPECT_EQ(message.second, plugin->onMessage(message.first, luaState)) << message.first;
     }
+    RecordProperty("fixture_rows", static_cast<int>(messages.size()));
     lua_close(luaState);
     infile.close();
 }

@@ -1,0 +1,126 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("//tools/bazel/image:defs.bzl", "docker_overlay2_store", "onie_installer", "sonic_disk_image", "sonic_squashfs")
+load(":fixture.bzl", "image_action_fixture")
+load("//tools/bazel/image:initramfs.bzl", "sonic_initramfs")
+
+package(default_testonly = True)
+
+config_setting(name = "arm64", constraint_values = ["@platforms//cpu:aarch64"])
+
+py_binary(name = "fixture_generator", srcs = ["fixture.py"], main = "fixture.py")
+
+image_action_fixture(
+    name = "inputs",
+    architecture = select({":arm64": "arm64", "//conditions:default": "amd64"}),
+)
+
+[
+    filegroup(name = name, srcs = [":inputs"], output_group = name)
+    for name in [
+        "arch_image_conf", "boot_files", "default_platform_conf", "efi_sbatlevel",
+        "grub_config", "initrd", "install_sh", "kernel_metadata",
+        "layer", "machine_conf", "oci", "onie_boot", "onie_image_conf",
+        "partition_layout", "platform_archive", "platforms_asic", "sharch_body", "version",
+    ]
+]
+
+sonic_squashfs(
+    name = "squashfs",
+    layers = [":layer"],
+    compression = "zstd",
+    block_size = 1048576,
+    out = "root.squashfs",
+    mksquashfs = "@sonic_build_infra//tools/build_tools:mksquashfs",
+)
+
+docker_overlay2_store(
+    name = "docker_store",
+    images = {":oci": "action-probe:{version}"},
+    platform = select({":arm64": "linux/arm64", "//conditions:default": "linux/amd64"}),
+    version_file = ":version",
+    tar_split_json = "//tools/bazel/image/tar_split_json:tar_split_json",
+    compression = "none",
+    out = "docker-store.tar",
+)
+
+onie_installer(
+    name = "installer",
+    squashfs = ":squashfs",
+    boot_files = ":boot_files",
+    kernel_metadata = ":kernel_metadata",
+    initrd = ":initrd",
+    platform_archive = ":platform_archive",
+    dockerfs = ":docker_store",
+    dockerfs_compression = "none",
+    platform_compression = "none",
+    install_sh = ":install_sh",
+    sharch_body = ":sharch_body",
+    machine_conf = ":machine_conf",
+    default_platform_conf = ":default_platform_conf",
+    onie_image_conf = ":onie_image_conf",
+    arch_image_conf = ":arch_image_conf",
+    platforms_asic = ":platforms_asic",
+    efi_sbatlevel = ":efi_sbatlevel",
+    installer_variables = select({
+        ":arm64": {"ARCH": "arm64", "IMAGE_VERSION": "action-probe"},
+        "//conditions:default": {"ARCH": "amd64", "IMAGE_VERSION": "action-probe"},
+    }),
+    out = "installer.bin",
+)
+
+sonic_disk_image(
+    name = "disk",
+    squashfs = ":squashfs",
+    boot_files = ":boot_files",
+    kernel_metadata = ":kernel_metadata",
+    initrd = ":initrd",
+    docker_store = ":docker_store",
+    docker_store_compression = "none",
+    onie_boot = ":onie_boot",
+    platform_layers = [":platform_archive"],
+    grub_assets = "@sonic_build_infra//tools/build_tools:image_runtime",
+    grub_assets_subdir = "usr/lib/grub",
+    grub_config = ":grub_config",
+    machine_conf = ":machine_conf",
+    image_version_file = ":version",
+    partition_layout = ":partition_layout",
+    disk_size_mib = 96,
+    sparse_threshold_bytes = 4096,
+    mke2fs = "@sonic_build_infra//tools/build_tools:mke2fs",
+    debugfs = "@sonic_build_infra//tools/build_tools:debugfs",
+    sgdisk = "@sonic_build_infra//tools/build_tools:sgdisk",
+    qemu_img = "@sonic_build_infra//tools/build_tools:qemu-img",
+    grub_mkimage = "@sonic_build_infra//tools/build_tools:grub-mkimage",
+    grub_bios_setup = "@grub//:grub-bios-setup",
+    grub_editenv = "@sonic_build_infra//tools/build_tools:grub-editenv",
+    out = "disk.qcow2",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
+py_test(
+    name = "action_test",
+    srcs = ["test.py"],
+    main = "test.py",
+    data = [":squashfs", ":docker_store", ":installer", ":layer", "@sonic_build_infra//tools/build_tools:unsquashfs", "@sonic_build_infra//tools/build_tools:tar-split"],
+    args = [
+        "--squashfs=$(rootpath :squashfs)",
+        "--docker-store=$(rootpath :docker_store)",
+        "--layer=$(rootpath :layer)",
+        "--tar-split=$(rootpath @sonic_build_infra//tools/build_tools:tar-split)",
+        "--installer=$(rootpath :installer)",
+        "--unsquashfs=$(rootpath @sonic_build_infra//tools/build_tools:unsquashfs)",
+    ] + select({":arm64": ["--architecture=arm64"], "//conditions:default": ["--architecture=amd64"]}),
+)
+
+py_test(
+    name = "disk_action_test",
+    srcs = ["disk_test.py"],
+    main = "disk_test.py",
+    data = [":disk", "@sonic_build_infra//tools/build_tools:qemu-img"],
+    args = [
+        "--disk=$(rootpath :disk)",
+        "--qemu-img=$(rootpath @sonic_build_infra//tools/build_tools:qemu-img)",
+        "--size-mib=96",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)

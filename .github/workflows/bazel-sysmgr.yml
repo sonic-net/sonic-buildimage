@@ -1,0 +1,174 @@
+name: Bazel Sysmgr source packages
+
+on:
+  pull_request:
+    paths:
+      - tools/bazel/ci/resources.py
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - src/sonic-sysmgr/**
+      - tools/bazel/ci/bazel_commands.py
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - .github/workflows/bazel-sysmgr.yml
+  push:
+    branches: [master]
+    paths:
+      - tools/bazel/ci/resources.py
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - src/sonic-sysmgr/**
+      - tools/bazel/ci/bazel_commands.py
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - .github/workflows/bazel-sysmgr.yml
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      vs_artifact_id:
+        type: string
+        required: true
+      vs_debug:
+        type: string
+        required: true
+      run_source_tests:
+        type: boolean
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native Sysmgr packages (amd64)
+    if: inputs.vs_artifact_id != '' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+    runs-on: [self-hosted, linux, bazel-x64]
+    timeout-minutes: 45
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Nested Linux sandboxes must remount /proc; Docker's masked system paths
+      # otherwise prevent Bazel from registering the required sandbox strategy.
+      options: --init --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils binutils-gold build-essential ca-certificates curl file git python3 tar unzip zstd
+      - name: Record the called workflow identity for cleanup
+        if: inputs.vs_artifact_id != ''
+        env:
+          JOB_WORKFLOW_REF: ${{ job.workflow_ref }}
+        run: printf 'BAZEL_CLEANUP_JOB_WORKFLOW_REF=%s\n' "$JOB_WORKFLOW_REF" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.vs_artifact_id && github.sha || github.event.pull_request.head.sha || github.sha }}
+          # The VS artifact is bound to a merge commit. Retain its PR head for the ancestry check.
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Prepare pinned source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          module-root: src/sonic-sysmgr
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: sysmgr-amd64
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
+      - name: Configure read-only cache and local test evidence
+        run: |
+          printf '%s\n' \
+            'build --remote_upload_local_results=false' \
+            'build --experimental_build_event_upload_strategy=local' \
+            >> "$GITHUB_WORKSPACE/.bazelrc.user"
+      - name: Check out the registry's verified Cosmos downloader
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: securely1g/sonic-bazel-registry
+          ref: 0f459395f8852b5c89e9895afeeea01b95b281ea
+          path: .ci/sysmgr-registry
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /ci/github_sources.py
+            /ci/github_sources/cosmos-4.0.2.json
+      - name: Prepare the APE tools from the official Cosmos release
+        run: |
+          mkdir -p artifacts/sysmgr
+          registry=.ci/sysmgr-registry/ci
+          python3 -B "$registry/github_sources.py" \
+            --manifest "$registry/github_sources/cosmos-4.0.2.json" \
+            --distdir "$RUNNER_TEMP/sysmgr-distdir" \
+            --cache-dir "$RUNNER_TEMP/sysmgr-github-cache" \
+            --receipt artifacts/sysmgr/github-sources.json
+          printf 'common --distdir="%s"\n' "$RUNNER_TEMP/sysmgr-distdir" >> "$GITHUB_WORKSPACE/.bazelrc.user"
+      - name: Allocate fresh VS package inputs
+        if: inputs.vs_artifact_id != ''
+        env:
+          ARTIFACT_ID: ${{ inputs.vs_artifact_id }}
+        run: |
+          [[ $ARTIFACT_ID =~ ^[1-9][0-9]*$ ]]
+          mkdir -p src/sonic-sysmgr/target
+          bundle=$(mktemp -d "$GITHUB_WORKSPACE/src/sonic-sysmgr/target/vs-sysmgr-XXXXXXXX")
+          echo "VS_SYSMGR_DIRECTORY=$bundle" >> "$GITHUB_ENV"
+      - name: Download original Sysmgr inputs from VS
+        if: inputs.vs_artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.vs_artifact_id }}
+          path: ${{ env.VS_SYSMGR_DIRECTORY }}
+          merge-multiple: true
+      - name: Audit, build and validate installed packages and original tests
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+          VS_DEBUG: ${{ inputs.vs_debug }}
+          RUN_SOURCE_TESTS: ${{ inputs.run_source_tests }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          package_args=()
+          if [[ -n "${VS_SYSMGR_DIRECTORY:-}" ]]; then
+            python3 -m tools.bazel.ci.vs_component_artifacts test --component sysmgr \
+              --directory "$VS_SYSMGR_DIRECTORY" --revision "$GITHUB_SHA" --debug "$VS_DEBUG"
+            package_args+=(--vs-directory "$VS_SYSMGR_DIRECTORY" --vs-debug "$VS_DEBUG")
+            if [[ $RUN_SOURCE_TESTS != true ]]; then package_args+=(--installed-only); fi
+          fi
+          python3 -B src/sonic-sysmgr/bazel/ci.py "${package_args[@]}" \
+            --startup-arg="--bazelrc=$GITHUB_WORKSPACE/.bazelrc.user" \
+            --registry https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main \
+            --artifacts artifacts/sysmgr 2>&1 | tee artifacts/sysmgr/ci.log
+      - name: Upload packages, original XML and installed-package evidence
+        id: runner_cleanup_upload_0
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sysmgr-amd64
+          path: artifacts/sysmgr
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

@@ -1,0 +1,87 @@
+Subject: [PATCH] tests: propagate Tcl harness errors and require executed tests
+
+Tcl test-file errors are reported by runAllTests, even when no failed
+assertions were counted. Preserve that result and capture executed-test
+counts before cleanup resets them. Passing suites may still include skips.
+
+diff --git a/tests/yanglint/interactive/all.tcl b/tests/yanglint/interactive/all.tcl
+--- a/tests/yanglint/interactive/all.tcl
++++ b/tests/yanglint/interactive/all.tcl
+@@ -1,15 +1,18 @@
+ package require tcltest
+
+-# Hook to determine if any of the tests failed.
+-# Sets a global variable exitCode to 1 if any test fails otherwise it is set to 0.
++set exitCode 1
++
++# Capture the result before cleanup resets the counts.
++# Skipped tests do not count as executed tests.
+ proc tcltest::cleanupTestsHook {} {
+     variable numTests
+-    set ::exitCode [expr {$numTests(Failed) > 0}]
++    set ::exitCode [expr {$numTests(Failed) > 0 ||
++                         ($numTests(Passed) + $numTests(Failed)) == 0}]
+ }
+
+ if {[info exists ::env(TESTS_DIR)]} {
+     tcltest::configure -testdir "$env(TESTS_DIR)/interactive"
+ }
+
+-tcltest::runAllTests
+-exit $exitCode
++set harnessFailed [tcltest::runAllTests]
++exit [expr {$harnessFailed || $exitCode}]
+diff --git a/tests/yanglint/non-interactive/all.tcl b/tests/yanglint/non-interactive/all.tcl
+--- a/tests/yanglint/non-interactive/all.tcl
++++ b/tests/yanglint/non-interactive/all.tcl
+@@ -1,15 +1,18 @@
+ package require tcltest
+
+-# Hook to determine if any of the tests failed.
+-# Sets a global variable exitCode to 1 if any test fails otherwise it is set to 0.
++set exitCode 1
++
++# Capture the result before cleanup resets the counts.
++# Skipped tests do not count as executed tests.
+ proc tcltest::cleanupTestsHook {} {
+     variable numTests
+-    set ::exitCode [expr {$numTests(Failed) > 0}]
++    set ::exitCode [expr {$numTests(Failed) > 0 ||
++                         ($numTests(Passed) + $numTests(Failed)) == 0}]
+ }
+
+ if {[info exists ::env(TESTS_DIR)]} {
+     tcltest::configure -testdir "$env(TESTS_DIR)/non-interactive"
+ }
+
+-tcltest::runAllTests
+-exit $exitCode
++set harnessFailed [tcltest::runAllTests]
++exit [expr {$harnessFailed || $exitCode}]
+diff --git a/tests/yangre/all.tcl b/tests/yangre/all.tcl
+--- a/tests/yangre/all.tcl
++++ b/tests/yangre/all.tcl
+@@ -1,15 +1,18 @@
+ package require tcltest
+
+-# Hook to determine if any of the tests failed.
+-# Sets a global variable exitCode to 1 if any test fails otherwise it is set to 0.
++set exitCode 1
++
++# Capture the result before cleanup resets the counts.
++# Skipped tests do not count as executed tests.
+ proc tcltest::cleanupTestsHook {} {
+     variable numTests
+-    set ::exitCode [expr {$numTests(Failed) > 0}]
++    set ::exitCode [expr {$numTests(Failed) > 0 ||
++                         ($numTests(Passed) + $numTests(Failed)) == 0}]
+ }
+
+ if {[info exists ::env(TESTS_DIR)]} {
+     tcltest::configure -testdir "$env(TESTS_DIR)"
+ }
+
+-tcltest::runAllTests
+-exit $exitCode
++set harnessFailed [tcltest::runAllTests]
++exit [expr {$harnessFailed || $exitCode}]

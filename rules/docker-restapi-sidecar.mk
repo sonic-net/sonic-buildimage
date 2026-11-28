@@ -36,3 +36,27 @@ $(DOCKER_RESTAPI_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_RESTAPI_SIDECAR)_FILES += $(RESTAPI_SYSTEMD)
 $(DOCKER_RESTAPI_SIDECAR)_FILES += $(K8S_POD_CONTROL)
 
+
+ifeq ($(BLDENV),trixie)
+SONIC_BAZEL_SWITCHABLE_IMAGES += $(DOCKER_RESTAPI_SIDECAR) $(DOCKER_RESTAPI_SIDECAR_DBG)
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE):$(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH):$(INCLUDE_FIPS):$(DBG_IMAGE_MARK),y:vs:amd64:y:dbg)
+ifeq ($(filter y,$(CROSS_BUILD_ENVIRON) $(MULTIARCH_QEMU_ENVIRON) $(ENABLE_ASAN)),)
+SONIC_BAZEL_DOCKER_IMAGES += $(DOCKER_RESTAPI_SIDECAR)
+SONIC_BAZEL_DBG_DOCKER_IMAGES += $(DOCKER_RESTAPI_SIDECAR_DBG)
+$(DOCKER_RESTAPI_SIDECAR)_BAZEL_TARGET = //dockers/docker-restapi-sidecar:$(DOCKER_RESTAPI_SIDECAR)
+$(DOCKER_RESTAPI_SIDECAR_DBG)_PATH = $($(DOCKER_RESTAPI_SIDECAR)_PATH)
+$(DOCKER_RESTAPI_SIDECAR_DBG)_BAZEL_TARGET = //dockers/docker-restapi-sidecar:$(DOCKER_RESTAPI_SIDECAR_DBG)
+SONIC_BAZEL_MANIFESTS += docker-restapi-sidecar docker-restapi-sidecar-dbg
+docker-restapi-sidecar_MANIFEST_IMAGE = $(DOCKER_RESTAPI_SIDECAR)
+docker-restapi-sidecar-dbg_MANIFEST_IMAGE = $(DOCKER_RESTAPI_SIDECAR)
+docker-restapi-sidecar-dbg_MANIFEST_SUFFIX = dbg
+$(DOCKER_RESTAPI_SIDECAR)_BAZEL_DEPENDS = $(TARGET_PATH)/bazel-manifests/docker-base-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-config-engine-trixie/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-restapi-sidecar/manifest.json \
+    $(TARGET_PATH)/bazel-manifests/docker-restapi-sidecar/image.env
+$(DOCKER_RESTAPI_SIDECAR_DBG)_BAZEL_DEPENDS = $($(DOCKER_RESTAPI_SIDECAR)_BAZEL_DEPENDS) \
+    $(TARGET_PATH)/bazel-manifests/docker-restapi-sidecar-dbg/manifest.json
+SONIC_BAZEL_IMAGE_ENVIRONMENTS += docker-restapi-sidecar
+endif
+endif
+endif

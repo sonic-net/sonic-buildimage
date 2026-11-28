@@ -1,7 +1,13 @@
-# Instruct apt-get to timeout after 20 seconds and retry 3 times before giving up. 
-# This can help mitigate issues with slow or unreliable network connections when using apt-get in Docker builds.
+// Retry transient download failures per acquisition. A later package download
+// gets its own budget instead of consuming another whole Docker-build attempt.
 
 Acquire::http::Timeout "20";
 Acquire::https::Timeout "20";
 Acquire::ftp::Timeout "20";
-Acquire::Retries "3";
+Acquire::Retries "8";
+Acquire::Retries::Delay "true";
+Acquire::Retries::Delay::Maximum "30";
+
+// Fail the refresh if an index cannot be downloaded. A warning-only success
+// can otherwise become a cached Docker layer with missing or stale indexes.
+APT::Update::Error-Mode "any";

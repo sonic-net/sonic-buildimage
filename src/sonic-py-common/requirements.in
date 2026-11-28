@@ -1,0 +1,21 @@
+# Runtime dependencies for the complete Python 3 package.
+natsort==8.4.0
+PyYAML==6.0.3
+# The Make-pinned swsssdk source requires Redis Python >=4.5.4.
+redis==4.5.4
+# Keep the Make-pinned source for the legacy SWSSSDK test dependency.
+# Production redis-dump-load comes from @redis_dump_load.
+redis-dump-load @ https://github.com/p/redis-dump-load/archive/758549795174dc6b3be70810e0e4d6308f80f1a3.tar.gz
+grpcio==1.71.0
+protobuf==5.29.6
+
+# Generate the gNOI modules with the same version used by the Make image.
+grpcio-tools==1.71.0
+
+# Source and installed-wheel tests use this same reviewed dependency set.
+pytest==8.4.2
+mock==3.0.5
+setuptools==80.9.0
+wheel==0.45.1
+pytest-runner==6.0.1
+installer==0.7.0

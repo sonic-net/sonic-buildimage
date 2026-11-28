@@ -1,0 +1,169 @@
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@sonic_build_infra//python:wheel_layer.bzl", "wheel_layer")
+load("@tar.bzl", "tar")
+load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+
+package(default_visibility = ["//dockers/docker-orchagent:__pkg__"])
+
+exports_files(["requirements_lock.txt"])
+
+# Expose runtime and debug manifests to image validation targets.
+filegroup(
+    name = "manifest.json",
+    srcs = ["//tools/bazel/image/vs/metadata:docker-orchagent.manifest"],
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+filegroup(
+    name = "manifest-dbg.json",
+    srcs = ["//tools/bazel/image/vs/metadata:docker-orchagent-dbg.manifest"],
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+manifest_labels(
+    name = "labels",
+    out = "manifest.labels",
+    manifest = ":manifest.json",
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+manifest_labels(
+    name = "debug_labels",
+    out = "manifest-dbg.labels",
+    manifest = ":manifest-dbg.json",
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+filegroup(
+    name = "render_manifests",
+    srcs = [
+        ":debug_labels",
+        ":labels",
+        ":manifest.json",
+        ":manifest-dbg.json",
+    ],
+)
+
+# Keep SWSS's non-ASAN data and startup template with the container owner.
+sonic_cfggen_template(
+    name = "docker_init",
+    out = "docker-init.sh",
+    additional_data = {"ENABLE_ASAN": "n"},
+    template = "//dockers/docker-orchagent:docker-init.j2",
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)
+
+filegroup(
+    name = "render_config",
+    srcs = [
+        ":docker_init",
+        ":render_manifests",
+    ],
+)
+
+wheel_layer(
+    name = "python_runtime",
+    headers = "/usr/local/include/python3.13",
+    site_packages = "/usr/local/lib/python3.13/dist-packages",
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+    wheels = [
+        "@scapy//:wheel",
+        "@swss_config_pip//pyroute2:whl",
+    ],
+)
+
+write_file(
+    name = "config_status",
+    out = "config_status.txt",
+    content = [
+        "# Config files managed by sonic-config-engine",
+        "",
+    ],
+)
+
+# Match Dockerfile.common.j2 and COPY *.j2. docker-init.j2 is rendered and removed
+# by the legacy Dockerfile; all remaining templates are configured at startup.
+_SCRIPTS = [
+    "buffermgrd.sh",
+    "enable_counters.py",
+    "orchagent.sh",
+    "swssconfig.sh",
+    "tunnel_packet_handler.py",
+]
+
+_TEMPLATES = [
+    "Dockerfile.common.j2",
+    "arp_update.conf",
+    "critical_processes.j2",
+    "ipinip.json.j2",
+    "ndppd.conf",
+    "ndppd.conf.j2",
+    "orch_zmq_tables.conf.j2",
+    "ports.json.j2",
+    "supervisord.conf.common.j2",
+    "supervisord.conf.j2",
+    "switch.json.j2",
+    "tunnel_packet_handler.conf",
+    "vlan_vars.j2",
+    "vxlan.json.j2",
+    "wait_for_link.sh.j2",
+    "watchdog_processes.j2",
+]
+
+tar(
+    name = "files",
+    srcs = [
+        ":config_status",
+        ":docker-init.sh",
+        "//dockers/docker-base-trixie:etc/rsyslog.conf",
+        "//dockers/docker-orchagent:Dockerfile.j2",
+        "//files/build_templates:arp_update_vars.j2",
+        "//files/scripts:arp_update",
+    ] + ["//dockers/docker-orchagent:" + name for name in _SCRIPTS + _TEMPLATES],
+    mtree = [
+        "./ uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./etc uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/bin uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/share uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/share/sonic uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./usr/share/sonic/templates uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./var uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./etc/rsyslog.conf uid=0 gid=0 mode=0644 time=0 type=file content=$(location //dockers/docker-base-trixie:etc/rsyslog.conf)",
+        "./usr/bin/docker-init.sh uid=0 gid=0 mode=0755 time=0 type=file content=$(location :docker-init.sh)",
+        "./usr/bin/arp_update uid=0 gid=0 mode=0755 time=0 type=file content=$(location //files/scripts:arp_update)",
+        "./usr/share/sonic/templates/arp_update_vars.j2 uid=0 gid=0 mode=0644 time=0 type=file content=$(location //files/build_templates:arp_update_vars.j2)",
+        "./usr/share/sonic/templates/Dockerfile.j2 uid=0 gid=0 mode=0755 time=0 type=file content=$(location //dockers/docker-orchagent:Dockerfile.j2)",
+        "./var/sonic uid=0 gid=0 mode=0755 time=0 type=dir",
+        "./var/sonic/config_status uid=0 gid=0 mode=0644 time=0 type=file content=$(location :config_status)",
+    ] + [
+        "./usr/bin/" + name + " uid=0 gid=0 mode=0755 time=0 type=file content=$(location //dockers/docker-orchagent:" + name + ")"
+        for name in _SCRIPTS
+    ] + [
+        "./usr/share/sonic/templates/" + name + " uid=0 gid=0 mode=0644 time=0 type=file content=$(location //dockers/docker-orchagent:" + name + ")"
+        for name in _TEMPLATES
+    ],
+    visibility = [
+        "//dockers/docker-orchagent:__pkg__",
+        "//tools/bazel/tests:__pkg__",
+    ],
+)

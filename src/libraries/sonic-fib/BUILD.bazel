@@ -1,0 +1,184 @@
+load("@sonic_build_infra//cc:runtime_test.bzl", "native_runtime_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("@tar.bzl//tar:tar.bzl", "tar")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+
+package(default_visibility = ["//visibility:public"])
+
+config_setting(name = "bookworm", constraint_values = ["@sonic_build_infra//platforms:bookworm"])
+config_setting(name = "trixie_amd64", constraint_values = ["@sonic_build_infra//platforms:trixie", "@platforms//cpu:x86_64"])
+config_setting(name = "trixie_arm64", constraint_values = ["@sonic_build_infra//platforms:trixie", "@platforms//cpu:aarch64"])
+
+[
+    alias(
+        name = name,
+        actual = select({
+            ":bookworm": "@fib_bookworm_deps//" + target,
+            "//conditions:default": "@fib_deps//" + target,
+        }),
+    )
+    for name, target in [("target_json", "nlohmann-json3-dev:nlohmann-json3"), ("target_json_headers", "nlohmann-json3-dev:nlohmann-json3_headers")] + [
+        ("target_" + package + "_data", package + ":data")
+        for package in ["libc6", "libstdc++6", "libgcc-s1"]
+    ]
+]
+
+py_binary(
+    name = "render_schema",
+    srcs = ["scripts/render_schema.py"],
+    main = "scripts/render_schema.py",
+    deps = ["@config_engine_pip//jinja2"],
+)
+
+[
+    genrule(
+        name = "generate_" + mode,
+        srcs = ["schema/NextHopGroupFull.json"] + glob(["templates/*.j2"]),
+        outs = ["src/" + output],
+        cmd = 'template=$(location templates/nexthopgroupfull.h.j2); $(execpath :render_schema) $(location schema/NextHopGroupFull.json) "$${template%/*}" $@ ' + mode,
+        tools = [":render_schema"],
+    )
+    for mode, output in [
+        ("header", "nexthopgroupfull.h"),
+        ("source", "nexthopgroupfull.cpp"),
+        ("json_bindings", "nexthopgroupfull_json.h"),
+        ("c_header", "c_nexthopgroupfull.h"),
+    ]
+]
+
+# Ordered warning, optimization, debugging and hardening options.
+# Bazel adds potentially empty generated include directories; its declared header
+# inputs replace GCC's filesystem-only -Wmissing-include-dirs check.
+_COPTS = [
+    "-Wall", "-Wcast-align", "-Wcast-qual",
+    "-Wconversion", "-Wdisabled-optimization", "-Werror", "-Wextra", "-Wfloat-equal",
+    "-Wformat=2", "-Wformat-nonliteral", "-Wformat-security", "-Wformat-y2k",
+    "-Wimport", "-Winit-self", "-Winvalid-pch", "-Wlong-long",
+    "-Wmissing-field-initializers", "-Wmissing-format-attribute",
+    "-Wmissing-noreturn", "-Wno-aggregate-return", "-Wno-padded", "-Wno-switch-enum",
+    "-Wno-unused-parameter", "-Wpacked", "-Wpointer-arith", "-Wredundant-decls",
+    "-Wshadow", "-Wstack-protector", "-Wstrict-aliasing=3", "-Wswitch",
+    "-Wswitch-default", "-Wunreachable-code", "-Wunused", "-Wvariadic-macros",
+    "-Wno-write-strings", "-Wno-missing-format-attribute", "-Wno-long-long",
+    "-fstack-protector-strong",
+] + [
+    "-g", "-O2", "-DNDEBUG",
+    "-D_FORTIFY_SOURCE=2", "-Wdate-time", "-Werror=format-security",
+] + select({
+    # Bookworm omits the newer Trixie hardening options.
+    ":bookworm": [],
+    ":trixie_amd64": ["-fstack-clash-protection", "-fcf-protection"],
+    ":trixie_arm64": ["-fstack-clash-protection", "-mbranch-protection=standard"],
+})
+
+_HEADERS = [
+    ":src/nexthopgroupfull.h", ":src/nexthopgroupfull_json.h", ":src/c_nexthopgroupfull.h",
+    "src/nexthopgroup_debug.h", "src/c-api/nexthopgroup_capi.h",
+]
+
+cc_library(
+    name = "objects",
+    srcs = [":src/nexthopgroupfull.cpp", "src/nexthopgroup_debug.cpp", "src/c-api/nexthopgroup_capi.cpp"],
+    hdrs = _HEADERS,
+    copts = ["-ansi", "-fPIC", "-std=c++14"] + _COPTS,
+    includes = [".", "src"],
+    deps = [":target_json_headers"],
+    alwayslink = True,
+)
+
+cc_binary(
+    name = "libnexthopgroup.so.0",
+    deps = [":objects"],
+    linkshared = True,
+    linkstatic = True,
+    linkopts = ["-pthread", "-Wl,-soname,libnexthopgroup.so.0", "-Wl,-z,now", "-Wl,-z,relro"],
+)
+
+cc_import(name = "shared", shared_library = ":libnexthopgroup.so.0")
+
+cc_library(
+    name = "headers",
+    hdrs = _HEADERS,
+    strip_include_prefix = "src",
+    include_prefix = "nexthopgroup",
+    deps = [":target_json_headers"],
+)
+
+cc_library(
+    name = "nexthopgroup",
+    deps = [":shared", ":headers"],
+)
+
+# Existing upstream tests exercise C ABI, JSON round trips, and debug callbacks.
+cc_binary(
+    name = "tests_binary",
+    srcs = ["tests/c_api_ut.cpp", "tests/nexthopgroupfull_ut.cpp", "tests/nexthopgroupfull_json_ut.cpp", "tests/nexthopgroup_debug_ut.cpp", "tests/main.cpp"],
+    # GoogleTest 1.17 headers require C++17 in the test translation units.
+    copts = ["-fPIC", "-std=c++17"] + _COPTS + ["-fno-access-control"],
+    deps = [":objects", "@googletest//:gtest"],
+    linkopts = ["-pthread"],
+)
+
+gzip_compress(name = "changelog", src = "debian/changelog", level = 9)
+
+_ARCHES = [("x86_64", "x86_64-linux-gnu"), ("aarch64", "aarch64-linux-gnu")]
+
+[
+    sonic_deploy_tar(
+        name = "runtime_" + cpu,
+        binaries = {"usr/lib/" + multiarch + "/libnexthopgroup.so.0.0.0 type=file uid=0 gid=0 mode=0644 time=0": ":libnexthopgroup.so.0"},
+        mtree = ["usr/lib/" + multiarch + "/libnexthopgroup.so.0 type=link uid=0 gid=0 mode=0777 time=0 link=libnexthopgroup.so.0.0.0", "usr/share/doc/libnexthopgroup/changelog.gz type=file uid=0 gid=0 mode=0644 time=0 content=$(location :changelog)"],
+        srcs = [":changelog"],
+        force_debug_build = True,
+        target_compatible_with = ["@platforms//cpu:" + cpu],
+    )
+    for cpu, multiarch in _ARCHES
+]
+
+alias(name = "runtime", actual = select({"@platforms//cpu:" + cpu: ":runtime_" + cpu for cpu, _ in _ARCHES}))
+
+alias(name = "runtime.debug_symbols", actual = select({"@platforms//cpu:" + cpu: ":runtime_" + cpu + ".debug_symbols" for cpu, _ in _ARCHES}))
+
+runtime_packages(
+    name = "runtime_packages.json",
+    control = "debian/control",
+    changelog = "debian/changelog",
+    module_name = "sonic-buildimage",
+    packages = {"libnexthopgroup": ":runtime"},
+    required_paths = {"libnexthopgroup": ["usr/lib/{multiarch}/libnexthopgroup.so.0.0.0"]},
+)
+
+[
+    tar(
+        name = "development_" + cpu,
+        srcs = _HEADERS + [":changelog"],
+        mtree = [
+            "usr/include/nexthopgroup/" + path + " type=file uid=0 gid=0 mode=0644 time=0 content=$(location src/" + path + ")"
+            for path in ["nexthopgroupfull.h", "nexthopgroupfull_json.h", "c_nexthopgroupfull.h", "nexthopgroup_debug.h", "c-api/nexthopgroup_capi.h"]
+        ] + ["usr/lib/" + multiarch + "/libnexthopgroup.so type=link uid=0 gid=0 mode=0777 time=0 link=libnexthopgroup.so.0", "usr/share/doc/libnexthopgroup-dev/changelog.gz type=file uid=0 gid=0 mode=0644 time=0 content=$(location :changelog)"],
+        target_compatible_with = ["@platforms//cpu:" + cpu],
+    )
+    for cpu, multiarch in _ARCHES
+]
+
+alias(name = "development", actual = select({"@platforms//cpu:" + cpu: ":development_" + cpu for cpu, _ in _ARCHES}))
+
+cc_binary(
+    name = "public_c_api_test_binary",
+    srcs = ["tests/public_c_api.c"],
+    copts = ["-std=c11", "-Wall", "-Wextra", "-Werror"],
+    deps = [":nexthopgroup"],
+)
+
+# Match the fixed target C/C++ runtime used to compile the original tests.
+[
+    native_runtime_test(
+        name = name,
+        binary = ":" + name + "_binary",
+        runtime_payloads = [":target_" + package + "_data" for package in ["libc6", "libstdc++6", "libgcc-s1"]],
+    )
+    for name in ["tests", "public_c_api_test"]
+]

@@ -1,0 +1,18 @@
+{
+  "package": {
+    "name": "telemetry",
+    "version": "2.3.0",
+    "depends": [
+      "database"
+    ]
+  },
+  "service": {
+    "name": "telemetry",
+    "asic-service": false,
+    "host-service": true,
+    "after": [
+      "database"
+    ]
+  },
+  "custom-field": "keep \"quoted\" values, newlines\nand = signs"
+}

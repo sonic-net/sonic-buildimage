@@ -1,0 +1,41 @@
+--- a/package_test.py
++++ b/package_test.py
+@@ -177,9 +177,9 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     for name in ("runtime", "debug", "metadata", "fixtures", "hiredis", "readelf", "objcopy", "changelog"):
+-        parser.add_argument("--" + name, type=Path, required=True)
++        parser.add_argument("--" + name, type=Path, required=name != "debug")
+     args = parser.parse_args()
+-    args = argparse.Namespace(**{name: path.resolve(strict=True) for name, path in vars(args).items()})
++    args = argparse.Namespace(**{name: path.resolve(strict=True) if path is not None else None for name, path in vars(args).items()})
+     env = {k: v for k, v in os.environ.items() if k not in ("LD_LIBRARY_PATH", "LD_PRELOAD", "LD_AUDIT")}
+     env.update(LC_ALL="C", TZ="UTC", DEBUGINFOD_URLS="")
+     # Unix sockets have a short pathname limit; Bazel's nested test directory
+@@ -203,6 +203,8 @@
+                 assert m.isfile() and (m.mode, m.uid, m.gid, m.mtime) == (mode, 0, 0, 1672560000), name
+             archive.extractall(payload, filter="data")
+         for source, destination in ((args.debug, debug), (args.hiredis, payload), (args.fixtures, fixtures)):
++            if source is None:
++                continue
+             with tarfile.open(source) as archive:
+                 archive.extractall(destination, filter="data")
+         compressed = (payload / "usr/share/doc/hsflowd/changelog.Debian.gz").read_bytes()
+@@ -221,6 +223,9 @@
+             assert not re.search(r"\((?:RPATH|RUNPATH)\)", elf("-d"))
+             assert ".debug_info" not in elf("-SW")
+             build_id = re.search(r"Build ID: ([0-9a-f]+)", elf("-n")).group(1)
++            build_ids[relative] = build_id
++            if args.debug is None:
++                continue
+             symbols = debug / "usr/lib/debug/.build-id" / build_id[:2] / (build_id[2:] + ".debug")
+             assert symbols.is_file() and ".debug_info" in run([args.readelf, "-SW", symbols], env)
+             assert build_id in run([args.readelf, "-n", symbols], env)
+@@ -236,7 +241,6 @@
+                 assert bool(re.search(r'Line \d+ of ".*\.c"', output)) == present, output
+                 if present:
+                     assert "type =" in output
+-            build_ids[relative] = build_id
+         evidence = {"status": "passed", "build_ids": build_ids,
+                     "service": service_probe(root, payload, fixtures, env)}
+         print(json.dumps(evidence, sort_keys=True))

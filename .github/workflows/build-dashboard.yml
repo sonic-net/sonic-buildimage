@@ -1,0 +1,252 @@
+name: Build time dashboard
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - '.github/workflows/build-dashboard.yml'
+      - '.github/workflows/bazel-oci.yml'
+      - 'tools/ci/build_dashboard/**'
+      - 'tools/bazel/ci/summarize_vs_image_timings.py'
+      - 'tools/bazel/tests/vs_image_timing_summary_test.py'
+      - 'slave.mk'
+      - 'update_screen.sh'
+      - 'build_debian.sh'
+      - 'build_image.sh'
+      - 'scripts/build_kvm_image.sh'
+      - 'scripts/image_timing.py'
+  push:
+    branches: [master]
+    paths:
+      - '.github/actions/bazel-post-job-cleanup/**'
+      - 'tools/bazel/ci/cleanup_container_bazel.py'
+      - 'tools/bazel/tests/container_bazel_cleanup_test.py'
+      - 'tools/bazel/tests/migrated_job_cleanup_test.py'
+      - '.github/workflows/build-dashboard.yml'
+      - '.github/workflows/bazel-oci.yml'
+      - 'tools/ci/build_dashboard/**'
+      - 'tools/bazel/ci/summarize_vs_image_timings.py'
+      - 'tools/bazel/tests/vs_image_timing_summary_test.py'
+      - 'slave.mk'
+      - 'update_screen.sh'
+      - 'build_debian.sh'
+      - 'build_image.sh'
+      - 'scripts/build_kvm_image.sh'
+      - 'scripts/image_timing.py'
+  workflow_run:
+    workflows:
+      - Bazel SWSS OCI
+      - Bazel OCI
+      - Bazel VS unprivileged assembly
+      - Bazel
+    types: [completed]
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: Re-read completed run attempts from GitHub
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Serialize the complete publication, including deployment. A coalesced event
+# loses no history: each collection also checks for changes since the last run.
+concurrency:
+  group: build-time-dashboard-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'publish' }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: Build dashboard checks
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 10
+    steps:
+      - &restore_workspace_access
+        name: Restore workspace access before checkout
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY##*/}"
+          pipeline_workspace="${RUNNER_PIPELINE_WORKSPACE%/}"
+          expected="$pipeline_workspace/$repository"
+          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
+            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
+              "$expected" "$GITHUB_WORKSPACE" >&2
+            exit 1
+          fi
+          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
+            echo 'No existing workspace to repair.'
+            exit 0
+          fi
+          work_root="$(realpath -e -- "$pipeline_workspace/..")"
+          physical_workspace="$work_root/$repository/$repository"
+          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
+            echo 'Refusing permission repair on a redirected workspace.' >&2
+            exit 1
+          fi
+          expected="$physical_workspace"
+          owner="$(id -u):$(id -g)"
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chown --no-dereference -- "$owner" {} +
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chmod u+rwx -- {} +
+          sudo -n find -P "$expected" -xdev -type f -links 1 \
+            -exec chown --no-dereference -- "$owner" {} +
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - &setup_dashboard_gh
+        name: Install pinned GitHub CLI for the dashboard
+        shell: bash
+        env:
+          GH_CLI_VERSION: '2.101.0'
+          GH_CLI_SHA256: f876a3b87bf67c94f773d17becca4dc7340b056dab901473a9260ee2a73e237b
+        run: |
+          set -euo pipefail
+          directory=$(mktemp -d "${SONIC_BAZEL_JOB_TEMP:?}/dashboard-gh.XXXXXX")
+          package="$directory/gh.deb"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.deb" \
+            --output "$package"
+          printf '%s  %s\n' "$GH_CLI_SHA256" "$package" | sha256sum --check --status
+          dpkg-deb --extract "$package" "$directory"
+          "$directory/usr/bin/gh" --version
+          "$directory/usr/bin/gh" api --help | grep -F -- '--allow-escape-sequences' >/dev/null
+          echo "$directory/usr/bin" >> "$GITHUB_PATH"
+      - name: Test metadata collection
+        run: python3 -B -m unittest discover -s tools/ci/build_dashboard -p 'test_*.py' -v
+      - name: Test profile evidence and workflow summary
+        run: python3 -B tools/bazel/tests/vs_image_timing_summary_test.py
+      - name: Check dashboard JavaScript
+        run: |
+          node --check tools/ci/build_dashboard/web/app.js
+          node --test tools/ci/build_dashboard/web/app_test.js
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '[]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
+  publish:
+    name: Collect build timings
+    needs: checks
+    if: >-
+      github.repository == 'securely1g/sonic-buildimage' &&
+      github.ref == 'refs/heads/master' &&
+      github.event_name != 'pull_request'
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: securely1g/sonic-buildimage
+      BACKFILL: ${{ inputs.backfill || false }}
+    steps:
+      # workflow_run data never selects executable code. Only the maintained
+      # default-branch revision that passed checks supplies the collector/site.
+      - *restore_workspace_access
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - *setup_dashboard_gh
+      - name: Restore durable timing history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init history
+          git -C history remote add origin "https://github.com/$REPOSITORY.git"
+          if git -C history ls-remote --exit-code --heads origin refs/heads/build-metrics > "$RUNNER_TEMP/build-metrics-ref"; then
+            git -C history fetch --depth=1 origin refs/heads/build-metrics
+            git -C history checkout -b build-metrics FETCH_HEAD
+          else
+            status=$?
+            if test "$status" -ne 2; then exit "$status"; fi
+            git -C history checkout --orphan build-metrics
+          fi
+      - name: Collect public job and step timings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/history
+          args=()
+          if test "$BACKFILL" = true; then args+=(--backfill); fi
+          python3 -B tools/ci/build_dashboard/collect.py \
+            --repo "$REPOSITORY" --history history/data.json \
+            --output site/data.json "${args[@]}"
+          cp tools/ci/build_dashboard/web/index.html tools/ci/build_dashboard/web/app.js \
+            tools/ci/build_dashboard/web/styles.css site/
+          cp LICENSE site/
+          touch site/.nojekyll
+      - name: Preserve history independently of artifact retention
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Commit the same index and shards that Pages will serve.
+          git -C history rm -qr --ignore-unmatch -- history/
+          cp -R site/history history/
+          cp site/data.json history/data.json
+          git -C history config user.name 'Guohan Lu'
+          git -C history config user.email securely1g@gmail.com
+          git -C history add -A -- .
+          if ! git -C history diff --cached --quiet; then
+            git -C history commit -m 'Update build timing history'
+            git -C history -c credential.helper= \
+              -c 'credential.helper=!gh auth git-credential' \
+              push origin HEAD:refs/heads/build-metrics
+          fi
+      - name: Package the static dashboard
+        id: runner_cleanup_upload_0
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: site
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
+  deploy:
+    name: Publish build dashboard
+    needs: publish
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

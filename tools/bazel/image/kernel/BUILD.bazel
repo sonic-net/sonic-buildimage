@@ -1,0 +1,7 @@
+package(default_visibility = ["//visibility:public"])
+
+# Consume finalized source installation outputs directly from the registry module.
+filegroup(name = "runtime", srcs = ["@sonic_linux_kernel//:linux-image.runtime"])
+filegroup(name = "control", srcs = ["@sonic_linux_kernel//:linux-image.control"])
+filegroup(name = "boot", srcs = ["@sonic_linux_kernel//:boot"])
+filegroup(name = "metadata", srcs = ["@sonic_linux_kernel//:kernel_metadata.json"])

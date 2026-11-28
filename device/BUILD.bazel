@@ -1,0 +1,23 @@
+# Device templates consumed by the existing config-engine regression suite.
+filegroup(
+    name = "config_engine_test_data",
+    testonly = True,
+    srcs = glob([
+        "**/*.j2",
+        "**/*.json",
+        "**/*.ini",
+    ]),
+    visibility = ["//tools/bazel/tests:__pkg__"],
+)
+
+# Make stages device/<vendor>/<platform>, following links to their contents.
+filegroup(
+    name = "platform_files",
+    srcs = glob(["*/*/**"], exclude = ["*/.*", "*/.*/**"]),
+    visibility = ["//src/sonic-device-data:__pkg__"],
+)
+
+exports_files(["BUILD.bazel"], visibility = ["//src/sonic-device-data:__pkg__"])
+
+# Platform markers also feed the VS installer platform archive.
+filegroup(name = "platform_asic_files", srcs = glob(["*/*/platform_asic"]), visibility = ["//visibility:public"])

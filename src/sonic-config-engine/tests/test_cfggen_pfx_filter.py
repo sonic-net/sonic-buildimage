@@ -10,7 +10,7 @@ class TestPfxFilter(TestCase):
         # Generate output
         data_dir = "tests/data/pfx_filter"
         output_file = "/tmp/result_1.txt"
-        cmd = [utils.PYTHON_INTERPRETTER, "./sonic-cfggen", "-j", "{}/param_1.json".format(data_dir), "-t", "{}/tmpl_1.txt.j2".format(data_dir)]
+        cmd = utils.cfggen_command("./sonic-cfggen") + ["-j", "{}/param_1.json".format(data_dir), "-t", "{}/tmpl_1.txt.j2".format(data_dir)]
         output = subprocess.check_output(cmd, universal_newlines=True)
         with open(output_file, 'w') as f:
             f.write(output)

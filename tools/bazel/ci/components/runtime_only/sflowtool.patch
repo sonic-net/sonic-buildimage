@@ -1,0 +1,80 @@
+--- a/package_test.py
++++ b/package_test.py
+@@ -41,8 +41,10 @@
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     for key in ("runtime", "debug", "unstripped", "copyright", "readelf", "objcopy", "metadata"):
+-        parser.add_argument("--" + key, type=Path, required=True)
++        parser.add_argument("--" + key, type=Path, required=key not in ("debug", "unstripped"))
+     args = parser.parse_args()
++    if bool(args.debug) != bool(args.unstripped):
++        parser.error("--debug and --unstripped must be supplied together")
+     expected_arch, expected_machine, expected_needed = {
+         "x86_64": ("amd64", "Advanced Micro Devices X86-64", {"libc.so.6"}),
+         "aarch64": ("arm64", "AArch64", {"libc.so.6", "ld-linux-aarch64.so.1"}),
+@@ -61,8 +63,9 @@
+                 assert member.isfile() and (member.uid, member.gid, member.mtime) == (0, 0, 1672560000), name
+                 assert member.mode == (0o755 if name == "usr/bin/sflowtool" else 0o644), name
+             archive.extractall(runtime, filter="data")
+-        with tarfile.open(args.debug) as archive:
+-            archive.extractall(debug, filter="data")
++        if args.debug:
++            with tarfile.open(args.debug) as archive:
++                archive.extractall(debug, filter="data")
+         assert (runtime / "usr/share/doc/sflowtool/copyright").read_bytes() == args.copyright.read_bytes()
+         metadata = json.loads(args.metadata.read_text())
+         assert metadata["schema"] == 1 and metadata["architecture"] == expected_arch, metadata
+@@ -83,25 +86,26 @@
+         assert "BIND_NOW" in dynamic, dynamic
+         assert "GNU_RELRO" in elf(binary, "-lW")
+         build_id = re.search(r"Build ID: ([0-9a-f]+)", elf(binary, "-n")).group(1)
+-        symbols = debug / "usr/lib/debug/.build-id" / build_id[:2] / (build_id[2:] + ".debug")
+-        assert re.search(r"Build ID: ([0-9a-f]+)", elf(symbols, "-n")).group(1) == build_id
+-        assert re.search(r"Build ID: ([0-9a-f]+)", elf(args.unstripped, "-n")).group(1) == build_id
+         assert ".debug_info" not in elf(binary, "-SW")
+-        assert ".debug_info" in elf(symbols, "-SW") and ".debug_info" in elf(args.unstripped, "-SW")
+-        section = root / "debuglink.bin"
+-        subprocess.run([args.objcopy.absolute(), "--dump-section", ".gnu_debuglink=" + str(section), binary, root / "inspection-copy"], check=True, env=env)
+-        link = section.read_bytes()
+-        assert link.split(b"\0", 1)[0].decode() == symbols.name
+-        assert struct.unpack("<I", link[-4:])[0] == zlib.crc32(symbols.read_bytes()) & 0xffffffff
+-        for directory, expected in ((debug / "usr/lib/debug", True), (empty, False)):
+-            result = subprocess.run(["gdb", "--nx", "--nh", "--batch", "-iex", "set auto-load off",
+-                                     "-iex", "set debuginfod enabled off", "-ex", "set debug-file-directory " + str(directory),
+-                                     "-ex", "file " + str(binary), "-ex", "info line main", "-ex", "ptype main"],
+-                                    capture_output=True, text=True, env=env, check=False)
+-            found = bool(re.search(r'Line \d+ of ".*sflowtool.c"', result.stdout))
+-            assert found == expected, result.stdout + result.stderr
+-            if expected:
+-                assert result.returncode == 0 and "type =" in result.stdout
++        if args.debug:
++            symbols = debug / "usr/lib/debug/.build-id" / build_id[:2] / (build_id[2:] + ".debug")
++            assert re.search(r"Build ID: ([0-9a-f]+)", elf(symbols, "-n")).group(1) == build_id
++            assert re.search(r"Build ID: ([0-9a-f]+)", elf(args.unstripped, "-n")).group(1) == build_id
++            assert ".debug_info" in elf(symbols, "-SW") and ".debug_info" in elf(args.unstripped, "-SW")
++            section = root / "debuglink.bin"
++            subprocess.run([args.objcopy.absolute(), "--dump-section", ".gnu_debuglink=" + str(section), binary, root / "inspection-copy"], check=True, env=env)
++            link = section.read_bytes()
++            assert link.split(b"\0", 1)[0].decode() == symbols.name
++            assert struct.unpack("<I", link[-4:])[0] == zlib.crc32(symbols.read_bytes()) & 0xffffffff
++            for directory, expected in ((debug / "usr/lib/debug", True), (empty, False)):
++                result = subprocess.run(["gdb", "--nx", "--nh", "--batch", "-iex", "set auto-load off",
++                                         "-iex", "set debuginfod enabled off", "-ex", "set debug-file-directory " + str(directory),
++                                         "-ex", "file " + str(binary), "-ex", "info line main", "-ex", "ptype main"],
++                                        capture_output=True, text=True, env=env, check=False)
++                found = bool(re.search(r'Line \d+ of ".*sflowtool.c"', result.stdout))
++                assert found == expected, result.stdout + result.stderr
++                if expected:
++                    assert result.returncode == 0 and "type =" in result.stdout
+         help_result = subprocess.run([binary, "-h"], capture_output=True, text=True, env=env, timeout=10)
+         assert "version: 6.11" in help_result.stdout + help_result.stderr
+
+@@ -133,7 +137,7 @@
+         evidence = {"status": "passed", "architecture": expected_arch, "build_id": build_id,
+                     "runtime_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+                     "agents": agents, "counter_fields": ["ifIndex", "ifSpeed", "ifInOctets", "ifOutOctets", "ifInUcastPkts"],
+-                    "forwarded_datagrams": 2, "unsupported_version": "rejected", "gdb": "source/type with negative control"}
++                    "forwarded_datagrams": 2, "unsupported_version": "rejected", "gdb": "source/type with negative control" if args.debug else "disabled"}
+         print(json.dumps(evidence, sort_keys=True))
+         if os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR"):
+             (Path(os.environ["TEST_UNDECLARED_OUTPUTS_DIR"]) / "installed-sflowtool.json").write_text(json.dumps(evidence, indent=2) + "\n")

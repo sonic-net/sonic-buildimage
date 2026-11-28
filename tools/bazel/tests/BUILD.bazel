@@ -1,0 +1,1596 @@
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@config_engine_pip//:requirements.bzl", "requirement")
+load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@sonic_build_infra//python:source_package.bzl", "python_runtime_packages")
+load("//src/sonic-config-engine:template.bzl", "sonic_cfggen_template")
+load("//tools/bazel/dpkg:defs.bzl", "PATH_INCLUDES", "dpkg_filter", "sonic_layer")
+load("//tools/bazel/oci:manifest_labels.bzl", "manifest_labels")
+load("//tools/bazel/oci:oci_base_layout.bzl", "oci_base_layout")
+load("//tools/bazel/oci:shared_runtime_layers.bzl", "shared_runtime_layers")
+load("//tools/bazel/oci:sonic_docker_archive.bzl", "sonic_docker_archive")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["integration/frr_python_wheel_probe.py"])
+
+py_test(
+    name = "shared_runtime_base_test",
+    srcs = ["shared_runtime_base_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:shared_runtime_base_lib",
+    ],
+)
+
+py_test(
+    name = "shared_runtime_layers_test",
+    srcs = ["shared_runtime_layers_test.py"],
+    args = [
+        "--action-first=$(rootpath :shared_apt_first.tar)",
+        "--action-second=$(rootpath :shared_apt_second.tar)",
+        "--action-common=$(rootpath :shared_runtime_action/common.tar.gz)",
+        "--action-left=$(rootpath :shared_runtime_action/first.tar.gz)",
+        "--action-right=$(rootpath :shared_runtime_action/second.tar.gz)",
+    ],
+    data = [
+        ":shared_apt_first.tar",
+        ":shared_apt_second.tar",
+        ":shared_runtime_action/common.tar.gz",
+        ":shared_runtime_action/first.tar.gz",
+        ":shared_runtime_action/second.tar.gz",
+    ],
+    deps = ["//tools/bazel/oci:shared_runtime_layers_lib"],
+)
+
+py_binary(
+    name = "shared_runtime_layers_fixture",
+    srcs = ["shared_runtime_layers_fixture.py"],
+)
+
+run_binary(
+    name = "shared_apt_inputs",
+    outs = [
+        "shared_apt_first.tar",
+        "shared_apt_second.tar",
+    ],
+    args = [
+        "$(execpath shared_apt_first.tar)",
+        "$(execpath shared_apt_second.tar)",
+    ],
+    tool = ":shared_runtime_layers_fixture",
+)
+
+shared_runtime_layers(
+    name = "shared_runtime_action",
+    base = ":oci-consumer-first",
+    first = ":shared_apt_first.tar",
+    second = ":shared_apt_second.tar",
+)
+
+# Preserve the old build label; CI executes the source owner's real test rule.
+alias(
+    name = "swss_common_rust_test",
+    actual = "@sonic_swss//crates/countersyncd:common_rust_test",
+)
+
+_OCI_OWNER_POLICIES = [
+    "//dockers/docker-orchagent:package_policy",
+    "//platform/vs/docker-syncd-vs:package_policy",
+]
+
+_OCI_POLICY_ARGS = [
+    "--swss-policy=$(rootpath //dockers/docker-orchagent:package_policy)",
+    "--syncd-policy=$(rootpath //platform/vs/docker-syncd-vs:package_policy)",
+]
+
+# Compare the actual source-built layers with SWSS's own install declarations,
+# and require matching debug symbols for all 30 programs, DASH and Protobuf.
+# These inputs produce TARs and source files; no Debian package is generated.
+py_test(
+    name = "swss_package_contract_test",
+    size = "large",
+    srcs = ["integration/oci_source_layers_test.py"],
+    args = [
+        "--policy=$(rootpath //dockers/docker-orchagent:package_policy)",
+        "--runtime=$(rootpath //dockers/docker-orchagent:ci_swss)",
+        "--library=protobuf.tar=$(rootpath //dockers/docker-orchagent:ci_protobuf)",
+        "--library=libteam.tar=$(rootpath //dockers/docker-orchagent:ci_libteam)",
+        "--library=libteamdctl.tar=$(rootpath //dockers/docker-orchagent:ci_libteamdctl)",
+        "--dependencies=$(rootpath //dockers/docker-orchagent:ci_rdeps)",
+        "--source-layer-excludes=$(rootpath //tools/bazel/dpkg:dpkg_excludes.txt)",
+        "--source-layer-includes=$(rootpath //tools/bazel/dpkg:oci_includes.txt)",
+        "--config=$(rootpath //dockers/docker-orchagent:ci_config)",
+        "--debug-symbols=$(rootpath //dockers/docker-orchagent:ci_debug_symbols)",
+        "--source-file=dist/BUILD.bazel=$(rootpath @swss_install_contract//:dist-BUILD.bazel.txt)",
+        "--source-file=debian/swss.install=$(rootpath @swss_install_contract//:swss.install.txt)",
+        "--source-anchor=$(rootpath @sonic_swss//fpmsyncd:bgp_eoiu_marker.py)",
+        "--source-anchor-relative=fpmsyncd/bgp_eoiu_marker.py",
+        "--readelf=$(rootpath @sonic_build_infra//toolchains/binutils:readelf)",
+        "--objcopy=$(rootpath @sonic_build_infra//toolchains/binutils:objcopy)",
+        "--source-data",
+        "$(rootpaths @sonic_swss//cfgmgr:lua_files)",
+        "$(rootpaths @sonic_swss//orchagent:lua_files)",
+        "$(rootpath @sonic_swss//fpmsyncd:bgp_eoiu_marker.py)",
+        "$(rootpath @sonic_swss//neighsyncd:restore_neighbors.py)",
+        "$(rootpath @sonic_swss//swssconfig:sample/netbouncer.json)",
+    ],
+    data = [
+        "//dockers/docker-orchagent:ci_config",
+        "//dockers/docker-orchagent:ci_debug_symbols",
+        "//dockers/docker-orchagent:ci_libteam",
+        "//dockers/docker-orchagent:ci_libteamdctl",
+        "//dockers/docker-orchagent:ci_protobuf",
+        "//dockers/docker-orchagent:ci_rdeps",
+        "//dockers/docker-orchagent:ci_swss",
+        "//dockers/docker-orchagent:package_policy",
+        "//tools/bazel/dpkg:dpkg_excludes.txt",
+        "//tools/bazel/dpkg:oci_includes.txt",
+        "@sonic_build_infra//toolchains/binutils:objcopy",
+        "@sonic_build_infra//toolchains/binutils:readelf",
+        "@sonic_swss//cfgmgr:lua_files",
+        "@sonic_swss//fpmsyncd:bgp_eoiu_marker.py",
+        "@sonic_swss//neighsyncd:restore_neighbors.py",
+        "@sonic_swss//orchagent:lua_files",
+        "@sonic_swss//swssconfig:sample/netbouncer.json",
+        "@swss_install_contract//:dist-BUILD.bazel.txt",
+        "@swss_install_contract//:swss.install.txt",
+    ],
+    main = "integration/oci_source_layers_test.py",
+    # Keep archive inputs in the same default configuration as ci_artifacts.
+    # A Python-version transition here also transitions every data dependency.
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:package_contract_lib",
+    ],
+)
+
+# Exercise upstream package extraction with existing checked-in DEBs. These
+# native genrules deliberately show the same tools the Syncd owner BUILD uses;
+# no package-generating rule or shared import facade participates in the test.
+_OCI_DEB_FIXTURES = {
+    "gz": "fixtures/oci-debs/example-gz_1.0-1_all.deb",
+    "xz": "fixtures/oci-debs/example-xz_1.0-1_all.deb",
+    "foreign": "fixtures/oci-debs/example-foreign_1.0-1_arm64.deb",
+}
+
+[
+    genrule(
+        name = "oci_extract_fixture_" + kind,
+        testonly = True,
+        srcs = [source],
+        outs = ["oci_deb_fixture/" + kind + "/" + filename for filename in [
+            "members.txt",
+            "debian-binary",
+            "control.archive",
+            "data.archive",
+        ]],
+        cmd = """set -euo pipefail
+export LC_ALL=C.UTF-8
+"$(BSDTAR_BIN)" -tf "$(execpath {source})" > "$(RULEDIR)/oci_deb_fixture/{kind}/members.txt"
+mapfile -t members < "$(RULEDIR)/oci_deb_fixture/{kind}/members.txt"
+[[ "$${{#members[@]}}" == 3 && "$${{members[0]}}" == debian-binary ]]
+case "$${{members[1]}}" in control.tar|control.tar.gz|control.tar.xz|control.tar.bz2) ;; *) exit 1 ;; esac
+case "$${{members[2]}}" in data.tar|data.tar.gz|data.tar.xz|data.tar.bz2) ;; *) exit 1 ;; esac
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" debian-binary > "$(RULEDIR)/oci_deb_fixture/{kind}/debian-binary"
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" "$${{members[1]}}" > "$(RULEDIR)/oci_deb_fixture/{kind}/control.archive"
+"$(BSDTAR_BIN)" -xOf "$(execpath {source})" "$${{members[2]}}" > "$(RULEDIR)/oci_deb_fixture/{kind}/data.archive"
+""".format(
+            kind = kind,
+            source = source,
+        ),
+        toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+        tools = ["@bsd_tar_toolchains//:resolved_toolchain"],
+    )
+    for kind, source in _OCI_DEB_FIXTURES.items()
+]
+
+_OCI_FIXTURE_INPUTS = [
+    "oci_deb_fixture/" + kind + "/" + filename
+    for kind in [
+        "gz",
+        "xz",
+        "foreign",
+    ]
+    for filename in [
+        "members.txt",
+        "debian-binary",
+        "control.archive",
+        "data.archive",
+    ]
+]
+
+[
+    genrule(
+        name = "oci_deb_fixture_" + suffix,
+        testonly = True,
+        srcs = _OCI_FIXTURE_INPUTS + _OCI_DEB_FIXTURES.values(),
+        outs = [
+            "oci_deb_fixture/" + suffix + "/payload.tar",
+            "oci_deb_fixture/" + suffix + "/manifest.json",
+        ],
+        cmd = "set -euo pipefail\nexport LC_ALL=C.UTF-8\n" +
+              "\"$(BSDTAR_BIN)\" --format=pax -cf '$(RULEDIR)/oci_deb_fixture/" + suffix + "/payload.tar' " +
+              "'@$(execpath oci_deb_fixture/gz/data.archive)' '@$(execpath oci_deb_fixture/xz/data.archive)'\n" +
+              "\"$(execpath //tools/bazel/oci:package_receipts)\"" +
+              " --architecture=amd64" +
+              " --payload='$(RULEDIR)/oci_deb_fixture/" + suffix + "/payload.tar'" +
+              " --out='$(RULEDIR)/oci_deb_fixture/" + suffix + "/manifest.json'" +
+              " ".join([" --package='" + json.encode({
+                  "source_label": "//tools/bazel/tests:" + _OCI_DEB_FIXTURES[kind],
+                  "source": "$(execpath " + _OCI_DEB_FIXTURES[kind] + ")",
+                  "members": "$(execpath oci_deb_fixture/" + kind + "/members.txt)",
+                  "version": "$(execpath oci_deb_fixture/" + kind + "/debian-binary)",
+                  "control": "$(execpath oci_deb_fixture/" + kind + "/control.archive)",
+                  "data": "$(execpath oci_deb_fixture/" + kind + "/data.archive)",
+              }) + "'" for kind in [
+                  "gz",
+                  "xz",
+              ]]),
+        toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+        tools = [
+            "//tools/bazel/oci:package_receipts",
+            "@bsd_tar_toolchains//:resolved_toolchain",
+        ],
+    )
+    for suffix in [
+        "first",
+        "repeat",
+    ]
+]
+
+# Exercise an inherited payload through Bazel's declared symlink and runfiles.
+copy_file(
+    name = "oci_deb_fixture_inherited_payload",
+    testonly = True,
+    src = "oci_deb_fixture/first/payload.tar",
+    out = "oci_deb_fixture/debug/payload.tar",
+    allow_symlink = True,
+)
+
+oci_image(
+    name = "oci_direct_deb_fixture_image",
+    testonly = True,
+    architecture = "amd64",
+    os = "linux",
+    tars = ["oci_deb_fixture/first/payload.tar"],
+)
+
+py_test(
+    name = "oci_package_receipts_test",
+    srcs = ["integration/oci_package_receipts_test.py"],
+    args = [
+        "--payload=$(rootpath oci_deb_fixture/first/payload.tar)",
+        "--manifest=$(rootpath oci_deb_fixture/first/manifest.json)",
+        "--repeat-payload=$(rootpath oci_deb_fixture/repeat/payload.tar)",
+        "--repeat-manifest=$(rootpath oci_deb_fixture/repeat/manifest.json)",
+        "--inherited-payload=$(rootpath :oci_deb_fixture_inherited_payload)",
+        "--image=$(rootpath :oci_direct_deb_fixture_image)",
+    ] + ["--package='" + json.encode({
+        "source_label": "//tools/bazel/tests:" + source,
+        "source": "$(rootpath " + source + ")",
+        "members": "$(rootpath oci_deb_fixture/" + kind + "/members.txt)",
+        "version": "$(rootpath oci_deb_fixture/" + kind + "/debian-binary)",
+        "control": "$(rootpath oci_deb_fixture/" + kind + "/control.archive)",
+        "data": "$(rootpath oci_deb_fixture/" + kind + "/data.archive)",
+    }) + "'" for kind, source in _OCI_DEB_FIXTURES.items()] + _OCI_POLICY_ARGS,
+    data = _OCI_FIXTURE_INPUTS + _OCI_DEB_FIXTURES.values() + [
+        "oci_deb_fixture/first/manifest.json",
+        "oci_deb_fixture/first/payload.tar",
+        "oci_deb_fixture/repeat/manifest.json",
+        "oci_deb_fixture/repeat/payload.tar",
+        ":oci_deb_fixture_inherited_payload",
+        ":oci_direct_deb_fixture_image",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_receipts_test.py",
+    python_version = "3.11",
+    deps = [
+        ":oci_contract_fixture",
+        "//tools/bazel/oci:package_receipts_lib",
+    ],
+)
+
+# Installed-package tests accept either their source target or the exact VS installer wheel.
+label_flag(
+    name = "redis_dump_load_test_wheel",
+    build_setting_default = "@redis_dump_load//:wheel",
+)
+
+label_flag(
+    name = "sonic_supervisord_utilities_test_wheel",
+    build_setting_default = "//src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel",
+)
+
+label_flag(
+    name = "sonic_yang_mgmt_test_wheel",
+    build_setting_default = "@sonic_yang_mgmt//:sonic_yang_mgmt_wheel",
+)
+
+label_flag(
+    name = "sonic_containercfgd_test_wheel",
+    build_setting_default = "//src/sonic-containercfgd:sonic_containercfgd_wheel",
+)
+
+label_flag(
+    name = "sonic_py_common_test_wheel",
+    build_setting_default = "//src/sonic-py-common:sonic_py_common_wheel",
+)
+
+label_flag(
+    name = "sonic_config_engine_test_wheel",
+    build_setting_default = "//src/sonic-config-engine:sonic_config_engine_wheel",
+)
+
+label_flag(
+    name = "sonic_dhcp_utilities_test_wheel",
+    build_setting_default = "//src/sonic-dhcp-utilities:sonic_dhcp_utilities_wheel",
+)
+
+label_flag(
+    name = "sonic_frr_mgmt_framework_test_wheel",
+    build_setting_default = "//src/sonic-frr-mgmt-framework:sonic_frr_mgmt_framework_wheel",
+)
+
+label_flag(
+    name = "sonic_bgpcfgd_test_wheel",
+    build_setting_default = "//src/sonic-bgpcfgd:sonic_bgpcfgd_wheel",
+)
+
+# Shared installed-wheel mechanics: reject owner checkout imports and retain
+# receipts for the exact artifacts exercised by component-specific probes.
+py_library(
+    name = "wheel_test_helpers",
+    testonly = True,
+    srcs = [
+        "integration/installed_wheel_fixture.py",
+        "integration/wheel_contract.py",
+    ],
+    deps = [
+        requirement("installer"),
+        requirement("packaging"),
+        requirement("setuptools"),
+    ],
+)
+
+py_test(
+    name = "installed_wheel_fixture_test",
+    srcs = ["integration/installed_wheel_fixture_test.py"],
+    legacy_create_init = False,
+    main = "integration/installed_wheel_fixture_test.py",
+    python_version = "3.13",
+    deps = [":wheel_test_helpers"],
+)
+
+py_test(
+    name = "wheel_contract_test",
+    srcs = ["integration/wheel_contract_test.py"],
+    legacy_create_init = False,
+    main = "integration/wheel_contract_test.py",
+    python_version = "3.13",
+    deps = [":wheel_test_helpers"],
+)
+
+py_test(
+    name = "containercfgd_full_test",
+    srcs = [
+        "integration/component_pytest_runner.py",
+        "integration/containercfgd_pytest_runner.py",
+    ],
+    args = ["--component-setup=$(rootpath //src/sonic-containercfgd:setup.py)"],
+    data = [
+        "//src/sonic-containercfgd:setup.py",
+        "//src/sonic-containercfgd:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/containercfgd_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-containercfgd:containercfgd",
+        requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "containercfgd_wheel_test",
+    srcs = ["integration/containercfgd_wheel_test.py"],
+    args = [
+        "$(rootpath :sonic_containercfgd_test_wheel)",
+        "$(rootpath //src/sonic-containercfgd:setup.py)",
+        "$(rootpath :sonic_py_common_test_wheel)",
+    ],
+    data = [
+        "//src/sonic-containercfgd:setup.py",
+        ":sonic_containercfgd_test_wheel",
+        "//src/sonic-containercfgd:test_sources",
+        ":sonic_py_common_test_wheel",
+    ],
+    legacy_create_init = False,
+    main = "integration/containercfgd_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-py-common:sonic_py_common",
+    ],
+)
+
+py_test(
+    name = "supervisor_python_full_test",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+        "--sibling-setup=$(rootpath //src/sonic-config-engine:setup.py)",
+    ],
+    data = [
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:supervisor_test_fixtures",
+        "//src/sonic-supervisord-utilities:setup.py",
+        "//src/sonic-supervisord-utilities:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("mock"),
+        requirement("mockredispy"),
+        requirement("pytest"),
+        requirement("redis"),
+        requirement("supervisor"),
+        requirement("swsssdk"),
+    ],
+)
+
+py_test(
+    name = "supervisor_python_wheel_test",
+    srcs = ["integration/supervisor_python_wheel_test.py"],
+    args = [
+        "$(rootpath :sonic_supervisord_utilities_test_wheel)",
+        "$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+        "$(rootpath :sonic_py_common_test_wheel)",
+    ],
+    data = [
+        ":sonic_py_common_test_wheel",
+        "//src/sonic-supervisord-utilities:setup.py",
+        ":sonic_supervisord_utilities_test_wheel",
+        "//src/sonic-supervisord-utilities:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/supervisor_python_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("supervisor"),
+    ],
+)
+
+py_test(
+    name = "sonic_yang_mgmt_full_test",
+    size = "large",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath @sonic_yang_mgmt//:setup.py)",
+        "--models=$(rootpath @sonic_yang_models//:test_models)",
+        "--yang-config=$(rootpath //src/sonic-yang-models:tests/files/sample_config_db.json)",
+    ],
+    data = [
+        "@sonic_yang_mgmt//:setup.py",
+        "@sonic_yang_mgmt//:test_sources",
+        "//src/sonic-yang-models:tests/files/sample_config_db.json",
+        "@sonic_yang_models//:test_models",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "@sonic_yang_mgmt//:sonic_yang_mgmt",
+        requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "sonic_yang_mgmt_wheel_test",
+    srcs = ["integration/yang_mgmt_wheel_test.py"],
+    args = [
+        "$(rootpath :sonic_yang_mgmt_test_wheel)",
+        "$(rootpath @sonic_yang_mgmt//:setup.py)",
+        "$(rootpath @sonic_yang_models//:test_models)",
+    ],
+    data = [
+        "@sonic_yang_mgmt//:setup.py",
+        ":sonic_yang_mgmt_test_wheel",
+        "@sonic_yang_mgmt//:test_sources",
+        "@sonic_yang_models//:test_models",
+    ],
+    legacy_create_init = False,
+    main = "integration/yang_mgmt_wheel_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "@libyang_python//:libyang",
+        requirement("ijson"),
+        requirement("jsondiff"),
+        requirement("jsonpointer"),
+        requirement("tabulate"),
+    ],
+)
+
+py_test(
+    name = "sonic_config_engine_full_test",
+    size = "large",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = [
+        "--component-setup=$(rootpath //src/sonic-config-engine:setup.py)",
+        "--models=$(rootpath @sonic_yang_models//:test_models)",
+        "--cfggen=$(rootpath //src/sonic-config-engine:sonic_cfggen)",
+    ],
+    data = [
+        "//device:config_engine_test_data",
+        "//dockers:config_engine_test_data",
+        "//files/build_templates:config_engine_test_data",
+        "//files/image_config:config_engine_test_data",
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:sonic_cfggen",
+        "//src/sonic-config-engine:test_sources",
+        "@sonic_yang_models//:test_models",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-config-engine:sonic_config_engine",
+        requirement("mock"),
+        requirement("mockredispy"),
+        requirement("pytest"),
+        requirement("redis"),
+        requirement("swsssdk"),
+    ],
+)
+
+py_test(
+    name = "sonic_py_common_full_test",
+    size = "large",
+    srcs = ["integration/component_pytest_runner.py"],
+    args = ["--component-setup=$(rootpath //src/sonic-py-common:setup.py)"],
+    data = [
+        "//src/sonic-py-common:setup.py",
+        "//src/sonic-py-common:test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/component_pytest_runner.py",
+    python_version = "3.13",
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("grpcio"),
+        requirement("grpcio-tools"),
+        requirement("mock"),
+        requirement("packaging"),
+        requirement("protobuf"),
+        requirement("pytest"),
+        requirement("pytest-runner"),
+        requirement("setuptools"),
+        requirement("swsssdk"),
+        requirement("wheel"),
+    ],
+)
+
+py_test(
+    name = "sonic_python_wheels_test",
+    size = "medium",
+    srcs = ["integration/sonic_python_wheels_test.py"],
+    args = [
+        "--redis-wheel=$(rootpath :redis_dump_load_test_wheel)",
+        "--common-wheel=$(rootpath :sonic_py_common_test_wheel)",
+        "--config-wheel=$(rootpath :sonic_config_engine_test_wheel)",
+        "--yang-wheel=$(rootpath :sonic_yang_mgmt_test_wheel)",
+        "--common-setup=$(rootpath //src/sonic-py-common:setup.py)",
+        "--config-setup=$(rootpath //src/sonic-config-engine:setup.py)",
+    ],
+    data = [
+        ":redis_dump_load_test_wheel",
+        "//src/sonic-config-engine:setup.py",
+        ":sonic_config_engine_test_wheel",
+        "//src/sonic-config-engine:wheel_sources",
+        "//src/sonic-py-common:setup.py",
+        ":sonic_py_common_test_wheel",
+        "//src/sonic-py-common:wheel_sources",
+        ":sonic_yang_mgmt_test_wheel",
+    ],
+    legacy_create_init = False,
+    main = "integration/sonic_python_wheels_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-config-engine:sonic_config_engine",
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("grpcio-tools"),
+    ],
+)
+
+# Reuse component behavior tests with the real source-built Common extension.
+# Explicit file arguments keep the shared runner independent of source layout.
+py_test(
+    name = "sonic_py_common_test",
+    srcs = [
+        "integration/pytest_runner.py",
+        "integration/sonic_py_common_native_test.py",
+        "//src/sonic-py-common:tests/interface_test.py",
+        "//src/sonic-py-common:tests/test_bgp.py",
+        "//src/sonic-py-common:tests/test_eeprom_utils.py",
+    ],
+    args = [
+        "$(rootpath //src/sonic-py-common:tests/interface_test.py)",
+        "$(rootpath //src/sonic-py-common:tests/test_bgp.py)",
+        "$(rootpath //src/sonic-py-common:tests/test_eeprom_utils.py)",
+        "$(rootpath :integration/sonic_py_common_native_test.py)",
+    ],
+    legacy_create_init = False,
+    main = "integration/pytest_runner.py",
+    deps = [
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("pytest"),
+    ],
+)
+
+# Check the selected release against the build settings, independently of the label action.
+config_setting(
+    name = "use_product_image_version",
+    flag_values = {
+        "//tools/bazel/image/vs/metadata:use_make_metadata": "false",
+        "//tools/bazel/oci:image_version": "",
+    },
+)
+
+_IMAGE_VERSION_ENV = select({
+    ":use_product_image_version": {"EXPECTED_SONIC_IMAGE_VERSION": "$(SONIC_PRODUCT_VERSION)"},
+    "//conditions:default": {"EXPECTED_SONIC_IMAGE_VERSION": "$(SONIC_IMAGE_VERSION)"},
+})
+
+_IMAGE_VERSION_FLAGS = [
+    "//tools/bazel/image/vs/metadata:version",
+    "//tools/bazel/oci:image_version",
+]
+
+py_library(
+    name = "manifest_label_assertions",
+    testonly = True,
+    srcs = ["integration/manifest_label_assertions.py"],
+)
+
+manifest_labels(
+    name = "runtime_manifest_fixture",
+    testonly = True,
+    manifest = "manifest_fixture.json",
+)
+
+manifest_labels(
+    name = "debug_manifest_fixture",
+    testonly = True,
+    manifest = "manifest_fixture-dbg.json",
+)
+
+py_test(
+    name = "manifest_labels_action_test",
+    size = "small",
+    srcs = ["integration/manifest_labels_action_test.py"],
+    args = [
+        "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
+        "--runtime-manifest=$(rootpath :manifest_fixture.json)",
+        "--debug-manifest=$(rootpath :manifest_fixture-dbg.json)",
+        "--runtime-labels=$(rootpath :runtime_manifest_fixture)",
+        "--debug-labels=$(rootpath :debug_manifest_fixture)",
+        "--package-name=telemetry",
+        "--package-version=2.3.0",
+        "--service-name=telemetry",
+        "--asic-service=false",
+        "--host-service=true",
+    ],
+    data = [
+        "manifest_fixture.json",
+        "manifest_fixture-dbg.json",
+        ":debug_manifest_fixture",
+        ":runtime_manifest_fixture",
+        "//tools/bazel/oci:manifest_labels",
+    ],
+    env = _IMAGE_VERSION_ENV,
+    main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
+)
+
+# Check each owner's real outputs with the same implementation. The unrelated
+# fixture above additionally preserves custom fields, quotes and newlines.
+py_test(
+    name = "swss_manifest_labels_test",
+    size = "small",
+    srcs = ["integration/manifest_labels_action_test.py"],
+    args = [
+        "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
+        "--runtime-manifest=$(rootpath //dockers/docker-orchagent/config:manifest.json)",
+        "--debug-manifest=$(rootpath //dockers/docker-orchagent/config:manifest-dbg.json)",
+        "--runtime-labels=$(rootpath //dockers/docker-orchagent/config:labels)",
+        "--debug-labels=$(rootpath //dockers/docker-orchagent/config:debug_labels)",
+        "--package-name=swss",
+        "--package-version=1.0.0",
+        "--service-name=swss",
+        "--asic-service=true",
+        "--host-service=false",
+        "--manifest-version=1.0.0",
+    ],
+    data = [
+        "//dockers/docker-orchagent/config:debug_labels",
+        "//dockers/docker-orchagent/config:labels",
+        "//dockers/docker-orchagent/config:manifest.json",
+        "//dockers/docker-orchagent/config:manifest-dbg.json",
+        "//tools/bazel/oci:manifest_labels",
+    ],
+    env = _IMAGE_VERSION_ENV,
+    main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
+)
+
+# Layer checks are shared by APT selection and both containers' CI suites.
+py_test(
+    name = "validation_inputs_test",
+    size = "small",
+    srcs = ["validation_inputs_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:oci_inventory",
+        "//tools/bazel/oci:package_contract_lib",
+    ],
+)
+
+py_test(
+    name = "oci_inventory_test",
+    size = "small",
+    srcs = ["integration/oci_inventory_test.py"],
+    main = "integration/oci_inventory_test.py",
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:oci_inventory",
+    ],
+)
+
+sonic_cfggen_template(
+    name = "cfggen_template_fixture",
+    testonly = True,
+    srcs = ["cfggen_fixture_fragment.j2"],
+    out = "cfggen-template-fixture.txt",
+    additional_data = {
+        "message": "two words 'single' \"double\" $HOME $(ignored) `literal` \\ end",
+        "prefix": "198.51.100.19/24",
+        "values": [
+            "a b",
+            "c",
+        ],
+    },
+    template = "cfggen_fixture.j2",
+)
+
+py_test(
+    name = "cfggen_template_test",
+    size = "small",
+    srcs = ["integration/cfggen_template_test.py"],
+    args = [
+        "$(rootpath :cfggen_template_fixture)",
+        "$(rootpath //src/sonic-config-engine:sonic_cfggen)",
+    ],
+    data = [
+        ":cfggen_template_fixture",
+        "//src/sonic-config-engine:sonic_cfggen",
+    ],
+    main = "integration/cfggen_template_test.py",
+)
+
+py_test(
+    name = "manifest_labels_test",
+    size = "small",
+    srcs = ["manifest_labels_test.py"],
+    deps = ["//tools/bazel/oci:manifest_labels_lib"],
+)
+
+py_test(
+    name = "prepare_oci_base_test",
+    size = "small",
+    srcs = [
+        "prepare_oci_base_test.py",
+        "//tools/bazel/oci:prepare_oci_base.py",
+    ],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:oci_layout",
+    ],
+)
+
+# Shared OCI selection and CLI coverage has no container-owned inputs.
+py_test(
+    name = "source_base_validation_test",
+    srcs = ["source_base_validation_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
+    name = "apt_selection_test",
+    size = "small",
+    srcs = ["integration/apt_selection_test.py"],
+    main = "integration/apt_selection_test.py",
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:apt_selection",
+    ],
+)
+
+# Check the generated mapping and small imported DEBs alongside tar/OCI fixtures.
+# Explicit amd64 labels allow archive inspection on native ARM64 test hosts too.
+py_test(
+    name = "select_apt_payloads_test",
+    size = "small",
+    srcs = ["integration/select_apt_payloads_test.py"],
+    args = [
+        "$(rootpath @orchagent_apt_inputs//:apt_inputs.bzl)",
+        "$(rootpath //dockers/docker-orchagent:runtime_layer_policy)",
+        "$(rootpath @sonic_build_infra//apt:apt.lock.json)",
+        "$(rootpath //platform/vs/docker-syncd-vs:Dockerfile.j2)",
+        "$(rootpath @orchagent_debian//arping/amd64:deb)",
+        "$(rootpath @orchagent_debian//arping/amd64:control)",
+        "$(rootpath @orchagent_debug_debian//gdbserver/amd64:deb)",
+        "$(rootpath @orchagent_debug_debian//gdbserver/amd64:control)",
+    ],
+    data = [
+        "//dockers/docker-orchagent:runtime_layer_policy",
+        "//platform/vs/docker-syncd-vs:Dockerfile.j2",
+        "@sonic_build_infra//apt:apt.lock.json",
+        "@orchagent_apt_inputs//:apt_inputs.bzl",
+        "@orchagent_debian//arping/amd64:control",
+        "@orchagent_debian//arping/amd64:deb",
+        "@orchagent_debug_debian//gdbserver/amd64:control",
+        "@orchagent_debug_debian//gdbserver/amd64:deb",
+    ],
+    main = "integration/select_apt_payloads_test.py",
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:apt_selection",
+        "//tools/bazel/oci:oci_inventory",
+        "@sonic_build_infra//apt:lib",
+    ],
+)
+
+py_library(
+    name = "oci_base_fixture_lib",
+    srcs = ["oci_base_fixture.py"],
+    imports = ["."],
+)
+
+py_binary(
+    name = "oci_base_fixture",
+    srcs = ["oci_base_fixture.py"],
+    data = ["//tools/bazel/oci:prepare_oci_base"],
+    deps = ["@rules_python//python/runfiles"],
+)
+
+py_test(
+    name = "oci_base_layout_test",
+    size = "small",
+    srcs = ["oci_base_layout_test.py"],
+    deps = [
+        ":oci_base_fixture_lib",
+        "//tools/bazel/oci:oci_layout",
+    ],
+)
+
+# Different outer archive timestamps must leave the original OCI bytes intact.
+# Each fixture invokes Make's actual publication helper before Bazel reads it.
+run_binary(
+    name = "oci_fixture_first",
+    args = [
+        "--out",
+        "$@",
+        "--mtime",
+        "946684800",
+    ],
+    out_dirs = ["oci-fixture-first"],
+    tool = ":oci_base_fixture",
+)
+
+run_binary(
+    name = "oci_fixture_second",
+    args = [
+        "--out",
+        "$@",
+        "--mtime",
+        "1700000000",
+    ],
+    out_dirs = ["oci-fixture-second"],
+    tool = ":oci_base_fixture",
+)
+
+oci_base_layout(
+    name = "oci_base_first",
+    srcs = [":oci_fixture_first"],
+    expected_platform = "linux/amd64",
+    marker = "$(execpath :oci_fixture_first)/oci-layout",
+    root = "tools/bazel/tests/oci-fixture-first",
+)
+
+oci_base_layout(
+    name = "oci_base_second",
+    srcs = [":oci_fixture_second"],
+    expected_platform = "linux/amd64",
+    marker = "$(execpath :oci_fixture_second)/oci-layout",
+    root = "tools/bazel/tests/oci-fixture-second",
+)
+
+genrule(
+    name = "oci_fixture_overlay",
+    outs = ["oci-overlay.tar"],
+    cmd = "$(execpath :oci_base_fixture) --overlay $@",
+    tools = [":oci_base_fixture"],
+)
+
+oci_image(
+    name = "oci-consumer-first",
+    base = ":oci_base_first",
+    env = {"CONSUMER_FIXTURE": "added"},
+    tars = [":oci_fixture_overlay"],
+)
+
+oci_image(
+    name = "oci-consumer-second",
+    base = ":oci_base_second",
+    env = {"CONSUMER_FIXTURE": "added"},
+    tars = [":oci_fixture_overlay"],
+)
+
+sonic_docker_archive(
+    name = "oci-consumer-first.gz",
+    image = ":oci-consumer-first",
+)
+
+sonic_docker_archive(
+    name = "oci-consumer-second.gz",
+    image = ":oci-consumer-second",
+)
+
+py_test(
+    name = "oci_base_consumer_test",
+    size = "small",
+    srcs = ["integration/oci_base_consumer_test.py"],
+    args = [
+        "--first-layout=$(location :oci_base_first)",
+        "--second-layout=$(location :oci_base_second)",
+        "--first-image=$(location :oci-consumer-first)",
+        "--second-image=$(location :oci-consumer-second)",
+        "--first-export=$(location :oci-consumer-first.gz)",
+        "--second-export=$(location :oci-consumer-second.gz)",
+    ],
+    data = [
+        ":oci-consumer-first",
+        ":oci-consumer-first.gz",
+        ":oci-consumer-second",
+        ":oci-consumer-second.gz",
+        ":oci_base_first",
+        ":oci_base_second",
+    ],
+    main = "integration/oci_base_consumer_test.py",
+    deps = [":oci_base_fixture_lib"],
+)
+
+# A source-only fixture exercises the production archive macro on both native
+# CI architectures without requiring Make-built components or a Docker daemon.
+py_binary(
+    name = "archive_fixture",
+    srcs = ["archive_fixture.py"],
+)
+
+genrule(
+    name = "archive_fixture_layer",
+    outs = ["archive-layer.tar"],
+    cmd = "$(execpath :archive_fixture) --layer $@",
+    tools = [":archive_fixture"],
+)
+
+oci_image(
+    name = "archive-fixture",
+    architecture = select({
+        "@platforms//cpu:aarch64": "arm64",
+        "//conditions:default": "amd64",
+    }),
+    os = "linux",
+    tars = [":archive-layer.tar"],
+)
+
+sonic_docker_archive(
+    name = "archive-fixture.gz",
+    image = ":archive-fixture",
+)
+
+genrule(
+    name = "archive_fixture_sources",
+    srcs = [":archive-fixture.tar"],
+    outs = [
+        "archive-first.tar",
+        "different-source-name.tar",
+    ],
+    cmd = "$(execpath :archive_fixture) --copy $(location :archive-fixture.tar) " +
+          "--first $(location :archive-first.tar) " +
+          "--second $(location :different-source-name.tar)",
+    tools = [":archive_fixture"],
+)
+
+gzip_compress(
+    name = "archive_fixture_first",
+    src = ":archive-first.tar",
+    level = 6,
+)
+
+gzip_compress(
+    name = "archive_fixture_second",
+    src = ":different-source-name.tar",
+    level = 6,
+)
+
+py_test(
+    name = "sonic_docker_archive_test",
+    size = "small",
+    srcs = ["integration/sonic_docker_archive_test.py"],
+    args = [
+        "--archive=$(location :archive-fixture.gz)",
+        "--first=$(location :archive_fixture_first)",
+        "--second=$(location :archive_fixture_second)",
+        "--first-source=$(location :archive-first.tar)",
+        "--second-source=$(location :different-source-name.tar)",
+    ] + select({
+        "@platforms//cpu:aarch64": ["--architecture=arm64"],
+        "//conditions:default": ["--architecture=amd64"],
+    }),
+    data = [
+        ":archive-first.tar",
+        ":archive-fixture.gz",
+        ":archive_fixture_first",
+        ":archive_fixture_second",
+        ":different-source-name.tar",
+    ],
+    main = "integration/sonic_docker_archive_test.py",
+)
+
+# Validate SWSS startup and labels against the selected manifests.
+py_test(
+    name = "swss_render_test",
+    srcs = ["integration/swss_render_test.py"],
+    args = [
+        "$(location //dockers/docker-orchagent/config:docker-init.sh)",
+        "$(location //dockers/docker-orchagent/config:manifest.json)",
+        "$(location //dockers/docker-orchagent/config:manifest-dbg.json)",
+        "$(location //dockers/docker-orchagent/config:manifest.labels)",
+        "$(location //dockers/docker-orchagent/config:manifest-dbg.labels)",
+    ],
+    data = [
+        "//dockers/docker-orchagent/config:docker-init.sh",
+        "//dockers/docker-orchagent/config:manifest.json",
+        "//dockers/docker-orchagent/config:manifest.labels",
+        "//dockers/docker-orchagent/config:manifest-dbg.json",
+        "//dockers/docker-orchagent/config:manifest-dbg.labels",
+    ],
+    env = _IMAGE_VERSION_ENV,
+    main = "integration/swss_render_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
+)
+
+# Keep the checked-in dpkg include patterns aligned with Make's source list.
+write_file(
+    name = "declared_includes",
+    out = "declared_includes.txt",
+    # The trailing "" gives the final newline awk's print writes.
+    content = PATH_INCLUDES + [""],
+)
+
+# Catch drift between the generated dpkg include patterns and PATH_INCLUDES.
+# This compares text files; it neither checks exclude patterns nor builds DEBs.
+diff_test(
+    name = "test_dpkg_patterns_up_to_date",
+    size = "small",
+    file1 = "declared_includes.txt",
+    file2 = "//tools/bazel/dpkg:dpkg_includes.txt",
+)
+
+# Exercise the real source-TAR filter twice, as an OCI image's runtime layers do.
+py_binary(
+    name = "oci_license_fixture",
+    srcs = ["integration/oci_license_filter_test.py"],
+    main = "integration/oci_license_filter_test.py",
+)
+
+run_binary(
+    name = "oci_license_fixture_tar",
+    outs = ["oci-license-fixture.tar"],
+    args = [
+        "--write",
+        "$(location oci-license-fixture.tar)",
+    ],
+    tool = ":oci_license_fixture",
+)
+
+dpkg_filter(
+    name = "oci_license_filtered",
+    src = ":oci_license_fixture_tar",
+)
+
+sonic_layer(
+    name = "oci_license_refiltered",
+    tars = [":oci_license_filtered"],
+)
+
+py_test(
+    name = "oci_license_filter_test",
+    srcs = ["integration/oci_license_filter_test.py"],
+    args = [
+        "$(rootpath :oci_license_fixture_tar)",
+        "$(rootpath //tools/bazel/dpkg:dpkg_excludes.txt)",
+        "$(rootpath //tools/bazel/dpkg:oci_includes.txt)",
+        "$(rootpath :oci_license_filtered)",
+        "$(rootpath :oci_license_refiltered)",
+    ],
+    data = [
+        ":oci_license_fixture_tar",
+        "//tools/bazel/dpkg:dpkg_excludes.txt",
+        "//tools/bazel/dpkg:oci_includes.txt",
+        ":oci_license_filtered",
+        ":oci_license_refiltered",
+    ],
+    main = "integration/oci_license_filter_test.py",
+    deps = ["//tools/bazel/oci:container_validation"],
+)
+
+# Keep the compatibility build label; the owner test already provides its
+# declared Common runtime. CI selects the owner test rule directly.
+alias(
+    name = "common_rust_runtime_test",
+    actual = "@sonic_swss//crates/countersyncd:common_rust_test",
+)
+
+# Shared OCI regression fixtures exercise the same algorithms for both owners.
+# Actual owner declarations are inputs, alongside deliberately unrelated fixtures.
+py_library(
+    name = "oci_contract_fixture",
+    testonly = True,
+    srcs = ["oci_contract_fixture.py"],
+    deps = ["//tools/bazel/oci:package_contract_lib"],
+)
+
+_OCI_TEST_DEPS = [
+    ":oci_contract_fixture",
+    "//tools/bazel/ci:validation_inputs",
+    "//tools/bazel/oci:package_contract_lib",
+    "//tools/bazel/oci:package_state_lib",
+    "//tools/bazel/oci:container_validation",
+    "//tools/bazel/tests:oci_base_fixture_lib",
+    "@sonic_build_infra//apt:lib",
+    "//tools/bazel/oci:normalize_layer_lib",
+]
+
+# These receipt and image tests use TAR/OCI fixtures and create no Debian packages.
+py_test(
+    name = "oci_package_payloads_test",
+    srcs = [
+        "integration/oci_package_payloads_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_payloads_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "oci_image_test",
+    srcs = [
+        "integration/oci_image_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = [
+        "//dockers/docker-base-trixie:dpkg_01_drop",
+        "//platform/vs/docker-syncd-vs:critical_processes",
+        "//platform/vs/docker-syncd-vs:start.sh",
+        "//platform/vs/docker-syncd-vs:supervisord.conf",
+        "//platform/vs/docker-syncd-vs/config:openssh-client.conf",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_image_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "oci_apt_overlay_test",
+    srcs = [
+        "integration/oci_apt_overlay_test.py",
+    ],
+    args = ["--policy=$(rootpath //platform/vs/docker-syncd-vs:runtime_layer_policy)"] + _OCI_POLICY_ARGS,
+    data = [
+        "//platform/vs/docker-syncd-vs:runtime_layer_policy",
+    ] + _OCI_OWNER_POLICIES,
+    main = "integration/oci_apt_overlay_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS + ["//tools/bazel/oci:apt_selection"],
+)
+
+py_test(
+    name = "oci_package_state_layer_test",
+    srcs = [
+        "integration/oci_package_state_layer_test.py",
+    ],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_state_layer_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+py_test(
+    name = "syncd_manifest_labels_test",
+    size = "small",
+    srcs = ["integration/manifest_labels_action_test.py"],
+    args = [
+        "--tool=$(rootpath //tools/bazel/oci:manifest_labels)",
+        "--runtime-manifest=$(rootpath //tools/bazel/image/vs/metadata:docker-syncd-vs.manifest)",
+        "--debug-manifest=$(rootpath //tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest)",
+        "--runtime-labels=$(rootpath //platform/vs/docker-syncd-vs/config:labels)",
+        "--debug-labels=$(rootpath //platform/vs/docker-syncd-vs/config:debug_labels)",
+        "--package-name=syncd",
+        "--package-version=1.0.0",
+        "--service-name=syncd",
+        "--asic-service=true",
+        "--host-service=false",
+        "--manifest-version=1.0.0",
+    ],
+    data = [
+        "//tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest",
+        "//tools/bazel/image/vs/metadata:docker-syncd-vs.manifest",
+        "//platform/vs/docker-syncd-vs/config:debug_labels",
+        "//platform/vs/docker-syncd-vs/config:labels",
+        "//tools/bazel/oci:manifest_labels",
+    ],
+    env = _IMAGE_VERSION_ENV,
+    main = "integration/manifest_labels_action_test.py",
+    toolchains = _IMAGE_VERSION_FLAGS,
+    deps = [":manifest_label_assertions"],
+)
+
+py_test(
+    name = "oci_package_contract_test",
+    srcs = ["integration/oci_package_contract_test.py"],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_package_contract_test.py",
+    python_version = "3.11",
+    deps = _OCI_TEST_DEPS,
+)
+
+# This fixture compiles a small ELF using the native CI toolchain and checks
+# actual readelf/objcopy correspondence. It creates no Debian package.
+py_test(
+    name = "oci_native_packages_test",
+    srcs = ["integration/oci_native_packages_test.py"],
+    args = _OCI_POLICY_ARGS,
+    data = _OCI_OWNER_POLICIES,
+    main = "integration/oci_native_packages_test.py",
+    python_version = "3.11",
+    tags = ["local"],
+    deps = _OCI_TEST_DEPS,
+)
+
+# Production validation is explicit: hosted fixture suites must not request
+# Make-produced packages or the complete Syncd images.
+_SYNCD_OWNER = "//platform/vs/docker-syncd-vs"
+
+_SYNCD_P4_IMAGE_INPUTS = {
+    "runtime_path": _SYNCD_OWNER + ":docker-syncd-vs",
+    "debug_path": _SYNCD_OWNER + ":docker-syncd-vs-dbg",
+    "runtime_manifest_path": "//tools/bazel/image/vs/metadata:docker-syncd-vs.manifest",
+    "debug_manifest_path": "//tools/bazel/image/vs/metadata:docker-syncd-vs-dbg.manifest",
+    "source_contract_path": _SYNCD_OWNER + ":source_contract",
+    "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
+    "dpkg_filter_path": "//dockers/docker-base-trixie:dpkg_01_drop",
+    "source_layer_excludes": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source_layer_includes": "//tools/bazel/dpkg:oci_includes",
+    "base_path": _SYNCD_OWNER + ":config_engine_base_layout",
+    "apt_layer": _SYNCD_OWNER + ":apt_deps",
+    "debug_tools_layer": _SYNCD_OWNER + ":debug_tools",
+    "runtime_links_layer": _SYNCD_OWNER + ":installation_links",
+    "runtime_apt_selection": _SYNCD_OWNER + ":runtime_apt_selection",
+    "debug_apt_selection": _SYNCD_OWNER + ":debug_apt_selection",
+    "runtime_archive": _SYNCD_OWNER + ":docker-syncd-vs.gz",
+    "debug_archive": _SYNCD_OWNER + ":docker-syncd-vs-dbg.gz",
+    "source_runtime_tar": _SYNCD_OWNER + ":source_runtime_payloads",
+    "source_debug_tar": _SYNCD_OWNER + ":source_debug_payloads",
+    "source_receipt": _SYNCD_OWNER + ":source_package_receipt",
+    "base_symbols": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+    "base_metadata": "//dockers/docker-base-trixie:runtime_package_metadata",
+    "config_metadata": "//dockers/docker-config-engine-trixie:runtime_package_metadata",
+    "workspace_module": "@image_source_modules//:sonic-buildimage.MODULE.bazel",
+    "policy": _SYNCD_OWNER + ":package_policy",
+    "make_runtime_archive": "//:target/docker-syncd-vs.gz",
+    "make_debug_archive": "//:target/docker-syncd-vs-dbg.gz",
+    "readelf": "@sonic_build_infra//toolchains/binutils:readelf",
+    "objcopy": "@sonic_build_infra//toolchains/binutils:objcopy",
+}
+
+py_test(
+    name = "syncd_validation_timing_test",
+    size = "small",
+    srcs = [
+        "integration/syncd_p4_images_test.py",
+        "syncd_validation_timing_test.py",
+    ],
+    main = "syncd_validation_timing_test.py",
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
+    name = "syncd_p4_images_test",
+    size = "large",
+    srcs = ["integration/syncd_p4_images_test.py"],
+    args = ["--" + name.replace("_", "-") + "=$(rootpath " + label + ")" for name, label in _SYNCD_P4_IMAGE_INPUTS.items()],
+    data = _SYNCD_P4_IMAGE_INPUTS.values() + [
+        _SYNCD_OWNER + ":start.sh",
+        _SYNCD_OWNER + ":supervisord.conf",
+        _SYNCD_OWNER + ":critical_processes",
+        _SYNCD_OWNER + "/config:openssh-client.conf",
+    ],
+    main = "integration/syncd_p4_images_test.py",
+    tags = ["manual"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/ci:validation_inputs",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+py_test(
+    name = "source_contract_test",
+    srcs = ["integration/source_contract_test.py"],
+    main = "integration/source_contract_test.py",
+    deps = ["//tools/bazel/oci:source_contract_lib"],
+)
+
+# The owner composes native/configuration TARs directly and retains libteam's
+# generated package receipt for APT ownership. Validate both against the OCI.
+_SWSS_OWNER = "//dockers/docker-orchagent"
+
+_SWSS_IMAGE_INPUTS = {
+    "runtime_path": _SWSS_OWNER + ":docker-orchagent",
+    "debug_path": _SWSS_OWNER + ":docker-orchagent-dbg",
+    "runtime_manifest_path": "//tools/bazel/image/vs/metadata:docker-orchagent.manifest",
+    "debug_manifest_path": "//tools/bazel/image/vs/metadata:docker-orchagent-dbg.manifest",
+    "apt_lock_path": "@sonic_build_infra//apt:apt.lock.json",
+    "debug_apt_lock_path": _SWSS_OWNER + "/bazel:debug_apt.lock.json",
+    "base_path": _SWSS_OWNER + ":config_engine_base_layout",
+    "apt_layer": _SWSS_OWNER + ":apt_deps",
+    "debug_tools_layer": _SWSS_OWNER + ":debug_tools",
+    "runtime_apt_selection": _SWSS_OWNER + ":runtime_apt_selection",
+    "debug_apt_selection": _SWSS_OWNER + ":debug_apt_selection",
+    "package_state_contract": _SWSS_OWNER + "/bazel:package_state.json",
+    "runtime_archive": _SWSS_OWNER + ":docker-orchagent.gz",
+    "debug_archive": _SWSS_OWNER + ":docker-orchagent-dbg.gz",
+    "source_contract_path": _SWSS_OWNER + ":libteam_source_contract",
+    "source_runtime_tar": _SWSS_OWNER + ":libteam_source_runtime.tar",
+    "source_debug_tar": _SWSS_OWNER + ":docker-orchagent.debug_symbols",
+    "source_receipt": _SWSS_OWNER + ":libteam_source_receipt",
+    "source_layer_excludes": "//tools/bazel/dpkg:dpkg_excludes.txt",
+    "source_layer_includes": "//tools/bazel/dpkg:oci_includes.txt",
+    "base_symbols": "//dockers/docker-config-engine-trixie:docker-config-engine-trixie.debug_symbols",
+    "base_metadata": "//dockers/docker-base-trixie:runtime_package_metadata",
+    "config_metadata": "//dockers/docker-config-engine-trixie:runtime_package_metadata",
+    "workspace_module": "@image_source_modules//:sonic-buildimage.MODULE.bazel",
+    "policy": _SWSS_OWNER + ":package_policy",
+    "make_runtime_archive": "//:target/docker-orchagent.gz",
+    "make_debug_archive": "//:target/docker-orchagent-dbg.gz",
+    "readelf": "@sonic_build_infra//toolchains/binutils:readelf",
+    "objcopy": "@sonic_build_infra//toolchains/binutils:objcopy",
+}
+
+_SWSS_RUNTIME_LAYERS = [
+    _SWSS_OWNER + ":rdeps",
+    _SWSS_OWNER + ":runtime_alternatives",
+    _SWSS_OWNER + "/config:python_runtime",
+    _SWSS_OWNER + "/config:files",
+    _SWSS_OWNER + ":installed_package_state",
+]
+
+_SWSS_DEBUG_LAYERS = [
+    _SWSS_OWNER + ":docker-orchagent.debug_symbols",
+    _SWSS_OWNER + ":debug_client",
+    _SWSS_OWNER + ":debug_client_symbols",
+    _SWSS_OWNER + ":debug_accounts",
+    _SWSS_OWNER + ":debug_package_state",
+]
+
+py_test(
+    name = "swss_images_test",
+    size = "large",
+    srcs = ["integration/oci_images_test.py"],
+    args = ["--" + name.replace("_", "-") + "=$(rootpath " + label + ")" for name, label in _SWSS_IMAGE_INPUTS.items()] +
+           ["--runtime-payload-layer=$(rootpath " + label + ")" for label in _SWSS_RUNTIME_LAYERS] +
+           ["--debug-payload-layer=$(rootpath " + label + ")" for label in _SWSS_DEBUG_LAYERS],
+    data = depset(_SWSS_IMAGE_INPUTS.values() + _SWSS_RUNTIME_LAYERS + _SWSS_DEBUG_LAYERS).to_list(),
+    main = "integration/oci_images_test.py",
+    tags = ["manual"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "//tools/bazel/ci:artifact_validation",
+        "//tools/bazel/oci:container_validation",
+        "//tools/bazel/oci:source_base_validation",
+    ],
+)
+
+# Each image family must use the same configuration as its Make build: SWSS
+# uses the default flags, while Syncd uses --config=syncd-dash. The runtime
+# validator combines these policies and checks the shared base is identical.
+_INSTALLED_IMAGE_FAMILIES = {
+    "swss": (_SWSS_OWNER, "docker-orchagent"),
+    "syncd": (_SYNCD_OWNER, "docker-syncd-vs"),
+}
+
+_INSTALLED_BASE = "//dockers/docker-config-engine-trixie"
+
+[
+    run_binary(
+        name = family + variant + "_installed_images_policy",
+        srcs = [
+            _INSTALLED_BASE + ":installed_checks",
+            owner + ":installed_checks",
+        ] + [
+            image_owner + ":" + name + suffix
+            for name, image_owner in members
+            for suffix in ["", ".gz"]
+        ],
+        outs = [family + variant + "-installed-images-policy.json"],
+        args = [
+            "--architecture",
+            "amd64",
+            "--out",
+            "$(location " + family + variant + "-installed-images-policy.json)",
+            "--policy=$(location " + _INSTALLED_BASE + ":installed_checks)",
+            "--policy=$(location " + owner + ":installed_checks)",
+        ] + (["--runtime-only"] if variant else []) + [arg for name, image_owner in members for arg in [
+            "--layout",
+            name,
+            "$(location " + image_owner + ":" + name + ")",
+            "--archive",
+            name,
+            "$(location " + image_owner + ":" + name + ".gz)",
+        ]],
+        target_compatible_with = [
+            "@platforms//cpu:x86_64",
+            "@platforms//os:linux",
+        ],
+        tool = "//tools/bazel/oci:installed_images_policy",
+    )
+    for family, (owner, image) in _INSTALLED_IMAGE_FAMILIES.items()
+    for variant, members in [
+        ("", [("docker-config-engine-trixie", _INSTALLED_BASE), (image, owner), (image + "-dbg", owner)]),
+        ("_runtime", [("docker-config-engine-trixie", _INSTALLED_BASE), (image, owner)]),
+    ]
+]
+
+py_test(
+    name = "gbsyncd_make_test",
+    srcs = ["gbsyncd_make_test.py"],
+    data = [
+        "//:platform/template/docker-gbsyncd-trixie.mk",
+        "//:platform/vs/docker-gbsyncd-vs.mk",
+        "//platform/vs/docker-gbsyncd-vs:Dockerfile.j2",
+        "//platform/vs/docker-syncd-vs:Dockerfile.j2",
+    ],
+    python_version = "3.11",
+)
+
+# Validate the source installation contract independently of wheel assembly.
+py_test(
+    name = "source_installation_test",
+    srcs = ["integration/source_installation_test.py"],
+    args = [
+        "--redis-wheel=$(rootpath :redis_dump_load_test_wheel)",
+        "--yang-mgmt-dependencies",
+        "$(rootpaths @sonic_yang_mgmt//:sonic-yang-mgmt.runtime_metadata)",
+        "--metadata",
+        "$(rootpaths :source_installation_metadata)",
+        "--package=sonic-config-engine=$(rootpath //src/sonic-config-engine:sonic-config-engine.runtime)",
+        "--setup=sonic-config-engine=$(rootpath //src/sonic-config-engine:setup.py)",
+        "--package=sonic-py-common=$(rootpath //src/sonic-py-common:sonic-py-common.runtime)",
+        "--setup=sonic-py-common=$(rootpath //src/sonic-py-common:setup.py)",
+        "--package=sonic-yang-mgmt=$(rootpath @sonic_yang_mgmt//:sonic-yang-mgmt.runtime)",
+        "--setup=sonic-yang-mgmt=$(rootpath @sonic_yang_mgmt//:setup.py)",
+        "--package=sonic-yang-models=$(rootpath //src/sonic-yang-models:sonic-yang-models.runtime)",
+        "--setup=sonic-yang-models=$(rootpath //src/sonic-yang-models:setup.py)",
+        "--package=sonic-containercfgd=$(rootpath //src/sonic-containercfgd:sonic-containercfgd.runtime)",
+        "--setup=sonic-containercfgd=$(rootpath //src/sonic-containercfgd:setup.py)",
+        "--package=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime)",
+        "--setup=sonic-supervisord-utilities=$(rootpath //src/sonic-supervisord-utilities:setup.py)",
+    ],
+    data = [
+        ":redis_dump_load_test_wheel",
+        ":source_installation_metadata",
+        "//src/sonic-config-engine:setup.py",
+        "//src/sonic-config-engine:sonic-config-engine.runtime",
+        "//src/sonic-config-engine:source_install_test_sources",
+        "//src/sonic-containercfgd:setup.py",
+        "//src/sonic-containercfgd:sonic-containercfgd.runtime",
+        "//src/sonic-containercfgd:source_install_test_sources",
+        "//src/sonic-py-common:setup.py",
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "//src/sonic-py-common:source_install_test_sources",
+        "//src/sonic-supervisord-utilities:setup.py",
+        "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
+        "//src/sonic-supervisord-utilities:source_install_test_sources",
+        "@sonic_yang_mgmt//:setup.py",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime_metadata",
+        "@sonic_yang_mgmt//:source_install_test_sources",
+        "//src/sonic-yang-models:setup.py",
+        "//src/sonic-yang-models:sonic-yang-models.runtime",
+        "//src/sonic-yang-models:source_install_test_sources",
+    ],
+    legacy_create_init = False,
+    main = "integration/source_installation_test.py",
+    python_version = "3.13",
+    deps = [
+        ":wheel_test_helpers",
+        "//src/sonic-config-engine:sonic_config_engine",
+        "//src/sonic-containercfgd:containercfgd",
+        "//src/sonic-py-common:sonic_py_common",
+        requirement("grpcio-tools"),
+        requirement("jinja2"),
+    ],
+)
+
+python_runtime_packages(
+    name = "source_installation_packages",
+    testonly = True,
+    deps = [
+        "//src/sonic-config-engine:sonic-config-engine.runtime",
+        "//src/sonic-containercfgd:sonic-containercfgd.runtime",
+        "//src/sonic-py-common:sonic-py-common.runtime",
+        "//src/sonic-supervisord-utilities:sonic-supervisord-utilities.runtime",
+        "@sonic_yang_mgmt//:sonic-yang-mgmt.runtime",
+        "//src/sonic-yang-models:sonic-yang-models.runtime",
+    ],
+)
+
+filegroup(
+    name = "source_installation_metadata",
+    testonly = True,
+    srcs = [":source_installation_packages"],
+    output_group = "metadata",
+)

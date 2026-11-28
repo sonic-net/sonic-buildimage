@@ -43,8 +43,8 @@ docker cp -L $DOCKER_CONTAINER:/usr/local/share/buildinfo/post-versions $TARGET_
 # Save the cache contents from docker build
 IMAGENAME=${DOCKER_IMAGE_TAG} j2 files/build_templates/build_docker_cache.j2 > ${DOCKER_FILE}.cleanup
 docker tag ${DOCKER_IMAGE_TAG} tmp-${DOCKER_IMAGE_TAG}
-DOCKER_BUILDKIT=1 docker build -f ${DOCKER_PATH}/Dockerfile.cleanup  --target output -o target/vcache/${DOCKER_IMAGE_NAME} ${DOCKER_PATH}
-DOCKER_BUILDKIT=1 docker build -f ${DOCKER_PATH}/Dockerfile.cleanup  --no-cache --target final --tag ${DOCKER_IMAGE_TAG} ${DOCKER_PATH}
+DOCKER_BUILDKIT=1 docker build -f "${DOCKER_FILE}.cleanup"  --target output -o target/vcache/${DOCKER_IMAGE_NAME} ${DOCKER_PATH}
+DOCKER_BUILDKIT=1 docker build -f "${DOCKER_FILE}.cleanup"  --no-cache --target final --tag ${DOCKER_IMAGE_TAG} ${DOCKER_PATH}
 docker rmi tmp-${DOCKER_IMAGE_TAG}
 docker cp -L $DOCKER_CONTAINER:/usr/local/share/buildinfo/log ${BUILD_LOG_PATH}/
 

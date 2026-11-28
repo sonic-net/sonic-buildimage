@@ -1,0 +1,2227 @@
+name: Bazel OCI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      source_image:
+        description: Dedicated source-image worker task
+        type: choice
+        options: [none, dhcp-relay]
+        default: none
+      source_revision:
+        description: Reviewed 40-character source commit for an image task
+        type: string
+        default: ''
+      source_inputs_run:
+        description: Optional successful source-download run in this repository
+        type: string
+        default: ''
+      enable_debug_layer:
+        description: Build companion debug archives for the VS installer
+        type: boolean
+        default: false
+      skip_vs:
+        description: Run source and packaging tests without building or validating VS containers
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # Preserve long VS builds across PR revisions and isolate explicit retries.
+  group: bazel-oci-${{ github.run_attempt == '1' && github.event.pull_request.number || format('run-{0}', github.run_id) }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  BAZEL: bazel
+
+jobs:
+  dhcp_relay_source_image:
+    name: DHCP relay source image (AMD64, K3s)
+    if: github.event_name == 'workflow_dispatch' && inputs.source_image == 'dhcp-relay'
+    runs-on: [self-hosted, Linux, X64, sonic-slave-container-k3s]
+    timeout-minutes: 360
+    env:
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      BAZELISK_GITHUB_TOKEN: ""
+      SOURCE_INPUTS_RUN: ${{ inputs.source_inputs_run }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Validate the requested source revision
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          assert re.fullmatch(r'[0-9a-f]{40}', os.environ['SOURCE_REVISION']), 'Use a full reviewed source SHA'
+          assert not os.environ['SOURCE_INPUTS_RUN'], 'K3s uses the remote cache, not source-input artifacts'
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_revision }}
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$SOURCE_REVISION" --event-name workflow_dispatch \
+            --github-output "$GITHUB_OUTPUT"
+      # The ephemeral K3s worker lifecycle owns job-local state cleanup.
+      # The shared remote cache is managed by the worker, not this workflow.
+      - name: Prepare existing image inspection and template tools
+        id: dhcp_tools
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from tools.bazel.ci.source_image_worker import prepare_validation_tools
+          artifacts = Path('artifacts/dhcp-relay')
+          artifacts.mkdir(parents=True, exist_ok=True)
+          prepare_validation_tools(artifacts)
+          PY
+      - name: Verify native AMD64 Trixie tools and remote-only cache
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(. /etc/os-release; echo "$VERSION_CODENAME")" = trixie
+          for tool in bazel git make python3 readelf objcopy bsdtar j2 file; do
+            command -v "$tool"
+          done
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+          python3 -B tools/bazel/ci/resources.py --configure
+          python3 -B tools/bazel/ci/configure_runner_cache.py --remote-only \
+            --output artifacts/dhcp-relay/cache-configuration.json
+          # The shared wrapper disables the home RC. Import only the verified
+          # worker-managed cache settings into its ignored job-local RC.
+          python3 - <<'PY'
+          import os
+          import hashlib
+          import json
+          from pathlib import Path
+          import shlex
+          managed = os.environ['SONIC_BAZEL_REMOTE_ONLY_RC']
+          assert '\n' not in managed and '\r' not in managed
+          trust = Path(os.environ['SONIC_BAZEL_JAVA_TRUST_STORE'])
+          assert trust.is_absolute() and trust.is_file() and os.access(trust, os.R_OK)
+          assert '\n' not in str(trust) and '\r' not in str(trust)
+          with Path('.bazelrc.user').open('a') as output:
+              output.write('import ' + shlex.quote(managed) + '\n')
+              output.write('startup ' + shlex.quote('--host_jvm_args=-Djavax.net.ssl.trustStore=' + str(trust)) + '\n')
+          Path('artifacts/dhcp-relay/worker-java-trust.validation.json').write_text(json.dumps({
+              'status': 'passed', 'java_trust_store_sha256': hashlib.sha256(trust.read_bytes()).hexdigest(),
+              'certificate_verification': True,
+          }, indent=2) + '\n')
+          PY
+      - name: Configure verified source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py --prefer-debian-snapshot --output "$RUNNER_TEMP/dhcp-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/dhcp-source-mirrors.cfg" >> .bazelrc.user
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Check DHCP utilities and CLI tests without DEB generation
+        id: dhcp_utility_tests
+        run: &dhcp_utility_tests |
+          set -euo pipefail
+          wheel_flags=()
+          audit_flags=()
+          if [[ -n ${VS_PACKAGE:-} ]]; then
+            wheel_flag=$(python3 -B -m tools.bazel.ci.vs_python_packages flags --group dhcp --package "$VS_PACKAGE")
+            wheel_flags+=("$wheel_flag")
+            audit_flags+=("--bazel-arg=$wheel_flag")
+          fi
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
+            --output artifacts/dhcp-relay/utility-action.validation.json \
+            //src/sonic-dhcp-utilities:upstream_tests //src/sonic-dhcp-utilities:installed_wheel_test \
+            //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests
+          "$BAZEL" test "${wheel_flags[@]}" //src/sonic-dhcp-utilities:upstream_tests \
+            //src/sonic-dhcp-utilities:installed_wheel_test \
+            //dockers/docker-dhcp-relay/cli-plugin-tests:upstream_tests --nocache_test_results \
+            --build_event_json_file="$PWD/artifacts/dhcp-relay/utility-test-events.json"
+      - name: Build DHCP relay runtime and debug images from source owners
+        id: dhcp_relay_build
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py build --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+      - name: Validate DHCP relay image contents and source symbols
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py validate --artifacts artifacts/dhcp-relay
+      - name: Check DHCP relay incremental rebuild and restored image digests
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: |
+          GITHUB_SHA="$SOURCE_REVISION" python3 -B tools/bazel/ci/dhcp_relay_image.py incremental --bazel "$BAZEL" --artifacts artifacts/dhcp-relay
+          git diff --exit-code
+      - name: Prepare reviewed DHCP relay evidence
+        id: dhcp_relay_public
+        if: always() && (steps.dhcp_tools.outcome == 'failure' || steps.dhcp_utility_tests.outcome == 'failure' || steps.dhcp_relay_build.outcome == 'success' || steps.dhcp_relay_build.outcome == 'failure')
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from types import SimpleNamespace
+          from tools.bazel.ci.source_image_worker import publish
+          publish(SimpleNamespace(artifacts=Path('artifacts/dhcp-relay'), image='dhcp-relay'))
+          PY
+      - name: Retain DHCP relay images and reviewed build evidence
+        id: bazel_upload_dhcp_relay_public
+        if: always() && steps.dhcp_relay_public.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dhcp-relay-image-amd64
+          path: artifacts/dhcp-relay/public/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+  dhcp_relay_runtime:
+    name: Run installed DHCP relay images (AMD64)
+    needs: dhcp_relay_source_image
+    env:
+      TESTED_REVISION: ${{ inputs.source_revision }}
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    timeout-minutes: 25
+    steps:
+      - name: Restore workspace access before checkout
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env:
+          RUNNER_PIPELINE_WORKSPACE: ${{ runner.workspace }}
+        run: "set -euo pipefail\nrepository=\"${GITHUB_REPOSITORY##*/}\"\npipeline_workspace=\"${RUNNER_PIPELINE_WORKSPACE%/}\"\nexpected=\"$pipeline_workspace/$repository\"\nif [[ \"$GITHUB_WORKSPACE\" != \"$expected\" ]]; then\n  printf 'Refusing permission repair: expected workspace %s, got %s.\\n' \\\n    \"$expected\" \"$GITHUB_WORKSPACE\" >&2\n  exit 1\nfi\nif [[ ! -e \"$expected\" && ! -L \"$expected\" ]]; then\n  echo 'No existing workspace to repair.'\n  exit 0\nfi\nwork_root=\"$(realpath -e -- \"$pipeline_workspace/..\")\"\nphysical_workspace=\"$work_root/$repository/$repository\"\nif [[ ! -d \"$expected\" || \"$(realpath -e -- \"$expected\")\" != \"$physical_workspace\" ]]; then\n  echo 'Refusing permission repair on a redirected workspace.' >&2\n  exit 1\nfi\nexpected=\"$physical_workspace\"\nowner=\"$(id -u):$(id -g)\"\nsudo -n find -P \"$expected\" -xdev -type d \\\n  -exec chown --no-dereference -- \"$owner\" {} +\nsudo -n find -P \"$expected\" -xdev -type d \\\n  -exec chmod u+rwx\
+          \ -- {} +\nsudo -n find -P \"$expected\" -xdev -type f -links 1 \\\n  -exec chown --no-dereference -- \"$owner\" {} +\n"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.TESTED_REVISION }}
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Align retained kernel checkout
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --kernel-only
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$TESTED_REVISION" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dhcp-relay-image-amd64
+          path: artifacts/dhcp-relay
+      - name: Exercise installed DHCPv4, DHCPv6 and monitor services
+        env:
+          CI_HEAD_SHA: ${{ steps.checkout_identity.outputs.head_sha }}
+          CI_BASE_SHA: ${{ steps.checkout_identity.outputs.base_sha }}
+        run: GITHUB_SHA="$TESTED_REVISION" python3 -B tools/bazel/ci/dhcp_relay_loaded.py --artifacts artifacts/dhcp-relay
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        id: runner_cleanup_upload_0
+        if: always()
+        with:
+          name: dhcp-relay-runtime-amd64
+          path: |
+            artifacts/dhcp-relay/*.runtime.json
+            artifacts/dhcp-relay/loaded-validation.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
+  archive:
+    needs: [checks, vs_container]
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.vs_container.result == 'success' || needs.vs_container.result == 'skipped')
+    name: Container archive (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ARM64
+            architecture: arm64
+            machine: aarch64
+            runner: [self-hosted, linux, bazel-arm64]
+            platform: aarch64_trixie
+            disk_cache: buildimage-gzip-arm64
+    container: &package_test_container
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Reap the detached Bazel server so each Make archive can finish shutdown.
+      options: --init
+    env:
+      USE_VS_WHEELS: ${{ needs.vs_container.result == 'success' }}
+      VS_WHEELS_ARTIFACT_ID: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+      BAZEL: &package_test_bazel ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+    defaults: &package_test_defaults
+      run:
+        shell: bash
+    steps: &package_test_steps
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates gdb git j2cli jq libarchive-tools libtool libxml2 pkg-config python3 python3-jinja2 python3-yaml tar unzip zstd
+          for tool in bsdtar gdb readelf objcopy; do
+            command -v "$tool"
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bind the tested checkout identity
+        id: checkout_identity
+        env:
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -B tools/bazel/ci/checkout_identity.py \
+            --expected-revision "$GITHUB_SHA" --event-name "$GITHUB_EVENT_NAME" \
+            --head-sha "$EVENT_HEAD_SHA" --event-base-sha "$EVENT_BASE_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Configure remote cache uploads
+        env:
+          UPLOAD_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          printf '\nbuild --remote_upload_local_results=%s\n' \
+            "$UPLOAD_CACHE" >> .bazelrc.user
+
+      - name: Check native architecture and generated dependency state
+        run: |
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Prepare pinned submodules for image builds
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Register post-job Bazel cleanup
+        id: bazel_cleanup_register
+        uses: ./.github/actions/bazel-post-job-cleanup
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: ${{ matrix.disk_cache }}
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --configure-startup
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Record package build identity
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          mkdir -p artifacts/archive
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          Path('artifacts/archive/revision.json').write_text(json.dumps({
+              'tested_head': os.environ['GITHUB_SHA'], 'architecture': os.environ['ARCHITECTURE']
+          }) + '\n')
+          PYTHON
+
+      - name: Verify native VS host installation interfaces
+        if: matrix.architecture == 'amd64'
+        run: |
+          bazel test --config=syncd-dash \
+            --build_event_json_file=artifacts/archive/host-package-events.jsonl \
+            @bash_tacplus//:installation_test \
+            //src/radius/pam:installation_test \
+            //platform/vs/sonic-platform-modules-vs:deb_test \
+            //src/sonic-ctrmgrd:ctrmgrd.runtime_metadata \
+            //src/sonic-ctrmgrd-rs:runtime_packages.json \
+            //src/sonic-device-data:runtime_packages.json \
+            //src/sonic-eventd:bazel/rsyslog_plugin.runtime_packages.json \
+            //src/sonic-nettools:runtime_packages.json \
+            //src/syslog-counter:runtime_packages.json \
+            //src/system-health:system_health.runtime_metadata \
+            //src/systemd-sonic-generator:systemd-sonic-generator.runtime_metadata \
+            @sonic_host_services//:sonic-host-services.runtime_metadata \
+            @sonic_host_services//:sonic-host-services-data.runtime_metadata \
+            @sonic_host_services//:sonic-host-services-rs.runtime_metadata
+
+      - name: Test archive rules against synthetic OCI fixtures
+        run: |
+          "$BAZEL" test --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --lockfile_mode=update --nocache_test_results --test_output=all \
+            --build_event_json_file="$PWD/artifacts/archive/test-events.jsonl" \
+            //tools/bazel/tests:sonic_docker_archive_test \
+            //tools/bazel/tests:oci_base_layout_test \
+            //tools/bazel/tests:prepare_oci_base_test \
+            //tools/bazel/tests:oci_base_consumer_test \
+            //tools/bazel/tests:select_apt_payloads_test \
+            //tools/bazel/tests:shared_runtime_base_test \
+            //tools/bazel/tests:shared_runtime_layers_test \
+            //tools/bazel/tests:source_contract_test \
+            //tools/bazel/tests:oci_license_filter_test \
+            //tools/bazel/tests:test_dpkg_patterns_up_to_date \
+            //tools/bazel/oci/tests:imported_symbols_test \
+            //tools/bazel/oci/tests:native_symbols_test \
+            //tools/bazel/oci/tests:normalize_layer_test \
+            //tools/bazel/oci/tests:normalize_layer_rule_test \
+            2>&1 | tee artifacts/archive/test.log
+
+      - name: Allocate a directory for the VS wheels
+        id: wheel_inputs
+        if: env.USE_VS_WHEELS == 'true'
+        env:
+          ARTIFACT_ID: ${{ env.VS_WHEELS_ARTIFACT_ID }}
+        run: |
+          [[ $ARTIFACT_ID =~ ^[1-9][0-9]*$ ]]
+          mkdir -p target
+          scratch=$(mktemp -d target/vs-python-XXXXXXXX)
+          echo "scratch=$scratch" >> "$GITHUB_OUTPUT"
+          echo "directory=$PWD/$scratch/download" >> "$GITHUB_OUTPUT"
+          echo "package=$scratch/inputs" >> "$GITHUB_OUTPUT"
+
+      - name: Download wheels used by VS
+        if: steps.wheel_inputs.outcome == 'success'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ env.VS_WHEELS_ARTIFACT_ID }}
+          path: ${{ steps.wheel_inputs.outputs.directory }}
+          merge-multiple: true
+
+      - name: Test Python packages and check startup generation
+        env:
+          VS_WHEELS: ${{ steps.wheel_inputs.outputs.directory }}
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/config-engine
+          wheel_flags=()
+          audit_flags=()
+          if [[ -n $VS_WHEELS ]]; then
+            python3 -B -m tools.bazel.ci.vs_python_packages stage \
+              --directory "$VS_WHEELS" --revision "$GITHUB_SHA" --package "$VS_PACKAGE"
+            python3 -B -m tools.bazel.ci.vs_python_packages flags --group config-engine --architecture "${{ matrix.architecture }}" \
+              --package "$VS_PACKAGE" > "$VS_PACKAGE/flags.txt"
+            mapfile -t wheel_flags < "$VS_PACKAGE/flags.txt"
+            for flag in "${wheel_flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          fi
+          # Render SWSS metadata on either host; this does not build an ARM64 image.
+          make -f tools/bazel/prepare_manifests.mk \
+            MANIFEST_METADATA=rules/docker-orchagent.mk \
+            BUILD_WITH_BAZEL_WHEN_AVAILABLE=y BLDENV=trixie CONFIGURED_PLATFORM=vs \
+            CONFIGURED_ARCH=amd64 ENABLE_ASAN=n DBG_IMAGE_MARK=dbg DOCKERS_PATH=dockers \
+            2>&1 | tee artifacts/config-engine/make-manifests.log
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
+            --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --output artifacts/config-engine/action-audit.json \
+            //tools/bazel/tests:apt_selection_test \
+            //tools/bazel/tests:sonic_py_common_test \
+            //tools/bazel/tests:sonic_yang_mgmt_full_test \
+            //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
+            @sonic_yang_mgmt//:sonic_yang_mgmt_runtime_test \
+            //tools/bazel/tests:sonic_py_common_full_test \
+            //tools/bazel/tests:sonic_config_engine_full_test \
+            //tools/bazel/tests:sonic_python_wheels_test \
+            //tools/bazel/tests:source_installation_test \
+            //tools/bazel/tests:containercfgd_full_test \
+            //tools/bazel/tests:containercfgd_wheel_test \
+            //tools/bazel/tests:supervisor_python_full_test \
+            //tools/bazel/tests:supervisor_python_wheel_test \
+            //tools/bazel/tests:installed_wheel_fixture_test \
+            //tools/bazel/tests:wheel_contract_test \
+            //src/sonic-config-engine:sonic_cfggen_cli_test \
+            //tools/bazel/tests:manifest_labels_test \
+            //tools/bazel/image/vs/metadata:metadata_test \
+            //tools/bazel/tests:manifest_labels_action_test \
+            //tools/bazel/tests:cfggen_template_test \
+            //tools/bazel/tests:swss_render_test \
+            @sonic_yang_mgmt//:sonic_yang_mgmt_wheel \
+            //src/sonic-py-common:sonic_py_common_wheel \
+            //src/sonic-config-engine:sonic_config_engine_wheel \
+            //src/sonic-containercfgd:sonic_containercfgd_wheel \
+            //src/sonic-supervisord-utilities:sonic_supervisord_utilities_wheel \
+            //dockers/docker-orchagent/config:docker_init
+          "$BAZEL" test "${wheel_flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --nocache_test_results --test_output=all \
+            --build_event_json_file="$PWD/artifacts/config-engine/test-events.jsonl" \
+            //tools/bazel/tests:apt_selection_test \
+            //tools/bazel/tests:sonic_py_common_test \
+            //tools/bazel/tests:sonic_yang_mgmt_full_test \
+            //tools/bazel/tests:sonic_yang_mgmt_wheel_test \
+            @sonic_yang_mgmt//:sonic_yang_mgmt_runtime_test \
+            //tools/bazel/tests:sonic_py_common_full_test \
+            //tools/bazel/tests:sonic_config_engine_full_test \
+            //tools/bazel/tests:sonic_python_wheels_test \
+            //tools/bazel/tests:containercfgd_full_test \
+            //tools/bazel/tests:containercfgd_wheel_test \
+            //tools/bazel/tests:supervisor_python_full_test \
+            //tools/bazel/tests:supervisor_python_wheel_test \
+            //tools/bazel/tests:installed_wheel_fixture_test \
+            //tools/bazel/tests:wheel_contract_test \
+            //src/sonic-config-engine:sonic_cfggen_cli_test \
+            //tools/bazel/tests:manifest_labels_test \
+            //tools/bazel/image/vs/metadata:metadata_test \
+            //tools/bazel/tests:manifest_labels_action_test \
+            //tools/bazel/tests:cfggen_template_test \
+            //tools/bazel/tests:swss_render_test \
+            2>&1 | tee artifacts/config-engine/test.log
+          output=$("$BAZEL" cquery "${wheel_flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --output=files //dockers/docker-orchagent/config:docker_init)
+          test -s "$output"
+          bash -n "$output"
+          cp "$output" artifacts/config-engine/docker-init.sh
+          sha256sum artifacts/config-engine/docker-init.sh > artifacts/config-engine/sha256.txt
+          git diff --exit-code
+
+      - name: Exercise the alternate source installation TAR rules
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          # VS installs these components from wheels. This independent test builds the
+          # six direct-source TARs and checks their metadata, modes and imports.
+          mkdir -p artifacts/source-installation
+          flags=()
+          if [[ -n "$VS_PACKAGE" ]]; then mapfile -t flags < "$VS_PACKAGE/flags.txt"; fi
+          "$BAZEL" test "${flags[@]}" --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --nocache_test_results --test_output=errors \
+            --build_event_json_file="$PWD/artifacts/source-installation/test-events.jsonl" \
+            //tools/bazel/tests:source_installation_test \
+            2>&1 | tee artifacts/source-installation/test.log
+
+      - name: Check DHCP utilities and CLI tests without DEB generation
+        if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: *dhcp_utility_tests
+
+      - name: Check the PDDF wheel against its independent setuptools reference
+        if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          flags=()
+          if [[ -n "$VS_PACKAGE" ]]; then
+            wheel=sonic_platform_pddf_common-1.0-py3-none-any.whl
+            if [[ -f "$VS_PACKAGE/$wheel" ]]; then
+              flags+=("--//platform/pddf/platform-api-pddf-base:test_wheel=//$VS_PACKAGE:$wheel")
+            else
+              echo "PDDF was disabled in VS. Running the standalone source packaging contract."
+            fi
+          fi
+          target=//platform/pddf/platform-api-pddf-base:wheel_contract_test
+          platform=@sonic_build_infra//platforms:x86_64_trixie
+          flags+=("--platforms=$platform" "--host_platform=$platform")
+          audit_flags=()
+          for flag in "${flags[@]}"; do audit_flags+=("--bazel-arg=$flag"); done
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" "${audit_flags[@]}" \
+            --output artifacts/pddf/action-audit.json "$target"
+          "$BAZEL" test "${flags[@]}" --test_output=errors \
+            --build_event_json_file="$PWD/artifacts/pddf/test-events.jsonl" "$target"
+
+      - name: Test SONiC component packages and their upstream suites
+        if: matrix.architecture == 'amd64'
+        env:
+          VS_PACKAGE: ${{ steps.wheel_inputs.outputs.package }}
+        run: |
+          mkdir -p artifacts/owners
+          scapy_tests=(@scapy//:upstream_test @scapy//:wheel_test)
+          if [[ -n "$VS_PACKAGE" ]]; then
+            python3 -B -m tools.bazel.ci.scapy_installed_tests --bazel "$BAZEL" --package "$VS_PACKAGE" \
+              > artifacts/owners/scapy-tests.txt
+            mapfile -t scapy_tests < artifacts/owners/scapy-tests.txt
+          fi
+          "$BAZEL" query 'kind(".*_test rule", @hsflowd//src/json:*)' > artifacts/owners/hsflowd-targets.txt
+          mapfile -t hsflowd_tests < artifacts/owners/hsflowd-targets.txt
+          test "${#hsflowd_tests[@]}" -eq 22
+          targets=(
+            //dockers/docker-platform-monitor/bazel:smartcmd_compatibility_test
+            //tools/bazel/tests:swss_manifest_labels_test
+            //tools/bazel/tests:oci_apt_overlay_test //tools/bazel/tests:oci_image_test
+            //tools/bazel/tests:oci_inventory_test //tools/bazel/tests:oci_native_packages_test
+            //tools/bazel/tests:oci_package_contract_test //tools/bazel/tests:oci_package_payloads_test
+            //tools/bazel/tests:oci_package_receipts_test //tools/bazel/tests:oci_package_state_layer_test
+            @libteam//:consumer_test @sonic_swss//crates/countersyncd:common_rust_test
+            @sonic_swss//bazel:protobuf_runtime_test "${scapy_tests[@]}"
+            "${hsflowd_tests[@]}"
+          )
+          if [[ ${USE_VS_WHEELS:-false} != true ]]; then targets+=(//tools/bazel/tests:swss_package_contract_test); fi
+          # The VS job validates the selected native packages against its exact TARs.
+          if [[ "${USE_VS_WHEELS:-false}" != true ]]; then
+            targets+=(@nnpy//:package_test @hsflowd//:package_test @sflowtool//:package_test @libpsample//:package_test)
+            targets+=(@otelcol_contrib//distributions/otelcol-contrib:source_contract_test
+                      @otelcol_contrib//bazel:components_output_test @otelcol_contrib//distributions/otelcol-contrib:package_test)
+          fi
+          platform=@sonic_build_infra//platforms:x86_64_trixie
+          python3 -B tools/bazel/ci/bazel_commands.py --bazel "$BAZEL" \
+            --bazel-arg="--platforms=$platform" --bazel-arg="--host_platform=$platform" \
+            --output artifacts/owners/action-audit.json "${targets[@]}"
+          "$BAZEL" test "--platforms=$platform" "--host_platform=$platform" --test_output=errors \
+            --build_event_json_file="$PWD/artifacts/owners/test-events.jsonl" "${targets[@]}"
+
+      - name: Verify SWSS native link closure and symbol lookups
+        if: matrix.architecture == 'amd64' && env.USE_VS_WHEELS != 'true'
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          set -euo pipefail
+          "$BAZEL" build //dockers/docker-orchagent:package_policy \
+            @sonic_swss//dist:swss_pkg @sonic_swss//dist:swss_pkg.debug_symbols
+          output() {
+            local files
+            files=$("$BAZEL" cquery "config($1, ${2:-target})" --output=files) || return
+            if [[ -z "$files" || "$files" == *$'\n'* ]]; then
+              printf 'Expected exactly one configured output for %s\n' "$1" >&2
+              return 1
+            fi
+            printf '%s\n' "$files"
+          }
+          runtime="$(output @sonic_swss//dist:swss_pkg)"
+          symbols="$(output @sonic_swss//dist:swss_pkg.debug_symbols)"
+          policy="$(output //dockers/docker-orchagent:package_policy)"
+          anchor="$(output @sonic_swss//fpmsyncd:bgp_eoiu_marker.py null)"
+          execution_root="$(dirname "$(realpath bazel-out)")"
+          source="$(dirname "$(dirname "$(realpath "$execution_root/$anchor")")")"
+          graph="$(mktemp)"
+          trap 'rm -f "$graph"' EXIT
+          "$BAZEL" aquery --include_param_files --output=jsonproto \
+            'mnemonic("CppLink", deps(//dockers/docker-orchagent:rdeps))' > "$graph"
+          python3 -B tools/bazel/ci/swss_native_closure.py --source "$source" \
+            --runtime "$runtime" --symbols "$symbols" --policy "$policy" \
+            --link-graph "$graph" --output artifacts/owners/native-closure.json
+          git diff --exit-code
+      - name: Allocate a clean SWSS package directory
+        id: swss_input
+        if: matrix.architecture == 'amd64' && env.USE_VS_WHEELS == 'true'
+        run: |
+          [[ $VS_SWSS_ARTIFACT_ID =~ ^[1-9][0-9]*$ ]]
+          echo "directory=$(mktemp -d)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        name: Download SWSS package inputs from VS
+        if: steps.swss_input.outcome == 'success'
+        with:
+          artifact-ids: ${{ env.VS_SWSS_ARTIFACT_ID }}
+          merge-multiple: true
+          path: ${{ steps.swss_input.outputs.directory }}
+      - name: Verify SWSS packages and configured native links from VS
+        if: steps.swss_input.outcome == 'success'
+        env:
+          BUNDLE: ${{ steps.swss_input.outputs.directory }}
+        run: |
+          python3 -B -m tools.bazel.ci.vs_component_artifacts test --component swss --directory "$BUNDLE" \
+            --revision "$GITHUB_SHA" --debug "$VS_COMPONENT_DEBUG"
+
+      - name: Retain wheels and required Python test evidence
+        id: packages
+        env:
+          VS_WHEELS: ${{ steps.wheel_inputs.outputs.directory }}
+        run: |
+          inputs=()
+          if [[ -n $VS_WHEELS ]]; then inputs=(--vs-packages "$VS_WHEELS"); fi
+          python3 -B tools/bazel/ci/python_packages.py "${inputs[@]}" \
+            --artifacts artifacts/config-engine \
+            --revision artifacts/archive/revision.json \
+            --architecture "${{ matrix.architecture }}" \
+            --bazel "$BAZEL" \
+            --bazel-arg=--platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --bazel-arg=--host_platform=@sonic_build_infra//platforms:${{ matrix.platform }}
+          PYTHONPATH="$PWD" python3 - <<'PYTHON'
+          from pathlib import Path
+          import json
+          from tools.bazel.ci.public_artifacts import bep_summary
+          for path in sorted(Path("artifacts").glob("*/test-events.jsonl")):
+              with path.open() as events:
+                  summary = bep_summary(events)
+              path.with_name("test-summary.json").write_text(json.dumps(summary, sort_keys=True) + "\n")
+          PYTHON
+          git diff --exit-code
+
+      - name: Upload package test results
+        id: bazel_upload_packages
+        if: always() && steps.packages.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-packages-${{ matrix.architecture }}
+          path: |
+            artifacts/*/test-summary.json
+            artifacts/owners/action-audit.json
+            artifacts/pddf/action-audit.json
+            artifacts/owners/native-closure.json
+            artifacts/config-engine/*.whl
+            artifacts/config-engine/wheels-sha256.txt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Remove downloaded wheel inputs
+        if: always() && steps.wheel_inputs.outcome == 'success'
+        env:
+          SCRATCH: ${{ steps.wheel_inputs.outputs.scratch }}
+        run: rm -rf -- "$SCRATCH"
+
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts
+
+  package_amd64:
+    name: Container package tests (${{ matrix.name }})
+    needs: [checks, vs_container]
+    # Fork PRs and explicit source-only runs retain their standalone package tests.
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.vs_container.result == 'success' || needs.vs_container.result == 'skipped')
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      matrix:
+        include:
+          - name: AMD64
+            architecture: amd64
+            machine: x86_64
+            runner: [self-hosted, linux, bazel-x64]
+            platform: x86_64_trixie
+            disk_cache: swss-layer-amd64
+    container: *package_test_container
+    env:
+      VS_SWSS_ARTIFACT_ID: ${{ needs.vs_container.outputs.swss_artifact_id }}
+      VS_COMPONENT_DEBUG: ${{ needs.vs_container.outputs.debug_layer }}
+      BAZEL: *package_test_bazel
+      USE_VS_WHEELS: ${{ needs.vs_container.result == 'success' }}
+      VS_WHEELS_ARTIFACT_ID: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+    defaults: *package_test_defaults
+    steps: *package_test_steps
+
+  native_sysmgr_amd64:
+    needs: vs_container
+    if: needs.vs_container.outputs.sysmgr_artifact_id != ''
+    uses: ./.github/workflows/bazel-sysmgr.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.sysmgr_artifact_id }}
+      vs_debug: ${{ needs.vs_container.outputs.debug_layer }}
+      run_source_tests: ${{ contains(fromJSON(needs.vs_container.outputs.source_workflows), 'bazel-sysmgr.yml') }}
+
+  kernel_packages_amd64:
+    needs: vs_container
+    uses: ./.github/workflows/bazel-kernel-bundle.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.kernel_artifact_id }}
+
+  frr_python_amd64:
+    needs: vs_container
+    uses: ./.github/workflows/bazel-frr-python.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+
+  yang_models:
+    needs: vs_container
+    if: needs.vs_container.outputs.python_packages_artifact_id != ''
+    uses: ./.github/workflows/bazel-yang-models.yml
+    with:
+      vs_artifact_id: ${{ needs.vs_container.outputs.python_packages_artifact_id }}
+
+  checks:
+    if: github.event_name != 'workflow_dispatch' || inputs.source_image == 'none'
+    name: OCI regression checks (AMD64)
+    runs-on: [self-hosted, Linux, X64, ubuntu-x64]
+    outputs:
+      p4_sources_artifact_id: ${{ steps.p4_sources_upload.outputs.artifact-id }}
+      source_workflows: ${{ steps.source_workflows.outputs.workflows }}
+    # No SWSS/Syncd package compilation: those checks reuse the full Make build.
+    timeout-minutes: 60
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Reap any Bazel processes used for dependency resolution.
+      options: --init
+    env:
+      # Draft catalog for root-module resolution; the full Make VS job is separate.
+      BAZEL: ${{ github.workspace }}/tools/bazel/ci/libteam_draft_bazel.sh
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl \
+            gdb git j2cli jq libarchive-tools libtool libxml2 make pigz pkg-config python3 python3-jinja2 python3-pip python3-yaml redis-server squashfs-tools tar unzip zstd
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Check generated dependency state
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test ! -e MODULE.bazel.lock
+          test -z "$(git ls-files -- MODULE.bazel.lock)"
+          git check-ignore MODULE.bazel.lock
+
+      - name: Select component source suites for the tested changes
+        id: source_workflows
+        run: |
+          workflows=$(python3 -B -m tools.bazel.ci.source_workflows)
+          echo "workflows=$workflows" >> "$GITHUB_OUTPUT"
+
+      - name: Check hosted storage
+        run: df -h "$GITHUB_WORKSPACE" "$HOME"
+
+      - name: Test kernel CAS transport with the Trixie build slave's gRPC versions
+        run: |
+          client="$RUNNER_TEMP/kernel-transport"
+          python3 -m pip install --target "$client" --only-binary=:all: grpcio==1.71.0 grpcio-tools==1.71.0 protobuf==5.29.6
+          PYTHONPATH="$client" python3 -B tools/bazel/tests/kernel_cache_transport_test.py
+
+      - name: Prepare pinned source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          # This job resolves/downloads dependencies but executes no Bazel builds.
+          disk-cache: false
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only
+
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
+
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Check Make handoff and archive validation
+        env:
+          SONIC_REQUIRE_HOST_BASE_TEST: "1"
+        run: |
+          test "$(bazel --version)" = "bazel $(cat .bazelversion)"
+          PYTHONPATH="$PWD" python3 -B -m unittest discover -s tools/bazel/ci -p 'p4rt_*_test.py'
+          python3 -B -m unittest discover -s tools/bazel/tests -p '*_test.py'
+          python3 -B -m unittest discover -s tools/ci/tests -p '*_test.py'
+          python3 -B -m unittest discover -s tools/ci/runner -p '*_test.py'
+          python3 -B tools/bazel/ci/configure_runner_cache_test.py
+          PYTHONPATH=tools/bazel/registry python3 -B -m unittest discover -s tools/bazel/equivalence_checker -p '*_test.py'
+          PYTHONPATH=tools/bazel/registry python3 -B tools/bazel/registry/registry_lib_test.py
+
+      - name: Retain the verified GitLab source downloads
+        id: repository_inputs
+        run: |
+          mkdir -p artifacts/repository-inputs
+          test "$("$BAZEL" --version)" = "bazel $(cat .bazelversion)"
+          "$BAZEL" fetch --repo=@@ape+ --repo=@@download_utils+ \
+            --repo=@@rules_coreutils+ --repo=@@rules_gzip+ --repo=@@toolchain_utils+
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          from tools.bazel.ci import resolution
+          import os
+          resolution.collect(Path.cwd(), Path("artifacts/repository-inputs"), bazel=[os.environ["BAZEL"]])
+          PYCODE
+          python3 -B tools/bazel/gzip/source_archive.py \
+            --repository-cache "$("$BAZEL" info repository_cache)" \
+            --module-graph artifacts/repository-inputs/module-graph.json \
+            --output artifacts/repository-inputs \
+            > artifacts/repository-inputs/receipt.json
+
+      - name: Check P4RT dependency pins against the resolved root graph
+        run: python3 -B tools/bazel/ci/p4rt_acceptance.py --module-graph artifacts/repository-inputs/module-graph.json
+
+      - name: Prepare repository graph failure receipt
+        id: repository_graph_failure
+        if: always() && steps.repository_inputs.outcome == 'failure'
+        run: |
+          python3 - <<'PYDIAG'
+          import os
+          from pathlib import Path
+          from tools.bazel.ci.public_artifacts import load_json, receipt_summary
+          failure = Path('artifacts/repository-inputs/module-graph-failure.json')
+          if failure.is_symlink() or (failure.exists() and not failure.is_file()):
+              raise ValueError('Unsafe graph failure receipt')
+          if failure.exists():
+              if failure.stat().st_size > 4096:
+                  raise ValueError('Oversized graph failure receipt')
+              receipt_summary(load_json(failure.read_bytes()), 'resolution')
+              with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+                  output.write('present=true\n')
+          PYDIAG
+
+      - name: Retain repository graph failure receipt
+        id: runner_cleanup_upload_0
+        if: always() && steps.repository_graph_failure.outcome == 'success' && steps.repository_graph_failure.outputs.present == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repository-graph-failure-amd64
+          path: artifacts/repository-inputs/module-graph-failure.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+      - name: Retain the native Redis test helper for installed-image checks
+        run: |
+          mkdir -p artifacts/repository-inputs/test-helpers
+          cp /usr/bin/redis-server artifacts/repository-inputs/test-helpers/redis-server
+          cp /usr/share/doc/redis-server/copyright artifacts/repository-inputs/test-helpers/redis-copyright
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          root = pathlib.Path("artifacts/repository-inputs/test-helpers")
+          binary = root / "redis-server"
+          receipt = {
+              "_generated": {"notice": "AUTO-GENERATED. DO NOT EDIT MANUALLY.",
+                             "generator": ".github/workflows/bazel-oci.yml"},
+              "purpose": "Isolated test helper; not installed in the Syncd image",
+              "architecture": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip(),
+              "package_version": subprocess.check_output(["dpkg-query", "-W", "-f=${Version}", "redis-server"], text=True),
+              "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+              "version": subprocess.check_output([str(binary.resolve()), "--version"], text=True).strip(),
+          }
+          assert receipt["architecture"] == "amd64"
+          (root / "redis.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          PY
+
+      - name: Upload the source downloads for the VS job
+        id: runner_cleanup_upload_1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bazel-repository-inputs
+          path: |
+            artifacts/repository-inputs/ape-1.0.1/src.tar.gz
+            artifacts/repository-inputs/download_utils-1.0.1/src.tar.gz
+            artifacts/repository-inputs/rules_coreutils-1.0.1/src.tar.gz
+            artifacts/repository-inputs/rules_gzip-1.0.0/src.tar.gz
+            artifacts/repository-inputs/toolchain_utils-1.0.2/src.tar.gz
+            artifacts/repository-inputs/receipt.json
+            artifacts/repository-inputs/test-helpers/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Fetch pinned P4 source inputs for the native worker
+        id: p4_sources_fetch
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+          (github.event_name == 'pull_request' &&
+           github.event.pull_request.head.repo.full_name == github.repository) ||
+          (github.event_name == 'workflow_dispatch' && !inputs.skip_vs)
+        run: |
+          python3 -B tools/ci/p4_source_inputs.py --fetch \
+            --manifest src/p4lang/source-inputs.json \
+            --directory artifacts/p4-source-inputs/sources \
+            --receipt artifacts/p4-source-inputs/receipt.json
+          echo 'P4 source-byte pins verified. The unchanged upstream P4C descriptor has a known checksum discrepancy; receipt.json records its declared and published hashes separately.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve P4 source inputs and verification receipt
+        id: p4_sources_upload
+        if: always() && (steps.p4_sources_fetch.outcome == 'success' || steps.p4_sources_fetch.outcome == 'failure')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: p4-source-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/p4-source-inputs/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Report validation scope
+        run: |
+          echo 'Hosted checks cover regressions and dependency resolution; the VS installer uses host-driven Make on the dedicated VS agent.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Record post-job cleanup eligibility
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0", "runner_cleanup_upload_1", "p4_sources_upload"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts
+
+  vs_container:
+    name: VS installer in SONiC slave (AMD64)
+    needs: [checks]
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      containers: ${{ steps.bundles.outputs.matrix }}
+      source_workflows: ${{ needs.checks.outputs.source_workflows }}
+      eventd_artifact_id: ${{ steps.component_eventd.outputs.artifact-id }}
+      supervisor_rust_artifact_id: ${{ steps.component_supervisor_rust.outputs.artifact-id }}
+      frr_native_artifact_id: ${{ steps.component_frr_native.outputs.artifact-id }}
+      libteam_artifact_id: ${{ steps.component_libteam.outputs.artifact-id }}
+      sysmgr_artifact_id: ${{ steps.component_sysmgr.outputs.artifact-id }}
+      swss_artifact_id: ${{ steps.component_swss.outputs.artifact-id }}
+      hsflowd_artifact_id: ${{ steps.component_hsflowd.outputs.artifact-id }}
+      sflowtool_artifact_id: ${{ steps.component_sflowtool.outputs.artifact-id }}
+      libpsample_artifact_id: ${{ steps.component_libpsample.outputs.artifact-id }}
+      nnpy_artifact_id: ${{ steps.component_nnpy.outputs.artifact-id }}
+      otel_artifact_id: ${{ steps.component_otel.outputs.artifact-id }}
+      fib_artifact_id: ${{ steps.component_fib.outputs.artifact-id }}
+      component_matrix: ${{ steps.component_matrix.outputs.matrix }}
+      artifact_prefix: ${{ steps.bundles.outputs.prefix }}
+      python_packages_artifact_id: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
+      kernel_artifact_id: ${{ steps.vs_kernel_upload.outputs.artifact-id }}
+      installer_artifact_id: ${{ steps.vs_installer_upload.outputs.artifact-id }}
+      debug_layer: ${{ steps.bundles.outputs.debug_layer }}
+    if: >-
+      ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && inputs.source_image == 'none' && !inputs.skip_vs))
+    runs-on: [self-hosted, linux, bazel-x64, vs]
+    timeout-minutes: 720
+    defaults:
+      run:
+        shell: bash
+        working-directory: vs-${{ github.run_id }}-${{ github.run_attempt }}
+    env:
+      SONIC_CI_CONTAINER_LABEL: io.sonic-buildimage.ci-job=${{ github.repository }}:${{ github.run_id }}:${{ github.run_attempt }}:vs
+      BAZEL: bazel
+      # Use the explicitly selected gRPC service, not the legacy HTTPS override.
+      BAZEL_REMOTE_AUTH: ""
+      SONIC_BAZEL_REMOTE_CACHE: grpc://172.16.0.4:9092
+      SONIC_BAZEL_REMOTE_UPLOAD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'y' || 'n' }}
+      SONIC_CONFIG_USE_DOCKER_CACHE: "y"
+      SONIC_DPKG_CACHE_METHOD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'rwcache' || 'rcache' }}
+      SONIC_DPKG_CACHE_SOURCE: /nfs/dpkg_cache/vs
+      SONIC_BUILD_JOBS: "1"
+      SONIC_ENABLE_DEBUG_LAYER: ${{ inputs.enable_debug_layer && 'y' || 'n' }}
+      ENABLE_DOCKER_BASE_PULL: "y"
+      REGISTRY_SERVER: sonicdev-microsoft.azurecr.io
+      ACR_REGISTRY_NAME: sonicdev
+      AZURE_SUBSCRIPTION_ID: ${{ vars.ACR_SUBSCRIPTION_ID }}
+      REGISTRY_PORT: "443"
+      INCLUDE_FIPS: "y"
+      SONIC_VERSION_CONTROL_COMPONENTS: py2,py3,web,git,docker
+      MIRROR_SNAPSHOT: "y"
+      SONIC_BUILD_SLAVE_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      SONIC_BUILD_VARS: P4LANG_SOURCE_BASE_URL=file:/sonic/artifacts/vs/p4-source-inputs/sources
+      PREFER_DEBIAN_REPO: "y"
+      SONIC_VS_REUSE_BAZEL_PRODUCERS: "1"
+      SONIC_VS_VALIDATION_BUNDLES: "1"
+      # Make schedules one recipe; Bazel schedules all selected container targets.
+      # Let Bazel choose its job count and CPU/memory scheduling budgets.
+      # Debug exports need the space otherwise used by a duplicate local action
+      # cache. Keep the output base and shared remote/repository caches available.
+      BAZEL_CONTAINER_ARGS: >-
+        ${{ inputs.enable_debug_layer && '--disk_cache=' || '' }}
+        --repo_contents_cache=/bazel_repo_contents_cache
+        --remote_local_fallback
+        --incompatible_remote_local_fallback_for_remote_cache
+        --experimental_remote_downloader=grpc://172.16.0.4:9092
+        --experimental_remote_downloader_local_fallback
+        --distdir=/bazel_cache/distdir/ape-1.0.1
+        --distdir=/bazel_cache/distdir/download_utils-1.0.1
+        --distdir=/bazel_cache/distdir/rules_coreutils-1.0.1
+        --distdir=/bazel_cache/distdir/rules_gzip-1.0.0
+        --distdir=/bazel_cache/distdir/toolchain_utils-1.0.2
+    steps:
+      - name: Checkout repository and pinned submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Download verified source archives
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bazel-repository-inputs
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/repository-inputs
+
+      - name: Initialize private Docker configuration
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-config-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$DOCKER_CONFIG"
+          printf 'DOCKER_CONFIG=%s\n' "$DOCKER_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+
+      - name: Validate shared NFS package cache
+        run: bash tools/ci/runner/nfs_package_cache.sh
+
+      - name: Remove stopped VS containers from completed attempts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+        run: |
+          python3 -B -m tools.bazel.ci.cleanup_stale_vs_containers \
+            --runner-workspace "$VS_RUNNER_WORKSPACE"
+
+      - name: Reclaim unused images and build cache
+        run: |
+          set -euo pipefail
+          docker system df
+          docker image prune --all --force
+          docker builder prune --all --force
+          docker system df
+
+      - name: Reclaim local build caches
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_MAX_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MAX_GIB || '70' }}
+          CACHE_MAX_AGE_DAYS: ${{ vars.VS_REPO_CONTENTS_CACHE_MAX_AGE_DAYS || '14' }}
+          CACHE_MIN_FREE_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MIN_FREE_GIB || '220' }}
+        run: |
+          python3 -B -m tools.bazel.ci.cleanup_runner_bazel_cache \
+            --runner-workspace "$VS_RUNNER_WORKSPACE" --remove-package-cache \
+            --retain-repo-contents --repo-contents-max-gib "$CACHE_MAX_GIB" \
+            --repo-contents-max-age-days "$CACHE_MAX_AGE_DAYS" \
+            --repo-contents-min-free-gib "$CACHE_MIN_FREE_GIB"
+
+      - name: Check host-agent build prerequisites
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_MIN_FREE_GIB: ${{ vars.VS_REPO_CONTENTS_CACHE_MIN_FREE_GIB || '220' }}
+        run: |
+          python3 -B -m tools.bazel.ci.retain_repo_contents_cache \
+            --runner-workspace "$VS_RUNNER_WORKSPACE" \
+            --min-free-gib "$CACHE_MIN_FREE_GIB" --check-free-space-only
+          python3 -B tools/ci/runner/preflight.py --host-agent --workspace "$PWD" --build-target sonic-vs.bin
+
+      - name: Require the P4 source artifact from this producer job
+        env:
+          P4_SOURCES_ARTIFACT_ID: ${{ needs.checks.outputs.p4_sources_artifact_id }}
+        run: '[[ "$P4_SOURCES_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]'
+
+      - name: Download the pinned P4 source inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.checks.outputs.p4_sources_artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/p4-source-inputs
+
+      - name: Verify P4 source bytes before native Make
+        run: |
+          python3 -B tools/ci/p4_source_inputs.py \
+            --manifest src/p4lang/source-inputs.json \
+            --directory artifacts/vs/p4-source-inputs/sources \
+            --receipt artifacts/vs/p4-source-inputs-verified.json
+
+      - name: Configure persistent caches
+        env:
+          SONIC_BAZEL_CACHE_SOURCE: ${{ runner.workspace }}/vs-cache/bazel
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$SONIC_BAZEL_CACHE_SOURCE"
+          test -w "$SONIC_BAZEL_CACHE_SOURCE"
+          for cache in repository_cache disk_cache; do
+            directory="$SONIC_BAZEL_CACHE_SOURCE/$cache"
+            if test -d "$directory"; then
+              blocked=$(find "$directory" -type d ! -writable -print -quit)
+              if test -n "$blocked"; then
+                printf 'Unwritable cache directory: %s\n' "$blocked" >&2
+                exit 1
+              fi
+            fi
+          done
+          python3 -B tools/bazel/gzip/source_archive.py \
+            --archives-dir artifacts/vs/repository-inputs \
+            --output "$SONIC_BAZEL_CACHE_SOURCE/distdir" > artifacts/vs/source-download-receipt.json
+          printf 'SONIC_BAZEL_CACHE_SOURCE=%s\nSONIC_DPKG_CACHE_SOURCE=%s\n' \
+            "$SONIC_BAZEL_CACHE_SOURCE" "$SONIC_DPKG_CACHE_SOURCE" >> "$GITHUB_ENV"
+
+      - name: Prepare runner-local Bazel repository contents cache
+        env:
+          VS_RUNNER_WORKSPACE: ${{ runner.workspace }}
+          CACHE_SCOPE: ${{ github.event_name == 'push' && 'master' || github.event_name == 'pull_request' && 'review' || 'dispatch' }}
+        run: |
+          set -euo pipefail
+          workspace=$(realpath -e -- "$VS_RUNNER_WORKSPACE")
+          cache="$workspace/vs-cache/repo-contents/$CACHE_SCOPE"
+          if [[ $(realpath -m -- "$cache") != "$cache" ]]; then
+            echo 'Refusing redirected repository cache below the runner workspace' >&2
+            exit 1
+          fi
+          install -d -m 0700 -- "$cache"
+          test -w "$cache"
+          printf 'SONIC_BAZEL_REPO_CONTENTS_SOURCE=%s\n' "$cache" >> "$GITHUB_ENV"
+
+      - name: Authenticate to the slave image registry
+        env:
+          AZURE_CONFIG_DIR: ${{ runner.temp }}/vs-azure-cli
+        run: bash tools/ci/runner/azure_acr_login.sh "${ACR_REGISTRY_NAME:?}"
+
+      - name: Prepare the host-driven SONiC slave
+        run: |
+          set -euo pipefail
+          make init 2>&1 | tee artifacts/vs/init.log
+          make configure PLATFORM=vs PLATFORM_ARCH=amd64 \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL" \
+            2>&1 | tee artifacts/vs/configure.log
+          for build_env in bookworm trixie; do
+            make -f Makefile.work BLDENV="$build_env" docker-start \
+              SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL" \
+              2>&1 | tee "artifacts/vs/docker-start-$build_env.log"
+          done
+          make -f Makefile.work BLDENV=trixie sonic-slave-run \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL" \
+            SONIC_RUN_CMDS='python3 -B tools/bazel/ci/check_kernel_sandbox.py' \
+            2>&1 | tee artifacts/vs/kernel-sandbox.log
+
+      - name: Set the VS builder action memory budget
+        run: |
+          memory_option=$(python3 -B tools/bazel/ci/resources.py) || exit
+          printf 'BAZEL_CONTAINER_ARGS=%s %s\n' "${BAZEL_CONTAINER_ARGS:-}" "$memory_option" >> "$GITHUB_ENV"
+
+      - name: Prepare private VS host-base cache
+        id: host_base_dir
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          snapshot="${GITHUB_WORKSPACE:?}/.sonic-vs-host-base-cache"
+          rm -rf --one-file-system -- "$snapshot"
+          install -d -m 0700 -- "$snapshot" artifacts/vs/host-base-transfer/configured
+
+      - name: Find a retained host base from this PR or master
+        id: host_base_source
+        if: steps.host_base_dir.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -B tools/bazel/ci/vs_host_base_snapshot.py
+
+      - name: Download the previous VS host-base snapshot
+        id: host_base_download
+        if: steps.host_base_source.outputs.read_artifact_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.host_base_source.outputs.read_run_id }}
+          artifact-ids: ${{ steps.host_base_source.outputs.read_artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/download
+
+      - name: Restore the VS host-base cache for Make
+        if: steps.host_base_download.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py restore \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer/download
+
+      - name: Find the configured VS host from master
+        id: configured_host_source
+        if: steps.host_base_dir.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -B tools/bazel/ci/vs_host_base_snapshot.py --configured-host
+
+      - name: Download the configured VS host
+        id: configured_host_download
+        if: steps.configured_host_source.outputs.read_artifact_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.configured_host_source.outputs.read_run_id }}
+          artifact-ids: ${{ steps.configured_host_source.outputs.read_artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/configured/download
+
+      - name: Restore the configured VS host cache for Make
+        if: steps.configured_host_download.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py restore \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer/configured/download
+
+      - name: Find the VS kernel index from a master push
+        id: kernel_index_source
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf -- artifacts/vs/kernel-cache-download
+          python3 -B -m tools.bazel.ci.vs_kernel_cache_snapshot
+
+      - name: Download the trusted VS kernel index
+        id: kernel_index_download
+        if: steps.kernel_index_source.outputs.artifact_id != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.kernel_index_source.outputs.run_id }}
+          artifact-ids: ${{ steps.kernel_index_source.outputs.artifact_id }}
+          merge-multiple: true
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-cache-download
+
+      - name: Build sonic-vs.bin through the host Make wrapper
+        id: native_build
+        env:
+          # The labeled cleanup step removes the stopped builder after artifact publication.
+          SONIC_VS_DEFER_BUILDER_CLEANUP: "y"
+          DOCKER_LOAD_ON_BOOT: "y"
+          SONIC_VS_IMAGE_TIMINGS: "1"
+          SONIC_VS_RETRY_GO_FETCH: "1"
+          SONIC_VS_KERNEL_REMOTE_REUSE: "1"
+          KERNEL_INDEX_DOWNLOAD: ${{ steps.kernel_index_download.outcome }}
+          HOST_BASE_DIR: ${{ steps.host_base_dir.outcome }}
+          SONIC_VS_RFS_HANDOFF: "1"
+          SONIC_VS_FAST_ASSEMBLY: "1"
+          TERM: dumb
+        run: |
+          set -euo pipefail
+          # Accept only the index downloaded for this attempt, even if the checkout contains one.
+          rm -rf -- artifacts/vs/kernel-cache-input artifacts/vs/kernel-cache-output
+          index=artifacts/vs/kernel-cache-download/index.json
+          if [[ "${KERNEL_INDEX_DOWNLOAD:-}" == success && -f "$index" && ! -L "$index" ]]; then
+            install -D -m 0644 -- "$index" artifacts/vs/kernel-cache-input/index.json
+          fi
+          if [[ ${HOST_BASE_DIR:-} == success ]]; then
+            export SONIC_HOSTBASE_CACHE_SOURCE="$GITHUB_WORKSPACE/.sonic-vs-host-base-cache"
+            export SONIC_VS_CONFIGURED_HOST_CACHE=y
+          fi
+          mkdir -p artifacts/vs/image-timings
+          bash tools/bazel/ci/build_vs.sh 2>&1 | tee artifacts/vs/build.log
+          test -s target/sonic-vs.bin
+          test -s target/sonic-vs.bin.dockers
+          test "$(git rev-parse HEAD)" = "$(cat artifacts/vs/build-revision.txt)"
+
+      - name: Retain the validated VS kernel index on master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.native_build.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-kernel-cache-index-amd64-v1
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-cache-output/index.json
+          retention-days: 14
+          overwrite: true
+          if-no-files-found: ignore
+
+      - name: Package the newly built VS host base
+        id: host_base_publish
+        if: steps.host_base_source.outputs.write_name != ''
+        run: |
+          set -euo pipefail
+          receipt=artifacts/vs/host-base-cache.json
+          [[ -f "$receipt" ]] || exit 0
+          key=$(jq -er '.identity_sha256 | select(test("^[0-9a-f]{64}$"))' "$receipt")
+          if jq -e '.cache_hit == true' "$receipt" >/dev/null; then
+            echo "Reused VS host base $key" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          jq -e '.cache_hit == false' "$receipt" >/dev/null
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py pack \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" "$key" artifacts/vs/host-base-transfer/publish
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Retain the VS host base for subsequent commits
+        if: steps.host_base_publish.outputs.ready == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.host_base_source.outputs.write_name }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/publish
+          include-hidden-files: true
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Prepare the configured VS host for subsequent builds
+        id: configured_host_publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.native_build.outcome == 'success' && steps.host_base_dir.outcome == 'success'
+        run: |
+          set -euo pipefail
+          receipt=artifacts/vs/configured-host-cache.json
+          [[ -f "$receipt" ]] || exit 0
+          jq -e '.cache_hit == false' "$receipt" > /dev/null || exit 0
+          key=$(jq -er '.identity_sha256 | select(test("^[0-9a-f]{64}$"))' "$receipt")
+          python3 -B tools/bazel/ci/vs_host_base_transfer.py pack \
+            "$GITHUB_WORKSPACE/.sonic-vs-host-base-cache" "$key" artifacts/vs/host-base-transfer/configured/publish
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Retain the configured VS host from master
+        if: steps.configured_host_publish.outputs.ready == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-configured-host-v1-master
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/host-base-transfer/configured/publish
+          include-hidden-files: true
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Remove this job's host-base cache snapshot
+        if: always() && steps.host_base_dir.outcome == 'success'
+        run: rm -rf --one-file-system -- "${GITHUB_WORKSPACE:?}/.sonic-vs-host-base-cache" artifacts/vs/host-base-transfer
+
+      - name: Summarize VS Bazel build timings
+        if: always() && steps.native_build.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          timings=artifacts/vs/image-timings
+          if [[ -d "$timings" ]]; then
+            python3 -B tools/bazel/ci/summarize_vs_image_timings.py "$timings" --github-actions
+            cat "$timings/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Summarize sanitized VS BEP events
+        if: always() && steps.native_build.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          python3 -B tools/bazel/ci/summarize_bep.py artifacts/vs/image-timings
+
+      - name: Preserve VS Bazel profiles, sanitized BEP JSON, timings and Make logs
+        id: vs_image_timings_upload
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-bazel-timings-amd64
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/image-timings/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Build archive validation artifacts from the installer image selection
+        run: |
+          make -f Makefile.work BLDENV=trixie sonic-slave-run \
+            BUILD_WITH_BAZEL_WHEN_AVAILABLE=y INCLUDE_VS_DASH_SAI=y INCLUDE_FIPS=y ENABLE_ASAN=n ENABLE_SYNCD_RPC=n \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL -e BAZEL -e BAZEL_CONTAINER_ARGS" \
+            SONIC_RUN_CMDS='python3 -B tools/bazel/ci/vs_validation_bundles.py complete --directory artifacts/vs/containers'
+
+      - name: Record checksums of installer deliverables
+        run: |
+          set -euo pipefail
+          archives=(target/docker-orchagent.gz target/docker-syncd-vs.gz)
+          if [[ $SONIC_ENABLE_DEBUG_LAYER == y ]]; then
+            archives+=(target/docker-orchagent-dbg.gz target/docker-syncd-vs-dbg.gz)
+          fi
+          sha256sum target/sonic-vs.bin target/sonic-vs.bin.dockers "${archives[@]}" > artifacts/vs/outputs.sha256
+
+      - name: Bind validation bundles to the VS build
+        id: bundles
+        run: |
+          set -euo pipefail
+          matrix=$(python3 -B tools/bazel/ci/vs_validation_bundles.py matrix \
+            --directory artifacts/vs/containers --debug-layer "$SONIC_ENABLE_DEBUG_LAYER")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "debug_layer=$SONIC_ENABLE_DEBUG_LAYER" >> "$GITHUB_OUTPUT"
+          echo "components=$(jq -c .components artifacts/vs/containers/selection.json)" >> "$GITHUB_OUTPUT"
+          echo "prefix=vs-container-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      - name: Collect the kernel handoff used by VS
+        run: |
+          make -f Makefile.work BLDENV=trixie sonic-slave-run \
+            SONIC_BUILDER_EXTRA_CMDLINE="--label $SONIC_CI_CONTAINER_LABEL" \
+            SONIC_RUN_CMDS='python3 -B tools/bazel/ci/kernel_artifacts.py --vs-handoff --output artifacts/vs/kernel-amd64'
+
+      - name: Publish kernel packages for validation
+        id: vs_kernel_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-kernel-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/kernel-amd64/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Publish Python packages for validation
+        id: vs_python_packages_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-python-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/python-packages/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Require immutable artifact IDs for the package checks
+        env:
+          KERNEL_ID: ${{ steps.vs_kernel_upload.outputs.artifact-id }}
+          PYTHON_ID: ${{ steps.vs_python_packages_upload.outputs.artifact-id }}
+        run: |
+          [[ $KERNEL_ID =~ ^[1-9][0-9]*$ && $PYTHON_ID =~ ^[1-9][0-9]*$ ]]
+
+      - name: Publish VS component eventd
+        id: component_eventd
+        if: contains(fromJSON(steps.bundles.outputs.components), 'eventd')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-eventd-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/eventd/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component supervisor_rust
+        id: component_supervisor_rust
+        if: contains(fromJSON(steps.bundles.outputs.components), 'supervisor_rust')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-supervisor_rust-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/supervisor_rust/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component frr_native
+        id: component_frr_native
+        if: contains(fromJSON(steps.bundles.outputs.components), 'frr_native')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-frr_native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/frr_native/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component libteam
+        id: component_libteam
+        if: contains(fromJSON(steps.bundles.outputs.components), 'libteam')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-libteam-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/libteam/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component sysmgr
+        id: component_sysmgr
+        if: contains(fromJSON(steps.bundles.outputs.components), 'sysmgr')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-sysmgr-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/sysmgr/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component swss
+        id: component_swss
+        if: contains(fromJSON(steps.bundles.outputs.components), 'swss')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-swss-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/swss/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component hsflowd
+        id: component_hsflowd
+        if: contains(fromJSON(steps.bundles.outputs.components), 'hsflowd')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-hsflowd-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/hsflowd/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component sflowtool
+        id: component_sflowtool
+        if: contains(fromJSON(steps.bundles.outputs.components), 'sflowtool')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-sflowtool-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/sflowtool/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component libpsample
+        id: component_libpsample
+        if: contains(fromJSON(steps.bundles.outputs.components), 'libpsample')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-libpsample-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/libpsample/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component nnpy
+        id: component_nnpy
+        if: contains(fromJSON(steps.bundles.outputs.components), 'nnpy')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-nnpy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/nnpy/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component otel
+        id: component_otel
+        if: contains(fromJSON(steps.bundles.outputs.components), 'otel')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-otel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/otel/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Publish VS component fib
+        id: component_fib
+        if: contains(fromJSON(steps.bundles.outputs.components), 'fib')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vs-component-fib-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/components/fib/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 1
+
+      - name: Select component validators for the published artifacts
+        id: component_matrix
+        env:
+          UPLOAD_STEPS: ${{ toJSON(steps) }}
+        run: |
+          matrix=$(python3 -B -m tools.bazel.ci.vs_component_artifacts matrix --directory artifacts/vs/containers/components)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the installer and matching container archives
+        id: vs_installer_upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-slave-amd64
+          path: |
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/sonic-vs.bin
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/sonic-vs.bin.dockers
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/docker-orchagent.gz
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/docker-orchagent-dbg.gz
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/docker-syncd-vs.gz
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/target/docker-syncd-vs-dbg.gz
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/outputs.sha256
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/selection.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Preserve build receipts
+        id: vs_receipts_upload
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-vs-slave-evidence-amd64
+          path: |
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/*.json
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/*.txt
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/*.sha256
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/syncd-p4-images/validation.json
+            vs-${{ github.run_id }}-${{ github.run_attempt }}/MODULE.bazel.lock
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish docker-base-trixie for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-base-trixie')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-base-trixie
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-base-trixie/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-config-engine-trixie for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-config-engine-trixie')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-config-engine-trixie
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-config-engine-trixie/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-dash-engine for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-dash-engine')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-dash-engine
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-dash-engine/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-dash-ha for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-dash-ha')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-dash-ha
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-dash-ha/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-database for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-database')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-database
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-database/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-dhcp-relay for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-dhcp-relay')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-dhcp-relay
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-dhcp-relay/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-eventd for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-eventd')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-eventd
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-eventd/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-fpm-frr for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-fpm-frr')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-fpm-frr
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-fpm-frr/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-gbsyncd-vs for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-gbsyncd-vs')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-gbsyncd-vs
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-gbsyncd-vs/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-lldp for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-lldp')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-lldp
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-lldp/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-macsec for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-macsec')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-macsec
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-macsec/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-mux for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-mux')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-mux
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-mux/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-nat for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-nat')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-nat
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-nat/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-gnmi-sidecar for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-gnmi-sidecar')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-gnmi-sidecar
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-gnmi-sidecar/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-restapi-sidecar for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-restapi-sidecar')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-restapi-sidecar
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-restapi-sidecar/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-gnmi-watchdog for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-gnmi-watchdog')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-gnmi-watchdog
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-gnmi-watchdog/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-bmp-watchdog for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-bmp-watchdog')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-bmp-watchdog
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-bmp-watchdog/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-orchagent for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-orchagent')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-orchagent
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-orchagent/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-platform-monitor for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-platform-monitor')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-platform-monitor
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-platform-monitor/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-router-advertiser for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-router-advertiser')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-router-advertiser
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-router-advertiser/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sflow for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sflow')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sflow
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sflow/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-snmp for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-snmp')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-snmp
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-snmp/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sonic-bmp for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sonic-bmp')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sonic-bmp
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sonic-bmp/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sonic-gnmi for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sonic-gnmi')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sonic-gnmi
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sonic-gnmi/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sonic-mgmt-framework for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sonic-mgmt-framework')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sonic-mgmt-framework
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sonic-mgmt-framework/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sonic-otel for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sonic-otel')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sonic-otel
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sonic-otel/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sonic-p4rt for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sonic-p4rt')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sonic-p4rt
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sonic-p4rt/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-swss-layer-trixie for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-swss-layer-trixie')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-swss-layer-trixie
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-swss-layer-trixie/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-syncd-vs for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-syncd-vs')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-syncd-vs
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-syncd-vs/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-sysmgr for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-sysmgr')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-sysmgr
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-sysmgr/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Publish docker-teamd for validation
+        if: contains(fromJSON(steps.bundles.outputs.matrix).include.*.image, 'docker-teamd')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.bundles.outputs.prefix }}-docker-teamd
+          path: vs-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/vs/containers/docker-teamd/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+      - name: Remove only this job's build containers
+        id: vs_container_cleanup
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          containers=$(docker ps --all --quiet --filter "label=$SONIC_CI_CONTAINER_LABEL")
+          while IFS= read -r container; do
+            test -n "$container" || continue
+            if ! docker rm --force "$container"; then
+              remaining=$(docker ps --all --quiet \
+                --filter "label=$SONIC_CI_CONTAINER_LABEL" --filter "id=$container")
+              if test -n "$remaining"; then
+                printf 'Unable to remove job container: %s\n' "$container" >&2
+                exit 1
+              fi
+              printf 'Job container already removed: %s\n' "$container"
+            fi
+          done <<< "$containers"
+
+      - name: Log out of the slave image registry
+        if: always()
+        working-directory: ${{ runner.temp }}
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/docker-config-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+        run: |
+          set -euo pipefail
+          status=0
+          docker logout "$REGISTRY_SERVER:$REGISTRY_PORT" || status=$?
+          rm -f -- "${DOCKER_CONFIG:?}/config.json"
+          exit "$status"
+
+      - name: Remove only this run's checkout
+        if: >-
+          always() && steps.vs_container_cleanup.outcome == 'success' &&
+          steps.vs_image_timings_upload.outcome == 'success' &&
+          steps.vs_receipts_upload.outcome == 'success' &&
+          !failure() &&
+          (steps.vs_installer_upload.outcome == 'success' ||
+           steps.vs_installer_upload.outcome == 'skipped')
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          checkout="$GITHUB_WORKSPACE/vs-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if test -L "$checkout"; then
+            printf 'Refusing redirected VS checkout: %s\n' "$checkout" >&2
+            exit 1
+          fi
+          if test ! -e "$checkout"; then
+            printf 'No VS checkout to remove: %s\n' "$checkout"
+            exit 0
+          fi
+          python3 -B "$checkout/tools/bazel/ci/cleanup_vs_workspace.py" \
+            --workspace "$GITHUB_WORKSPACE" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+
+  installer_validation:
+    name: Validate the published VS installer (AMD64)
+    needs: vs_container
+    runs-on: [self-hosted, linux, bazel-x64]
+    timeout-minutes: 30
+    outputs:
+      build_version: ${{ steps.installer.outputs.build_version }}
+    steps:
+      - &restore_workspace_access
+        name: Restore workspace access before checkout
+        if: runner.environment == 'self-hosted'
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY##*/}"
+          pipeline_workspace="${RUNNER_WORKSPACE%/}"
+          expected="$pipeline_workspace/$repository"
+          if [[ "$GITHUB_WORKSPACE" != "$expected" ]]; then
+            printf 'Refusing permission repair: expected workspace %s, got %s.\n' \
+              "$expected" "$GITHUB_WORKSPACE" >&2
+            exit 1
+          fi
+          if [[ ! -e "$expected" && ! -L "$expected" ]]; then
+            echo 'No existing workspace to repair.'
+            exit 0
+          fi
+          work_root="$(realpath -e -- "$pipeline_workspace/..")"
+          physical_workspace="$work_root/$repository/$repository"
+          if [[ ! -d "$expected" || "$(realpath -e -- "$expected")" != "$physical_workspace" ]]; then
+            echo 'Refusing permission repair on a redirected workspace.' >&2
+            exit 1
+          fi
+          expected="$physical_workspace"
+          owner="$(id -u):$(id -g)"
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chown --no-dereference -- "$owner" {} +
+          sudo -n find -P "$expected" -xdev -type d \
+            -exec chmod u+rwx -- {} +
+          sudo -n find -P "$expected" -xdev -type f -links 1 \
+            -exec chown --no-dereference -- "$owner" {} +
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.vs_container.outputs.installer_artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/vs-installer
+      - name: Prepare installer inspection tools
+        run: |
+          if ! command -v unsquashfs >/dev/null || ! python3 -c 'import yaml'; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends squashfs-tools python3-yaml
+          fi
+      - name: Check installer version, checksums and image selection
+        id: installer
+        shell: bash
+        working-directory: ${{ runner.temp }}/vs-installer
+        env:
+          DEBUG_LAYER: ${{ needs.vs_container.outputs.debug_layer }}
+        run: |
+          set -euo pipefail
+          sha256sum --check artifacts/vs/outputs.sha256
+          python3 -B "$GITHUB_WORKSPACE/scripts/validate_sonic_version.py" target/sonic-vs.bin \
+            --installer --expect-boot-bundle --secure-upgrade-mode no_sign \
+            --expected-commit-id "$GITHUB_SHA" \
+            --json-output artifacts/vs/sonic-version.json
+          PYTHONPATH="$GITHUB_WORKSPACE" python3 -B -m tools.bazel.ci.verify_vs_selection \
+            --workspace "$PWD" --revision "$GITHUB_SHA" --debug-layer "$DEBUG_LAYER" \
+            --github-output "$GITHUB_OUTPUT"
+
+  validate_container:
+    name: Validate ${{ matrix.image }} (AMD64)
+    needs: [vs_container, installer_validation]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.vs_container.outputs.containers) }}
+    runs-on: [self-hosted, linux, bazel-x64]
+    timeout-minutes: 60
+    steps:
+      - *restore_workspace_access
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore populated submodules to the installer revision
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --populated-only
+      - name: Check out the P4RT runtime test at the installer revision
+        if: matrix.image == 'docker-sonic-p4rt'
+        run: git submodule update --init --depth 1 -- src/sonic-p4rt/sonic-pins
+      - name: Check out the Sysmgr gNOI probe at the installer revision
+        if: matrix.image == 'docker-sysmgr'
+        run: git submodule update --init --depth 1 -- src/sonic-sysmgr/gnoi
+      - name: Allocate a fresh container artifact directory
+        id: bundle
+        run: |
+          directory=$(mktemp -d "$RUNNER_TEMP/vs-container.XXXXXXXX")
+          printf 'directory=%s\n' "$directory" >> "$GITHUB_OUTPUT"
+      - name: Download the selected VS container
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.vs_container.outputs.artifact_prefix }}-${{ matrix.image }}
+          path: ${{ steps.bundle.outputs.directory }}
+      - name: Check the runner and installed service
+        shell: bash
+        env:
+          BUNDLE_DIR: ${{ steps.bundle.outputs.directory }}
+          IMAGE: ${{ matrix.image }}
+          BUILD_VERSION: ${{ needs.installer_validation.outputs.build_version }}
+          DEBUG_LAYER: ${{ needs.vs_container.outputs.debug_layer }}
+        run: |
+          set -euo pipefail
+          docker info >/dev/null
+          python3 -B tools/bazel/ci/vs_container_probe.py \
+            --artifacts "$BUNDLE_DIR" --image "$IMAGE" \
+            --revision "$GITHUB_SHA" --debug-layer "$DEBUG_LAYER" --build-version "$BUILD_VERSION"
+
+      - name: Retain the container validation result
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: validated-${{ matrix.image }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.bundle.outputs.directory }}/vs-validation.json
+            ${{ steps.bundle.outputs.directory }}/*.runtime.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove this job's downloaded container archive
+        if: always() && steps.bundle.outcome == 'success'
+        env:
+          BUNDLE_DIR: ${{ steps.bundle.outputs.directory }}
+        run: rm -rf -- "$BUNDLE_DIR"
+
+  validate_component:
+    name: Validate component ${{ matrix.component }} (AMD64)
+    needs: vs_container
+    if: needs.vs_container.outputs.component_matrix != '{"include":[]}'
+    runs-on: [self-hosted, linux, bazel-x64]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.vs_container.outputs.component_matrix) }}
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    steps:
+      - name: Install native inspection tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git python3 binutils gdb gcc libc6-dev pkg-config
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Allocate a fresh component directory
+        id: bundle
+        shell: bash
+        run: echo "path=$(mktemp -d)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ matrix.artifact_id }}
+          merge-multiple: true
+          path: ${{ steps.bundle.outputs.path }}
+      - name: Validate the original VS component files
+        env:
+          COMPONENT: ${{ matrix.component }}
+          DEBUG: ${{ matrix.debug }}
+          BUNDLE: ${{ steps.bundle.outputs.path }}
+        run: |
+          python3 -B -m tools.bazel.ci.vs_component_artifacts test --component "$COMPONENT" \
+            --revision "$GITHUB_SHA" --debug "$DEBUG" --directory "$BUNDLE"
+
+  archive_acceptance:
+    name: Container archive (AMD64)
+    needs: [archive, package_amd64, kernel_packages_amd64, frr_python_amd64, vs_container, installer_validation, validate_container, validate_component, native_sysmgr_amd64, yang_models]
+    if: always() && !cancelled() && needs.vs_container.result != 'skipped'
+    runs-on: [self-hosted, linux, bazel-x64]
+    steps:
+      - name: Require the installer and every selected container
+        env:
+          INSTALLER: ${{ needs.installer_validation.result }}
+          ARM64_PACKAGES: ${{ needs.archive.result }}
+          AMD64_PACKAGES: ${{ needs.package_amd64.result }}
+          KERNEL: ${{ needs.kernel_packages_amd64.result }}
+          FRR_PYTHON: ${{ needs.frr_python_amd64.result }}
+          PRODUCER: ${{ needs.vs_container.result }}
+          VALIDATION: ${{ needs.validate_container.result }}
+          YANG: ${{ needs.yang_models.result }}
+          SYSMGR: ${{ needs.native_sysmgr_amd64.result }}
+          EXPECT_SYSMGR: ${{ needs.vs_container.outputs.sysmgr_artifact_id != '' }}
+          EXPECT_COMPONENTS: ${{ needs.vs_container.outputs.component_matrix != '{"include":[]}' }}
+          COMPONENTS: ${{ needs.validate_component.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_result() { if [[ "$1" == true ]]; then echo success; else echo skipped; fi; }
+          test "$SYSMGR" = "$(expected_result "$EXPECT_SYSMGR")"
+          test "$COMPONENTS" = "$(expected_result "$EXPECT_COMPONENTS")"
+          test "$YANG" = success
+          test "$ARM64_PACKAGES" = success && test "$AMD64_PACKAGES" = success &&
+          test "$KERNEL" = success && test "$FRR_PYTHON" = success &&
+          test "$PRODUCER" = success && test "$INSTALLER" = success && test "$VALIDATION" = success

@@ -1,0 +1,29 @@
+"""Direct installation of the current Make Python distribution."""
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+package(default_visibility = ["//visibility:public"])
+site_packages(
+    name = 'system_health.runtime',
+    distribution = 'system-health',
+    version = '1.0',
+    summary = 'SONiC system health package',
+    license = 'Apache 2.0',
+    author = 'SONiC Team',
+    author_email = 'linuxnetdev@microsoft.com',
+    homepage = 'https://github.com/Azure/sonic-buildimage',
+    requires = ['natsort', 'docker', 'sonic-py-common'],
+    classifiers = ['Development Status :: 4 - Beta', 'Environment :: No Input/Output (Daemon)', 'Intended Audience :: Developers', 'Intended Audience :: Information Technology', 'Intended Audience :: System Administrators', 'License :: OSI Approved :: Apache Software License', 'Natural Language :: English', 'Operating System :: POSIX :: Linux', 'Programming Language :: Python :: 3.7', 'Topic :: System :: Hardware'],
+    python_tag = 'py3',
+    regular_file_mode = '0644',
+    site_packages = '/usr/local/lib/python3.13/dist-packages',
+    scripts = '/usr/local/bin',
+    headers = '/usr/local/include',
+    data_prefix = '/usr/local',
+    interpreter = '/usr/bin/python3',
+    normalize_scripts = True,
+    executable_files = ['system_health-1.0.data/scripts/healthd'],
+    maintainer = 'Junchao Chen',
+    maintainer_email = 'junchaow@mellanox.com',
+    keywords = 'SONiC sonic HEALTH health',
+    files = {p: p for p in glob(['health_checker/*.py', 'tests/*.py'])} | {'scripts/healthd': 'system_health-1.0.data/scripts/healthd'},
+)
+filegroup(name = 'system_health.runtime_metadata', srcs = [':system_health.runtime'], output_group = "metadata")

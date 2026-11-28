@@ -1,0 +1,4 @@
+# Generated from source Requires-Dist for this target environment.
+freezegun
+jinja2
+psutil

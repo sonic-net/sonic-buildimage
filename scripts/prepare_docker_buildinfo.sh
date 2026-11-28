@@ -1,6 +1,37 @@
 #!/bin/bash
 
-grep "^# SKIP_HOOK" $2 && exit 0
+# APT 3.0.3 can retain an unbounded delayed-retry warning queue (Debian
+# https://bugs.debian.org/1117797). Only the native Docker CI job opts out of
+# internal retries; its existing whole-build retry wrapper remains responsible
+# for recovery. Never change the APT policy shipped in the resulting image.
+case "${SONIC_DOCKER_APT_RETRIES:-}" in
+    ""|0) ;;
+    *) echo "SONIC_DOCKER_APT_RETRIES must be unset, empty, or 0" >&2; exit 1 ;;
+esac
+case "${SONIC_DOCKER_APT_PROXY:-}" in
+    ""|0|1) ;;
+    *) echo "SONIC_DOCKER_APT_PROXY must be unset, empty, 0, or 1" >&2; exit 1 ;;
+esac
+
+configure_apt_mounts() {
+    if [ "${SONIC_DOCKER_APT_PROXY:-}" = 1 ] || grep -qx '# SONIC_DOCKER_APT_PROXY=1' "$1"; then
+        python3 "$(dirname "$0")/docker_apt_secret_mounts.py" "$1" "${SONIC_DOCKER_APT_PROXY:-0}"
+    fi
+}
+
+if grep -q "^# SKIP_HOOK" "$2"; then
+    if [ -n "${SONIC_DOCKER_APT_RETRIES:-}" ]; then
+        echo "SONIC_DOCKER_APT_RETRIES requires buildinfo finalization" >&2
+        exit 1
+    fi
+    if [ "${SONIC_DOCKER_APT_PROXY:-}" = 1 ] || [ -f "${4:-$2}" ]; then
+        if [ "${SONIC_DOCKER_APT_PROXY:-}" = 1 ] && [ "$2" != "${4:-$2}" ]; then
+            cp -- "$2" "$4" || exit 1
+        fi
+        configure_apt_mounts "${4:-$2}" || exit 1
+    fi
+    exit 0
+fi
 
 [[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
@@ -26,6 +57,19 @@ DOCKERFILE_PATH=$(dirname "$DOCKERFILE_TARGET")
 BUILDINFO_PATH="${DOCKERFILE_PATH}/buildinfo"
 BUILDINFO_VERSION_PATH="${BUILDINFO_PATH}/versions"
 DOCKER_PATH=$(dirname $DOCKERFILE)
+
+# Reusing generated output under a different policy would silently ignore the
+# caller's requested behavior. Regenerate from the original Dockerfile instead.
+if [ -f "$DOCKERFILE_TARGET" ] && grep -q "Auto-Generated for buildinfo" "$DOCKERFILE_TARGET"; then
+    if grep -q '^# SONIC_DOCKER_APT_RETRIES=0$' "$DOCKERFILE_TARGET"; then
+        [ "${SONIC_DOCKER_APT_RETRIES:-}" = 0 ] || {
+            echo "Regenerate the Dockerfile before changing SONIC_DOCKER_APT_RETRIES" >&2; exit 1;
+        }
+    elif [ -n "${SONIC_DOCKER_APT_RETRIES:-}" ]; then
+        echo "Regenerate the Dockerfile before changing SONIC_DOCKER_APT_RETRIES" >&2
+        exit 1
+    fi
+fi
 
 [ -d $BUILDINFO_PATH ] && rm -rf $BUILDINFO_PATH
 mkdir -p $BUILDINFO_VERSION_PATH
@@ -53,8 +97,27 @@ fi
 # add script for reproducible build. using sha256 instead of tag for docker base image.
 scripts/docker_version_control.sh $@
 
+DOCKERFILE_APT_PRE_SCRIPT=
+DOCKERFILE_APT_POST_SCRIPT=
+if [ "${SONIC_DOCKER_APT_RETRIES:-}" = 0 ]; then
+    APT_RETRY_CONTENT='// Temporary SONiC native Docker CI override; Debian bug #1117797.
+Acquire::Retries "0";'
+    APT_RETRY_SHA=$(printf '%s\n' "$APT_RETRY_CONTENT" | sha256sum | cut -d' ' -f1)
+    DOCKERFILE_APT_PRE_SCRIPT='# SONIC_DOCKER_APT_RETRIES=0
+RUN set -eu; conf=/etc/apt/apt.conf.d/zzzz-sonic-ci-acquire-retries; \
+    if [ -e "$conf" ] || [ -L "$conf" ]; then echo "Refusing to overwrite $conf" >&2; exit 1; fi; \
+    (umask 022; set -C; printf "%s\n" "// Temporary SONiC native Docker CI override; Debian bug #1117797." '\''Acquire::Retries "0";'\'' > "$conf"); \
+    [ "$(apt-config shell retries Acquire::Retries)" = "retries='\''0'\''" ] || { echo "Temporary APT override did not set effective Acquire::Retries to 0" >&2; exit 1; }
+'
+    DOCKERFILE_APT_POST_SCRIPT='RUN set -eu; conf=/etc/apt/apt.conf.d/zzzz-sonic-ci-acquire-retries; \
+    [ -f "$conf" ] && [ ! -L "$conf" ]; \
+    [ "$(sha256sum "$conf" | cut -d" " -f1)" = "'${APT_RETRY_SHA}'" ] || { echo "Temporary APT override changed unexpectedly" >&2; exit 1; }; \
+    rm -- "$conf"
+'
+fi
+
 DOCKERFILE_PRE_SCRIPT='# Auto-Generated for buildinfo
-ARG SONIC_VERSION_CACHE
+'${DOCKERFILE_APT_PRE_SCRIPT}'ARG SONIC_VERSION_CACHE
 ARG SONIC_VERSION_CONTROL_COMPONENTS
 ARG ENABLE_SBOM=n
 COPY ["buildinfo", "/usr/local/share/buildinfo"]
@@ -70,28 +133,62 @@ DOCKERFILE_POST_SCRIPT='
 RUN post_run_buildinfo '${IMAGENAME}'
 RUN post_run_cleanup '${IMAGENAME}'
 '
+DOCKERFILE_POST_SCRIPT+="${DOCKERFILE_APT_POST_SCRIPT}"
 
 # Add the auto-generate code if it is not added in the target Dockerfile
 if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCKERFILE_TARGET; then
-    # Insert the docker build script before the RUN command
-    LINE_NUMBER=$(grep -Fn -m 1 'RUN' $DOCKERFILE | cut -d: -f1)
     COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM \$BASE$' $DOCKERFILE | cut -d: -f1)
     if [ -z "$COPY_BASE_LINE_NUMBER" ]; then
         COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM scratch$' $DOCKERFILE | cut -d: -f1)
     fi
     TEMP_FILE=$(mktemp)
-    if [ -n "$COPY_BASE_LINE_NUMBER" ]; then
-        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER -v postscript="${DOCKERFILE_POST_SCRIPT}" -v copybaselinenumber=$COPY_BASE_LINE_NUMBER 'NR==copybaselinenumber{print postscript} NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
-    else
-        awk -v prescript="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print prescript}1' $DOCKERFILE > $TEMP_FILE
+    # Each build stage starts from its own image. In particular, the watchdog
+    # Rust builder does not pass its hooks to the independent runtime stage.
+    # Initialize before each stage's first RUN, except the final flattening
+    # stage, which copies the already finalized filesystem from the base stage.
+    # ENVIRON preserves literal shell escapes; awk -v would interpret printf's
+    # backslash-n and split the generated Docker RUN instruction.
+    SONIC_BUILDINFO_PRE_SCRIPT="${DOCKERFILE_PRE_SCRIPT}" \
+    SONIC_BUILDINFO_POST_SCRIPT="${DOCKERFILE_POST_SCRIPT}" \
+    SONIC_BUILDINFO_APT_CLEANUP="${DOCKERFILE_APT_POST_SCRIPT}" \
+    awk -v copybaselinenumber="$COPY_BASE_LINE_NUMBER" '
+        BEGIN {
+            prescript = ENVIRON["SONIC_BUILDINFO_PRE_SCRIPT"]
+            postscript = ENVIRON["SONIC_BUILDINFO_POST_SCRIPT"]
+            aptcleanup = ENVIRON["SONIC_BUILDINFO_APT_CLEANUP"]
+        }
+        NR == copybaselinenumber {
+            if (!initialized) print prescript
+            print postscript
+        }
+        /^FROM[[:space:]]/ {
+            # A later stage can COPY from any earlier stage. Remove only our
+            # temporary policy before that stage becomes a copyable image.
+            if (aptcleanup && stage_active && NR != copybaselinenumber) {
+                if (!initialized) print prescript
+                print aptcleanup
+            }
+            initialized = 0
+            stage_active = (!copybaselinenumber || NR < copybaselinenumber)
+        }
+        /^RUN[[:space:]]/ && !initialized && (!copybaselinenumber || NR < copybaselinenumber) {
+            print prescript
+            initialized = 1
+        }
+        { print }
+        END {
+            if (!copybaselinenumber) {
+                if (!initialized) print prescript
+                print postscript
+            }
+        }
+    ' "$DOCKERFILE" > "$TEMP_FILE"
 
-        # Append the docker build script at the end of the docker file
-        echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
-        echo -e "\nRUN post_run_cleanup ${IMAGENAME} " >> $TEMP_FILE
-    fi
-
-    cat $TEMP_FILE > $DOCKERFILE_TARGET
-    rm -f $TEMP_FILE
+    configure_apt_mounts "$TEMP_FILE" || { rm -f "$TEMP_FILE"; exit 1; }
+    cat "$TEMP_FILE" > "$DOCKERFILE_TARGET" || { rm -f "$TEMP_FILE"; exit 1; }
+    rm -f "$TEMP_FILE"
+else
+    configure_apt_mounts "$DOCKERFILE_TARGET" || exit 1
 fi
 
 # Copy the build info config

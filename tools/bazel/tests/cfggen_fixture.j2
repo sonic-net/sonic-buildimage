@@ -1,0 +1,4 @@
+{{ message }}
+{{ values|join('|') }}
+{% include 'cfggen_fixture_fragment.j2' %}
+namespace={{ (DEVICE_METADATA|default({})).get('localhost', {}).get('namespace_id', 'none') }}

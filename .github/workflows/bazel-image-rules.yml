@@ -1,0 +1,281 @@
+name: Image assembly rule contracts
+
+on:
+  pull_request:
+    paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/migrated_job_cleanup_test.py
+      - src/sonic-device-data/**
+      - scripts/install_device_data.py
+      - rules/sonic-device-data.mk
+      - tools/bazel/tests/device_data_install_test.py
+      - tools/bazel/ci/device_data_benchmark.py
+      - tools/bazel/ci/resources.py
+      - tools/bazel/image/**
+      - tools/bazel/build_container_batch.py
+      - tools/bazel/common.bazelrc
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
+      - tools/bazel/image-assembly-design.md
+      - MODULE.bazel
+      - .github/workflows/bazel-image-rules.yml
+  push:
+    branches: [master]
+    paths:
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/migrated_job_cleanup_test.py
+      - src/sonic-device-data/**
+      - scripts/install_device_data.py
+      - rules/sonic-device-data.mk
+      - tools/bazel/tests/device_data_install_test.py
+      - tools/bazel/ci/device_data_benchmark.py
+      - tools/bazel/ci/resources.py
+      - tools/bazel/image/**
+      - tools/bazel/build_container_batch.py
+      - tools/bazel/common.bazelrc
+      - tools/bazel/ci/source_mirrors.py
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/tests/integration/container_batch.py
+      - tools/bazel/tests/integration/boot_bundle_cache.py
+      - MODULE.bazel
+      - .github/workflows/bazel-image-rules.yml
+  workflow_dispatch:
+    inputs:
+      device_data_cache:
+        description: Measure the AMD64 VS device-data TAR on a fresh K3s runner
+        type: choice
+        options: ['off', populate, restore]
+        default: 'off'
+
+permissions:
+  contents: read
+
+jobs:
+  device-data-cache:
+    name: VS device data TAR (${{ inputs.device_data_cache }})
+    if: github.event_name == 'workflow_dispatch' && (inputs.device_data_cache == 'populate' || inputs.device_data_cache == 'restore')
+    runs-on: [self-hosted, Linux, X64, sonic-slave-container-k3s]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify the worker's remote-only cache configuration
+        run: |
+          python3 -B tools/bazel/ci/resources.py --configure
+          python3 -B tools/bazel/ci/configure_runner_cache.py --remote-only --output artifacts/device-data/cache.json
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/device-data-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/device-data-mirrors.cfg" >> .bazelrc.user
+      - name: Build and measure the installer payload
+        env:
+          CACHE_MODE: ${{ inputs.device_data_cache }}
+        run: PYTHONPATH="$GITHUB_WORKSPACE" python3 -B -m tools.bazel.ci.device_data_benchmark "$CACHE_MODE" --report artifacts/device-data/measurement.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: device-data-${{ inputs.device_data_cache }}
+          path: artifacts/device-data/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  contracts:
+    if: github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off'
+    name: Image assembly contracts (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            platform: x86_64_trixie
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            platform: aarch64_trixie
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.architecture == 'amd64' && 30 || 15 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out Bazel module submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh --bazel-only
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: image-rule-actions-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Check AMD64 VS device-data package registration and installer selection
+        if: matrix.architecture == 'amd64'
+        run: sudo python3 -B tools/bazel/tests/device_data_install_test.py
+      - name: Compare batched and standalone configured container outputs
+        run: python3 tools/bazel/tests/integration/container_batch.py --architecture ${{ matrix.architecture }}
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+      - name: Run public Bazel rule actions
+        env:
+          BAZELISK_GITHUB_TOKEN: ""
+        run: |
+          mkdir -p artifacts/image-rule-actions
+          git rev-parse HEAD > artifacts/image-rule-actions/revision.txt
+          test ! -e MODULE.bazel.lock
+          disk_targets=()
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            disk_targets=(//tools/bazel/image/action_test:disk_action_test)
+          fi
+          bazel test //tools/bazel/image:assembly_formats_test \
+            //tools/bazel/image:boot_image_bundle_test \
+            //tools/bazel/image:mkinitramfs_test \
+            //tools/bazel/image:kernel_deb_test \
+            //tools/bazel/image/tar_split_json:format_test \
+            //tools/bazel/image/action_test:action_test "${disk_targets[@]}" \
+            --platforms=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --host_platform=@sonic_build_infra//platforms:${{ matrix.platform }} \
+            --spawn_strategy=processwrapper-sandbox --nocache_test_results \
+            --nozip_undeclared_test_outputs
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, 'tools/bazel/ci')
+          import resolution
+
+          directory = Path('artifacts/image-rule-actions')
+          retained = resolution.collect(Path.cwd(), directory)
+          (directory / 'resolution.json').write_text(json.dumps(retained, indent=2) + '\n')
+          PY
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json/format_test action_test/action_test; do
+            directory="artifacts/image-rule-actions/${target%%/*}"
+            mkdir -p "$directory"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.log" "$directory/"
+            cp "bazel-testlogs/tools/bazel/image/$target/test.xml" "$directory/"
+          done
+          cp bazel-testlogs/tools/bazel/image/action_test/action_test/test.outputs/action-receipt.json artifacts/image-rule-actions/
+          if [ '${{ matrix.architecture }}' = amd64 ]; then
+            mkdir -p artifacts/image-rule-actions/disk_action_test
+            cp bazel-testlogs/tools/bazel/image/action_test/disk_action_test/test.{log,xml} artifacts/image-rule-actions/disk_action_test/
+          fi
+          test -s artifacts/image-rule-actions/MODULE.bazel.lock
+          test -s artifacts/image-rule-actions/module-graph.json
+          test -s artifacts/image-rule-actions/module-graph-inspection.json
+          test -s artifacts/image-rule-actions/resolution.json
+          for target in assembly_formats_test boot_image_bundle_test mkinitramfs_test kernel_deb_test tar_split_json action_test; do
+            test -s "artifacts/image-rule-actions/$target/test.log"
+            test -s "artifacts/image-rule-actions/$target/test.xml"
+          done
+          test -s artifacts/image-rule-actions/action-receipt.json
+          git diff --exit-code
+      - name: Verify offline bundle cache reuse across clean Bazel builds
+        if: matrix.architecture == 'amd64'
+        run: |
+          sandbox_args=()
+          if unshare --user --map-root-user --mount true; then
+            sandbox_args+=(--require-linux-sandbox)
+          fi
+          python3 tools/bazel/tests/integration/boot_bundle_cache.py "${sandbox_args[@]}" \
+            --report artifacts/image-rule-actions/boot-bundle-cache.json
+      - name: Retain public rule action evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-rule-actions-${{ matrix.architecture }}
+          path: artifacts/image-rule-actions/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+
+  native-vs-installer:
+    name: Native Bazel VS installer (AMD64)
+    if: >-
+      (github.event_name != 'workflow_dispatch' || inputs.device_data_cache == 'off') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, linux, bazel-x64]
+    # The first native build took 79 minutes; allow time for checks and cleanup.
+    timeout-minutes: 120
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      # Use the existing native Sysmgr worker settings for nested Linux sandboxes.
+      options: --init --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl file git libtool patch pkg-config python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Register post-job cleanup
+        id: runner_cleanup
+        if: runner.environment == 'self-hosted'
+        uses: ./.github/actions/bazel-post-job-cleanup
+        with:
+          migrated-job: 'true'
+      - name: Prepare the pinned image source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+      - name: Verify the native worker and configure standard CI inputs
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(bazel --version)" = 'bazel 8.5.1'
+          python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve standard native repository and remote caches
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --repository-only --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --configure-startup
+      - name: Configure source download mirrors
+        run: |
+          mkdir -p artifacts/native-vs
+          python3 -B tools/bazel/ci/source_mirrors.py --output "$RUNNER_TEMP/native-vs-mirrors.cfg"
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/native-vs-mirrors.cfg" >> .bazelrc.user
+      - name: Build the complete VS AMD64 Trixie FIPS DASH runtime installer
+        run: |
+          bazel build --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic-vs.bin
+          sha256sum bazel-bin/tools/bazel/image/vs/sonic-vs.bin > artifacts/native-vs/sonic-vs.bin.sha256
+      - name: Verify the produced installer contents and installation layout
+        run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
+          bazel test --remote_upload_local_results=true --config=syncd-dash \
+            //tools/bazel/image/vs:sonic_vs_test
+      - name: Verify debug selection without producing a second installer
+        run: |
+          # Release the previous command graph within the worker JVM heap budget.
+          bazel shutdown
+          bazel build --nobuild --config=syncd-dash \
+            --//tools/bazel/image/vs:variant=debug //tools/bazel/image/vs:sonic-vs.bin
+      - name: Retain the acceptance results
+        id: runner_cleanup_upload_0
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-vs-installer-amd64
+          path: |
+            artifacts/native-vs/*.json
+            artifacts/native-vs/*.sha256
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.xml
+            bazel-testlogs/tools/bazel/image/vs/sonic_vs_test/test.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Authorize post-job cleanup
+        if: always() && steps.runner_cleanup.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+          BAZEL_CLEANUP_JOB_STATUS: ${{ job.status }}
+          BAZEL_CLEANUP_UPLOAD_STEPS: '["runner_cleanup_upload_0"]'
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --migrated-job --mark-artifacts

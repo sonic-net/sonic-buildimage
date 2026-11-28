@@ -10,7 +10,7 @@ from unittest import TestCase
 class TestCfgGen(TestCase):
     def setUp(self):
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
         self.t0_port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
         self.output_file = os.path.join(self.test_dir, 'output')

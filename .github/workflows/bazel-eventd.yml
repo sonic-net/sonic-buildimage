@@ -1,0 +1,153 @@
+name: Bazel event services
+
+on:
+  pull_request:
+    paths:
+      - tools/bazel/ci/resources.py
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
+      - src/sonic-eventd/**
+      - .bazelrc
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - tools/bazel/go/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
+      - .github/workflows/bazel-eventd.yml
+  push:
+    branches: [master]
+    paths:
+      - tools/bazel/ci/resources.py
+      - .github/actions/bazel-post-job-cleanup/**
+      - tools/bazel/ci/cleanup_container_bazel.py
+      - tools/bazel/tests/container_bazel_cleanup_test.py
+      - src/sonic-eventd/**
+      - .bazelrc
+      - MODULE.bazel
+      - tools/bazel/common.bazelrc
+      - tools/bazel/go/**
+      - tools/bazel/debian_mirrors.cfg
+      - tools/bazel/ci/libteam_draft_bazel.sh
+      - tools/bazel/ci/prepare_image_submodules.sh
+      - tools/bazel/ci/preserve_setup_bazel_cache.py
+      - tools/bazel/ci/repair_bazel_startup.py
+      - tools/bazel/ci/source_mirrors.py
+      - .github/workflows/bazel-eventd.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native event services (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: [self-hosted, linux, bazel-x64]
+          - architecture: arm64
+            runner: [self-hosted, linux, bazel-arm64]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    container:
+      image: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+      options: --init
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends autoconf automake binutils binutils-gold build-essential busybox ca-certificates curl file git libtool patch pkg-config python3 tar unzip zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare pinned source submodules
+        run: bash tools/bazel/ci/prepare_image_submodules.sh
+      - uses: ./.github/actions/bazel-post-job-cleanup
+        id: bazel_cleanup_register
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: eventd-${{ matrix.architecture }}
+          cache-version: "8.5.1"
+      - name: Configure Bazel action memory budget
+        run: python3 -B tools/bazel/ci/resources.py --configure
+      - name: Preserve setup-bazel caches for source checks
+        run: python3 tools/bazel/ci/preserve_setup_bazel_cache.py --private-remote-cache
+      - name: Configure and verify job-private Bazel startup
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --configure-startup
+      - name: Configure shared source download mirrors
+        run: |
+          python3 -B tools/bazel/ci/source_mirrors.py \
+            --output "$RUNNER_TEMP/sonic-source-mirrors.cfg"
+          # common.bazelrc imports this ignored file, including through Draft wrappers.
+          printf 'common --downloader_config=%s\n' "$RUNNER_TEMP/sonic-source-mirrors.cfg" >> .bazelrc.user
+
+      - name: Diagnose Bazel startup permissions
+        run: |
+          set -euo pipefail
+          id
+          printf 'HOME=%s\nRUNNER_TEMP=%s\n' "$HOME" "$RUNNER_TEMP"
+          startup="$SONIC_BAZEL_JOB_TEMP/bazel-startup/user-root"
+          printf 'Private Bazel startup directory=%s\n' "$startup"
+          for path in / /github "$HOME" "$SONIC_BAZEL_JOB_TEMP" \
+            "$startup" "$RUNNER_TEMP"; do
+            if [[ -e "$path" || -L "$path" ]]; then
+              stat -L -c '%A mode=%a owner=%u:%g path=%n' -- "$path"
+            else
+              printf 'Missing path: %s\n' "$path"
+            fi
+          done
+          for path in /proc/self/uid_map /proc/self/gid_map /proc/self/attr/current; do
+            printf '\n%s\n' "$path"
+            cat "$path"
+          done
+          grep -E '^(Uid|Gid|CapEff|NoNewPrivs|Seccomp):' /proc/self/status
+          awk -v home="$HOME" -v temp="$RUNNER_TEMP" \
+            '$5 == "/" || $5 == home || $5 == temp { print }' /proc/self/mountinfo
+          if ! probe="$(mktemp -d "$startup/.write-probe.XXXXXX")"; then
+            echo 'Bazel cache-parent write probe failed; see permissions above.' >&2
+            exit 1
+          fi
+          rmdir -- "$probe"
+          echo 'Bazel cache-parent write probe passed.'
+          tools/bazel/ci/libteam_draft_bazel.sh info output_base
+      - name: Audit, build and run all original suites with private Redis
+        id: eventd_build
+        env:
+          # Bazel records its client environment in retained build events.
+          BAZELISK_GITHUB_TOKEN: ""
+          USE_VS_EVENTD: ${{ matrix.architecture == 'amd64' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -B src/sonic-eventd/bazel/run_tests_test.py
+          package_args=()
+          if [[ "$USE_VS_EVENTD" == true ]]; then package_args+=(--plugin-only); fi
+          python3 -B src/sonic-eventd/bazel/ci.py "${package_args[@]}" --bazel "$GITHUB_WORKSPACE/tools/bazel/ci/libteam_draft_bazel.sh" --architecture '${{ matrix.architecture }}' --artifacts artifacts/eventd
+          git -c safe.directory="$GITHUB_WORKSPACE" diff --exit-code
+      - name: Upload native packages and test evidence
+        id: bazel_upload_eventd_build
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eventd-${{ matrix.architecture }}
+          path: artifacts/eventd
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1
+      - name: Authorize published artifacts for post-job cleanup
+        if: always() && steps.bazel_cleanup_register.outcome == 'success'
+        env:
+          BAZEL_CLEANUP_STEPS: ${{ toJSON(steps) }}
+        run: python3 -B -m tools.bazel.ci.cleanup_container_bazel --mark-artifacts

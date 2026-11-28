@@ -1,0 +1,89 @@
+#!/usr/bin/python3
+"""Import the installed image bundle into this SONiC version's Docker store."""
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+
+
+DOCKER = ["/usr/bin/docker", "--host", "unix:///var/run/docker.sock"]
+STORE = Path("/var/lib/docker")
+INVENTORY = Path("/usr/share/sonic/docker-image-inventory.json")
+
+
+def wait_for_daemon():
+    # The upgrade chroot uses start-stop-daemon, which returns before dockerd
+    # accepts requests. Systemd already waits for dockerd's READY notification.
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        try:
+            probe = subprocess.run(DOCKER + ["info"], stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, timeout=5)
+            if probe.returncode == 0:
+                return
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(1)
+    raise RuntimeError("Docker did not become ready for the SONiC image import")
+
+
+def load_images(store, inventory, wait=False):
+    expected_bytes = inventory.read_bytes()
+    expected = json.loads(expected_bytes)
+    if not isinstance(expected, dict) or not expected:
+        raise ValueError("empty or invalid SONiC image inventory")
+    digest = hashlib.sha256(expected_bytes).hexdigest()
+    bundle = store / "sonic-images.tar.gz"
+    receipt = store / ".sonic-images-loaded"
+
+    with (store / ".sonic-image-load.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if wait:
+            wait_for_daemon()
+        if not bundle.is_file():
+            if receipt.is_file() and receipt.read_text().strip() == digest:
+                return
+            raise RuntimeError(f"missing {bundle} and its completed import receipt")
+
+        start = time.monotonic()
+        print(f"Loading {bundle.stat().st_size} bytes from {bundle}; "
+              f"{shutil.disk_usage(store).free} bytes free", flush=True)
+        subprocess.run(DOCKER + ["image", "load", "--input", str(bundle)], check=True)
+        ids = subprocess.check_output(
+            DOCKER + ["image", "inspect", "--format", "{{.Id}}", "--", *expected],
+            text=True,
+        ).splitlines()
+        if ids != list(expected.values()):
+            raise RuntimeError("imported Docker image IDs differ from the SONiC image inventory")
+
+        # Docker's successful response can precede disk writeback. Flush
+        # image data before recording success and removing the offline source.
+        subprocess.run(["/bin/sync", "-f", str(store)], check=True)
+        with receipt.open("w") as out:
+            out.write(digest + "\n")
+            out.flush()
+            os.fsync(out.fileno())
+        directory = os.open(store, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+            bundle.unlink()
+        finally:
+            os.close(directory)
+        print(f"Verified {len(ids)} SONiC image tags in {time.monotonic() - start:.1f}s; "
+              f"{shutil.disk_usage(store).free} bytes free after releasing the bundle", flush=True)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--wait-for-daemon", action="store_true")
+    try:
+        load_images(STORE, INVENTORY, parser.parse_args().wait_for_daemon)
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+        sys.exit(str(error))

@@ -79,10 +79,10 @@
 #   Bump it when a slave.mk change genuinely affects package build output
 #   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
 #
-SONIC_CACHE_RECIPE_VER := 2
+SONIC_CACHE_RECIPE_VER := 3
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 56f06da3a34edd0e0819aae4cc5851e541bb20cc
+SONIC_CACHE_RECIPE_VER_BASELINE := 1e337b0c95ef6248f166ab9700bc9d1ea65721a9
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -254,9 +254,14 @@ define GET_MOD_DEP_SHA
 
 	$(if $(MDEBUG), $(info $(1)_MOD_DEP_PKGS: $($(1)_MOD_DEP_PKGS)))
 
-	# Warn if there is any missing dependency files
+	# Bazel archives have no Make dependency sidecars. Hash the published bytes
+	# instead: a source or module change can alter the base image without changing
+	# its legacy .flags/.dep.sha files (which may also be left from a Make build).
 	$(eval $(1)_DEP_MOD_SHA_FILES := $(foreach dfile,$($(1)_MOD_DEP_PKGS), \
-	                        $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE)) )
+	                        $(if $(filter $(dfile),$(SONIC_BAZEL_DOCKER_IMAGES) $(SONIC_BAZEL_DBG_DOCKER_IMAGES)), \
+	                            $(TARGET_PATH)/$(dfile), \
+	                            $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE))) )
+	# Warn if there is any missing dependency files
 	$(eval $(1)_DEP_FILES_MISSING := $(filter-out $(wildcard $($(1)_DEP_MOD_SHA_FILES)),$($(1)_DEP_MOD_SHA_FILES)) )
 	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependency file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
 
@@ -329,7 +334,18 @@ define LOAD_FROM_CACHE
 	# Load the cache if cache is enabled and cache file is present in the cache
 	# Update the cache_loaded variable
 	$(if $(and $(CACHE_FILE_SELECT),$(call CHECK_RCACHE_ENABLED,$(1))),
-		$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo );
+		$(if $($(1)_CACHE_FORCE_RESTORE),
+			# Switchable container archives must replace the other builder's output.
+			# Stage this single-output restore so an invalid cache preserves the old
+			# archive and leaves its newer method stamp to trigger another attempt.
+			(
+				cache_restore_dir=$$(mktemp -d "$($(1)_DST_PATH)/.cache-restore.XXXXXX")
+				trap '$($(1)_CACHE_USER) rm -rf "$$cache_restore_dir"' EXIT
+				$($(1)_CACHE_USER) tar -C "$$cache_restore_dir" -mxzvf $(CACHE_FILE_SELECT) $(2) $($(1)_DST_PATH)/$(1).cached.log 1>> $($(1)_DST_PATH)/$(1).log
+				$($(1)_CACHE_USER) mv -f "$$cache_restore_dir/$($(1)_DST_PATH)/$(1).cached.log" "$($(1)_DST_PATH)/$(1).cached.log"
+				$($(1)_CACHE_USER) mv -f "$$cache_restore_dir/$(2)" "$(2)"
+			),
+			$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo ));
 		echo "File $(CACHE_FILE_SELECT) is loaded from cache into $($(1)_BASE_PATH)" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_LOADED := Yes)
 		$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(shell touch $(CACHE_FILE_SELECT)))
@@ -437,8 +453,34 @@ define SAVE_CACHE
 	$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(call SAVE_INTO_CACHE,$(1),$(2)))
 endef
 
+# Final installers use ordinary Make prerequisites for these scripts.
+INSTALLER_SBOM_SCRIPTS := scripts/build_sbom.sh scripts/build_sbom.py \
+	scripts/sbom_kernel_deb.py scripts/install_sbom_tool.sh \
+	scripts/sbom_fragment.py scripts/sbom_cve_refs.py \
+	scripts/sbom_purl.py scripts/sbom_parse_lockfiles.py \
+	scripts/sbom_extract_vex_from_patches.py
+sonic-vs.bin_INSTALLER_SCRIPTS := scripts/image_timing.py
+sonic-vs.img.gz_INSTALLER_SCRIPTS := scripts/image_timing.py scripts/build_kvm_image.sh
+
+ifeq ($(CONFIGURED_PLATFORM):$(DOCKER_LOAD_ON_BOOT),vs:y)
+vs_boot_bundle_inputs := files/docker/docker files/docker/load-images.conf files/docker/sonic-load-images \
+                        installer/install.sh onie-mk-demo.sh scripts/build_boot_packages.py \
+                        installer/sharch_body.sh scripts/stream_onie_payload.py \
+                        tools/bazel/image/boot_image_bundle.py tools/bazel/image/image_config.py \
+                        tools/bazel/oci/boot_layout.py tools/bazel/oci/oci_layout.py
+ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
+vs_boot_bundle_inputs += tools/bazel/image/build_boot_bundle.py tools/bazel/image/boot_bundle.bzl \
+                         tools/bazel/image/boot_bundle_action.py tools/bazel/image/BUILD.bazel \
+                         tools/bazel/image/file_copy.py \
+                         tools/bazel/build_helpers.py tools/bazel/ci/build.py tools/bazel/ci/cache_reuse.py
+endif
+endif
+
 RFS_DEP_FILES := $(wildcard \
 	$(addprefix scripts/, build_debian_base_system.sh prepare_debian_image_buildinfo.sh build_mirror_config.sh) \
+	$(if $(filter vs,$(CONFIGURED_PLATFORM)),scripts/build_vs_configured_host.sh scripts/vs_host_base_state.sh \
+		scripts/installer_rootfs_handoff.py scripts/image_timing.py) \
+	scripts/validate_sonic_version.py scripts/installer_step_timing.py \
 	$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
 	$(shell git ls-files files/initramfs-tools) \
 	$(shell git ls-files files/image_config) \
@@ -488,7 +530,9 @@ $(foreach pkg, $(SONIC_PYTHON_WHEELS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(PYTHON_WHEELS_PATH))) \
 		$(eval $(PYTHON_WHEELS_PATH)/$(pkg)_TARGET := $(pkg)) )
 
+# The version collector rebuilds the final Docker layer before saving the image.
 $(foreach pkg, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), \
+	$(eval $(pkg)_DEP_FILES += scripts/collect_docker_version_files.sh files/build_templates/build_docker_cache.j2 src/sonic-build-hooks/scripts/utils.sh) \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
 		$(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
 
@@ -527,7 +571,7 @@ RFS_INLINE_ENV_FLAGS := $(USERNAME) $(CHANGE_DEFAULT_PASSWORD) $(BMC_NOS_ACCOUNT
 $(foreach pkg, $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
         $(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA) \
-        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(RFS_INLINE_ENV_FLAGS) $($($(pkg)_INSTALLER)_IMAGE_TYPE)) \
+        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(RFS_INLINE_ENV_FLAGS) IMAGE_DISTRO=$(IMAGE_DISTRO) $($($(pkg)_INSTALLER)_IMAGE_TYPE)) \
         $(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES)) \
         $(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
 

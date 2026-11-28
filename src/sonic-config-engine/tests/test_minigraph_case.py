@@ -20,7 +20,7 @@ class TestCfgGenCaseInsensitive(TestCase):
     def setUp(self):
         self.yang = utils.YangWrapper()
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.sample_graph = os.path.join(self.test_dir, 'simple-sample-graph-case.xml')
         self.sample_simple_graph = os.path.join(self.test_dir, 'simple-sample-graph.xml')
         self.sample_resource_graph = os.path.join(self.test_dir, 'sample-graph-resource-type.xml')

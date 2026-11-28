@@ -22,8 +22,7 @@ class TestCfgGen(object):
     @pytest.fixture(autouse=True)
     def setup_teardown(self):
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(
-            self.test_dir, '..', 'sonic-cfggen')]
+        self.script_file = utils.cfggen_command(os.path.join(self.test_dir, '..', 'sonic-cfggen'))
         self.sample_yang_file = os.path.join(self.test_dir,
                                              'test_yang_data.json')
 

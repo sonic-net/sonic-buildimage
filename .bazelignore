@@ -1,0 +1,38 @@
+# Keep unrelated platform trees outside recursive Bazel discovery.
+# VS Syncd and gearbox export their original Make files beside their targets.
+platform/alpinevs
+platform/aspeed
+platform/barefoot
+platform/broadcom
+platform/centec
+platform/centec-arm64
+platform/checkout
+platform/cisco
+platform/clounix
+platform/components
+platform/generic
+platform/marvell-prestera
+platform/marvell-teralynx
+platform/mellanox
+platform/micas-vs
+platform/nephos
+platform/nexthop-common
+platform/nokia-vs
+platform/nvidia-bluefield
+platform/p4
+# PMON builds the Platform Development Driver Framework (PDDF) Python package.
+platform/pddf/i2c
+platform/pensando
+platform/s3ip-sysfs
+platform/template
+platform/vpp
+platform/vs/docker-sonic-vs
+platform/vs/sonic-version
+platform/vs/tests
+src/sonic-device-data/workspace
+src/sonic-linux-kernel
+src/sonic-p4rt/sonic-pins
+tools/bazel/kernel
+
+# The image consumes Sysmgr through its standalone module.
+src/sonic-sysmgr
