@@ -1033,6 +1033,19 @@ def hdl_ibgp_maxpath(daemon, cmd_str, op, st_idx, args, data):
         return None
     return cmd_list + upd_cmd_list
 
+def hdl_advertise_all_vni(daemon, cmd_str, op, st_idx, args, data):
+    # A bare advertise-all-vni resets the l3vni-neigh token, so emit one command for the combined state.
+    vals = args[st_idx]
+    if 0 not in vals:
+        return []
+    is_del = op == CachedDataWithOp.OP_DELETE
+    state = {idx: val for idx, (val, chg) in vals.items() if not (is_del and chg)}
+    if state.get(0) != 'true':
+        return ['no advertise-all-vni']
+    if state.get(1) == 'true':
+        return ['advertise-all-vni l3vni-neigh']
+    return ['advertise-all-vni']
+
 def hdl_ospf_log(daemon, cmd_str, op, st_idx, args, data):
     cmd_list = []
 
@@ -1845,7 +1858,8 @@ class BGPConfigDaemon:
                            '+route_flap_dampen_reuse_threshold',
                            '+route_flap_dampen_suppress_threshold',
                            '+route_flap_dampen_max_suppress'],          '{no:no-prefix}bgp dampening {} {} {} {}', ['true', 'false']),
-                         ('advertise-all-vni',                      '{no:no-prefix}advertise-all-vni', ['true','false']),
+                         (('advertise-all-vni',
+                           '+advertise-all-vni-l3vni-neigh'),           '{no:no-prefix}advertise-all-vni', hdl_advertise_all_vni),
                          ('advertise-svi-ip',                       '{no:no-prefix}advertise-svi-ip', ['true','false']),
                          ('advertise-default-gw',                   '{no:no-prefix}advertise-default-gw', ['true','false']),
                          ('advertise-ipv4-unicast',                      '{no:no-prefix}advertise ipv4 unicast', ['true','false']),

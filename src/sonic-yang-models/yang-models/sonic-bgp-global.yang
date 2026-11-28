@@ -459,6 +459,14 @@ module sonic-bgp-global {
                     description "L2VPN advertise all VNIs";
                 }
 
+                leaf advertise-all-vni-l3vni-neigh {
+                    must "current() = 'false' or (current()/../afi_safi = 'l2vpn_evpn' and current()/../advertise-all-vni = 'true')" {
+                        error-message "advertise-all-vni-l3vni-neigh requires advertise-all-vni on l2vpn_evpn";
+                    }
+                    type boolean;
+                    description "EVPN L3 multihoming: sync host ARP/ND entries to ES peers as pure-L3 RT-2 routes over the L3VNI (advertise-all-vni l3vni-neigh)";
+                }
+
                 leaf advertise-svi-ip {
                     type boolean;
                     description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
