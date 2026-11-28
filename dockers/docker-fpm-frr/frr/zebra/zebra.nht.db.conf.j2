@@ -1,0 +1,38 @@
+!
+! Nexthop tracking configuration (runtime template)
+! Used by bgpcfgd NhtMgr for NEXTHOP_TRACKING changes
+!
+{% if resolve_via_default in ['true', 'false'] %}
+{% if vrf_name == 'default' %}
+{% if afi == 'ipv4' %}
+{% if resolve_via_default == 'true' %}
+ip nht resolve-via-default
+{% else %}
+no ip nht resolve-via-default
+{% endif %}
+{% elif afi == 'ipv6' %}
+{% if resolve_via_default == 'true' %}
+ipv6 nht resolve-via-default
+{% else %}
+no ipv6 nht resolve-via-default
+{% endif %}
+{% endif %}
+{% else %}
+vrf {{ vrf_name }}
+{% if afi == 'ipv4' %}
+{% if resolve_via_default == 'true' %}
+ ip nht resolve-via-default
+{% else %}
+ no ip nht resolve-via-default
+{% endif %}
+{% elif afi == 'ipv6' %}
+{% if resolve_via_default == 'true' %}
+ ipv6 nht resolve-via-default
+{% else %}
+ no ipv6 nht resolve-via-default
+{% endif %}
+{% endif %}
+exit-vrf
+{% endif %}
+{% endif %}
+!
