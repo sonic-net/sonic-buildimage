@@ -3,7 +3,17 @@
 # 1. Discovers K8s-managed containers via 'docker ps' label filtering
 #    (exact match on io.kubernetes.container.name + io.kubernetes.pod.namespace,
 #    which are injected by the dockershim/CRI on every K8s-managed container).
-# 2. Uses 'docker restart' to restart the target container.
+# 2. Uses 'docker stop' to stop the target container and leaves the start to
+#    kubelet, which replaces a stopped container with a new attempt.
+#
+# Never 'docker start' / 'docker restart' a kubelet-managed container. kubelet
+# polls the runtime once a second; if it observes the container stopped it
+# creates the next attempt, and a 'docker restart' then brings the old attempt
+# back as well. kubelet only ever reconciles the newest attempt per container
+# name and its garbage collector only removes stopped containers, so the old
+# attempt keeps running unmanaged (no probes, no restarts) until the next
+# reboot. Stopping is safe: a stopped container is exactly what kubelet is
+# built to replace.
 #
 # Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
 #        Or source this script after setting SERVICE_NAME
@@ -47,44 +57,57 @@ pods_on_node() {
     2>/dev/null || true
 }
 
-restart_containers() {
+# Seconds 'docker stop' waits for the process to exit on SIGTERM before SIGKILL.
+STOP_TIMEOUT="${STOP_TIMEOUT:-10}"
+# Seconds cmd_start waits for kubelet to have a running attempt before giving up
+# (informational only; kubelet keeps trying regardless).
+START_WAIT="${START_WAIT:-20}"
+
+stop_containers() {
   mapfile -t cids < <(container_ids_on_node)
   if (( ${#cids[@]} == 0 )); then
     log "No containers found for '${SERVICE_NAME}' on ${NODE_NAME} (ns=${NS})."
     return 0
   fi
 
-  log "Restarting containers for '${SERVICE_NAME}' on ${NODE_NAME}: ${cids[*]}"
+  log "Stopping containers for '${SERVICE_NAME}' on ${NODE_NAME} (kubelet will start the replacement): ${cids[*]}"
 
   local rc_any=0
   for cid in "${cids[@]}"; do
     [[ -z "$cid" ]] && continue
-    if docker restart "$cid" >/dev/null 2>&1; then
-      log "Restarted container ${cid} (${SERVICE_NAME})"
+    if docker stop -t "${STOP_TIMEOUT}" "$cid" >/dev/null 2>&1; then
+      log "Stopped container ${cid} (${SERVICE_NAME})"
     else
-      log "ERROR: failed to restart container ${cid} (${SERVICE_NAME})"
+      log "ERROR: failed to stop container ${cid} (${SERVICE_NAME})"
       rc_any=1
     fi
   done
 
   if (( rc_any != 0 )); then
-    log "ERROR one or more container restarts failed for '${SERVICE_NAME}' on ${NODE_NAME}"
+    log "ERROR one or more container stops failed for '${SERVICE_NAME}' on ${NODE_NAME}"
   else
-    log "All containers restarted for '${SERVICE_NAME}' on ${NODE_NAME}"
+    log "All containers stopped for '${SERVICE_NAME}' on ${NODE_NAME}; kubelet owns the restart"
   fi
   return "$rc_any"
 }
 
 cmd_start() {
-  # Re-invoke ourselves with the "restart" action under a hard 20s cap.
-  # On a healthy node this finishes in 1-2s; the timeout guards against
-  # a hung 'docker restart' so we stay within TimeoutStartSec (30s).
-  timeout 20 "${BASH_SOURCE[0]}" "${SERVICE_NAME}" restart 2>&1 \
-    | logger -t "${SERVICE_NAME}-start" || true
+  # kubelet owns starting the container. Only wait (bounded) for a running
+  # attempt so 'systemctl start' reflects reality; never docker start/restart.
+  local i
+  for (( i = 0; i < START_WAIT; i++ )); do
+    if [[ -n "$(container_ids_on_node)" ]]; then
+      log "'${SERVICE_NAME}' container running on ${NODE_NAME}"
+      return 0
+    fi
+    sleep 1
+  done
+  log "WARNING: no running '${SERVICE_NAME}' container on ${NODE_NAME} after ${START_WAIT}s; kubelet has not started it yet"
+  return 0
 }
 
-cmd_stop()    { restart_containers; }
-cmd_restart() { restart_containers; }
+cmd_stop()    { stop_containers; }
+cmd_restart() { stop_containers; }
 
 cmd_status() {
   local out=""; out="$(pods_on_node)"
