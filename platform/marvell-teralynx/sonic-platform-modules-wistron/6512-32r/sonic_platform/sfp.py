@@ -6,6 +6,7 @@
 #############################################################################
 try:
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.eeprom_rw import ModuleEepromLowerMemoryInfo
     from sonic_py_common.logger import Logger
     import sys
     import time
@@ -118,7 +119,7 @@ class Sfp(SfpOptoeBase):
 
     def _detect_sfp_type(self, sfp_type):
         eeprom_raw = []
-        eeprom_raw = self._xcvr_api_factory._get_id()
+        eeprom_raw = ModuleEepromLowerMemoryInfo(self.read_eeprom).get_id()
         if eeprom_raw is not None:
             eeprom_raw = hex(eeprom_raw)
             if eeprom_raw in QSFP_TYPE_CODE_LIST:
