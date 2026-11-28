@@ -408,6 +408,9 @@ install_deb_package {{deb}}
 {% endfor %}
 {% endif %}
 
+# Install the Rust cfggen after swss-common is available.
+install_deb_package $debs_path/sonic-cfggen-lite-rs_*.deb
+
 # Install SONiC host services Rust deb package
 install_deb_package $debs_path/sonic-host-services-rs_*.deb
 

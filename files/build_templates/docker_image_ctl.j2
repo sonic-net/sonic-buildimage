@@ -348,9 +348,15 @@ function postStartAction()
             if [ -r /etc/sonic/config_db$DEV.json ]; then
 
                 if [ -r /etc/sonic/init_cfg.json ]; then
-                    $SONIC_CFGGEN -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db$DEV.json --write-to-db
+                    if ! $SONIC_CFGGEN_LITE_RS -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db$DEV.json --write-to-db; then
+                        echo "WARNING: Rust CONFIG_DB load failed; falling back to sonic-cfggen" >&2
+                        $SONIC_CFGGEN -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db$DEV.json --write-to-db || return 1
+                    fi
                 else
-                    $SONIC_CFGGEN -j /etc/sonic/config_db$DEV.json --write-to-db
+                    if ! $SONIC_CFGGEN_LITE_RS -j /etc/sonic/config_db$DEV.json --write-to-db; then
+                        echo "WARNING: Rust CONFIG_DB load failed; falling back to sonic-cfggen" >&2
+                        $SONIC_CFGGEN -j /etc/sonic/config_db$DEV.json --write-to-db || return 1
+                    fi
                 fi
             fi
 
@@ -1068,10 +1074,12 @@ if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
 
     SONIC_CFGGEN="sonic-cfggen -n $NET_NS"
+    SONIC_CFGGEN_LITE_RS="sonic-cfggen-lite-rs -n $NET_NS"
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
  else
     NET_NS=""
     SONIC_CFGGEN="sonic-cfggen"
+    SONIC_CFGGEN_LITE_RS="sonic-cfggen-lite-rs"
     SONIC_DB_CLI="sonic-db-cli"
 fi
 

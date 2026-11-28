@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+RUST_TARGET ?= $(strip $(or $(RUST_CROSS_COMPILE_TARGET),$(CARGO_BUILD_TARGET)))
+ifeq ($(CROSS_BUILD_ENVIRON),y)
+ifeq ($(strip $(RUST_TARGET)),)
+$(error RUST_CROSS_COMPILE_TARGET must be set for cross builds)
+endif
+endif
+CARGO_TARGET_DIR ?= target
+CARGO_FLAGS := --locked $(if $(RUST_TARGET),--target $(RUST_TARGET))
+CARGO_RELEASE_DIR := $(CARGO_TARGET_DIR)/$(if $(RUST_TARGET),$(RUST_TARGET)/)release
+SOURCE_PARENT := $(abspath $(CURDIR)/..)
+export RUSTFLAGS := $(strip $(RUSTFLAGS) --remap-path-prefix=$(SOURCE_PARENT)=.)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release --all-features $(CARGO_FLAGS)
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS) $(DEB_BUILD_PROFILES)))
+	cargo test --all-targets --all-features $(CARGO_FLAGS)
+endif
+
+override_dh_auto_install:
+	install -D -m 0755 $(CARGO_RELEASE_DIR)/sonic-cfggen-lite-rs \
+		debian/sonic-cfggen-lite-rs/usr/bin/sonic-cfggen-lite-rs
+
+override_dh_auto_clean:
+	cargo clean

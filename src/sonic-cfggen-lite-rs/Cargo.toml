@@ -1,0 +1,39 @@
+[package]
+name = "sonic-cfggen-lite-rs"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.86"
+authors = ["SONiC"]
+description = "Rust SONiC configuration data reader and writer"
+license = "Apache-2.0"
+repository = "https://github.com/sonic-net/sonic-buildimage"
+
+[[bin]]
+name = "sonic-cfggen-lite-rs"
+path = "src/sonic-cfggen-lite-rs.rs"
+
+[dependencies]
+clap = { version = "=4.5.48", features = ["derive"] }
+indexmap = "=2.11.4"
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
+rustix = { version = "0.38.44", features = ["process"] }
+serde = "1.0"
+serde_json = { version = "1.0", features = ["arbitrary_precision", "preserve_order"] }
+thiserror = "2.0"
+yaml-rust2 = { version = "0.11", default-features = false }
+
+# Keep the native CONFIG_DB implementation in swss-common; cfggen must not grow
+# a second Redis client stack.
+swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+
+[dev-dependencies]
+tempfile = "=3.15.0"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[lints.rust]
+unsafe_code = "deny"

@@ -214,7 +214,7 @@ function restore_cpufreq_governor() {
 
 # Finalize warm/fast boot in global namespace.
 function finalize_global() {
-    local -r asic_type=${ASIC_TYPE:-`sonic-cfggen -y /etc/sonic/sonic_version.yml -v asic_type`}
+    local -r asic_type=${ASIC_TYPE:-`sonic-cfggen-lite-rs -y /etc/sonic/sonic_version.yml -v asic_type`}
 
     finalize_boot
 
