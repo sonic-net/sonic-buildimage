@@ -59,6 +59,16 @@ run_ipv6_multicast_ping() {
         timeout "$wait_time" ping6 -I "$ifname" -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null 2>&1
 }
 
+# Prints "<IP> <ifname>" for each neighbor on the VLAN to refresh. NOARP
+# entries (EVPN remote hosts) are left out: a reply never changes them, and
+# each request for one floods over VXLAN.
+vlan_neighbors_to_refresh() {
+    local family="$1"
+    local vlan="$2"
+
+    ip "$family" neigh show | grep -v fe80 | grep -v NOARP | grep "$vlan" | awk '{print $1, $3}'
+}
+
 flush_unsynced_neighbors() {
     local vlan="$1"
     local neighbors="$2"
@@ -206,7 +216,7 @@ while /bin/true; do
       while read -r ip ifname; do
           [ -z "$ip" ] && continue
           run_arping_with_retry "$ifname" "$ip"
-      done < <(ip -4 neigh show | grep "$vlan" | awk '{print $1, $3}')
+      done < <(vlan_neighbors_to_refresh -4 "$vlan")
 
       # send ipv6 multicast pings to Vlan interfaces to get/refresh link-local addrs
       run_ipv6_multicast_ping 1 "$vlan"
@@ -218,7 +228,7 @@ while /bin/true; do
       while read -r ip ifname; do
           [ -z "$ip" ] && continue
           run_ndisc6_with_retry "$ifname" "$ip"
-      done < <(ip -6 neigh show | grep -v fe80 | grep "$vlan" | awk '{print $1, $3}')
+      done < <(vlan_neighbors_to_refresh -6 "$vlan")
 
       if [[ $SUBTYPE == "dualtor" ]]; then
         # capture all current failed/incomplete IPv6 neighbors in the kernel to avoid situations where new neighbors are learned
