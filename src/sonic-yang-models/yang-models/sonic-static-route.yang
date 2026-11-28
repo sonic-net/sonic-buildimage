@@ -12,9 +12,91 @@ module sonic-static-route {
   description
     "STATIC ROUTE yang Module for SONiC OS";
 
+  revision 2026-11-25 {
+    description
+      "Both key shapes take the same leaves, including tag. bfd and advertise take one
+       value per route. ifname is limited to interface names. Per-nexthop leaves must have
+       one entry per nexthop and have no default. A prefix may use only one key shape.";
+  }
+
   revision 2022-03-17 {
     description
       "First Revision";
+  }
+
+  typedef static-route-flag {
+    type string {
+      pattern "(true|false)";
+    }
+    description
+      "One true/false value for the whole route.";
+  }
+
+  typedef static-route-ifname-list {
+    type string {
+      pattern "("
+            + "Ethernet(-BP|-IB|-Rec)?[0-9]+"
+            + "|PortChannel[0-9]{1,4}"
+            + "|Vlan(409[0-5]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[2-9])"
+            + "|Loopback[0-9]+"
+            + "|eth[0-9]+"
+            + "|(Ethernet[0-9]+|PortChannel[0-9]{1,4})\\.([1-9][0-9]{0,2}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])"
+            + "|(Eth[0-9]+|Po[0-9]+)\\.([1-9][0-9]{0,2}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])"
+            + "|null"
+            + ")?"
+            + "(,("
+            + "Ethernet(-BP|-IB|-Rec)?[0-9]+"
+            + "|PortChannel[0-9]{1,4}"
+            + "|Vlan(409[0-5]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{2}|[1-9][0-9]|[2-9])"
+            + "|Loopback[0-9]+"
+            + "|eth[0-9]+"
+            + "|(Ethernet[0-9]+|PortChannel[0-9]{1,4})\\.([1-9][0-9]{0,2}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])"
+            + "|(Eth[0-9]+|Po[0-9]+)\\.([1-9][0-9]{0,2}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])"
+            + "|null"
+            + ")?)*";
+    }
+    description
+      "Egress interface per nexthop, comma-separated. An entry may be empty; 'null' is the
+       null interface.";
+  }
+
+  typedef static-route-distance-list {
+    type string {
+      pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
+    }
+    description
+      "Administrative distance per nexthop, comma-separated. Lower is preferred.";
+  }
+
+  typedef static-route-vrf-list {
+    type string {
+      pattern "((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt))?(,((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt))?)*";
+    }
+    description
+      "Nexthop VRF per nexthop, comma-separated, for VRF leaking. An entry may be empty
+       when its nexthop is in the route's own VRF.";
+  }
+
+  typedef static-route-blackhole-list {
+    type string {
+      pattern "((true|false),)*(true|false)";
+    }
+    description
+      "Blackhole flag per nexthop, comma-separated. A blackhole nexthop drops matching
+       traffic.";
+  }
+
+  typedef static-route-tag-list {
+    type string {
+      pattern "(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[01][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}"
+            + "|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[01][0-9]{2}"
+            + "|42949672[0-8][0-9]|429496729[0-5])"
+            + "(,(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[01][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}"
+            + "|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[01][0-9]{2}"
+            + "|42949672[0-8][0-9]|429496729[0-5]))*";
+    }
+    description
+      "Route tag per nexthop, comma-separated, 0-4294967295 (uint32). 0 means no tag.";
   }
 
   container sonic-static-route {
@@ -23,6 +105,40 @@ module sonic-static-route {
         "Static route entries for deterministic IP forwarding.";
       list STATIC_ROUTE_TEMPLATE_LIST {
         key "prefix";
+        must "not(bfd = 'true') or (ifname and ifname != '')" {
+          error-message
+            "bfd requires ifname: staticroutebfd identifies each session by its interface.";
+        }
+        must "not(ifname) or ifname = '' or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(ifname) - string-length(translate(ifname, ',', ''))" {
+          error-message
+            "ifname must have one comma-separated entry per nexthop.";
+        }
+        must "not(nexthop-vrf) or nexthop-vrf = '' or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(nexthop-vrf) - string-length(translate(nexthop-vrf, ',', ''))" {
+          error-message
+            "nexthop-vrf must have one comma-separated entry per nexthop.";
+        }
+        must "not(distance) or string-length(distance) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(distance) - string-length(translate(distance, ',', ''))" {
+          error-message
+            "distance must have one comma-separated entry per nexthop.";
+        }
+        must "not(blackhole) or string-length(blackhole) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(blackhole) - string-length(translate(blackhole, ',', ''))" {
+          error-message
+            "blackhole must have one comma-separated entry per nexthop.";
+        }
+        must "not(tag) or string-length(tag) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(tag) - string-length(translate(tag, ',', ''))" {
+          error-message
+            "tag must have one comma-separated entry per nexthop.";
+        }
         leaf prefix {
           type inet:ip-prefix;
           description
@@ -36,27 +152,84 @@ module sonic-static-route {
              specified, use 0.0.0.0 as leaf value";
         }
         leaf ifname {
-          type string;
+          type static-route-ifname-list;
           description
             "When interface is specified, forwarding happens through it";
         }
         leaf advertise {
-          type string {
-            pattern "((true|false),)*(true|false)";
-          }
+          type static-route-flag;
           default "false";
-          description "Advertise this static route to BGP, comma-separated per nexthop.";
+          description "Advertise this static route to BGP.";
+        }
+        leaf distance {
+          type static-route-distance-list;
+          description
+            "Administrative Distance (preference) of the entry.  The
+             preference defines the order of selection when multiple
+             sources (protocols, static, etc.) contribute to the same
+             prefix entry.  The lower the preference, the more preferable the
+             prefix is.  When this value is not specified, the preference is
+             inherited from the default preference of the implementation for
+             static routes.";
+        }
+        leaf nexthop-vrf {
+          type static-route-vrf-list;
+          description
+            "VRF name of the nexthop. This is for vrf leaking";
+        }
+        leaf blackhole {
+          type static-route-blackhole-list;
+          description
+            "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+        leaf tag {
+          type static-route-tag-list;
+          description
+            "Route tag of each nexthop. Absent means no tag.";
         }
         leaf bfd {
-          type string {
-            pattern "((true|false),)*(true|false)";
-          }
+          type static-route-flag;
           default "false";
-          description "Enable BFD monitoring for each nexthop, comma-separated per nexthop.";
+          description "Enable BFD monitoring for each nexthop.";
         }
       }
       list STATIC_ROUTE_LIST {
         key "vrf_name prefix";
+        must "not(ifname) or ifname = '' or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(ifname) - string-length(translate(ifname, ',', ''))" {
+          error-message
+            "ifname must have one comma-separated entry per nexthop.";
+        }
+        must "not(nexthop-vrf) or nexthop-vrf = '' or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(nexthop-vrf) - string-length(translate(nexthop-vrf, ',', ''))" {
+          error-message
+            "nexthop-vrf must have one comma-separated entry per nexthop.";
+        }
+        must "not(distance) or string-length(distance) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(distance) - string-length(translate(distance, ',', ''))" {
+          error-message
+            "distance must have one comma-separated entry per nexthop.";
+        }
+        must "not(blackhole) or string-length(blackhole) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(blackhole) - string-length(translate(blackhole, ',', ''))" {
+          error-message
+            "blackhole must have one comma-separated entry per nexthop.";
+        }
+        must "not(tag) or string-length(tag) = 0 or not(nexthop) or nexthop = ''"
+           + " or string-length(nexthop) - string-length(translate(nexthop, ',', ''))"
+           + "  = string-length(tag) - string-length(translate(tag, ',', ''))" {
+          error-message
+            "tag must have one comma-separated entry per nexthop.";
+        }
+        must "not(vrf_name = 'default'"
+           + "      and ../STATIC_ROUTE_TEMPLATE_LIST[prefix = current()/prefix])" {
+          error-message
+            "This prefix is configured twice: once with vrf default and once without. Delete one.";
+        }
         leaf vrf_name {
           type union {
             type string {
@@ -85,22 +258,17 @@ module sonic-static-route {
              specified, use 0.0.0.0 as leaf value";
         }
         leaf ifname {
-          type string;
+          type static-route-ifname-list;
           description
             "When interface is specified, forwarding happens through it";
         }
         leaf advertise {
-          type string {
-            pattern "((true|false),)*(true|false)";
-          }
+          type static-route-flag;
           default "false";
-          description "Advertise this static route to BGP, comma-separated per nexthop.";
+          description "Advertise this static route to BGP.";
         }
         leaf distance {
-          type string {
-            pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
-          }
-          default "0";
+          type static-route-distance-list;
           description
             "Administrative Distance (preference) of the entry.  The
              preference defines the order of selection when multiple
@@ -111,19 +279,19 @@ module sonic-static-route {
              static routes.";
         }
         leaf nexthop-vrf {
-          type string {
-            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
-          }
+          type static-route-vrf-list;
           description
             "VRF name of the nexthop. This is for vrf leaking";
         }
         leaf blackhole {
-          type string {
-            pattern "((true|false),)*(true|false)";
-          }
-          default "false";
+          type static-route-blackhole-list;
           description
             "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+        leaf tag {
+          type static-route-tag-list;
+          description
+            "Route tag of each nexthop. Absent means no tag.";
         }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */

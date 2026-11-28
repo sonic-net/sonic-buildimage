@@ -3070,6 +3070,14 @@
                 "ifname": "Ethernet14",
                 "nexthop": "10.184.229.212",
                 "nexthop-vrf": "default"
+            },
+            "30.30.30.0/24": {
+                "blackhole": "false,false",
+                "distance": "10,20",
+                "ifname": "Ethernet14,Ethernet14",
+                "nexthop": "10.184.229.212,10.184.229.213",
+                "nexthop-vrf": "default,default",
+                "tag": "100,200"
             }
         },
         "KUBERNETES_MASTER": {
