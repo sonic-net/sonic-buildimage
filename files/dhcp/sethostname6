@@ -1,14 +1,80 @@
+# The host name comes from the DHCP server and ends up in sed and grep
+# patterns, so accept only the characters a host name is made of: letters,
+# digits, '.', '-' and '_', up to the 253 characters of a full domain name.
+sonic_is_valid_hostname()
+(
+    name=$1
+    LC_ALL=C
+    export LC_ALL
+
+    [ -n "$name" ] && [ "${#name}" -le 253 ] || return 1
+    case "$name" in
+        *[!A-Za-z0-9._-]*) return 1 ;;
+    esac
+)
+
+# Turn a name accepted by sonic_is_valid_hostname into a pattern that matches
+# it literally; '.' is the only pattern metacharacter such a name can contain.
+sonic_hostname_pattern()
+{
+    printf '%s\n' "$1" | sed 's/\./\\./g'
+}
+
+# Docker gives each host-network container its own copy of the host's
+# /etc/hosts when the container starts and never refreshes it, so a rename has
+# to be applied to the copies in running containers too; see sethostname.
+#
+# Usage: sonic_update_container_hosts OLD_NAME NEW_NAME [HOST_HOSTS_FILE]
+sonic_update_container_hosts()
+(
+    old_name=$1
+    new_name=$2
+    hosts_file=${3:-/etc/hosts}
+
+    if ! sonic_is_valid_hostname "$old_name" || ! sonic_is_valid_hostname "$new_name"; then
+        logger -t sethostname6 "not updating container /etc/hosts: invalid host name"
+        return 0
+    fi
+    old_pattern=$(sonic_hostname_pattern "$old_name")
+    new_pattern=$(sonic_hostname_pattern "$new_name")
+
+    command -v docker >/dev/null 2>&1 || return 0
+    containers=$(timeout 10 docker ps -q --filter network=host 2>/dev/null) || return 0
+    [ -n "$containers" ] || return 0
+
+    # The entries the host file now holds for the new name.
+    new_entries=$(grep -E "[[:space:]]${new_pattern}\$" "$hosts_file")
+    [ -n "$new_entries" ] || return 0
+
+    for container in $containers; do
+        # Edit the copy in place rather than replace it with the host file, so
+        # entries that exist only in the container (--add-host) survive. The
+        # copy is a bind mount, so it is rewritten through a redirect; sed -i
+        # would try to rename a new file over the mount point and fail.
+        if ! printf '%s\n' "$new_entries" | timeout 10 docker exec -i "$container" sh -c '
+                kept=$(sed -e "/[[:space:]]$1\$/d" -e "/[[:space:]]$2\$/d" "$3") || exit 1
+                { [ -z "$kept" ] || printf "%s\n" "$kept"; cat; } > "$3"
+            ' sh "$old_pattern" "$new_pattern" /etc/hosts; then
+            logger -t sethostname6 "failed to update /etc/hosts in container $container"
+        fi
+    done
+)
+
 case $reason in
     BOUND6|RENEW6|REBIND6|REBOOT)
         current_fqdn_fqdn=`hostname`
-        if [ "$current_fqdn_fqdn" != "$new_fqdn_fqdn" ] && [ -n "$new_fqdn_fqdn" ]
+        if [ -n "$new_fqdn_fqdn" ] && ! sonic_is_valid_hostname "$new_fqdn_fqdn"
+        then
+            logger -t sethostname6 "ignoring invalid host name from DHCPv6"
+        elif [ "$current_fqdn_fqdn" != "$new_fqdn_fqdn" ] && [ -n "$new_fqdn_fqdn" ]
         then
             echo $new_fqdn_fqdn > /etc/hostname
             hostname -F /etc/hostname
-            sed -i "/\s$current_fqdn_fqdn$/d" /etc/hosts
-            sed -i "/\s$new_fqdn_fqdn$/d" /etc/hosts
+            sed -i "/\s$(sonic_hostname_pattern "$current_fqdn_fqdn")$/d" /etc/hosts
+            sed -i "/\s$(sonic_hostname_pattern "$new_fqdn_fqdn")$/d" /etc/hosts
             echo "127.0.0.1 $new_fqdn_fqdn" >> /etc/hosts
             echo ":: $new_fqdn_fqdn" >> /etc/hosts
+            sonic_update_container_hosts "$current_fqdn_fqdn" "$new_fqdn_fqdn"
         fi
         ;;
 esac
