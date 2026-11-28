@@ -1,14 +1,16 @@
 {
    "chassis": {
-      "7060XE7-64PRS-MV3-L": {
+      "DCS-7060XE7-64PRS-MV3-L": {
          "component": {
             "Aboot()": {},
             "Scd(addr=0000:07:00.0)": {},
-            "Ucd90320(addr=8-0031)": {},
+            "Ucd90320(addr=6-0031)": {},
+            "SteamerLaneSysCpld(addr=12-0023)": {},
+            "Ucd90320(addr=13-0011)": {},
+            "Ucd90320(addr=13-0013)": {},
             "Scd(addr=0000:09:00.0)": {},
             "Scd(addr=0000:08:00.0)": {},
-            "Ucd90320(addr=23-0011)": {},
-            "Ucd90320(addr=23-0013)": {}
+            "Tomahawk6(addr=0000:05:00.0)": {}
          }
       }
    }
