@@ -200,6 +200,72 @@ copy_config_files_and_directories()
     done
 }
 
+# Walk a path under /etc/sonic and copy from the backup each component the new
+# image lacks, a directory with its contents and a link as a link, without
+# overwriting anything the new image has, stopping at the first link.
+restore_config_path()
+{
+    local prefix=/etc/sonic rest=${1#/etc/sonic/} part entry link
+    local old_dir=/etc/sonic/old_config
+
+    link_target=
+    while [ -n "${rest}" ]; do
+        part=${rest%%/*}
+        rest=${rest#"${part}"}
+        rest=${rest#/}
+        prefix=${prefix}/${part}
+        entry=${prefix#/etc/sonic/}
+        if [ ! -e "${prefix}" ] && [ ! -L "${prefix}" ]; then
+            [ -e "${old_dir}/${entry}" ] || [ -L "${old_dir}/${entry}" ] || return 0
+            echo "Copying SONiC configuration ${entry} ..."
+            cp -a "${old_dir}/${entry}" "${prefix}" || return 0
+        fi
+        if [ -L "${prefix}" ]; then
+            link=$(readlink "${prefix}")
+            [ "${link:0:1}" = / ] || link=${prefix%/*}/${link}
+            # Normalize lexically without resolving earlier links
+            link_target=$(realpath -m -s "${link}${rest:+/${rest}}")
+            return 0
+        fi
+    done
+}
+
+# Restore /etc/sonic files from host old_config/config_db.json certs strings.
+copy_configured_cert_files()
+{
+    local old_config_db=/etc/sonic/old_config/config_db.json
+    local path rel target hop link_target
+
+    [ -r "${old_config_db}" ] || return 0
+    jq -r '.[] | objects | .certs? | objects | .[] | strings
+           | select(startswith("/etc/sonic/") and (contains("\n") | not))' \
+        "${old_config_db}" | sort -u | while IFS= read -r path; do
+        [ "${path}" != "/etc/sonic/" ] && path=${path%/}
+        rel=${path#/etc/sonic/}
+        case "/${rel}/" in
+            */../*|*/./*|*//*|/old_config/*)
+                echo "Skipping SONiC certificate path ${path} ..."
+                continue
+                ;;
+        esac
+        [ -e "${path}" ] && continue
+
+        # Follow up to 40 links in /etc/sonic; stop if a link leaves it
+        target=${path}
+        for ((hop = 0; hop <= 40; hop++)); do
+            restore_config_path "${target}"
+            [ -e "${path}" ] && break
+            case "${link_target}" in
+                /etc/sonic/old_config|/etc/sonic/old_config/*) break ;;
+                /etc/sonic/?*) target=${link_target} ;;
+                *) break ;;
+            esac
+        done
+        [ -e "${path}" ] || echo "Missing SONiC certificate ${rel} ..."
+    done
+    return 0
+}
+
 # Check if SONiC switch has booted after a warm reboot request.
 # Prefers STATE_DB when available (reflects true warm boot state and
 # gets cleared after warm boot completes). Falls back to /proc/cmdline
@@ -637,6 +703,9 @@ do_config_migration()
     
     # Migrate all config_db from old to new
     copy_config_files_and_directories $(get_config_db_file_list)
+
+    # Migrate the certificate files that the old configuration names
+    copy_configured_cert_files
 
     # Migrate post-migration hooks
     copy_post_migration_hooks
