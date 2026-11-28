@@ -1,0 +1,78 @@
+#!/bin/bash
+# This script load/unload gt kernel modules
+
+### BEGIN INIT INFO
+# Provides:          load-gt-modules
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load gt kernel modules
+### END INIT INFO
+#set socket buffer max size limit to 100MB
+RMEM_SIZE_SETTING=104857600
+WMEM_SIZE_SETTING=25165824
+
+MODULES_LOAD="uio gt_dev gt_netif"
+MODULES_UNLOAD="gt_netif gt_dev uio"
+
+load_modules() {
+    echo -n "Load gt kernel modules... "
+
+    depmod -a 2>/dev/null
+
+    RMEM_SIZE=`cat /proc/sys/net/core/rmem_max`
+    if [ $RMEM_SIZE -lt $RMEM_SIZE_SETTING ]; then
+        echo "$RMEM_SIZE_SETTING" > /proc/sys/net/core/rmem_max
+    fi
+    WMEM_SIZE=`cat /proc/sys/net/core/wmem_max`
+    if [ $WMEM_SIZE -lt $WMEM_SIZE_SETTING ]; then
+        echo "$WMEM_SIZE_SETTING" > /proc/sys/net/core/wmem_max
+    fi
+
+    for mod in $MODULES_LOAD; do
+        if ! modprobe "$mod"; then
+            echo "FAILED to load $mod"
+            return 1
+        fi
+    done
+
+    echo "done."
+    return 0
+}
+
+unload_modules() {
+    echo -n "Unload gt kernel modules... "
+
+    for mod in $MODULES_UNLOAD; do
+        if ! rmmod "$mod" 2>/dev/null; then
+            echo "warning: $mod may still be in use"
+        fi
+    done
+
+    echo "done."
+}
+
+case "$1" in
+    start)
+        load_modules
+        ;;
+
+    stop)
+        unload_modules
+        ;;
+
+    restart|force-reload)
+        unload_modules
+        load_modules
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|restart|force-reload}"
+        exit 1
+        ;;
+esac
+
+exit 0
