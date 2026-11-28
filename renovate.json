@@ -55,13 +55,20 @@
   ],
   "packageRules": [
     {
-      "description": "Renovate merges the updates the preset labels automerge: security updates below a major version, except patched modules. It merges on a later run, once every check on the head commit has passed, not only the required ones, and the renovate-approve app has approved the pull request. Reviewers are still assigned, so one that fails reaches them.",
+      "description": "Renovate merges the updates the preset labels automerge: security updates below a major version, except patched modules. It merges on a later run, once every check on the head commit has passed, not only the required ones, and the renovate-approve app has approved the pull request. Reviewers are still assigned, so one that fails reaches them. They are rebased only on a conflict, not each time master moves as the preset does: CI here runs 10 to 13 hours and master moves every few hours, so each rebase cancelled the run, and master does not require a branch to be up to date to merge.",
       "matchJsonata": ["isVulnerabilityAlert = true and $not('patched-module' in addLabels)"],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": false,
-      "assignAutomerge": true
+      "assignAutomerge": true,
+      "rebaseWhen": "conflicted"
+    },
+    {
+      "description": "Major updates of Docker and containerd land in one pull request. docker-ce 29 requires containerd.io 2.1.5 or later, so either major alone fails every image build",
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["docker-ce", "containerd.io"],
+      "groupName": "docker engine"
     }
   ]
 }
