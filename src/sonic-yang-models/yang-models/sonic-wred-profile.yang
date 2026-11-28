@@ -43,26 +43,35 @@ module sonic-wred-profile {
                     description "WRED profile name";
                 }
 
+                /* Thresholds are bounded to the signed 32-bit range that orchagent can parse. */
                 leaf yellow_min_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     description "Queue depth in bytes at which WRED begins dropping yellow-colored packets.";
                 }
 
                 leaf green_min_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     description "Queue depth in bytes at which WRED begins dropping green-colored packets.";
                 }
 
                 leaf red_min_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     description "Queue depth in bytes at which WRED begins dropping red-colored packets.";
                 }
 
                 leaf yellow_max_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     must "(current() >= current()/../yellow_min_threshold)" {
                         error-message "Yellow max threshold must be greater than or equal to min threshold";
@@ -71,7 +80,9 @@ module sonic-wred-profile {
                 }
 
                 leaf green_max_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     must "(current() >= current()/../green_min_threshold)" {
                          error-message "Green max threshold must be greater than or equal to min threshold";
@@ -80,7 +91,9 @@ module sonic-wred-profile {
                 }
 
                 leaf red_max_threshold {
-                    type uint64;
+                    type uint64 {
+                        range "0..2147483647";
+                    }
                     units bytes;
                     must "(current() >= current()/../red_min_threshold)" {
                         error-message "Red max threshold must be greater than or equal to min threshold";

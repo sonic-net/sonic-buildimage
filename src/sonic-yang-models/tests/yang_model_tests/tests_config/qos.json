@@ -263,6 +263,56 @@
         }
     },
 
+    "WRED_PROFILE_THRESHOLD_UPPER_BOUND": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "yellow_min_threshold": 2147483647,
+                    "green_min_threshold": 2147483647,
+                    "red_min_threshold": 2147483647,
+                    "yellow_max_threshold": 2147483647,
+                    "green_max_threshold": 2147483647,
+                    "red_max_threshold": 2147483647,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_MAX_THRESHOLD_RANGE": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "green_min_threshold": 4096,
+                    "green_max_threshold": 4294967295,
+                    "wred_green_enable": true,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_MIN_THRESHOLD_RANGE": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "red_min_threshold": 2147483648,
+                    "wred_red_enable": true,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
     "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
         "sonic-wred-profile:sonic-wred-profile": {
             "sonic-wred-profile:WRED_PROFILE": {
