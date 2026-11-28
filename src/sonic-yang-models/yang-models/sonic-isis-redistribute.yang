@@ -1,0 +1,64 @@
+module sonic-isis-redistribute {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-isis-redistribute";
+    prefix isisr;
+
+    import sonic-isis-global { prefix isisg; }
+    import sonic-route-map { prefix rmap; }
+
+    organization "SONiC";
+    contact "SONiC";
+    description "FRR 10.7.1 IS-IS redistribution, one policy per AF/source/level/table.";
+
+    revision 2026-11-18 {
+        description "Six-part keys and complete policy replacement.";
+    }
+
+    container sonic-isis-redistribute {
+        container ISIS_REDISTRIBUTE {
+            list ISIS_REDISTRIBUTE_LIST {
+                key "vrf_name instance_name addr_family src_protocol level table_id";
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]";
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level";
+                must "(src_protocol = 'table' and table_id > 0) or (src_protocol != 'table' and table_id = 0)";
+                must "(addr_family = 'ipv4' and src_protocol != 'ripng' and src_protocol != 'ospf6') or (addr_family = 'ipv6' and src_protocol != 'rip' and src_protocol != 'ospf' and src_protocol != 'eigrp')";
+                leaf vrf_name { type isisg:vrf-name; }
+                leaf instance_name { type isisg:instance-name; }
+                leaf addr_family { type enumeration { enum ipv4; enum ipv6; } }
+                leaf src_protocol {
+                    type enumeration {
+                        enum kernel;
+                        enum connected;
+                        enum local;
+                        enum static;
+                        enum rip;
+                        enum ripng;
+                        enum ospf;
+                        enum ospf6;
+                        enum bgp;
+                        enum eigrp;
+                        enum nhrp;
+                        enum vnc;
+                        enum babel;
+                        enum sharp;
+                        enum openfabric;
+                        enum table;
+                    }
+                    description "sharp requires a SONiC build with sharpd enabled.";
+                }
+                leaf level { type enumeration { enum level-1; enum level-2; } }
+                leaf table_id { type uint16; }
+                leaf metric {
+                    type uint32 { range "0..16777215"; }
+                    default 0;
+                }
+                leaf-list route_map {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    max-elements 1;
+                }
+            }
+        }
+    }
+}

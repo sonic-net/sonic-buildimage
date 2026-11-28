@@ -1,0 +1,122 @@
+module sonic-isis-global {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-isis-global";
+    prefix isisg;
+
+    import sonic-vrf { prefix vrf; }
+
+    organization "SONiC";
+    contact "SONiC";
+    description "FRR 10.7.1 IS-IS instances. Row existence creates an instance.";
+
+    revision 2026-11-18 {
+        description "Named instances with independently stored L1/L2 parameters.";
+    }
+
+    typedef instance-name {
+        type string {
+            length "1..64";
+            pattern '[A-Za-z0-9_][A-Za-z0-9_.-]*';
+        }
+    }
+
+    typedef vrf-name {
+        type union {
+            type string { pattern "default"; }
+            type leafref { path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name"; }
+        }
+    }
+
+    typedef isis-level {
+        type enumeration {
+            enum level-1;
+            enum level-2;
+            enum level-1-2;
+        }
+    }
+
+    typedef backoff-delay {
+        type uint32 { range "0..60000"; }
+        units "milliseconds";
+    }
+
+    container sonic-isis-global {
+        container ISIS_GLOBALS {
+            list ISIS_GLOBALS_LIST {
+                key "vrf_name instance_name";
+                must "(not(spf_init_delay) and not(spf_short_delay) and not(spf_long_delay) and not(spf_hold_down) and not(spf_time_to_learn)) or (spf_init_delay and spf_short_delay and spf_long_delay and spf_hold_down and spf_time_to_learn)";
+                must "not(spf_hold_down) or spf_hold_down > spf_time_to_learn";
+                leaf vrf_name { type vrf-name; }
+                leaf instance_name { type instance-name; }
+                leaf net_title {
+                    type string { pattern '[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00'; }
+                    must "not(../../ISIS_GLOBALS_LIST[vrf_name=current()/../vrf_name][net_title][translate(substring(net_title, string-length(net_title)-16, 14), 'ABCDEF', 'abcdef') != translate(substring(current(), string-length(current())-16, 14), 'ABCDEF', 'abcdef')])";
+                    description "One optional NET per instance.";
+                }
+                leaf level { type isis-level; default level-1-2; }
+                leaf dynamic_hostname { type boolean; default true; }
+                leaf lsp_mtu {
+                    type uint16 { range "128..4352"; }
+                    units "bytes";
+                    default 1497;
+                }
+                leaf ipv6_multi_topology { type boolean; default false; }
+                leaf overload { type boolean; default false; }
+                leaf overload_on_startup {
+                    type uint32 { range "0..86400"; }
+                    units "seconds";
+                    default 0;
+                }
+                leaf lsp_refresh_interval_level_1 {
+                    type uint16 { range "1..65235"; }
+                    units "seconds";
+                    default 900;
+                }
+                leaf lsp_refresh_interval_level_2 {
+                    type uint16 { range "1..65235"; }
+                    units "seconds";
+                    default 900;
+                }
+                leaf lsp_lifetime_level_1 {
+                    type uint16 { range "350..65535"; }
+                    units "seconds";
+                    default 1200;
+                    must ". >= ../lsp_refresh_interval_level_1 + 300";
+                }
+                leaf lsp_lifetime_level_2 {
+                    type uint16 { range "350..65535"; }
+                    units "seconds";
+                    default 1200;
+                    must ". >= ../lsp_refresh_interval_level_2 + 300";
+                }
+                leaf lsp_generation_interval_level_1 {
+                    type uint16 { range "1..120"; }
+                    units "seconds";
+                    default 30;
+                    must ". < ../lsp_refresh_interval_level_1";
+                }
+                leaf lsp_generation_interval_level_2 {
+                    type uint16 { range "1..120"; }
+                    units "seconds";
+                    default 30;
+                    must ". < ../lsp_refresh_interval_level_2";
+                }
+                leaf spf_minimum_interval_level_1 {
+                    type uint16 { range "1..120"; }
+                    units "seconds";
+                    default 1;
+                }
+                leaf spf_minimum_interval_level_2 {
+                    type uint16 { range "1..120"; }
+                    units "seconds";
+                    default 1;
+                }
+                leaf spf_init_delay { type backoff-delay; }
+                leaf spf_short_delay { type backoff-delay; }
+                leaf spf_long_delay { type backoff-delay; }
+                leaf spf_hold_down { type backoff-delay; }
+                leaf spf_time_to_learn { type backoff-delay; }
+            }
+        }
+    }
+}

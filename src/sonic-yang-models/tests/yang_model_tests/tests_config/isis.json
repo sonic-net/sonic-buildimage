@@ -1,0 +1,116 @@
+{
+    "ISIS_VALID": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [
+            {"vrf_name": "default", "instance_name": "CORE", "net_title": "49.0001.1921.6800.0001.00", "lsp_refresh_interval_level_1": 100, "lsp_lifetime_level_1": 500},
+            {"vrf_name": "default", "instance_name": "EDGE", "net_title": "49.0002.1921.6800.0001.00"}
+        ]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [
+            {"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE", "ipv4_enabled": true, "ipv6_enabled": true, "metric_level_1": 0, "metric_level_2": 16777215}
+        ]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [
+            {"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "table", "level": "level-1", "table_id": 1},
+            {"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "table", "level": "level-2", "table_id": 65535},
+            {"vrf_name": "default", "instance_name": "EDGE", "addr_family": "ipv6", "src_protocol": "ospf6", "level": "level-2", "table_id": 0}
+        ]}}
+    },
+    "ISIS_EMPTY_INSTANCE": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}}
+    },
+    "ISIS_NET_SHORT": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "net_title": "49.0001.00"}]}}
+    },
+    "ISIS_NET_NSEL": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "net_title": "49.0001.1921.6800.0001.01"}]}}
+    },
+    "ISIS_NET_SYSTEM_ID": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [
+            {"vrf_name": "default", "instance_name": "CORE", "net_title": "49.0001.1921.6800.0001.00"},
+            {"vrf_name": "default", "instance_name": "EDGE", "net_title": "49.0002.1921.6800.0002.00"}
+        ]}}
+    },
+    "ISIS_INSTANCE_NAME": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "-CORE"}]}}
+    },
+    "ISIS_UNKNOWN_VRF": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "VrfMissing", "instance_name": "CORE"}]}}
+    },
+    "ISIS_MTU_LOW": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_mtu": 127}]}}
+    },
+    "ISIS_MTU_HIGH": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_mtu": 4353}]}}
+    },
+    "ISIS_REFRESH_HIGH": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_refresh_interval_level_2": 65236}]}}
+    },
+    "ISIS_LIFETIME_LOW": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_lifetime_level_1": 349}]}}
+    },
+    "ISIS_TIMER_RELATION": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_refresh_interval_level_2": 1000}]}}
+    },
+    "ISIS_GENERATION_RELATION": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "lsp_refresh_interval_level_1": 30}]}}
+    },
+    "ISIS_BACKOFF_VALID": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "spf_init_delay": 0, "spf_short_delay": 50, "spf_long_delay": 500, "spf_hold_down": 60000, "spf_time_to_learn": 1000}]}}
+    },
+    "ISIS_BACKOFF_PARTIAL": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "spf_init_delay": 0}]}}
+    },
+    "ISIS_BACKOFF_ORDER": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "spf_init_delay": 0, "spf_short_delay": 50, "spf_long_delay": 500, "spf_hold_down": 1000, "spf_time_to_learn": 1000}]}}
+    },
+    "ISIS_ORPHAN_INTERFACE": {
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE", "ipv4_enabled": true}]}}
+    },
+    "ISIS_IPV6_ONLY": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE", "ipv6_enabled": true}]}}
+    },
+    "ISIS_BOTH_AF_DISABLED": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE"}]}}
+    },
+    "ISIS_LEVEL_INTERSECTION": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "level": "level-1"}]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE", "ipv4_enabled": true, "level": "level-2"}]}}
+    },
+    "ISIS_VALID_VRF": {
+        "sonic-vrf:sonic-vrf": {"VRF": {"VRF_LIST": [{"name": "VrfA"}]}},
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "VrfA", "instance_name": "CORE"}]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0", "vrf_name": "VrfA"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "VrfA", "ifname": "Loopback0", "instance_name": "CORE", "ipv4_enabled": true}]}}
+    },
+    "ISIS_WRONG_INTERFACE_VRF": {
+        "sonic-vrf:sonic-vrf": {"VRF": {"VRF_LIST": [{"name": "VrfA"}]}},
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-loopback-interface:sonic-loopback-interface": {"LOOPBACK_INTERFACE": {"LOOPBACK_INTERFACE_LIST": [{"name": "Loopback0", "vrf_name": "VrfA"}]}},
+        "sonic-isis-interface:sonic-isis-interface": {"ISIS_INTERFACE": {"ISIS_INTERFACE_LIST": [{"vrf_name": "default", "ifname": "Loopback0", "instance_name": "CORE", "ipv4_enabled": true}]}}
+    },
+    "ISIS_REDISTRIBUTE_TABLE_ZERO": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [{"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "table", "level": "level-1", "table_id": 0}]}}
+    },
+    "ISIS_REDISTRIBUTE_ORDINARY_TABLE": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [{"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "connected", "level": "level-1", "table_id": 1}]}}
+    },
+    "ISIS_REDISTRIBUTE_AF": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [{"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv6", "src_protocol": "ospf", "level": "level-1", "table_id": 0}]}}
+    },
+    "ISIS_REDISTRIBUTE_LEVEL": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE", "level": "level-1"}]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [{"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "static", "level": "level-2", "table_id": 0}]}}
+    },
+    "ISIS_REDISTRIBUTE_ROUTE_MAP": {
+        "sonic-isis-global:sonic-isis-global": {"ISIS_GLOBALS": {"ISIS_GLOBALS_LIST": [{"vrf_name": "default", "instance_name": "CORE"}]}},
+        "sonic-isis-redistribute:sonic-isis-redistribute": {"ISIS_REDISTRIBUTE": {"ISIS_REDISTRIBUTE_LIST": [{"vrf_name": "default", "instance_name": "CORE", "addr_family": "ipv4", "src_protocol": "static", "level": "level-1", "table_id": 0, "route_map": ["MissingMap"]}]}}
+    }
+}

@@ -607,7 +607,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         for key in keyList:
             val = entry.get(key)
-            if val:
+            if val is not None:
                 keyDict[key] = sval = str(val)
                 keyV += sval + "|"
             else:

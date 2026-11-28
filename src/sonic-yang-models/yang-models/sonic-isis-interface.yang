@@ -1,0 +1,70 @@
+module sonic-isis-interface {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-isis-interface";
+    prefix isis-if;
+
+    import sonic-isis-global { prefix isisg; }
+    import sonic-port { prefix port; }
+    import sonic-portchannel { prefix lag; }
+    import sonic-interface { prefix intf; }
+    import sonic-vlan { prefix vlan; }
+    import sonic-loopback-interface { prefix lo; }
+    import sonic-vlan-sub-interface { prefix sub; }
+
+    organization "SONiC";
+    contact "SONiC";
+    description "IS-IS interface bindings and independently stored L1/L2 attributes.";
+
+    revision 2026-11-18 {
+        description "Composite VRF/interface keys, explicit AF and instance binding.";
+    }
+
+    typedef metric {
+        type uint32 { range "0..16777215"; }
+    }
+    typedef hello-interval {
+        type uint16 { range "1..600"; }
+        units "seconds";
+    }
+    typedef hello-multiplier {
+        type uint8 { range "2..100"; }
+    }
+
+    container sonic-isis-interface {
+        container ISIS_INTERFACE {
+            list ISIS_INTERFACE_LIST {
+                key "vrf_name ifname";
+                must "ipv4_enabled = 'true' or ipv6_enabled = 'true'";
+                must "/isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]";
+                must "level = 'level-1-2' or /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level = 'level-1-2' or level = /isisg:sonic-isis-global/isisg:ISIS_GLOBALS/isisg:ISIS_GLOBALS_LIST[isisg:vrf_name=current()/vrf_name][isisg:instance_name=current()/instance_name]/isisg:level";
+                must "not(/lag:sonic-portchannel/lag:PORTCHANNEL_MEMBER/lag:PORTCHANNEL_MEMBER_LIST[lag:port=current()/ifname])";
+                must "(vrf_name = 'default' and not(/intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name) and not(/lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name) and not(/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name) and not(/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name) and not(/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name)) or /intf:sonic-interface/intf:INTERFACE/intf:INTERFACE_LIST[intf:name=current()/ifname]/intf:vrf_name = vrf_name or /lag:sonic-portchannel/lag:PORTCHANNEL_INTERFACE/lag:PORTCHANNEL_INTERFACE_LIST[lag:name=current()/ifname]/lag:vrf_name = vrf_name or /vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST[vlan:name=current()/ifname]/vlan:vrf_name = vrf_name or /lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST[lo:name=current()/ifname]/lo:vrf_name = vrf_name or /sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST[sub:name=current()/ifname]/sub:vrf_name = vrf_name";
+                leaf vrf_name { type isisg:vrf-name; }
+                leaf ifname {
+                    type union {
+                        type leafref { path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name"; }
+                        type leafref { path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name"; }
+                        type leafref { path "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST/vlan:name"; }
+                        type leafref { path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name"; }
+                        type leafref { path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name"; }
+                    }
+                }
+                leaf instance_name { type isisg:instance-name; mandatory true; }
+                leaf ipv4_enabled { type boolean; default false; }
+                leaf ipv6_enabled { type boolean; default false; }
+                leaf level { type isisg:isis-level; default level-1-2; }
+                leaf network_type {
+                    type enumeration { enum lan; enum p2p; }
+                    default lan;
+                }
+                leaf passive { type boolean; default false; }
+                leaf metric_level_1 { type metric; default 10; }
+                leaf metric_level_2 { type metric; default 10; }
+                leaf hello_interval_level_1 { type hello-interval; default 3; }
+                leaf hello_interval_level_2 { type hello-interval; default 3; }
+                leaf hello_multiplier_level_1 { type hello-multiplier; default 10; }
+                leaf hello_multiplier_level_2 { type hello-multiplier; default 10; }
+            }
+        }
+    }
+}

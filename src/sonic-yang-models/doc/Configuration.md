@@ -4026,3 +4026,60 @@ To be added.
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that
 implemented dynamic configuration for BGP.
+
+
+## IS-IS
+
+FRR baseline: 10.7.1 (`10.7.1-sonic-0`). Keys are
+`ISIS_GLOBALS|<vrf_name>|<instance_name>`,
+`ISIS_INTERFACE|<vrf_name>|<ifname>`, and
+`ISIS_REDISTRIBUTE|<vrf_name>|<instance_name>|<addr_family>|<src_protocol>|<level>|<table_id>`.
+Instance row existence creates an instance; there is no global enable field.
+Interface keys reference PORT, PORTCHANNEL, VLAN_INTERFACE, LOOPBACK_INTERFACE
+or VLAN_SUB_INTERFACE entries and bind to an existing same-VRF instance.
+Global VRFs reference VRF, except `default`; interface VRF must match actual ownership,
+and PortChannel member ports are rejected.
+ConfigDB stores scalar values as strings. YANG validates field types and ranges.
+
+| Table | Field | Type / range | Default |
+| --- | --- | --- | --- |
+| ISIS_GLOBALS | `net_title` | string matching `[0-9a-fA-F]{2}(\.[0-9a-fA-F]{4}){3,9}\.00` | absent |
+| ISIS_GLOBALS | `level` | level-1, level-2, level-1-2 | level-1-2 |
+| ISIS_GLOBALS | `dynamic_hostname` | boolean | true |
+| ISIS_GLOBALS | ipv6_multi_topology | boolean | false |
+| ISIS_GLOBALS | lsp_mtu | uint16, 128–4352 bytes | 1497 |
+| ISIS_GLOBALS | overload | boolean | false |
+| ISIS_GLOBALS | overload_on_startup | uint32, 0–86400 seconds | 0 |
+| ISIS_GLOBALS | lsp_refresh_interval_level_1 / _level_2 | uint16, 1–65235 seconds | 900 |
+| ISIS_GLOBALS | lsp_lifetime_level_1 / _level_2 | uint16, 350–65535 seconds | 1200 |
+| ISIS_GLOBALS | lsp_generation_interval_level_1 / _level_2 | uint16, 1–120 seconds | 30 |
+| ISIS_GLOBALS | spf_minimum_interval_level_1 / _level_2 | uint16, 1–120 seconds | 1 |
+| ISIS_GLOBALS | spf_init_delay, spf_short_delay, spf_long_delay, spf_hold_down, spf_time_to_learn | uint32, 0–60000 milliseconds | absent |
+| ISIS_INTERFACE | instance_name | 1–64 character instance name | required |
+| ISIS_INTERFACE | ipv4_enabled | boolean | false |
+| ISIS_INTERFACE | ipv6_enabled | boolean | false |
+| ISIS_INTERFACE | level | level-1, level-2, level-1-2 | level-1-2 |
+| ISIS_INTERFACE | metric_level_1 / _level_2 | uint32, 0–16777215 | 10 |
+| ISIS_INTERFACE | network_type | p2p, lan | lan |
+| ISIS_INTERFACE | passive | boolean | false |
+| ISIS_INTERFACE | hello_interval_level_1 / _level_2 | uint16, 1–600 seconds | 3 |
+| ISIS_INTERFACE | hello_multiplier_level_1 / _level_2 | uint8, 2–100 | 10 |
+| ISIS_REDISTRIBUTE | metric | uint32, 0–16777215 | 0 |
+| ISIS_REDISTRIBUTE | route_map | ROUTE_MAP_SET name list, at most one item | absent |
+
+At each level, lifetime must be at least refresh + 300 seconds and generation
+must be less than refresh, including omitted defaults. SPF backoff requires all
+five fields or none, with hold-down greater than time-to-learn.
+NETs within a VRF share a system ID. Saved instance/interface levels must intersect.
+LAN uses each level's Hello parameters; P2P uses L1 and retains L2 values.
+
+IPv4 and IPv6 flags default to false. At least one AF must be enabled in each
+interface row; disabling the final AF deletes the row and all its parameters.
+Reset removes selected explicit attributes and preserves remaining fields.
+
+Redistribution AF is ipv4/ipv6 and level is level-1/level-2 supported by the parent.
+IPv4 sources: kernel, connected, local, static, rip, ospf, bgp, eigrp, nhrp, vnc,
+babel, sharp, openfabric, table. IPv6 replaces rip/ospf with ripng/ospf6 and excludes
+eigrp. sharp requires sharpd. table_id is 0 for ordinary sources and 1–65535 for
+table; multiple IDs and levels are independent rows. A same-key add fully replaces
+metric and route-map, including removal of an omitted old route-map.
