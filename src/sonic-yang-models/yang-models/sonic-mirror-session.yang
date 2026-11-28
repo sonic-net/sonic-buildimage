@@ -32,6 +32,13 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-11-24 {
+        description
+            "Key the sFlow exclusion on admin state: an enabled
+             PORT_MIRROR_SAMPLE entry cannot coexist with sFlow globally
+             enabled.";
+    }
+
     revision 2026-10-16 {
         description
             "Move sample_rate and truncate_size from MIRROR_SESSION to
@@ -227,9 +234,9 @@ module sonic-mirror-session {
                 description
                     "A sampling policy for one physical port or PortChannel and direction.";
 
-                must "not(/sflow:sonic-sflow/sflow:SFLOW/sflow:global)" {
+                must "not(admin_state = 'up' and /sflow:sonic-sflow/sflow:SFLOW/sflow:global/sflow:admin_state = 'up')" {
                     error-message
-                        "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist.";
+                        "An enabled PORT_MIRROR_SAMPLE entry cannot coexist with SFLOW global admin_state up.";
                     error-app-tag "sampling-config-conflict";
                 }
 
@@ -261,8 +268,8 @@ module sonic-mirror-session {
                     type stypes:admin_status;
                     default down;
                     description
-                        "Requested binding state. Disabled bindings still participate
-                         in global sFlow configuration exclusion.";
+                        "Requested binding state. Only enabled bindings conflict
+                         with sFlow globally enabled.";
                 }
 
                 leaf mirror_session {

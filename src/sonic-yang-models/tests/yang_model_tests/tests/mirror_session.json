@@ -194,44 +194,29 @@
             "A sampled export session must not configure src_port."
         ]
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_CONFLICT": {
-        "desc": "Reject an explicitly configured empty sFlow global entry together with a PORT_MIRROR_SAMPLE entry whose admin_state is omitted.",
-        "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
-        ]
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_ALLOWED": {
+        "desc": "Accept an empty sFlow global entry together with a PORT_MIRROR_SAMPLE entry whose admin_state is omitted (defaults to down)."
     },
     "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_UP_CONFLICT": {
         "desc": "Reject coexistence when sFlow global admin_state is up and PORT_MIRROR_SAMPLE entry admin_state is up.",
         "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
+            "An enabled PORT_MIRROR_SAMPLE entry cannot coexist with SFLOW global admin_state up."
         ]
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_CONFLICT": {
-        "desc": "Reject coexistence when sFlow global admin_state is up and PORT_MIRROR_SAMPLE entry admin_state is down.",
-        "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
-        ]
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_ALLOWED": {
+        "desc": "Accept a disabled PORT_MIRROR_SAMPLE entry while sFlow global admin_state is up."
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_CONFLICT": {
-        "desc": "Reject coexistence when sFlow global admin_state is down and PORT_MIRROR_SAMPLE entry admin_state is up.",
-        "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
-        ]
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_ALLOWED": {
+        "desc": "Accept an enabled PORT_MIRROR_SAMPLE entry while sFlow global admin_state is down."
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_CONFLICT": {
-        "desc": "Reject coexistence when sFlow global admin_state is down and PORT_MIRROR_SAMPLE entry admin_state is down.",
-        "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
-        ]
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_ALLOWED": {
+        "desc": "Accept a disabled PORT_MIRROR_SAMPLE entry while sFlow global admin_state is down."
     },
     "PORT_MIRROR_SAMPLE_SFLOW_WITHOUT_GLOBAL_ALLOWED": {
         "desc": "Accept sampled bindings without explicit sFlow global: sflow without global allowed."
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_CONFLICT": {
-        "desc": "Reject global coexistence even when sampling uses different ports and the mirror binding is disabled.",
-        "eStr": [
-            "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist."
-        ]
+    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_BINDING_DOWN_ALLOWED": {
+        "desc": "Accept sFlow enabled on one port with a disabled PORT_MIRROR_SAMPLE entry on another port."
     },
     "PORT_MIRROR_SAMPLE_ABSENT_UNSAMPLED_WITH_SFLOW_ALLOWED": {
         "desc": "Preserve existing session schema behavior with sFlow when no sampled binding exists: unsampled."

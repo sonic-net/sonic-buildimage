@@ -1199,7 +1199,7 @@
             }
         }
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_CONFLICT": {
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_EMPTY_BINDING_OMITTED_ALLOWED": {
         "sonic-port:sonic-port": {
             "PORT": {
                 "PORT_LIST": [
@@ -1278,7 +1278,7 @@
             }
         }
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_CONFLICT": {
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_UP_BINDING_DOWN_ALLOWED": {
         "sonic-port:sonic-port": {
             "PORT": {
                 "PORT_LIST": [
@@ -1319,7 +1319,7 @@
             }
         }
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_CONFLICT": {
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_UP_ALLOWED": {
         "sonic-port:sonic-port": {
             "PORT": {
                 "PORT_LIST": [
@@ -1360,7 +1360,7 @@
             }
         }
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_CONFLICT": {
+    "PORT_MIRROR_SAMPLE_SFLOW_GLOBAL_DOWN_BINDING_DOWN_ALLOWED": {
         "sonic-port:sonic-port": {
             "PORT": {
                 "PORT_LIST": [
@@ -1437,7 +1437,7 @@
             "SFLOW": {}
         }
     },
-    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_CONFLICT": {
+    "PORT_MIRROR_SAMPLE_SFLOW_DIFFERENT_PORT_BINDING_DOWN_ALLOWED": {
         "sonic-port:sonic-port": {
             "PORT": {
                 "PORT_LIST": [
