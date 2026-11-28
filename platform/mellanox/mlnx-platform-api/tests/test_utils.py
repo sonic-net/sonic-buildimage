@@ -165,126 +165,186 @@ class TestUtils:
         assert utils.extract_RJ45_ports_index() == [0]
 
     @pytest.mark.parametrize(
-        "platform_json, hwsku_json, expected_result",
+        "cpo_data, expected_result",
         [
-            # Case 1: platform.json and hwsku.json files do not exist
-            ({}, {}, None),
-
-            # Case 2: platform.json file does not exist
+            # Case 1: cpo.json file does not exist
+            (None, None),
+            # Case 2: empty file
+            ({}, None),
+            # Case 3: empty interfaces
+            ({"interfaces": {}}, None),
+            # Case 4: one vModule with duplicate interface entries deduped
             (
-                {},
                 {
                     "interfaces": {
                         "Ethernet0": {
-                            "port_type": "CPO"
-                        }
+                            "associated_devices": [
+                                {"device_id": "OE0", "bank": 0},
+                                {"device_id": "ELS0", "bank": 0},
+                            ]
+                        },
+                        "Ethernet4": {
+                            "associated_devices": [
+                                {"device_id": "OE0", "bank": 0},
+                                {"device_id": "ELS0", "bank": 0},
+                            ]
+                        },
+                        "Ethernet8": {
+                            "associated_devices": [
+                                {"device_id": "OE0", "bank": 1},
+                                {"device_id": "ELS0", "bank": 0},
+                            ]
+                        },
                     }
                 },
-                None
+                {0: (0, 0, 0), 1: (0, 0, 1)},
             ),
-
-            # Case 3: hwsku.json file does not exist
+            # Case 5: multiple vModules
             (
                 {
-                    'interfaces': {
+                    "interfaces": {
                         "Ethernet0": {
-                            "index": "1",
-                            "lanes": "0"
-                        }
+                            "associated_devices": [
+                                {"device_id": "OE0", "bank": 0},
+                                {"device_id": "ELS0", "bank": 0},
+                            ]
+                        },
+                        "Ethernet32": {
+                            "associated_devices": [
+                                {"device_id": "OE1", "bank": 0},
+                                {"device_id": "ELS1", "bank": 0},
+                            ]
+                        },
                     }
                 },
-                {},
-                None
+                {0: (0, 0, 0), 1: (1, 1, 0)},
             ),
-
-            # Case 4: no CPO ports
+            # Case 6: interface missing ELS is skipped
             (
                 {
-                    'interfaces': {
+                    "interfaces": {
                         "Ethernet0": {
-                            "index": "1",
-                            "lanes": "0",
-                            "breakout_modes": {
-                                "2x400G[200G]": ["etp1a", "etp1b"]
-                            }
+                            "associated_devices": [
+                                {"device_id": "OE0", "bank": 0},
+                            ]
                         }
                     }
                 },
-                {
-                    'interfaces': {
-                        "Ethernet0": {
-                            "default_brkout_mode": "2x400G[200G]",
-                            "port_type": "SFP"
-                        }
-                    }
-                },
-                None
+                None,
             ),
-
-            # Case 5: one CPO port
-            (
-                {
-                    'interfaces': {
-                        "Ethernet0": {
-                            "index": "1",
-                            "lanes": "0",
-                            "breakout_modes": {
-                                "2x400G[200G]": ["etp1a", "etp1b"]
-                            }
-                        }
-                    }
-                },
-                {
-                    'interfaces': {
-                        "Ethernet0": {
-                            "default_brkout_mode": "2x400G[200G]",
-                            "port_type": "CPO"
-                        }
-                    }
-                },
-                [0]
-            ),
-
-            # Case 6: multiple CPO ports
-            (
-                {
-                    'interfaces': {
-                        "Ethernet0": {"index": "1"},
-                        "Ethernet4": {"index": "5"},
-                        "Ethernet8": {"index": "9"}
-                    }
-                },
-                {
-                    'interfaces': {
-                        "Ethernet0": {"port_type": "CPO"},
-                        "Ethernet4": {"port_type": "CPO"},
-                        "Ethernet8": {"port_type": "CPO"}
-                    }
-                },
-                [0, 4, 8]
-            ),
-        ]
+        ],
     )
-    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
-    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
-    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
-    @mock.patch('sonic_platform.utils.load_json_file')
-    @mock.patch('os.path.exists')
-    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, platform_json, hwsku_json, expected_result):
-        if platform_json and hwsku_json:
-            mock_exists.side_effect = [True, True]
-            mock_load_json.side_effect = [platform_json, hwsku_json]
-        elif platform_json:
-            mock_exists.side_effect = [True, False]
-            mock_load_json.side_effect = [platform_json, None]
-        elif hwsku_json:
-            mock_exists.side_effect = [False, True]
-            mock_load_json.side_effect = [None, hwsku_json]
-        else:
-            mock_exists.side_effect = [False, False]
-            mock_load_json.side_effect = [None, None]
+    @mock.patch('sonic_platform.utils.get_port_name_to_index_map',
+                mock.MagicMock(return_value={"Ethernet0": 1, "Ethernet4": 1, "Ethernet8": 2, "Ethernet32": 2}))
+    def test_build_cpo_port_map(self, cpo_data, expected_result):
+        assert utils.build_cpo_port_map(cpo_data) == expected_result
 
-        assert utils.extract_cpo_ports_index() == expected_result
+    @staticmethod
+    def _cpo_interface(oe_id, bank):
+        return {"associated_devices": [{"device_id": "OE%d" % oe_id, "bank": bank},
+                                       {"device_id": "ELS%d" % oe_id, "bank": 0}]}
+
+    def test_build_cpo_port_map_does_not_depend_on_the_order_of_cpo_json(self):
+        """A port is the one platform.json says it is, however cpo.json is
+        sorted. Counting the entries instead would put another OE behind the
+        same port index after a regeneration, without any error."""
+        names = ["Ethernet%d" % (8 * i) for i in range(8)]
+        port_indexes = {name: i + 1 for i, name in enumerate(names)}
+        interfaces = {name: self._cpo_interface(i // 4, i % 4) for i, name in enumerate(names)}
+        expected = {i: (i // 4, i // 4, i % 4) for i in range(8)}
+
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value=port_indexes):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == expected
+            # sorted by name: Ethernet0, Ethernet16, Ethernet24, ..., Ethernet8
+            by_name = {name: interfaces[name] for name in sorted(names)}
+            assert list(by_name) != names
+            assert utils.build_cpo_port_map({"interfaces": by_name}) == expected
+            reversed_order = {name: interfaces[name] for name in reversed(names)}
+            assert utils.build_cpo_port_map({"interfaces": reversed_order}) == expected
+
+    def test_build_cpo_port_map_skips_what_platform_json_does_not_declare(self):
+        interfaces = {"Ethernet0": self._cpo_interface(0, 0), "Ethernet8": self._cpo_interface(0, 1)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value={"Ethernet0": 1}):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == {0: (0, 0, 0)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map', return_value=None):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) is None
+
+    def test_build_cpo_port_map_keeps_the_first_of_two_devices_on_one_port(self):
+        interfaces = {"Ethernet0": self._cpo_interface(0, 0), "Ethernet4": self._cpo_interface(1, 0)}
+        with mock.patch('sonic_platform.utils.get_port_name_to_index_map',
+                        return_value={"Ethernet0": 1, "Ethernet4": 1}):
+            assert utils.build_cpo_port_map({"interfaces": interfaces}) == {0: (0, 0, 0)}
+
+    @pytest.mark.parametrize(
+        "cpo_data, expected_result",
+        [
+            (None, None),
+            ({}, None),
+            ({"interfaces": {}}, None),
+            (
+                {
+                    "sfps": {
+                        "Ethernet512": {
+                            "module_index": "64",
+                            "sdk_module_index": "16",
+                        },
+                        "Ethernet513": {
+                            "module_index": "64",
+                            "sdk_module_index": "16",
+                        },
+                    }
+                },
+                {64: 16},
+            ),
+        ],
+    )
+    def test_build_cpo_service_port_map(self, cpo_data, expected_result):
+        assert utils.build_cpo_service_port_map(cpo_data) == expected_result
+
+    @mock.patch('sonic_platform.utils.get_port_name_to_index_map', mock.MagicMock(return_value={"Ethernet0": 1}))
+    @mock.patch('sonic_py_common.device_info.get_cpo_data')
+    def test_the_port_maps_read_cpo_json_when_not_handed_the_data(self, mock_get_cpo_data):
+        """Both builders fall back to the one community reader of cpo.json."""
+        mock_get_cpo_data.return_value = {
+            "interfaces": {
+                "Ethernet0": {
+                    "associated_devices": [
+                        {"device_id": "OE0", "bank": 0},
+                        {"device_id": "ELS0", "bank": 0},
+                    ]
+                }
+            },
+            "sfps": {
+                "Ethernet512": {"module_index": "64", "sdk_module_index": "16"}
+            },
+        }
+
+        assert utils.build_cpo_port_map() == {0: (0, 0, 0)}
+        assert utils.build_cpo_service_port_map() == {64: 16}
+
+    @pytest.mark.parametrize(
+        "associated_devices, expected",
+        [
+            (
+                [
+                    {"device_id": "OE2", "bank": 3},
+                    {"device_id": "ELS2", "bank": 0},
+                ],
+                (2, 2, 3),
+            ),
+            ([{"device_id": "OE0", "bank": 0}], (None, None, None)),
+            ([], (None, None, None)),
+            (
+                [
+                    {"device_id": "OE0"},
+                    {"device_id": "ELS0"},
+                ],
+                (0, 0, 0),
+            ),
+        ],
+    )
+    def test_parse_oe_els_bank_for_interface(self, associated_devices, expected):
+        assert utils._parse_oe_els_bank_for_interface(associated_devices, "Ethernet0") == expected
 
     def test_wait_until(self):
         values = []

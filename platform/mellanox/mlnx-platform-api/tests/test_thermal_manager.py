@@ -29,7 +29,7 @@ class TestThermalManager:
         mock_dpus_data.return_value = {}
         sfp_mock = mock.MagicMock()
         mod_mock = mock.MagicMock()
-        mock_chassis_instance.get_all_sfps = sfp_mock
+        mock_chassis_instance.get_all_ports = sfp_mock
         mock_chassis_instance.get_all_modules = mod_mock
         sfp_mock.return_value = ['sfp1', 'sfp2']
         mod_mock.return_value = ['dpu1', 'dpu2']

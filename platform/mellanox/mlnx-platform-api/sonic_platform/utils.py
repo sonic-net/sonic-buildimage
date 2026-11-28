@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 import os
+import re
 
 # Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
 # https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
@@ -39,7 +40,9 @@ HWSKU_JSON = 'hwsku.json'
 PORT_INDEX_KEY = "index"
 PORT_TYPE_KEY = "port_type"
 RJ45_PORT_TYPE = "RJ45"
-CPO_PORT_TYPE = "CPO"
+
+_OE_DEVICE_ID_RE = re.compile(r'OE(\d+)')
+_ELS_DEVICE_ID_RE = re.compile(r'ELS(\d+)')
 
 logger = Logger()
 
@@ -247,25 +250,33 @@ def load_json_file(filename, log_func=logger.log_error):
         return None
 
 
-def _extract_ports_index_by_type(port_type, num_of_asics=1):
+def get_port_name_to_index_map():
+    """Compose an interface name to front panel port index mapping from 'platform.json'
+
+    Returns:
+        dict[str, int]: interface name -> port index (1-based) as the platform
+        declares it, or None if there is no platform.json or it declares none.
+    """
     platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
     if not os.path.exists(platform_file):
         return None
 
     platform_dict = load_json_file(platform_file)['interfaces']
     port_name_to_index_map_dict = {}
-    port_index_list = []
-
-    # Compose a interface name to index mapping from 'platform.json'
-    for i, (key, value) in enumerate(platform_dict.items()):
+    for key, value in platform_dict.items():
         if PORT_INDEX_KEY in value:
-            index_raw = value[PORT_INDEX_KEY]
             # The index could be "1" or "1, 1, 1, 1"
-            index = index_raw.split(',')[0]
-            port_name_to_index_map_dict[key] = index
+            port_name_to_index_map_dict[key] = int(value[PORT_INDEX_KEY].split(',')[0])
 
-    if not bool(port_name_to_index_map_dict):
+    return port_name_to_index_map_dict if port_name_to_index_map_dict else None
+
+
+def _extract_ports_index_by_type(port_type, num_of_asics=1):
+    port_name_to_index_map_dict = get_port_name_to_index_map()
+    if not port_name_to_index_map_dict:
         return None
+
+    port_index_list = []
 
     hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
     hwsku_dict = {}
@@ -281,7 +292,7 @@ def _extract_ports_index_by_type(port_type, num_of_asics=1):
     # Check if "port_type" matches, if yes, add the port index to the list.
     for i, (key, value) in enumerate(hwsku_dict.items()):
         if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == port_type:
-            port_index_list.append(int(port_name_to_index_map_dict[key]) - 1)
+            port_index_list.append(port_name_to_index_map_dict[key] - 1)
 
     # Remove duplicates
     port_index_list = list(dict.fromkeys(port_index_list))
@@ -302,8 +313,114 @@ def extract_RJ45_ports_index(num_of_asics=1):
     return _extract_ports_index_by_type(RJ45_PORT_TYPE, num_of_asics)
 
 
-def extract_cpo_ports_index(num_of_asics=1):
-    return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
+def build_cpo_port_map(cpo_data=None):
+    """Build the CPO port map used by chassis as cpo_port_map.
+
+    Reads the interfaces section of cpo.json. Each interface lists the OE/ELS
+    devices behind it, and its chassis index is the front panel port index that
+    platform.json declares for that interface. The order of the interfaces in
+    cpo.json therefore does not matter: an interface keeps its devices however
+    the file is regenerated or sorted.
+
+    Args:
+        cpo_data: already parsed cpo.json, as handed to construct_cpo_devices.
+                  Read from disk when not given.
+
+    Returns:
+        dict[int, tuple[int, int, int]]: chassis_index -> (oe_id, els_id, bank_id)
+        for CpoPort construction, e.g. {0: (0, 0, 0), 1: (0, 0, 1)}.
+        None if the file is missing, empty, or has no parseable interfaces.
+    """
+    if cpo_data is None:
+        cpo_data = device_info.get_cpo_data()
+    if not cpo_data:
+        return None
+    interfaces = cpo_data.get('interfaces')
+    if not isinstance(interfaces, dict):
+        return None
+
+    port_name_to_index_map = get_port_name_to_index_map() if interfaces else None
+    cpo_port_map = {}
+    for interface_name, interface_data in interfaces.items():
+        interface_associated_devices = interface_data.get('associated_devices') or []
+        oe_id, els_id, bank_id = _parse_oe_els_bank_for_interface(interface_associated_devices, interface_name)
+        if oe_id is None:
+            continue
+        if not port_name_to_index_map or interface_name not in port_name_to_index_map:
+            logger.log_error("Interface {} of cpo.json has no port index in platform.json".format(interface_name))
+            continue
+        index = port_name_to_index_map[interface_name] - 1
+        oe_els_bank = (oe_id, els_id, bank_id)
+        if cpo_port_map.setdefault(index, oe_els_bank) != oe_els_bank:
+            logger.log_error("Interface {} maps port {} to {}, but it is already mapped to {}".format(
+                interface_name, index + 1, oe_els_bank, cpo_port_map[index]))
+
+    return cpo_port_map if cpo_port_map else None
+
+
+def _parse_oe_els_bank_for_interface(interface_associated_devices, interface_name):
+    """
+    Parse OE / ELS numeric ids and OE bank from one interface's associated_devices list.
+
+    Returns:
+        tuple: (oe_id, els_id, bank_id) with integers, or (None, None, None) if OE or ELS is missing.
+    """
+    if not interface_associated_devices:
+        return None, None, None
+    oe_id = els_id = None
+    bank_id = 0
+    for device in interface_associated_devices:
+        device_id = device.get('device_id') or ''
+        oe_match = _OE_DEVICE_ID_RE.match(device_id)
+        if oe_match:
+            oe_id = int(oe_match.group(1))
+            bank_id = int(device.get('bank', 0))
+            continue
+        els_match = _ELS_DEVICE_ID_RE.match(device_id)
+        if els_match:
+            els_id = int(els_match.group(1))
+    if oe_id is None or els_id is None:
+        logger.log_error(
+            "Interface {} is missing OE or ELS in associated_devices: {}"
+            .format(interface_name, interface_associated_devices))
+        return None, None, None
+    return oe_id, els_id, bank_id
+
+
+def build_cpo_service_port_map(cpo_data=None):
+    """Build the CPO service port map.
+
+    Reads the sfps section of cpo.json. Maps module_index to
+    SDK module_index for the service port on CPO platforms, e.g. {64: 16}.
+
+    Args:
+        cpo_data: already parsed cpo.json, as handed to construct_cpo_devices.
+                  Read from disk when not given.
+
+    Returns:
+        dict[int, int] or None if cpo.json is missing or has no
+        parseable sfps entries.
+    """
+    if cpo_data is None:
+        cpo_data = device_info.get_cpo_data()
+    if not cpo_data:
+        return None
+    service_ports_data = cpo_data.get('sfps')
+    if not isinstance(service_ports_data, dict):
+        return None
+    cpo_service_port_map = {}
+    for _interface_name, interface_data in service_ports_data.items():
+        raw_index = interface_data.get('module_index')
+        raw_sdk_index = interface_data.get('sdk_module_index')
+        if raw_index is None or raw_sdk_index is None:
+            continue
+        try:
+            module_index = int(raw_index)
+            sdk_module_index = int(raw_sdk_index)
+        except (TypeError, ValueError):
+            continue
+        cpo_service_port_map[module_index] = sdk_module_index
+    return cpo_service_port_map if cpo_service_port_map else None
 
 
 # Use this function only for files that have user read permission.
