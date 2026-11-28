@@ -82,7 +82,7 @@
 SONIC_CACHE_RECIPE_VER := 2
 # Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
 # Used by the guard below to detect unreviewed slave.mk changes.
-SONIC_CACHE_RECIPE_VER_BASELINE := 56f06da3a34edd0e0819aae4cc5851e541bb20cc
+SONIC_CACHE_RECIPE_VER_BASELINE := 3eee3e3ea6148cd90ba3671471af9a02ebf290e8
 
 # Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
 # This catches the case where someone modifies slave.mk build recipes without
@@ -437,7 +437,7 @@ define SAVE_CACHE
 	$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(call SAVE_INTO_CACHE,$(1),$(2)))
 endef
 
-RFS_DEP_FILES := $(wildcard \
+RFS_DEP_FILES := dockers/docker-base-trixie/reserve-redis-identity.sh $(wildcard \
 	$(addprefix scripts/, build_debian_base_system.sh prepare_debian_image_buildinfo.sh build_mirror_config.sh) \
 	$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
 	$(shell git ls-files files/initramfs-tools) \
@@ -518,6 +518,7 @@ rfs_secret_fp = $(if $(strip $(1)),$(shell printf '%s' '$(call rfs_shell_escape,
 # ($($(installer)_IMAGE_TYPE), see slave.mk) and is folded per RFS target below.
 # Track embedding being toggled; certificate contents are hashed through RFS_DEP_FILES.
 RFS_INLINE_ENV_FLAGS := $(USERNAME) $(CHANGE_DEFAULT_PASSWORD) $(BMC_NOS_ACCOUNT_USERNAME) \
+                        REDIS_USER_UID=$(REDIS_USER_UID) REDIS_USER_GID=$(REDIS_USER_GID) \
                         $(MASTER_KUBERNETES_VERSION) $(MASTER_CRI_DOCKERD) \
                         $(TRUSTED_GPG_URLS) $(BUILD_PACKAGES_URL) \
                         $(call rfs_secret_fp,$(PASSWORD)) \

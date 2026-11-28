@@ -17,6 +17,7 @@
 #  * INSTALL_DEBUG_TOOLS: Install debug tools and debug symbol packages.
 #  * USERNAME: Desired username -- default at rules/config
 #  * PASSWORD: Desired password -- default at rules/config
+#  * REDIS_USER_UID, REDIS_USER_GID: Redis service IDs -- defaults in rules/config
 #  * KEEP_SLAVE_ON: Keeps slave container up and active after building process concludes.
 #  *                Note that rm=true is still set, so once user quits from the docker
 #  *                           session, the docker will be removed.
@@ -722,6 +723,8 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SAITHRIFT_V2=$(SAITHRIFT_V2) \
                            MDEBUG=$(MDEBUG) \
                            USERNAME=$(USERNAME) \
+                           REDIS_USER_UID=$(REDIS_USER_UID) \
+                           REDIS_USER_GID=$(REDIS_USER_GID) \
 			   CHANGE_DEFAULT_PASSWORD=$(CHANGE_DEFAULT_PASSWORD) \
                            SONIC_BUILD_JOBS=$(SONIC_BUILD_JOBS) \
                            VS_PREPARE_MEM=$(VS_PREPARE_MEM) \

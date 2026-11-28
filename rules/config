@@ -155,6 +155,10 @@ DEFAULT_KERNEL_PROCURE_METHOD = build
 FRR_USER_UID = 300
 FRR_USER_GID = 300
 
+# Redis service identity shared by the host and database container.
+REDIS_USER_UID = 400
+REDIS_USER_GID = 400
+
 # ENABLE_FRR_TCMALLOC - build FRR with gperftools tcmalloc support.
 ENABLE_FRR_TCMALLOC ?= y
 

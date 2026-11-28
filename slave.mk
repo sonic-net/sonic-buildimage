@@ -436,6 +436,8 @@ endif
 export SONIC_ROUTING_STACK
 export FRR_USER_UID
 export FRR_USER_GID
+export REDIS_USER_UID
+export REDIS_USER_GID
 export INCLUDE_FIPS
 export ENABLE_FIPS
 export ENABLE_DIALOUT
@@ -1495,6 +1497,8 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			--build-arg docker_container_name=$($*.gz_CONTAINER_NAME) \
 			--build-arg frr_user_uid=$(FRR_USER_UID) \
 			--build-arg frr_user_gid=$(FRR_USER_GID) \
+			--build-arg redis_user_uid=$(REDIS_USER_UID) \
+			--build-arg redis_user_gid=$(REDIS_USER_GID) \
 			--build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 			--build-arg SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
 			--build-arg image_version=$(SONIC_IMAGE_VERSION) \
