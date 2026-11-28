@@ -52,3 +52,8 @@
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
 0130-lib-fix-use-after-free-in-agentx_events_update.patch
 0131-SONiC-ONLY-zebra-Copy-the-VxLAN-encap-data-to-a-nexthop-resolved-through-EVPN.patch
+# EVPN L3 multihoming without an L2VNI, FRR PR #23304
+0132-zebra-unify-EVPN-neigh-MAC-linkage-through-ref-deref.patch
+0133-zebra-don-t-map-a-VNI-less-VLAN-on-a-VLAN-aware-brid.patch
+0134-bgpd-zebra-lib-tools-EVPN-L3-multihoming-without-an-.patch
+0135-tests-add-EVPN-L3MH-no-L2VNI-topotest.patch
