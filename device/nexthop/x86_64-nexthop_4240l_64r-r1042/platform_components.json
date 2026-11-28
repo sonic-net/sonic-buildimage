@@ -1,0 +1,30 @@
+{
+    "chassis": {
+        "NH-4240L-64R": {
+            "component": {
+                "CPUCARD_FPGA": {},
+                "SWITCHCARD_FPGA": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {},
+                "ASIC_PCIE": {},
+                "MGMT_SWITCH": {},
+                "DPM1": {},
+                "DPM2": {},
+                "DPM3": {},
+                "DCDC0": {},
+                "DCDC1": {},
+                "DCDC2": {},
+                "DCDC3": {},
+                "DCDC4": {},
+                "DCDC5": {},
+                "DCDC6": {},
+                "DCDC7": {},
+                "DCDC8": {},
+                "DCDC9": {},
+                "DCDC10": {}
+            }
+        }
+    }
+}

@@ -125,6 +125,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(NEXTHOP_4210_R1032_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_PLATFORM_MODULE) \
                                $(NEXTHOP_4220_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4240L_PLATFORM_MODULE) \
+                               $(NEXTHOP_4240L_64R_R1042_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_R0_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \

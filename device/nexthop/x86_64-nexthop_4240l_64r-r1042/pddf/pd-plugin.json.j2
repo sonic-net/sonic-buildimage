@@ -1,0 +1,314 @@
+{
+    "DPM": {
+        "cpu_card": {
+            "type": "adm1266",
+            "dpm": "DPM1",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "THERMTRIP_L",
+                    "hw_desc": "CPU exceeded Tdie temperature threshold",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_CPU"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x8000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "CPU FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_PWR_CYC_REQ",
+                    "hw_desc": "BMC requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "FPGA_PWR_CYC_REQ",
+                    "hw_desc": "FPGA requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_X86_SWT_PWR_OFF",
+                    "hw_desc": "BMC powered off the x86 and the switch card FPGA/ASIC",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x8002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "MINOR_LEAK",
+                    "hw_desc": "Minor coolant leak detected",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CRITICAL_LEAK",
+                    "hw_desc": "Critical leak detected; switch card powered off system via watchdog",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_CMD_MAIN_PWR_OFF_LEAK",
+                    "hw_desc": "Leak detected; BMC powered off the MAIN domain (CPU and switch ASIC/FPGA off, MGT/console stay up)",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x8004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "VBUS_LOSS_L",
+                    "hw_desc": "Busbar/PSU input power lost",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0xC004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "RMC_CMD_MAIN_OFF",
+                    "hw_desc": "Rack management card commanded power off",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0006",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_CMD_MAIN_PWR_OFF",
+                    "hw_desc": "BMC powered off the MAIN domain (CPU and switch ASIC/FPGA off, MGT/console stay up)",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0xC006",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x4006",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_CYC_REQ",
+                    "hw_desc": "CPU requested power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V",
+                "VH2": "POS5V0",
+                "VH3": "POS2V0_PHY",
+                "VH4": "POS5V0_S0",
+                "VP1": "POS1V0_A7",
+                "VP2": "POS1V8_A7",
+                "VP3": "POS3V3",
+                "VP4": "POS0V74_PHY",
+                "VP5": "POS1V2_A7",
+                "VP6": "POS0V75_S5",
+                "VP7": "POS1V8_S5",
+                "VP8": "POS3V3_S5",
+                "VP9": "POS1V1_S0",
+                "VP10": "POS1V5_SWT",
+                "VP11": "POS1V05_SWT",
+                "VP12": "POS1V8_S0",
+                "VP13": "POS3V3_S0",
+                "PDIO2": "DPM_LOG_2",
+                "PDIO3": "DPM_LOG_3",
+                "PDIO4": "POS0V75_S5+POS1V8_S5",
+                "PDIO5": "POS3V3_S5",
+                "PDIO6": "POS5V0_S0",
+                "PDIO7": "POS1V1_S0",
+                "PDIO8": "POS1V8_S0+POS3V3_S0",
+                "PDIO15": "DPM_LOG_0",
+                "PDIO16": "DPM_LOG_1"
+            }
+        },
+        "switch_card_1": {
+            "type": "adm1266",
+            "dpm": "DPM2",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0001",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0001",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "TRAY_EJECTED",
+                    "hw_desc": "Tray ejected from the rack",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "BMC_CMD_MAIN_PWR_OFF",
+                    "hw_desc": "BMC shut down the MAIN power domain",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x0004",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "MAJOR_LEAK",
+                    "hw_desc": "Major coolant leak detected",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0080",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0080",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_CMD_PCYC",
+                    "hw_desc": "CPU card commanded power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V_MAIN",
+                "VH2": "POS12V_CPU",
+                "VH3": "POS5V0",
+                "VH4": "POS0V9_WEST",
+                "VP1": "POS0V75_WEST",
+                "VP2": "POS0V725_PT2_VDDC",
+                "VP3": "POS1V0",
+                "VP4": "POS3V3_WEST",
+                "VP5": "POS0V75_VDDC",
+                "VP7": "POS1V2_CP",
+                "VP8": "POS0V8",
+                "VP9": "POS0V9_PVDD_0",
+                "VP10": "POS0V9_PVDD_1",
+                "VP11": "POS0V72_PB0",
+                "VP12": "POS0V72_PB1",
+                "VP13": "POS1V8",
+                "PDIO1": "TRAY_EJECTED",
+                "PDIO2": "BMC_MAIN_PWR_OFF",
+                "PDIO3": "MAJOR_LEAK",
+                "PDIO4": "P0V72_PT0_PG",
+                "PDIO5": "P0V72_PT1_PG",
+                "PDIO6": "P0V72_PT2_PG",
+                "PDIO7": "P0V72_PT3_PG",
+                "PDIO8": "CPU_CMD_PCYC",
+                "PDIO9": "FPGA_CMD_PCYC",
+                "PDIO10": "ASIC_PWR_OFF",
+                "PDIO11": "TH_CORE_PG",
+                "PDIO13": "DP_PWR_ON"
+            }
+        },
+        "switch_card_2": {
+            "type": "adm1266",
+            "dpm": "DPM3",
+            "dpm_signal_to_fault_cause": [
+                {
+                    "pdio_mask": "0x0002",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0002",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "OVER_TEMP",
+                    "hw_desc": "Switch card exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0004",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0004",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CPU_PWR_BAD",
+                    "hw_desc": "CPU card power bad",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                },
+                {
+                    "pdio_mask": "0x0008",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0008",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "WATCHDOG",
+                    "hw_desc": "FPGA watchdog expired",
+                    "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                },
+                {
+                    "pdio_mask": "0x0010",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0010",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "ASIC_OT",
+                    "hw_desc": "ASIC exceeded overtemperature",
+                    "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC"
+                },
+                {
+                    "pdio_mask": "0x0040",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x0040",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CMD_PWR_CYC",
+                    "hw_desc": "Software commanded power cycle",
+                    "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                },
+                {
+                    "pdio_mask": "0x2000",
+                    "gpio_mask": "0x0000",
+                    "pdio_value": "0x2000",
+                    "gpio_value": "0x0000",
+                    "hw_cause": "CRITICAL_LEAK",
+                    "hw_desc": "Critical coolant leak shut down the CPU and MAIN power domains",
+                    "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                }
+            ],
+            "pin_to_name": {
+                "VH1": "POS12V_MAIN",
+                "VH2": "POS12V_CPU",
+                "VH3": "POS3V3",
+                "VH4": "POS0V9_EAST",
+                "VP1": "POS0V75_EAST",
+                "VP2": "POS0V725_PT7",
+                "VP3": "POS1V2_DP",
+                "VP4": "POS3V3_EAST",
+                "VP5": "POS1V5",
+                "VP6": "POS1V8_DP",
+                "VP7": "POS0V725_PT5",
+                "VP8": "POS0V9_PVDD_2",
+                "VP9": "POS0V9_PVDD_3",
+                "VP10": "POS0V72_PB2",
+                "VP11": "POS0V72_PB3",
+                "VP12": "POS1V2_PCIE",
+                "VP13": "POS1V5_RVDD",
+                "PDIO1": "DPM_LOG_0",
+                "PDIO2": "DPM_LOG_1",
+                "PDIO3": "DPM_LOG_2",
+                "PDIO4": "DPM_LOG_3",
+                "PDIO5": "DPM_LOG_4",
+                "PDIO6": "DPM_LOG_5",
+                "PDIO7": "DPM_LOG_6",
+                "PDIO8": "DPM_LOG_7",
+                "PDIO9": "P0V72_PT4_PG",
+                "PDIO10": "P0V72_PT5_PG",
+                "PDIO11": "P0V72_PT6_PG",
+                "PDIO12": "P0V72_PT7_PG",
+                "PDIO14": "CRITICAL_LEAK"
+            }
+        }
+    },
+    "REBOOT_CAUSE": {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    },
+    "BLACKBOX": ["dcdc", "dpm"]
+}

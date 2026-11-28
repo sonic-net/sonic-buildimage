@@ -38,6 +38,12 @@ Depends: ${misc:Depends},
          sonic-platform-nexthop-common
 Description: Modules for all revisions of NH-4220
 
+Package: sonic-platform-nexthop-4240l
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-common
+Description: Modules for all revisions of NH-4240L-64R
+
 Package: sonic-platform-nexthop-5010
 Architecture: amd64
 Depends: ${misc:Depends},
@@ -81,6 +87,12 @@ Depends: ${misc:Depends},
          sonic-platform-nexthop-4220,
          sonic-platform-nexthop-komodo
 Description: Modules for NH-4220 r0
+
+Package: sonic-platform-nexthop-4240l-64r-r1042
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4240l
+Description: Modules for NH-4240L-64R r1042
 
 Package: sonic-platform-nexthop-5010-r0
 Architecture: amd64
