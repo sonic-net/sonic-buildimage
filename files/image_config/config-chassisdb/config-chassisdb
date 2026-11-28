@@ -11,21 +11,27 @@
 config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
     chassisdb_address_file="/etc/sonic/chassisdb_address"
+
     [ ! -e $startdb_file ] || rm $startdb_file
-    [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
+
     platform=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     # database-chassis services will start when $chassis_config file exists
     chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
     if [ ! -e $chassis_config ]; then
+       [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
        echo "no chassisdb.conf found, bypass config-chassisdb service"
        exit 0
     fi
 
     # On virtual switch, retain the original flow, as it don't support most platform APIs
+    # and use the static provisioned chassisdb_address file
     asic_type=$(python3 -c 'from sonic_py_common.device_info import get_sonic_version_info; \
-	                    print(get_sonic_version_info().get("asic_type") or "")')
+                        print(get_sonic_version_info().get("asic_type") or "")')
 
     if [[ "$asic_type" != "vs" ]]; then
+    # regenerate the chassisdb_address file on each boot
+    [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
+
     # Read the various device attributes
     read -r is_supervisor is_disagg is_smartswitch is_dpu < <(python3 -c \
 	    'import sonic_py_common.device_info as d; print(*[getattr(d,n,lambda:False)() \
