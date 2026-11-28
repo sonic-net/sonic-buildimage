@@ -5,17 +5,16 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="${SCRIPT_DIR}/arp_update"
 SOURCE_SCRIPT="$(mktemp)"
-MISMATCH_LOOP_SCRIPT="$(mktemp)"
+RECHECK_SCRIPT="$(mktemp)"
 DB_CALL_LOG="$(mktemp)"
 DB_KEY_LOG="$(mktemp)"
-LOGGER_LOG="$(mktemp)"
+KERNEL_CALL_LOG="$(mktemp)"
 MARKER_FILE="/tmp/arp-update-test-marker"
 rm -f "$MARKER_FILE"
-trap 'rm -f "${SOURCE_SCRIPT}" "${MISMATCH_LOOP_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${LOGGER_LOG}" "${MARKER_FILE}"' EXIT
+trap 'rm -f "${SOURCE_SCRIPT}" "${RECHECK_SCRIPT}" "${DB_CALL_LOG}" "${DB_KEY_LOG}" "${KERNEL_CALL_LOG}" "${MARKER_FILE}"' EXIT
 
 # Load only the helper functions; the remainder of arp_update is an infinite loop.
 sed '/^while \/bin\/true; do$/,$d' "$SCRIPT" > "$SOURCE_SCRIPT"
-sed -n '/^  for neigh in \$KERNEL_NEIGH; do$/,/^  done$/p' "$SCRIPT" > "$MISMATCH_LOOP_SCRIPT"
 # shellcheck source=/dev/null
 source "$SOURCE_SCRIPT"
 
@@ -30,21 +29,95 @@ assert_eq() {
 }
 
 logger() {
-    printf '%s\n' "$*" >> "$LOGGER_LOG"
+    :
 }
 
 timeout() {
     TIMEOUT_ARGS=("$@")
 }
 
+APPL_DB_MAC=""
+DB_READ_STATUS=0
+APPL_DB_KEYS=""
+DB_KEYS_READ_STATUS=0
+CONFIG_DB_KEYS=""
+CONFIG_KEYS_READ_STATUS=0
+KERNEL_SNAPSHOT4=""
+KERNEL_SNAPSHOT6=""
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
+RECHECK_AFTER_SLEEP=false
+KERNEL_RECHECK_IP="192.0.2.1"
+KERNEL_RECHECK_INTF="Vlan1000"
+KERNEL_RECHECK_OUTPUT=""
+KERNEL_READ_STATUS=0
+KERNEL_FLUSH_STATUS=0
+KERNEL_FLUSH_FAIL_INTF=""
+SCOPED_FLUSH_CALLS=()
+DB_NEIGH_MISSING_FROM_KERNEL=""
+SUBTYPE="dualtor"
+
+MOCK_SUBTYPE=""
+
 sonic-db-cli() {
+    if [[ "$*" == "-s CONFIG_DB hget DEVICE_METADATA|localhost subtype" ]]; then
+        printf '%s' "$MOCK_SUBTYPE"
+        return
+    fi
+    if [[ "$*" == "-s CONFIG_DB keys NEIGH*" ]]; then
+        printf '%s' "$CONFIG_DB_KEYS"
+        return "$CONFIG_KEYS_READ_STATUS"
+    fi
     printf '%s\n' "$*" > "$DB_CALL_LOG"
     printf '%s\n' "$4" > "$DB_KEY_LOG"
-    printf '%s' "${SONIC_DB_RESPONSE:-}"
+    assert_eq "neighbor lookup uses the local Unix socket" "-s" "$1"
+    assert_eq "neighbor lookup uses APPL_DB" "APPL_DB" "$2"
+    if [[ "$3" == keys ]]; then
+        printf '%s' "$APPL_DB_KEYS"
+        return "$DB_KEYS_READ_STATUS"
+    fi
+    if [[ "$RECHECK_AFTER_SLEEP" == true ]]; then
+        assert_eq "recheck follows the existing wait" "120" "${SLEEP_ARGS[*]}"
+    fi
+    if [[ "$DB_READ_STATUS" -ne 0 ]]; then
+        return "$DB_READ_STATUS"
+    fi
+    printf '%s' "$APPL_DB_MAC"
 }
 
 ip() {
-    IP_ARGS=("$@")
+    case "$*" in
+        "neigh show")
+            printf '%s\n' "$KERNEL_NEIGH_OUTPUT"
+            ;;
+        "-4 neigh show"|"-6 neigh show")
+            printf '%s\n' "$*" >> "$KERNEL_CALL_LOG"
+            if [[ "$1" == -4 ]]; then
+                printf '%s\n' "$KERNEL_SNAPSHOT4"
+            else
+                printf '%s\n' "$KERNEL_SNAPSHOT6"
+            fi
+            [[ "$1" != "$KERNEL_SNAPSHOT_FAIL_FAMILY" ]]
+            ;;
+        "-4 neigh show to "*|"-6 neigh show to "*)
+            printf '%s\n' "$*" >> "$KERNEL_CALL_LOG"
+            if [[ "$KERNEL_READ_STATUS" -ne 0 ]]; then
+                return "$KERNEL_READ_STATUS"
+            fi
+            if [[ "$5" == "$KERNEL_RECHECK_IP" && ( "$7" == "$KERNEL_RECHECK_INTF" || "$KERNEL_RECHECK_INTF" == "*" ) ]]; then
+                printf '%s' "$KERNEL_RECHECK_OUTPUT"
+            fi
+            ;;
+        "-4 neigh flush to "*|"-6 neigh flush to "*)
+            IP_ARGS=("$@")
+            SCOPED_FLUSH_CALLS+=("$*")
+            if [[ -z "$KERNEL_FLUSH_FAIL_INTF" || "$7" == "$KERNEL_FLUSH_FAIL_INTF" ]]; then
+                return "$KERNEL_FLUSH_STATUS"
+            fi
+            ;;
+        *)
+            IP_ARGS=("$@")
+            ;;
+    esac
 }
 
 arping() {
@@ -99,29 +172,505 @@ replace_failed_neighbors "2001:db8::2 dev Vlan1000 FAILED"
 assert_eq "replace address remains one argument" "2001:db8::2" "${IP_ARGS[2]}"
 assert_eq "replace interface remains one argument" "Vlan1000" "${IP_ARGS[4]}"
 
+APPL_DB_MAC=""
+KERNEL_RECHECK_OUTPUT="192.0.2.1 dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+LOGGER_ARGS=()
 IP_ARGS=()
 TIMEOUT_ARGS=()
-SONIC_DB_RESPONSE="02:00:00:00:00:02"
-SUBTYPE="dualtor"
-KERNEL_NEIGH="169.254.1.1,Vlan1000,02:00:00:00:00:01"
+logger() { LOGGER_ARGS=("$@"); }
+recheck_missing_neighbors $'192.0.2.1,Vlan1000\n'
+assert_eq "recheck reports the missing neighbor" \
+    "Neighbor 192.0.2.1 on Vlan1000 present in kernel but still missing from APPL_DB after recheck; flushing without probing" \
+    "${LOGGER_ARGS[2]}"
+assert_eq "recheck flushes only the exact neighbor" \
+    "-4 neigh flush to 192.0.2.1 dev Vlan1000" "${IP_ARGS[*]}"
+assert_eq "recheck does not recreate the neighbor with a probe" "0" "${#TIMEOUT_ARGS[@]}"
+
+APPL_DB_MAC="00:11:22:33:44:55"
+LOGGER_ARGS=()
+: > "$KERNEL_CALL_LOG"
+recheck_missing_neighbors $'192.0.2.1,Vlan1000\n'
+assert_eq "recheck stays quiet once APPL_DB catches up" "0" "${#LOGGER_ARGS[@]}"
+assert_eq "recovered APPL_DB entry needs no kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+
+# Exercise the existing inline MAC loop without starting the daemon.
+sed -n '/^  # Flush neighbor entries with MAC mismatch/,/^  VLAN=/{
+    /^  VLAN=/d
+    p
+}' "$SCRIPT" > "$SOURCE_SCRIPT"
+
+sed -n '/^  # sleep here before handling the mismatch/,/^  # refresh neighbor entries/{
+    /^  # refresh neighbor entries/d
+    p
+}' "$SCRIPT" > "$RECHECK_SCRIPT"
+
+logger() {
+    LOGGER_MESSAGES+=("$*")
+}
+
+sleep() {
+    SLEEP_ARGS+=("$@")
+}
+
+run_mac_mismatch_loop() {
+    IP_ARGS=()
+    TIMEOUT_ARGS=()
+    SLEEP_ARGS=()
+    LOGGER_MESSAGES=()
+    : > "$KERNEL_CALL_LOG"
+    # Match the daemon's pipeline behavior when grep filters every neighbor.
+    set +o pipefail
+    source "$SOURCE_SCRIPT"
+    set -o pipefail
+}
+
+for neighbor_ip in "192.0.2.1" "2001:db8::1"; do
+    KERNEL_NEIGH_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+    KERNEL_RECHECK_IP="$neighbor_ip"
+    KERNEL_RECHECK_INTF="Vlan1000"
+    KERNEL_RECHECK_OUTPUT="$KERNEL_NEIGH_OUTPUT"
+    if [[ "$neighbor_ip" == *":"* ]]; then
+        expected_family=-6
+    else
+        expected_family=-4
+    fi
+    APPL_DB_MAC=""
+    run_mac_mismatch_loop
+    assert_eq "missing entry keeps the existing mismatch warning" \
+        "-p warning MAC mismatch for $neighbor_ip on Vlan1000 - kernel: 00:11:22:33:44:55, APPL_DB: " \
+        "${LOGGER_MESSAGES[0]}"
+    assert_eq "missing entry is not flushed" "0" "${#IP_ARGS[@]}"
+    assert_eq "missing entry is not probed" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "missing entry does not add a sleep to the MAC loop" "0" "${#SLEEP_ARGS[@]}"
+    assert_eq "missing-entry recheck is deferred" "1" "${#LOGGER_MESSAGES[@]}"
+    assert_eq "missing entry is confirmed immediately in the live kernel" \
+        "$expected_family neigh show to $neighbor_ip dev Vlan1000" "$(<"$KERNEL_CALL_LOG")"
+    assert_eq "only the confirmed candidate is queued" "$neighbor_ip,Vlan1000"$'\n' "$MISSING_APPL_DB_NEIGH"
+
+    : > "$KERNEL_CALL_LOG"
+    RECHECK_AFTER_SLEEP=true
+    source "$RECHECK_SCRIPT"
+    RECHECK_AFTER_SLEEP=false
+    assert_eq "deferred recheck uses only the existing wait" "120" "${SLEEP_ARGS[*]}"
+    assert_eq "kernel recheck selects the exact IP, interface and family" \
+        "$expected_family neigh show to $neighbor_ip dev Vlan1000" "$(<"$KERNEL_CALL_LOG")"
+    assert_eq "persistent mismatch and mitigation are logged" \
+        "-p warning Neighbor $neighbor_ip on Vlan1000 present in kernel but still missing from APPL_DB after recheck; flushing without probing" \
+        "${LOGGER_MESSAGES[1]}"
+    assert_eq "persistent mismatch is flushed by exact family, IP and interface" \
+        "$expected_family neigh flush to $neighbor_ip dev Vlan1000" "${IP_ARGS[*]}"
+    assert_eq "delayed cleanup does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+
+    run_mac_mismatch_loop
+    KERNEL_RECHECK_OUTPUT=""
+    RECHECK_AFTER_SLEEP=true
+    source "$RECHECK_SCRIPT"
+    RECHECK_AFTER_SLEEP=false
+    assert_eq "deletion from both tables keeps only the initial warning" "1" "${#LOGGER_MESSAGES[@]}"
+    assert_eq "deletion from both tables does not flush" "0" "${#IP_ARGS[@]}"
+    assert_eq "deletion from both tables does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+
+    KERNEL_RECHECK_OUTPUT="$KERNEL_NEIGH_OUTPUT"
+    run_mac_mismatch_loop
+    KERNEL_RECHECK_INTF="Vlan2000"
+    : > "$KERNEL_CALL_LOG"
+    RECHECK_AFTER_SLEEP=true
+    source "$RECHECK_SCRIPT"
+    RECHECK_AFTER_SLEEP=false
+    assert_eq "neighbor on a different interface is not a mismatch" "1" "${#LOGGER_MESSAGES[@]}"
+    assert_eq "delayed lookup remains scoped to the original interface" \
+        "$expected_family neigh show to $neighbor_ip dev Vlan1000" "$(<"$KERNEL_CALL_LOG")"
+    assert_eq "a neighbor on another interface is not flushed" "0" "${#IP_ARGS[@]}"
+    KERNEL_RECHECK_INTF="Vlan1000"
+
+    for recovered_mac in "00:11:22:33:44:55" "00:00:00:00:00:00"; do
+        APPL_DB_MAC=""
+        run_mac_mismatch_loop
+        APPL_DB_MAC="$recovered_mac"
+        : > "$KERNEL_CALL_LOG"
+        RECHECK_AFTER_SLEEP=true
+        source "$RECHECK_SCRIPT"
+        RECHECK_AFTER_SLEEP=false
+        assert_eq "recovered entry is rechecked after the existing wait" "120" "${SLEEP_ARGS[*]}"
+        assert_eq "entry recovered during the wait does not log an error" "1" "${#LOGGER_MESSAGES[@]}"
+        assert_eq "entry recovered during the wait needs no kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+        assert_eq "recovered entry is not flushed" "0" "${#IP_ARGS[@]}"
+        assert_eq "recovered entry is not probed" "0" "${#TIMEOUT_ARGS[@]}"
+    done
+
+    APPL_DB_MAC=""
+    KERNEL_RECHECK_OUTPUT=""
+    run_mac_mismatch_loop
+    assert_eq "an already deleted kernel neighbor is not queued" "" "$MISSING_APPL_DB_NEIGH"
+    assert_eq "an already deleted kernel neighbor is not flushed" "0" "${#IP_ARGS[@]}"
+    assert_eq "an already deleted kernel neighbor is not probed" "0" "${#TIMEOUT_ARGS[@]}"
+    : > "$DB_CALL_LOG"
+    : > "$KERNEL_CALL_LOG"
+    RECHECK_AFTER_SLEEP=true
+    source "$RECHECK_SCRIPT"
+    RECHECK_AFTER_SLEEP=false
+    assert_eq "an already deleted neighbor needs no delayed DB lookup" "" "$(<"$DB_CALL_LOG")"
+    assert_eq "an already deleted neighbor needs no delayed kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+    KERNEL_RECHECK_OUTPUT="$KERNEL_NEIGH_OUTPUT"
+
+    KERNEL_RECHECK_INTF="Vlan2000"
+    run_mac_mismatch_loop
+    assert_eq "a neighbor only on another interface is not queued" "" "$MISSING_APPL_DB_NEIGH"
+    assert_eq "another interface is not flushed" "0" "${#IP_ARGS[@]}"
+    KERNEL_RECHECK_INTF="Vlan1000"
+
+    DB_READ_STATUS=1
+    run_mac_mismatch_loop
+    assert_eq "initial DB read failure is reported separately" \
+        "-p error Failed to read APPL_DB neighbor $neighbor_ip on Vlan1000 during MAC check" "${LOGGER_MESSAGES[0]}"
+    assert_eq "initial DB read failure does not authorize a kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+    assert_eq "initial DB read failure does not queue cleanup" "" "$MISSING_APPL_DB_NEIGH"
+    assert_eq "initial DB read failure does not flush" "0" "${#IP_ARGS[@]}"
+    assert_eq "initial DB read failure does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+    DB_READ_STATUS=0
+
+    KERNEL_READ_STATUS=1
+    run_mac_mismatch_loop
+    assert_eq "initial kernel read failure is reported separately" \
+        "-p error Failed to read kernel neighbor $neighbor_ip on Vlan1000 during MAC check" "${LOGGER_MESSAGES[1]}"
+    assert_eq "initial kernel read failure does not queue cleanup" "" "$MISSING_APPL_DB_NEIGH"
+    assert_eq "initial kernel read failure does not flush" "0" "${#IP_ARGS[@]}"
+    assert_eq "initial kernel read failure does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+    KERNEL_READ_STATUS=0
+
+    APPL_DB_MAC="00:11:22:33:44:55"
+    run_mac_mismatch_loop
+    assert_eq "matching MACs are not flushed" "0" "${#IP_ARGS[@]}"
+    assert_eq "matching MACs are not probed" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "matching MACs do not add a delay" "0" "${#SLEEP_ARGS[@]}"
+    assert_eq "matching MACs do not warn" "0" "${#LOGGER_MESSAGES[@]}"
+    : > "$DB_CALL_LOG"
+    source "$RECHECK_SCRIPT"
+    assert_eq "no pending entries leave the existing wait unchanged" "120" "${SLEEP_ARGS[*]}"
+    assert_eq "no pending entries cause no extra DB lookups" "" "$(<"$DB_CALL_LOG")"
+    assert_eq "no pending entries cause no kernel lookups" "" "$(<"$KERNEL_CALL_LOG")"
+
+    if [[ "$neighbor_ip" == *":"* ]]; then
+        expected_ping=ping6
+    else
+        expected_ping=ping
+    fi
+    for APPL_DB_MAC in "00:11:22:33:44:66" "00:00:00:00:00:00"; do
+        run_mac_mismatch_loop
+        assert_eq "nonempty mismatch keeps the existing flush" \
+            "neigh flush $neighbor_ip" "${IP_ARGS[*]}"
+        assert_eq "nonempty mismatch keeps the family and interface-specific probe" \
+            "0.2 $expected_ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 $neighbor_ip" "${TIMEOUT_ARGS[*]}"
+        assert_eq "nonempty mismatch does not add a delay" "0" "${#SLEEP_ARGS[@]}"
+    done
+
+    APPL_DB_MAC=""
+    DB_READ_STATUS=1
+    LOGGER_MESSAGES=()
+    IP_ARGS=()
+    TIMEOUT_ARGS=()
+    : > "$KERNEL_CALL_LOG"
+    if recheck_missing_neighbors "$neighbor_ip,Vlan1000"; then
+        echo "FAIL: APPL_DB read failure passed the recheck" >&2
+        exit 1
+    fi
+    assert_eq "APPL_DB read failure is not reported as a mismatch" \
+        "-p error Failed to read APPL_DB neighbor $neighbor_ip on Vlan1000 during recheck" "${LOGGER_MESSAGES[0]}"
+    assert_eq "APPL_DB read failure causes no kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+    assert_eq "APPL_DB read failure does not flush" "0" "${#IP_ARGS[@]}"
+    assert_eq "APPL_DB read failure does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+    DB_READ_STATUS=0
+
+    KERNEL_READ_STATUS=1
+    LOGGER_MESSAGES=()
+    if recheck_missing_neighbors "$neighbor_ip,Vlan1000"; then
+        echo "FAIL: kernel read failure passed the recheck" >&2
+        exit 1
+    fi
+    assert_eq "kernel read failure is not mistaken for deletion" \
+        "-p error Failed to read kernel neighbor $neighbor_ip on Vlan1000 during recheck" "${LOGGER_MESSAGES[0]}"
+    assert_eq "kernel read failure does not flush" "0" "${#IP_ARGS[@]}"
+    assert_eq "kernel read failure does not probe" "0" "${#TIMEOUT_ARGS[@]}"
+    KERNEL_READ_STATUS=0
+
+    KERNEL_FLUSH_STATUS=1
+    LOGGER_MESSAGES=()
+    if recheck_missing_neighbors "$neighbor_ip,Vlan1000"; then
+        echo "FAIL: kernel flush failure passed the recheck" >&2
+        exit 1
+    fi
+    assert_eq "kernel flush failure is reported" \
+        "-p error Failed to flush kernel neighbor $neighbor_ip on Vlan1000 during recheck" "${LOGGER_MESSAGES[1]}"
+    assert_eq "kernel flush failure does not fall back to probing" "0" "${#TIMEOUT_ARGS[@]}"
+    KERNEL_FLUSH_STATUS=0
+
+    for neighbor_state in REACHABLE STALE FAILED INCOMPLETE; do
+        KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 $neighbor_state"
+        IP_ARGS=()
+        recheck_missing_neighbors "$neighbor_ip,Vlan1000"
+        assert_eq "confirmed cleanup selects dynamic neighbors without widening its scope" \
+            "$expected_family neigh flush to $neighbor_ip dev Vlan1000" "${IP_ARGS[*]}"
+    done
+
+    for neighbor_state in PERMANENT NOARP; do
+        KERNEL_NEIGH_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+        KERNEL_RECHECK_OUTPUT="$KERNEL_NEIGH_OUTPUT"
+        run_mac_mismatch_loop
+        KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 $neighbor_state"
+        source "$RECHECK_SCRIPT"
+        assert_eq "a neighbor becoming static during the wait is not flushed" "0" "${#IP_ARGS[@]}"
+        assert_eq "a neighbor becoming static during the wait is not probed" "0" "${#TIMEOUT_ARGS[@]}"
+
+        KERNEL_NEIGH_OUTPUT="$KERNEL_RECHECK_OUTPUT"
+        run_mac_mismatch_loop
+        assert_eq "static neighbors are not queued for cleanup" "" "$MISSING_APPL_DB_NEIGH"
+    done
+
+    for neighbor_intf in eth0 Ethernet0 PortChannel1; do
+        KERNEL_NEIGH_OUTPUT="$neighbor_ip dev $neighbor_intf lladdr 00:11:22:33:44:55 REACHABLE"
+        run_mac_mismatch_loop
+        assert_eq "non-VLAN neighbors are not queued for cleanup" "" "$MISSING_APPL_DB_NEIGH"
+        assert_eq "non-VLAN neighbors need no cleanup lookup" "" "$(<"$KERNEL_CALL_LOG")"
+        : > "$DB_CALL_LOG"
+        recheck_missing_neighbors "$neighbor_ip,$neighbor_intf"
+        assert_eq "non-VLAN neighbors are not rechecked against APPL_DB" "" "$(<"$DB_CALL_LOG")"
+        assert_eq "non-VLAN neighbors are not flushed" "0" "${#IP_ARGS[@]}"
+        assert_eq "non-VLAN neighbors are not probed" "0" "${#TIMEOUT_ARGS[@]}"
+    done
+
+    KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+    LOGGER_MESSAGES=()
+    IP_ARGS=()
+    : > "$KERNEL_CALL_LOG"
+    recheck_missing_neighbors $'\n'"$neighbor_ip,Vlan2000"$'\n'"$neighbor_ip,Vlan1000"$'\n'
+    assert_eq "skipping an absent candidate does not skip later candidates" "1" "${#LOGGER_MESSAGES[@]}"
+    assert_eq "a mixed candidate list flushes only the matching interface" \
+        "$expected_family neigh flush to $neighbor_ip dev Vlan1000" "${IP_ARGS[*]}"
+
+    KERNEL_RECHECK_INTF="*"
+    KERNEL_FLUSH_STATUS=1
+    KERNEL_FLUSH_FAIL_INTF="Vlan2000"
+    SCOPED_FLUSH_CALLS=()
+    LOGGER_MESSAGES=()
+    if recheck_missing_neighbors "$neighbor_ip,Vlan2000"$'\n'"$neighbor_ip,Vlan1000"; then
+        echo "FAIL: a mixed cleanup hid a flush failure" >&2
+        exit 1
+    fi
+    assert_eq "cleanup continues after one candidate fails" "2" "${#SCOPED_FLUSH_CALLS[@]}"
+    assert_eq "the first candidate remains scoped when its flush fails" \
+        "$expected_family neigh flush to $neighbor_ip dev Vlan2000" "${SCOPED_FLUSH_CALLS[0]}"
+    assert_eq "the second candidate is still mitigated after the first fails" \
+        "$expected_family neigh flush to $neighbor_ip dev Vlan1000" "${SCOPED_FLUSH_CALLS[1]}"
+    assert_eq "a mixed cleanup reports the failed interface" \
+        "-p error Failed to flush kernel neighbor $neighbor_ip on Vlan2000 during recheck" "${LOGGER_MESSAGES[1]}"
+    assert_eq "a mixed cleanup does not fall back to probing" "0" "${#TIMEOUT_ARGS[@]}"
+    KERNEL_RECHECK_INTF="Vlan1000"
+    KERNEL_FLUSH_STATUS=0
+    KERNEL_FLUSH_FAIL_INTF=""
+done
+
+for neighbor_ip in 169.254.1.1 fe80::1 fe90::1 fea0::1 febf::1; do
+    KERNEL_RECHECK_IP="$neighbor_ip"
+    KERNEL_RECHECK_INTF="Vlan1000"
+    KERNEL_NEIGH_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+    KERNEL_RECHECK_OUTPUT="$KERNEL_NEIGH_OUTPUT"
+    run_mac_mismatch_loop
+    assert_eq "link-local neighbors are not queued for cleanup" "" "$MISSING_APPL_DB_NEIGH"
+    : > "$DB_CALL_LOG"
+    recheck_missing_neighbors "$neighbor_ip,Vlan1000"
+    assert_eq "link-local neighbors are not rechecked against APPL_DB" "" "$(<"$DB_CALL_LOG")"
+    assert_eq "link-local neighbors are not flushed" "0" "${#IP_ARGS[@]}"
+    assert_eq "link-local neighbors are not probed" "0" "${#TIMEOUT_ARGS[@]}"
+done
+
+KERNEL_RECHECK_IP='192.0.2.1; touch /tmp/arp-update-test-marker'
+KERNEL_RECHECK_INTF='Vlan1000; touch /tmp/arp-update-test-marker'
+KERNEL_RECHECK_OUTPUT="$KERNEL_RECHECK_IP dev $KERNEL_RECHECK_INTF lladdr 00:11:22:33:44:55 REACHABLE"
+recheck_missing_neighbors "$KERNEL_RECHECK_IP,$KERNEL_RECHECK_INTF"
+assert_eq "scoped cleanup preserves the address as one argument" "$KERNEL_RECHECK_IP" "${IP_ARGS[4]}"
+assert_eq "scoped cleanup preserves the interface as one argument" "$KERNEL_RECHECK_INTF" "${IP_ARGS[6]}"
+
+KERNEL_NEIGH_OUTPUT="169.254.1.1 dev Vlan1000 lladdr 02:00:00:00:00:01 REACHABLE"
+APPL_DB_MAC="02:00:00:00:00:02"
+MOCK_SUBTYPE="dualtor"
 : > "$DB_CALL_LOG"
-: > "$LOGGER_LOG"
-# shellcheck source=/dev/null
-source "$MISMATCH_LOOP_SCRIPT"
+run_mac_mismatch_loop
 assert_eq "DualToR IPv4 link-local neighbor skips APPL_DB lookup" "" "$(<"$DB_CALL_LOG")"
 assert_eq "DualToR IPv4 link-local neighbor is not flushed" "0" "${#IP_ARGS[@]}"
-assert_eq "DualToR IPv4 link-local mismatch is not logged" "" "$(<"$LOGGER_LOG")"
+assert_eq "DualToR IPv4 link-local mismatch is not logged" "0" "${#LOGGER_MESSAGES[@]}"
 
-IP_ARGS=()
-TIMEOUT_ARGS=()
-SUBTYPE=""
-: > "$LOGGER_LOG"
-# shellcheck source=/dev/null
-source "$MISMATCH_LOOP_SCRIPT"
+MOCK_SUBTYPE=""
+run_mac_mismatch_loop
 assert_eq "non-DualToR IPv4 link-local neighbor is flushed" "169.254.1.1" "${IP_ARGS[2]}"
 assert_eq "non-DualToR IPv4 link-local mismatch is logged" \
     "-p warning MAC mismatch for 169.254.1.1 on Vlan1000 - kernel: 02:00:00:00:00:01, APPL_DB: 02:00:00:00:00:02" \
-    "$(<"$LOGGER_LOG")"
+    "${LOGGER_MESSAGES[0]}"
+
+SUBTYPE="dualtor"
+for neighbor_ip in "192.0.2.1" "2001:db8::1"; do
+    if [[ "$neighbor_ip" == *":"* ]]; then
+        expected_family=-6
+        expected_ping=ping6
+    else
+        expected_family=-4
+        expected_ping=ping
+    fi
+    KERNEL_RECHECK_IP="$neighbor_ip"
+    KERNEL_RECHECK_INTF="Vlan1000"
+    db_keys="NEIGH_TABLE:Vlan1000:$neighbor_ip NEIGH_TABLE:Ethernet0:$neighbor_ip"
+
+    KERNEIGH4=""
+    KERNEIGH6=""
+    assert_eq "a VLAN DB neighbor missing from the kernel is recorded" \
+        "$neighbor_ip,Vlan1000" "$(collect_db_neighbors_missing_from_kernel "$db_keys")"
+    KERNEIGH4="$neighbor_ip,Vlan1000"
+    KERNEIGH6="$neighbor_ip,Vlan1000"
+    assert_eq "a neighbor flushed after collection is not recorded" \
+        "" "$(collect_db_neighbors_missing_from_kernel "$db_keys")"
+
+    run_db_recheck() {
+        LOGGER_MESSAGES=()
+        TIMEOUT_ARGS=()
+        SLEEP_ARGS=()
+        MISSING_APPL_DB_NEIGH=""
+        DB_NEIGH_MISSING_FROM_KERNEL="$neighbor_ip,Vlan1000"$'\n'
+        : > "$KERNEL_CALL_LOG"
+        RECHECK_AFTER_SLEEP=true
+        source "$RECHECK_SCRIPT"
+        RECHECK_AFTER_SLEEP=false
+        DB_NEIGH_MISSING_FROM_KERNEL=""
+    }
+
+    APPL_DB_MAC="00:11:22:33:44:55"
+    KERNEL_RECHECK_OUTPUT=""
+    run_db_recheck
+    assert_eq "a persistent DB/kernel mismatch is pinged after the existing wait" \
+        "0.2 $expected_ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 $neighbor_ip" "${TIMEOUT_ARGS[*]}"
+    assert_eq "the persistent mismatch is checked in the kernel by exact family, IP and interface" \
+        "$expected_family neigh show to $neighbor_ip dev Vlan1000" "$(<"$KERNEL_CALL_LOG")"
+
+    APPL_DB_MAC=""
+    run_db_recheck
+    assert_eq "a neighbor deleted from APPL_DB during the wait is not pinged" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "a neighbor deleted from APPL_DB needs no kernel lookup" "" "$(<"$KERNEL_CALL_LOG")"
+
+    APPL_DB_MAC="00:11:22:33:44:55"
+    KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 lladdr 00:11:22:33:44:55 REACHABLE"
+    run_db_recheck
+    assert_eq "a neighbor relearned in the kernel during the wait is not pinged" "0" "${#TIMEOUT_ARGS[@]}"
+
+    KERNEL_RECHECK_OUTPUT="$neighbor_ip dev Vlan1000 FAILED"
+    run_db_recheck
+    assert_eq "dualtor treats an unresolved kernel neighbor as present" "0" "${#TIMEOUT_ARGS[@]}"
+    SUBTYPE=""
+    run_db_recheck
+    assert_eq "other devices still ping an unresolved kernel neighbor" \
+        "0.2 $expected_ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 $neighbor_ip" "${TIMEOUT_ARGS[*]}"
+    SUBTYPE="dualtor"
+
+    KERNEL_RECHECK_OUTPUT=""
+    for failure in DB_READ_STATUS KERNEL_READ_STATUS; do
+        printf -v "$failure" 1
+        LOGGER_MESSAGES=()
+        TIMEOUT_ARGS=()
+        if recheck_db_neighbors_missing_from_kernel "$neighbor_ip,Vlan1000" "$SUBTYPE"; then
+            echo "FAIL: ${failure} passed the DB/kernel recheck" >&2
+            exit 1
+        fi
+        assert_eq "a ${failure} failure does not ping" "0" "${#TIMEOUT_ARGS[@]}"
+        printf -v "$failure" 0
+    done
+done
+
+sed -n '/^  # Record APPL_DB neighbors/,/^  # sleep here/{
+    /^  # sleep here/d
+    p
+}' "$SCRIPT" > "$SOURCE_SCRIPT"
+
+APPL_DB_KEYS="NEIGH_TABLE:Vlan1000:192.0.2.1"
+for SUBTYPE in dualtor ""; do
+    for KERNEL_SNAPSHOT_FAIL_FAMILY in -4 -6; do
+        KERNEIGH4="stale"
+        KERNEIGH6="stale"
+        DB_NEIGH_MISSING_FROM_KERNEL="192.0.2.1,Vlan1000"
+        LOGGER_MESSAGES=()
+        : > "$DB_CALL_LOG"
+        set +o pipefail
+        source "$SOURCE_SCRIPT"
+        set -o pipefail
+        assert_eq "a failed snapshot clears queued candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+        assert_eq "a failed snapshot invalidates both families" "" "$KERNEIGH4$KERNEIGH6"
+        assert_eq "a failed snapshot does not collect DB keys" "" "$(<"$DB_CALL_LOG")"
+        assert_eq "a failed snapshot is logged" \
+            "-p error Failed to read IPv${KERNEL_SNAPSHOT_FAIL_FAMILY#-} kernel neighbor snapshot" "${LOGGER_MESSAGES[0]}"
+    done
+done
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
+
+DB_KEYS_READ_STATUS=1
+LOGGER_MESSAGES=()
+DB_NEIGH_MISSING_FROM_KERNEL="192.0.2.1,Vlan1000"
+source "$SOURCE_SCRIPT"
+assert_eq "a failed DB keys query discards partial results and old candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a failed DB keys query is logged" \
+    "-p error Failed to read APPL_DB neighbor keys during initial kernel check" "${LOGGER_MESSAGES[0]}"
+DB_KEYS_READ_STATUS=0
+
+LOGGER_MESSAGES=()
+source "$SOURCE_SCRIPT"
+assert_eq "a valid empty kernel snapshot permits candidate collection" \
+    "192.0.2.1,Vlan1000" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a valid empty kernel snapshot is not an error" "0" "${#LOGGER_MESSAGES[@]}"
+APPL_DB_KEYS=""
+source "$SOURCE_SCRIPT"
+assert_eq "a valid empty DB snapshot clears prior candidates" "" "$DB_NEIGH_MISSING_FROM_KERNEL"
+assert_eq "a valid empty DB snapshot is not an error" "0" "${#LOGGER_MESSAGES[@]}"
+
+KERNEL_SNAPSHOT4=$'192.0.2.1 dev Vlan1000 REACHABLE\n192.0.2.2 dev Vlan1000 FAILED\n192.0.2.3 dev Ethernet0 REACHABLE'
+KERNEL_SNAPSHOT6=$'2001:db8::1 dev Vlan1000 REACHABLE\n2001:db8::2 dev Vlan1000 INCOMPLETE\nfe80::1 dev Vlan1000 REACHABLE'
+for SUBTYPE in dualtor ""; do
+    load_kernel_vlan_neighbors "$SUBTYPE"
+    expected4="192.0.2.1,Vlan1000"
+    expected6="2001:db8::1,Vlan1000"
+    if [[ "$SUBTYPE" == dualtor ]]; then
+        expected4+=$'\n192.0.2.2,Vlan1000'
+        expected6+=$'\n2001:db8::2,Vlan1000'
+    fi
+    assert_eq "IPv4 snapshot keeps the existing subtype and VLAN filters" "$expected4" "$KERNEIGH4"
+    assert_eq "IPv6 snapshot keeps the existing subtype and link-local filters" "$expected6" "$KERNEIGH6"
+done
+KERNEL_SNAPSHOT4=""
+KERNEL_SNAPSHOT6=""
+
+sed -n '/^  # refresh neighbor entries/,${
+    /^done$/d
+    p
+}' "$SCRIPT" > "$SOURCE_SCRIPT"
+
+CONFIG_DB_KEYS="NEIGH|Vlan1000|192.0.2.1"
+for KERNEL_SNAPSHOT_FAIL_FAMILY in -4 -6; do
+    LOGGER_MESSAGES=()
+    TIMEOUT_ARGS=()
+    set +o pipefail
+    source "$SOURCE_SCRIPT"
+    set -o pipefail
+    assert_eq "a failed static refresh snapshot does not authorize pinging" "0" "${#TIMEOUT_ARGS[@]}"
+    assert_eq "a failed static refresh snapshot is logged" \
+        "-p error Failed to read IPv${KERNEL_SNAPSHOT_FAIL_FAMILY#-} kernel neighbor snapshot" "${LOGGER_MESSAGES[0]}"
+done
+KERNEL_SNAPSHOT_FAIL_FAMILY=""
+
+CONFIG_KEYS_READ_STATUS=1
+LOGGER_MESSAGES=()
+TIMEOUT_ARGS=()
+source "$SOURCE_SCRIPT"
+assert_eq "a failed CONFIG_DB keys query does not authorize pinging" "0" "${#TIMEOUT_ARGS[@]}"
+assert_eq "a failed CONFIG_DB keys query is logged" \
+    "-p error Failed to read CONFIG_DB neighbor keys during kernel refresh" "${LOGGER_MESSAGES[0]}"
+CONFIG_KEYS_READ_STATUS=0
+source "$SOURCE_SCRIPT"
+assert_eq "static neighbors still refresh immediately after successful snapshots" \
+    "0.2 ping -I Vlan1000 -n -q -i 0 -c 1 -W 1 192.0.2.1" "${TIMEOUT_ARGS[*]}"
 
 [[ ! -e "$MARKER_FILE" ]]
 

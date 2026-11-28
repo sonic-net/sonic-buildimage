@@ -59,6 +59,133 @@ run_ipv6_multicast_ping() {
         timeout "$wait_time" ping6 -I "$ifname" -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null 2>&1
 }
 
+is_missing_neighbor_cleanup_candidate() {
+    local neighbor_ip="$1" intf="$2"
+    [[ "$intf" == Vlan* && "$neighbor_ip" != 169.254.* &&
+        ! "$neighbor_ip" =~ ^[fF][eE][89aAbB][[:xdigit:]]: ]]
+}
+
+recheck_missing_neighbors() {
+    local neighbors="$1"
+    local neighbor_ip intf appl_db_mac kernel_neighbor ip_family failed=0
+
+    while IFS=, read -r neighbor_ip intf; do
+        [[ -z "$neighbor_ip" ]] && continue
+        is_missing_neighbor_cleanup_candidate "$neighbor_ip" "$intf" || continue
+        if ! appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${neighbor_ip}" neigh)"; then
+            logger -p error "Failed to read APPL_DB neighbor ${neighbor_ip} on ${intf} during recheck"
+            failed=1
+            continue
+        fi
+        [[ -n "$appl_db_mac" ]] && continue
+
+        if [[ "$neighbor_ip" == *":"* ]]; then
+            ip_family=-6
+        else
+            ip_family=-4
+        fi
+        if ! kernel_neighbor="$(ip "$ip_family" neigh show to "$neighbor_ip" dev "$intf")"; then
+            logger -p error "Failed to read kernel neighbor ${neighbor_ip} on ${intf} during recheck"
+            failed=1
+            continue
+        fi
+        if [[ -n "$kernel_neighbor" && ! "$kernel_neighbor" =~ [[:space:]](PERMANENT|NOARP)([[:space:]]|$) ]]; then
+            logger -p warning "Neighbor ${neighbor_ip} on ${intf} present in kernel but still missing from APPL_DB after recheck; flushing without probing"
+            if ! ip "$ip_family" neigh flush to "$neighbor_ip" dev "$intf"; then
+                logger -p error "Failed to flush kernel neighbor ${neighbor_ip} on ${intf} during recheck"
+                failed=1
+            fi
+        fi
+    done <<< "$neighbors"
+
+    return "$failed"
+}
+
+load_kernel_vlan_neighbors() {
+    local subtype="$1"
+    local kernel_neighbors4 kernel_neighbors6
+    KERNEIGH4=""
+    KERNEIGH6=""
+    if ! kernel_neighbors4="$(ip -4 neigh show)"; then
+        logger -p error "Failed to read IPv4 kernel neighbor snapshot"
+        return 1
+    fi
+    if ! kernel_neighbors6="$(ip -6 neigh show)"; then
+        logger -p error "Failed to read IPv6 kernel neighbor snapshot"
+        return 1
+    fi
+    if ! KERNEIGH4="$(awk -v subtype="$subtype" '/Vlan/ && (subtype == "dualtor" || !/FAILED|INCOMPLETE/) {print $1 "," $3}' <<< "$kernel_neighbors4")" ||
+        ! KERNEIGH6="$(awk -v subtype="$subtype" '!/fe80/ && /Vlan/ && (subtype == "dualtor" || !/FAILED|INCOMPLETE/) {print $1 "," $3}' <<< "$kernel_neighbors6")"; then
+        KERNEIGH4=""
+        KERNEIGH6=""
+        logger -p error "Failed to filter kernel neighbor snapshots"
+        return 1
+    fi
+}
+
+ping_db_neighbor() {
+    local neighbor_ip="$1" intf="$2"
+    if [[ $neighbor_ip == *"."* ]]; then
+        logger "mismatch arp entry, pinging ${neighbor_ip} on ${intf}"
+        run_with_retry_cmd "db/kernel mismatch ping to ${neighbor_ip} on ${intf}" \
+            timeout 0.2 ping -I "$intf" -n -q -i 0 -c 1 -W 1 "$neighbor_ip" >/dev/null 2>&1
+    elif [[ $neighbor_ip == *":"* ]]; then
+        logger "mismatch v6 nbr entry, pinging ${neighbor_ip} on ${intf}"
+        run_with_retry_cmd "db/kernel mismatch ping6 to ${neighbor_ip} on ${intf}" \
+            timeout 0.2 ping6 -I "$intf" -n -q -i 0 -c 1 -W 1 "$neighbor_ip" >/dev/null 2>&1
+    fi
+}
+
+# Print "ip,intf" for VLAN DB neighbors missing from the KERNEIGH4/KERNEIGH6 snapshot.
+collect_db_neighbors_missing_from_kernel() {
+    local db_neighbors="$1"
+    local neigh intf neighbor_ip
+
+    for neigh in $db_neighbors; do
+        intf="$( cut -d ':' -f 2 <<< "$neigh" )"
+        neighbor_ip="$( cut -d ':' -f 3- <<< "$neigh" )"
+        [[ $intf == *"Vlan"* ]] || continue
+        if [[ $neighbor_ip == *"."* && ! $KERNEIGH4 =~ "${neighbor_ip},${intf}" ]] ||
+            [[ $neighbor_ip == *":"* && ! $KERNEIGH6 =~ "${neighbor_ip},${intf}" ]]; then
+            printf '%s,%s\n' "$neighbor_ip" "$intf"
+        fi
+    done
+}
+
+# Ping APPL_DB neighbors only if they are still in APPL_DB and still absent from the kernel.
+recheck_db_neighbors_missing_from_kernel() {
+    local neighbors="$1" subtype="$2"
+    local neighbor_ip intf appl_db_mac kernel_neighbor ip_family failed=0
+
+    while IFS=, read -r neighbor_ip intf; do
+        [[ -z "$neighbor_ip" ]] && continue
+        if ! appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${neighbor_ip}" neigh)"; then
+            logger -p error "Failed to read APPL_DB neighbor ${neighbor_ip} on ${intf} during kernel recheck"
+            failed=1
+            continue
+        fi
+        [[ -z "$appl_db_mac" ]] && continue
+
+        if [[ "$neighbor_ip" == *":"* ]]; then
+            ip_family=-6
+        else
+            ip_family=-4
+        fi
+        if ! kernel_neighbor="$(ip "$ip_family" neigh show to "$neighbor_ip" dev "$intf")"; then
+            logger -p error "Failed to read kernel neighbor ${neighbor_ip} on ${intf} during kernel recheck"
+            failed=1
+            continue
+        fi
+        if [[ -n "$kernel_neighbor" ]] &&
+            [[ "$subtype" == "dualtor" || ! "$kernel_neighbor" =~ [[:space:]](FAILED|INCOMPLETE)([[:space:]]|$) ]]; then
+            continue
+        fi
+        ping_db_neighbor "$neighbor_ip" "$intf"
+    done <<< "$neighbors"
+
+    return "$failed"
+}
+
 flush_unsynced_neighbors() {
     local vlan="$1"
     local neighbors="$2"
@@ -176,6 +303,7 @@ while /bin/true; do
   # Flush neighbor entries with MAC mismatch between kernel and APPL_DB
   SUBTYPE=$(sonic-db-cli -s CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
   KERNEL_NEIGH=$(ip neigh show | grep -v "fe80" | grep -v "FAILED\|INCOMPLETE" | cut -d ' ' -f 1,3,5 --output-delimiter=',' | tr -d ' ')
+  MISSING_APPL_DB_NEIGH=""
   for neigh in $KERNEL_NEIGH; do
         ip="$( cut -d ',' -f 1 <<< "$neigh" )"
         intf="$( cut -d ',' -f 2 <<< "$neigh" )"
@@ -183,9 +311,29 @@ while /bin/true; do
         if [[ "$SUBTYPE" == "dualtor" && "$ip" == 169.254.* ]]; then
             continue
         fi
-        appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${ip}" neigh)"
+        if ! appl_db_mac="$(sonic-db-cli -s APPL_DB hget "NEIGH_TABLE:${intf}:${ip}" neigh)"; then
+            logger -p error "Failed to read APPL_DB neighbor ${ip} on ${intf} during MAC check"
+            continue
+        fi
         if [[ $kernel_mac != $appl_db_mac ]]; then
             logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
+            # Neighbor is missing in APPL_DB, which could indicate it is in the process of being deleted.
+            # Only defer neighbors that still exist in the live kernel.
+            if [[ -z "$appl_db_mac" ]]; then
+                is_missing_neighbor_cleanup_candidate "$ip" "$intf" || continue
+                if [[ "$ip" == *":"* ]]; then
+                    ip_family=-6
+                else
+                    ip_family=-4
+                fi
+                if ! kernel_neighbor="$(ip "$ip_family" neigh show to "$ip" dev "$intf")"; then
+                    logger -p error "Failed to read kernel neighbor ${ip} on ${intf} during MAC check"
+                    continue
+                fi
+                [[ -z "$kernel_neighbor" || "$kernel_neighbor" =~ [[:space:]](PERMANENT|NOARP)([[:space:]]|$) ]] && continue
+                MISSING_APPL_DB_NEIGH+="${ip},${intf}"$'\n'
+                continue
+            fi
             ip neigh flush "$ip"
             if [[ $ip == *":"* ]]; then
                 ping_prefix=ping6
@@ -262,40 +410,35 @@ while /bin/true; do
   done
 
 
-  # sleep here before handling the mismatch as it is not required during startup
-  sleep 120
-
-  # refresh neighbor entries from APP_DB in case of mismatch with kernel
-  DBNEIGH=$(sonic-db-cli -s APPL_DB keys NEIGH_TABLE*)
-
-  # resolve neighbor entries from CONFIG_DB in case of mismatch with kernel
-  DBNEIGH="$DBNEIGH $(sonic-db-cli -s CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
-
-  # Define kernel neighbors based on device type
-  if [[ "$SUBTYPE" != "dualtor" ]]; then
-    # Non-DualToR: exclude FAILED/INCOMPLETE neighbors
-    KERNEIGH4=$(ip -4 neigh show | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
-    KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
-  else
-    # DualToR: include FAILED/INCOMPLETE neighbors
-    KERNEIGH4=$(ip -4 neigh show | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
-    KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
+  # Record APPL_DB neighbors missing from the kernel; ping them after the wait only if still missing.
+  DB_NEIGH_MISSING_FROM_KERNEL=""
+  if load_kernel_vlan_neighbors "$SUBTYPE"; then
+      if DBNEIGH="$(sonic-db-cli -s APPL_DB keys 'NEIGH_TABLE*')"; then
+          DB_NEIGH_MISSING_FROM_KERNEL=$(collect_db_neighbors_missing_from_kernel "$DBNEIGH")
+      else
+          logger -p error "Failed to read APPL_DB neighbor keys during initial kernel check"
+      fi
   fi
 
-  for neigh in $DBNEIGH; do
-      intf="$( cut -d ':' -f 2 <<< "$neigh" )"
-      ip="$( cut -d ':' -f 3- <<< "$neigh" )"
-      if [[ $intf == *"Vlan"* ]]; then
-          if [[ $ip == *"."* ]] && [[ ! $KERNEIGH4 =~ "${ip},${intf}" ]]; then
-              logger "mismatch arp entry, pinging ${ip} on ${intf}"
-              run_with_retry_cmd "db/kernel mismatch ping to ${ip} on ${intf}" \
-                timeout 0.2 ping -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
-          elif [[ $ip == *":"* ]] && [[ ! $KERNEIGH6 =~ "${ip},${intf}" ]]; then
-              logger "mismatch v6 nbr entry, pinging ${ip} on ${intf}"
-              run_with_retry_cmd "db/kernel mismatch ping6 to ${ip} on ${intf}" \
-                timeout 0.2 ping6 -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
-          fi
+  # sleep here before handling the mismatch as it is not required during startup
+  sleep 120
+  # Flush confirmed kernel-only neighbors without proactively recreating them.
+  if [[ -n "$MISSING_APPL_DB_NEIGH" ]]; then
+      recheck_missing_neighbors "$MISSING_APPL_DB_NEIGH"
+  fi
+  if [[ -n "$DB_NEIGH_MISSING_FROM_KERNEL" ]]; then
+      recheck_db_neighbors_missing_from_kernel "$DB_NEIGH_MISSING_FROM_KERNEL" "$SUBTYPE"
+  fi
+
+  # refresh neighbor entries from CONFIG_DB in case of mismatch with kernel
+  if DBNEIGH="$(sonic-db-cli -s CONFIG_DB keys 'NEIGH*')"; then
+      if load_kernel_vlan_neighbors "$SUBTYPE"; then
+          while IFS=, read -r ip intf; do
+              [[ -n "$ip" ]] && ping_db_neighbor "$ip" "$intf"
+          done <<< "$(collect_db_neighbors_missing_from_kernel "${DBNEIGH//|/:}")"
       fi
-  done
+  else
+      logger -p error "Failed to read CONFIG_DB neighbor keys during kernel refresh"
+  fi
 
 done
