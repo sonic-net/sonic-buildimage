@@ -52,3 +52,4 @@
 0129-zebra-count-a-local-MAC-delete-with-no-kernel-entry-.patch
 0130-lib-fix-use-after-free-in-agentx_events_update.patch
 0131-SONiC-ONLY-zebra-Copy-the-VxLAN-encap-data-to-a-nexthop-resolved-through-EVPN.patch
+0132-zebra-delete-an-ES-port-s-VLAN-br-port-entry-when-th.patch
