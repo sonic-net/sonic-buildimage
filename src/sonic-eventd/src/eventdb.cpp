@@ -12,7 +12,7 @@ int main()
 {
     swss::Logger::getInstance().setMinPrio(swss::Logger::SWSS_NOTICE);
 
-    swss::DBConnector eventDb("EVENT_DB", 0);
+    swss::DBConnector eventDb("EVENT_DB", 0, false, "", true);
 
     // register signal handlers
     signal(SIGINT, signalHandler);

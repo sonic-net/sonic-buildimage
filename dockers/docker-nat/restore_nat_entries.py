@@ -46,7 +46,7 @@ def add_nat_conntrack_entry_in_kernel(ipproto, srcip, dstip, srcport, dstport, n
 
 # Set the statedb "NAT_RESTORE_TABLE|Flags", so natsyncd can start reconciliation
 def set_statedb_nat_restore_done():
-    statedb = swsscommon.DBConnector("STATE_DB", 0)
+    statedb = swsscommon.DBConnector("STATE_DB", 0, False, "", True)
     tbl = swsscommon.Table(statedb, "NAT_RESTORE_TABLE")
     fvs = swsscommon.FieldValuePairs([("restored", "true")])
     tbl.set("Flags", fvs)
@@ -74,7 +74,7 @@ def main():
 
     # Use warmstart python binding to check warmstart information
     warmstart = swsscommon.WarmStart()
-    warmstart.initialize("natsyncd", "nat")
+    warmstart.initialize("natsyncd", "nat", 0, False, True)
     warmstart.checkWarmStart("natsyncd", "nat", False)
 
     # if swss or system warm reboot not enabled, don't run

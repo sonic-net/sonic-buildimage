@@ -6,7 +6,9 @@ class MockConfigDb(object):
     CONFIG_DB = None
     event_queue = []
 
-    def __init__(self, **kwargs):
+    def __init__(self, *, use_unix_socket_path=False, authenticate=False):
+        self.use_unix_socket_path = use_unix_socket_path
+        self.authenticate = authenticate
         self.handlers = {}
 
     @staticmethod

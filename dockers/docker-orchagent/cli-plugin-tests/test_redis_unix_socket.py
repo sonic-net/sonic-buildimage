@@ -64,7 +64,7 @@ def test_enable_counters_uses_unix_socket():
     enable_counters.enable_rates()
 
     assert constructor_calls == [
-        ((), {"use_unix_socket_path": True}),
+        ((), {"use_unix_socket_path": True, "authenticate": True}),
     ]
     assert connect_calls == [("COUNTERS_DB",)]
 
@@ -166,7 +166,7 @@ def test_tunnel_packet_handler_uses_unix_socket():
     assert constructor_calls == [
         ("ConfigDBConnector", (), {"use_unix_socket_path": True}),
         ("SonicV2Connector", (), {"use_unix_socket_path": True}),
-        ("SonicV2Connector", (), {"use_unix_socket_path": True}),
+        ("SonicV2Connector", (), {"use_unix_socket_path": True, "authenticate": True}),
     ]
     assert connect_calls == [
         ("CONFIG_DB", ()),
@@ -176,7 +176,8 @@ def test_tunnel_packet_handler_uses_unix_socket():
 
 
 CLI_CALL_PATTERN = re.compile(
-    r"\bsonic-db-cli(?P<socket>\s+-s)?\s+(?P<db>[A-Z][A-Z0-9_]*_DB)"
+    r"\bsonic-db-cli(?P<socket>\s+-s)?(?P<authenticate>\s+--authenticate)?"
+    r"\s+(?P<db>[A-Z][A-Z0-9_]*_DB)\s+(?P<command>[A-Za-z]+)"
 )
 
 LOCAL_CLI_CALLS = {
@@ -217,6 +218,12 @@ def test_all_local_shell_clients_request_unix_socket():
 
         assert [database for database, _ in local_calls] == expected_databases
         assert all(use_socket for _, use_socket in local_calls)
+        for match in CLI_CALL_PATTERN.finditer(path.read_text()):
+            if match.group("db") == "CHASSIS_STATE_DB":
+                continue
+            command = match.group("command").upper()
+            assert command in {"HGET", "KEYS", "HSET"}
+            assert (match.group("authenticate") is not None) == (command == "HSET")
 
         # Do not regress to the raw redis-cli TCP default.
         assert "redis-cli" not in path.read_text().replace("sonic-db-cli", "")
