@@ -2470,12 +2470,15 @@ name as object key and member list as attribute.
         "mtu": "9100",
         "fallback": "false",
         "fast_rate": "true",
+        "active": "false",
         "system_mac": "aa:bb:cc:dd:ee:ff",
         "lag_type": "LACP"
     }
   }
 }
 ```
+
+The optional **active** field sets the LACP activity mode for the PortChannel. `true` (the default when unset) runs LACP in active mode; `false` runs it in passive mode, where LACPDUs are sent only after the partner sends them. The value is applied when the PortChannel is created.
 
 The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
 

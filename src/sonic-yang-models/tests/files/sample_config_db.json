@@ -147,6 +147,7 @@
                 "tpid": "0x8100",
                 "fast_rate": "false",
                 "fallback" : "true",
+                "active": "false",
                 "mode":"routed",
                 "system_mac": "aa:bb:cc:dd:ee:ff",
                 "lag_type": "LACP"

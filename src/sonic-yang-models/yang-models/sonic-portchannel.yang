@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2026-11-25 {
+        description "Add LACP activity mode (active/passive)";
+    }
+
     revision 2025-06-24 {
         description "Add LACP System MAC address";
     }
@@ -131,6 +135,15 @@ module sonic-portchannel {
                 }
                 leaf fast_rate {
                     description "Enable LACP fast rate";
+                    type stypes:boolean_type;
+                }
+
+                leaf active {
+                    description
+                        "LACP activity mode. When true, the PortChannel runs LACP in
+                         active mode and always transmits LACPDUs. When false, it runs
+                         in passive mode and transmits LACPDUs only after receiving
+                         them from the partner. When unset, active mode is used.";
                     type stypes:boolean_type;
                 }
 
