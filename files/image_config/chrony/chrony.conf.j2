@@ -47,7 +47,7 @@ confdir /etc/chrony/conf.d
     {% endif -%}
 
     {# Aggressive polling -#}
-    {% if config.iburst -%}
+    {% if config.iburst | d('on') == 'on' -%}
         {% set soptions = soptions ~ ' iburst' -%}
     {% endif -%}
 
