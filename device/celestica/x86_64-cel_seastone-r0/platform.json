@@ -321,9 +321,6 @@
         ],
         "sfps": [
             {
-                "name": "Ethernet124"
-            },
-            {
                 "name": "Ethernet0"
             },
             {
@@ -415,6 +412,12 @@
             },
             {
                 "name": "Ethernet120"
+            },
+            {
+                "name": "Ethernet124"
+            },
+            {
+                "name": "Ethernet128"
             }
         ]
     },
@@ -705,6 +708,13 @@
                 "1x100G[40G]": ["Eth32"],
                 "2x50G": ["Eth32/1", "Eth32/2"],
                 "4x25G[10G]": ["Eth32/1", "Eth32/2", "Eth32/3", "Eth32/4"]
+            }
+        },
+        "Ethernet128": {
+            "index": "33",
+            "lanes": "131",
+            "breakout_modes": {
+                "1x10G": ["Sfpp1"]
             }
         }
     }

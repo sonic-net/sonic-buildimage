@@ -125,6 +125,12 @@
 
 #define I2C_BAUD_RATE_100K      0x40
 
+#define SFP_MODABS_REG          0x25A
+#define SFP_MODABS_BIT          0x40
+#define SFP_TXFAULT_REG         0x25A
+#define SFP_TXFAULT_BIT         0x20
+#define SFP_RXLOS_REG           0x25B
+#define SFP_RXLOS_BIT           0x02
 
 struct dx010_i2c_data {
         int portid;
@@ -458,6 +464,49 @@ static ssize_t set_cpld4_int0_msk(struct device *dev, struct device_attribute *d
         return count;
 }
 
+// All SFP status are put on the second bit
+static ssize_t get_sfp_modabs(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+        unsigned long sfp_modabs = 0;
+
+        mutex_lock(&cpld_data->cpld_lock);
+
+        if (inb(SFP_MODABS_REG) & SFP_MODABS_BIT)
+                sfp_modabs |= 0x2;
+
+        mutex_unlock(&cpld_data->cpld_lock);
+
+        return sprintf(buf,"0x%8.8lx\n", sfp_modabs & 0xffffffff);
+}
+
+static ssize_t get_sfp_rxlos(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+        unsigned long sfp_rxlos = 0;
+
+        mutex_lock(&cpld_data->cpld_lock);
+
+        if (inb(SFP_RXLOS_REG) & SFP_RXLOS_BIT)
+                sfp_rxlos |= 0x2;
+
+        mutex_unlock(&cpld_data->cpld_lock);
+
+        return sprintf(buf,"0x%8.8lx\n", sfp_rxlos & 0xffffffff);
+}
+
+static ssize_t get_sfp_txfault(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+        unsigned long sfp_txfault = 0;
+
+        mutex_lock(&cpld_data->cpld_lock);
+
+        if (inb(SFP_TXFAULT_REG) & SFP_TXFAULT_BIT)
+                sfp_txfault |= 0x2;
+
+        mutex_unlock(&cpld_data->cpld_lock);
+
+        return sprintf(buf,"0x%8.8lx\n", sfp_txfault & 0xffffffff);
+}
+
 static DEVICE_ATTR_RW(getreg);
 static DEVICE_ATTR_WO(setreg);
 static DEVICE_ATTR(qsfp_reset, S_IRUGO | S_IWUSR, get_reset, set_reset);
@@ -468,6 +517,9 @@ static DEVICE_ATTR(qsfp_modprs_irq, S_IRUGO, get_modprs_irq, NULL);
 static DEVICE_ATTR(qsfp_modprs_msk, S_IRUGO | S_IWUSR, get_modprs_msk, set_modprs_msk);
 static DEVICE_ATTR(cpld4_int0, S_IRUGO, get_cpld4_int0, NULL);
 static DEVICE_ATTR(cpld4_int0_msk, S_IRUGO | S_IWUSR, get_cpld4_int0_msk, set_cpld4_int0_msk);
+static DEVICE_ATTR(sfp_modabs, S_IRUGO, get_sfp_modabs, NULL);
+static DEVICE_ATTR(sfp_rxlos, S_IRUGO, get_sfp_rxlos, NULL);
+static DEVICE_ATTR(sfp_txfault, S_IRUGO, get_sfp_txfault, NULL);
 
 static struct attribute *dx010_lpc_attrs[] = {
         &dev_attr_getreg.attr,
@@ -480,6 +532,9 @@ static struct attribute *dx010_lpc_attrs[] = {
         &dev_attr_qsfp_modprs_msk.attr,
         &dev_attr_cpld4_int0.attr,
         &dev_attr_cpld4_int0_msk.attr,
+        &dev_attr_sfp_modabs.attr,
+        &dev_attr_sfp_rxlos.attr,
+        &dev_attr_sfp_txfault.attr,
         NULL,
 };
 

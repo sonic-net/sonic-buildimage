@@ -19,7 +19,7 @@ except ImportError as e:
 NUM_FAN_TRAY = 5
 NUM_PSU = 2
 NUM_THERMAL = 5
-NUM_SFP = 32
+NUM_SFP = 33
 NUM_COMPONENT = 6
 RESET_REGISTER = "0x103"
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
