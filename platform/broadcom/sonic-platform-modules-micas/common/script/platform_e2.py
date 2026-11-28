@@ -32,7 +32,7 @@ import eepromutil.onietlv as ot
 from platform_config import PLATFORM_E2_CONF
 from platform_util import byteTostr, dev_file_read, exec_os_cmd
 try:
-    from cpoutil import get_all_oe_vendor_info, get_all_rlm_vendor_info
+    from micas_cpoutil import get_all_oe_vendor_info, get_all_rlm_vendor_info
 except:
     pass
 
