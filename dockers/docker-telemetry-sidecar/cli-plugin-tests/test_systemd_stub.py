@@ -980,6 +980,20 @@ def test_ensure_sync_aborts_service_checker_for_unsupported_branch(ss):
     assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"old-service-checker"
 
 
+def test_ensure_sync_skips_service_checker_without_python_health_checker(ss):
+    """A host without the Python health_checker package gets no service_checker.py and no system-health restart."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"new-service-checker"
+    host_fs.pop(ss_mod.HOST_SERVICE_CHECKER)
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert ss_mod.HOST_SERVICE_CHECKER not in host_fs
+    assert not any(args and "system-health" in args for _, args in commands)
+
+
 def test_ensure_sync_202411_missing_service_checker_fails(ss):
     """When branch is 202411 but the branch-specific service_checker is missing, sync fails."""
     ss_mod, container_fs, host_fs, commands, config_db = ss

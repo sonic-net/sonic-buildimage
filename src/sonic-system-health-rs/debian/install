@@ -1,0 +1,2 @@
+target/release/healthd usr/bin
+target/release/healthcheck usr/bin

@@ -13,11 +13,12 @@ swss-common = { path = "../sonic-swss-common/crates/swss-common" }
 thiserror = "1"
 tracing = "0.1"
 syslog = "6.1"
+serde_json = "1.0"
+yaml-rust2 = { version = "0.13", default-features = false }
 
 [dev-dependencies]
 mockall = "0.12"
 tempfile = "3.8"
-serde_json = "1.0"
 gag = "1.0"
 
 [lints.rust]
