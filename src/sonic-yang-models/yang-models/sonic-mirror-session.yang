@@ -17,10 +17,6 @@ module sonic-mirror-session {
         prefix lag;
     }
 
-    import sonic-sflow {
-        prefix sflow;
-    }
-
     import sonic-types {
         prefix stypes;
     }
@@ -35,8 +31,7 @@ module sonic-mirror-session {
     revision 2026-10-16 {
         description
             "Move sample_rate and truncate_size from MIRROR_SESSION to
-             PORT_MIRROR_SAMPLE source bindings, and add system-wide sFlow
-             configuration exclusion.";
+             PORT_MIRROR_SAMPLE source bindings.";
     }
 
     revision 2026-04-14 {
@@ -227,12 +222,6 @@ module sonic-mirror-session {
                 description
                     "A sampling policy for one physical port or PortChannel and direction.";
 
-                must "not(/sflow:sonic-sflow/sflow:SFLOW/sflow:global)" {
-                    error-message
-                        "SFLOW global configuration and PORT_MIRROR_SAMPLE entries cannot coexist.";
-                    error-app-tag "sampling-config-conflict";
-                }
-
                 leaf port {
                     type union {
                         type leafref {
@@ -260,9 +249,7 @@ module sonic-mirror-session {
                 leaf admin_state {
                     type stypes:admin_status;
                     default down;
-                    description
-                        "Requested binding state. Disabled bindings still participate
-                         in global sFlow configuration exclusion.";
+                    description "Requested binding state.";
                 }
 
                 leaf mirror_session {
