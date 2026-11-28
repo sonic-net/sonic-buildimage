@@ -1,0 +1,41 @@
+Skip dhclient carrier-wait loop when wait=False
+
+dhclient.start() polls /sys/class/net/<iface>/carrier up to 5 times with
+1s sleeps before launching dhclient, regardless of the `wait` argument.
+For callers that pass wait=False (which translates to dhclient -nw), the
+carrier loop is pointless: -nw already tells dhclient to background and
+retry on its own, so the up-to-5s preamble is pure overhead.
+
+This is a real regression for SONiC ZTP boot. With dhcp-wait="no" set in
+the ifupdown2 dhcp policy, every inband port hits the full 5s timeout
+during start-networking because port carrier is 0 at that point (swss
+and syncd are still coming up). On a 64-port platform that adds ~5
+minutes (64 * 5s) to the networking restart, regressing ZTP boot from
+~30s to ~6min.
+
+Gate the carrier loop on `wait`. When wait=True the existing behaviour
+is preserved; when wait=False the loop is skipped and dhclient is
+started immediately with -nw.
+
+Verified on a 64-port NH-5010 ZTP boot:
+  - Pre-patch:  Ethernet0 stop -> dhclient -nw 5050ms; full restart 5m49s
+  - Post-patch: Ethernet0 stop -> dhclient -nw   38ms; full restart 38s
+
+---
+ ifupdown2/ifupdownaddons/dhclient.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/ifupdown2/ifupdownaddons/dhclient.py b/ifupdown2/ifupdownaddons/dhclient.py
+--- a/ifupdown2/ifupdownaddons/dhclient.py
++++ b/ifupdown2/ifupdownaddons/dhclient.py
+@@ -69,8 +69,8 @@ class dhclient(utilsBase):
+         retries = 0
+         out = "0"
+
+-        # wait if interface isn't up yet
+-        while '1' not in out and retries < 5:
++        # wait if interface isn't up yet (skip when wait=False, i.e. dhcp-wait=no)
++        while wait and '1' not in out and retries < 5:
+             path = '/sys/class/net/%s/carrier' %ifacename
+             out = self.read_file_oneline(path)
+             if out is None:

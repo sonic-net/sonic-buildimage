@@ -24,7 +24,7 @@ index 2b94f1c..5acc840 100644
 +++ b/ifupdown2/lib/nlcache.py
 @@ -2171,6 +2171,13 @@ class NetlinkListenerWithCache(nllistener.NetlinkManagerWithListener, BaseObject
              self.errorq = []
- 
+
      def rx_rtm_newaddr(self, rxed_addr_packet):
 +        # The address cache is keyed by IP version and only models AF_INET and
 +        # AF_INET6. A global RTM_GETADDR (AF_UNSPEC) dump also returns addresses
@@ -35,31 +35,31 @@ index 2b94f1c..5acc840 100644
 +            return
          super(NetlinkListenerWithCache, self).rx_rtm_newaddr(rxed_addr_packet)
          self.cache.add_address(rxed_addr_packet)
- 
+
 diff --git a/ifupdown2/nlmanager/nlpacket.py b/ifupdown2/nlmanager/nlpacket.py
 index 495930a..0edf3bc 100644
 --- a/ifupdown2/nlmanager/nlpacket.py
 +++ b/ifupdown2/nlmanager/nlpacket.py
-@@ -162,6 +162,7 @@ RT_SCOPES = {
+@@ -164,6 +164,7 @@ RT_SCOPES = {
  }
- 
+
  AF_MPLS = 28
 +AF_MCTP = 45
- 
- 
- AF_FAMILY = dict()
-@@ -170,6 +171,7 @@ for family in [attr for attr in dir(socket) if attr.startswith('AF_')]:
+
+ BOND_MAX_ARP_TARGETS = 16
+
+@@ -174,6 +175,7 @@ for family in [attr for attr in dir(socket) if attr.startswith('AF_')]:
      AF_FAMILY[getattr(socket, family)] = family
- 
+
  AF_FAMILY[AF_MPLS] = 'AF_MPLS'
 +AF_FAMILY[AF_MCTP] = 'AF_MCTP'
- 
- 
+
+
  def get_family_str(family):
 @@ -905,6 +907,13 @@ class NetlinkPacket_IFLA_LINKINFO_Attributes:
- 
+
  class Attribute(object):
- 
+
 +    # Address families this attribute type knows how to decode. None means the
 +    # attribute is family-agnostic (integers, strings, raw bytes, ...). A subclass
 +    # that only understands specific families overrides this; add_attribute() then
@@ -71,9 +71,9 @@ index 495930a..0edf3bc 100644
          self.atype = atype
          self.string = string
 @@ -1367,20 +1376,23 @@ class AttributeStringInterfaceName(AttributeString):
- 
+
  class AttributeIPAddress(Attribute):
- 
+
 +    # family -> struct format used to (un)pack the address. Single source of truth
 +    # for the families this attribute can handle: supported_families is derived from
 +    # it, and add_attribute() uses that to fall back gracefully.
@@ -87,7 +87,7 @@ index 495930a..0edf3bc 100644
      def __init__(self, atype, string, family, logger):
          Attribute.__init__(self, atype, string, logger)
          self.family = family
- 
+
 -        if self.family == AF_INET:
 -            self.PACK = '>L'
 -
@@ -102,21 +102,21 @@ index 495930a..0edf3bc 100644
 +            self.PACK = self.family_to_pack[family]
 +        except KeyError:
              raise Exception("%s is not a supported address family" % self.family)
- 
+
          self.LEN = calcsize(self.PACK)
 @@ -1422,7 +1434,7 @@ class AttributeIPAddress(Attribute):
      def encode(self):
          length = self.HEADER_LEN + self.LEN
- 
+
 -        if self.family not in [AF_INET, AF_INET6, AF_BRIDGE]:
 +        if self.family not in self.supported_families:
              raise Exception("%s is not a supported address family" % self.family)
- 
+
          raw = pack(self.HEADER_PACK, length, self.atype) + self.value.packed
 @@ -3635,6 +3647,18 @@ class NetlinkPacket(object):
              self.log.debug("Attribute %d is not defined in %s.attribute_to_class, assuming AttributeGeneric" %
                             (attr_type, self.__class__.__name__))
- 
+
 +        # Some attribute types can only decode a subset of address families (the
 +        # class advertises this via 'supported_families'). A global AF_UNSPEC dump
 +        # can return families we don't model - e.g. AF_MCTP (45) addresses. Rather
@@ -130,11 +130,11 @@ index 495930a..0edf3bc 100644
 +            attr_class = AttributeGeneric
 +
          attr = attr_class(attr_type, attr_string, self.family, self.log)
- 
+
          attr.set_value(value)
 @@ -5450,6 +5474,12 @@ class Route(NetlinkPacket):
          return ifname
- 
+
      def get_nexthops(self, ifname_by_index={}):
 +        # Nexthops are (IP, ifname) pairs and only make sense for the IP route
 +        # families we model. For anything else (e.g. AF_MCTP) the address
