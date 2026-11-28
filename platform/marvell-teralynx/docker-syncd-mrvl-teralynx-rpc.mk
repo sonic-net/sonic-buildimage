@@ -20,3 +20,5 @@ $(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.
 $(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /var/run/docker-syncd:/var/run/syncd
 $(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /usr/share/sonic/device/x86_64-marvell_common:/usr/share/sonic/device/x86_64-marvell_common:ro
+$(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /usr/share/sonic/templates/buffers_config.j2:/usr/share/sonic/templates/buffers_config.j2:ro
+$(DOCKER_SYNCD_MRVL_TERALYNX_RPC)_RUN_OPT += -v /usr/share/sonic/templates/qos_config.j2:/usr/share/sonic/templates/qos_config.j2:ro

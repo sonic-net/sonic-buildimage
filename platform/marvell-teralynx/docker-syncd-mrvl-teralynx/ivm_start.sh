@@ -8,8 +8,8 @@ else
 fi
 
 if [ ${topo} != "none" ]; then
-    BUFFER_CONFIG=/usr/share/sonic/hwsku/buffers_defaults_${topo}.j2
-    QOS_CONFIG=/usr/share/sonic/hwsku/qos_defaults_${topo}.j2
+    BUFFER_CONFIG=/usr/share/sonic/hwsku/buffers.json.j2
+    QOS_CONFIG=/usr/share/sonic/hwsku/qos.json.j2
 
     if [ "$(/usr/local/bin/sonic-cfggen -d -v TC_TO_PRIORITY_GROUP_MAP)" ] || \
        [ "$(/usr/local/bin/sonic-cfggen -d -v MAP_PFC_PRIORITY_TO_QUEUE)" ] || \
@@ -27,8 +27,8 @@ if [ ${topo} != "none" ]; then
        [ "$(/usr/local/bin/sonic-cfggen -d -v BUFFER_QUEUE)" ]; then
         echo "Database has QoS settings, skip loading defaults"
     elif [ -f "$BUFFER_CONFIG" ] && [ -f "$QOS_CONFIG" ]; then
-        /usr/local/bin/sonic-cfggen -d -t $BUFFER_CONFIG >/tmp/buffers.json
-        /usr/local/bin/sonic-cfggen -d -t $QOS_CONFIG -y /etc/sonic/sonic_version.yml >/tmp/qos.json
+        /usr/local/bin/sonic-cfggen -d -t $BUFFER_CONFIG -a "{\"default_topo\": \"$topo\"}" >/tmp/buffers.json
+        /usr/local/bin/sonic-cfggen -d -t $QOS_CONFIG -a "{\"default_topo\": \"$topo\"}" -y /etc/sonic/sonic_version.yml >/tmp/qos.json
         /usr/local/bin/sonic-cfggen -j /tmp/buffers.json --write-to-db
         /usr/local/bin/sonic-cfggen -j /tmp/qos.json --write-to-db
     else
