@@ -7,10 +7,6 @@ module sonic-bgp-peerrange {
         prefix inet;
     }
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     import sonic-vrf {
         prefix vrf;
     }
@@ -94,7 +90,7 @@ module sonic-bgp-peerrange {
                 }
 
                 leaf-list ip_range {
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     ordered-by user;
                     description "A range of addresses";
                 }
@@ -130,7 +126,7 @@ module sonic-bgp-peerrange {
                 }
 
                 leaf-list ip_range {
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     ordered-by user;
                     description "A range of addresses";
                 }
