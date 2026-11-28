@@ -5,7 +5,15 @@ import socket
 import sys
 
 CONFIG_DB = 'CONFIG_DB'
+STATE_DB = 'STATE_DB'
+# STATE_DB table of every registered component's effective log setting. It is
+# shared with the swss-common C++ logger, which publishes LOGLEVEL and LOGOUTPUT
+# there; this module also publishes require_manual_refresh. The name must match
+# STATE_LOGGER_TABLE_NAME in swss-common's schema.h; it is not imported because
+# older swsscommon bindings do not export it.
+STATE_LOGGER_TABLE = 'LOGGER_TABLE'
 FIELD_LOG_LEVEL = 'LOGLEVEL'
+FIELD_LOG_OUTPUT = 'LOGOUTPUT'
 FIELD_REQUIRE_REFRESH = 'require_manual_refresh'
 
 
@@ -38,30 +46,44 @@ class SysLogger:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
+        self._default_log_level = log_level
         self.set_min_log_priority(log_level)
         
         if enable_runtime_config:
-            self.update_log_level()
+            ret, msg = self.update_log_level()
+            if not ret:
+                self.log_error(msg)
                             
     def update_log_level(self):
         """Refresh log level.
+
+        The CONFIG_DB LOGGER row is operator intent and is only read: an absent
+        row or LOGLEVEL field means the level this logger was created with. The
+        effective level is published to STATE_DB, with require_manual_refresh
+        telling the CLI that this logger does not pick up CONFIG_DB changes on
+        its own. The level is applied even if the publish fails, so the
+        operator's CONFIG_DB setting still takes effect.
 
         Returns:
             tuple: (refresh result, fail reason)
         """        
         from swsscommon import swsscommon
         try:
-            config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
-            config_db.connect(CONFIG_DB)
-            log_level_in_db = config_db.get(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{self.log_identifier}', FIELD_LOG_LEVEL)
+            db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            db.connect(CONFIG_DB)
+            log_level_in_db = db.get(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{self.log_identifier}', FIELD_LOG_LEVEL)
             if log_level_in_db:
                 self.set_min_log_priority(self.log_priority_from_str(log_level_in_db))
             else:
-                data = {
-                    FIELD_LOG_LEVEL: self.log_priority_to_str(self._min_log_level),
-                    FIELD_REQUIRE_REFRESH: 'true'
-                }
-                config_db.hmset(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{self.log_identifier}', data)
+                self.set_min_log_priority(self._default_log_level)
+
+            db.connect(STATE_DB)
+            data = {
+                FIELD_LOG_LEVEL: self.log_priority_to_str(self._min_log_level),
+                FIELD_LOG_OUTPUT: 'SYSLOG',
+                FIELD_REQUIRE_REFRESH: 'true'
+            }
+            db.hmset(STATE_DB, f'{STATE_LOGGER_TABLE}|{self.log_identifier}', data)
             return True, ''
         except Exception as e:
             return False, f'Failed to refresh log configuration - {e}'
