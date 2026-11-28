@@ -9,12 +9,17 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from sonic_platform_base.bmc_watchdog import BMCWatchdog
+    from sonic_py_common.logger import Logger
+    from sonic_platform import cooling
     from sonic_platform.thermal import Thermal
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.liquid_cooling import LiquidCooling
     from sonic_platform.switch_host_module import SwitchHostModule
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
+
+
+logger = Logger()
 
 
 # Watchdog bootstatus file paths for AST2700
@@ -339,6 +344,68 @@ class Chassis(ChassisBase):
         """
         switch_host = self._module_list[0]
         return switch_host.get_serial()
+
+    def get_product_name(self):
+        """
+        Read the Product Name (ONIE TLV 0x21) from the BMC IDPROM.
+
+        Returns:
+            str: Product Name, uppercased and stripped; "" if unavailable.
+        """
+        try:
+            e = self._eeprom.read_eeprom()
+            valid, tlv = self._eeprom.get_tlv_field(
+                e, TlvInfoDecoder._TLV_CODE_PRODUCT_NAME)
+        except Exception:
+            return ""
+
+        if not valid or tlv is None:
+            return ""
+        return tlv[2].decode("ascii", errors="ignore").strip().upper()
+
+    def is_liquid_cooled(self):
+        """
+        Whether this chassis is liquid cooled.
+
+        A BMC card can be installed in either an air- or liquid-cooled chassis,
+        so this is resolved at runtime from the system model number in the
+        IDPROM. platform.json "chassis.liquid_cooled" overrides it when declared.
+
+        Drives the LiquidCoolingUpdater in thermalctld, so anything that makes
+        the answer untrustworthy is logged at error level: both an unrecognised
+        model number and a platform.json that disagrees with the model number.
+        That applies whichever way the result points: reporting a liquid
+        chassis as air cooled skips leak handling, and reporting an air-cooled
+        one as liquid arms it needlessly.
+
+        Returns:
+            bool: True if this chassis is liquid cooled.
+        """
+        result, reason, status = self.is_liquid_cooled_detail()
+        if status in cooling.UNTRUSTWORTHY_STATUSES:
+            logger.log_error(f"is_liquid_cooled: {result} ({reason})")
+        elif result:
+            logger.log_notice(f"is_liquid_cooled: True ({reason})")
+        return result
+
+    def is_liquid_cooled_detail(self):
+        """
+        is_liquid_cooled() plus the reason it decided that, for logging and for
+        `show` output.
+
+        Returns:
+            tuple: (is_liquid_cooled, reason, status) -- see
+                   sonic_platform.cooling.resolve_is_liquid_cooled.
+        """
+        # Imported lazily: device_info pulls in swsscommon at module scope, and
+        # this module should stay importable without it.
+        from sonic_py_common import device_info
+        try:
+            platform_data = device_info.get_platform_json_data()
+        except Exception:
+            platform_data = None
+        return cooling.resolve_is_liquid_cooled(platform_data,
+                                                self.get_product_name())
 
     def get_liquid_cooling(self):
         """
