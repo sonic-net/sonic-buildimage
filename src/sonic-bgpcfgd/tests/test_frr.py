@@ -1,4 +1,7 @@
+import os
+import tempfile
 from unittest.mock import patch
+
 import bgpcfgd.frr
 import pytest
 
@@ -37,17 +40,86 @@ def test_get_config_fail(mocked_log_crit):
     assert out == ""
     mocked_log_crit.assert_called_with("can't update running config: rc=1 out='some config' err='some error'")
 
-def test_write():
-    bgpcfgd.frr.run_command = lambda cmd: (0, "some output", "")
+def test_write(tmp_path, monkeypatch):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda prefix, dir: original_mkstemp(prefix=prefix, dir=str(tmp_path))
+    )
+
+    def run_command(cmd):
+        assert os.path.exists(cmd[2])
+        return 0, "some output", ""
+
+    bgpcfgd.frr.run_command = run_command
     f = bgpcfgd.frr.FRR(["abc", "cde"])
     res = f.write("config context")
     assert res, "Expect True return value"
+    assert list(tmp_path.iterdir()) == []
 
-def test_write_fail():
-    bgpcfgd.frr.run_command = lambda cmd: (1, "some output", "some error")
+@pytest.mark.parametrize(
+    "ret_code, expected_result, remove_called",
+    [
+        (0, True, True),
+        (1, False, False),
+    ]
+)
+@patch('bgpcfgd.frr.log_err')
+def test_write_cleanup_error(
+    mocked_log_err, ret_code, expected_result, remove_called, tmp_path, monkeypatch
+):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda prefix, dir: original_mkstemp(prefix=prefix, dir=str(tmp_path))
+    )
+    bgpcfgd.frr.run_command = lambda cmd: (ret_code, "some output", "some error")
+
+    f = bgpcfgd.frr.FRR(["abc", "cde"])
+    with patch('bgpcfgd.frr.os.remove', side_effect=OSError("remove error")) as mocked_remove:
+        res = f.write("config context")
+
+    assert res is expected_result
+    assert mocked_remove.called is remove_called
+    mocked_log_err.assert_called_once()
+    if remove_called:
+        assert "can't remove temporary file=" in mocked_log_err.call_args.args[0]
+        assert "remove error" in mocked_log_err.call_args.args[0]
+    else:
+        assert len(list(tmp_path.iterdir())) == 1
+        assert "can't push configuration from file=" in mocked_log_err.call_args.args[0]
+
+def test_write_fail(tmp_path, monkeypatch):
+    original_mkstemp = tempfile.mkstemp
+    monkeypatch.setattr(
+        bgpcfgd.frr.tempfile,
+        "mkstemp",
+        lambda prefix, dir: original_mkstemp(prefix=prefix, dir=str(tmp_path))
+    )
+
+    def run_command(cmd):
+        assert os.path.exists(cmd[2])
+        return 1, "some output", "some error"
+
+    bgpcfgd.frr.run_command = run_command
     f = bgpcfgd.frr.FRR(["abc", "cde"])
     res = f.write("config context")
     assert not res, "Expect False return value"
+    failed_config_files = list(tmp_path.iterdir())
+    assert len(failed_config_files) == 1
+    assert failed_config_files[0].name.startswith("bgpcfgd_failed_config.")
+    assert failed_config_files[0].read_text() == "config context\n"
+
+    res = f.write("new config context")
+    assert not res, "Expect False return value"
+    failed_config_files = list(tmp_path.iterdir())
+    assert len(failed_config_files) == 2
+    assert sorted(path.read_text() for path in failed_config_files) == [
+        "config context\n",
+        "new config context\n",
+    ]
 
 def test_restart_peer_groups():
     bgpcfgd.frr.run_command = lambda cmd: (0, "some output", "")
