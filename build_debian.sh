@@ -36,7 +36,7 @@ run_organization_build_hook()
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
+DOCKER_VERSION=5:29.10.0-1~debian.13~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
 LINUX_KERNEL_VERSION=6.12.94+deb13
 
