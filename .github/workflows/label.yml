@@ -21,6 +21,6 @@ jobs:
     if: github.repository_owner == 'sonic-net'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@main
+    - uses: actions/labeler@a4c9e93145dff057e9782320b30e8b5e57174f4d # main
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
