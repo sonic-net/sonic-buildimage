@@ -1,0 +1,88 @@
+{
+    "ISIS_VALID": {
+        "desc": "ISIS VALID"
+    },
+    "ISIS_NET_SHORT": {
+        "desc": "ISIS NET SHORT",
+        "eStrKey": "Pattern"
+    },
+    "ISIS_NET_NSEL": {
+        "desc": "ISIS NET NSEL",
+        "eStrKey": "Pattern"
+    },
+    "ISIS_UNKNOWN_VRF": {
+        "desc": "ISIS UNKNOWN VRF",
+        "eStrKey": "InvalidValue"
+    },
+    "ISIS_MTU_LOW": {
+        "desc": "ISIS MTU LOW",
+        "eStrKey": "Range"
+    },
+    "ISIS_MTU_HIGH": {
+        "desc": "ISIS MTU HIGH",
+        "eStrKey": "Range"
+    },
+    "ISIS_REFRESH_HIGH": {
+        "desc": "ISIS REFRESH HIGH",
+        "eStrKey": "Range"
+    },
+    "ISIS_LIFETIME_LOW": {
+        "desc": "ISIS LIFETIME LOW",
+        "eStrKey": "Range"
+    },
+    "ISIS_TIMER_RELATION": {
+        "desc": "ISIS TIMER RELATION",
+        "eStrKey": "Must"
+    },
+    "ISIS_TIMER_ORPHAN": {
+        "desc": "ISIS TIMER ORPHAN",
+        "eStrKey": "LeafRef"
+    },
+    "ISIS_ORPHAN_INTERFACE": {
+        "desc": "ISIS ORPHAN INTERFACE",
+        "eStrKey": "InvalidValue"
+    },
+    "ISIS_VALID_VRF": {
+        "desc": "ISIS VALID VRF"
+    },
+    "ISIS_IPV6_ONLY": {
+        "desc": "Load an IPv6-only IS-IS interface without enabling IPv4."
+    },
+    "ISIS_BOTH_AF_DISABLED": {
+        "desc": "Accept a retained IS-IS interface row with both address families disabled."
+    },
+    "ISIS_IPV4_INVALID_BOOL": {
+        "desc": "Reject an invalid IS-IS IPv4 binding boolean.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "ipv4_enabled"
+        ]
+    },
+    "ISIS_MTU_EXPLICIT_1492": {
+        "desc": "Preserve an explicitly configured IS-IS LSP MTU of 1492.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "key": "sonic-isis-global:lsp_mtu",
+            "value": 1492
+        }
+    },
+    "ISIS_MTU_IMPLICIT_DEFAULT": {
+        "desc": "Verify the implicit native-aligned IS-IS LSP MTU default is 1497.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-global:sonic-isis-global/ISIS_GLOBALS_TIMERS/ISIS_GLOBALS_TIMERS_LIST[vrf_name='default']/vrf_name",
+            "key": "sonic-isis-global:lsp_mtu",
+            "value": 1497
+        }
+    },
+    "ISIS_IPV4_IMPLICIT_DEFAULT": {
+        "desc": "Verify omitted IS-IS IPv4 binding defaults to true for compatibility.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-isis-interface:sonic-isis-interface/ISIS_INTERFACE/ISIS_INTERFACE_LIST[ifname='Loopback0']/ifname",
+            "key": "sonic-isis-interface:ipv4_enabled",
+            "value": true
+        }
+    }
+}

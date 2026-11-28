@@ -25,6 +25,36 @@ module sonic-srv6 {
 
     container sonic-srv6 {
 
+        container SRV6_MY_FORMATS {
+            description "Global allocation settings shared by all locators using a SID format.";
+
+            list SRV6_MY_FORMATS_LIST {
+                key "name";
+
+                must "count(/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[format = current()/name]) > 0" {
+                    error-message "a format override requires a locator using that format";
+                }
+
+                leaf name {
+                    type enumeration {
+                        enum usid-f3216;
+                    }
+                    description "Built-in SID format name.";
+                }
+
+                leaf lib_start {
+                    type uint16 {
+                        range "1..65023";
+                    }
+                    mandatory true;
+                    description
+                        "First Local ID Block value, in decimal. The default is 57344.
+                         Values must remain below the built-in explicit LIB start 65024.
+                         Removing the row resets the owned override to the FRR default.";
+                }
+            }
+        }
+
         container SRV6_MY_LOCATORS {
             description "SRv6 locator definitions partitioning the SID address space.";
 
@@ -38,7 +68,10 @@ module sonic-srv6 {
 
                 leaf prefix {
                     description "IPv6 address prefix for this locator.";
-                    type inet:ipv6-address;
+                    type union {
+                        type inet:ipv6-address;
+                        type inet:ipv6-prefix;
+                    }
                     mandatory true;
                 }
 
@@ -80,6 +113,28 @@ module sonic-srv6 {
 
                 must 'block_len + node_len + func_len + arg_len <= 128';
 
+                must "not(contains(prefix, '/')) or number(substring-after(prefix, '/')) = block_len + node_len" {
+                    error-message "locator prefix length must equal block_len plus node_len";
+                }
+
+                leaf behavior {
+                    type enumeration {
+                        enum usid;
+                    }
+                    description "Optional unformatted uSID behavior; absence preserves Classic behavior.";
+                }
+
+                leaf format {
+                    type enumeration {
+                        enum usid-f3216;
+                    }
+                    description "Optional SID format; absence preserves the unformatted locator profile.";
+                }
+
+                must "not(format) or (behavior = 'usid' and block_len = 32 and node_len = 16 and func_len = 16 and arg_len = 0)" {
+                    error-message "usid-f3216 requires behavior usid and geometry 32/16/16/0";
+                }
+
                 leaf vrf {
                     type union {
                         type leafref {
@@ -96,11 +151,35 @@ module sonic-srv6 {
             }
         }
 
+        container SRV6_MY_SOURCE {
+            description "Global SRv6 encapsulation source address.";
+
+            list SRV6_MY_SOURCE_LIST {
+                key "name";
+                max-elements 1;
+
+                leaf name {
+                    type string;
+                    description "Singleton row key; tunnel-source is canonical and existing keys are preserved.";
+                }
+
+                leaf source-address {
+                    type inet:ipv6-address;
+                    mandatory true;
+                    description "IPv6 source address for SRv6 encapsulation.";
+                }
+            }
+        }
+
         container SRV6_MY_SIDS {
             description "Local SRv6 SID entries with endpoint behavior and decapsulation settings.";
 
             list SRV6_MY_SIDS_LIST {
                 key "locator ip_prefix";
+
+                must "not(action) or count(../SRV6_MY_SIDS_LIST[ip_prefix = current()/ip_prefix][action]) = 1" {
+                    error-message "action-bearing SID prefixes must be unique across locators";
+                }
 
                 leaf ip_prefix {
                     description "IPv6 prefix representing this SID.";

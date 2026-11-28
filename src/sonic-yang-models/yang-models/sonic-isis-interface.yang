@@ -1,0 +1,98 @@
+module sonic-isis-interface {
+    namespace "http://github.com/sonic-net/sonic-isis-interface";
+    prefix isis-if;
+    yang-version 1.1;
+
+    import sonic-port { prefix port; }
+    import sonic-portchannel { prefix lag; }
+    import sonic-vlan { prefix vlan; }
+    import sonic-loopback-interface { prefix lo; }
+    import sonic-vlan-sub-interface { prefix sub; }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC IS-IS Interface YANG Module";
+
+    revision 2026-06-16 {
+        description
+            "Initial revision for IS-IS interface level configurations.";
+    }
+
+    container sonic-isis-interface {
+        container ISIS_INTERFACE {
+            list ISIS_INTERFACE_LIST {
+                key "ifname";
+
+                leaf ifname {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_LIST/vlan:name";
+                        }
+                        type leafref {
+                            path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
+                        }
+                        type leafref {
+                            path "/sub:sonic-vlan-sub-interface/sub:VLAN_SUB_INTERFACE/sub:VLAN_SUB_INTERFACE_LIST/sub:name";
+                        }
+                    }
+                    description "The physical or logical interface name enabled for IS-IS.";
+                }
+
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description "Administrative state of the IS-IS interface binding.";
+                }
+
+                leaf ipv4_enabled {
+                    type boolean;
+                    default true;
+                    description "Enable the IPv4 IS-IS interface binding.";
+                }
+
+                leaf ipv6_enabled {
+                    type boolean;
+                    default true;
+                    description "Enable the IPv6 IS-IS interface binding.";
+                }
+
+                leaf metric {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    default 10;
+                    description "IS-IS link cost metric assigned to this specific interface.";
+                }
+
+                leaf circuit_type {
+                    type enumeration {
+                        enum p2p {
+                            description "Point-to-Point network link type.";
+                        }
+                        enum lan {
+                            description "Broadcast multi-access network link type.";
+                        }
+                    }
+                    default lan;
+                    description "The operational link state type of the interface circuit.";
+                }
+
+                leaf passive {
+                    type boolean;
+                    description "Enable passive mode on this interface for IS-IS.";
+                }
+            }
+        }
+    }
+}
