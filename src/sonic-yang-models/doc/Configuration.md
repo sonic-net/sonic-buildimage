@@ -430,6 +430,14 @@ and migration plan
 }
 ```
 
+***ACL DSCP rewrite action***
+
+An ACL rule can specify `"DSCP_ACTION": "46"` to set the DSCP value on matching
+packets. Valid values are integers from 0 to 63. For direct rewriting with a
+custom ACL table, include `DSCP_ACTION` in the table type's `ACTIONS` list.
+`PACKET_ACTION` is optional for these rules. Direct rewriting requires SWSS
+support and ASIC/SAI `SET_DSCP` capability at the selected ingress or egress stage.
+
 ### BGP BBR
 
 The **BGP_BBR** table contains device-level BBR state.
