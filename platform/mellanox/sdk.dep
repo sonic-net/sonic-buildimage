@@ -1,6 +1,6 @@
 # DPKG FRK
 
-# Append MLNX_SDK_DEB_VERSION to flags list.
+# Append MLNX_SDK_DEB_VERSION and MLNX_SDK_ISSU_VERSION to flags list.
 # We use SONIC_OVERRIDE_BUILD_VARS in order to build SONiC with any SDK we want
 # by passing it in environment variable. This approach does not work well with
 # caching framework which assumes that if the corresponding makefile didn't change
@@ -8,5 +8,24 @@
 # caching and anything user can pass in SONIC_OVERRIDE_BUILD_VARS, so as a W/A
 # we append MLNX_SDK_DEB_VERSION to flags to invalidate cache in case we use
 # SONIC_OVERRIDE_BUILD_VARS.
-MLNX_SDK_COMMON_FLAGS_LIST = $(SONIC_COMMON_FLAGS_LIST) $(MLNX_SDK_DEB_VERSION)
+MLNX_SDK_COMMON_FLAGS_LIST = $(SONIC_COMMON_FLAGS_LIST) $(MLNX_SDK_DEB_VERSION) $(MLNX_SDK_ISSU_VERSION)
 
+# The cache key of a package includes the flags and file hashes of every package
+# in its _DEPENDS/_RDEPENDS. Declaring the SDK version in the SDK packages' own
+# flags therefore reaches every cached package that depends on the SDK (SAI,
+# ISSU version file, syncd, ...), so a cached build made against another SDK
+# is never restored. The SDK itself is a release asset (or built in its own
+# recipe), so it is not cached here.
+SDK_DEP_FILES := $(PLATFORM_PATH)/sdk.mk $(PLATFORM_PATH)/sdk.dep
+
+$(SYSSDK)_CACHE_MODE := none
+$(SYSSDK)_DEP_FLAGS := $(MLNX_SDK_COMMON_FLAGS_LIST)
+$(SYSSDK)_DEP_FILES := $(SDK_DEP_FILES)
+
+$(SYSSDK_DEV)_CACHE_MODE := none
+$(SYSSDK_DEV)_DEP_FLAGS := $(MLNX_SDK_COMMON_FLAGS_LIST)
+$(SYSSDK_DEV)_DEP_FILES := $(SDK_DEP_FILES)
+
+$(SYSSDK_DBGSYM)_CACHE_MODE := none
+$(SYSSDK_DBGSYM)_DEP_FLAGS := $(MLNX_SDK_COMMON_FLAGS_LIST)
+$(SYSSDK_DBGSYM)_DEP_FILES := $(SDK_DEP_FILES)
