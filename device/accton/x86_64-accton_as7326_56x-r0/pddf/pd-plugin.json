@@ -34,7 +34,7 @@
         {
             "i2c":
             {
-                "valmap": { "F2B":"EXHAUST", "B2F":"INTAKE" }
+                "valmap": { "F2B":"exhaust", "B2F":"intake" }
             }
         },
 
@@ -47,7 +47,7 @@
         {
             "i2c":
             {
-                "valmap": {"1":"INTAKE", "0":"EXHAUST"}
+                "valmap": {"1":"intake", "0":"exhaust"}
             }
         },
 
@@ -61,7 +61,9 @@
 
         "duty_cycle_to_pwm": {"input_offset": 0, "multiplier": 100, "pre_divide_offset": 0, "divisor": 625, "output_offset": -1, "divide_before_multiply": false, "force_float": false},
 
+
         "pwm_to_duty_cycle": {"input_offset": 1, "multiplier": 625, "pre_divide_offset": 75, "divisor": 100, "output_offset": 0, "divide_before_multiply": false, "force_float": false}
+
     }
 
 }
