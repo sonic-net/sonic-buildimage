@@ -30,6 +30,10 @@ except ImportError as e:
 
 logger = Logger()
 
+# Test leak markers: one file per sensor, holding its severity. /run/bmc is a
+# host tmpfs that the monitor container shares, so all processes see them.
+LEAK_TEST_DIR = "/run/bmc/leak_sim"
+
 
 def _check_value_in_range(scaled, bound_a, bound_b):
     low, high = (bound_a, bound_b) if bound_a <= bound_b else (bound_b, bound_a)
@@ -188,17 +192,37 @@ class LeakageSensor(LeakageSensorBase):
         )
         return READING_ERROR
 
+    def _test_leak_marker(self) -> str:
+        return os.path.join(LEAK_TEST_DIR, f"{self._a2d_index}_{self._channel_index}.test_leak")
+
+    def _get_test_leak(self) -> Optional[LeakSeverity]:
+        """Return the stored test leak severity, or None."""
+        try:
+            with open(self._test_leak_marker()) as marker:
+                return LeakSeverity(marker.read().strip())
+        except (OSError, ValueError):
+            return None
+
     def is_leak(self):
-        leaking, _, _ = self._check_channel_value()
+        # The one reading of a poll. The base class get_leak_severity() and
+        # is_test_leak() report what is recorded here.
+        leaking, sensor_ok, severity = self._check_channel_value()
+        test_leak = False
+        # Read the marker only when the hardware is healthy and dry, so a real
+        # leak or a fault always takes precedence over a test leak.
+        if sensor_ok and not leaking:
+            test_severity = self._get_test_leak()
+            if test_severity is not None:
+                leaking, severity, test_leak = True, test_severity, True
+        self.leaking = leaking
+        self.leak_sensor_ok = sensor_ok
+        self.leak_severity = severity
+        self.test_leak = test_leak
         return leaking
 
     def is_leak_sensor_ok(self):
         _, sensor_ok, _ = self._check_channel_value()
         return sensor_ok
-
-    def get_leak_severity(self):
-        _, _, severity = self._check_channel_value()
-        return severity
 
     def get_leak_profile(self):
         return self._profile
