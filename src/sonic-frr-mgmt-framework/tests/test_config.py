@@ -31,6 +31,77 @@ def test_contructor():
 
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_l3_neigh_down_peering_time_override(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+    table, field = 'EVPN_MH_GLOBAL', 'l3_neigh_down_peering_time'
+    command = ['vtysh', '-c', 'configure terminal', '-c']
+    handler = dict(daemon.table_handler_list)[table]
+    daemon.subscribe_all()
+    daemon.config_db.subscribe.assert_any_call(table, handler)
+
+    handler(table, 'default', {'neigh_holdtime': '600'})
+    handler(table, 'default', None)
+    handler(table, 'other', {field: '45'})
+    run_cmd.assert_not_called()
+
+    for value in ('0', '86401', '1.5', '45\nexit', True):
+        handler(table, 'default', {field: value})
+    run_cmd.assert_not_called()
+
+    run_cmd.return_value = False
+    handler(table, 'default', {field: '45'})
+    run_cmd.assert_called_once_with(
+        table, command + ['evpn mh l3-neigh-down-peering-time 45'], True, ['zebra'])
+    run_cmd.return_value = True
+    for value in ('45', '86400', 1):
+        run_cmd.reset_mock()
+        handler(table, 'default', {field: value})
+        run_cmd.assert_called_once_with(
+            table, command + [f'evpn mh l3-neigh-down-peering-time {value}'], True, ['zebra'])
+
+    run_cmd.reset_mock()
+    handler(table, 'default', {field: '1', 'neigh_holdtime': '600'})
+    run_cmd.assert_not_called()
+    handler(table, 'default', {'neigh_holdtime': '600'})
+    run_cmd.assert_called_once_with(
+        table, command + ['no evpn mh l3-neigh-down-peering-time'], True, ['zebra'])
+
+    handler(table, 'default', {field: '120'})
+    run_cmd.reset_mock()
+    handler(table, 'default', None)
+    run_cmd.assert_called_once_with(
+        table, command + ['no evpn mh l3-neigh-down-peering-time'], True, ['zebra'])
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_evpn_l3_neigh_down_peering_time_replay(run_cmd):
+    from frrcfgd.frrcfgd import BGPConfigDaemon, ExtConfigDBConnector
+    table, field = 'EVPN_MH_GLOBAL', 'l3_neigh_down_peering_time'
+    row = {field: '45'}
+    cache_key = ExtConfigDBConnector.get_table_key(table, 'default')
+    db = MagicMock()
+    db.get_entry.return_value = {
+        'docker_routing_config_mode': 'unified',
+        'use_template_render_for_restore': 'false',
+    }
+    db.get_table.side_effect = lambda name: {'default': row} if name == table else {}
+    db.get_table_data.return_value = {cache_key: row.copy()}
+    db.serialize_key.side_effect = lambda key: key
+
+    with patch('frrcfgd.frrcfgd.ExtConfigDBConnector', return_value=db) as connector:
+        connector.get_table_key.return_value = cache_key
+        BGPConfigDaemon()
+
+    run_cmd.assert_called_once_with(
+        table,
+        ['vtysh', '-c', 'configure terminal', '-c', 'evpn mh l3-neigh-down-peering-time 45'],
+        True, ['zebra'])
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_key_and_asn_validation(run_cmd):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()

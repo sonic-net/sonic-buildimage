@@ -1,4 +1,11 @@
 !
+{% if EVPN_MH_GLOBAL is defined and EVPN_MH_GLOBAL.default is defined and
+      EVPN_MH_GLOBAL.default.l3_neigh_down_peering_time is defined %}
+{% set seconds = (EVPN_MH_GLOBAL.default.l3_neigh_down_peering_time|string).lstrip('0') %}
+{% if seconds.isascii() and seconds.isdecimal() and seconds|length <= 5 and seconds|int <= 86400 %}
+evpn mh l3-neigh-down-peering-time {{ seconds }}
+{% endif %}
+{% endif %}
 {% block vrf %}
 {%  if VNET is defined %}
 {%   for vnet_name, vnet_metadata in VNET.items() %}

@@ -2333,6 +2333,12 @@ class BGPConfigDaemon:
         if key is None:
             return
 
+        if table == 'EVPN_MH_GLOBAL':
+            # In this mode Zebra has not loaded the timer from a template.
+            self.table_data_cache.pop(ExtConfigDBConnector.get_table_key(table, key), None)
+            self.evpn_mh_global_handler(table, key, data)
+            return
+
         upd_data = {}
         for upd_key, upd_val in data.items():
             upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
@@ -2496,6 +2502,7 @@ class BGPConfigDaemon:
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
+            ('EVPN_MH_GLOBAL', self.evpn_mh_global_handler),
             ('BGP_GLOBALS', self.bgp_global_handler),
             ('BGP_GLOBALS_AF', self.bgp_af_handler),
             ('PREFIX_SET', self.bgp_table_handler_common),
@@ -2558,6 +2565,35 @@ class BGPConfigDaemon:
     @staticmethod
     def __run_command(table, command, daemons = None):
         return g_run_command(table, command, True, daemons)
+
+    def evpn_mh_global_handler(self, table, key, data):
+        if key != 'default':
+            return
+
+        field = 'l3_neigh_down_peering_time'
+        cache_key = ExtConfigDBConnector.get_table_key(table, key)
+        cached = self.table_data_cache.get(cache_key, {})
+        old_value = cached.get(field)
+        new_value = (data or {}).get(field)
+        command = 'evpn mh l3-neigh-down-peering-time'
+
+        if new_value is not None:
+            new_value = str(new_value).lstrip('0')
+            if not re.fullmatch(r'[0-9]{1,5}', new_value) or int(new_value) > 86400:
+                syslog.syslog(syslog.LOG_ERR, 'invalid L3 neighbor down-peering time')
+                return
+
+        if old_value is not None:
+            old_value = str(old_value).lstrip('0')
+        if new_value == old_value:
+            return
+
+        cli = f'{command} {new_value}' if new_value is not None else f'no {command}'
+        if self.__run_command(table, ['vtysh', '-c', 'configure terminal', '-c', cli], ['zebra']):
+            if new_value is None:
+                cached.pop(field)
+            else:
+                self.table_data_cache.setdefault(cache_key, {})[field] = new_value
 
     def metadata_handler(self, table, key, data):
         if key != 'localhost':

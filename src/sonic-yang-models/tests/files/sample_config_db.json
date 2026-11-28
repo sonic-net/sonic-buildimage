@@ -3391,7 +3391,8 @@
             "default" : {
                 "startup_delay": "1800",
                 "mac_holdtime": "1000",
-                "neigh_holdtime": "600"
+                "neigh_holdtime": "600",
+                "l3_neigh_down_peering_time": "45"
             }
         }
     },

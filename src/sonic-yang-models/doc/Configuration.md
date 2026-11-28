@@ -1428,6 +1428,9 @@ The **EVPN_ETHERNET_SEGMENT** table is keyed by a physical port or PortChannel n
 
 The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, and `neigh_holdtime`.
 
+Set `l3_neigh_down_peering_time` to override Zebra's 60-second L3MH port-down timer.
+The allowed range is 1 to 86400 seconds. Removing the field restores the FRR default.
+
 ```json
 {
     "EVPN_ETHERNET_SEGMENT": {
@@ -1441,7 +1444,8 @@ The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN m
         "default": {
             "startup_delay": "1800",
             "mac_holdtime": "1000",
-            "neigh_holdtime": "600"
+            "neigh_holdtime": "600",
+            "l3_neigh_down_peering_time": "45"
         }
     }
 }
