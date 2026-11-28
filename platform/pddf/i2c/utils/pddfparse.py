@@ -33,6 +33,24 @@ HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 DEFAULT_FPGA_REGISTER_WIDTH_BITS = 32
 
+# Native-I3C optics (e.g. optoe_i3c) enumerate at runtime as
+# /sys/bus/i3c/devices/<parent_bus>-<pid>/eeprom, where the bus number is
+# deterministic (declared per optic as i3c.topo_info.parent_bus) but the
+# Provisioned ID is assigned dynamically by DAA. PDDF resolves that path after
+# the master is created and exposes a stable per-port symlink here for
+# consumers (e.g. cpo.json).
+I3C_SYSFS_DEVICES = '/sys/bus/i3c/devices'
+I3C_EEPROM_SYMLINK_BASE = '/var/run/pddf/i3c'
+# Driver attribute. PDDF writes "<manuf>" or "<manuf> <part>" here before
+# creating the I3C master so optoe_i3c can match targets as soon as DAA adds
+# them. part_id is optional: a manuf-only write matches any part of that vendor.
+OPTOE_I3C_NEW_ID = '/sys/bus/i3c/drivers/optoe_i3c/new_id'
+# i3c.topo_info.dev_type that marks a native-I3C optic EEPROM (bound by
+# optoe_i3c). Scanned to collect manuf_id/part_id and to publish eeprom symlinks.
+OPTOE_I3C_DEV_TYPE = 'optoe3_i3c'
+I3C_EEPROM_RESOLVE_RETRIES = 5
+I3C_EEPROM_RESOLVE_DELAY_SEC = 0.2
+
 dirname = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -850,6 +868,22 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        if dev.get("i3c_controllers"):
+            # Program optoe_i3c's ID table once, before any master is created,
+            # so DAA binds targets as soon as each master is registered. This
+            # is topology-independent (covers every optic under every master or
+            # mux), so it lives here rather than inside the per-master step.
+            ret = self.load_optoe_i3c_ids()
+            if ret != 0:
+                return create_ret.append(ret)
+
+        for i3c_controller_name in dev.get("i3c_controllers", []):
+            ret = self.create_multifpgapci_i3c_controller(
+                self.data[i3c_controller_name], ops
+            )
+            if ret != 0:
+                return create_ret.append(ret)
+
         return create_ret.append(ret)
 
     def create_multifpgapci_spi_controller(
@@ -912,6 +946,219 @@ class PddfParse():
             spi_device_attr["chip_select"],
         )
         return self.runcmd(cmd)
+
+    def create_multifpgapci_i3c_controller(
+        self,
+        i3c_controller: dict[str, dict[str, ...]],
+        ops,
+    ) -> int:
+        device_parent = i3c_controller["dev_info"]["device_parent"]
+        fpga_bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        for command in i3c_controller.get("i3c_mode_commands", []):
+            if "enable" in command:
+                ret = self.runcmd(command["enable"])
+                if ret != 0:
+                    return ret
+
+        # Create I3C Controller. i3c_controller_idx is renamed to
+        # new_i3c_master so it is written last and triggers instantiation
+        # after all config attrs are staged. I3C targets are auto-discovered
+        # via DAA, so there is no downstream device-creation step.
+        attr_to_sysfs_name_override = {
+            "i3c_controller_idx": "new_i3c_master",
+        }
+        sysfs_key_value = {
+            attr_to_sysfs_name_override.get(k, k): v
+            for k, v in i3c_controller["dev_attr"].items()
+        }
+        ret = self.create_device(
+            attr=sysfs_key_value,
+            path="pddf/devices/multifpgapci/{}/i3c".format(fpga_bdf),
+            ops=ops,
+        )
+        if ret != 0:
+            return ret
+
+        # After the master is registered, DAA enumerates its target(s) and the
+        # native-I3C optics driver (optoe_i3c) binds, exposing
+        # <parent_bus>-<pid>/eeprom (parent_bus comes from each optic's
+        # i3c.topo_info).
+        self.create_i3c_eeprom_symlinks(i3c_controller, ops)
+
+        return 0
+
+    def _i3c_master_name(self, i3c_controller):
+        return i3c_controller.get("dev_attr", {}).get("i3c_controller_name") \
+            or i3c_controller.get("dev_info", {}).get("device_name")
+
+    def _i3c_owning_master(self, dev):
+        """Walk device_parent up to the owning I3C_CONTROLLER and return its
+        node name. Traversing the parent chain (rather than matching a single
+        level) keeps this correct when an i3c_mux sits between the master and
+        the optic, i.e. master -> i3c_mux -> ... -> PORT."""
+        seen = set()
+        parent = dev.get("dev_info", {}).get("device_parent")
+        while parent and parent not in seen:
+            seen.add(parent)
+            pnode = self.data.get(parent)
+            if not isinstance(pnode, dict):
+                break
+            if pnode.get("dev_info", {}).get("device_type") == "I3C_CONTROLLER":
+                return parent
+            parent = pnode.get("dev_info", {}).get("device_parent")
+        return None
+
+    def _i3c_eeprom_topo(self, dev):
+        """Return the i3c.topo_info of a native-I3C optic EEPROM node, else None.
+
+        An optic EEPROM is any node whose i3c.topo_info.dev_type is
+        OPTOE_I3C_DEV_TYPE. topo_info is the single source of i3c identity
+        (parent_bus/manuf_id/part_id), independent of whether the pddf was
+        authored as a standalone PORT or split into PORT + PORT-EEPROM, and
+        independent of whether an i3c_mux sits between the master and the optic.
+        """
+        if not isinstance(dev, dict):
+            return None
+        i3c = dev.get("i3c")
+        if not isinstance(i3c, dict):
+            return None
+        topo = i3c.get("topo_info")
+        if not isinstance(topo, dict):
+            return None
+        if topo.get("dev_type") != OPTOE_I3C_DEV_TYPE:
+            return None
+        return topo
+
+    def _iter_i3c_eeprom_devices(self, master_name):
+        """Yield (link_name, topo_info) for every native-I3C optic EEPROM whose
+        parent chain ends at the given i3c master. link_name is the logical
+        port (dev_info.virt_parent) when the optic is an PORT-EEPROM child, else
+        the node's own device_name. The owning-master walk follows
+        device_parent, so a pddf authored with or without an intervening
+        i3c_mux is handled transparently."""
+        for name, dev in self.data.items():
+            topo = self._i3c_eeprom_topo(dev)
+            if topo is None:
+                continue
+            if self._i3c_owning_master(dev) != master_name:
+                continue
+            info = dev.get("dev_info", {})
+            link_name = info.get("virt_parent") or info.get("device_name", name)
+            yield link_name, topo
+
+    def load_optoe_i3c_ids(self):
+        """Program optoe_i3c's ID table with every unique native-I3C optic id
+        in the device tree, before any i3c master is created.
+
+        Topology-independent: it scans all optoe3_i3c eeprom nodes
+        (i3c.topo_info) regardless of which master or i3c_mux they sit under,
+        collects each unique (manuf_id, part_id) combination, and writes it
+        once to the driver's new_id. manuf_id is mandatory; part_id is optional
+        (a manuf-only entry matches any part of that vendor). The driver also
+        dedups, so repeated/shared ids stay safe.
+        """
+        seen = set()
+        for name, dev in self.data.items():
+            topo = self._i3c_eeprom_topo(dev)
+            if topo is None:
+                continue
+            optic = dev.get("dev_info", {}).get("device_name", name)
+            if "manuf_id" not in topo:
+                logger.error(
+                    "i3c optic %s is missing topo_info.manuf_id; optoe_i3c will not bind",
+                    optic,
+                )
+                return 1
+            manuf = int(str(topo["manuf_id"]), 0)
+            part_val = topo.get("part_id")
+            if part_val is not None and str(part_val).strip() != "":
+                part = int(str(part_val), 0)
+            else:
+                part = None
+            if (manuf, part) in seen:
+                continue
+            seen.add((manuf, part))
+            if part is not None:
+                cmd = "echo {:#x} {:#x} > {}".format(manuf, part, OPTOE_I3C_NEW_ID)
+            else:
+                cmd = "echo {:#x} > {}".format(manuf, OPTOE_I3C_NEW_ID)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return ret
+        return 0
+
+    def _resolve_i3c_eeprom_path(self, parent_bus):
+        """Resolve the runtime <parent_bus>-<pid>/eeprom node created after DAA.
+
+        The i3c bus number is deterministic (topo_info.parent_bus of the optic,
+        i.e. the kernel bus id of the master/mux segment it sits on), but the
+        Provisioned ID is assigned at runtime, so glob for the single target
+        sysfs node under that bus. Retries briefly because DAA/driver bind
+        completes shortly after the new_i3c_master write.
+        """
+        pattern = "{}/{}-*/eeprom".format(I3C_SYSFS_DEVICES, parent_bus)
+        for _ in range(I3C_EEPROM_RESOLVE_RETRIES):
+            matches = sorted(glob.glob(pattern))
+            if matches:
+                return matches[0]
+            time.sleep(I3C_EEPROM_RESOLVE_DELAY_SEC)
+        return None
+
+    def create_i3c_eeprom_symlinks(self, i3c_controller, ops):
+        """Publish /var/run/pddf/i3c/<port>/eeprom -> <bus>-<pid>/eeprom for each
+        native-I3C optic behind this master. The bus is resolved per optic from
+        its topo_info.parent_bus, so optics on different mux segments resolve
+        independently and the direct-attach (no-mux) case just uses the
+        master's own bus."""
+        master_name = self._i3c_master_name(i3c_controller)
+        if master_name is None:
+            return 0
+
+        for link_name, topo in self._iter_i3c_eeprom_devices(master_name):
+            parent_bus = topo.get("parent_bus")
+            if parent_bus is None:
+                logger.error(
+                    "i3c optic %s is missing topo_info.parent_bus; symlink not created",
+                    link_name,
+                )
+                continue
+            bus = int(str(parent_bus), 0)
+            link_dir = os.path.join(I3C_EEPROM_SYMLINK_BASE, link_name)
+            link_path = os.path.join(link_dir, "eeprom")
+            target = self._resolve_i3c_eeprom_path(bus)
+            if target is None:
+                logger.warning(
+                    "i3c eeprom not found for %s under bus %s (%s/%s-*/eeprom); "
+                    "symlink %s not created",
+                    link_name, bus, I3C_SYSFS_DEVICES, bus, link_path,
+                )
+                continue
+            try:
+                os.makedirs(link_dir, exist_ok=True)
+                if os.path.islink(link_path) or os.path.exists(link_path):
+                    os.remove(link_path)
+                os.symlink(target, link_path)
+                logger.info("i3c eeprom symlink %s -> %s", link_path, target)
+            except OSError as e:
+                logger.error("failed to create i3c eeprom symlink %s: %s", link_path, e)
+        return 0
+
+    def remove_i3c_eeprom_symlinks(self, i3c_controller, ops):
+        """Tear down the /var/run/pddf/i3c/<port>/eeprom symlinks for this master."""
+        master_name = self._i3c_master_name(i3c_controller)
+        if master_name is None:
+            return 0
+        for link_name, _topo in self._iter_i3c_eeprom_devices(master_name):
+            link_dir = os.path.join(I3C_EEPROM_SYMLINK_BASE, link_name)
+            link_path = os.path.join(link_dir, "eeprom")
+            try:
+                if os.path.islink(link_path) or os.path.exists(link_path):
+                    os.remove(link_path)
+                if os.path.isdir(link_dir):
+                    os.rmdir(link_dir)
+            except OSError as e:
+                logger.error("failed to remove i3c eeprom symlink %s: %s", link_path, e)
+        return 0
 
     def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
         for line in gpio_dev.keys():
@@ -996,6 +1243,34 @@ class PddfParse():
             spi_device_name
         )
         return self.runcmd(cmd)
+
+    def delete_multifpgapci_i3c_controller(
+        self,
+        i3c_controller: dict[str, dict[str, ...]],
+        ops: str,
+    ) -> int:
+        i3c_controller_index = i3c_controller["dev_attr"]["i3c_controller_idx"]
+
+        # Remove the stable per-PORT eeprom symlinks before the underlying
+        # <bus>-<pid> nodes disappear with the controller.
+        self.remove_i3c_eeprom_symlinks(i3c_controller, ops)
+
+        # Delete the I3C controller. Its DAA-discovered targets are torn down
+        # by the controller driver when the platform device is unregistered.
+        device_parent = i3c_controller["dev_info"]["device_parent"]
+        bdf = self.data[device_parent]["dev_info"]["device_bdf"]
+        cmd = f"echo {i3c_controller_index} > /sys/kernel/pddf/devices/multifpgapci/{bdf}/i3c/del_i3c_master"
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return ret
+
+        for command in i3c_controller.get("i3c_mode_commands", []):
+            if "disable" in command:
+                ret = self.runcmd(command["disable"])
+                if ret != 0:
+                    return ret
+
+        return 0
 
     def delete_eeprom_device(self, dev, ops):
         if "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
@@ -1122,6 +1397,11 @@ class PddfParse():
         for spi_controller_name in dev.get("spi_controllers", []):
             self.delete_multifpgapci_spi_controller(
                 self.data[spi_controller_name], ops
+            )
+
+        for i3c_controller_name in dev.get("i3c_controllers", []):
+            self.delete_multifpgapci_i3c_controller(
+                self.data[i3c_controller_name], ops
             )
 
         bdf = dev['dev_info']['device_bdf']
@@ -2356,6 +2636,18 @@ class PddfParse():
             )
         return [ret]
 
+    def multifpgapci_i3c_controller_parse(
+        self, i3c_controller: dict[str, dict[str, ...]], ops: dict[str, ...]
+    ) -> int:
+        ret = getattr(self, ops["cmd"] + "_multifpgapci_i3c_controller")(i3c_controller, ops)
+        if ret != 0:
+            print(
+                "{}_i3c_controller() cmd failed for {}".format(
+                    ops["cmd"], i3c_controller["dev_attr"]["i3c_controller_name"]
+                )
+            )
+        return [ret]
+
     # 'create' and 'show_attr' ops returns an array
     # 'delete', 'show' and 'validate' ops return None
     def dev_parse(self, dev, ops):
@@ -2427,6 +2719,9 @@ class PddfParse():
 
         if attr['device_type'] == 'SPI_DEVICE':
             return self.multifpgapci_spi_device_parse(dev, ops)
+
+        if attr['device_type'] == 'I3C_CONTROLLER':
+            return self.multifpgapci_i3c_controller_parse(dev, ops)
 
     def is_supported_sysled_state(self, sysled_name, sysled_state):
         if not sysled_name in self.data.keys():
