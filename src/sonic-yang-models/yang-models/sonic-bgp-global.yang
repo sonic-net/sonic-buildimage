@@ -137,6 +137,16 @@ module sonic-bgp-global {
                     description "Check BGP network route exists in IGP";
                 }
 
+                leaf ebgp_requires_policy {
+                    type boolean;
+                    default "true";
+                    description
+                        "Whether an eBGP session requires an inbound/outbound policy
+                         (route-map, prefix-list, or filter-list) before routes are
+                         accepted or advertised. Defaults to true; set false to allow
+                         eBGP routes without a configured policy.";
+                }
+
                 leaf graceful_shutdown {
                     type boolean;
                     description "Enable graceful shutdown";

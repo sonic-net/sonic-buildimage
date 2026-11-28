@@ -22,6 +22,16 @@ no fpm use-next-hop-groups
 ! Add fpm address for zebra
 fpm address 127.0.0.1
 !
+{% if ( ('localhost' in DEVICE_METADATA) and ('zebra_nexthop' in DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['zebra_nexthop'] == 'enabled') ) %}
+! enable kernel nexthop group programming
+zebra nexthop kernel enable
+{% endif %}
+{% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group_keep_time' in DEVICE_METADATA['localhost']) ) %}
+! seconds to retain an unused nexthop group (unset => FRR default of 180)
+zebra nexthop-group keep {{ DEVICE_METADATA['localhost']['nexthop_group_keep_time'] }}
+{% endif %}
+!
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !
 {% if MGMT_VRF_CONFIG %}

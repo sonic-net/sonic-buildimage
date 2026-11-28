@@ -478,6 +478,379 @@ def test_bgp_neighbor_description_injection(run_cmd):
                 "injection payload not found as literal arg: {}".format(cmd)
 
 
+# ---------------------------------------------------------------------------
+# Feature / regression tests for the frrcfgd BGP parity gaps (sonic-buildimage#28482):
+#   * 'no bgp ebgp-requires-policy' emitted per BGP instance
+#   * route-map 'on-match next' / 'on-match goto' (continue-flow) clause
+#   * listen-range peer-group attribute drop on delete + re-create
+# ---------------------------------------------------------------------------
+
+def _collect_vtysh_lines(run_cmd):
+    """Return every vtysh '-c' payload across all g_run_command calls, in order."""
+    lines = []
+    for call in run_cmd.call_args_list:
+        argv = call[0][1]
+        if not isinstance(argv, list):
+            continue
+        i = 0
+        while i < len(argv):
+            if argv[i] == '-c' and i + 1 < len(argv):
+                lines.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+    return lines
+
+
+def _make_daemon():
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    return BGPConfigDaemon()
+
+
+def _handler(daemon, table):
+    hdlrs = [h for t, h in daemon.table_handler_list if t == table]
+    assert len(hdlrs) == 1, "expected exactly one handler for {}".format(table)
+    return hdlrs[0]
+
+
+def _seed_bgp_asn(daemon, asn='100', vrf='default'):
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', vrf, {'local_asn': asn})
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_bgp_ebgp_requires_policy(run_cmd):
+    """ebgp_requires_policy is field-driven (NOT an unconditional default): false ->
+    'no bgp ebgp-requires-policy', true -> 'bgp ebgp-requires-policy'. The migrator sets it
+    to replicate bgpcfgd's traditional behavior. See sonic-buildimage#28482."""
+    daemon = _make_daemon()
+    _seed_bgp_asn(daemon, '100')
+    # Not set by default -> frrcfgd must not touch ebgp-requires-policy.
+    assert not any('ebgp-requires-policy' in line for line in _collect_vtysh_lines(run_cmd)), \
+        'ebgp-requires-policy must not be emitted unless the field is set'
+    # Field false -> 'no bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'false'})
+    assert 'no bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+    # Field true -> 'bgp ebgp-requires-policy'
+    run_cmd.reset_mock()
+    _handler(daemon, 'BGP_GLOBALS')('BGP_GLOBALS', 'default',
+                                    {'local_asn': '100', 'ebgp_requires_policy': 'true'})
+    assert 'bgp ebgp-requires-policy' in _collect_vtysh_lines(run_cmd), _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_route_map_on_match(run_cmd):
+    daemon = _make_daemon()
+    rm_hdlr = _handler(daemon, 'ROUTE_MAP')
+    # ON_MATCH_NEXT -> 'on-match next'
+    rm_hdlr('ROUTE_MAP', 'RM_OMN|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_NEXT'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'route-map RM_OMN permit 10' in lines, lines
+    assert any(line.strip() == 'on-match next' for line in lines), lines
+    # ON_MATCH_GOTO with a target sequence -> 'on-match goto 20'
+    run_cmd.reset_mock()
+    rm_hdlr('ROUTE_MAP', 'RM_OMG|10',
+            {'route_operation': 'permit', 'set_on_match_action': 'ON_MATCH_GOTO',
+             'set_on_match_goto': '20'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'on-match goto 20' for line in lines), lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_rerender_after_delete(run_cmd):
+    """Regression (sonic-buildimage#28482): a listen-range peer-group re-created after a delete
+    must re-render its attributes (e.g. update-source), not silently drop them because a stale
+    cache row made the incremental diff resolve every field to 'no change'."""
+    daemon = _make_daemon()
+    # The real swsscommon ConfigDBConnector.serialize_key joins a key tuple with '|'; the test
+    # mock does not, so make it realistic -- the peer-group cache-eviction path reconstructs the
+    # cache key via serialize_key((vrf, pg)), and it must match the stored 'vrf|pg' key.
+    daemon.config_db.serialize_key = lambda key_tuple: '|'.join(key_tuple)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_data = {'asn': '100', 'local_addr': '1.1.1.1'}
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+    assert 'neighbor PG1 update-source 1.1.1.1' in _collect_vtysh_lines(run_cmd), \
+        'update-source missing on initial peer-group create'
+
+    # delete the peer-group
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', None)
+
+    # re-create: attributes must be programmed again (pre-fix they were dropped)
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+    assert 'neighbor PG1 update-source 1.1.1.1' in _collect_vtysh_lines(run_cmd), \
+        'update-source dropped on peer-group re-create (cache not evicted on delete)'
+
+
+def _fake_config_db(daemon, db):
+    """Back the daemon's CONFIG_DB reads with ``{table: {key_tuple: row}}``."""
+    daemon.config_db.serialize_key = lambda key_tuple: '|'.join(key_tuple)
+    daemon.config_db.get_table = lambda table: copy.deepcopy(db.get(table, {}))
+    daemon.config_db.get_entry = lambda table, key: copy.deepcopy(db.get(table, {}).get(key, {}))
+
+
+class _FakeBgpd:
+    """Fails 'neighbor <peer> peer-group <pg>' as bgpd does when <pg> does not exist,
+    or when neither the peer nor the group has a remote-as."""
+    def __init__(self):
+        self.groups = set()
+        self.remote_as = set()
+
+    def __call__(self, table, argv, *args, **kwargs):
+        cmd = argv[-1].strip() if isinstance(argv, list) else ''
+        words = cmd.split()
+        if len(words) == 3 and words[0] == 'neighbor' and words[2] == 'peer-group':
+            self.groups.add(words[1])
+        elif len(words) == 4 and words[0] == 'neighbor' and words[2] == 'peer-group':
+            return words[3] in self.groups and bool({words[1], words[3]} & self.remote_as)
+        elif len(words) == 4 and words[0] == 'neighbor' and words[2] == 'remote-as':
+            self.remote_as.add(words[1])
+        return True
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_neighbor_af_cache_cleared_on_delete(run_cmd):
+    """Deleting a neighbor must evict every BGP_NEIGHBOR_AF cache row, l2vpn_evpn included."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {})
+    _seed_bgp_asn(daemon, '100')
+    nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+    af_hdlr = _handler(daemon, 'BGP_NEIGHBOR_AF')
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '200'})
+    af_hdlr('BGP_NEIGHBOR_AF', 'default|10.0.0.1|l2vpn_evpn', {'admin_status': 'true'})
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', None)
+    assert not [k for k in daemon.table_data_cache if '10.0.0.1' in k], daemon.table_data_cache
+
+    run_cmd.reset_mock()
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'asn': '200'})
+    af_hdlr('BGP_NEIGHBOR_AF', 'default|10.0.0.1|l2vpn_evpn', {'admin_status': 'true'})
+    assert 'neighbor 10.0.0.1 activate' in _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_type_readd_reapplies_neighbor_af(run_cmd):
+    """A neighbor re-created via peer_type (no asn) must re-apply its BGP_NEIGHBOR_AF rows."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {'BGP_NEIGHBOR_AF': {
+        ('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}})
+    _seed_bgp_asn(daemon, '100')
+    nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_type': 'external'})
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', None)
+
+    run_cmd.reset_mock()
+    nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_type': 'external'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'neighbor 10.0.0.1 remote-as external' in lines, lines
+    assert 'neighbor 10.0.0.1 activate' in lines, lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_remote_as_swap_recreates(run_cmd):
+    """Swapping asn/peer_type/peer_group_name makes bgpd drop and re-create the peer, so the
+    whole row and its BGP_NEIGHBOR_AF rows must be rendered again."""
+    for old, new in [({'peer_type': 'external'}, {'peer_group_name': 'PG1'}),
+                     ({'asn': '300'}, {'peer_group_name': 'PG1'}),
+                     ({'asn': '300'}, {'peer_type': 'external'})]:
+        run_cmd.reset_mock()
+        daemon = _make_daemon()
+        old_row, new_row = dict(old, local_addr='1.1.1.1'), dict(new, local_addr='1.1.1.1')
+        db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): old_row},
+              'BGP_NEIGHBOR_AF': {('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}}
+        _fake_config_db(daemon, db)
+        _seed_bgp_asn(daemon, '100')
+        _handler(daemon, 'BGP_PEER_GROUP')('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+        nbr_hdlr = _handler(daemon, 'BGP_NEIGHBOR')
+        nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', dict(old_row))
+
+        run_cmd.reset_mock()
+        db['BGP_NEIGHBOR'][('default', '10.0.0.1')] = new_row
+        nbr_hdlr('BGP_NEIGHBOR', 'default|10.0.0.1', dict(new_row))
+        lines = _collect_vtysh_lines(run_cmd)
+        if 'peer_type' in new:
+            assert 'neighbor 10.0.0.1 remote-as external' in lines, (old, lines)
+        else:
+            assert 'neighbor 10.0.0.1 peer-group PG1' in lines, (old, lines)
+            assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs, old
+        assert 'neighbor 10.0.0.1 update-source 1.1.1.1' in lines, (old, lines)
+        assert 'neighbor 10.0.0.1 activate' in lines, (old, lines)
+        assert daemon.table_data_cache['BGP_NEIGHBOR&&default|10.0.0.1'] == new_row, old
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_remote_as_swap_recreates(run_cmd):
+    """A peer-group swapping asn for peer_type is re-rendered, with its members."""
+    daemon = _make_daemon()
+    db = {'BGP_PEER_GROUP': {('default', 'PG1'): {'asn': '200', 'local_addr': '1.1.1.1'}},
+          'BGP_NEIGHBOR': {('default', '10.0.0.1'): {'peer_group_name': 'PG1'}}}
+    _fake_config_db(daemon, db)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200', 'local_addr': '1.1.1.1'})
+
+    run_cmd.reset_mock()
+    db['BGP_PEER_GROUP'][('default', 'PG1')] = {'peer_type': 'external', 'local_addr': '1.1.1.1'}
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'peer_type': 'external', 'local_addr': '1.1.1.1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'neighbor PG1 remote-as external' in lines, lines
+    assert 'neighbor PG1 update-source 1.1.1.1' in lines, lines
+    assert 'neighbor 10.0.0.1 peer-group PG1' in lines, lines
+    assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_peer_type_update_reapplies_neighbors(run_cmd):
+    """Giving an existing peer-group a peer_type must re-bind neighbors bgpd rejected
+    while the group had no remote-as."""
+    run_cmd.side_effect = _FakeBgpd()
+    daemon = _make_daemon()
+    db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): {'peer_group_name': 'PG1'}}}
+    _fake_config_db(daemon, db)
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'local_addr': '1.1.1.1'})
+    _handler(daemon, 'BGP_NEIGHBOR')('BGP_NEIGHBOR', 'default|10.0.0.1', {'peer_group_name': 'PG1'})
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'local_addr': '1.1.1.1', 'peer_type': 'external'})
+    assert 'neighbor 10.0.0.1 peer-group PG1' in _collect_vtysh_lines(run_cmd)
+    assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_peer_group_readd_reapplies_af(run_cmd):
+    """Re-adding a peer-group must re-apply its BGP_PEER_GROUP_AF rows still in CONFIG_DB."""
+    daemon = _make_daemon()
+    _fake_config_db(daemon, {'BGP_PEER_GROUP_AF': {
+        ('default', 'PG1', 'ipv4_unicast'): {'admin_status': 'true'}}})
+    _seed_bgp_asn(daemon, '100')
+    pg_hdlr = _handler(daemon, 'BGP_PEER_GROUP')
+    af_hdlr = _handler(daemon, 'BGP_PEER_GROUP_AF')
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+    af_hdlr('BGP_PEER_GROUP_AF', 'default|PG1|ipv4_unicast', {'admin_status': 'true'})
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', None)
+
+    run_cmd.reset_mock()
+    pg_hdlr('BGP_PEER_GROUP', 'default|PG1', {'asn': '200'})
+    assert 'neighbor PG1 activate' in _collect_vtysh_lines(run_cmd)
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_neighbor_before_peer_group(run_cmd):
+    """``config load`` delivers BGP_NEIGHBOR before BGP_PEER_GROUP. A neighbor bgpd rejected
+    because its group did not exist yet must be bound once the group is created, whether the
+    group carries asn, peer_type, or no remote-as at all."""
+    for pg_data, nbr_data in [({'asn': '200'}, {'peer_group_name': 'PG1'}),
+                              ({'peer_type': 'external'}, {'peer_group_name': 'PG1'}),
+                              ({'local_addr': '1.1.1.1'}, {'asn': '200', 'peer_group_name': 'PG1'})]:
+        run_cmd.reset_mock()
+        run_cmd.side_effect = _FakeBgpd()
+        daemon = _make_daemon()
+        db = {'BGP_NEIGHBOR': {('default', '10.0.0.1'): nbr_data},
+              'BGP_NEIGHBOR_AF': {('default', '10.0.0.1', 'ipv4_unicast'): {'admin_status': 'true'}}}
+        _fake_config_db(daemon, db)
+        _seed_bgp_asn(daemon, '100')
+        _handler(daemon, 'BGP_NEIGHBOR')('BGP_NEIGHBOR', 'default|10.0.0.1', dict(nbr_data))
+        _handler(daemon, 'BGP_PEER_GROUP')('BGP_PEER_GROUP', 'default|PG1', dict(pg_data))
+        lines = _collect_vtysh_lines(run_cmd)
+        assert lines.count('neighbor 10.0.0.1 peer-group PG1') == 2, (pg_data, lines)
+        assert 'neighbor 10.0.0.1 activate' in lines, (pg_data, lines)
+        assert '10.0.0.1' in daemon.bgp_peer_group['default']['PG1'].ref_nbrs, pg_data
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_zebra_knobs(run_cmd):
+    """The device-wide zebra knobs bgpcfgd renders must apply at runtime, not only via the
+    boot-time template render -- a CONFIG_DB write should reach FRR without a config reload.
+
+    Each is opt-in: absent emits nothing and leaves FRR's own default (180s retention for
+    nexthop groups), so upgrading changes no existing installation. See
+    sonic-buildimage#28482."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Nothing set -> frrcfgd must not touch either knob.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('nexthop-group keep' in line for line in lines), lines
+    assert not any('nexthop kernel' in line for line in lines), lines
+
+    # nexthop_group_keep_time -> 'zebra nexthop-group keep <N>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'nexthop_group_keep_time': '1'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop-group keep 1' for line in lines), lines
+
+    # zebra_nexthop enabled/disabled -> the enable line and its 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'zebra nexthop kernel enable' for line in lines), lines
+
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'zebra_nexthop': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no zebra nexthop kernel enable' for line in lines), lines
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_device_metadata_suppress_fib_pending(run_cmd):
+    """suppress-fib-pending is a 'router bgp <asn>' sub-command, so it is emitted with an
+    explicit router-bgp prefix rather than through device_metadata_key_map (which has no ASN
+    context and would emit at top level, where FRR rejects it).
+
+    DEVICE_METADATA stays the single source of truth: it is what `config
+    suppress-fib-pending` writes and what route_check.py reads."""
+    daemon = _make_daemon()
+    md_hdlr = _handler(daemon, 'DEVICE_METADATA')
+
+    # Absent -> nothing emitted.
+    md_hdlr('DEVICE_METADATA', 'localhost', {'bgp_asn': '100'})
+    assert not any('suppress-fib-pending' in line for line in _collect_vtysh_lines(run_cmd))
+
+    # enabled -> the line, framed inside 'router bgp <asn>'
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert 'router bgp 100' in lines, lines
+    assert any(line.strip() == 'bgp suppress-fib-pending' for line in lines), lines
+
+    # disabled -> the 'no' form
+    run_cmd.reset_mock()
+    md_hdlr('DEVICE_METADATA', 'localhost',
+            {'bgp_asn': '100', 'suppress-fib-pending': 'disabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert any(line.strip() == 'no bgp suppress-fib-pending' for line in lines), lines
+
+    # No ASN known yet -> defer rather than emit a malformed 'router bgp None'.
+    run_cmd.reset_mock()
+    daemon.metadata_asn = None
+    md_hdlr('DEVICE_METADATA', 'localhost', {'suppress-fib-pending': 'enabled'})
+    lines = _collect_vtysh_lines(run_cmd)
+    assert not any('suppress-fib-pending' in line for line in lines), lines
+
+
 def test_bgp_confederation_template():
     """Verify bgpd.conf.db.j2 renders 'bgp confederation identifier/peers'
     from BGP_GLOBALS, and emits nothing when confed is not configured."""
@@ -529,3 +902,28 @@ def test_bgp_confederation_template():
         BGP_GLOBALS={'default': {'local_asn': '65100'}}
     )
     assert 'bgp confederation' not in result
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_srv6_ua_sid(run_cmd):
+    """uA SIDs render like bgpcfgd: interface is required, adj becomes the nexthop."""
+    daemon = _make_daemon()
+    sid_hdlr = _handler(daemon, 'SRV6_MY_SIDS')
+    sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe01::/64',
+             {'action': 'uA', 'interface': 'Ethernet0', 'adj': '2001:db8::1'})
+    sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe02::/64',
+             {'action': 'uA', 'interface': 'Ethernet4'})
+    lines = [line.strip() for line in _collect_vtysh_lines(run_cmd)]
+    assert ('sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 '
+            'nexthop 2001:db8::1') in lines, lines
+    assert 'sid fcbb:bbbb:1:fe02::/64 locator loc1 behavior uA interface Ethernet4' in lines, lines
+
+    run_cmd.reset_mock()
+    with patch('frrcfgd.frrcfgd.syslog.syslog') as log:
+        sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe03::/64', {'action': 'uA'})
+        sid_hdlr('SRV6_MY_SIDS', 'loc1|fcbb:bbbb:1:fe04::/64', {'action': 'uB'})
+    assert not _collect_vtysh_lines(run_cmd)
+    errors = [c[0][1] for c in log.call_args_list if c[0][0] == 3]
+    assert any('interface' in msg and 'fe03' in msg for msg in errors), errors
+    assert any('uB' in msg for msg in errors), errors
