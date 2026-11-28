@@ -745,6 +745,7 @@ write_platform_specific_cmdline() {
         fi
     fi
     if in_array "$platform" "marconi"; then
+        cmdline_add pcie_ports=native
         if [ -f /tmp/.switch-prefdl ]; then
             read_switch_eeprom
         else
