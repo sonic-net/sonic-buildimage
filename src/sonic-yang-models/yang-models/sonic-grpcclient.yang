@@ -12,6 +12,11 @@ module sonic-grpcclient {
     description
         "SONiC DualToR grpc client configuration data";
 
+    revision 2026-11-17 {
+        description
+            "Add mutual to auth_level.";
+    }
+
     revision 2024-10-14 {
         description
             "Initial revision";
@@ -35,8 +40,15 @@ module sonic-grpcclient {
 
                 leaf auth_level {
                     type enumeration {
-                        enum server;
+                        enum server {
+                            description "Verify the server's certificate with ca_crt.";
+                        }
                         enum client;
+                        enum mutual {
+                            description
+                                "Mutual TLS: verify the server's certificate with ca_crt,
+                                and present client_crt and client_key to the server.";
+                        }
                     }
                     description "grpc client auth level. ";
                 }
