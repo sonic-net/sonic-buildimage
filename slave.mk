@@ -1769,19 +1769,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 # Rebuild when the VS image store, compression, package batching, or device-data input changes.
 ifeq ($(CONFIGURED_PLATFORM),vs)
 vs_boot_mode_stamp := $(TARGET_PATH)/.installer-docker-load-on-boot
-ifeq ($(DOCKER_LOAD_ON_BOOT),y)
-vs_boot_bundle_inputs := files/docker/docker files/docker/load-images.conf files/docker/sonic-load-images \
-                        installer/install.sh onie-mk-demo.sh scripts/build_boot_packages.py \
-                        installer/sharch_body.sh scripts/stream_onie_payload.py \
-                        tools/bazel/image/boot_image_bundle.py tools/bazel/image/image_config.py \
-                        tools/bazel/oci/boot_layout.py tools/bazel/oci/oci_layout.py
-ifeq ($(BUILD_WITH_BAZEL_WHEN_AVAILABLE),y)
-vs_boot_bundle_inputs += tools/bazel/image/build_boot_bundle.py tools/bazel/image/boot_bundle.bzl \
-                         tools/bazel/image/boot_bundle_action.py tools/bazel/image/BUILD.bazel \
-                         tools/bazel/image/file_copy.py \
-                         tools/bazel/build_helpers.py tools/bazel/ci/build.py tools/bazel/ci/cache_reuse.py
-endif
-endif
 .PHONY: check-vs-boot-mode
 $(vs_boot_mode_stamp): check-vs-boot-mode
 	@mkdir -p "$(@D)"
@@ -1857,19 +1844,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         files/build_templates/docker_image_ctl.j2 \
         $(SONIC_DEBIAN_EXTENSION_DEPENDS) \
         scripts/dbg_files.sh \
-        scripts/build_sbom.sh \
-        scripts/build_sbom.py \
-        scripts/sbom_kernel_deb.py \
-        scripts/install_sbom_tool.sh \
-        scripts/sbom_fragment.py \
-        scripts/sbom_cve_refs.py \
-        scripts/sbom_purl.py \
-        scripts/sbom_parse_lockfiles.py \
-        scripts/sbom_extract_vex_from_patches.py \
+        $(INSTALLER_SBOM_SCRIPTS) \
         build_image.sh \
         scripts/installer_rootfs_handoff.py \
-        $$(if $$(filter sonic-vs.bin sonic-vs.img.gz,$$*),scripts/image_timing.py) \
-        $$(if $$(filter sonic-vs.img.gz,$$*),scripts/build_kvm_image.sh) \
+        $$($$*_INSTALLER_SCRIPTS) \
         $$(addsuffix -install,$$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_DEPENDS))) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \
