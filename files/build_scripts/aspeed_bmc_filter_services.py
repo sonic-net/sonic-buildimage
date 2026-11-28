@@ -161,15 +161,6 @@ After=database.service
 """
     return create_service_override(filesystem_root, 'sysmgr.service', override_content, enable=False)
 
-def create_telemetry_bmc_override(filesystem_root):
-    """Create systemd drop-in override for telemetry to remove swss/syncd dependencies on BMC."""
-    override_content = """[Unit]
-# BMC override: Remove ASIC/switch dependencies (swss, syncd)
-# Telemetry on BMC doesn't need swss or syncd
-After=database.service
-"""
-    return create_service_override(filesystem_root, 'telemetry.service', override_content, enable=False)
-
 def mask_services_in_filesystem(filesystem_root):
     """Mask excluded services by removing symlinks and creating mask files."""
 
@@ -235,7 +226,6 @@ def filter_services(input_file, output_file, filesystem_root=None):
         create_gnmi_bmc_override(filesystem_root)
         create_determine_reboot_cause_bmc_override(filesystem_root)
         create_sysmgr_bmc_override(filesystem_root)
-        create_telemetry_bmc_override(filesystem_root)
 
     # Print summary to build log (not to file)
     print("=" * 80)

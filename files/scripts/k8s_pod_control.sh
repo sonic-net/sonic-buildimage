@@ -5,7 +5,7 @@
 #    which are injected by the dockershim/CRI on every K8s-managed container).
 # 2. Uses 'docker restart' to restart the target container.
 #
-# Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
+# Usage: SERVICE_NAME=gnmi k8s_pod_control.sh start
 #        Or source this script after setting SERVICE_NAME
 
 set -euo pipefail
@@ -16,7 +16,7 @@ if [[ -n "${1:-}" ]] && [[ "${1}" != "start" ]] && [[ "${1}" != "stop" ]] && [[ 
   shift
 fi
 
-# SERVICE_NAME must be set by caller (e.g., "telemetry", "restapi")
+# SERVICE_NAME must be set by caller (e.g., "gnmi", "restapi")
 if [[ -z "${SERVICE_NAME:-}" ]]; then
   echo "ERROR: SERVICE_NAME must be provided as first argument or environment variable" >&2
   exit 1
@@ -29,8 +29,8 @@ log() { /usr/bin/logger -t "k8s-podctl#system" "$*"; }
 
 # Docker label filters for K8s-managed containers of this service.
 # Using labels (rather than name= substring matching) gives an EXACT match on
-# the container name, so e.g. SERVICE_NAME=telemetry will not also match a
-# hypothetical 'telemetry_v2' container, and is independent of the
+# the container name, so e.g. SERVICE_NAME=gnmi will not also match a
+# hypothetical 'gnmi_v2' container, and is independent of the
 # k8s_<container>_<pod>_<ns>_<uid> dockershim naming convention.
 DOCKER_FILTERS=(
   --filter "label=io.kubernetes.container.name=${SERVICE_NAME}"

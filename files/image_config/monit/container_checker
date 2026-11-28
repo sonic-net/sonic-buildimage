@@ -72,19 +72,9 @@ def get_expected_running_containers():
         # skip frr_bmp since it's not container just bmp option used by bgpd
         if container_name == "frr_bmp":
             continue
-        # slim image does not have telemetry container and corresponding docker image
-        if container_name == "telemetry":
-            ret = check_docker_image("docker-sonic-telemetry")
-            if not ret:
-                # If telemetry container image is not present, check gnmi container image
-                # If gnmi container image is not present, ignore telemetry container check
-                # if gnmi container image is present, check gnmi container instead of telemetry
-                ret = check_docker_image("docker-sonic-gnmi")
-                if not ret:
-                    print("Ignoring telemetry container check on image which has no corresponding telemetry or gnmi docker image")
-                else:
-                    container_list.append("gnmi")
-                continue
+        # A FEATURE|telemetry row can outlive the telemetry docker (old config_db, golden config)
+        if container_name == "telemetry" and not check_docker_image("docker-sonic-telemetry"):
+            continue
         container_list.append(container_name)
 
     for container_name in container_list:
