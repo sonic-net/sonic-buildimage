@@ -1,0 +1,8 @@
+# Repo owners
+* @sonic-buildimage-maintainer
+
+# Vendor directories - this is an example and needs TSC approval
+# /device/nexthop/ @eswaran-nexthop @sonic-buildimage-maintainer
+
+# Working Groups - this is an example and needs TSC approval
+# /src/sonic-frr/ @eddieruan-alibaba @sonic-buildimage-maintainer
