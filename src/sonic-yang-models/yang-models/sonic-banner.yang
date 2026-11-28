@@ -24,7 +24,7 @@ module sonic-banner {
                 leaf login {
                     type string;
                     description "Banner message displayed to user before login prompt";
-                    default "Debian GNU/Linux 11";
+                    default "Debian GNU/Linux 13";
                 }
                 leaf motd {
                     type string;

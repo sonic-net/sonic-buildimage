@@ -514,7 +514,7 @@ set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::ClientAliv
 rm /files/etc/ssh/sshd_config/MaxAuthTries
 set /files/etc/ssh/sshd_config/MaxAuthTries 3
 rm /files/etc/ssh/sshd_config/Banner
-set /files/etc/ssh/sshd_config/Banner /etc/issue
+set /files/etc/ssh/sshd_config/Banner /etc/issue.net
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
 rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
