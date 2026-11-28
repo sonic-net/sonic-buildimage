@@ -453,12 +453,9 @@ and offline IPv4/IPv6 captures. It checks requested ping arguments without
 executing them. This does not test ASIC forwarding, live capture, complete
 supervisor startup, FIPS POST or a VS installer.
 
-Socat selects [`1.8.0.2.sonic.7`](https://github.com/securely1g/sonic-bazel-registry/tree/main/modules/socat/1.8.0.2.sonic.7).
-Its explicit `tar.xz` type accepts the content-addressed Debian patch archive
-URL while retaining the original source hashes. The `.3` to `.6` upgrade also
-includes the published compiler/debug prefix mapping and compiler-path
-normalization from `.4`, plus the `procan` namespace-string termination fix from
-`.5`.
+Socat uses the same Debian Trixie source as Make, `1.8.0.3-1+deb13u1`,
+including Debian’s security update and the SONiC readline and procan patches.
+[Published Bazel module](https://github.com/sonic-net/sonic-bazel-registry/tree/main/modules/socat/1.8.0.3.sonic.1).
 
 Validation uses the maintained registry `main` and BCR through `.bazelrc`. The
 FIPS parent retains its selected source and known entropy/assembly-path

@@ -18,15 +18,9 @@ Local and CI builds resolve modules from registry `main`. The hosted workflows u
 the same checksum-verified [source mirror policy](../../tools/bazel/ci/source_mirrors.py)
 as the installer, with the repository's Debian mirrors first.
 
-Socat uses [`1.8.0.2.sonic.7`](https://github.com/securely1g/sonic-bazel-registry/tree/main/modules/socat/1.8.0.2.sonic.7),
-with the same upstream 1.8.0.2 and Debian
-1.8.0.2-1 archive hashes. Its explicit `tar.xz` archive type supports the
-verified content URL, whose path has no archive extension. This upgrade
-from `.3` also includes the published compiler-path normalization and
-procan namespace-string termination fixes from `.4` and `.5`; executable
-and debug bytes may change. Configured features, tools, installed paths
-and runtime/debug TAR interfaces remain as declared. Fresh resolution
-and native acceptance for this selected version are still required.
+Socat uses the same Debian Trixie source as Make, `1.8.0.3-1+deb13u1`,
+including Debian’s security update and the SONiC readline and procan patches.
+[Published Bazel module](https://github.com/sonic-net/sonic-bazel-registry/tree/main/modules/socat/1.8.0.3.sonic.1).
 
 The image keeps direct `@libteam` runtime TAR inputs. SWSS's reexport filegroups
 are not substituted for those inputs because the debug aspect follows the direct
