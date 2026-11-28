@@ -7,7 +7,9 @@ standard unittest.mock.patch() instead of subprocess or file-based mocking.
 """
 import json
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 from io import StringIO
 from unittest import mock
@@ -168,6 +170,44 @@ class TestVoqSystemPortGen(unittest.TestCase):
                 "switch_id", port_config,
                 f"Missing switch_id in {port_name}",
             )
+
+    def test_extra_system_ports_added(self):
+        """extra_system_ports.ini next to port_config.ini adds SYSTEM_PORT rows, not PORTs."""
+        with tempfile.TemporaryDirectory() as hwsku_dir:
+            port_config = os.path.join(hwsku_dir, "port_config.ini")
+            shutil.copy(self.voq_port_config, port_config)
+            with open(os.path.join(hwsku_dir, "extra_system_ports.ini"), "w") as f:
+                f.write("# name    speed   index   core_id   core_port_id   num_voq\n")
+                f.write("Eventor0  10000   330     0         230            8\n")
+            args = [
+                "-k", "Test-VOQ-SKU",
+                "-p", port_config,
+                "--preset", "l2",
+            ]
+            output = self._run_sonic_cfggen(args, mock_voq_enabled=True)
+        result = json.loads(output)
+
+        eventor = [v for k, v in result["SYSTEM_PORT"].items() if k.endswith("|Eventor0")]
+        self.assertEqual(len(eventor), 1)
+        self.assertEqual(eventor[0]["core_index"], "0")
+        self.assertEqual(eventor[0]["core_port_index"], "230")
+        self.assertEqual(eventor[0]["num_voq"], "8")
+        self.assertEqual(eventor[0]["speed"], "10000")
+        self.assertEqual(str(eventor[0]["system_port_id"]), "330")
+        self.assertNotIn("Eventor0", result["PORT"])
+
+    def test_no_extra_system_ports_file(self):
+        """Without extra_system_ports.ini, SYSTEM_PORT has only port_config.ini rows and Cpu0."""
+        args = [
+            "-k", "Test-VOQ-SKU",
+            "-p", self.voq_port_config,
+            "--preset", "l2",
+        ]
+        output = self._run_sonic_cfggen(args, mock_voq_enabled=True)
+        result = json.loads(output)
+
+        names = {k.split("|")[-1] for k in result["SYSTEM_PORT"]}
+        self.assertEqual(names, set(result["PORT"]) | {"Cpu0"})
 
 
 if __name__ == "__main__":
