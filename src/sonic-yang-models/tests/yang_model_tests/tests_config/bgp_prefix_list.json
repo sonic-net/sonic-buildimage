@@ -23,13 +23,144 @@
             }
         }
     },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV4_ENTRIES": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "pl10",
+                        "prefix": "10.10.0.0/16",
+                        "family": "IPv4",
+                        "action": "permit",
+                        "seq": "10",
+                        "ge": "17",
+                        "le": "17"
+                    },
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "123",
+                        "prefix": "10.10.0.0/16",
+                        "action": "permit",
+                        "seq": "20",
+                        "ge": "24",
+                        "le": "24"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV6_ENTRY": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "192.0.2.1",
+                        "prefix": "2001:db8::192.0.2.0/120",
+                        "family": "IPv6",
+                        "action": "permit",
+                        "seq": "10",
+                        "ge": "120",
+                        "le": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_MISSING_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "pl10",
+                        "action": "permit"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_INVALID_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "pl10",
+                        "prefix": "invalid_prefix",
+                        "action": "permit"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_CIDR_KEY_AND_PREFIX_FIELD": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "10.0.0.0/24",
+                        "prefix": "10.0.0.0/24",
+                        "action": "permit"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_ENTRY_INVALID_FAMILY": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "entry:v6",
+                        "prefix": "10.0.0.0/24",
+                        "family": "IPv6",
+                        "action": "permit"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV4_INVALID_GE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "pl10",
+                        "prefix": "10.0.0.0/24",
+                        "action": "permit",
+                        "ge": "33"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_NAMED_IPV6_INVALID_LE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "TEST_PL",
+                        "ip-prefix": "pl10",
+                        "prefix": "fc00::/64",
+                        "action": "permit",
+                        "le": "48"
+                    }
+                ]
+            }
+        }
+    },
     "BGP_PREFIX_LIST_WITH_INVALID_PREFIX": {
         "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
             "sonic-bgp-prefix-list:PREFIX_LIST": {
                 "PREFIX_LIST_LIST": [
                     {
                         "prefix_type": "ANCHOR_PREFIX",
-                        "ip-prefix": "invalid_prefix"
+                        "ip-prefix": "10.0.0.0/33"
                     }
                 ]
             }

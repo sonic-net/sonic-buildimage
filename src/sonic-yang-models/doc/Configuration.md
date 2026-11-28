@@ -3627,12 +3627,15 @@ An example is as follows:
 ### Prefix List
 Prefix list table stores a list of prefixes with type and prefix separated by `|`. PrefixListMgr renders configuration for supported prefix types (e.g., `ANCHOR_PREFIX` for RADIAN); other prefix list entries may be consumed by BGP and can use the optional fields below.
 
+Alternatively, use `PREFIX_LIST|<prefix_type>|<entry_name>` with a non-empty `prefix` field. The entry name must not contain `/` or `|`. This allows multiple dynamic entries for the same prefix, with different sequence numbers or length ranges. Omit `prefix` for legacy CIDR keys. The YANG key leaf remains named `ip-prefix` for backward compatibility, but holds the entry name in the named form.
+
 The following optional fields are supported for dynamic prefix list configuration:
  Note: `seq`, `ge`, and `le` may only be specified when `action` is set.
  Note: `prefix_type` must match `[A-Za-z0-9_.:\-]+` (no whitespace) to pass YANG validation.
 
 | Field   | Type   | Description                                                                 |
 |---------|--------|-----------------------------------------------------------------------------|
+| prefix  | string | IPv4 or IPv6 CIDR prefix; required for named entries, omitted for CIDR keys |
 | action  | string | Permit or deny action for this prefix entry (`permit` or `deny`)            |
 | seq     | uint32 | Sequence number (1–4294967295) for ordering prefix list entries             |
 | ge      | uint8  | Minimum prefix length to match, greater-than-or-equal (0–128)              |
@@ -3660,10 +3663,26 @@ Examples:
         "BGP_DENIED_IPV4|10.255.0.0/16": {
             "action": "deny",
             "seq": "30"
+        },
+        "BGP_NAMED_IPV4|pl10": {
+            "prefix": "10.10.0.0/16",
+            "action": "permit",
+            "seq": "10",
+            "ge": "17",
+            "le": "17"
+        },
+        "BGP_NAMED_IPV4|pl20": {
+            "prefix": "10.10.0.0/16",
+            "action": "permit",
+            "seq": "20",
+            "ge": "24",
+            "le": "24"
         }
     }
 }
 ```
+
+Updates to dynamic entries remove the previous FRR line before adding the replacement. Deletes use cached entry fields to remove only the matching line. An uncached named entry is skipped with a warning; the legacy delete-by-name fallback is also skipped if another cached entry exists for the same list and address family.
 
 ### FIPS
 
