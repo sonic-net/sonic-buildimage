@@ -1,0 +1,56 @@
+Subject: [PATCH] Handle current Redis client arguments and TTL results
+
+--- a/redisdl.py
++++ b/redisdl.py
+@@ -55,7 +55,7 @@
+     def pttl_or_ttl(self, key):
+         if self.have_pttl:
+             pttl = self.pttl(key)
+-            if pttl is None:
++            if pttl is None or pttl < 0:
+                 return None
+             else:
+                 return float(pttl) / 1000
+@@ -69,7 +69,7 @@
+             return p.ttl(key)
+ 
+     def decode_pttl_or_ttl_pipeline_value(self, value):
+-        if value is None:
++        if value is None or value < 0:
+             return None
+         if self.have_pttl:
+             return float(value) / 1000
+@@ -110,13 +110,13 @@
+         r = RedisWrapper(unix_socket_path=unix_socket_path,
+                         password=password,
+                         db=db,
+-                        charset=encoding)
++                        encoding=encoding)
+     else:
+         r = RedisWrapper(host=host,
+                         port=port,
+                         password=password,
+                         db=db,
+-                        charset=encoding)
++                        encoding=encoding)
+     return r
+ 
+ def dumps(host='localhost', port=6379, password=None, db=0, pretty=False,
+@@ -523,12 +523,16 @@
+             p.sadd(key, element)
+     elif type == 'zset':
+         for element, score in value:
+-            p.zadd(key, element, score)
++            p.zadd(key, {element: float(score)})
+     elif type == 'hash':
+         p.hmset(key, value)
+     else:
+         raise UnknownTypeError("Unknown key type: %s" % type)
+
++    # Older dumps recorded a negative TTL and an expiry for persistent keys.
++    if ttl is not None and ttl < 0:
++        return
++
+     if use_expireat:
+         if expireat is not None:
+             r.pexpireat_or_expireat_pipeline(p, key, expireat)
