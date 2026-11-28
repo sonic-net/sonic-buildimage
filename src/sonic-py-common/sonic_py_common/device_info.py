@@ -698,40 +698,42 @@ def get_sonic_version_file():
 # Get hardware information
 def get_platform_info(config_db=None):
     """
-    This function is used to get the HW info helper function
+    Get hardware information. Cache results for the default host lookup.
     """
     global hw_info_dict
 
-    if hw_info_dict:
+    use_host_cache = config_db is None
+    if use_host_cache and hw_info_dict:
         return hw_info_dict
 
     from .multi_asic import get_asic_presence_list
 
     version_info = get_sonic_version_info()
 
-    hw_info_dict['platform'] = get_platform()
-    hw_info_dict['hwsku'] = get_hwsku()
+    hw_info = hw_info_dict if use_host_cache else {}
+    hw_info['platform'] = get_platform()
+    hw_info['hwsku'] = get_hwsku()
     if version_info:
-        hw_info_dict['asic_type'] = version_info.get('asic_type')
+        hw_info['asic_type'] = version_info.get('asic_type')
     try:
-        hw_info_dict['asic_count'] = len(get_asic_presence_list())
+        hw_info['asic_count'] = len(get_asic_presence_list())
     except:
-        hw_info_dict['asic_count'] = 'N/A'
+        hw_info['asic_count'] = 'N/A'
 
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
-        if not config_db:
+        if config_db is None:
             config_db = ConfigDBConnector()
             config_db.connect()
 
         metadata = config_db.get_table('DEVICE_METADATA')["localhost"]
         switch_type = metadata.get('switch_type')
         if switch_type:
-            hw_info_dict['switch_type'] = switch_type
+            hw_info['switch_type'] = switch_type
     except Exception:
         pass
 
-    return hw_info_dict
+    return hw_info
 
 
 def get_chassis_info():

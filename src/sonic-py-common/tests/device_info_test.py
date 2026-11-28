@@ -260,6 +260,25 @@ class TestDeviceInfo(object):
         mock_hwsku.assert_called_once()
         mock_cfg_inst.get_table.assert_called_once_with("DEVICE_METADATA")
 
+    @pytest.mark.parametrize("read_host_first", [False, True])
+    def test_platform_info_keeps_supplied_connector_out_of_host_cache(self, monkeypatch, read_host_first):
+        monkeypatch.setattr(device_info, "hw_info_dict", {})
+        monkeypatch.setattr(device_info, "get_platform", mock.Mock(return_value="test-platform"))
+        monkeypatch.setattr(device_info, "get_hwsku", mock.Mock(return_value="test-sku"))
+        host_db = mock.Mock()
+        host_db.get_table.return_value = {"localhost": {"switch_type": "npu"}}
+        supplied_db = mock.Mock()
+        supplied_db.get_table.return_value = {"localhost": {"switch_type": "voq"}}
+        monkeypatch.setattr(device_info, "ConfigDBConnector", mock.Mock(return_value=host_db))
+
+        if read_host_first:
+            assert device_info.get_platform_info()["switch_type"] == "npu"
+        assert device_info.get_platform_info(config_db=supplied_db)["switch_type"] == "voq"
+        assert device_info.get_platform_info()["switch_type"] == "npu"
+        supplied_db.connect.assert_not_called()
+        supplied_db.get_table.assert_called_once_with("DEVICE_METADATA")
+        host_db.get_table.assert_called_once_with("DEVICE_METADATA")
+
     @mock.patch("os.path.isfile")
     @mock.patch("{}.open".format(BUILTINS))
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
