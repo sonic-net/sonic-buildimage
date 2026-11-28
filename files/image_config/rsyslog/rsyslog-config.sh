@@ -41,6 +41,18 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
+# Resolve the global syslog source interface (SYSLOG_CONFIG|GLOBAL:src_intf,
+# e.g. Loopback0) to an IP address. This is used as the default source address
+# for remote syslog forwarding when a server has no per-server source of its
+# own (EOS 'logging source-interface').
+syslog_src_intf=$(sonic-db-cli CONFIG_DB hget "SYSLOG_CONFIG|GLOBAL" "src_intf")
+syslog_src_ip=""
+syslog_src_ip6=""
+if [ -n "$syslog_src_intf" ]; then
+    syslog_src_ip=$(ip -j -4 addr list "$syslog_src_intf" 2>/dev/null | jq -r -M '[.[].addr_info[]?.local][0] // empty')
+    syslog_src_ip6=$(ip -j -6 addr list "$syslog_src_intf" scope global 2>/dev/null | jq -r -M '[.[].addr_info[]?.local][0] // empty')
+fi
+
 # Generate temporary config to validate output before overwriting
 # /etc/rsyslog.conf
 TMPFILE=$(mktemp /tmp/rsyslog.conf.XXXXXX)
@@ -59,7 +71,9 @@ json_args=$(jq -n \
     --arg forward_with_osversion "$syslog_with_osversion" \
     --arg os_version "$os_version" \
     --arg syslog_counter "$syslog_counter" \
-    '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter}')
+    --arg syslog_src_ip "$syslog_src_ip" \
+    --arg syslog_src_ip6 "$syslog_src_ip6" \
+    '{udp_server_ip: $udp_server_ip, docker0_ip: $docker0_ip, forward_with_osversion: $forward_with_osversion, os_version: $os_version, syslog_counter: $syslog_counter, syslog_src_ip: $syslog_src_ip, syslog_src_ip6: $syslog_src_ip6}')
 
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "$json_args" \

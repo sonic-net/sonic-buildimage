@@ -87,11 +87,19 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% set conf = servers[server] | d({}) -%}
 
 {% set source = conf.get('source') -%}
+{# Fall back to the global source interface IP (SYSLOG_CONFIG|GLOBAL:src_intf,
+   resolved by rsyslog-config.sh) when this server has no explicit source. -#}
+{% if not source -%}
+    {% if ':' in (server | string) and syslog_src_ip6 is defined and syslog_src_ip6 %}{% set source = syslog_src_ip6 -%}
+    {% elif syslog_src_ip is defined and syslog_src_ip %}{% set source = syslog_src_ip -%}
+    {% endif -%}
+{% endif -%}
 {% if source %}{% set source = source | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') %}{% endif -%}
 {% set port = conf.get('port', 514) | int(514) -%}
 {% set proto = conf.get('protocol', 'udp') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set vrf = conf.get('vrf', 'default') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set severity = conf.get('severity', gconf.get('severity', '*')) | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
+{% set facility = conf.get('facility', '*') | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') -%}
 {% set filter = conf.get('filter') -%}
 {% set regex = conf.get('filter_regex') -%}
 
@@ -122,7 +130,7 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 {% if filter %}
 :msg, {{ fmodifier }}ereregex, "{{ regex | replace('\n', '') | replace('\r', '') | replace('"', '\\"') }}"
 {% endif %}
-*.{{ severity }}
+{{ facility }}.{{ severity }}
 action(type="omfwd" Target="{{ server | string | replace('\n', '') | replace('\r', '') | replace('"', '') | replace('\\', '') | replace('%', '') }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000"{{ options }})
 {% endfor %}
 
