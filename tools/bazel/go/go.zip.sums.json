@@ -23,7 +23,7 @@
   "github.com/go-redis/redismock/v9@v9.2.0": "443d3c0cdfd26e94550f51cd5f87f9a3048d53422b8c025a45f83e83fe23c0a3",
   "github.com/godbus/dbus/v5@v5.2.4": "2a3a2996c274cbb735aa7f634dbcc0b292c0dff154447896d3a95955d078fb83",
   "github.com/gogo/protobuf@v1.3.2": "dd2b73f163c8183941626360196c8f844addd95423d341a0412e1b22d0104ff7",
-  "github.com/golang/glog@v1.2.4": "6636c4a48a010844df02886621c32706af2f5e707ad23acb52fe22510b60c822",
+  "github.com/golang/glog@v1.2.5": "99f5736dc4fd976a0691361b57ed853cb459070ba4c42ace6e3f5ebd0d154f8e",
   "github.com/golang/groupcache@v0.0.0-20241129210726-2c02b8208cf8": "163367355442a630b12b0b452892cd98e99fcfdf7e40b68d358be73479cc1c23",
   "github.com/golang/mock@v1.7.0-rc.1": "1bb96d83a76df04a93f59614bde60d35c10aef57c1c6b46b2c72172d8a3dfd61",
   "github.com/golang/protobuf@v1.5.4": "9a2f43d3eac8ceda506ebbeb4f229254b87235ce90346692a0e233614182190b",
