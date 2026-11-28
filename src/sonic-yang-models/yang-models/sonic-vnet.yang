@@ -27,6 +27,11 @@ module sonic-vnet {
     description
         "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
+    revision 2026-11-23 {
+        description
+            "Validate comma-separated vxlan_tunnel_list names against VXLAN_TUNNEL.";
+    }
+
     revision 2026-09-15 {
         description
             "Add install_on_kernel leaf to VNET_ROUTE_TUNNEL_LIST.";
@@ -49,6 +54,10 @@ module sonic-vnet {
 
                 key "name";
 
+                must "vxlan_tunnel or string-length(vxlan_tunnel_list) > 0" {
+                    error-message "Either vxlan_tunnel or a non-empty vxlan_tunnel_list must be configured.";
+                }
+
                 leaf name {
                     description "Unique alphanumeric name identifying the virtual network";
                     type string {
@@ -57,10 +66,25 @@ module sonic-vnet {
                 }
 
                 leaf vxlan_tunnel {
-                    mandatory true;
                     description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.";
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
+
+                leaf vxlan_tunnel_list {
+                    description "Comma-separated names of existing VXLAN tunnels. Takes precedence over vxlan_tunnel when non-empty.";
+                    type string {
+                        pattern '([^,]+(,[^,]+)?)?' {
+                            error-message "vxlan_tunnel_list must be empty or contain one or two comma-separated tunnel names.";
+                        }
+                    }
+                    must ". = '' or " +
+                         "(substring-before(concat(., ','), ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name and " +
+                         "(not(contains(., ',')) or substring-after(., ',') = " +
+                         "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name))" {
+                        error-message "vxlan_tunnel_list must reference existing VXLAN tunnels.";
                     }
                 }
 
