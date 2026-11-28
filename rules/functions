@@ -181,6 +181,16 @@ rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst 
 
 expand = $(foreach d,$(1),$(call expand,$($(d)_$(2)),$(2))) $(1)
 
+# Directory holding a package's quilt series (call: resolve_patch_path pkg).
+# Defaults to the legacy "<SRC_PATH>.patch" sibling of SRC_PATH. Set
+# $(pkg)_PATCH_PATH explicitly when SRC_PATH is a subdirectory inside a
+# submodule (e.g. sonic-platform-daemons/sonic-xcvrd): the sibling of that
+# subdirectory would live inside the submodule's own working tree and can't
+# be tracked by this repo. Patches must still be authored relative to
+# SRC_PATH (e.g. with `git diff --relative=<subdir>`), same as today.
+resolve_patch_path = $(if $($(1)_PATCH_PATH),$($(1)_PATCH_PATH),$($(1)_SRC_PATH).patch)
+resolve_patch_abspath = $(abspath $(call resolve_patch_path,$(1)))
+
 ###############################################################################
 ## Uninstall debs
 ###############################################################################
