@@ -78,6 +78,11 @@
 
     container sonic-alarm {
 
+      // This module describes operational state (alarms raised by the
+      // system), not configuration; `config false` applies to every
+      // descendant so the data is correctly modeled as read-only state.
+      config false;
+
       container ALARM {
 
         list ALARM_LIST {
