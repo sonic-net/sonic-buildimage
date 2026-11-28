@@ -12,7 +12,8 @@ if [ "${RUNTIME_OWNER}" == "" ]; then
 fi
 
 CTR_SCRIPT="/usr/share/sonic/scripts/container_startup.py"
-if test -f ${CTR_SCRIPT}
+# Process mode skips management of LLDP as a standalone feature container.
+if [ "${1:-}" != "--process-mode" ] && test -f ${CTR_SCRIPT}
 then
     ${CTR_SCRIPT} -f lldp -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
 fi

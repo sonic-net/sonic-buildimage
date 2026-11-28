@@ -178,10 +178,8 @@ supervisorctl start tunnelmgrd
 supervisorctl start fabricmgrd
 
 # Start LLDP (uses docker-lldp's start.sh)
-/usr/bin/start-lldp.sh
+/bin/bash -e /usr/bin/start-lldp.sh --process-mode
 /usr/bin/start-teamd.sh
-
-supervisorctl start rebootbackend
 
 # Start arp_update when VLAN exists
 VLAN=`sonic-cfggen -d -v 'VLAN.keys() | join(" ") if VLAN'`

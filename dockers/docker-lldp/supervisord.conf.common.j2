@@ -21,7 +21,7 @@ stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
-dependent_startup_wait_for=start:exited
+dependent_startup_wait_for={{ lldp_wait_for | default("start:exited") }}
 
 [program:waitfor_lldp_ready]
 command=/usr/bin/waitfor_lldp_ready.sh

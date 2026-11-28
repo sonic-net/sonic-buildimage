@@ -118,6 +118,7 @@ stderr_syslog=true
 {% include "supervisord.conf.nat.j2" %}
 
 {% set lldp_priority_base = 34 %}
+{% set lldp_wait_for = "start.sh:exited" %}
 {% include "supervisord.conf.lldp.j2" %}
 
 # SNMP programs (from docker-snmp via _INCLUDE_DOCKER)
