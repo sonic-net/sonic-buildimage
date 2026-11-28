@@ -7,6 +7,7 @@ FROM $BASE AS base
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+
 ## Update apt source list to ubuntu Azure mirror
 RUN sed -i 's|http://.*.ubuntu.com|http://azure.archive.ubuntu.com|g' /etc/apt/sources.list
 
