@@ -16,6 +16,14 @@ SYSTEM_WARM_START=$(get_restart_enable "WARM_RESTART_ENABLE_TABLE|system")
 BGP_WARM_START=$(get_restart_enable "WARM_RESTART_ENABLE_TABLE|bgp")
 SYSTEM_FAST_REBOOT=$(get_restart_enable "FAST_RESTART_ENABLE_TABLE|system")
 
+# Clear previous-cycle EOIU before either the marker or fpmsyncd can start.
+if [[ "$SYSTEM_WARM_START" == "true" || "$BGP_WARM_START" == "true" ]]; then
+    if ! sonic-db-cli STATE_DB DEL "BGP_STATE_TABLE|IPv4|eoiu" "BGP_STATE_TABLE|IPv6|eoiu" > /dev/null; then
+        logger -p error "Failed to clear BGP EOIU markers before warm restart"
+        exit 1
+    fi
+fi
+
 CFGGEN_PARAMS=" \
     -d \
     -y /etc/sonic/constants.yml \
