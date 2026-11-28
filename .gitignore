@@ -4,6 +4,7 @@
 # Build system related
 .arch
 .platform
+.j2_context.json
 .screen
 rules/config.user
 
