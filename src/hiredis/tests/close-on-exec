@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+task_dir=$(mktemp -d "${AUTOPKGTEST_TMP:-/tmp}/hiredis-cloexec.XXXXXX")
+trap 'test ! -e "$task_dir/redis.pid" || kill "$(cat "$task_dir/redis.pid")"; rm -rf "$task_dir"' EXIT
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+${CC:-gcc} -Wall -Wextra -Werror -o "$task_dir/check" \
+    "$script_dir/close-on-exec.c" -lhiredis -ldl
+redis-server --bind 127.0.0.1 --port 0 --unixsocket "$task_dir/redis.sock" \
+    --save '' --appendonly no --daemonize yes --pidfile "$task_dir/redis.pid"
+for attempt in $(seq 1 100); do
+    test ! -S "$task_dir/redis.sock" || break
+    sleep 0.01
+done
+# Retry if another process claims the candidate TCP port before Redis binds it.
+for attempt in $(seq 1 100); do
+    port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+    if redis-cli -s "$task_dir/redis.sock" CONFIG SET port "$port" | grep -qx OK; then
+        break
+    fi
+done
+"$task_dir/check" "$task_dir/redis.sock" "$port"

@@ -1,0 +1,19 @@
+Description: Close newly created Redis sockets when a child executes
+ Create sockets with SOCK_CLOEXEC on platforms that provide it. This avoids
+ exposing a Redis connection to a child that executes while another thread
+ connects. Platforms without SOCK_CLOEXEC retain the existing behavior.
+Author: Ashutosh Agrawal <ashu@cisco.com>
+Forwarded: no
+--- a/net.c
++++ b/net.c
+@@ -49,0 +50,4 @@
++#ifndef SOCK_CLOEXEC
++#define SOCK_CLOEXEC 0
++#endif
++
+@@ -124 +128 @@
+-    if ((s = socket(type, SOCK_STREAM, 0)) == REDIS_INVALID_FD) {
++    if ((s = socket(type, SOCK_STREAM | SOCK_CLOEXEC, 0)) == REDIS_INVALID_FD) {
+@@ -494 +498 @@
+-        if ((s = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == REDIS_INVALID_FD)
++        if ((s = socket(p->ai_family,p->ai_socktype | SOCK_CLOEXEC,p->ai_protocol)) == REDIS_INVALID_FD)
