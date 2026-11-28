@@ -44,6 +44,14 @@ class CachedDataWithOp:
             op_str = 'UPDATE'
         return '(%s, %s)' % (self.data, op_str)
 
+# Defaults the YANG model declares for the routing-policy prefix tables.
+# A leaf carrying a default is not guaranteed to be materialised in CONFIG_DB,
+# so a consumer has to apply the default rather than require the field.
+# PREFIX_SET.mode declares IPv4.  PREFIX.action declares permit.
+PREFIX_SET_MODE_IPV4 = 'ipv4'
+PREFIX_SET_MODE_DEFAULT = PREFIX_SET_MODE_IPV4
+PREFIX_ACTION_DEFAULT = 'permit'
+
 bgpd_client = None
 
 def g_run_command(table, command, use_bgpd_client, daemons, ignore_fail = False):
@@ -1664,7 +1672,7 @@ class MatchPrefixList(list):
         if af_mode is None:
             self.af = None
         else:
-            self.af = socket.AF_INET if af_mode == 'ipv4' else socket.AF_INET6
+            self.af = socket.AF_INET if af_mode == PREFIX_SET_MODE_IPV4 else socket.AF_INET6
     def __eq__(self, other):
         return super(MatchPrefixList, self).__eq__(other) and self.af == other.af
     def __ne__(self, other):
@@ -1681,7 +1689,7 @@ class MatchPrefixList(list):
             except socket.error:
                 continue
         return None
-    def add_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
+    def add_prefix(self, ip_pfx, len_range = None, action = PREFIX_ACTION_DEFAULT, sequence_number = None):
         af = self.__get_ip_af(ip_pfx)
         if self.af is None:
             self.af = af
@@ -1691,7 +1699,7 @@ class MatchPrefixList(list):
                 raise ValueError
         self.append(MatchPrefix(self.af, ip_pfx, len_range, action, sequence_number))
         return self[-1]
-    def get_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
+    def get_prefix(self, ip_pfx, len_range = None, action = PREFIX_ACTION_DEFAULT, sequence_number = None):
         if self.af is None:
             return (None, None)
         prefix = MatchPrefix(self.af, ip_pfx, len_range, action)
@@ -2343,6 +2351,18 @@ class BGPConfigDaemon:
             table_key = ExtConfigDBConnector.get_table_key(table1, key1)
             self.__update_cache_data(table_key, data1)
 
+    def __restore_replays_config(self):
+        """True when __init__ replays CONFIG_DB into FRR itself.
+
+        With unified routing config and template rendering off, the constructor
+        walks every table and hands each row to the ordinary handlers, so FRR is
+        programmed from those events rather than from a rendered config.  A
+        consumer that also seeds itself from CONFIG_DB up front would then hold
+        the row twice for the one command that was issued.
+        """
+        return (self.config_mode == "unified" and
+                self.use_template_render_for_restore == 'false')
+
     def __init__(self):
         self.config_db = ExtConfigDBConnector({'STATIC_ROUTE': {'nexthop', 'ifname', 'distance', 'nexthop-vrf', 'blackhole', 'track'}})
         try:
@@ -2430,24 +2450,36 @@ class BGPConfigDaemon:
         self.prefix_set_list = {}
         pfx_set_table = self.config_db.get_table('PREFIX_SET')
         for key, entry in pfx_set_table.items():
-            if 'mode' in entry:
-                syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, entry['mode']))
-                self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
-        pfx_table = self.config_db.get_table('PREFIX')
-        for key, entry in pfx_table.items():
-            if len(key) == 4:
-                pfx_set_name, seq, ip_pfx, len_range = key
-            else:
-                pfx_set_name, ip_pfx, len_range = key
-                seq = None
-            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
-            if len_range == 'exact':
-                len_range = None
-            if pfx_set_name in self.prefix_set_list:
-                try:
-                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'), seq)
-                except ValueError:
-                    pass
+            set_mode = (entry.get('mode') or PREFIX_SET_MODE_DEFAULT).lower()
+            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix_Set %s mode %s' % (key, set_mode))
+            self.prefix_set_list[key] = MatchPrefixList(set_mode)
+        # The unified restore replay below delivers every PREFIX row as its own
+        # OP_ADD event, and MatchPrefixList.add_prefix appends without dedup, so
+        # seeding the prefixes here as well leaves two entries per row for the
+        # one command restore issues.  A later row delete then removes one and
+        # strands the other, and get_prefix -- which compares neither action nor
+        # sequence -- resolves the stale copy first, so the daemon stops holding
+        # a convergent model of the list.  Leave the prefixes to the replay on
+        # that path; the prefix-sets are still seeded above, which is what makes
+        # the replay take the already-registered short-circuit rather than
+        # programming each row a second time.
+        if not self.__restore_replays_config():
+            pfx_table = self.config_db.get_table('PREFIX')
+            for key, entry in pfx_table.items():
+                if len(key) == 4:
+                    pfx_set_name, seq, ip_pfx, len_range = key
+                else:
+                    pfx_set_name, ip_pfx, len_range = key
+                    seq = None
+                syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
+                if len_range == 'exact':
+                    len_range = None
+                if pfx_set_name in self.prefix_set_list:
+                    try:
+                        self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range,
+                                                                      entry.get('action', PREFIX_ACTION_DEFAULT), seq)
+                    except ValueError:
+                        pass
         self.as_path_set_list = {}
         aspath_table = self.config_db.get_table('AS_PATH_SET')
         for key, entry in aspath_table.items():
@@ -2541,10 +2573,12 @@ class BGPConfigDaemon:
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
+        # PREFIX rows read once per __update_bgp batch; see __batch_prefix_table.
+        self.batch_prefix_table = None
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
-        if self.config_mode == "unified" and self.use_template_render_for_restore == 'false':
+        if self.__restore_replays_config():
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
@@ -2716,6 +2750,83 @@ class BGPConfigDaemon:
     def __vrf_based_table(table_name):
         return table_name in BGPConfigDaemon.vrf_tables
 
+    def __batch_prefix_table(self):
+        """The PREFIX table, read at most once per __update_bgp batch.
+
+        __replay_prefixes runs on every prefix-set registration, and
+        ConfigDBConnector.get_table is a keys() scan plus one hgetall per row,
+        so reading it per registration costs P x (N+1) round trips on the single
+        listener thread.  A row written after the read still arrives as its own
+        keyspace event and is programmed on the ordinary path, so a batch-old
+        copy cannot lose one.
+        """
+        if self.batch_prefix_table is None:
+            self.batch_prefix_table = self.config_db.get_table('PREFIX')
+        return self.batch_prefix_table
+
+    def __replay_prefixes(self, pfx_set_name):
+        """Program prefixes already in CONFIG_DB for a just-registered prefix-set.
+
+        A PREFIX row reaches FRR only on its own keyspace event.  A prefix-set
+        registered after its prefixes were written would therefore never pick
+        them up, so supplying a missing mode later would not recover the
+        prefix-list without a daemon restart.  Replay the rows here instead.
+        """
+        pfx_list = self.prefix_set_list.get(pfx_set_name, None)
+        if pfx_list is None:
+            return
+        for key, entry in self.__batch_prefix_table().items():
+            if len(key) == 4:
+                set_name, seq, ip_pfx, len_range = key
+            elif len(key) == 3:
+                set_name, ip_pfx, len_range = key
+                seq = None
+            else:
+                continue
+            if set_name != pfx_set_name:
+                continue
+            if len_range == 'exact':
+                len_range = None
+            pfx_action = entry.get('action') or PREFIX_ACTION_DEFAULT
+            try:
+                add_pfx = pfx_list.add_prefix(ip_pfx, len_range, pfx_action, seq)
+            except ValueError:
+                # add_prefix logs the address-family mismatch, and the row's own
+                # keyspace event reports it again per row.  Leaving the cache
+                # untouched is what keeps that second report.
+                continue
+            af_str = 'ip' if pfx_list.af == socket.AF_INET else 'ipv6'
+            daemons = None if pfx_list.af == socket.AF_INET else ['bgpd', 'zebra']
+            command = ['vtysh', '-c', 'configure terminal',
+                       '-c', '{} prefix-list {} {}'.format(af_str, pfx_set_name, str(add_pfx))]
+            # 'PREFIX', not the table whose event triggered the replay: the
+            # daemon list belongs to the command, and TABLE_DAEMON['PREFIX_SET']
+            # is bgpd alone, so a replayed IPv4 list would never reach zebra,
+            # ospfd or pimd.
+            if not self.__run_command('PREFIX', command, daemons):
+                syslog.syslog(syslog.LOG_ERR,
+                              'failed to replay prefix %s with range %s into set %s' %
+                              (ip_pfx, len_range, pfx_set_name))
+                # add_prefix appends before the command is attempted, so take
+                # the entry back out -- the ordinary path does the same on this
+                # failure.  Left behind, it makes the row's own event program a
+                # second copy for the one command that never landed, and a
+                # later delete then removes one and strands the other.
+                del_pfx, pfx_idx = pfx_list.get_prefix(ip_pfx, len_range,
+                                                       pfx_action, seq)
+                if del_pfx is not None:
+                    del(pfx_list[pfx_idx])
+                continue
+            # Record what the replay programmed.  add_prefix appends without
+            # dedup, so without this the row's own keyspace event diffs as an
+            # add and programs a second copy -- and a later delete then removes
+            # one and strands the other.
+            table_key = ExtConfigDBConnector.get_table_key(
+                    'PREFIX', self.config_db.serialize_key(key))
+            cached = dict(entry)
+            cached['action'] = pfx_action
+            self.table_data_cache[table_key] = cached
+
     @staticmethod
     def get_prefix_set_name(orig_name, table_name):
         new_name = orig_name
@@ -2836,6 +2947,9 @@ class BGPConfigDaemon:
         return cmd_suffix, None
 
     def __update_bgp(self, data_list):
+        # Dropped per batch so a registration later in the queue sees the rows
+        # written since the previous one.
+        self.batch_prefix_table = None
         while not self.bgp_message.empty():
             key, del_table, table, data = self.bgp_message.get()
             if table == 'STATIC_ROUTE' and len(key.split('|')) == 1:
@@ -3099,11 +3213,17 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_DEBUG, 'prefix-set %s exists with af %d' %
                                 (pfx_set_name, self.prefix_set_list[pfx_set_name].af))
                         continue
-                    if 'mode' not in data:
-                        syslog.syslog(syslog.LOG_ERR, 'no mode given for prefix-set %s' % pfx_set_name)
-                        continue
-                    set_mode = data['mode'].data.lower()
+                    mode_val = data.get('mode', None)
+                    if (mode_val is not None and mode_val.data and
+                            mode_val.op != CachedDataWithOp.OP_DELETE):
+                        set_mode = mode_val.data.lower()
+                    else:
+                        # The model declares a default here, so an absent field
+                        # is not an absent value.  Discarding the prefix-set
+                        # would also reject every prefix beneath it.
+                        set_mode = PREFIX_SET_MODE_DEFAULT
                     self.prefix_set_list[pfx_set_name] = MatchPrefixList(set_mode)
+                    self.__replay_prefixes(pfx_set_name)
                 else:
                     if pfx_set_name in self.prefix_set_list:
                         del(self.prefix_set_list[pfx_set_name])
@@ -3127,8 +3247,36 @@ class BGPConfigDaemon:
                     if len_range == 'exact':
                         len_range = None
                     pfx_action = data.get('action', None)
-                    if pfx_action is None or pfx_action.op == CachedDataWithOp.OP_NONE:
+                    if pfx_action is not None and pfx_action.op == CachedDataWithOp.OP_NONE:
+                        # Present and unchanged: .data holds the row's real
+                        # action, not an absent one.  Nothing to reprogram, and
+                        # defaulting here would reprogram a deny as permit.
                         continue
+                    if pfx_action is None:
+                        # action is the only non-key field on a PREFIX row, so a
+                        # keys-only row is an ordinary thing to write, and both
+                        # the startup cache and the boot templates read one as
+                        # permit.  Agree with them rather than dropping the
+                        # prefix -- on a delete too, or the entry they programmed
+                        # is left behind in FRR.  The action carried here only
+                        # probes the cache: the command is rendered from the
+                        # entry actually held.
+                        pfx_action = CachedDataWithOp(
+                                PREFIX_ACTION_DEFAULT,
+                                CachedDataWithOp.OP_DELETE if del_table
+                                else CachedDataWithOp.OP_ADD)
+                        data['action'] = pfx_action
+                    elif pfx_action.op == CachedDataWithOp.OP_DELETE and not del_table:
+                        # The row survives; dropping action means the model's
+                        # default applies, not that the prefix goes away.  When
+                        # the cached value already is that default nothing
+                        # changed -- leaving the field STAT_FAIL keeps it cached,
+                        # which is what lets a later row delete find it.
+                        if (pfx_action.data or '').lower() == PREFIX_ACTION_DEFAULT:
+                            continue
+                        pfx_action = CachedDataWithOp(PREFIX_ACTION_DEFAULT,
+                                                      CachedDataWithOp.OP_UPDATE)
+                        data['action'] = pfx_action
                     af = self.prefix_set_list[pfx_set_name].af
                     if af == socket.AF_INET:
                         # use table daemons setting
