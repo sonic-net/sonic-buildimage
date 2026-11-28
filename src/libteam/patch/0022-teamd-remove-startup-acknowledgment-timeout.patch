@@ -1,0 +1,201 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Xichen Lin <lukelin0907@gmail.com>
+Date: Wed, 4 Nov 2026 03:11:00 +1100
+Subject: [PATCH] teamd: own startup acknowledgement pipe
+
+teamd inherited a fixed 20-second daemon startup acknowledgement timeout
+from libdaemon's generic example. SONiC startup can legitimately exceed
+that limit, after which the daemon may complete initialization and delete
+its newly created team interface when it processes the queued SIGTERM.
+
+Removing the deadline from libdaemon's result pipe is not sufficient:
+libdaemon retains a copy of the write end in the parent, so an abnormal
+daemon exit before acknowledgement cannot produce EOF and leaves the
+parent blocked.
+
+Use a teamd-owned status pipe around the existing daemon_fork() instead.
+The parent closes its writer and waits without a deadline. The daemon
+preserves only its writer through descriptor cleanup and sends the same
+integer success or failure status at the existing acknowledgement points.
+Normal completion still returns the reported status, an abnormal daemon
+exit closes the last writer and returns EOF, and a live daemon permanently
+stuck in initialization retains the writer and remains the accepted
+external-recovery case.
+---
+ teamd/teamd.c | 104 +++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 92 insertions(+), 12 deletions(-)
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -25,6 +25,7 @@
+ #include <ctype.h>
+ #include <getopt.h>
+ #include <errno.h>
++#include <fcntl.h>
+ #include <signal.h>
+ #include <stdbool.h>
+ #include <inttypes.h>
+@@ -1505,8 +1506,69 @@
+ 	team_free(ctx->th);
+ }
+ 
++/* Own the startup pipe so daemon exit closes the last writer and produces EOF. */
++static void teamd_close_fd(int *fd)
++{
++	if (*fd >= 0) {
++		close(*fd);
++		*fd = -1;
++	}
++}
++
++static int teamd_move_fd_up(int *fd)
++{
++	int new_fd;
++
++	if (*fd > STDERR_FILENO)
++		return 0;
++
++	new_fd = fcntl(*fd, F_DUPFD_CLOEXEC, STDERR_FILENO + 1);
++	if (new_fd < 0)
++		return -errno;
++
++	teamd_close_fd(fd);
++	*fd = new_fd;
++	return 0;
++}
++
++static void teamd_startup_status_send(int *fd, int status)
++{
++	int saved_errno = errno;
++
++	if (*fd < 0)
++		return;
++
++	if (write(*fd, &status, sizeof(status)) != sizeof(status))
++		teamd_log_err("Failed to send startup status to parent.");
++	teamd_close_fd(fd);
++	errno = saved_errno;
++}
++
++static int teamd_startup_status_wait(int *fd)
++{
++	int saved_errno;
++	int status;
++	ssize_t len;
++
++	do {
++		len = read(*fd, &status, sizeof(status));
++	} while (len < 0 && errno == EINTR);
++
++	saved_errno = errno;
++	teamd_close_fd(fd);
++	errno = saved_errno;
++	if (len < 0)
++		return -errno;
++	if (len == 0)
++		return -ECHILD;
++	if (len != sizeof(status))
++		return -EIO;
++	return status;
++}
++
+ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ {
++	int startup_pipe[2] = { -1, -1 };
+ 	pid_t pid;
+ 	int err = 0;
+ 
+@@ -1532,22 +1594,39 @@
+ 	}
+ 
+ 	if (ctx->daemonize) {
+-		daemon_retval_init();
++		if (pipe(startup_pipe) < 0) {
++			err = -errno;
++			teamd_log_err("Failed to create startup status pipe.");
++			return err;
++		}
++
++		err = teamd_move_fd_up(&startup_pipe[0]);
++		if (!err)
++			err = teamd_move_fd_up(&startup_pipe[1]);
++		if (err) {
++			teamd_close_fd(&startup_pipe[0]);
++			teamd_close_fd(&startup_pipe[1]);
++			teamd_log_err("Failed to move startup status pipe.");
++			return err;
++		}
+ 
+ 		pid = daemon_fork();
+ 		if (pid < 0) {
++			err = -errno;
+ 			teamd_log_err("Daemon fork failed.");
+-			daemon_retval_done();
+-			return -errno;
++			teamd_close_fd(&startup_pipe[0]);
++			teamd_close_fd(&startup_pipe[1]);
++			return err;
+ 		}
+ 		else if (pid != 0) {
+ 			int ret;
+ 
+ 			/* Parent */
+-			ret = daemon_retval_wait(20);
++			teamd_close_fd(&startup_pipe[1]);
++			ret = teamd_startup_status_wait(&startup_pipe[0]);
+ 			if (ret < 0) {
+-				teamd_log_err("Could not receive return value from daemon process.");
+-				return -errno;
++				teamd_log_err("Could not receive startup status from daemon process.");
++				return ret;
+ 			}
+ 			if (ret > 0)
+ 				teamd_log_err("Daemon process failed.");
+@@ -1555,6 +1634,7 @@
+ 		}
+ 
+ 	/* Child */
++		teamd_close_fd(&startup_pipe[0]);
+ 	}
+ 
+ 	ctx->log_output = ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
+@@ -1567,21 +1647,21 @@
+ 			daemon_log_use = DAEMON_LOG_SYSLOG;
+ 	}
+ 
+-	if (daemon_close_all(-1) < 0) {
++	if (daemon_close_all(startup_pipe[1], -1) < 0) {
+ 		teamd_log_err("Failed to close all file descriptors.");
+-		daemon_retval_send(errno);
++		teamd_startup_status_send(&startup_pipe[1], errno);
+ 		return -errno;
+ 	}
+ 
+ 	if (daemon_pid_file_create() < 0) {
+ 		teamd_log_err("Could not create PID file.");
+-		daemon_retval_send(errno);
++		teamd_startup_status_send(&startup_pipe[1], errno);
+ 		return -errno;
+ 	}
+ 
+ 	if (daemon_signal_init(SIGINT, SIGTERM, SIGQUIT, SIGHUP, SIGUSR1, SIGUSR2, 0) < 0) {
+ 		teamd_log_err("Could not register signal handlers.");
+-		daemon_retval_send(errno);
++		teamd_startup_status_send(&startup_pipe[1], errno);
+ 		err = -errno;
+ 		goto pid_file_remove;
+ 	}
+@@ -1589,12 +1669,12 @@
+ 	err = teamd_init(ctx);
+ 	if (err) {
+ 		teamd_log_err("teamd_init() failed.");
+-		daemon_retval_send(-err);
++		teamd_startup_status_send(&startup_pipe[1], -err);
+ 		goto signal_done;
+ 	}
+ 	*p_ret = TEAMD_EXIT_RUNTIME_FAILURE;
+ 
+-	daemon_retval_send(0);
++	teamd_startup_status_send(&startup_pipe[1], 0);
+ 
+ 	teamd_log_info(PACKAGE_VERSION" successfully started.");
+ 
