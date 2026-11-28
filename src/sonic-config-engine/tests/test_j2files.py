@@ -1517,6 +1517,8 @@ assert config == original, 'Rendering mutated the ConfigDB input'
 
         for file_name in files_to_copy:
             src_file = os.path.join(dir_path, file_name)
+            if file_name == 'pg_profile_lookup.ini' and not os.path.isfile(src_file):
+                src_file = os.path.join(os.path.dirname(dir_path), file_name)
             dst_file = os.path.join(self.test_dir, file_name)
 
             if not revert:
