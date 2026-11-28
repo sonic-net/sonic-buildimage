@@ -1,0 +1,48 @@
+{
+    "TAM_DEVICE_VALID": {
+        "desc": "Configure valid transit device."
+    },
+    "TAM_DEVICE_VALID_NO_IFA": {
+        "desc": "Configure valid non-transit device."
+    },
+    "TAM_DEVICE_INVALID_DEVICE": {
+        "desc": "Invalid device name.",
+        "eStrKey": "Pattern"
+    },
+    "TAM_DEVICE_INVALID_DEVICEID_RANGE": {
+        "desc": "Invalid deviceid range.",
+        "eStrKey": "Range"
+    },
+   "TAM_DEVICE_INVALID_ENTERPRISEID_RANGE": {
+        "desc": "Invalid enterpriseid range.",
+        "eStrKey": "Range"
+    },
+    "TAM_COLLECTOR_VALID_IPV4": {
+        "desc": "Valid ipv4 collector table."
+    },
+    "TAM_COLLECTOR_VALID_IPV6": {
+        "desc": "Valid ipv6 collector table."
+    },
+    "TAM_COLLECTOR_VALID_MULTIPLE": {
+        "desc": "Valid multiple collectors."
+    },
+    "TAM_COLLECTOR_INVALID_PORT": {
+        "desc": "Invalid port range.",
+        "eStrKey": "Bounds"
+    },
+    "TAM_COLLECTOR_INVALID_PORT_MISSING": {
+        "desc": "Missing port",
+        "eStrKey": "Mandatory"
+    },
+    "TAM_COLLECTOR_INVALID_IPADDRESS": {
+        "desc": "Invalid IP Address",
+        "eStrKey": "InvalidValue"
+    },
+    "TAM_COLLECTOR_INVALID_MISSING_IPADDRESS": {
+        "desc": "Missing ip address",
+        "eStrKey": "Mandatory"
+    },
+    "TAM_FLOW_GROUP_VALID": {
+        "desc": "Configure valid flow group."
+    }
+}
