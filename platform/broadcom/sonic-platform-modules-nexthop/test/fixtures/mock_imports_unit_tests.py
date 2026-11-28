@@ -125,6 +125,24 @@ def mock_sonic_platform_package():
     }
 
 
+def mock_nexthop_package():
+    """Set up a fresh nexthop package for every test.
+
+    Sets up __path__ so Python finds the real submodules, but each test imports them anew.
+    """
+    fixtures_dir = os.path.dirname(os.path.abspath(__file__))
+    nexthop_path = os.path.abspath(os.path.join(fixtures_dir, "../../common/nexthop"))
+
+    nexthop = types.ModuleType("nexthop")
+    nexthop.__path__ = [nexthop_path]
+    nexthop.__file__ = os.path.join(nexthop_path, "__init__.py")
+    nexthop.__all__ = []
+
+    return {
+        "nexthop": nexthop,
+    }
+
+
 def fake_some_base_modules():
     """Returns fake bases for some modules that their derived classes are required to be real.
 
@@ -187,6 +205,7 @@ def dependencies_dict() -> dict[str, types.ModuleType]:
     for module in MOCK_MODULES:
         results[module] = Mock()
     results.update(mock_sonic_platform_package())
+    results.update(mock_nexthop_package())
     results.update(mock_smbus2())
     results.update(mock_syslog_modules())
     results.update(fake_some_base_modules())
