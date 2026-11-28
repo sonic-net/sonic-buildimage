@@ -21,8 +21,9 @@ index b6cb92b..dacc8fd 100644
  	audisp-tac_plus.conf audisp-tacplus.conf
  
 -audisp_tacplus_SOURCES = audisp-tacplus.c password.c regex_helper.c trace.c sudoers_helper.c
+-audisp_tacplus_CFLAGS = -O
 +audisp_tacplus_SOURCES = audisp-tacplus.c password.c regex_helper.c trace.c local_accounting.c sudoers_helper.c
- audisp_tacplus_CFLAGS = -O
++audisp_tacplus_CFLAGS = -O  -Wno-stringop-truncation
  audisp_tacplus_LDADD = -lauparse -ltacsupport -ltac
  sbin_PROGRAMS = audisp-tacplus
 diff --git a/audisp-tacplus.c b/audisp-tacplus.c
