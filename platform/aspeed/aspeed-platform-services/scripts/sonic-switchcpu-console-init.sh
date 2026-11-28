@@ -56,25 +56,30 @@ udevadm control --reload-rules
 udevadm trigger
 log "Udev rules reloaded and triggered"
 
-# Configure CONSOLE_PORT|0 with platform settings (preserve user config such as logging)
+# Configure CONSOLE_PORT|0 with platform settings. They are defaults only:
+# a field already in CONFIG_DB (e.g. a saved baud_rate) is user config and is kept.
 log "Configuring CONSOLE_PORT|0 in CONFIG_DB..."
 
-existing_logging=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" logging_enabled 2>/dev/null || true)
-existing_log_file=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" log_file 2>/dev/null || true)
-if [ -n "$existing_logging" ] || [ -n "$existing_log_file" ]; then
-    log "Preserving existing user config: logging_enabled=${existing_logging:-unset}, log_file=${existing_log_file:-unset}"
-fi
+set_default() {
+    local field=$1 value=$2 current
 
-log "Updating CONSOLE_PORT|0 platform settings: baud=$CONSOLE_BAUD_RATE, flow=$CONSOLE_FLOW_CONTROL, device=$CONSOLE_REMOTE_DEVICE"
-if sonic-db-cli CONFIG_DB HMSET "CONSOLE_PORT|0" \
-    baud_rate "$CONSOLE_BAUD_RATE" \
-    flow_control "$CONSOLE_FLOW_CONTROL" \
-    remote_device "$CONSOLE_REMOTE_DEVICE"; then
-    log "CONSOLE_PORT|0 configured successfully"
-else
-    log "ERROR: Failed to configure CONSOLE_PORT|0"
-    exit 1
-fi
+    current=$(sonic-db-cli CONFIG_DB HGET "CONSOLE_PORT|0" "$field" 2>/dev/null || true)
+    if [ -n "$current" ]; then
+        log "Keeping existing CONSOLE_PORT|0 $field=$current"
+        return 0
+    fi
+
+    log "Setting CONSOLE_PORT|0 $field=$value"
+    if ! sonic-db-cli CONFIG_DB HSET "CONSOLE_PORT|0" "$field" "$value" >/dev/null; then
+        log "ERROR: Failed to set CONSOLE_PORT|0 $field"
+        exit 1
+    fi
+}
+
+set_default baud_rate "$CONSOLE_BAUD_RATE"
+set_default flow_control "$CONSOLE_FLOW_CONTROL"
+set_default remote_device "$CONSOLE_REMOTE_DEVICE"
+log "CONSOLE_PORT|0 configured successfully"
 
 log "Switch CPU console initialization complete"
 exit 0
