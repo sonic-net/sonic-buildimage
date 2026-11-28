@@ -9,6 +9,8 @@ mkdir -p $DIFF_VERSION_PATH
 mkdir -p $BUILD_VERSION_PATH
 mkdir -p $LOG_PATH
 
+# Pins a parent image's build released apply to that build only.
+rm -f $VERSION_PATH/*.released
 [ -d $PRE_VERSION_PATH ] && rm -rf $PRE_VERSION_PATH
 [ -d $POST_VERSION_PATH ] && rm -rf $POST_VERSION_PATH
 mkdir -p $POST_VERSION_PATH
