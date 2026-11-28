@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import Mock
 
@@ -15,6 +16,53 @@ sys.path.insert(0, str(ROOT))
 from tools.bazel.ci import kernel_artifacts
 from tools.bazel.kernel import prepare as kernel
 from tools.bazel.tests import kernel_test
+
+
+class KernelManifestPublicationTest(unittest.TestCase):
+    # Records from the published SONiC kernel at dea1b2300ab2.
+    patches = [
+        {
+            "name": "patches-sonic/security/CVE-2026-68117-tipc-clear-sock-sk-on-the-failed-insert-path-in-tipc.patch",
+            "mode": 0o644,
+            "sha256": "4fd3160421e589dc127d11e62ce68c5c9e49dbb28e01f129c0311fe1955491a4",
+        },
+        {
+            "name": "patches-sonic/security/CVE-2026-74537-Bluetooth-ISO-hold-sk-properly-in-iso_conn_ready.patch",
+            "mode": 0o644,
+            "sha256": "c97cf0b26499f73154a03f54039bd43436d1e6083f0aef5c1a6b5a53c348b3ed",
+        },
+    ]
+
+    def check_metadata(self, metadata, filename=kernel.MANIFEST):
+        with tempfile.TemporaryDirectory() as directory:
+            packages = Path(directory)
+            output = packages / "public"
+            output.mkdir()
+            data = (json.dumps(metadata, indent=2) + "\n").encode()
+            (packages / filename).write_bytes(data)
+            kernel_artifacts.checked_metadata(packages, output, filename, hashlib.sha256(data).hexdigest(),
+                                              set(metadata))
+            self.assertEqual((output / filename).read_bytes(), data)
+
+    def test_preserves_public_kernel_patch_records_and_manifest_bytes(self):
+        self.check_metadata({"source_files": self.patches})
+
+    def test_credential_guard_still_applies_outside_exact_public_patch_records(self):
+        patch = self.patches[0]
+        for change in (
+            {"name": "patches-sonic/security/sk-" + "A" * 30 + ".patch"},
+            {"name": patch["name"].replace(".patch", "-other.patch")},
+            {"sha256": "0" * 64},
+            {"mode": 0o755},
+            {"extra": "unrecognized field"},
+        ):
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "credential-pattern"):
+                self.check_metadata({"source_files": [patch | change]})
+
+        with self.assertRaisesRegex(ValueError, "credential-pattern"):
+            self.check_metadata({"source_files": [], "source_archives": self.patches})
+        with self.assertRaisesRegex(ValueError, "credential-pattern"):
+            self.check_metadata({"source_files": self.patches}, kernel.PROVENANCE)
 
 
 class KernelArtifactsTest(unittest.TestCase):

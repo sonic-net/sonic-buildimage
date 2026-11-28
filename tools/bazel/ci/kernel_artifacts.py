@@ -16,6 +16,21 @@ from tools.bazel.kernel import packages as root_packages, prepare as kernel
 
 VS_RECEIPT = "vs-kernel-handoff.json"
 
+# Public source entries from sonic-net/sonic-linux-kernel at dea1b230. The
+# socket variable `sk` in these patch names resembles a credential prefix.
+PUBLIC_SOCKET_PATCHES = (
+    {
+        "name": "patches-sonic/security/CVE-2026-68117-tipc-clear-sock-sk-on-the-failed-insert-path-in-tipc.patch",
+        "mode": 0o644,
+        "sha256": "4fd3160421e589dc127d11e62ce68c5c9e49dbb28e01f129c0311fe1955491a4",
+    },
+    {
+        "name": "patches-sonic/security/CVE-2026-74537-Bluetooth-ISO-hold-sk-properly-in-iso_conn_ready.patch",
+        "mode": 0o644,
+        "sha256": "c97cf0b26499f73154a03f54039bd43436d1e6083f0aef5c1a6b5a53c348b3ed",
+    },
+)
+
 
 def checked_metadata(packages, output, name, digest, fields):
     path = output / name
@@ -23,6 +38,12 @@ def checked_metadata(packages, output, name, digest, fields):
     kernel.require(kernel.sha256(path) == digest, "kernel metadata changed during collection")
     metadata = public_artifacts.load_json(path.read_text())
     kernel.require(set(metadata) == fields, "unexpected kernel metadata fields in " + name)
+    if name == kernel.MANIFEST:
+        for entry in metadata["source_files"]:
+            if entry in PUBLIC_SOCKET_PATCHES:
+                # Omit only this verified name from the scan. The handoff keeps
+                # the original hash-checked file that Make will consume.
+                del entry["name"]
     public_artifacts.safe_json(metadata)
 
 
