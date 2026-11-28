@@ -6,7 +6,8 @@ from .template import TemplateFabric
 
 
 class ZebraSetSrc(Manager):
-    """ This class initialize "set src" settings for zebra """
+    """ This class initialize "set src" settings for zebra.
+    If a different Loopback0 address of the same IP family is received later, it replaces the current one """
     def __init__(self, common_objs, db, table):
         """
         Initialize the object
@@ -36,27 +37,25 @@ class ZebraSetSrc(Manager):
                 log_err("Wrong Loopback0 ip prefix: '%s'" % ip_addr_w_mask)
                 return True
             ip_addr = ip_addr_w_mask[:slash_pos]
+            is_v4 = TemplateFabric.is_ipv4(ip_addr)
+            if not is_v4 and not TemplateFabric.is_ipv6(ip_addr):
+                log_err("Got ambiguous ip address '%s'" % ip_addr)
+                return True
+            prev = self.lo_ipv4 if is_v4 else self.lo_ipv6
+            if prev == ip_addr:
+                return True
+            rm_name, ip_proto = ("RM_SET_SRC", "") if is_v4 else ("RM_SET_SRC6", "v6")
             try:
-                if TemplateFabric.is_ipv4(ip_addr):
-                    if self.lo_ipv4 is None:
-                        self.lo_ipv4 = ip_addr
-                        txt = self.zebra_set_src_template.render(rm_name="RM_SET_SRC", lo_ip=ip_addr, ip_proto="")
-                    else:
-                        log_warn("Update command is not supported for set src templates. current ip='%s'. new ip='%s'" % (self.lo_ipv4, ip_addr))
-                        return True
-                elif TemplateFabric.is_ipv6(ip_addr):
-                    if self.lo_ipv6 is None:
-                        self.lo_ipv6 = ip_addr
-                        txt = self.zebra_set_src_template.render(rm_name="RM_SET_SRC6", lo_ip=ip_addr, ip_proto="v6")
-                    else:
-                        log_warn("Update command is not supported for set src templates. current ip='%s'. new ip='%s'" % (self.lo_ipv6, ip_addr))
-                        return True
-                else:
-                    log_err("Got ambiguous ip address '%s'" % ip_addr)
-                    return True
+                txt = self.zebra_set_src_template.render(rm_name=rm_name, lo_ip=ip_addr, ip_proto=ip_proto)
             except jinja2.TemplateError as e:
                 log_err("Error while rendering 'set src' template: %s" % str(e))
                 return True
+            if prev is not None:
+                log_info("Replacing 'set src' Loopback0 ip '%s' with '%s'" % (prev, ip_addr))
+            if is_v4:
+                self.lo_ipv4 = ip_addr
+            else:
+                self.lo_ipv6 = ip_addr
             self.cfg_mgr.push(txt)
             log_info("The 'set src' configuration with Loopback0 ip '%s' has been scheduled to be added" % ip_addr)
         return True
