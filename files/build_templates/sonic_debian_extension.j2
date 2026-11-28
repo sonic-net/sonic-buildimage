@@ -850,6 +850,11 @@ sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_
 sudo cp $IMAGE_CONFIGS/backend_acl/backend_acl.py $FILESYSTEM_ROOT/usr/bin/backend_acl.py
 echo "backend-acl.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
+# Copy the service that keeps a hardware PFC watchdog's config within the hardware range;
+# the script it runs comes with sonic-utilities
+sudo cp $IMAGE_CONFIGS/pfcwd/pfcwd-hw-defaults.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/pfcwd-hw-defaults.service
+echo "pfcwd-hw-defaults.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
 # Copy RPS script file
 sudo cp $IMAGE_CONFIGS/rps/rps.py $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
