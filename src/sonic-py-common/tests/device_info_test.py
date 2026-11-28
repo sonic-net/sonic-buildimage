@@ -87,6 +87,12 @@ class TestDeviceInfo(object):
         with mock.patch.dict(os.environ, {}, clear=True):
             yield
 
+    @pytest.fixture(autouse=True)
+    def clear_chassis_info(self):
+        device_info.is_chassis_info = None
+        yield
+        device_info.is_chassis_info = None
+
     def test_get_machine_info(self):
         with mock.patch("os.path.isfile") as mock_isfile:
             mock_isfile.return_value = True
@@ -126,10 +132,22 @@ class TestDeviceInfo(object):
     @mock.patch("sonic_py_common.device_info.get_localhost_info")
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
     def test_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
+        # is_chassis() reads DEVICE_METADATA once; mirror the value mocked for
+        # get_localhost_info() into both the device type and the switch type.
+        def metadata():
+            value = mock_localhost_info.return_value
+            return {"type": value, "switch_type": value} if value else None
+
+        with mock.patch("sonic_py_common.device_info._get_localhost_metadata", side_effect=metadata):
+            self._check_is_chassis(mock_is_disaggregated_chassis, mock_localhost_info,
+                                   mock_platform_info, mock_is_chassis_config_absent)
+
+    def _check_is_chassis(self, mock_is_disaggregated_chassis, mock_localhost_info, mock_platform_info, mock_is_chassis_config_absent):
         mock_localhost_info.return_value = "npu"
         mock_platform_info.return_value = {"switch_type": "npu"}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
@@ -140,6 +158,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "voq"
@@ -148,6 +167,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "voq"
@@ -156,6 +176,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = True
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
         mock_localhost_info.return_value = "chassis-packet"
@@ -164,12 +185,14 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == True
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "SpineRouter"
         mock_platform_info.return_value = {}
         mock_is_disaggregated_chassis.return_value = False
         mock_is_chassis_config_absent.return_value = False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = "dummy-sup"
@@ -179,6 +202,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_virtual_chassis() == True
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == True
 
         mock_localhost_info.return_value = None
@@ -187,6 +211,7 @@ class TestDeviceInfo(object):
         mock_is_chassis_config_absent.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
+        device_info.is_chassis_info = None
         assert device_info.is_chassis() == False
 
     @mock.patch("sonic_py_common.device_info.is_chassis_config_absent")
@@ -237,6 +262,109 @@ class TestDeviceInfo(object):
             assert mock_localhost_info.call_count == 3
         finally:
             device_info.hwsku_info = None
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent", return_value=False)
+    @mock.patch("sonic_py_common.device_info.get_platform_info", return_value={})
+    def test_is_chassis_is_cached(self, mock_platform_info, mock_config_absent,
+                                  mock_disaggregated, mock_cfg_db):
+        """is_chassis() is called once per port by some CLI commands. A non-chassis
+           answer is cached too, so CONFIG_DB is not read again on every call."""
+        mock_cfg_db.return_value.get_table.return_value = {"localhost": {"type": "LeafRouter"}}
+        assert device_info.is_chassis() is False
+        reads_by_first_call = mock_cfg_db.call_count
+        # type and switch_type come from one read of DEVICE_METADATA
+        assert reads_by_first_call == 1
+
+        for _ in range(99):
+            assert device_info.is_chassis() is False
+        # Only the first call reads CONFIG_DB
+        assert mock_cfg_db.call_count == reads_by_first_call
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent", return_value=False)
+    @mock.patch("sonic_py_common.device_info.get_platform_info", return_value={})
+    def test_is_chassis_does_not_cache_failure(self, mock_platform_info, mock_config_absent,
+                                               mock_disaggregated, mock_cfg_db):
+        """A failed lookup must be retried, not cached, so a transient CONFIG_DB error
+           does not pin a wrong answer for the lifetime of the process."""
+        reachable = False
+        good = mock.MagicMock()
+        good.get_table.return_value = {"localhost": {"type": "LeafRouter", "switch_type": "chassis-packet"}}
+
+        def connector():
+            if not reachable:
+                raise Exception("CONFIG_DB not reachable")
+            return good
+
+        mock_cfg_db.side_effect = connector
+
+        assert device_info.is_chassis() is False
+        assert device_info.is_chassis_info is None
+
+        reachable = True
+        assert device_info.is_chassis() is True
+        assert device_info.is_chassis_info is True
+
+        # Now cached: CONFIG_DB is not read again
+        reads_by_second_call = mock_cfg_db.call_count
+        assert device_info.is_chassis() is True
+        assert mock_cfg_db.call_count == reads_by_second_call
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent", return_value=False)
+    @mock.patch("sonic_py_common.device_info.get_platform_info", return_value={})
+    def test_is_chassis_does_not_cache_partial_failure(self, mock_platform_info, mock_config_absent,
+                                                       mock_disaggregated, mock_cfg_db):
+        """A read that fails after a successful one must not pin a wrong answer. The type and
+           the switch type come from the same snapshot, so a failure on a later connection
+           cannot leave a cached False behind a successful type read."""
+        good = mock.MagicMock()
+        good.get_table.return_value = {"localhost": {"type": "LeafRouter", "switch_type": "voq"}}
+        # Fails on the first connection after the cache is cleared, then recovers
+        mock_cfg_db.side_effect = [Exception("CONFIG_DB not reachable"), good]
+
+        assert device_info.is_chassis() is False
+        assert device_info.is_chassis_info is None
+
+        assert device_info.is_chassis() is True
+        assert device_info.is_chassis_info is True
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent", return_value=False)
+    @mock.patch("sonic_py_common.device_info.get_platform_info", return_value={})
+    def test_is_chassis_caches_absent_switch_type(self, mock_platform_info, mock_config_absent,
+                                                  mock_disaggregated, mock_cfg_db):
+        """A switch_type that is unset in a successfully read snapshot is a real answer,
+           unlike a failed read, and is cached."""
+        mock_cfg_db.return_value.get_table.return_value = {"localhost": {"type": "LeafRouter"}}
+        assert device_info.is_chassis() is False
+        assert device_info.is_chassis_info is False
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
+    @mock.patch("sonic_py_common.device_info.is_chassis_config_absent", return_value=False)
+    @mock.patch("sonic_py_common.device_info.get_platform_info", return_value={})
+    def test_is_chassis_does_not_cache_snapshot_without_type(self, mock_platform_info, mock_config_absent,
+                                                             mock_disaggregated, mock_cfg_db):
+        """get_table() can return an incomplete table; without the device type the snapshot
+           is treated as incomplete and retried."""
+        mock_cfg_db.return_value.get_table.return_value = {}
+        assert device_info.is_chassis() is False
+        assert device_info.is_chassis_info is None
+
+    @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
+    def test_get_localhost_info_is_not_cached(self, mock_cfg_db):
+        mock_cfg_db.return_value.get_table.side_effect = [
+            {"localhost": {"hostname": "sonic"}}, {"localhost": {"hostname": "renamed"}}]
+
+        assert device_info.get_localhost_info("hostname") == "sonic"
+        assert device_info.get_localhost_info("hostname") == "renamed"
+        assert mock_cfg_db.call_count == 2
 
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.get_sonic_version_info")
