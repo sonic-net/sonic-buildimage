@@ -1852,7 +1852,15 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_pfcwd_on_start="$(ENABLE_PFCWD_ON_START)"
 	export installer_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$($*_INSTALLS) $(FIPS_BASEIMAGE_INSTALLERS) $(SOCAT))"
 	export installer_python_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(FIPS_BASEIMAGE_PYTHON_INSTALLERS))"
-	export lazy_installer_debs="$(foreach deb, $($*_LAZY_INSTALLS),$(foreach device, $($(deb)_PLATFORM),$(addprefix $(device)@, $(IMAGE_DISTRO_DEBS_PATH)/$(deb))))"
+	# Build the per-platform mapping in Bash, not in the bash -c argument.
+	# Keep it in memory: never save the expanded installer recipe or environment.
+	_lazy_installer_debs=()
+	$(foreach deb,$($*_LAZY_INSTALLS),\
+		for _lazy_device in $(foreach device,$($(deb)_PLATFORM),"$(device)"); do \
+			_lazy_installer_debs+=("$${_lazy_device}@$(IMAGE_DISTRO_DEBS_PATH)/$(deb)"); \
+		done;)
+	export lazy_installer_debs="$${_lazy_installer_debs[*]}"
+	unset _lazy_installer_debs _lazy_device
 	export lazy_build_installer_debs="$(foreach deb, $($*_LAZY_BUILD_INSTALLS), $(addprefix $($(deb)_MACHINE)|,$(deb)))"
 	export scapy_wheel="$(PYTHON_WHEELS_PATH)/$(SCAPY)"
 	export installer_python_wheels="$(addprefix $(PYTHON_WHEELS_PATH)/,$(filter-out $(SCAPY),$($*_PYTHON_WHEELS)))"
