@@ -136,11 +136,16 @@ resolvconf_updates_restore
 # Read sysctl conf files again
 sysctl -p /etc/sysctl.d/90-dhcp6-systcl.conf
 
+# Apply the interface configuration with "ifreload -a" instead of
+# "systemctl restart networking". ifreload only applies the delta, so the
+# management device is not recreated and the management session is not
+# interrupted. Keep retrying to tolerate the race where ifupdown2 reports
+# another instance is already running.
 MAX_RETRIES=5
 RETRY_DELAY=2
 for ((i=1; i<=MAX_RETRIES; i++)); do
     LOG_MARK=$(date '+%Y-%m-%d %H:%M:%S')
-    if systemctl restart networking; then
+    if ifreload -a; then
         if journalctl -u networking --since "$LOG_MARK" | grep -q "error.*already running"; then
             echo "interfaces-config: error during networking restart in attempt $i. Retrying in ${RETRY_DELAY} seconds..."
             sleep "${RETRY_DELAY}"
